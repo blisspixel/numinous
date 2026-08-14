@@ -67,6 +67,21 @@ cells became under B3/S23. Every call is still a complete stateless replay. The
 newest 24 pointer-down events become launches. The native App separately owns a
 continuous universe for one room visit and does not inherit that replay bound.
 
+Phase change is directly comparable too. Add `from_t` with an explicit
+destination `t` and one stateless `play_room` call returns two exact
+observations. The top-level
+`render` and `status` remain the destination. `structuredContent.temporal`
+carries the origin render and status plus a typed origin-to-destination cell
+delta. That delta is separate from the top-level touch delta, so a player can
+ask both what the hand changed at one phase and which visible cells differ
+between two phases. Compact poke coordinates are reapplied independently at
+each phase. A phase-stamped gesture supplies one exact event history to both
+observations, allowing room-defined causal evolution. The phases are exact
+comparison points, not a claim about wall time, lived duration, or every state
+between them. A zero cell delta is honest evidence that the two ASCII
+observations match at that resolution, not proof that the mathematical state is
+unchanged.
+
 ## MCP-game conventions (July 2026 survey)
 
 The MCP-game genre now has real exemplars and emerging conventions. What the

@@ -4,11 +4,25 @@ use serde_json::{Map, Value};
 use std::error::Error;
 use std::fmt;
 
+/// Default requested ASCII width for a public `play_room` action.
+pub const PLAY_ROOM_DEFAULT_WIDTH: u64 = 72;
+
+/// Default requested ASCII height for a public `play_room` action.
+pub const PLAY_ROOM_DEFAULT_HEIGHT: u64 = 32;
+
 /// Maximum requested ASCII width retained in a public `play_room` action.
 pub const PLAY_ROOM_MAX_WIDTH: u64 = 512;
 
 /// Maximum requested ASCII height retained in a public `play_room` action.
 pub const PLAY_ROOM_MAX_HEIGHT: u64 = 256;
+
+/// Maximum cells in each observation of a public two-phase `play_room` result.
+///
+/// A temporal result carries two ASCII renders in structured form. Full mode
+/// also carries both in text, while compact mode carries a text summary. This
+/// bound keeps the complete public event inside the wire limit while admitting
+/// the 72 by 32 default canvas.
+pub const PLAY_ROOM_MAX_TEMPORAL_CELLS: u64 = 2_304;
 
 /// Stable game identities whose replays may cross the local broadcast seam.
 pub const NUMINOUS_GAME_IDS: [&str; 11] = [
@@ -215,7 +229,8 @@ impl Error for ProjectionError {}
 #[cfg(test)]
 mod tests {
     use super::{
-        ALL_PUBLIC_TOOLS, Compatibility, NUMINOUS_GAME_IDS, PublicTool, PublicToolEvent,
+        ALL_PUBLIC_TOOLS, Compatibility, NUMINOUS_GAME_IDS, PLAY_ROOM_DEFAULT_HEIGHT,
+        PLAY_ROOM_DEFAULT_WIDTH, PLAY_ROOM_MAX_TEMPORAL_CELLS, PublicTool, PublicToolEvent,
         numinous_compatibility,
     };
     use serde_json::json;
@@ -230,6 +245,14 @@ mod tests {
         }
         assert_eq!(PublicTool::from_name("journey"), None);
         assert_eq!(PublicTool::from_name("PLAY_ROOM"), None);
+    }
+
+    #[test]
+    fn temporal_budget_admits_the_default_canvas() {
+        assert_eq!(
+            PLAY_ROOM_DEFAULT_WIDTH * PLAY_ROOM_DEFAULT_HEIGHT,
+            PLAY_ROOM_MAX_TEMPORAL_CELLS
+        );
     }
 
     #[test]

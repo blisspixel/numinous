@@ -6,7 +6,8 @@
 
 use numinous_broadcast::{
     ConsentMachine, ControlMarker, EventEnvelope, FrameError, HandshakeResponse,
-    PLAY_ROOM_MAX_HEIGHT, PLAY_ROOM_MAX_WIDTH, PairingGate, PairingOffer, PairingVerdict,
+    PLAY_ROOM_DEFAULT_HEIGHT, PLAY_ROOM_DEFAULT_WIDTH, PLAY_ROOM_MAX_HEIGHT,
+    PLAY_ROOM_MAX_TEMPORAL_CELLS, PLAY_ROOM_MAX_WIDTH, PairingGate, PairingOffer, PairingVerdict,
     PublicReceiver, PublicTool, PublicToolEvent, ReceiveOutcome, configure_handshake_stream,
     configure_public_stream, numinous_compatibility, read_handshake_request_stream,
     read_public_message, write_handshake_proof_stream, write_handshake_response_stream,
@@ -958,17 +959,7 @@ fn parse_room_replay(arguments: &Map<String, Value>) -> Option<RoomReplay> {
     if arguments.keys().any(|key| {
         !matches!(
             key.as_str(),
-            // Visual replay keys, plus engineered-aha arguments that affect
-            // MCP structured results only (no native body change).
-            "id" | "t"
-                | "width"
-                | "height"
-                | "variation"
-                | "pokes"
-                | "gesture"
-                | "place_wager"
-                | "number_wager"
-                | "aha_summon"
+            "id" | "t" | "from_t" | "width" | "height" | "variation" | "pokes" | "gesture"
         )
     }) {
         return None;
@@ -977,6 +968,21 @@ fn parse_room_replay(arguments: &Map<String, Value>) -> Option<RoomReplay> {
         || !valid_optional_dimension(arguments.get("height"), PLAY_ROOM_MAX_HEIGHT)
     {
         return None;
+    }
+    if let Some(from_t) = arguments.get("from_t") {
+        optional_unit(Some(from_t), 0.0, false)?;
+        arguments.get("t")?;
+        let width = arguments
+            .get("width")
+            .and_then(Value::as_u64)
+            .unwrap_or(PLAY_ROOM_DEFAULT_WIDTH);
+        let height = arguments
+            .get("height")
+            .and_then(Value::as_u64)
+            .unwrap_or(PLAY_ROOM_DEFAULT_HEIGHT);
+        if width.checked_mul(height)? > PLAY_ROOM_MAX_TEMPORAL_CELLS {
+            return None;
+        }
     }
     let id = arguments.get("id")?.as_str()?;
     let phase = optional_unit(arguments.get("t"), 0.0, false)?;
@@ -994,13 +1000,7 @@ fn parse_room_replay(arguments: &Map<String, Value>) -> Option<RoomReplay> {
     } else {
         gesture
     };
-    let room = if variation == 0 {
-        numinous_core::room_by_id(id)
-    } else {
-        numinous_core::all_rooms_with(variation)
-            .into_iter()
-            .find(|room| room.meta().id == id)
-    }?;
+    let room = numinous_core::room_by_id_with(id, variation)?;
     Some(RoomReplay {
         room,
         phase,
@@ -2706,10 +2706,7 @@ mod tests {
             .expect("valid native replay");
         let actual = replay.render(320, 180);
 
-        let room = numinous_core::all_rooms_with(42)
-            .into_iter()
-            .find(|room| room.meta().id == "times-tables")
-            .expect("times tables");
+        let room = numinous_core::room_by_id_with("times-tables", 42).expect("times tables");
         let inputs = numinous_core::inputs_from_pokes(&[(0.375, 0.5)], 0.81);
         let mut expected = Raster::with_accent(320, 180, room.meta().accent);
         room.render_input(&mut expected, 0.81, &inputs);
@@ -2729,10 +2726,20 @@ mod tests {
         for invalid in [
             serde_json::json!({"t": 0.25}),
             serde_json::json!({"id": "times-tables", "t": 1.0}),
+            serde_json::json!({"id": "times-tables", "from_t": 0.2}),
+            serde_json::json!({"id": "times-tables", "from_t": 1.0, "t": 0.5}),
+            serde_json::json!({
+                "id": "times-tables", "from_t": 0.2, "t": 0.5,
+                "width": 73, "height": 32
+            }),
             serde_json::json!({"id": "times-tables", "width": 0}),
             serde_json::json!({"id": "times-tables", "height": 257}),
             serde_json::json!({"id": "not-a-room"}),
             serde_json::json!({"id": "times-tables", "private": "not declared"}),
+            serde_json::json!({
+                "id": "times-tables", "from_t": 0.2, "t": 0.5,
+                "place_wager": "mandelbrot", "aha_summon": true
+            }),
             serde_json::json!({"id": "times-tables", "pokes": too_many_pokes}),
             serde_json::json!({
                 "id": "times-tables",
@@ -2761,6 +2768,14 @@ mod tests {
             ]
         });
         assert!(parse_room_replay(gesture.as_object().expect("arguments")).is_some());
+
+        let temporal = serde_json::json!({
+            "id": "times-tables", "from_t": 0.2, "t": 0.5,
+            "width": 72, "height": 32
+        });
+        let replay = parse_room_replay(temporal.as_object().expect("arguments"))
+            .expect("bounded temporal action replays its destination natively");
+        assert_eq!(replay.phase, 0.5);
     }
 
     #[test]

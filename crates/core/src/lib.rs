@@ -94,6 +94,7 @@ pub mod spectrum;
 pub mod studio;
 pub mod studio_request;
 pub mod surface;
+pub mod temporal;
 pub mod trophies;
 
 pub use aliens::{AlienMessage, alien_message, to_base};
@@ -209,4 +210,5 @@ pub use studio_request::{
     SingRequest, StudioRequestError,
 };
 pub use surface::Surface;
+pub use temporal::TemporalPair;
 pub use trophies::{Trophy, trophies};

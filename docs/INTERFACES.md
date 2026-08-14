@@ -298,6 +298,23 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   requirement for a `content` block while also serving the implemented modern
   2026-07-28 stateless protocol described below.
 - **Structured interaction deltas (built):** when `pokes` or a `gesture` are supplied, `play_room` also returns a `delta` in `structuredContent`: the interacted frame diffed against the untouched frame at the same phase, size, and variation, as `cells_changed`, `ink_added`, `ink_removed`, `ink_reshaped`, `total_cells`, and the inclusive `changed_region` bounding box; the text render carries the same count as a `Touch:` line. This is the proof-of-touch half of the challenge/verify loop: the agent gets quantitative, optimizable feedback on how the math answered its hand.
+- **Exact temporal evidence (built):** `play_room` accepts optional `from_t`
+  only with an explicit destination `t`. The top-level `render`, `status`, goal,
+  reveal, engineered aha, and interaction `delta` remain authoritative at `t`.
+  The additive `structuredContent.temporal` names schema version 1, both exact
+  phases, the origin status and render, and a directional `RenderDelta` from
+  origin to destination after visible overlays. Both observations use the same
+  room, variation, and dimensions. Compact poke coordinates are reapplied as
+  independent phase-local interventions, while a gesture keeps its exact
+  bounded event history for room-defined causal behavior. Equal phases and
+  zero visible deltas are valid. A zero delta says
+  only that the ASCII cells match at that resolution. The supplied order does
+  not assert elapsed duration, frame rate, or an interpolated path.
+  Two-observation calls are limited to 2,304 cells per render so a complete
+  consented public event retains wire margin. Omitting `from_t` omits
+  `temporal` and preserves the existing result. This evidence is stateless and
+  creates no receipt or journal entry. Successful play still follows the
+  existing coarse Journey visit policy.
 - **Phase-zero causality (built):** a room that claims retained state must answer
   before animation supplies an incidental difference. Cult of Pi therefore
   draws each held patch boundary through the shared surface in the App, CLI,
@@ -353,9 +370,14 @@ surface. X or the ninth controller-menu destination opens the ephemeral
 listener. The surface shows pairing, consent state, typed public actions,
 input JSON, human-readable text from MCP `content` result blocks, exact producer
 gaps, and local retention loss. For `play_room`, it strictly revalidates the
-public id, phase, variation, dimensions, pokes, and gesture, then reconstructs
-the native pixel frame through the same deterministic core `Room` at the local
-viewport size. Invalid replay values fall back to typed text. It retains each
+public id, destination phase, optional bounded origin phase, variation,
+dimensions, pokes, and gesture, then reconstructs the native pixel destination
+through the same deterministic core `Room` at the local viewport size. Full
+mode result text and structured content carry the origin observation; compact
+text carries only the phases and changed-cell count while the structured
+content remains complete. Explicit engineered Aha controls currently fall back
+to exact public text because their visible overlay is not yet core-owned;
+invalid or unsupported replay values do the same. It retains each
 complete typed serialized envelope. A successful `plot_expression` action is
 also revalidated against its exact source, finite ordered range, parameter,
 core parser, and successful public result, then reconstructed as a native
@@ -412,6 +434,10 @@ Describe Room, Crack, SETI, or Quiz would reveal private Journey level or boon
 choices; those four already use a deterministic baseline projection instead.
 The viewer never receives the guest's prompts, private reasoning, host logs,
 client metadata, environment, or arbitrary JSON-RPC traffic.
+
+Numinous does not control the surrounding MCP host. A host may retain its own
+tool traffic, transcript, or exports under that host's policy. Numinous journal
+and local-state erasure cannot erase copies outside Numinous-managed storage.
 
 There are two distinct witnessing surfaces. Native Watch Agent receives only
 allowlisted Numinous actions and results after the player consents. The local

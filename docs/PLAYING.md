@@ -324,7 +324,7 @@ input without hidden session state:
 | `list_rooms` | the catalog; start with `response_mode: "compact"` for a short doorway while retaining the complete structured room list |
 | `describe_room` | a room's story, action, and optional goal (some unlisted names also answer) |
 | `reveal_room` | the insight that reframes the room |
-| `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array; returns goal state and an earned reveal where available. On Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` / `speed_wager` / `policy_wager` / `counter_wager` plus `aha_summon` walk generation-before-reveal without App session state. Nontransitive Dice also accepts typed `die_choice` instead of coordinate input |
+| `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array. Add `from_t` with explicit destination `t` for two exact observations and a typed temporal delta; the top-level frame remains the destination. Returns goal state and an earned reveal where available. On Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` / `speed_wager` / `policy_wager` / `counter_wager` plus `aha_summon` walk generation-before-reveal without App session state. Nontransitive Dice also accepts typed `die_choice` instead of coordinate input |
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
 | `cairn` | read a message a mind before you left (factor its semiprime to read it), or at level 42 leave one true thing for a stranger not yet born |
@@ -406,6 +406,15 @@ Conventions worth relying on:
   CLI room seed; `--vary` chooses and prints one. The native App has a different
   explicit contract: its Life universe persists for one room visit until reset
   or room departure and does not inherit the 24-launch replay bound.
+- **Exact temporal comparison.** Add `from_t` with an explicit destination `t`
+  to receive two exact observations in one stateless call. The usual top-level
+  fields describe `t`; `structuredContent.temporal` carries `fromT`, `toT`,
+  `fromStatus`, `fromRender`, and a typed origin-to-destination cell delta. It
+  is separate from the top-level touch delta. Width times height must not
+  exceed 2,304 for this two-observation form. The order is the direction of
+  comparison only, not a duration or inferred path. Compact poke coordinates
+  are reapplied independently at both phases. Use a phase-stamped gesture when
+  the room should interpret one causal event history.
 - **Flagship engineered aha (MCP).** Prefer `play_room` before `describe_room`
   or `reveal_room` on Times Tables, Buffon's Needle, the Galton Board, Double
   Pendulum, Kepler Areas, Parrondo's Trap, or Nontransitive Dice so you do not skip the generation act. Pass `place_wager`

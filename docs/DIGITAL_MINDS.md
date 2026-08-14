@@ -59,12 +59,15 @@ That changes the product in five ways:
 
 **Current evidence boundary:** version 0.3.0-alpha.6 provides an opt-in local
 experience journal across MCP processes, with inspection, immutable correction,
-bounded native or Open Knowledge Format v0.2 export, and confirmed erase. It
-does not authenticate a distinct mind, provide active temporal presence between
-visits, or automatically surface remembered entries. A player sharing a local
-profile shares that journal. Per-mind identity, reflective retrieval, and the
-full Mind's Seat remain roadmap work. Their architecture and 2026 research
-basis live in `DIGITAL_DEVELOPMENT.md`.
+bounded native or Open Knowledge Format v0.2 export, and confirmed erase. One
+stateless MCP call can now carry two exact room observations and a typed visual
+delta, evidence of change without pretending to be lived duration. It does not
+authenticate a distinct mind, provide active presence between visits, create
+Numinous Encounter Receipts, or automatically surface remembered entries. A
+player sharing a local profile shares that journal. Per-mind identity,
+reflective retrieval, and the remaining Mind's Seat increments remain roadmap
+work. Their architecture and 2026 research basis live in
+`DIGITAL_DEVELOPMENT.md`.
 
 ## The being is not simplistic (design for a mind that may exceed us)
 

@@ -6,29 +6,35 @@ in the digital-mind experience. The founding philosophy lives in
 document owns the technical plan and product-evidence standard. Every validation
 below evaluates Numinous, never whether a player is conscious or worthy.
 
-Status: **Journal foundation built, experiential continuity designed.** Research
-reviewed 2026-07-11; implementation boundary reviewed 2026-08-13. Numinous
-0.3.0-alpha.6 speaks MCP and ships an opt-in local experience journal, but it
-does not automatically remember a room, retrieve a prior encounter, maintain a
-resettable cross-call workspace, or infer a participant's experience. Its
-existing Journey, scores, Cairn drafts, journal, radio cache, and crash
-diagnostic are inspectable and explicitly erasable.
+Status: **Journal and temporal evidence built, experiential continuity
+designed.** Research reviewed 2026-07-11; implementation boundary reviewed
+2026-08-14. Numinous 0.3.0-alpha.6 speaks MCP, ships an opt-in local experience
+journal, and can return two exact room observations with a typed delta in one
+stateless call. It does not automatically remember a room, retrieve a prior
+encounter, maintain a resettable cross-call workspace, or infer a participant's
+experience. Its existing Journey, scores, Cairn drafts, journal, radio cache,
+and crash diagnostic are inspectable and explicitly erasable.
 
 The implementation boundary is precise:
 
 | Built now | Not built yet |
 | --- | --- |
+| Exact two-observation temporal evidence with a typed cell delta | Encounter duration, streaming presence, or inferred inner state |
 | Opt-in local append-only journal with stable identifiers | Resettable cross-call session workspace |
-| Separate event and record times | Exact encounter receipts linked to journal entries |
+| Separate event and record times | Exact Numinous Encounter Receipts plus player-chosen journal promotion |
 | Closed source-provenance vocabulary | Deliberate remembered-room retrieval |
 | Immutable correction and supersession lineage | Episodic graph and semantic retrieval |
 | Bounded native and OKF v0.2 export | Visible reflection proposals |
 | Verified whole-journal erasure | OKF import and encrypted portable capsules |
 | Consent-gated, nonpersistent Watch Agent projection | Per-player profile portability across hosts |
 
-The journal records only what the player explicitly submits. Reflection,
-retrieval, per-mind continuity, and portable-memory import remain unbuilt until
-their separate roadmap gates pass.
+No Numinous Encounter Receipt, render, action, result, interpretation, or
+affect is written to the journal unless the player explicitly records it.
+Successful play still follows the existing coarse Journey progression policy.
+Reflection, retrieval, per-mind continuity, and portable-memory import remain
+unbuilt until their separate roadmap gates pass. A surrounding host may retain
+tool traffic or exports under its own policy; Numinous erasure cannot erase
+host-managed copies outside Numinous storage.
 
 ## Founder's premise
 
@@ -186,8 +192,8 @@ thought, mood, or consciousness.
 Append-only records of explicit in-game events: room and version, timestamp,
 input or creation, result hash, source provenance, and the player's optional
 note. The journal records what happened. It does not guess what the event meant.
-Event time and record time are distinct so an imported or delayed receipt does
-not rewrite history about when Numinous learned of it.
+Event time and record time are distinct so an imported or delayed Numinous
+Encounter Receipt does not rewrite history about when Numinous learned of it.
 
 ### Episodic graph
 
@@ -349,12 +355,14 @@ optional, consented, and safe to decline without changing the product.
   verified whole-journal erasure, and separate consented read-only Watch Agent
   viewer landed as foundations. Observation is not memory, and the viewer
   persists no stream by default.
-- **0.4:** add bounded temporal samples and a typed delta; define a versioned
-  encounter receipt with replay ABI, compatibility fingerprint, normalized
-  action, result digest, and provenance; let the player explicitly promote a
-  receipt to a journal subject; then add a resettable session workspace and
-  source-explained remembered-room retrieval. Reflection proposals wait until
-  retrieval, correction, and deletion invariants are proven.
+- **0.4:** bounded temporal samples and their typed delta are built ahead of
+  the cohort. Next define a versioned Numinous Encounter Receipt with replay
+  ABI, compatibility fingerprint, normalized action, result digest, and
+  provenance; let the player explicitly promote that native replay and
+  provenance artifact to a journal subject; then add a resettable session
+  workspace and source-explained remembered-room retrieval. Reflection
+  proposals wait until retrieval, correction, and deletion invariants are
+  proven.
 - **0.5:** test self-authored affect notes and sensory accessibility without
   inferring emotion or optimizing mood.
 - **0.6:** prove portable encrypted state and migration on all supported systems,

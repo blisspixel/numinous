@@ -40,7 +40,8 @@ fn dials(t: f64, seed: u64, hand: Option<(f64, f64)>) -> [f64; 7] {
     let mut d = base;
     if seed != 0 {
         for (i, v) in d.iter_mut().enumerate() {
-            *v *= 0.85 + 0.05 * ((seed as usize + i) % 4) as f64;
+            let seed_step = ((seed % 4) + i as u64) % 4;
+            *v *= 0.85 + 0.05 * seed_step as f64;
         }
     }
     if let Some((x, y)) = hand {
@@ -199,5 +200,14 @@ mod tests {
     #[test]
     fn motif_ok() {
         assert!(Loneliness::new().motif().unwrap().line.len() >= 6);
+    }
+
+    #[test]
+    fn maximum_variation_is_total() {
+        let room = Loneliness::new_with(u64::MAX);
+        let mut canvas = Canvas::new(48, 28);
+        room.render(&mut canvas, 0.5);
+        assert!(canvas.ink_count() > 10);
+        assert!(room.status(0.5).is_some());
     }
 }

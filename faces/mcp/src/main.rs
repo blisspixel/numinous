@@ -13,6 +13,7 @@
 mod broadcast;
 mod catalog;
 mod local_state;
+mod temporal;
 
 use std::io::{self, BufRead, Write};
 use std::sync::{Mutex, MutexGuard};
@@ -21,10 +22,12 @@ use broadcast::{SessionBroadcast, SessionSnapshot};
 use catalog::{discover_result, initialize_result, server_info, tools_catalog, tools_list_result};
 use local_state::forget_tool;
 use numinous_broadcast::{
+    PLAY_ROOM_DEFAULT_HEIGHT as DEFAULT_HEIGHT, PLAY_ROOM_DEFAULT_WIDTH as DEFAULT_WIDTH,
     PLAY_ROOM_MAX_HEIGHT as MAX_TOOL_HEIGHT, PLAY_ROOM_MAX_WIDTH as MAX_TOOL_WIDTH, PublicTool,
 };
 use numinous_core::{Canvas, room_by_id};
 use serde_json::{Map, Value, json};
+use temporal::{evidence_json as temporal_evidence_json, render_delta_json};
 
 /// Stateless MCP revision implemented by the per-request metadata path.
 const MODERN_PROTOCOL_VERSION: &str = "2026-07-28";
@@ -41,10 +44,6 @@ const CLIENT_INFO_META_KEY: &str = "io.modelcontextprotocol/clientInfo";
 const CLIENT_CAPABILITIES_META_KEY: &str = "io.modelcontextprotocol/clientCapabilities";
 const SERVER_INFO_META_KEY: &str = "io.modelcontextprotocol/serverInfo";
 const JSON_SCHEMA_2020_12: &str = "https://json-schema.org/draft/2020-12/schema";
-
-/// Default ASCII canvas size for `play_room`.
-const DEFAULT_WIDTH: u64 = 72;
-const DEFAULT_HEIGHT: u64 = 32;
 
 /// Longest catalog id a tool argument may carry (room, sim, or similar).
 /// Catalog keys today are far shorter; the bound rejects hostile multi-kilobyte
@@ -1346,6 +1345,17 @@ fn validate_declared_tool_arguments(params: Option<&Value>) -> Result<(), String
 }
 
 fn validate_domain_tool_arguments(name: &str, arguments: &Value) -> Result<(), String> {
+    if name == "play_room" {
+        let width = arguments
+            .get("width")
+            .and_then(Value::as_u64)
+            .unwrap_or(DEFAULT_WIDTH) as usize;
+        let height = arguments
+            .get("height")
+            .and_then(Value::as_u64)
+            .unwrap_or(DEFAULT_HEIGHT) as usize;
+        temporal::request(arguments, width, height)?;
+    }
     if name == "munch_arcade"
         && let Some(actions) = arguments.get("actions").and_then(Value::as_array)
         && let Some((index, _)) = actions
@@ -1765,6 +1775,14 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
             {
                 summary.push_str(&format!(" Touch changed {cells} cells."));
             }
+            if let Some(temporal) = structured.get("temporal") {
+                summary.push_str(&format!(
+                    " Temporal from t={:.3} to t={:.3}, {} cells changed.",
+                    temporal.get("fromT")?.as_f64()?,
+                    temporal.get("toT")?.as_f64()?,
+                    temporal.get("delta")?.get("cells_changed")?.as_u64()?
+                ));
+            }
             if let Some(beat) = structured
                 .get("engineeredAha")
                 .and_then(|aha| aha.get("beat"))
@@ -1772,9 +1790,15 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
             {
                 summary.push_str(&format!(" Aha beat: {beat}."));
             }
-            summary.push_str(
-                " Read structuredContent.render, pokes, gesture, status, delta, goal, goalMet, engineeredAha, and the earned reveal for the complete result.",
-            );
+            if structured.get("temporal").is_some() {
+                summary.push_str(
+                    " Read structuredContent.render, temporal, pokes, gesture, status, delta, goal, goalMet, engineeredAha, and the earned reveal for the complete result.",
+                );
+            } else {
+                summary.push_str(
+                    " Read structuredContent.render, pokes, gesture, status, delta, goal, goalMet, engineeredAha, and the earned reveal for the complete result.",
+                );
+            }
             Some(summary)
         }
         "listen_room" => Some(format!(
@@ -2378,6 +2402,55 @@ fn play_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
     play_room_tool_for_journey(args, &load_journey(journey_file))
 }
 
+fn render_room_observation(
+    room: &dyn numinous_core::Room,
+    canvas: &mut Canvas,
+    t: f64,
+    inputs: &[numinous_core::RoomInput],
+) {
+    if inputs.is_empty() {
+        room.render(canvas, t);
+    } else {
+        room.render_input(canvas, t, inputs);
+    }
+}
+
+fn room_status_at(
+    room: &dyn numinous_core::Room,
+    t: f64,
+    inputs: &[numinous_core::RoomInput],
+) -> Option<String> {
+    if inputs.is_empty() {
+        room.status(t)
+    } else {
+        room.status_input(t, inputs)
+    }
+}
+
+fn projected_play_status(
+    room_status: Option<String>,
+    aha_request: FlagshipAhaRequest,
+    engineered_aha: Option<&Value>,
+) -> Option<String> {
+    let aha_beat = engineered_aha
+        .and_then(|value| value.get("beat"))
+        .and_then(Value::as_str);
+    let use_aha_status = aha_request.uses_generation_args()
+        || matches!(
+            aha_beat,
+            Some("prime" | "morph" | "confirm" | "consolidated")
+        );
+    if use_aha_status {
+        engineered_aha
+            .and_then(|value| value.get("status"))
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+            .or(room_status)
+    } else {
+        room_status
+    }
+}
+
 fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
@@ -2400,6 +2473,10 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
             "Canvas size must be between 1x1 and {MAX_TOOL_WIDTH}x{MAX_TOOL_HEIGHT}."
         ));
     }
+    let temporal_pair = match temporal::request(args, width, height) {
+        Ok(pair) => pair,
+        Err(message) => return tool_error(&message),
+    };
     let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
     let inputs = match parse_room_inputs(args) {
         Ok(inputs) => inputs,
@@ -2429,30 +2506,19 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
             } else {
                 inputs.gesture.as_slice()
             };
-            let delta = if !inputs.gesture.is_empty() {
-                // A gesture trail: held rooms give it pull-and-release
-                // semantics; every other room answers through the same
-                // bridge the App uses.
-                room.render_input(&mut canvas, t, accepted_inputs);
-                let mut base = Canvas::new(width, height);
-                room.render(&mut base, t);
-                base.delta(&canvas)
-            } else if inputs.pokes.is_empty() {
-                room.render(&mut canvas, t);
+            // A gesture trail: held rooms give it pull-and-release semantics;
+            // every other room answers through the same bridge the App uses.
+            render_room_observation(room.as_ref(), &mut canvas, t, accepted_inputs);
+            let delta = if accepted_inputs.is_empty() {
                 None
             } else {
-                room.render_input(&mut canvas, t, accepted_inputs);
                 let mut base = Canvas::new(width, height);
                 room.render(&mut base, t);
                 base.delta(&canvas)
             };
             let m = room.meta();
             let action = numinous_core::room_action(room.as_ref());
-            let room_status = if !accepted_inputs.is_empty() {
-                room.status_input(t, accepted_inputs)
-            } else {
-                room.status(t)
-            };
+            let room_status = room_status_at(room.as_ref(), t, accepted_inputs);
             let goal = room.goal();
             let goal_met = goal.is_some() && room.goal_met(t, accepted_inputs);
             let completed_actions = if inputs.gesture.is_empty() {
@@ -2495,26 +2561,42 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
             // explore and for the established K5 goal path (four-lobe earn
             // without place_wager), so PRESS E does not appear when reveal is
             // already unlocked by goalMet.
-            let status = {
-                let aha_beat = engineered_aha
-                    .as_ref()
-                    .and_then(|value| value.get("beat"))
-                    .and_then(Value::as_str);
-                let use_aha_status = aha_request.uses_generation_args()
-                    || matches!(
-                        aha_beat,
-                        Some("prime" | "morph" | "confirm" | "consolidated")
-                    );
-                if use_aha_status {
-                    engineered_aha
-                        .as_ref()
-                        .and_then(|value| value.get("status"))
-                        .and_then(Value::as_str)
-                        .map(str::to_owned)
-                        .or(room_status)
+            let status = projected_play_status(room_status, aha_request, engineered_aha.as_ref());
+            let temporal_evidence = if let Some(pair) = temporal_pair {
+                let from_t = pair.from_t();
+                let from_poke_inputs = numinous_core::inputs_from_pokes(&inputs.pokes, from_t);
+                let from_inputs = if inputs.gesture.is_empty() {
+                    from_poke_inputs.as_slice()
                 } else {
-                    room_status
-                }
+                    inputs.gesture.as_slice()
+                };
+                let mut from_canvas = Canvas::new(width, height);
+                render_room_observation(room.as_ref(), &mut from_canvas, from_t, from_inputs);
+                let from_goal_met = goal.is_some() && room.goal_met(from_t, from_inputs);
+                let from_engineered_aha = match project_flagship_aha(
+                    id,
+                    variation,
+                    from_t,
+                    from_inputs,
+                    completed_actions,
+                    from_goal_met,
+                    aha_request,
+                ) {
+                    Ok(value) => value,
+                    Err(message) => return tool_error(&message),
+                };
+                render_engineered_aha_overlay(id, from_engineered_aha.as_ref(), &mut from_canvas);
+                let from_status = projected_play_status(
+                    room_status_at(room.as_ref(), from_t, from_inputs),
+                    aha_request,
+                    from_engineered_aha.as_ref(),
+                );
+                let temporal_delta = from_canvas
+                    .delta(&canvas)
+                    .expect("temporal observations use identical dimensions");
+                Some((pair, from_status, from_canvas.to_text(), temporal_delta))
+            } else {
+                None
             };
             let status_line = status
                 .as_ref()
@@ -2542,33 +2624,53 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
                 .map(|reveal| format!("\nReveal: {reveal}"))
                 .unwrap_or_default();
             let render = canvas.to_text();
-            tool_structured(
-                &format!(
-                    "{} at t={t:.3}:\nAction: {action}{goal_line}{status_line}{aha_line}{touch_line}{reveal_line}\n\n{render}",
-                    m.title,
-                ),
-                json!({
-                    "room": m.id,
-                    "title": m.title,
-                    "t": t,
-                    "width": width,
-                    "height": height,
-                    "variation": variation,
-                    "pokes": inputs.pokes,
-                    "gesture": if inputs.gesture.is_empty() { Value::Null } else { gesture_json(&inputs.gesture) },
-                    "action": action,
-                    "status": status,
-                    "goal": goal,
-                    "goalMet": goal_met,
-                    "reveal": earned_reveal,
-                    "engineeredAha": engineered_aha,
-                    // The picture itself, so a mind on a client that surfaces
-                    // only structuredContent still sees the math, not just its
-                    // metadata. The render is the substance, never text-only.
-                    "render": render,
-                    "delta": delta.map(render_delta_json),
-                }),
-            )
+            let destination_text = format!(
+                "{} at t={t:.3}:\nAction: {action}{goal_line}{status_line}{aha_line}{touch_line}{reveal_line}\n\n{render}",
+                m.title,
+            );
+            let text = temporal_evidence.as_ref().map_or_else(
+                || destination_text.clone(),
+                |(pair, from_status, from_render, temporal_delta)| {
+                    let from_status_line = from_status
+                        .as_ref()
+                        .map(|readout| format!("\nStatus: {readout}"))
+                        .unwrap_or_default();
+                    format!(
+                        "{} from t={:.3}:{from_status_line}\n\n{from_render}\n{destination_text}\nTemporal: {} of {} cells changed from t={:.3} to t={:.3}",
+                        m.title,
+                        pair.from_t(),
+                        temporal_delta.cells_changed,
+                        temporal_delta.total_cells,
+                        pair.from_t(),
+                        pair.to_t(),
+                    )
+                },
+            );
+            let mut structured = json!({
+                "room": m.id,
+                "title": m.title,
+                "t": t,
+                "width": width,
+                "height": height,
+                "variation": variation,
+                "pokes": inputs.pokes,
+                "gesture": if inputs.gesture.is_empty() { Value::Null } else { gesture_json(&inputs.gesture) },
+                "action": action,
+                "status": status,
+                "goal": goal,
+                "goalMet": goal_met,
+                "reveal": earned_reveal,
+                "engineeredAha": engineered_aha,
+                // The destination picture remains authoritative for every
+                // existing client. An optional origin lives only in temporal.
+                "render": render,
+                "delta": delta.map(render_delta_json),
+            });
+            if let Some((pair, from_status, from_render, temporal_delta)) = temporal_evidence {
+                structured["temporal"] =
+                    temporal_evidence_json(pair, from_status, from_render, temporal_delta);
+            }
+            tool_structured(&text, structured)
         }
         None => tool_error(&unknown_room(id)),
     }
@@ -4274,21 +4376,6 @@ fn cairn_tool(args: &Value, journey_file: &std::path::Path, path: &std::path::Pa
             "voices": voices,
         }),
     )
-}
-
-/// The structured JSON shape of a poke's [`numinous_core::RenderDelta`].
-///
-/// The delta compares the unpoked and poked frames at the same phase, size,
-/// and variation, so the numbers are exactly what the hand changed.
-fn render_delta_json(delta: numinous_core::RenderDelta) -> Value {
-    json!({
-        "cells_changed": delta.cells_changed,
-        "ink_added": delta.ink_added,
-        "ink_removed": delta.ink_removed,
-        "ink_reshaped": delta.ink_reshaped,
-        "total_cells": delta.total_cells,
-        "changed_region": delta.changed_region.map(|(x0, y0, x1, y1)| json!([x0, y0, x1, y1])),
-    })
 }
 
 /// The `list_sims` text: each sim with its levers.
@@ -6450,6 +6537,12 @@ mod tests {
         let play_properties = &play_room["inputSchema"]["properties"];
         assert_eq!(play_properties["t"]["minimum"], 0);
         assert_eq!(play_properties["t"]["exclusiveMaximum"], 1);
+        assert_eq!(play_properties["from_t"]["minimum"], 0);
+        assert_eq!(play_properties["from_t"]["exclusiveMaximum"], 1);
+        assert_eq!(
+            play_room["inputSchema"]["dependentRequired"]["from_t"],
+            json!(["t"])
+        );
         assert_eq!(play_properties["width"]["minimum"], 1);
         assert_eq!(play_properties["width"]["maximum"], super::MAX_TOOL_WIDTH);
         assert_eq!(play_properties["height"]["minimum"], 1);
@@ -10047,6 +10140,344 @@ mod tests {
             text.contains(&format!("Touch: {changed} of {} cells answered", 50 * 30)),
             "the text face speaks the same numbers: {text}"
         );
+    }
+
+    #[test]
+    fn play_room_temporal_evidence_replays_both_exact_observations() {
+        let origin_arguments = json!({
+            "id":"times-tables","width":72,"height":32,"variation":7,"t":0.20
+        });
+        let destination_arguments = json!({
+            "id":"times-tables","width":72,"height":32,"variation":7,"t":0.35
+        });
+        let paired_arguments = json!({
+            "id":"times-tables","width":72,"height":32,"variation":7,
+            "from_t":0.20,"t":0.35
+        });
+        let origin = call("play_room", origin_arguments);
+        let destination = call("play_room", destination_arguments);
+        let paired = call("play_room", paired_arguments.clone());
+        let repeated = call("play_room", paired_arguments.clone());
+        let temporal = &paired["result"]["structuredContent"]["temporal"];
+
+        assert_eq!(paired, repeated, "the paired observation is deterministic");
+        assert_eq!(temporal["schema"], "numinous.temporal-evidence");
+        assert_eq!(temporal["schemaVersion"], 1);
+        assert_eq!(temporal["fromT"], 0.20);
+        assert_eq!(temporal["toT"], 0.35);
+        assert_eq!(
+            temporal["fromRender"],
+            origin["result"]["structuredContent"]["render"]
+        );
+        assert_eq!(
+            temporal["fromStatus"],
+            origin["result"]["structuredContent"]["status"]
+        );
+        assert_eq!(
+            paired["result"]["structuredContent"]["render"],
+            destination["result"]["structuredContent"]["render"]
+        );
+        assert_eq!(
+            paired["result"]["structuredContent"]["status"],
+            destination["result"]["structuredContent"]["status"]
+        );
+        let mut destination_projection = paired["result"]["structuredContent"].clone();
+        destination_projection
+            .as_object_mut()
+            .expect("structured object")
+            .remove("temporal");
+        assert_eq!(
+            destination_projection, destination["result"]["structuredContent"],
+            "every existing top-level field remains the exact destination result"
+        );
+
+        let delta = &temporal["delta"];
+        let changed = delta["cells_changed"].as_u64().expect("changed cells");
+        assert!(
+            changed > 0,
+            "Times Tables visibly changes across these phases"
+        );
+        assert_eq!(
+            changed,
+            delta["ink_added"].as_u64().unwrap_or_default()
+                + delta["ink_removed"].as_u64().unwrap_or_default()
+                + delta["ink_reshaped"].as_u64().unwrap_or_default()
+        );
+        assert_eq!(delta["total_cells"], 72 * 32);
+        assert!(delta["changed_region"].is_array());
+        let text = paired["result"]["content"][0]["text"]
+            .as_str()
+            .expect("full temporal text");
+        assert!(text.contains("from t=0.200"), "{text}");
+        assert!(text.contains("at t=0.350"), "{text}");
+        assert!(
+            text.contains(&format!(
+                "Temporal: {changed} of {} cells changed from t=0.200 to t=0.350",
+                72 * 32
+            )),
+            "{text}"
+        );
+
+        let public = numinous_broadcast::PublicToolEvent::new(
+            PublicTool::PlayRoom,
+            &paired_arguments,
+            &paired["result"],
+        )
+        .expect("public temporal event");
+        let public_bytes = serde_json::to_vec(&public).expect("serialize public event");
+        assert!(
+            public_bytes.len() < numinous_broadcast::MAX_EVENT_BYTES - 1_024,
+            "temporal public event has no envelope margin: {} bytes",
+            public_bytes.len()
+        );
+    }
+
+    #[test]
+    fn every_maximum_temporal_room_event_enters_the_real_bounded_consent_queue() {
+        let gesture: Vec<Value> = (0..numinous_core::MAX_ROOM_INPUTS)
+            .map(|index| {
+                let fraction = index as f64 / numinous_core::MAX_ROOM_INPUTS as f64;
+                json!({
+                    "kind":"move",
+                    "x":0.1234567890123456 + fraction * 0.5,
+                    "y":0.9876543210987654 - fraction * 0.5,
+                    "t":0.1111111111111111 + fraction * 0.5
+                })
+            })
+            .collect();
+        let machine = numinous_broadcast::ConsentMachine::new(
+            numinous_broadcast::SessionId::generate().expect("session id"),
+            numinous_broadcast::numinous_compatibility().expect("compatibility"),
+        );
+        machine.begin_awaiting().expect("awaiting");
+        machine.allow().expect("live consent");
+
+        for metadata in numinous_core::ROOM_CATALOG {
+            let arguments = json!({
+                "id":metadata.id,
+                "width":72,
+                "height":32,
+                "variation":u64::MAX,
+                "from_t":0.1234567890123456,
+                "t":0.8765432109876543,
+                "gesture":gesture,
+            });
+            let result =
+                super::play_room_tool_for_journey(&arguments, &numinous_core::Journey::default());
+            assert_eq!(result["isError"], false, "{} refused", metadata.id);
+            let event =
+                numinous_broadcast::PublicToolEvent::new(PublicTool::PlayRoom, &arguments, &result)
+                    .expect("public event");
+            let ticket = machine.capture().expect("live ticket");
+            let outcome = machine
+                .prepare_and_commit(ticket, &event)
+                .expect("bounded projection");
+            assert!(
+                matches!(outcome, numinous_broadcast::CommitOutcome::Queued { .. }),
+                "{} temporal result exceeded the complete public envelope bound: {outcome:?}",
+                metadata.id
+            );
+        }
+    }
+
+    #[test]
+    fn temporal_decreasing_pair_preserves_supplied_direction() {
+        let common = json!({
+            "id":"times-tables", "width":40, "height":20, "variation":11
+        });
+        let mut decreasing_arguments = common.clone();
+        decreasing_arguments["from_t"] = json!(0.95);
+        decreasing_arguments["t"] = json!(0.05);
+        let mut reverse_arguments = common.clone();
+        reverse_arguments["from_t"] = json!(0.05);
+        reverse_arguments["t"] = json!(0.95);
+        let mut origin_arguments = common.clone();
+        origin_arguments["t"] = json!(0.95);
+        let mut destination_arguments = common;
+        destination_arguments["t"] = json!(0.05);
+
+        let decreasing = call("play_room", decreasing_arguments);
+        let reverse = call("play_room", reverse_arguments);
+        let origin = call("play_room", origin_arguments);
+        let destination = call("play_room", destination_arguments);
+        let temporal = &decreasing["result"]["structuredContent"]["temporal"];
+        let reverse_temporal = &reverse["result"]["structuredContent"]["temporal"];
+
+        assert_eq!(temporal["fromT"], 0.95);
+        assert_eq!(temporal["toT"], 0.05);
+        assert_eq!(
+            temporal["fromRender"],
+            origin["result"]["structuredContent"]["render"]
+        );
+        assert_eq!(
+            decreasing["result"]["structuredContent"]["render"],
+            destination["result"]["structuredContent"]["render"]
+        );
+        assert_eq!(
+            temporal["delta"]["ink_added"],
+            reverse_temporal["delta"]["ink_removed"]
+        );
+        assert_eq!(
+            temporal["delta"]["ink_removed"],
+            reverse_temporal["delta"]["ink_added"]
+        );
+        assert_eq!(
+            temporal["delta"]["ink_reshaped"],
+            reverse_temporal["delta"]["ink_reshaped"]
+        );
+        assert_eq!(
+            temporal["delta"]["changed_region"],
+            reverse_temporal["delta"]["changed_region"]
+        );
+    }
+
+    #[test]
+    fn temporal_evidence_keeps_equal_phases_and_touch_delta_distinct() {
+        let arguments = json!({
+            "id":"double-pendulum","width":48,"height":24,
+            "from_t":0.25,"t":0.25,"pokes":[[0.2,0.8]]
+        });
+        let full = call("play_room", arguments.clone());
+        let structured = &full["result"]["structuredContent"];
+        assert!(
+            structured["delta"].is_object(),
+            "touch delta remains present"
+        );
+        assert_eq!(structured["temporal"]["delta"]["cells_changed"], 0);
+        assert!(structured["temporal"]["delta"]["changed_region"].is_null());
+
+        let compact = call(
+            "play_room",
+            with_response_mode(arguments.clone(), "compact"),
+        );
+        assert_eq!(
+            structured, &compact["result"]["structuredContent"],
+            "compact mode changes prose only"
+        );
+        let compact_text = compact["result"]["content"][0]["text"]
+            .as_str()
+            .expect("compact text");
+        assert!(compact_text.contains("Touch changed"), "{compact_text}");
+        assert!(
+            compact_text.contains("Temporal from t=0.250"),
+            "{compact_text}"
+        );
+        assert!(
+            !compact_text.contains("\n\n"),
+            "compact text carries no ASCII frame"
+        );
+
+        let single = call(
+            "play_room",
+            json!({"id":"double-pendulum","width":48,"height":24,"t":0.25,"pokes":[[0.2,0.8]]}),
+        );
+        assert!(
+            single["result"]["structuredContent"]
+                .get("temporal")
+                .is_none(),
+            "legacy calls omit the additive field instead of returning null"
+        );
+    }
+
+    #[test]
+    fn temporal_pokes_and_gestures_match_their_declared_replay_basis() {
+        for (field, input) in [
+            ("pokes", json!([[0.23, 0.71]])),
+            (
+                "gesture",
+                json!([
+                    {"kind":"down","x":0.23,"y":0.71,"t":0.10},
+                    {"kind":"up","x":0.23,"y":0.71,"t":0.11}
+                ]),
+            ),
+        ] {
+            let mut paired_arguments = json!({
+                "id":"game-of-life","variation":7,"width":48,"height":24,
+                "from_t":0.20,"t":0.50
+            });
+            paired_arguments[field] = input;
+            let mut origin_arguments = paired_arguments.clone();
+            origin_arguments
+                .as_object_mut()
+                .expect("origin arguments")
+                .remove("from_t");
+            origin_arguments["t"] = json!(0.20);
+            let mut destination_arguments = paired_arguments.clone();
+            destination_arguments
+                .as_object_mut()
+                .expect("destination arguments")
+                .remove("from_t");
+
+            let paired = call("play_room", paired_arguments);
+            let origin = call("play_room", origin_arguments);
+            let destination = call("play_room", destination_arguments);
+            let temporal = &paired["result"]["structuredContent"]["temporal"];
+            assert_eq!(
+                temporal["fromRender"], origin["result"]["structuredContent"]["render"],
+                "{field} origin does not match its independent replay"
+            );
+            assert_eq!(
+                temporal["fromStatus"], origin["result"]["structuredContent"]["status"],
+                "{field} origin status does not match its independent replay"
+            );
+            assert_eq!(
+                paired["result"]["structuredContent"]["render"],
+                destination["result"]["structuredContent"]["render"],
+                "{field} destination does not match its independent replay"
+            );
+            if field == "gesture" {
+                assert_ne!(
+                    temporal["fromRender"], paired["result"]["structuredContent"]["render"],
+                    "the phase-stamped Life gesture should carry causal evolution"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn temporal_arguments_fail_closed_before_rendering() {
+        for (arguments, expected) in [
+            (
+                json!({"id":"times-tables","from_t":0.2}),
+                "requires an explicit numeric destination 't'",
+            ),
+            (
+                json!({"id":"times-tables","from_t":0.2,"t":0.3,"width":73,"height":32}),
+                "at most 2304 cells",
+            ),
+            (
+                json!({"id":"times-tables","from_t":1.0,"t":0.3}),
+                "less than 1",
+            ),
+            (
+                json!({"id":"times-tables","from_t":0.2,"t":null}),
+                "must be a number",
+            ),
+            (
+                json!({"id":"times-tables","from_t":0.2,"t":"later"}),
+                "must be a number",
+            ),
+        ] {
+            let response = call("play_room", arguments);
+            let text = tool_error_text(&response);
+            assert!(
+                text.contains(expected),
+                "expected {expected:?}, got {text:?}"
+            );
+        }
+
+        let direct = super::play_room_tool_for_journey(
+            &json!({"id":"times-tables","from_t":0.2,"t":0.3,"width":73,"height":32}),
+            &numinous_core::Journey::default(),
+        );
+        assert_eq!(direct["isError"], true);
+        for t in [Value::Null, json!("later")] {
+            let direct = super::play_room_tool_for_journey(
+                &json!({"id":"times-tables","from_t":0.2,"t":t}),
+                &numinous_core::Journey::default(),
+            );
+            assert_eq!(direct["isError"], true, "direct call accepted t={t}");
+        }
     }
 
     #[test]

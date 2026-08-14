@@ -29,24 +29,39 @@ fn run_session_with_barrier(
     barrier: impl FnMut() -> bool,
     after_barrier: &[Value],
 ) -> Vec<Value> {
-    run_session_with_journal_barrier(before_barrier, barrier, after_barrier, None)
+    run_session_with_state_barrier(before_barrier, barrier, after_barrier, None, None)
 }
 
 fn run_session_with_journal(requests: &[Value], journal: &std::path::Path) -> Vec<Value> {
-    run_session_with_journal_barrier(requests, || true, &[], Some(journal))
+    run_session_with_state_barrier(requests, || true, &[], Some(journal), None)
 }
 
-fn run_session_with_journal_barrier(
+fn run_session_with_state(
+    requests: &[Value],
+    journey: &std::path::Path,
+    journal: &std::path::Path,
+) -> Vec<Value> {
+    run_session_with_state_barrier(requests, || true, &[], Some(journal), Some(journey))
+}
+
+fn run_session_with_state_barrier(
     before_barrier: &[Value],
     mut barrier: impl FnMut() -> bool,
     after_barrier: &[Value],
     journal: Option<&std::path::Path>,
+    journey: Option<&std::path::Path>,
 ) -> Vec<Value> {
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
     let suffix = format!("{}-{session}", std::process::id());
-    let journey = std::env::temp_dir().join(format!("numinous_mcp_e2e_journey_{suffix}.txt"));
+    let ephemeral_journey = journey.is_none();
+    let journey = journey.map_or_else(
+        || std::env::temp_dir().join(format!("numinous_mcp_e2e_journey_{suffix}.txt")),
+        std::path::Path::to_path_buf,
+    );
     let scores = std::env::temp_dir().join(format!("numinous_mcp_e2e_scores_{suffix}.txt"));
-    let _ = std::fs::remove_file(&journey);
+    if ephemeral_journey {
+        let _ = std::fs::remove_file(&journey);
+    }
     let _ = std::fs::remove_file(&scores);
 
     let mut command = Command::new(env!("CARGO_BIN_EXE_numinous-mcp"));
@@ -80,7 +95,9 @@ fn run_session_with_journal_barrier(
             let _ = child.kill();
             let _ = child.wait();
             let _ = output_reader.join();
-            let _ = std::fs::remove_file(&journey);
+            if ephemeral_journey {
+                let _ = std::fs::remove_file(&journey);
+            }
             let _ = std::fs::remove_file(&scores);
             panic!("MCP session barrier did not resolve within {SESSION_BARRIER_TIMEOUT:?}");
         }
@@ -100,7 +117,9 @@ fn run_session_with_journal_barrier(
             let _ = child.kill();
             let _ = child.wait();
             let _ = output_reader.join();
-            let _ = std::fs::remove_file(&journey);
+            if ephemeral_journey {
+                let _ = std::fs::remove_file(&journey);
+            }
             let _ = std::fs::remove_file(&scores);
             panic!("MCP server did not exit within 30 seconds");
         }
@@ -109,7 +128,9 @@ fn run_session_with_journal_barrier(
     let stdout = output_reader.join().expect("MCP output reader");
 
     assert!(status.success(), "server exited with an error");
-    let _ = std::fs::remove_file(&journey);
+    if ephemeral_journey {
+        let _ = std::fs::remove_file(&journey);
+    }
     let _ = std::fs::remove_file(&scores);
 
     String::from_utf8(stdout)
@@ -198,6 +219,148 @@ fn modern_meta(capabilities: Value) -> Value {
         },
         "io.modelcontextprotocol/clientCapabilities": capabilities
     })
+}
+
+#[test]
+fn modern_play_room_returns_exact_temporal_evidence_over_real_stdio() {
+    let play = |id: u64, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{
+                "_meta":modern_meta(json!({})),
+                "name":"play_room",
+                "arguments":arguments
+            }
+        })
+    };
+    let replies = run_session(&[
+        json!({
+            "jsonrpc":"2.0", "id":1, "method":"tools/list",
+            "params":{"_meta":modern_meta(json!({}))}
+        }),
+        play(
+            2,
+            json!({
+                "id":"times-tables","width":40,"height":20,
+                "from_t":0.2,"t":0.35,"variation":3
+            }),
+        ),
+        play(
+            3,
+            json!({
+                "id":"times-tables","width":40,"height":20,
+                "t":0.2,"variation":3
+            }),
+        ),
+        play(
+            4,
+            json!({
+                "id":"times-tables","width":40,"height":20,
+                "t":0.35,"variation":3
+            }),
+        ),
+    ]);
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+
+    let play_schema = by_id(1)["result"]["tools"]
+        .as_array()
+        .and_then(|tools| tools.iter().find(|tool| tool["name"] == "play_room"))
+        .expect("play_room schema");
+    assert_eq!(
+        play_schema["inputSchema"]["dependentRequired"]["from_t"],
+        json!(["t"])
+    );
+    let paired = &by_id(2)["result"]["structuredContent"];
+    assert_eq!(paired["temporal"]["schema"], "numinous.temporal-evidence");
+    assert_eq!(paired["temporal"]["fromT"], 0.2);
+    assert_eq!(paired["temporal"]["toT"], 0.35);
+    assert_eq!(
+        paired["temporal"]["fromRender"],
+        by_id(3)["result"]["structuredContent"]["render"]
+    );
+    assert_eq!(
+        paired["render"],
+        by_id(4)["result"]["structuredContent"]["render"]
+    );
+    assert!(text_of(by_id(2)).contains("Temporal:"));
+}
+
+#[test]
+fn temporal_play_records_the_coarse_journey_visit_without_touching_the_journal() {
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous_mcp_temporal_persistence_{}_{}",
+        std::process::id(),
+        session
+    ));
+    std::fs::create_dir(&root).expect("fresh temporal persistence root");
+    let journey = root.join("journey.txt");
+    let journal = root.join("journal.txt");
+    numinous_core::record_journal_file(
+        &journal,
+        numinous_core::JournalRecord {
+            recorded_at_utc: 200,
+            event_at_utc: 100,
+            source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+            kind: "encounter",
+            subject: "before-temporal-play",
+            text: "Keep this exact player-chosen record.",
+            affect: None,
+        },
+    )
+    .expect("seed player journal");
+    let journal_before = std::fs::read(&journal).expect("read seeded journal");
+
+    let replies = run_session_with_state(
+        &[
+            json!({
+                "jsonrpc":"2.0", "id":1, "method":"initialize", "params":{
+                    "protocolVersion":"2025-11-25", "capabilities":{},
+                    "clientInfo":{"name":"temporal-persistence","version":"1.0"}
+                }
+            }),
+            json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            json!({
+                "jsonrpc":"2.0", "id":2, "method":"tools/call", "params":{
+                    "name":"play_room", "arguments":{
+                        "id":"times-tables", "from_t":0.2, "t":0.35,
+                        "width":40, "height":20
+                    }
+                }
+            }),
+            json!({
+                "jsonrpc":"2.0", "id":3, "method":"tools/call",
+                "params":{"name":"read_journal","arguments":{}}
+            }),
+        ],
+        &journey,
+        &journal,
+    );
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+    assert_eq!(by_id(2)["result"]["isError"], false);
+    assert_eq!(by_id(3)["result"]["structuredContent"]["totalEntries"], 1);
+
+    let persisted_journey = numinous_core::load_journey_file(&journey);
+    assert!(persisted_journey.visited.contains("times-tables"));
+    assert_eq!(
+        std::fs::read(&journal).expect("read journal after temporal play"),
+        journal_before,
+        "temporal play must not promote any action or result into the journal"
+    );
+
+    numinous_core::erase_journal_file(&journal).expect("erase test journal");
+    numinous_core::remove_persisted_file(&journey).expect("erase test journey");
+    std::fs::remove_dir(&root).expect("empty temporal persistence root");
 }
 
 #[test]
@@ -497,7 +660,11 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
             call(
                 3,
                 "play_room",
-                json!({"id":"times-tables","t":0.2,"width":40,"height":20,"variation":42}),
+                json!({
+                    "id":"times-tables","from_t":0.1,"t":0.2,
+                    "width":40,"height":20,"variation":42,
+                    "response_mode":"compact"
+                }),
             ),
             call(4, "challenge", json!({"id":"times-tables","seed":7})),
             call(
@@ -513,17 +680,27 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
                     "variation":42,"pokes":[[0.375,0.5]]
                 }),
             ),
-            call(7, "reveal_room", json!({"id":"times-tables"})),
-            call(8, "journey", json!({})),
+            call(
+                7,
+                "play_room",
+                json!({
+                    "id":"times-tables","from_t":0.2,"t":0.81,
+                    "width":40,"height":20,"variation":42,
+                    "pokes":[[0.375,0.5]],"place_wager":"mandelbrot",
+                    "aha_summon":true
+                }),
+            ),
+            call(8, "reveal_room", json!({"id":"times-tables"})),
+            call(9, "journey", json!({})),
         ],
         || {
-            viewer.retained_events().len() >= 5
+            viewer.retained_events().len() >= 6
                 && viewer
                     .retained_events()
                     .last()
                     .is_some_and(|event| event.event.tool == PublicTool::RevealRoom)
         },
-        &[call(9, "broadcast_session", json!({"action":"stop"}))],
+        &[call(10, "broadcast_session", json!({"action":"stop"}))],
     );
     let by_id = |id: u64| -> &Value {
         replies
@@ -533,6 +710,11 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
     };
     assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
     assert_eq!(
+        by_id(3)["result"]["structuredContent"]["temporal"]["fromT"],
+        0.1
+    );
+    assert!(text_of(by_id(3)).contains("Temporal from t=0.100 to t=0.200"));
+    assert_eq!(
         by_id(6)["result"]["structuredContent"]["status"],
         "K 5.00  CLOSED  4 LOBES  FOUND"
     );
@@ -541,8 +723,11 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
         by_id(6)["result"]["structuredContent"]["engineeredAha"]["earn"],
         "four-lobes"
     );
-    assert!(text_of(by_id(7)).contains("Mandelbrot"));
-    assert_eq!(by_id(9)["result"]["structuredContent"]["state"], "stopped");
+    assert_eq!(by_id(7)["result"]["isError"], false);
+    assert!(by_id(7)["result"]["structuredContent"]["temporal"].is_object());
+    assert!(by_id(7)["result"]["structuredContent"]["engineeredAha"].is_object());
+    assert!(text_of(by_id(8)).contains("Mandelbrot"));
+    assert_eq!(by_id(10)["result"]["structuredContent"]["state"], "stopped");
 
     let deadline = Instant::now() + Duration::from_secs(3);
     while viewer.status() != ViewerStatus::GuestStopped {
@@ -560,6 +745,7 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
             PublicTool::Challenge,
             PublicTool::Challenge,
             PublicTool::PlayRoom,
+            PublicTool::PlayRoom,
             PublicTool::RevealRoom,
         ]
     );
@@ -568,9 +754,31 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
             .iter()
             .map(|event| event.public_sequence)
             .collect::<Vec<_>>(),
-        [0, 1, 2, 3, 4]
+        [0, 1, 2, 3, 4, 5]
     );
     assert!(events.iter().all(|event| event.skipped.is_none()));
+    assert_eq!(events[0].event.arguments["from_t"], 0.1);
+    assert_eq!(events[0].event.arguments["t"], 0.2);
+    assert!(events[0].event.arguments.get("response_mode").is_none());
+    assert_eq!(
+        events[0].event.result["structuredContent"]["temporal"]["fromT"],
+        0.1
+    );
+    viewer.scrub(-1);
+    let aha_fallback = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+    assert!(
+        aha_fallback.lit_count() > 100,
+        "the exact public temporal Aha result remains visible as text"
+    );
+    assert!(
+        viewer.audio_selection().is_none(),
+        "an engineered Aha overlay must not claim incomplete native replay"
+    );
+    assert_eq!(events[4].event.arguments["aha_summon"], true);
+    assert_eq!(
+        events[4].event.result["structuredContent"]["temporal"]["fromT"],
+        0.2
+    );
     viewer.scrub(-1);
     let k5_frame = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
     assert!(
@@ -590,6 +798,21 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
         room_audio.render(8_000),
         Some(room.sound_input(0.81, &inputs).render(8_000)),
         "the real selected room replays exact shared core sound"
+    );
+    viewer.scrub(-3);
+    let temporal_destination = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+    assert!(
+        temporal_destination.lit_count() > 1_000,
+        "the compact temporal action reconstructs its native destination"
+    );
+    let temporal_audio = viewer
+        .audio_selection()
+        .expect("temporal destination selects local sound");
+    assert_eq!(temporal_audio.public_sequence(), 0);
+    assert_eq!(
+        temporal_audio.render(8_000),
+        Some(room.sound_input(0.2, &[]).render(8_000)),
+        "Watch Agent replays the destination t, not the origin from_t"
     );
     let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
     for forbidden in [

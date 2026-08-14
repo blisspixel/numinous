@@ -78,7 +78,10 @@ fn draw(canvas: &mut dyn Surface, r: f64, seed: u64) {
     let mut counts = [[0u32; 2]; 2];
     for i in 0..n {
         let u = hash_u(i as u64, seed.wrapping_add(11));
-        let v = hash_u(i as u64 + 999, seed.wrapping_mul(3) + 5);
+        let v = hash_u(
+            (i as u64).wrapping_add(999),
+            seed.wrapping_mul(3).wrapping_add(5),
+        );
         let x = if u < 0.5 { 0usize } else { 1 };
         let y = if v < r { x } else { 1 - x };
         counts[x][y] += 1;
