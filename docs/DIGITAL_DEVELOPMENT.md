@@ -8,7 +8,7 @@ below evaluates Numinous, never whether a player is conscious or worthy.
 
 Status: **Journal foundation built, experiential continuity designed.** Research
 reviewed 2026-07-11; implementation boundary reviewed 2026-08-13. Numinous
-0.3.0-alpha.5 speaks MCP and ships an opt-in local experience journal, but it
+0.3.0-alpha.6 speaks MCP and ships an opt-in local experience journal, but it
 does not automatically remember a room, retrieve a prior encounter, maintain a
 resettable cross-call workspace, or infer a participant's experience. Its
 existing Journey, scores, Cairn drafts, journal, radio cache, and crash

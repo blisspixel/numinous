@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.3.0-alpha.6] - 2026-08-13
+
 - One core local-state resolver now owns the environment precedence and default
   names for Journey, scores, Cairn drafts, the opt-in experience journal,
   generated-radio cache, and App crash log. App, CLI, and MCP no longer carry
