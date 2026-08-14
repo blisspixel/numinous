@@ -5,6 +5,22 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.1] - 2026-08-14
+
+- The development line advances to `0.4.0-alpha.1`. The package minor now
+  names the active milestone, matching the repository's original prerelease
+  semantics, while the alpha suffix states that the milestone exit remains
+  open.
+- Understanding Alpha already has predict-then-reveal play, a hardened study
+  contract and collector, independent analysis paths, provenance, and a
+  player-owned journal with native and OKF v0.2 export. This release does not
+  claim a qualifying cohort or a met 0.4 exit.
+- Stable `0.4.0` remains gated on external registration, novel-bank
+  calibration, two fresh independent passes, final artifact registration,
+  allocation freeze, and the complete qualifying cohort. Those evidence gates
+  constrain the claim without forcing active 0.4 work to retain a 0.3 package
+  identity.
+
 ## [0.3.0-alpha.7] - 2026-08-14
 
 - `play_room` now accepts an optional exact origin phase, `from_t`, alongside
