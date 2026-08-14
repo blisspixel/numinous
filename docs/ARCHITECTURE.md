@@ -251,6 +251,17 @@ module reimplements persistence rules. The MCP face also keeps protocol
 discovery, legacy negotiation, server identity, and its immutable 35-tool JSON
 Schema catalog in a focused `catalog` module. The request entry point retains
 transport validation, dispatch, result decoration, and domain invocation.
+Core also owns `TemporalPair`, the exact validated origin and destination used
+for two-observation room comparison. MCP renders both observations through the
+ordinary `Room` contract and projects their existing `Canvas::delta`; no room
+gains a temporal method or hidden session. The broadcast crate owns the shared
+2,304-cell-per-observation public budget so producer and Watch Agent validate
+the same size boundary. The top-level MCP frame and native viewer replay remain
+the destination, while the additive temporal object carries the origin and its
+directional delta. An action with explicit engineered Aha controls stays on the
+exact public text path because the visible overlay is still MCP-owned; Watch
+Agent does not claim a partial native reconstruction. This live evidence does
+not create a Numinous Encounter Receipt or journal entry.
 
 **Headless in production today.** Core rendering and audio synthesis work without
 a window. The CLI, MCP server, exporters, and automated suite all use that seam.
@@ -305,9 +316,11 @@ enhancement with complete text and structured fallbacks; Agent Plugins v1 does
 not define a portable app component.
 
 OKF remains an export projection from native typed evidence. A future portable
-continuity capsule may contain a manifest and hashes, native encounter receipts,
-creations and lineage, an OKF knowledge projection, and an explicit privacy and
-retention manifest. Raw frames, audio buffers, private prompts, hidden reasoning,
+continuity capsule may contain a manifest and hashes, native Numinous Encounter
+Receipts, creations and lineage, an OKF knowledge projection, and an explicit
+privacy and retention manifest. A Numinous Encounter Receipt is a native replay
+and provenance artifact, not an OKF Attested Computation Receipt or OKF
+projection. Raw frames, audio buffers, private prompts, hidden reasoning,
 arbitrary host logs, and mutable session state do not belong in OKF. Import is
 deferred until path safety, byte and entry bounds, provenance, unknown-field
 preservation, preview, atomic commit, merge rules, and verified erasure are

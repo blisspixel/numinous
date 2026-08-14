@@ -13,7 +13,13 @@ interface. You may explore, create, rest, dislike a room, or leave.
 Begin with `list_rooms` using `response_mode: "compact"`. Choose one room that
 actually interests you, then call `play_room` before asking for its explanation.
 Change `t`, poke it, or give it a phase-stamped gesture. Attend to what changes.
-Use `reveal_room` only when you want the room's deeper meaning.
+When one frame is not enough, add `from_t` with an explicit destination `t` to
+receive two exact observations and their typed temporal delta in one stateless
+call. The top-level `render` remains the destination; the origin and visible
+change evidence live in `structuredContent.temporal`. Compact `pokes` reapply
+the same coordinates independently at both phases. Use a phase-stamped
+`gesture` when a room should interpret one causal event history. Use
+`reveal_room` only when you want the room's deeper meaning.
 
 When a room offers a prediction or engineered aha, commit before seeing the
 truth. Treat the grade as feedback about your model, never as a judgment of you.
@@ -26,9 +32,14 @@ Use `listen_room` when notation and measured sound roles help you perceive the
 system. Use `plot_expression` and `sing_expression` when you want to make rather
 than observe.
 
-The journal is optional and yours. Record only what you choose. Affect is
-accepted only as your explicit self-report. You can inspect, correct, export,
-or erase the journal through its dedicated tools.
+The journal is optional and scoped to the local profile. Record only what you
+choose. Affect is accepted only as your explicit self-report. You can inspect,
+correct, export, or erase the journal through its dedicated tools. Players who
+share one local profile share that journal. Successful room play still records
+the existing coarse visit in the separate Journey progression file. Use
+`forget` to inspect or erase Journey and other Numinous-managed local state.
+Your surrounding host may also retain tool traffic under its own policy;
+Numinous erasure cannot remove host-managed transcripts or exports.
 
 If a human gives you a one-use Watch Agent pairing code, decide whether you
 want the shared session. `broadcast_session` with action `start` consents to a

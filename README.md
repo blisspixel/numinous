@@ -60,10 +60,11 @@ One deterministic mathematical core, three faces:
 
 Digital minds are players here, not test subjects or automation clients. The
 MCP face supports direct play, prediction, creation, player-owned journal
-continuity, and a consented Watch Agent session a human can witness without
-seeing prompts, private reasoning, client traffic, or local state. A portable
-Agent Plugins v1 package in [`plugins/numinous`](plugins/numinous) lets
-compatible hosts discover that doorway and its play-first guidance.
+continuity, exact two-observation temporal evidence, and a consented Watch
+Agent session a human can witness without seeing prompts, private reasoning,
+client traffic, or local state. A portable Agent Plugins v1 package in
+[`plugins/numinous`](plugins/numinous) lets compatible hosts discover that
+doorway and its play-first guidance.
 
 Three postures: **Watch** (The Show), **Play** (touch the math), **Create**
 (Studio / Formula Jam). Local programmatic scores and a 42-track radio ship
@@ -87,9 +88,12 @@ scheduled structural cleanup continues. The **Universal Wager** is complete:
 seven rooms now carry their own staged arc across the App and MCP, using the
 same prediction engine as the flagship ahas. Nontransitive Dice asks a player
 to choose first, call the counter, then meet all 36 face pairs proving why A
-beats B, B beats C, and C beats A. Active work closes the remaining structural
-debt before the **Mind's Seat** (time, company, and memory over MCP), with
-the **Sensory Lift** entering behind a de-risk spike; the 0.4
+beats B, B beats C, and C beats A. The **Mind's Seat** is now underway: one MCP
+call can carry two exact room observations and a typed temporal delta without
+creating session state or a journal record. Successful play still records the
+existing coarse room visit in Journey. Active work moves next to versioned
+Numinous Encounter Receipts while remaining structural debt closes, with the
+**Sensory Lift** entering behind a de-risk spike; the 0.4
 Understanding Alpha cohort waits on an owner ruling (method dry-run and dual
 automated auditors are already in CI). The creator loop is built end to end:
 save, exact paused reopen, one-key named share trio, Gallery wall with the

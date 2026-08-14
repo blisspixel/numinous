@@ -4,6 +4,7 @@ use super::{
     DEFAULT_JOURNAL_PAGE_ENTRIES, JSON_SCHEMA_2020_12, MAX_AUTHOR_CHARS, MAX_JOURNAL_PAGE_ENTRIES,
     MAX_TOOL_HEIGHT, MAX_TOOL_ID_CHARS, MAX_TOOL_WIDTH, SUPPORTED_PROTOCOL_VERSIONS,
 };
+use numinous_broadcast::PLAY_ROOM_MAX_TEMPORAL_CELLS;
 use serde_json::{Value, json};
 
 /// Default legacy MCP revision when an initialization request has no preference.
@@ -29,7 +30,7 @@ fn negotiate_protocol_version(params: Option<&Value>) -> &'static str {
 }
 
 fn server_instructions() -> &'static str {
-    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
+    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. Add from_t with an explicit destination t when you want two exact observations and their temporal delta in one stateless call. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
 }
 
 fn server_capabilities() -> Value {
@@ -209,12 +210,13 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "play_room",
-                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes or a gesture, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand. This call is stateless: replay the same inputs for the same result. Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice accept a room-owned wager plus aha_summon to walk an engineered aha without App session state; structuredContent.engineeredAha reports the beat.",
+                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. Add from_t with an explicit destination t for two exact observations and a typed temporal delta; no elapsed duration or path between them is inferred. When you supply pokes or a gesture, the top-level delta separately measures exactly how the math answered your hand at t. This call is stateless: replay the same inputs for the same result. Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice accept a room-owned wager plus aha_summon to walk an engineered aha without App session state; structuredContent.engineeredAha reports the beat.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "id": room_id_schema("Room id, for example times-tables."),
-                        "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Finite phase in [0,1). For Times Tables this sweeps the multiplier." },
+                        "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Finite destination phase in [0,1). For Times Tables this sweeps the multiplier. Required when from_t is present." },
+                        "from_t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": format!("Optional exact origin phase for two-observation temporal evidence. Requires explicit t. Both observations use the same room, variation, and dimensions. Compact poke coordinates are reapplied independently at each phase; use a phase-stamped gesture when the room should interpret one causal event history at both phases. Width times height must be at most {PLAY_ROOM_MAX_TEMPORAL_CELLS} cells. The supplied order is comparison direction only; it does not assert elapsed time or an interpolated path.") },
                         "width": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_WIDTH, "description": "ASCII canvas width in columns, from 1 through 512." },
                         "height": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_HEIGHT, "description": "ASCII canvas height in rows, from 1 through 256." },
                         "variation": { "type": "integer", "minimum": 0, "description": "Per-visit variation seed (default 0) for replayable novelty in supporting rooms." },
@@ -271,6 +273,7 @@ fn build_tools_catalog() -> Value {
                         }
                     },
                     "required": ["id"],
+                    "dependentRequired": { "from_t": ["t"] },
                     "additionalProperties": false
                 }
             },

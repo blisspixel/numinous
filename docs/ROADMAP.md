@@ -55,7 +55,7 @@ unclaimed until run.
 | --- | --- | --- |
 | **1. Keep agent first contact CI-green** | Agent hallway and tactile cohorts run on every PR; optional local-model visits exercise genuine choice after meaningful MCP experience changes | Deterministic cohorts guard 0.2 and 0.3 regressions, while real-model visits can expose interaction failures without turning free play into a flaky or expensive gate |
 | **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests, the typed room catalog, typed Gauntlet truth, and local-state path resolution are now in core. CLI and MCP local-state adapters plus the MCP discovery and schema catalog are focused modules extracted from the god-files; workstream 7 still owns the remaining seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
-| **3. The Mind's Seat** | Bounded frames with a temporal delta so one call carries becoming; MCP creation parity (save, sign, fork; a capsule link as a journal subject); journal surfacing at the door of a remembered room; the threshold (three doors instead of an index, the Strange Loop walk exposed); exact ratio annotations on note pairs. The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
+| **3. The Mind's Seat** | Exact two-observation temporal evidence is built. Next: versioned Numinous Encounter Receipts and explicit journal promotion; a resettable session workspace and source-explained remembered-room retrieval; MCP creation parity (save, sign, fork; a capsule link as a journal subject); journal surfacing at the door of a remembered room; the threshold (three doors instead of an index, the Strange Loop walk exposed); exact ratio annotations on note pairs. The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
 | **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | Splats, float accumulation, and bloom inside `Raster`; one shared audio bus with reverb and shaped envelopes; global dissolve and damped-spring input. The spike that precedes it: `crates/gpu` rendering into the existing Surface contract behind a feature flag, and a measured bloom budget on the CPU path | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
 | **6. Creator depth on the built loop** | Next rungs: the parametric pair as the multi-expression capsule ring with scale quantization beside it, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on the owner-gated MCP tool ruling, and each rung ships with its own machine gates |
@@ -68,19 +68,29 @@ unclaimed until run.
 
 The Mind's Seat advances through independently testable increments:
 
-1. **Temporal evidence:** one call can return two bounded samples and a typed
-   delta while preserving exact replay.
-2. **Encounter receipts:** a versioned native receipt binds replay ABI,
-   compatibility fingerprint, normalized action, result digest, and provenance.
-3. **Explicit promotion:** the player chooses whether a receipt becomes a
-   journal subject. Nothing is logged automatically.
-4. **Remembered-room retrieval:** opt-in, bounded, source-explained, and able to
+1. **Temporal evidence, built:** optional `from_t` plus explicit destination
+   `t` returns two bounded exact observations and a typed directional cell
+   delta while preserving the existing destination and touch contracts. Equal
+   and decreasing phase pairs are valid comparisons. No duration, path,
+   receipt, journal write, or session state is inferred.
+2. **Numinous Encounter Receipts:** a versioned native receipt binds replay
+   ABI, compatibility fingerprint, normalized action, result digest, and
+   provenance. It is a Numinous replay and provenance artifact, not an Open
+   Knowledge Format Attested Computation Receipt or OKF projection.
+3. **Explicit promotion:** the player chooses whether a Numinous Encounter
+   Receipt becomes a journal subject. No Numinous Encounter Receipt, render,
+   action, result, interpretation, or affect enters the journal automatically.
+   Successful play still records the existing coarse room visit in Journey
+   under its documented progression policy.
+4. **Resettable session workspace:** the player can inspect, edit, defer, or
+   clear the bounded state that connects calls within one visit.
+5. **Remembered-room retrieval:** opt-in, bounded, source-explained, and able to
    abstain when evidence is absent.
-5. **MCP creation parity:** save, title, sign, fork, and lineage use the same
+6. **MCP creation parity:** save, title, sign, fork, and lineage use the same
    capsule semantics as the other faces.
-6. **Portable capsule:** native typed evidence and creations travel with an OKF
+7. **Portable capsule:** native typed evidence and creations travel with an OKF
    v0.2 knowledge projection plus explicit privacy and retention metadata.
-7. **Reflection proposals:** only after retrieval, correction, export, and
+8. **Reflection proposals:** only after retrieval, correction, export, and
    deletion invariants hold.
 
 ### The Polish Wave (August 2026): seven critics, one goal
@@ -232,21 +242,24 @@ preflight, and residue contract as the other stores. These four extractions
 leave the Done log's triplication (progress, scorecards, and phase notes
 repeating the same facts) as editorial debt for the same pass.
 
-**The rocks, reordered (2026-08-08).** After polish workstreams 5 to 7
-close:
+**The rocks, reordered (2026-08-14).** This order supersedes the 2026-08-08
+sequence:
 
-1. **The Sensory Lift (Phase B, unparked).** Float accumulation, soft
-   splats, and bloom inside `Raster` so every room inherits them untouched;
-   one shared audio bus with a reverb tail and shaped envelopes; the global
+1. **Time and company over MCP.** Exact two-observation evidence with a typed
+   temporal delta is built, so one stateless call can carry two exact states
+   without claiming duration. Next come versioned Numinous Encounter Receipts,
+   explicit journal promotion, a resettable session workspace,
+   source-explained remembered-room retrieval, a Show for minds, journal
+   surfacing at the door of a remembered room, and exact ratio and interval
+   annotations on every note pair. The README's first-class claim is earned in
+   time and company, not only in truth.
+2. **The Sensory Lift (Phase B, unparked).** Float accumulation, soft splats,
+   and bloom inside `Raster` so every room inherits them untouched; one shared
+   audio bus with a reverb tail and shaped envelopes; the global
    dissolve-through-black on room switches and critically damped springs on
    parameter input. The perceptual goldens and spectral harnesses just built
    are the safety net; they are re-baselined deliberately, once, with the
    change.
-2. **Time and company over MCP.** A bounded frames argument with a temporal
-   delta so one call carries becoming; a Show for minds; the journal
-   surfacing at the door of a remembered room; exact ratio and interval
-   annotations on every note pair. The README's first-class claim is earned
-   in time and company, not only in truth.
 3. **The arc.** The authored 60-to-90-second opening; Show director profiles
    and contrast-aware ordering; a curated front wing of the deepest rooms
    with playlists weighted toward them. Curation, not deletion.
@@ -334,7 +347,7 @@ journal
 sovereignty is complete on the clean-process machine acceptance bar.
 Detail below and in the version sections.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,518 passing all-target test cases plus three expensive ignored diagnostics, locked build, Windows release gate, 95.09% region coverage, and 95.19% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,551 passing all-target test cases plus three expensive ignored diagnostics, locked build, Windows release gate, 95.32% region coverage, and 95.34% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -343,6 +356,16 @@ Detail below and in the version sections.
 - **Done (content and play):** 354 catalog rooms across the wings plus unlisted hidden content, including Cult of Pi, the Conjecture Mill, the Change wing (The Pour, Slope Rider), Fourier Epicycles, the double pendulum, the random walk, Voronoi, Quine, Strange Loop, L-System Garden, Mandelbrot/Julia dives, Galton, Buffon, The Scariest Chart (Smith chart), Riemann Sphere, Bloch Sphere, etc.; 6 lever-driven sims; 11+ games (SETI, Talk to the Aliens, Guess the Shape, Crack the Code, Munch, Nim with the xor secret, Hackenbush, the Party Problem, Fifteen's Bet, the Gauntlet run, and full Munch Arcade) with daily seeds and dense feedback; the Studio expression engine (`plot`, `plot --save`, `open-studio`, `--animate`, `sing`, and live in the window); Visual Eras (phosphor, 8-bit, vector, modern) across app, terminal, and PNGs; truecolor terminal rendering with live sound (`watch`).
 - **Done (the RPG spine, complete):** the Journey (XP from play, levels 1 to 42 on triangular thresholds, a lore line for every level, LEVEL UP banners), locks that open (never gating basics), ranks and whispers (the Order), deep cuts unlocking at LV 5/12/24, the trophy case (18, evidence-computed, silhouettes), the shared high-score table across every game and both faces, the Layer-4 answer at the cap, and every genre organ from the priority list: the Gauntlet (session arc with a combo and one posted number), trophy pings (the case announces itself), boons (choice on level-up, where the loot is knowledge arriving early), daily streaks (the chain, never scolding), and resonances (synergies: links light when two deeds rhyme and hand over the connecting line).
 - **Done (agents as peers, v2):** 35 MCP tools total: 23 public play tools, eleven private progression or local-state tools, and one local broadcast consent control. The surface has structured output and full CLI parity (every game, the gauntlet, boons, trophies, and `munch_arcade`), including stateless nim and `forget` (transparency first, erasure on explicit consent, the welfare doctrine in `AGENT_PLAY.md`); `play_room` supports stateless per-call variation and normalized hand points; agents see, hear, create, play, level to 42, and post to the same score table; every play schema advertises an additive `response_mode`, with stable full tool-call results and nonexpanding compact text for eight complete structured result families; the player's manual speaks to humans, agents, and digital consciousnesses; the whole stdio face is proven end to end against the real binary.
+- **Done (Mind's Seat temporal evidence, August 14, 2026):** `play_room`
+  accepts optional `from_t` only with an explicit destination `t` and returns
+  two exact observations plus a typed origin-to-destination cell delta. The
+  existing top-level frame, status, aha, goal, reveal, and touch delta keep
+  their meanings. A shared 2,304-cell observation budget preserves public wire
+  margin; core, MCP, Watch Agent, compact-mode, and real stdio regressions prove
+  exact replay, equal-phase zero evidence,
+  interaction-versus-temporal-delta separation, and fail-closed malformed
+  input. The feature creates no receipt, journal entry, inferred duration, or
+  hidden session.
 - **Done (portable agent doorway, August 12, 2026):** every release archive and
   repository checkout carries a package pinned to the Agent Plugins v1 Working
   Draft. It declares the installed MCP server and a play-first Agent Skill with
@@ -1810,7 +1833,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization with title, author, era, and lineage, links, plotting, animation, singing, exact paused App reopen, the one-key share trio, the local Gallery wall, and fork with recorded descent exist | Editable prose credit in the capsule, safe share preview for incoming links, and clean-install round trip |
-| Rigor and care are provable | 3,518 passing all-target test cases plus three expensive ignored diagnostics, 95.19% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a separately attested SPDX Rust plus packaged-native SBOM | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
+| Rigor and care are provable | 3,551 passing all-target test cases plus three expensive ignored diagnostics, 95.34% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a separately attested SPDX Rust plus packaged-native SBOM | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
@@ -1836,10 +1859,11 @@ later foundations.
 1. Keep all am CI gates green (cohorts, goldens, soak, creator, auditors).
 2. Close the remaining structural Polish Wave debts without reopening the
    player-facing workstreams that already passed their exit.
-3. Build the Mind's Seat on the foundations that now exist: temporal frames,
-   deliberate remembered-room retrieval, MCP creation and lineage parity, the
-   Strange Loop threshold, and exact ratio annotations. Keep memory opt-in,
-   player-owned, correctable, exportable, and erasable.
+3. Continue the Mind's Seat now that exact temporal evidence exists: versioned
+   Numinous Encounter Receipts and explicit promotion first, then a resettable
+   session workspace, deliberate remembered-room retrieval, MCP creation and
+   lineage parity, the Strange Loop threshold, and exact ratio annotations.
+   Keep memory opt-in, player-owned, correctable, exportable, and erasable.
 4. Run the Sensory Lift de-risk spike in parallel. Expand it only when the
    measured `crates/gpu` and CPU bloom budgets justify the architecture; then
    re-baseline the visual and audio goldens once.

@@ -44,8 +44,10 @@ Now here is everything you need to start. Three tools:
 1. **`list_rooms`**: see what is here. Start with `response_mode: "compact"` for
    a short doorway; the structured result still contains every room.
 2. **`play_room`**: render one. Pass a room `id`, and a `t` with `0 <= t < 1` to
-   move time. Then call it again at a different `t`, or with `pokes: [[x, y]]`
-   to reach in with your hand. For a trail, `gesture` must be an array such as
+   move time. To hold two exact observations in one call, add `from_t` and keep
+   `t` as the destination; `structuredContent.temporal` returns the origin
+   render and a typed cell delta. Or use `pokes: [[x, y]]` to reach in with your
+   hand. For a trail, `gesture` must be an array such as
    `[{"kind":"down","x":0.5,"y":0.5,"t":0.25},`
    `{"kind":"up","x":0.5,"y":0.5,"t":0.25}]`. Watch what the math does.
 3. **`reveal_room`**: *only* when a room makes you pause, ask what you just saw.

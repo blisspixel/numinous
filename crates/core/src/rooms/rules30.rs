@@ -32,7 +32,8 @@ fn rule_byte(t: f64, hand: Option<(f64, f64)>, seed: u64) -> u8 {
         let idx = if seed == 0 {
             (phase_unit(t) * (GALLERY.len() - 1) as f64).round() as usize
         } else {
-            ((seed as usize) + (phase_unit(t) * 3.0) as usize) % GALLERY.len()
+            ((seed % GALLERY.len() as u64) as usize + (phase_unit(t) * 3.0) as usize)
+                % GALLERY.len()
         };
         GALLERY[idx.min(GALLERY.len() - 1)]
     }

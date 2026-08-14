@@ -60,7 +60,7 @@ fn visit_peak(p_stay: f64, seed: u64) -> (usize, f64) {
     let mut hist = [0u32; 5];
     let steps = 240usize;
     for i in 0..steps {
-        let u = hash_u(i as u64, seed.wrapping_mul(31) + 7);
+        let u = hash_u(i as u64, seed.wrapping_mul(31).wrapping_add(7));
         state = step(state, p_stay, u, n);
         hist[state] += 1;
     }
@@ -90,7 +90,7 @@ fn draw(canvas: &mut dyn Surface, p_stay: f64, seed: u64) {
     let steps = width * 3;
     let mut path_y = Vec::with_capacity(width);
     for i in 0..steps {
-        let u = hash_u(i as u64, seed.wrapping_mul(31) + 7);
+        let u = hash_u(i as u64, seed.wrapping_mul(31).wrapping_add(7));
         state = step(state, p_stay, u, n);
         hist[state] += 1;
         if i % 3 == 0 {
