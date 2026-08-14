@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP protocol discovery, negotiation, server identity, and the immutable
+  35-tool JSON Schema catalog now live in a dedicated Rust module instead of
+  the request god-file. Transport validation, dispatch, result decoration, and
+  domain execution remain unchanged, and the existing protocol regressions
+  continue to exercise the public boundary.
 - CLI and MCP local-state inventory, consent, erasure presentation, and their
   focused regressions now live in dedicated Rust modules instead of the two
   face god-files. The headless core remains the only owner of resolution,
