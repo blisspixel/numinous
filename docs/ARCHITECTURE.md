@@ -241,6 +241,11 @@ modules declared through one catalog and constructed through the registry
 facade. The Gauntlet follows the same rule: one typed core puzzle owns seeded
 construction, stage grading, combo math, reveal semantics, and leaderboard
 identity. App, CLI, MCP, and Watch Agent only collect or present its values.
+Core persistence also resolves the six managed local-state paths through one
+environment precedence rule. Faces consume those resolved paths rather than
+reimplementing home-directory fallback or per-store overrides. A selected
+`NUMINOUS_RADIO` soundtrack remains user-owned and outside managed cache
+erasure.
 
 **Headless in production today.** Core rendering and audio synthesis work without
 a window. The CLI, MCP server, exporters, and automated suite all use that seam.

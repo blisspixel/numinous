@@ -35,36 +35,44 @@ fn public_forget_previews_fails_closed_and_erases_isolated_state() {
     let journey = root.join("journey.txt");
     let scores = root.join("scores.txt");
     let cairn = root.join("cairn.txt");
+    let journal = home.join(".numinous-journal");
     let radio = home.join(".numinous-radio");
     let crash = home.join(".numinous-crash.log");
     std::fs::create_dir_all(&journey).expect("unexpected Journey directory");
     std::fs::create_dir_all(&radio).expect("radio fixture");
     std::fs::write(&scores, b"50\tmunch seed:1 board:0\n").expect("score fixture");
     std::fs::write(&cairn, b"Ada\ttruth survives inspection\n").expect("Cairn fixture");
+    std::fs::create_dir_all(&home).expect("state home fixture");
+    std::fs::write(&journal, b"NUMINOUS_JOURNAL\t2\n").expect("journal fixture");
     std::fs::write(radio.join("trance-001.wav"), b"RIFF").expect("radio fixture");
     std::fs::write(&crash, b"isolated diagnostic").expect("crash fixture");
 
-    let command = |args: &[&str]| {
-        Command::new(env!("CARGO_BIN_EXE_numinous"))
+    let command = |args: &[&str], protected_radio: Option<&std::path::Path>| {
+        let mut process = Command::new(env!("CARGO_BIN_EXE_numinous"));
+        process
             .args(args)
             .env("NUMINOUS_JOURNEY", &journey)
             .env("NUMINOUS_SCORES", &scores)
             .env("NUMINOUS_CAIRN", &cairn)
             .env("HOME", &home)
             .env("USERPROFILE", &home)
-            .output()
-            .expect("launch public forget command")
+            .env_remove("NUMINOUS_RADIO");
+        if let Some(path) = protected_radio {
+            process.env("NUMINOUS_RADIO", path);
+        }
+        process.output().expect("launch public forget command")
     };
 
-    let preview = command(&["forget"]);
+    let preview = command(&["forget"], None);
     assert!(preview.status.success());
     let preview_text = String::from_utf8(preview.stdout).expect("preview is UTF-8");
     assert!(preview_text.contains("unexpected non-file object"));
     assert!(preview_text.contains("journey.txt"));
+    assert!(preview_text.contains(".numinous-journal"));
     assert!(preview_text.contains(".numinous-radio"));
     assert!(journey.is_dir(), "preview is non-destructive");
 
-    let blocked = command(&["forget", "--confirm", "--all-local"]);
+    let blocked = command(&["forget", "--confirm", "--all-local"], None);
     assert!(!blocked.status.success());
     let blocked_text = String::from_utf8(blocked.stderr).expect("failure is UTF-8");
     assert!(blocked_text.contains("Erasure stopped at journey"));
@@ -72,7 +80,29 @@ fn public_forget_previews_fails_closed_and_erases_isolated_state() {
 
     std::fs::remove_dir(&journey).expect("replace invalid Journey object");
     std::fs::write(&journey, b"visited lorenz\nplays 1\n").expect("Journey fixture");
-    let erased = command(&["forget", "--confirm", "--all-local"]);
+
+    let protected = command(&["forget", "--confirm", "--all-local"], Some(&radio));
+    assert!(!protected.status.success());
+    let protected_text = String::from_utf8(protected.stderr).expect("failure is UTF-8");
+    assert!(protected_text.contains("selected radio source"));
+    for path in [&journey, &scores, &cairn, &journal, &radio, &crash] {
+        assert!(path.exists(), "{} must be preserved", path.display());
+    }
+
+    let journal_erased = command(&["forget", "--confirm", "--journal"], None);
+    assert!(journal_erased.status.success());
+    assert!(!journey.exists(), "Journey is the baseline selected store");
+    assert!(
+        !journal.exists(),
+        "explicit journal selection must erase it"
+    );
+    for path in [&scores, &cairn, &radio, &crash] {
+        assert!(path.exists(), "{} must be preserved", path.display());
+    }
+
+    std::fs::write(&journey, b"visited lorenz\nplays 1\n").expect("Journey replacement");
+    std::fs::write(&journal, b"NUMINOUS_JOURNAL\t2\n").expect("journal replacement");
+    let erased = command(&["forget", "--confirm", "--all-local"], None);
     assert!(
         erased.status.success(),
         "complete erasure failed: {}",
@@ -80,7 +110,7 @@ fn public_forget_previews_fails_closed_and_erases_isolated_state() {
     );
     let erased_text = String::from_utf8(erased.stdout).expect("receipt is UTF-8");
     assert!(erased_text.contains("0 managed stores and 0 known bytes remain"));
-    for path in [&journey, &scores, &cairn, &radio, &crash] {
+    for path in [&journey, &scores, &cairn, &journal, &radio, &crash] {
         assert!(!path.exists(), "{} must be absent", path.display());
     }
     std::fs::remove_dir_all(root).expect("fixture cleanup");

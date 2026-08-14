@@ -154,7 +154,8 @@ pub use persistence::{
     LocalStateLock, LocalStatePaths, correct_journal_file, erase_journal_file, erase_local_state,
     inspect_journal_file, inspect_local_state, load_journal_file, load_journey_file,
     load_scoreboard_file, lock_local_state, persist_journey_delta, read_journey_file,
-    record_journal_file, record_score_file, remove_persisted_file, try_load_journal_file,
+    record_journal_file, record_score_file, remove_persisted_file, resolve_local_state_paths,
+    try_load_journal_file,
 };
 pub use photosensitivity::{
     DARK_CEILING, GENERAL_FLASH_DELTA, MAX_FLASHES_PER_SECOND, count_flashes, flashes_per_second,

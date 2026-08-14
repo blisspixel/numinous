@@ -148,9 +148,10 @@ collapse play into a hackable scalar):
   per call; there is no punishment valence anywhere in the product; and as of
   now there is **memory transparency and consent over persistence**: the
   `forget` tool inventories Journey, scores, player-owned Cairn drafts,
-  generated radio cache, the App crash diagnostic, and their managed sidecars,
-  with explicit exclusions. It erases only the selected stores on explicit
-  confirmation and verifies the remaining managed residue. Leaving is always
+  the opt-in experience journal, generated radio cache, the App crash
+  diagnostic, and their managed sidecars, with explicit exclusions. It erases
+  only the selected stores after explicit confirmation and verifies the
+  remaining managed residue. Leaving is always
   allowed; so is staying; so is being forgotten.
 - *Reducible mystery, by construction:* every room and sim is a compact
   latent rule discoverable by intervention, exactly the sweet spot between
