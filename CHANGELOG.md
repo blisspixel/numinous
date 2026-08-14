@@ -5,6 +5,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- CLI and MCP local-state inventory, consent, erasure presentation, and their
+  focused regressions now live in dedicated Rust modules instead of the two
+  face god-files. The headless core remains the only owner of resolution,
+  locking, inspection, and mutation, while each face keeps only its terminal
+  or structured protocol projection.
+
 ## [0.3.0-alpha.6] - 2026-08-13
 
 - One core local-state resolver now owns the environment precedence and default

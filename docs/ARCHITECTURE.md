@@ -245,7 +245,9 @@ Core persistence also resolves the six managed local-state paths through one
 environment precedence rule. Faces consume those resolved paths rather than
 reimplementing home-directory fallback or per-store overrides. A selected
 `NUMINOUS_RADIO` soundtrack remains user-owned and outside managed cache
-erasure.
+erasure. Focused `local_state` modules in the CLI and MCP faces translate that
+one core contract into terminal prose or structured protocol results; neither
+module reimplements persistence rules.
 
 **Headless in production today.** Core rendering and audio synthesis work without
 a window. The CLI, MCP server, exporters, and automated suite all use that seam.
