@@ -701,30 +701,6 @@ pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
     }
 }
 
-/// How many notes each face sings when nobody says.
-///
-/// Three faces, three answers, and that is the whole finding: asking each of
-/// them to sing the same expression without naming a note count produces three
-/// different pieces of music. The terminal face writes 48 notes over 6.1
-/// seconds and the MCP face names 24 over 3.2, measured from the built
-/// binaries rather than read off the source.
-///
-/// This is recorded rather than fixed. The knob had a majority to align to,
-/// since `plot` uses 1 on both faces and the App's Studio panel agrees, so
-/// making `sing` match it was alignment. Nothing breaks this tie: 24, 32 and
-/// 48 are three opinions about how long a default melody should be, and
-/// picking one changes what a player hears on at least two faces. Tracked in
-/// `docs/ROADMAP.md` as an owner decision.
-///
-/// Shrink-only: `scripts/test-workflow-pins.py` fails if a face changes its
-/// default without this list following, and if the three ever agree, at which
-/// point this list should be deleted rather than kept as a monument.
-pub const DEFAULT_MELODY_NOTES_PER_FACE: [(&str, usize); 3] = [
-    ("app-studio-panel", 32),
-    ("cli-sing", 48),
-    ("mcp-sing-expression", 24),
-];
-
 /// The most notes a melody may hold. Each note is a fixed slice of time and a
 /// sample buffer, so an unbounded count (a hostile `--notes`) would drive an
 /// unbounded allocation; this bounds it to a couple of minutes of audio while
@@ -787,18 +763,45 @@ pub fn plot_text(
     height: usize,
 ) -> Result<(String, f64, f64), String> {
     let expr = parse(source)?;
+    plot_parsed_text(&expr, xmin, xmax, a, width, height)
+        .map_err(|error| error.message().to_string())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PlotTextError {
+    InvalidGeometry,
+    Undefined,
+}
+
+impl PlotTextError {
+    const fn message(self) -> &'static str {
+        match self {
+            Self::InvalidGeometry => "need width >= 2, height >= 2, and xmax > xmin",
+            Self::Undefined => "nothing to plot: the function is undefined across this range",
+        }
+    }
+}
+
+pub(crate) fn plot_parsed_text(
+    expr: &Expr,
+    xmin: f64,
+    xmax: f64,
+    a: f64,
+    width: usize,
+    height: usize,
+) -> Result<(String, f64, f64), PlotTextError> {
     if width < 2 || height < 2 || xmax <= xmin {
-        return Err("need width >= 2, height >= 2, and xmax > xmin".to_string());
+        return Err(PlotTextError::InvalidGeometry);
     }
     let samples: Vec<(f64, f64)> = (0..width)
         .map(|i| {
             let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
-            (x, eval(&expr, x, a))
+            (x, eval(expr, x, a))
         })
         .filter(|(_, y)| y.is_finite())
         .collect();
     if samples.is_empty() {
-        return Err("nothing to plot: the function is undefined across this range".to_string());
+        return Err(PlotTextError::Undefined);
     }
     let ymin = samples.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
     let ymax = samples

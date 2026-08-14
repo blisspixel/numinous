@@ -37,7 +37,10 @@ notes decide what is built.
   and synthesis, the Studio expression engine, progression, insights, and
   lore.** It renders through face-neutral ASCII and RGBA surfaces, synthesizes
   bounded audio buffers, and answers room and learning queries without a
-  window. The app may add targeted GPU presentation through `numinous-gpu`.
+  window. Typed Studio plot and melody requests also own expression defaults,
+  bounds, and execution, so command flags and protocol fields cannot redefine
+  the formula. The app may add targeted GPU presentation through
+  `numinous-gpu`.
 - **Each face is thin, and owns only its UX.** No logic lives in a face that the others cannot reach; a face is purely how a given user *perceives and acts*.
 - **Done from the start** because retrofitting headless onto a GUI-first app is
   painful, and because tests and reproducible MCP review scripts drive the same

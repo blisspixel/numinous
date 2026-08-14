@@ -151,8 +151,10 @@ PROBES = [
         hand_tokens=(),
         expect_status_change=True,
         sonic_tool="sing_expression",
-        sonic_open_args={"expr": "sin(x)"},
-        sonic_hand_args={"expr": "sin(2*x)"},
+        # This exact sampled-set invariant belongs to the 24-point grid. Keep
+        # the evidence probe explicit instead of coupling it to a face default.
+        sonic_open_args={"expr": "sin(x)", "notes": 24},
+        sonic_hand_args={"expr": "sin(2*x)", "notes": 24},
     ),
 ]
 

@@ -22,7 +22,13 @@ const AUTO_PHRASE_SLICES: f64 = 8.0;
 const AUTO_PHRASE_EDGE: f64 = 0.06;
 
 fn sound_for_expression(expr: &Expr) -> SoundSpec {
-    numinous_core::to_melody(expr, -TAU, TAU, 32, 1.0)
+    numinous_core::to_melody(
+        expr,
+        numinous_core::DEFAULT_STUDIO_XMIN,
+        numinous_core::DEFAULT_STUDIO_XMAX,
+        numinous_core::DEFAULT_MELODY_NOTES,
+        numinous_core::DEFAULT_STUDIO_PARAMETER,
+    )
 }
 
 /// App-local alias of the shared curated bank (core owns the list).
@@ -396,7 +402,7 @@ impl StudioPanel {
                 expr,
                 opened.creation.xmin(),
                 opened.creation.xmax(),
-                32,
+                numinous_core::DEFAULT_MELODY_NOTES,
                 opened.creation.a(),
             ));
         }

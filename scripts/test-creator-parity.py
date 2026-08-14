@@ -77,6 +77,11 @@ class CaseTableTests(unittest.TestCase):
                         f"{label} passes {argument} a bare negative; use {argument}=value",
                     )
 
+    def test_one_live_sing_case_omits_the_shared_note_default(self) -> None:
+        defaults = [case for case in MODULE.SING_CASES if case[2] is None]
+        self.assertEqual(len(defaults), 1)
+        self.assertEqual(defaults[0][0], "neither face is told the note count")
+
 
 if __name__ == "__main__":
     unittest.main()

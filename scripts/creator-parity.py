@@ -216,7 +216,11 @@ def cli_plot(
 # `sin(a*x)` is first on purpose. It is the case that found the defect: the CLI
 # fixed the knob at 0 and offered no way to set it, so it sang a flat line while
 # MCP sang `sin(x)`, and this gate used to skip `sing` entirely.
-SING_CASES: tuple[tuple[str, str, int, float | None], ...] = (
+SING_CASES: tuple[tuple[str, str, int | None, float | None], ...] = (
+    # Omit the note count on both faces. This is the construction-level default
+    # contract: it caught the former 48 versus 24 disagreement and must remain
+    # a real binary comparison rather than a source-text assertion.
+    ("neither face is told the note count", "sin(a*x)", None, 1.0),
     ("knob expression", "sin(a*x)", 24, 1.0),
     ("plain expression", "sin(x)", 24, 1.0),
     ("knob at another value", "sin(a*x)", 16, 2.5),
@@ -295,7 +299,7 @@ def check_sing(
     mcp: str,
     label: str,
     source: str,
-    notes: int,
+    notes: int | None,
     knob: float | None,
     env: dict[str, str],
     xmin: float | None = None,
@@ -305,10 +309,12 @@ def check_sing(
     window = "" if xmin is None else f" over [{xmin}, {xmax}]"
     name = (
         f"sing {label}: {source} a={'default' if knob is None else knob} "
-        f"notes={notes}{window}"
+        f"notes={'default' if notes is None else notes}{window}"
     )
     try:
-        arguments: dict[str, Any] = {"expr": source, "notes": notes}
+        arguments: dict[str, Any] = {"expr": source}
+        if notes is not None:
+            arguments["notes"] = notes
         if knob is not None:
             arguments["a"] = knob
         if xmin is not None:
@@ -319,7 +325,9 @@ def check_sing(
             prefix="numinous-sing-parity-", ignore_cleanup_errors=True
         ) as workspace:
             wav = Path(workspace) / "sung.wav"
-            command = [cli, "sing", source, "--notes", str(notes)]
+            command = [cli, "sing", source]
+            if notes is not None:
+                command += ["--notes", str(notes)]
             if knob is not None:
                 command += [f"--a={knob}"]
             if xmin is not None:
