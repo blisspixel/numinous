@@ -10,6 +10,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "release.yml"
+CI_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "ci.yml"
 CONTRACT_COMMAND = "scripts/test-release-workflow.py"
 SBOM_CONTRACT_COMMAND = "scripts/test-release-sbom.py"
 PERFORMANCE_CONTRACT_COMMAND = "scripts/test-dependency-migration-performance.py"
@@ -17,7 +18,10 @@ PERFORMANCE_RECEIPT_COMMAND = (
     "scripts/dependency-migration-performance.py --verify-receipt "
     "docs/evidence/dependency-migration-2026-08-02.json"
 )
-ATTEST_ACTION = "actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1"
+ATTEST_ACTION = "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2"
+INSTALL_ACTION = (
+    "taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13"
+)
 RUST_TOOLCHAIN_ACTION = (
     "dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1"
 )
@@ -50,6 +54,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+        cls.ci_workflow = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
         cls.header = cls.workflow.split("\njobs:\n", maxsplit=1)[0]
         cls.audit = job_block(cls.workflow, "audit-artifacts")
         cls.attest = job_block(cls.workflow, "attest-artifacts")
@@ -65,6 +70,14 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertNotRegex(
             self.workflow,
             r"actions/attest@(v|main|master)",
+        )
+
+    def test_ci_install_actions_are_current_immutable_and_exact(self) -> None:
+        self.assertEqual(self.ci_workflow.count(INSTALL_ACTION), 2)
+        self.assertEqual(self.ci_workflow.count("uses: taiki-e/install-action@"), 2)
+        self.assertNotRegex(
+            self.ci_workflow,
+            r"taiki-e/install-action@(v|main|master)",
         )
 
     def test_privileged_authority_and_publication_are_workflow_unique(self) -> None:
