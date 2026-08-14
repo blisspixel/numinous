@@ -5,6 +5,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- CI now pins `taiki-e/install-action` v2.85.13, and release provenance now
+  pins `actions/attest` v4.2.2. Both references use the publishers' immutable
+  commit SHAs.
 - One typed room catalog now generates all 354 listed modules, static metadata
   implementations, and replayable constructors. The hidden Tetractys remains
   constructible through its private path without entering public discovery.
