@@ -247,15 +247,19 @@ reimplementing home-directory fallback or per-store overrides. A selected
 `NUMINOUS_RADIO` soundtrack remains user-owned and outside managed cache
 erasure. Focused `local_state` modules in the CLI and MCP faces translate that
 one core contract into terminal prose or structured protocol results; neither
-module reimplements persistence rules.
+module reimplements persistence rules. The MCP face also keeps protocol
+discovery, legacy negotiation, server identity, and its immutable 35-tool JSON
+Schema catalog in a focused `catalog` module. The request entry point retains
+transport validation, dispatch, result decoration, and domain invocation.
 
 **Headless in production today.** Core rendering and audio synthesis work without
 a window. The CLI, MCP server, exporters, and automated suite all use that seam.
 The MCP stdio boundary is dual-era: legacy initialization and modern
 2026-07-28 per-request metadata dispatch into the same tool functions. Protocol
-discovery, result decoration, caching hints, and multi round-trip input handling
-stay in the face; mathematical poses, grading, rendering, and persistence stay
-in core.
+discovery and the static tool contract stay in the face-local `catalog` module;
+result decoration, caching hints, and multi round-trip input handling stay in
+the request entry point. Mathematical poses, grading, rendering, and
+persistence stay in core.
 
 ## Agent participation and interoperability stack
 

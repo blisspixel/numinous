@@ -23,8 +23,9 @@ Open Knowledge Format v0.2 export, and confirmed erase.
 the remaining structural Polish Wave debts, then build the Mind's Seat. Shared
 Studio requests, the typed room catalog, the typed Gauntlet, and local-state
 path resolution now have one core owner. CLI and MCP local-state adapters are
-the first focused modules extracted from their god-files; the remaining seams
-are next.
+focused modules extracted from their god-files, and MCP discovery plus its
+immutable 35-tool schema now have a dedicated face-local catalog module. The
+remaining seams are next.
 Mind's Seat presence and retrieval follow, then the measured Sensory Lift spike.
 The 0.4 Understanding Alpha cohort waits on an owner ruling; its method dry-run
 and dual automated auditors are already in CI. Soft-thin densify, bulk new
