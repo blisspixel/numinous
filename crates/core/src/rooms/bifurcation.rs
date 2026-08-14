@@ -3,7 +3,7 @@
 //! Distinct from logistic-map cobweb/orbit rooms: this is the full r-x weather.
 //! DRAG: SET R WINDOW. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -89,15 +89,6 @@ impl Bifurcation {
 }
 
 impl Room for Bifurcation {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "bifurcation",
-            title: "Bifurcation Weather",
-            wing: "Motion & Dynamics",
-            blurb: "Logistic map long-term x as r sweeps: period doubling into chaos.",
-            accent: [200, 40, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (r0, r1) = r_window(t, None);

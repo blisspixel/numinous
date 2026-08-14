@@ -6,7 +6,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -149,16 +149,6 @@ impl LaplaceClock {
 }
 
 impl Room for LaplaceClock {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "laplace-clock",
-            title: "Laplace's Clockwork",
-            wing: "Motion & Dynamics",
-            blurb: "Io, Europa, Ganymede lock 1:2:4; the Laplace angle avoids the triple \
-                    conjunction. t turns the clock.",
-            accent: [220, 180, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let moons = positions(t, 0.0, self.seed);

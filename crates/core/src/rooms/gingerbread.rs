@@ -2,7 +2,7 @@
 //!
 //! x' = 1 - y + |x|; y' = x. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 6_000;
@@ -123,15 +123,6 @@ impl Gingerbread {
 }
 
 impl Room for Gingerbread {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "gingerbread",
-            title: "Gingerbreadman Map",
-            wing: "Motion & Dynamics",
-            blurb: "Piecewise-linear map whose orbit sketches a cookie silhouette.",
-            accent: [180, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (x, y) = start(t, None, self.seed);

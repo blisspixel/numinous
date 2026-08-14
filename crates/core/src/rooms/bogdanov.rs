@@ -3,7 +3,7 @@
 //! x' = y; y' = x + e y + k y (1-y) + mu x (x-1).
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 7_000;
@@ -97,15 +97,6 @@ impl Bogdanov {
 }
 
 impl Room for Bogdanov {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "bogdanov",
-            title: "Bogdanov Map",
-            wing: "Motion & Dynamics",
-            blurb: "Planar discrete map with a classic chaotic gallery.",
-            accent: [180, 60, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, k_param(t, None, self.seed));

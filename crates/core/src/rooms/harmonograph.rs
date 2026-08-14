@@ -5,7 +5,7 @@
 //! detunes the frequencies, opening and closing the weave. See `docs/ROOMS.md`.
 
 use super::variation_signed;
-use crate::room::{Room, RoomInput, RoomMeta, pokes_from_inputs};
+use crate::room::{Room, RoomInput, pokes_from_inputs};
 use crate::surface::Surface;
 use std::f64::consts::TAU;
 
@@ -121,16 +121,6 @@ fn point_damped(s: f64, detune: f64, damp: f64) -> (f64, f64) {
 }
 
 impl Room for Harmonograph {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "harmonograph",
-            title: "Harmonograph",
-            wing: "Waves & Sound",
-            blurb: "Two dying oscillations on each axis draw a curve that spirals inward as the \
-                    pendulums lose energy. t detunes the frequencies to open and close the weave.",
-            accent: [200, 80, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         self.draw_traced(canvas, self.detune_for(t), DAMP, '#', STEPS);

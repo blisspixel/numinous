@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE WIDTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -96,15 +96,6 @@ impl Diffraction {
 }
 
 impl Room for Diffraction {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "diffraction",
-            title: "Diffraction",
-            wing: "Waves & Sound",
-            blurb: "Single-slit sinc squared intensity pattern.",
-            accent: [100, 60, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, width(t, None, self.seed), self.seed);

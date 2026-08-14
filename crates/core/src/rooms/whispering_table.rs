@@ -6,7 +6,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const BOUNCES: usize = 48;
@@ -155,16 +155,6 @@ impl WhisperingTable {
 }
 
 impl Room for WhisperingTable {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "whispering-table",
-            title: "The Whispering Table",
-            wing: "Shape & Space",
-            blurb: "Elliptic billiards: every shot is integrable, caustics are confocal curves, \
-                    chaos never starts. t turns the ambient aim; PULL AND RELEASE: SHOOT.",
-            accent: [180, 140, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let th = phase_unit(t) * TAU

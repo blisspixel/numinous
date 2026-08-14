@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE B. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -121,15 +121,6 @@ impl SincInterp {
 }
 
 impl Room for SincInterp {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sinc-interp",
-            title: "Sinc Interpolation",
-            wing: "Analysis",
-            blurb: "Whittaker-Shannon reconstruction from samples.",
-            accent: [50, 90, 110],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, bandwidth(t, None, self.seed), self.seed);

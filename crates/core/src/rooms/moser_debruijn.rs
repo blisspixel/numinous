@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE N. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -91,15 +91,6 @@ impl MoserDebruijn {
 }
 
 impl Room for MoserDebruijn {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "moser-debruijn",
-            title: "Moser-de Bruijn",
-            wing: "Number & Pattern",
-            blurb: "Sums of distinct powers of 4.",
-            accent: [90, 50, 90],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, n_param(t, None, self.seed), self.seed);

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE A. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -121,15 +121,6 @@ impl Bifolium {
 }
 
 impl Room for Bifolium {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "bifolium",
-            title: "Bifolium",
-            wing: "Shape & Space",
-            blurb: "Two-leaf curve r = a sin th cos^2 th.",
-            accent: [90, 140, 50],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(

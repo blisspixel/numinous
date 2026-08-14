@@ -9,7 +9,7 @@
 use std::f64::consts::TAU;
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Fixed seed so the crowd stumbles the same way every time.
@@ -93,16 +93,6 @@ impl RandomWalk {
 }
 
 impl Room for RandomWalk {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "random-walk",
-            title: "Random Walk",
-            wing: "Chance & Order",
-            blurb: "Sixty walkers stumble one random step at a time. None knows where it is going; \
-                    together they obey the square root law. The circle is the law; t is the clock.",
-            accent: [140, 220, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();

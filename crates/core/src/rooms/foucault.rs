@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE LATITUDE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -94,15 +94,6 @@ impl Foucault {
 }
 
 impl Room for Foucault {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "foucault",
-            title: "Foucault Pendulum",
-            wing: "Motion & Dynamics",
-            blurb: "Swing plane precesses with sin(latitude).",
-            accent: [50, 90, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, latitude(t, None, self.seed), t, self.seed);

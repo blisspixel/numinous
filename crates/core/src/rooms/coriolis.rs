@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SPIN. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -107,15 +107,6 @@ impl Coriolis {
 }
 
 impl Room for Coriolis {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "coriolis",
-            title: "Coriolis Path",
-            wing: "Motion & Dynamics",
-            blurb: "Inertial straight line curves under frame spin.",
-            accent: [30, 130, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, spin(t, None, self.seed), self.seed);

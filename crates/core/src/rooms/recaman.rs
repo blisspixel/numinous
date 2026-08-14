@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_TERMS: usize = 96;
@@ -112,16 +112,6 @@ impl Recaman {
 }
 
 impl Room for Recaman {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "recaman",
-            title: "The Jumper",
-            wing: "Number & Pattern",
-            blurb: "Recaman's sequence: jump back by n if free, else forward. Nested arcs hide an \
-                    open seat (852655). t grows terms.",
-            accent: [200, 170, 90],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let n = 12 + (phase_unit(t) * 60.0) as usize;

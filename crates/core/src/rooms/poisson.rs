@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE RATE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -129,15 +129,6 @@ impl Poisson {
 }
 
 impl Room for Poisson {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "poisson",
-            title: "Poisson Process",
-            wing: "Chance & Order",
-            blurb: "Exponential waits build a living staircase. Watch it run.",
-            accent: [40, 120, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, rate(t, None, self.seed), phase_unit(t), self.seed);

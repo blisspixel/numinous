@@ -3,7 +3,7 @@
 //! x' = sin(a y) - cos(b x); y' = sin(c x) - cos(d y).
 //! DRAG: TUNE A AND B. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 10_000;
@@ -98,15 +98,6 @@ impl DeJong {
 }
 
 impl Room for DeJong {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "dejong",
-            title: "Peter de Jong",
-            wing: "Motion & Dynamics",
-            blurb: "Sin/cos map pair that paints dense filament clouds.",
-            accent: [200, 160, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b, c, d) = params(t, None, self.seed);

@@ -2,7 +2,7 @@
 //!
 //! (x,y) -> (x+y, x+2y) mod 1. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -88,15 +88,6 @@ impl CatMap {
 }
 
 impl Room for CatMap {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "cat-map",
-            title: "Arnold Cat Map",
-            wing: "Motion & Dynamics",
-            blurb: "Toral shear that shreds then rebuilds a face.",
-            accent: [180, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, iters(t, None), self.seed);

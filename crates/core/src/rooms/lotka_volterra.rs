@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE PREY RATE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 2_400;
@@ -113,15 +113,6 @@ impl LotkaVolterra {
 }
 
 impl Room for LotkaVolterra {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "lotka-volterra",
-            title: "Lotka-Volterra",
-            wing: "Motion & Dynamics",
-            blurb: "Predator and prey chase each other in closed orbits.",
-            accent: [80, 160, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, prey_rate(t, None, self.seed), self.seed);

@@ -7,7 +7,7 @@
 //! whole pile. `t` pours into the center; HOLD pours where the hand is. See
 //! `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Fixed simulation grid (open boundaries). Independent of the surface size.
@@ -266,17 +266,6 @@ impl Sandpile {
 }
 
 impl Room for Sandpile {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sandpile",
-            title: "The Sandpile",
-            wing: "Emergence",
-            blurb: "Drop grains; four topples to neighbors; self-organized criticality blooms a \
-                    fractal mandala. Catastrophe is the resting state. t pours the center; HOLD \
-                    pours under the hand.",
-            accent: [220, 170, 70],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let pile = build_ambient(t, self.seed);

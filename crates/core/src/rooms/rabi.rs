@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE DETUNE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -98,15 +98,6 @@ impl Rabi {
 }
 
 impl Room for Rabi {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "rabi",
-            title: "Rabi Flopping",
-            wing: "Waves & Sound",
-            blurb: "Two-level drive: detune slows full flips.",
-            accent: [80, 40, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, detune(t, None, self.seed), self.seed);

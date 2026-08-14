@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SCALE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -115,15 +115,6 @@ impl Airy {
 }
 
 impl Room for Airy {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "airy",
-            title: "Airy Disk",
-            wing: "Waves & Sound",
-            blurb: "Circular aperture diffraction rings.",
-            accent: [200, 180, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale_param(t, None, self.seed), self.seed);

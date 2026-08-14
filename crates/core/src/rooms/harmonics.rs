@@ -5,7 +5,7 @@
 
 use std::f64::consts::PI;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -149,16 +149,6 @@ impl Harmonics {
 }
 
 impl Room for Harmonics {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "harmonics",
-            title: "The Singing Sphere",
-            wing: "Waves & Sound",
-            blurb: "Real spherical harmonics Y_lm: the lobes of atomic orbitals and of a ringing \
-                    sphere. t lifts l.",
-            accent: [100, 160, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (l, m) = quantum(t, None, self.seed);

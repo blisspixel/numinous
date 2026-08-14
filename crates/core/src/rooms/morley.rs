@@ -6,7 +6,7 @@
 
 use std::f64::consts::PI;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -202,16 +202,6 @@ impl Morley {
 }
 
 impl Room for Morley {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "morley",
-            title: "The Triangle That Cheats",
-            wing: "Shape & Space",
-            blurb: "Trisect any triangle's angles: the inner crossings form a perfect equilateral \
-                    (Morley 1899). t wobbles vertices; DRAG A VERTEX.",
-            accent: [200, 140, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let tri = ambient_triangle(t, self.seed);

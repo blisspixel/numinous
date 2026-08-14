@@ -5,7 +5,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -106,15 +106,6 @@ impl Duality {
 }
 
 impl Room for Duality {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "duality",
-            title: "Two Descriptions, One Truth",
-            wing: "Shape & Space",
-            blurb: "One polygon, two languages: faces become vertices in the dual.",
-            accent: [180, 140, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let n = n_sides(t, None);

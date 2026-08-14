@@ -3,7 +3,7 @@
 //! Softmax over dot products of a query with key vectors.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const N_KEYS: usize = 8;
@@ -134,16 +134,6 @@ impl Attention {
 }
 
 impl Room for Attention {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "attention",
-            title: "Attention as Soft Light",
-            wing: "Number & Pattern",
-            blurb: "One query lights a few keys; the rest go dim. Softmax weights are the story. t \
-                    warms temperature.",
-            accent: [255, 220, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let ks = keys(self.seed);

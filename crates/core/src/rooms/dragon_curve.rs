@@ -3,7 +3,7 @@
 //! Each generation: R then reverse-complement with L/R flip.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -132,15 +132,6 @@ impl DragonCurve {
 }
 
 impl Room for DragonCurve {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "dragon-curve",
-            title: "The Paper Dragon",
-            wing: "Fractals",
-            blurb: "Heighway dragon: fold paper right, then reverse-complement.",
-            accent: [220, 60, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let g = gens(t, None);

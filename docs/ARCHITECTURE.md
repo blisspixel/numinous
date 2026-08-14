@@ -127,8 +127,11 @@ dependency.
 Everything playable is a **Room**, a self-contained module implementing one interface. The engine knows nothing about math; rooms know nothing about packaging. This seam is also the future public SDK.
 
 ```rust
-trait Room {
+trait RoomMetadata {
     fn meta(&self) -> RoomMeta;
+}
+
+trait Room: RoomMetadata {
     fn render(&self, surface: &mut dyn Surface, t: f64);
     fn reveal(&self) -> &'static str;
     fn postcard_t(&self) -> f64;
@@ -148,8 +151,12 @@ trait Room {
 }
 ```
 
-The required methods are `meta`, `render`, and `reveal`; the others have safe
-defaults that rooms override as their interaction or voice requires. `Surface`
+Custom rooms supply `meta`, `render`, and `reveal`; the other methods have
+safe defaults that rooms override as their interaction or voice requires.
+Built-in `RoomMetadata` implementations, module declarations, and replayable
+constructors are generated from one typed catalog declaration. The inherited
+`RoomMetadata::meta` method is the single object-safe discovery dispatch used
+by faces. `Surface`
 is the rendering seam for ASCII and RGBA output. `RoomInput` is bounded,
 normalized, replayable gesture data. `Motif` and `SoundSpec` keep notation and
 audio face-neutral. Seeded registry constructors provide variation without
@@ -162,7 +169,11 @@ the callback and own its playback lifetime. Face-owned Journey,
 export, window, and protocol concerns do not enter the room trait.
 
 ### Why this shape
-- Rooms are cheap and isolated: a new phenomenon is one module, no engine changes.
+- Room behavior is cheap and isolated: a new phenomenon is one module plus one
+  coherent catalog entry, with no face changes.
+- `ROOM_CATALOG` lets a face or agent inspect every listed room without
+  constructing renderers. Hidden rooms use the same invariants but stay out of
+  public discovery.
 - The faces own clocks, input collection, persistence, and presentation while
   the core owns deterministic room behavior.
 - Gesture and poke defaults preserve compatibility while allowing selected
@@ -226,7 +237,8 @@ typed public replay values, and the compatibility identity derived from core
 catalog metadata. It never owns gameplay or persistence. MCP depends on that
 crate through a thin producer adapter. The App depends on it through a
 face-local loopback listener and read-only presentation adapter. Rooms are core
-modules registered through one registry.
+modules declared through one catalog and constructed through the registry
+facade.
 
 **Headless in production today.** Core rendering and audio synthesis work without
 a window. The CLI, MCP server, exporters, and automated suite all use that seam.

@@ -3,7 +3,7 @@
 //! Left child a/(a+b), right (a+b)/b from root 1/1. Drawn as level bands.
 //! DRAG: SET THE DEPTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -113,15 +113,6 @@ impl CalkinWilf {
 }
 
 impl Room for CalkinWilf {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "calkin-wilf",
-            title: "Calkin-Wilf Tree",
-            wing: "Number & Pattern",
-            blurb: "Every positive rational once via left a/(a+b) and right (a+b)/b.",
-            accent: [40, 160, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, depth(t, None), self.seed);

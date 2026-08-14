@@ -3,7 +3,7 @@
 //! Iterate z^n + c in cylindrical form on a plane.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_ITER: u32 = 24;
@@ -117,15 +117,6 @@ impl MandelbulbSlice {
 }
 
 impl Room for MandelbulbSlice {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "mandelbulb-slice",
-            title: "Mandelbulb Slice",
-            wing: "Fractals",
-            blurb: "A plane cut through the power-8 Mandelbulb.",
-            accent: [160, 80, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let cz = slice_z(t, None);

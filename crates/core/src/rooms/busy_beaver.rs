@@ -4,7 +4,7 @@
 //! 1s before halting. BB(5) = 47,176,870 (bbchallenge 2024). This room runs a
 //! tiny toy champion path for small n so the stop is felt. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Toy machine: 2 symbols, up to 4 states (full BB(5) is too long for a frame).
@@ -175,16 +175,6 @@ impl BusyBeaver {
 }
 
 impl Room for BusyBeaver {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "busy-beaver",
-            title: "The Busy Beaver",
-            wing: "Number & Pattern",
-            blurb: "A tiny Turing machine races to write ones then halt. BB(5)=47,176,870 is proven; \
-                    here a toy champion stops on purpose. t extends the step budget.",
-            accent: [120, 80, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let table = default_table(self.seed);

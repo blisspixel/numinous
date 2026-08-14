@@ -7,7 +7,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{Room, RoomMeta};
+use crate::room::{Room};
 use crate::surface::Surface;
 
 /// The hidden room.
@@ -23,16 +23,6 @@ impl Tetractys {
 }
 
 impl Room for Tetractys {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "tetractys",
-            title: "Tetractys",
-            wing: "The Order",
-            blurb: "One, two, three, four. You were not told about this room, which means you \
-                    found it, which means it is yours.",
-            accent: [240, 220, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();

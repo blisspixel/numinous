@@ -3,7 +3,7 @@
 //! z_{n+1} = a + b z_n exp(i (c - d/(1+|z|^2))).
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 7_000;
@@ -113,15 +113,6 @@ impl Ikeda {
 }
 
 impl Room for Ikeda {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "ikeda",
-            title: "The Ikeda Map",
-            wing: "Motion & Dynamics",
-            blurb: "Dissipative complex map from laser cavities: a curly strange attractor.",
-            accent: [60, 180, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b) = params(t, None, self.seed);

@@ -3,7 +3,7 @@
 //! Cross out multiples; what remains is prime.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -103,16 +103,6 @@ impl Sieve {
 }
 
 impl Room for Sieve {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sieve",
-            title: "The Sieve",
-            wing: "Number & Pattern",
-            blurb: "Eratosthenes: cross out multiples, primes remain. \
-                    Variation shifts the strike animation seed.",
-            accent: [220, 180, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let n = ceiling(t, None);

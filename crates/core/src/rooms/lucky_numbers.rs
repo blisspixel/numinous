@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE N. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -116,15 +116,6 @@ impl LuckyNumbers {
 }
 
 impl Room for LuckyNumbers {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "lucky-numbers",
-            title: "Lucky Numbers",
-            wing: "Number & Pattern",
-            blurb: "Sieve by counting seats, not multiples.",
-            accent: [90, 140, 70],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, limit(t, None, self.seed), self.seed);

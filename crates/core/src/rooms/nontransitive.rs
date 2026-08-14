@@ -4,7 +4,7 @@
 //! ROLL: THE TRIO. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const SEED: u64 = 0xD1CE_710A_0000_0001;
@@ -243,15 +243,6 @@ impl Nontransitive {
 }
 
 impl Room for Nontransitive {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "nontransitive",
-            title: "Nontransitive Dice",
-            wing: "Number & Pattern",
-            blurb: "A beats B, B beats C, C beats A: ranking collapses. t runs trials.",
-            accent: [200, 140, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let rounds = 200 + (phase_unit(t) * 800.0) as usize;

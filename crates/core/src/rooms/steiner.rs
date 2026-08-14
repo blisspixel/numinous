@@ -6,7 +6,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -103,16 +103,6 @@ impl Steiner {
 }
 
 impl Room for Steiner {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "steiner",
-            title: "The Ring That Always Closes",
-            wing: "Shape & Space",
-            blurb: "A Steiner chain of circles fits between two boundaries and closes from every \
-                    angle. t sets count.",
-            accent: [160, 200, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let n = 6 + (phase_unit(t) * 6.0) as usize;

@@ -5,7 +5,7 @@
 //! Note: logistic-map and logistic-cobweb already exist; this room is a pure
 //! return-map portrait with measured period readout.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ORBIT: usize = 200;
@@ -129,15 +129,6 @@ impl LogisticOrbit {
 }
 
 impl Room for LogisticOrbit {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "logistic-orbit",
-            title: "Logistic Orbit",
-            wing: "Motion & Dynamics",
-            blurb: "Return-map cobweb of the logistic map with period guess.",
-            accent: [220, 60, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (r, x0) = params(t, None, self.seed);

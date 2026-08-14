@@ -3,7 +3,7 @@
 //! Countable infinity reshuffles to admit guests; uncountable demand cannot.
 //! ADMIT: THE NEXT GUEST. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -115,15 +115,6 @@ impl HilbertHotel {
 }
 
 impl Room for HilbertHotel {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "hilbert-hotel",
-            title: "Hilbert's Hotel",
-            wing: "Number & Pattern",
-            blurb: "Full hotel, room for one more bus, until the reals check in.",
-            accent: [160, 120, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let m = mode(t, None);

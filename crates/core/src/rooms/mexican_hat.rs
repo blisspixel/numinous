@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SCALE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -96,15 +96,6 @@ impl MexicanHat {
 }
 
 impl Room for MexicanHat {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "mexican-hat",
-            title: "Mexican Hat",
-            wing: "Waves & Sound",
-            blurb: "Ricker wavelet: second Gaussian derivative.",
-            accent: [160, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale_p(t, None, self.seed), self.seed);

@@ -3,7 +3,7 @@
 //! Ambient phase walks a pen along both lobes.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -124,15 +124,6 @@ impl Lemniscate {
 }
 
 impl Room for Lemniscate {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "lemniscate",
-            title: "Lemniscate",
-            wing: "Shape & Space",
-            blurb: "Bernoulli infinity draws both lobes. Watch the pen.",
-            accent: [160, 40, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale(t, None, self.seed), phase_unit(t), self.seed);

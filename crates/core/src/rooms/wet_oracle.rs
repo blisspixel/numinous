@@ -5,7 +5,7 @@
 //! See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const W: usize = 48;
@@ -166,16 +166,6 @@ impl WetOracle {
 }
 
 impl Room for WetOracle {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "wet-oracle",
-            title: "The Wet Oracle",
-            wing: "Emergence",
-            blurb: "A slime of agents deposits scent and climbs gradients between foods. Race it \
-                    to the shortest path and lose (Tero 2010 Physarum). t grows the network.",
-            accent: [120, 180, 90],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let steps = 8 + (phase_unit(t) * STEPS as f64) as usize;

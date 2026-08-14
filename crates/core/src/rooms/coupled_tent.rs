@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE COUPLING. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 300;
@@ -96,15 +96,6 @@ impl CoupledTent {
 }
 
 impl Room for CoupledTent {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "coupled-tent",
-            title: "Coupled Tents",
-            wing: "Motion & Dynamics",
-            blurb: "Two tent maps with coupling: sync or independent chaos.",
-            accent: [40, 160, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, coupling(t, None, self.seed), self.seed);

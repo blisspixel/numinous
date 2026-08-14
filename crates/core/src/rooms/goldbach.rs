@@ -6,7 +6,7 @@
 //! four quintillion and proven never. `t` grows the comet. Nobody knows. You
 //! could be first. See the Full Map in `docs/ROOMS.md`.
 
-use crate::room::{Room, RoomInput, RoomMeta};
+use crate::room::{Room, RoomInput};
 use crate::surface::Surface;
 
 /// The largest even number the comet reaches.
@@ -140,16 +140,6 @@ impl Goldbach {
 }
 
 impl Room for Goldbach {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "goldbach",
-            title: "Goldbach's Comet",
-            wing: "Open Problems",
-            blurb: "Every even number, tested: how many ways is it two primes? The counts plot \
-                    into a comet. That it never touches zero is unproven. Nobody knows. Go on.",
-            accent: [255, 220, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();

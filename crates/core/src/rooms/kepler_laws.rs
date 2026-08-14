@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE ECC. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Largest eccentricity exposed by the room's hand control.
@@ -163,15 +163,6 @@ impl KeplerLaws {
 }
 
 impl Room for KeplerLaws {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "kepler-laws",
-            title: "Kepler Areas",
-            wing: "Motion & Dynamics",
-            blurb: "Equal areas in equal times on an ellipse.",
-            accent: [100, 70, 30],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, ecc(t, None, self.seed), self.seed);

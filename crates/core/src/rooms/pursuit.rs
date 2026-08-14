@@ -4,7 +4,7 @@
 //! walks exactly one side length of the starting polygon. DRAG a bug; paths
 //! re-solve. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const BUGS: usize = 4;
@@ -127,16 +127,6 @@ impl Pursuit {
 }
 
 impl Room for Pursuit {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "pursuit",
-            title: "The Chase",
-            wing: "Motion & Dynamics",
-            blurb: "Four bugs each walk toward the next: a logarithmic whirlpool where every path \
-                    has the same length. t sets speed.",
-            accent: [220, 120, 90],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let corners = start_corners(phase_unit(t), self.seed);

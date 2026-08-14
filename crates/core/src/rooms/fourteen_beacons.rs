@@ -5,7 +5,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Relative angles (radians) for a stylized 14-pulsar map (not the real plaque data).
@@ -116,16 +116,6 @@ impl FourteenBeacons {
 }
 
 impl Room for FourteenBeacons {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "fourteen-beacons",
-            title: "Fourteen Beacons",
-            wing: "Shape & Space",
-            blurb: "Fourteen pulsar ticks around the Sun, one longer home mark: a toy of the \
-                    Pioneer plaque. t pulses the periods.",
-            accent: [200, 200, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, None, phase_unit(t), self.seed);

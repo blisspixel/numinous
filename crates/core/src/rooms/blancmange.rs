@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET THE DEPTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -103,15 +103,6 @@ impl Blancmange {
 }
 
 impl Room for Blancmange {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "blancmange",
-            title: "Blancmange Curve",
-            wing: "Fractals",
-            blurb: "Takagi's continuous graph with no tangent anywhere.",
-            accent: [220, 180, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, depth(t, None), self.seed);

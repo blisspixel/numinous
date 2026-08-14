@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE N. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -88,15 +88,6 @@ impl Basel {
 }
 
 impl Room for Basel {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "basel",
-            title: "Basel Problem",
-            wing: "Number & Pattern",
-            blurb: "sum 1/n^2 climbs to pi^2/6.",
-            accent: [120, 40, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, n_param(t, None, self.seed), self.seed);

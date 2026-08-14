@@ -10,7 +10,7 @@
 use std::f64::consts::TAU;
 
 use crate::room::{
-    Gesture, MAX_ROOM_POKES, Room, RoomInput, RoomMeta, latest_gesture, pokes_from_inputs,
+    Gesture, MAX_ROOM_POKES, Room, RoomInput, latest_gesture, pokes_from_inputs,
 };
 use crate::surface::Surface;
 
@@ -226,17 +226,6 @@ fn walking_sun(sticky: f64, t: f64) -> f64 {
 }
 
 impl Room for CoffeeCup {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "coffee-cup",
-            title: "The Coffee Cup",
-            wing: "Shape & Space",
-            blurb: "Rays bounce once in a circle and condense into a cardioid. t walks the sun on \
-                    the rim. Same cardioid curve as Times Tables and the \
-                    Mandelbrot main bulb.",
-            accent: [230, 150, 90],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw_cup(canvas, ambient_sun(t, self.seed));

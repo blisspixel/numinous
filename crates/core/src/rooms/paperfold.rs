@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE LENGTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -102,15 +102,6 @@ impl Paperfold {
 }
 
 impl Room for Paperfold {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "paperfold",
-            title: "Paperfold Sequence",
-            wing: "Number & Pattern",
-            blurb: "Regular fold bits draw a dragon path.",
-            accent: [50, 90, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, length(t, None, self.seed), self.seed);

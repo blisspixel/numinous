@@ -4,7 +4,7 @@
 //! communicative civilizations) stretches the bar. The silence is scheduling,
 //! not scarcity. DRAG adjusts dials. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const NAMES: [&str; 7] = ["R*", "fp", "ne", "fl", "fi", "fc", "L"];
@@ -99,16 +99,6 @@ impl Loneliness {
 }
 
 impl Room for Loneliness {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "loneliness",
-            title: "The Loneliness Equation",
-            wing: "Number & Pattern",
-            blurb: "Seven Drake dials multiply to N. L, the lifetime of talkers, is drawn longer: \
-                    silence can be scheduling, not scarcity. t grows L; DRAG a dial to retune N.",
-            accent: [140, 140, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let d = dials(t, self.seed, None);

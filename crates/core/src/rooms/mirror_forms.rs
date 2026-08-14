@@ -3,7 +3,7 @@
 //! Three objects and a few arrows; snap an arrow tip to another tail and see
 //! the composite path. SNAP: ARROW TO ARROW. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -130,16 +130,6 @@ impl MirrorForms {
 }
 
 impl Room for MirrorForms {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "mirror-forms",
-            title: "The Mirror of Forms",
-            wing: "Shape & Space",
-            blurb: "Objects and arrows; compose two maps into one path. Category-lite without a \
-                    jargon wall.",
-            accent: [200, 180, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let objs = objects(self.seed);

@@ -9,7 +9,7 @@
 use std::f64::consts::PI;
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// How far `t` can push the angle away from golden, in radians. A small nudge is
@@ -141,17 +141,6 @@ impl GoldenAngle {
 }
 
 impl Room for GoldenAngle {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "golden-angle",
-            title: "Golden Angle",
-            wing: "Number & Pattern",
-            blurb: "Place seeds one at a time, each turned a fixed angle from the last; at the \
-                    golden angle they pack into a flawless sunflower, and a nudge shatters it. \
-                    t detunes the angle.",
-            accent: [210, 160, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();

@@ -7,7 +7,7 @@
 //! (The real 1974 message was 1,679 bits: 23 times 73.) See `docs/ROOMS.md`.
 
 use crate::MAX_ROOM_POKES;
-use crate::room::{Room, RoomInput, RoomMeta, pokes_from_inputs};
+use crate::room::{Room, RoomInput, pokes_from_inputs};
 use crate::surface::Surface;
 
 /// The hidden payload, drawn at the one width that reads it: a big letter pi.
@@ -171,16 +171,6 @@ fn draw_message(
 }
 
 impl Room for Arecibo {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "arecibo",
-            title: "Arecibo Message",
-            wing: "Signals & Codes",
-            blurb: "A stream of bits that looks like noise until you line it up at the right width. \
-                    The length is a semiprime, so it has one nontrivial rectangle up to rotation.",
-            accent: [120, 230, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();

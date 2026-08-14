@@ -3,7 +3,7 @@
 //! A quadratic Koch variant with alternating turns.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -114,15 +114,6 @@ impl Minkowski {
 }
 
 impl Room for Minkowski {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "minkowski-sausage",
-            title: "Minkowski Sausage",
-            wing: "Fractals",
-            blurb: "Quadratic Koch sausage: a thick fractal polyline.",
-            accent: [160, 120, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let mut o = order(t, None);

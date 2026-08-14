@@ -7,7 +7,7 @@
 //! the Full Map in `docs/ROOMS.md`.
 
 use super::variation_unit;
-use crate::room::{Room, RoomInput, RoomMeta, pokes_from_inputs};
+use crate::room::{Room, RoomInput, pokes_from_inputs};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
@@ -97,16 +97,6 @@ impl SlopeRider {
 }
 
 impl Room for SlopeRider {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "slope-rider",
-            title: "Slope Rider",
-            wing: "Change",
-            blurb: "Ride the tangent line along a curve. The board's tilt is the slope, and the \
-                    tilt traces its own curve below as you go: the derivative, drawing itself.",
-            accent: [255, 190, 70],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();

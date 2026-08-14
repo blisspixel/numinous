@@ -3,7 +3,7 @@
 //! x' = x^2 - y^2 + a x + b y; y' = 2 x y + c x + d y.
 //! DRAG: TUNE A AND C. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 22_000;
@@ -159,15 +159,6 @@ impl Tinkerbell {
 }
 
 impl Room for Tinkerbell {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "tinkerbell",
-            title: "Tinkerbell Map",
-            wing: "Motion & Dynamics",
-            blurb: "Quadratic planar map with a butterfly-shaped attractor.",
-            accent: [220, 120, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b, c, d) = params(t, None, self.seed);

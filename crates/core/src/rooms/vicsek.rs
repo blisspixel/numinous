@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET THE DEPTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -88,15 +88,6 @@ impl Vicsek {
 }
 
 impl Room for Vicsek {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "vicsek",
-            title: "Vicsek Fractal",
-            wing: "Fractals",
-            blurb: "Plus-shaped IFS: crosses at every scale.",
-            accent: [160, 160, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, depth(t, None), self.seed);

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE R. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -90,15 +90,6 @@ impl EscapeVelocity {
 }
 
 impl Room for EscapeVelocity {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "escape-velocity",
-            title: "Escape Velocity",
-            wing: "Motion & Dynamics",
-            blurb: "v_esc = sqrt(2GM/r); circular is slower by sqrt(2).",
-            accent: [50, 50, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, radius(t, None, self.seed), self.seed);

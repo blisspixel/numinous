@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE A. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -93,15 +93,6 @@ impl Serpentine {
 }
 
 impl Room for Serpentine {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "serpentine",
-            title: "Serpentine Curve",
-            wing: "Shape & Space",
-            blurb: "Newton's snake y = a b x/(x^2+a^2).",
-            accent: [50, 120, 70],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, param_a(t, None, self.seed), self.seed, None);

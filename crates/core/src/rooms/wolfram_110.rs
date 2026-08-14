@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET THE SEED ROW. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const RULE: u8 = 110;
@@ -105,15 +105,6 @@ impl Wolfram110 {
 }
 
 impl Room for Wolfram110 {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "rule-110",
-            title: "Rule 110",
-            wing: "Emergence",
-            blurb: "Wolfram's Turing-complete elementary CA.",
-            accent: [40, 200, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, seed_bias(t, None, self.seed), self.seed);

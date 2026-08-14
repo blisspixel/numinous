@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE TERMS. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -108,15 +108,6 @@ impl Sylvester {
 }
 
 impl Room for Sylvester {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sylvester",
-            title: "Sylvester Sequence",
-            wing: "Number & Pattern",
-            blurb: "Double-exponential Egyptian fraction of 1.",
-            accent: [120, 60, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, terms(t, None, self.seed), self.seed);

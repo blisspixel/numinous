@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE R. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -122,15 +122,6 @@ impl GaussianPrimes {
 }
 
 impl Room for GaussianPrimes {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "gaussian-primes",
-            title: "Gaussian Primes",
-            wing: "Number & Pattern",
-            blurb: "Primes on the Z[i] lattice.",
-            accent: [70, 90, 150],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, radius(t, None, self.seed), self.seed);

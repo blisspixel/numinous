@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE RATIO. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -106,15 +106,6 @@ impl DevilCurve {
 }
 
 impl Room for DevilCurve {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "devil-curve",
-            title: "Devil Curve",
-            wing: "Shape & Space",
-            blurb: "Quartic figure-eight of Gabriele.",
-            accent: [120, 30, 30],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, ratio(t, None, self.seed), self.seed);

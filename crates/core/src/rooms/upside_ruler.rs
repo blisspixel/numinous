@@ -5,7 +5,7 @@
 //! right) and shows the carry that never ends until you accept the limit.
 //! CLICK: ADD ONE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_DIGITS: usize = 24;
@@ -161,16 +161,6 @@ impl UpsideRuler {
 }
 
 impl Room for UpsideRuler {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "upside-ruler",
-            title: "The Upside-Down Ruler",
-            wing: "Number & Pattern",
-            blurb: "In the 10-adics, ...999999 + 1 = 0, so ...999999 = -1. A tower of nines waits \
-                    for the carry that only resolves at infinity. t grows the tower.",
-            accent: [200, 160, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let nines = 4 + (phase_unit(t) * 16.0) as usize;

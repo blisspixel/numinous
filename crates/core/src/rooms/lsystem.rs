@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::{MAX_DIM, Surface};
 
 /// Max iterations for render (keeps it fast and bounded).
@@ -379,15 +379,6 @@ impl Default for LSystemGarden {
 }
 
 impl Room for LSystemGarden {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "lsystem-garden",
-            title: "L-System Garden",
-            wing: "Emergence",
-            blurb: "A one-line grammar rewrites itself; branches, curves and plants grow from nothing. Poke to plant or bend. Simple symbols, infinite form.",
-            accent: [80, 180, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         self.render_poked(canvas, t, &[]);
@@ -489,7 +480,7 @@ impl Room for LSystemGarden {
 mod tests {
     use super::*;
     use crate::canvas::Canvas;
-    use crate::room::MAX_ROOM_POKES;
+    use crate::room::{MAX_ROOM_POKES, RoomMetadata};
     use crate::surface::{MAX_DIM, Surface};
 
     #[test]

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SCALE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -152,15 +152,6 @@ impl Kappa {
 }
 
 impl Room for Kappa {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "kappa",
-            title: "Kappa Curve",
-            wing: "Shape & Space",
-            blurb: "Classical kappa: r = a cot theta.",
-            accent: [120, 80, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale(t, None, self.seed), phase_unit(t), self.seed);

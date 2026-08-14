@@ -2,7 +2,7 @@
 //!
 //! Wolfram Rule 30 from a single seed: structured randomness. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -108,16 +108,6 @@ impl Rules30 {
 }
 
 impl Room for Rules30 {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "rule-30",
-            title: "Rule 30",
-            wing: "Emergence",
-            blurb: "Elementary cellular automaton Rule 30: one black cell becomes structured \
-                    chaos.",
-            accent: [40, 40, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let rule = rule_byte(t, None, self.seed);

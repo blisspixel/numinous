@@ -3,7 +3,7 @@
 //! Pins on the plate; a discrete relaxation finds the Steiner topology.
 //! PIN: HOLD A WIRE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -139,16 +139,6 @@ impl SoapFilm {
 }
 
 impl Room for SoapFilm {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "soap-film",
-            title: "Soap Film",
-            wing: "Shape & Space",
-            blurb: "A film finds least length; Steiner junctions meet at 120 degrees. t wobbles \
-                    pins.",
-            accent: [180, 220, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let pins = default_pins(t, self.seed);

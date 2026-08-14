@@ -4,7 +4,7 @@
 //! See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const SEED: u64 = 0x1A4D_A0E4_0000_0001;
@@ -125,16 +125,6 @@ impl Landauer {
 }
 
 impl Room for Landauer {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "landauer",
-            title: "Landauer's Price",
-            wing: "Number & Pattern",
-            blurb: "Erase a bit, pay heat: kT ln 2 per irreversible forget. t grows the register; \
-                    a click forgets one bit.",
-            accent: [255, 120, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let b = bits(t, self.seed);

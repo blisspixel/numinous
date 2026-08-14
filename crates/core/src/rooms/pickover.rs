@@ -3,7 +3,7 @@
 //! x' = sin(a y) - z cos(b x); y' = z sin(c x) - cos(d y); z' = sin(x).
 //! Projected to xy. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 24_000;
@@ -139,15 +139,6 @@ impl Pickover {
 }
 
 impl Room for Pickover {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "pickover",
-            title: "Pickover Attractor",
-            wing: "Motion & Dynamics",
-            blurb: "Clifford Pickover's nested trig map, projected.",
-            accent: [220, 100, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b, c, d) = params(t, None, self.seed);

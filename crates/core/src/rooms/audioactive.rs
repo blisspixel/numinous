@@ -4,7 +4,7 @@
 //! becomes 111221. Conway proved the process splits into 92 "atoms" and the
 //! length grows by a fixed constant lambda ≈ 1.303577 each step. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Seed sequences (digit strings as ASCII).
@@ -153,17 +153,6 @@ impl Audioactive {
 }
 
 impl Room for Audioactive {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "audioactive",
-            title: "Audioactive Decay",
-            wing: "Number & Pattern",
-            blurb: "Speak a digit string by runs and it mutates: look-and-say. Length grows by \
-                    Conway's constant; the sequence shatters into 92 atoms. t advances generations; \
-                    a click speaks the next line.",
-            accent: [180, 100, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let step = ambient_gen(t);

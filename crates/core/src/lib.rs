@@ -164,15 +164,16 @@ pub use raster::Raster;
 pub use registry::{
     KNOWN_OVER_FLASH_BUDGET, MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, RESPONSE_INVISIBLE_WITHOUT_COLOR,
     all_rooms, all_rooms_with, display_safe, echoable_id, hidden_room_by_id,
-    must_escape_for_display, nearest_names, nearest_room_ids, room_by_id,
+    must_escape_for_display, nearest_names, nearest_room_ids, room_by_id, room_by_id_with,
 };
 pub use resonance::{Resonance, resonances};
 pub use rng::SplitMix64;
 pub use room::{
     DEFAULT_ROOM_ACTION, DEFAULT_TOUCH_ROOM_ACTION, Gesture, MAX_ROOM_INPUTS, MAX_ROOM_POKES, Room,
-    RoomInput, RoomMeta, held_pokes_from_inputs, inputs_from_pokes, latest_gesture,
+    RoomInput, RoomMeta, RoomMetadata, held_pokes_from_inputs, inputs_from_pokes, latest_gesture,
     pokes_from_inputs, renderable_poke_count, room_action, room_touch_action,
 };
+pub use rooms::{ROOM_CATALOG, room_meta_by_id};
 pub use scores::Scoreboard;
 pub use secret::{akousma, behind_the_veil, deep_akousma};
 pub use seti::{SetiChannel, SetiScan, build_scan};

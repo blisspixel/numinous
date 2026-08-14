@@ -3,7 +3,7 @@
 //! Complex lambda Julia-style escape for fixed lambda.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_ITER: u32 = 36;
@@ -117,15 +117,6 @@ impl LambdaMap {
 }
 
 impl Room for LambdaMap {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "lambda-map",
-            title: "Lambda Map",
-            wing: "Fractals",
-            blurb: "Complex logistic z -> lambda z(1-z) as Julia portrait.",
-            accent: [40, 140, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (lr, li) = lambda(t, None, self.seed);

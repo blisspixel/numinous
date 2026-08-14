@@ -2,7 +2,7 @@
 //!
 //! Projected to xy. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 6_000;
@@ -125,15 +125,6 @@ impl RabinovichFabrikant {
 }
 
 impl Room for RabinovichFabrikant {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "rabinovich-fabrikant",
-            title: "Rabinovich-Fabrikant",
-            wing: "Motion & Dynamics",
-            blurb: "Cubic continuous chaos from plasma physics.",
-            accent: [180, 60, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (g, a) = params(t, None, self.seed);

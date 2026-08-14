@@ -5,6 +5,24 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- One typed room catalog now generates all 354 listed modules, static metadata
+  implementations, and replayable constructors. The hidden Tetractys remains
+  constructible through its private path without entering public discovery.
+- `room_meta_by_id` and `ROOM_CATALOG` expose allocation-free discovery data
+  for faces and agent interfaces. Exact ID lookup and typo suggestions no
+  longer construct the full catalog, while lockstep tests prove that metadata,
+  constructors, source-to-room audit mapping, and historical catalog order
+  agree. A frozen v0.3.0-alpha.5 migration checksum covers every ordered metadata
+  field. CLI, MCP, and broadcast regressions explicitly keep hidden rooms out
+  of public listings, progress, and compatibility identity.
+- Room behavior remains isolated in its own module, but adding or editing a
+  built-in room no longer requires coordinated metadata, module, and registry
+  copies. All 355 prior per-room metadata blocks moved into the single catalog
+  declaration with semantic parity checked against the released source.
+- The full Windows release gate passes in 1,621.6 seconds with 3,524 passing
+  all-target Rust cases, three expensive ignored diagnostics, and 95.04%
+  region and line coverage.
+
 ## [0.3.0-alpha.5] - 2026-08-13
 
 - Studio plotting and singing now cross one face-neutral request boundary in

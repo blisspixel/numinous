@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE T. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -201,15 +201,6 @@ impl Napoleon {
 }
 
 impl Room for Napoleon {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "napoleon",
-            title: "Napoleon Theorem",
-            wing: "Shape & Space",
-            blurb: "Equilateral flaps make a new equilateral.",
-            accent: [70, 80, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, twist(t, None, self.seed), self.seed);

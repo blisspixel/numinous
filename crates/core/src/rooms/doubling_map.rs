@@ -3,7 +3,7 @@
 //! theta -> 2 theta mod 1. Expanding chaos, simple symbolics.
 //! DRAG: SET THE SEED AND STEPS. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -98,15 +98,6 @@ impl DoublingMap {
 }
 
 impl Room for DoublingMap {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "doubling-map",
-            title: "Angle Doubling",
-            wing: "Motion & Dynamics",
-            blurb: "Bernoulli shift theta -> 2 theta mod 1: expanding chaos.",
-            accent: [40, 180, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (th, n) = params(t, None);

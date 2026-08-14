@@ -3,7 +3,7 @@
 //! Distinct from the collatz orbit room: shows inverse branches.
 //! DRAG: SET THE ROOT AND DEPTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -133,15 +133,6 @@ impl CollatzTree {
 }
 
 impl Room for CollatzTree {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "collatz-tree",
-            title: "Collatz Tree",
-            wing: "Number & Pattern",
-            blurb: "Inverse hailstone branches from a root.",
-            accent: [180, 80, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (r, d) = params(t, None);

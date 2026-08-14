@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE X. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -103,15 +103,6 @@ impl ErrorFunction {
 }
 
 impl Room for ErrorFunction {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "error-function",
-            title: "Error Function",
-            wing: "Analysis",
-            blurb: "erf(x): signed Gaussian mass.",
-            accent: [60, 100, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, mark(t, None, self.seed), self.seed);

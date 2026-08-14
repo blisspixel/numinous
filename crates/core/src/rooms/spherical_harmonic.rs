@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE L. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -141,15 +141,6 @@ impl SphericalHarmonic {
 }
 
 impl Room for SphericalHarmonic {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "spherical-harmonic",
-            title: "Spherical Harmonic",
-            wing: "Waves & Sound",
-            blurb: "Y_lm nodal lines on the sphere.",
-            accent: [40, 100, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, degree_l(t, None, self.seed), self.seed);

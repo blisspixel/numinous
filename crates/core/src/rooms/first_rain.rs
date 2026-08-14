@@ -6,7 +6,7 @@
 //! dials the rain harder under the hand. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Lattice side (fixed simulation grid).
@@ -173,16 +173,6 @@ impl FirstRain {
 }
 
 impl Room for FirstRain {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "first-rain",
-            title: "The First Rain",
-            wing: "Emergence",
-            blurb: "Sites open with probability p; clusters merge until one spans top to bottom. \
-                    That cliff sits near p=0.5927. t rains harder.",
-            accent: [80, 140, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let p = ambient_p(t);
