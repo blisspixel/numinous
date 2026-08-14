@@ -6,7 +6,7 @@
 //! jump fraction (0.5 is the iconic value). See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Fixed seed so the render reproduces exactly (determinism, see `docs/QUALITY.md`).
@@ -127,16 +127,6 @@ fn render_vertices(canvas: &mut dyn Surface, t: f64, seed: u64, vertices: &[(f64
 }
 
 impl Room for ChaosGame {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "chaos-game",
-            title: "Chaos Game",
-            wing: "Emergence",
-            blurb: "Jump halfway to a random corner of a triangle, over and over, and pure chance \
-                    resolves into a perfect Sierpinski fractal. t tunes the jump fraction.",
-            accent: [40, 200, 170],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SCALE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -126,15 +126,6 @@ impl Clothoid {
 }
 
 impl Room for Clothoid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "clothoid",
-            title: "Clothoid",
-            wing: "Shape & Space",
-            blurb: "Euler spiral: curvature grows with arc length.",
-            accent: [60, 100, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale(t, None, self.seed), self.seed);

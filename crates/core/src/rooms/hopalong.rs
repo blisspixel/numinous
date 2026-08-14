@@ -3,7 +3,7 @@
 //! x' = y - sign(x) sqrt(|b x - c|); y' = a - x.
 //! DRAG: TUNE A AND B. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 10_000;
@@ -123,15 +123,6 @@ impl Hopalong {
 }
 
 impl Room for Hopalong {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "hopalong",
-            title: "Hopalong Attractor",
-            wing: "Motion & Dynamics",
-            blurb: "Martin hopalong map: absolute-value folds into a hoppy cloud.",
-            accent: [40, 180, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b, c) = params(t, None, self.seed);

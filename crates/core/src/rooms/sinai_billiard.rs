@@ -2,7 +2,7 @@
 //!
 //! Hard-disk billiard chaos in a box. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const BOUNCES: usize = 100;
@@ -156,15 +156,6 @@ impl SinaiBilliard {
 }
 
 impl Room for SinaiBilliard {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sinai-billiard",
-            title: "Sinai Billiard",
-            wing: "Shape & Space",
-            blurb: "Square table with a circular scatterer: hard chaos.",
-            accent: [100, 60, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (x, y, a) = launch(t, None, self.seed);

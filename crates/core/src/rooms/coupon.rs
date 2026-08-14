@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE N. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -101,15 +101,6 @@ impl Coupon {
 }
 
 impl Room for Coupon {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "coupon",
-            title: "Coupon Collector",
-            wing: "Chance & Order",
-            blurb: "Expected waits n H_n to finish a set.",
-            accent: [100, 80, 30],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, n_param(t, None, self.seed), self.seed);

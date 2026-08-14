@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE P. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -93,15 +93,6 @@ impl ShannonEntropy {
 }
 
 impl Room for ShannonEntropy {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "shannon-entropy",
-            title: "Shannon Entropy",
-            wing: "Chance & Noise",
-            blurb: "H(p) for a biased coin.",
-            accent: [50, 100, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, bias(t, None, self.seed), self.seed);

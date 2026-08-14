@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE ALPHA. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 6_000;
@@ -120,15 +120,6 @@ impl Chua {
 }
 
 impl Room for Chua {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "chua",
-            title: "Chua Circuit",
-            wing: "Motion & Dynamics",
-            blurb: "Double-scroll chaos from a nonlinear diode circuit.",
-            accent: [200, 60, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, alpha(t, None, self.seed), self.seed);

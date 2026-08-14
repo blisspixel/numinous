@@ -18,7 +18,7 @@ pub const DEFAULT_TOUCH_ROOM_ACTION: &str = "DRAG: SCRUB TIME";
 pub const MAX_ROOM_POKES: usize = 24;
 
 /// Static, human- and agent-readable description of a room.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RoomMeta {
     /// Stable identifier used on the command line and in the registry, e.g. `"times-tables"`.
     pub id: &'static str,
@@ -33,14 +33,21 @@ pub struct RoomMeta {
     pub accent: [u8; 3],
 }
 
+/// Static identity and discovery metadata for a room.
+///
+/// Built-in implementations are generated from the central room catalog. A
+/// custom room implements this trait directly, keeping static discovery data
+/// separate from rendering and interaction behavior.
+pub trait RoomMetadata {
+    /// This room's static metadata.
+    fn meta(&self) -> RoomMeta;
+}
+
 /// A playable mathematical phenomenon.
 ///
 /// Implementations are deterministic: the same inputs always produce the same
 /// output, so renders reproduce exactly across runs, faces, and machines.
-pub trait Room {
-    /// This room's static metadata.
-    fn meta(&self) -> RoomMeta;
-
+pub trait Room: RoomMetadata {
     /// Render a single deterministic frame into `surface`.
     ///
     /// The surface may be an ASCII `Canvas`, a pixel `Raster`, or any other
@@ -509,14 +516,14 @@ pub fn room_touch_action(room: &dyn Room) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_ROOM_INPUTS, MAX_ROOM_POKES, Room, RoomInput, RoomMeta, held_pokes_from_inputs,
-        inputs_from_pokes, pokes_from_inputs, renderable_poke_count,
+        MAX_ROOM_INPUTS, MAX_ROOM_POKES, Room, RoomInput, RoomMeta, RoomMetadata,
+        held_pokes_from_inputs, inputs_from_pokes, pokes_from_inputs, renderable_poke_count,
     };
     use crate::surface::Surface;
 
     struct DefaultSoundRoom;
 
-    impl Room for DefaultSoundRoom {
+    impl RoomMetadata for DefaultSoundRoom {
         fn meta(&self) -> RoomMeta {
             RoomMeta {
                 id: "default-sound",
@@ -526,7 +533,9 @@ mod tests {
                 accent: [0, 0, 0],
             }
         }
+    }
 
+    impl Room for DefaultSoundRoom {
         fn render(&self, _surface: &mut dyn Surface, _t: f64) {}
 
         fn reveal(&self) -> &'static str {
@@ -549,11 +558,13 @@ mod tests {
     #[test]
     fn default_interaction_status_preserves_phase_status() {
         struct StatusRoom;
-        impl Room for StatusRoom {
+        impl RoomMetadata for StatusRoom {
             fn meta(&self) -> RoomMeta {
                 DefaultSoundRoom.meta()
             }
+        }
 
+        impl Room for StatusRoom {
             fn render(&self, _surface: &mut dyn Surface, _t: f64) {}
 
             fn reveal(&self) -> &'static str {

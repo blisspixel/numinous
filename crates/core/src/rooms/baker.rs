@@ -2,7 +2,7 @@
 //!
 //! The classic chaotic map on `[0, 1]^2`. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -104,15 +104,6 @@ impl Baker {
 }
 
 impl Room for Baker {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "baker",
-            title: "Baker's Map",
-            wing: "Motion & Dynamics",
-            blurb: "Stretch the square, cut, and stack: classic chaos on [0,1]^2.",
-            accent: [180, 120, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, steps(t, None), self.seed);

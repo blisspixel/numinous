@@ -4,7 +4,7 @@
 //! Sierpinski; Kummer's theorem ties the fractal to carry counting. DRAG:
 //! TURN THE MODULUS. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_ROWS: usize = 48;
@@ -108,16 +108,6 @@ impl PascalMod {
 }
 
 impl Room for PascalMod {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "pascal-mod",
-            title: "The Divisor Fractal",
-            wing: "Number & Pattern",
-            blurb: "Pascal's triangle mod m: residue paints a fractal. mod 2 is Sierpinski; \
-                    Kummer ties carries to the pattern. t grows rows.",
-            accent: [160, 100, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let m = modulus(t, None);

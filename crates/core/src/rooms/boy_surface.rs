@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE T. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -108,15 +108,6 @@ impl BoySurface {
 }
 
 impl Room for BoySurface {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "boy-surface",
-            title: "Boy Surface",
-            wing: "Shape & Space",
-            blurb: "RP2 immersed without a free boundary.",
-            accent: [60, 90, 110],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, phase(t, None, self.seed), self.seed);

@@ -6,7 +6,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -100,16 +100,6 @@ impl TheLens {
 }
 
 impl Room for TheLens {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "the-lens",
-            title: "The Lens",
-            wing: "Shape & Space",
-            blurb: "A mass you never see bends background light into Einstein rings and arcs. t \
-                    grows the mass.",
-            accent: [160, 140, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let lens = (

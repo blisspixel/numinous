@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE WIDTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -135,15 +135,6 @@ impl Reuleaux {
 }
 
 impl Room for Reuleaux {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "reuleaux",
-            title: "Reuleaux Triangle",
-            wing: "Shape & Space",
-            blurb: "Constant-width curve of three arcs.",
-            accent: [180, 90, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, width(t, None, self.seed), self.seed);

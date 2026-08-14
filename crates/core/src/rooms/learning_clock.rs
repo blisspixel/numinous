@@ -3,7 +3,7 @@
 //! Two tasks on a shared weight. Train A, then B: measure retention of A.
 //! TRAIN: TASK A, THEN B. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -124,15 +124,6 @@ impl LearningClock {
 }
 
 impl Room for LearningClock {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "learning-clock",
-            title: "The Learning Clock",
-            wing: "Number & Pattern",
-            blurb: "Train task A, then B: does A survive? Continual learning as a felt trade.",
-            accent: [80, 200, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (sa, sb) = schedule(t, None);

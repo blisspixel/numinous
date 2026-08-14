@@ -5,7 +5,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const PHI: f64 = 1.618_033_988_749_895;
@@ -169,15 +169,6 @@ impl Penrose {
 }
 
 impl Room for Penrose {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "penrose",
-            title: "The Aperiodic Floor",
-            wing: "Shape & Space",
-            blurb: "Penrose kites from Robinson triangles: inflation never yields a lattice.",
-            accent: [220, 180, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let g = gens(t, None);

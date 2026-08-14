@@ -431,8 +431,8 @@ pub fn constellation(journey: &Journey, width: usize, height: usize) -> String {
     let width = width.clamp(1, MAX_CONSTELLATION_WIDTH);
     let height = height.clamp(1, MAX_CONSTELLATION_HEIGHT);
     let mut grid = vec![vec![' '; width]; height];
-    for room in all_rooms() {
-        let id = room.meta().id;
+    for metadata in crate::rooms::ROOM_CATALOG {
+        let id = metadata.id;
         // Hash the id into a stable position; probe on collision so catalog growth
         // does not silently overwrite stars.
         let mut seed = 0xC057_E11A_7101_u64;

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE COUPLING. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const N: usize = 48;
@@ -144,15 +144,6 @@ impl Kuramoto {
 }
 
 impl Room for Kuramoto {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "kuramoto",
-            title: "Kuramoto Sync",
-            wing: "Motion & Dynamics",
-            blurb: "Coupled phase clocks find a shared beat.",
-            accent: [40, 160, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let _ = draw(canvas, coupling(t, None, self.seed), self.seed);

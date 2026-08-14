@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE VIEW. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -93,15 +93,6 @@ impl RomanSurface {
 }
 
 impl Room for RomanSurface {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "roman-surface",
-            title: "Roman Surface",
-            wing: "Shape & Space",
-            blurb: "Steiner immersion of the projective plane.",
-            accent: [140, 40, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, view(t, None, self.seed), self.seed);

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE S. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -155,15 +155,6 @@ impl HuffmanTree {
 }
 
 impl Room for HuffmanTree {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "huffman-tree",
-            title: "Huffman Tree",
-            wing: "Chance & Noise",
-            blurb: "Optimal prefix codes from frequencies.",
-            accent: [70, 120, 90],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, skew(t, None, self.seed), self.seed);

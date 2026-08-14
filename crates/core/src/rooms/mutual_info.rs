@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE R. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -132,15 +132,6 @@ impl MutualInfo {
 }
 
 impl Room for MutualInfo {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "mutual-info",
-            title: "Mutual Information",
-            wing: "Chance & Noise",
-            blurb: "How much X tells you about Y.",
-            accent: [110, 90, 50],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, corr(t, None, self.seed), self.seed);

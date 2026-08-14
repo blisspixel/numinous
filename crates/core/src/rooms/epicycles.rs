@@ -9,7 +9,7 @@
 use std::f64::consts::TAU;
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::sound::SoundSpec;
 use crate::surface::{MAX_DIM, Surface};
 
@@ -195,16 +195,6 @@ impl Epicycles {
 }
 
 impl Room for Epicycles {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "epicycles",
-            title: "Fourier Epicycles",
-            wing: "Waves & Sound",
-            blurb: "Circles on circles, each spinning at its own speed, and the tip of the chain \
-                    draws a star. Fourier proved the circles can draw anything. t runs the pen.",
-            accent: [180, 130, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let Some((width, height, aspect, scale)) = drawing_frame(canvas) else {

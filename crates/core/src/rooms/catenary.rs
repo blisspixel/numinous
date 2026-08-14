@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE A. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -105,15 +105,6 @@ impl Catenary {
 }
 
 impl Room for Catenary {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "catenary",
-            title: "Catenary",
-            wing: "Shape & Space",
-            blurb: "The hanging chain: a cosh curve under gravity.",
-            accent: [140, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, a_param(t, None, self.seed), self.seed);

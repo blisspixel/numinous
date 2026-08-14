@@ -2,7 +2,7 @@
 //!
 //! z -> ((z^2+c-1)/(2z+c-2))^2. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_ITER: u32 = 30;
@@ -118,15 +118,6 @@ impl MagnetFractal {
 }
 
 impl Room for MagnetFractal {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "magnet-fractal",
-            title: "Magnet Fractal",
-            wing: "Fractals",
-            blurb: "Type-I magnet set: rational map escape portrait.",
-            accent: [80, 40, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (cx, cy) = center(t, None);

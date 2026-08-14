@@ -6,7 +6,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -110,16 +110,6 @@ impl Hopf {
 }
 
 impl Room for Hopf {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "hopf",
-            title: "The Linked Rings",
-            wing: "Shape & Space",
-            blurb: "Hopf fibration: space filled with circles all linked, none touching. The \
-                    shadow of S^3 and a picture of a qubit. t grows fibers.",
-            accent: [180, 120, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let n = 5 + (phase_unit(t) * 6.0) as usize;

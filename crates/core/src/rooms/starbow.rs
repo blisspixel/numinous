@@ -9,7 +9,7 @@
 use std::f64::consts::PI;
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Fixed catalog of rest-frame stars (deterministic).
@@ -150,17 +150,6 @@ impl Starbow {
 }
 
 impl Room for Starbow {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "starbow",
-            title: "The Starbow",
-            wing: "Shape & Space",
-            blurb: "Burn toward lightspeed; relativistic aberration pours the whole sky into a \
-                    burning ring ahead. One closed-form transform per star (McKinley 1979). t \
-                    burns ambient beta.",
-            accent: [255, 200, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw_starbow(canvas, ambient_beta(t), self.seed);

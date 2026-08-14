@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE N. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -90,15 +90,6 @@ impl Partition {
 }
 
 impl Room for Partition {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "partition",
-            title: "Partition Function",
-            wing: "Number & Pattern",
-            blurb: "p(n): ways to write n as unordered sums.",
-            accent: [140, 90, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, n_param(t, None, self.seed), self.seed);

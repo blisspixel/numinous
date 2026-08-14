@@ -3,7 +3,7 @@
 //! S0=0, S1=01, S_{n}=S_{n-1}S_{n-2}. Drawn as a mechanical word staircase or
 //! as beats. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -123,15 +123,6 @@ impl FibonacciWord {
 }
 
 impl Room for FibonacciWord {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "fibonacci-word",
-            title: "The Rabbit Sequence",
-            wing: "Number & Pattern",
-            blurb: "Fibonacci word: 0, 01, 010, 01001, ... the mechanical word of the golden slope.",
-            accent: [200, 160, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let g = word_gen(t, None)

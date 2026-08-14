@@ -3,7 +3,7 @@
 //! Ambient phase draws the path with a pen.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -124,15 +124,6 @@ impl Trochoid {
 }
 
 impl Room for Trochoid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "trochoid",
-            title: "Trochoid",
-            wing: "Shape & Space",
-            blurb: "Rolling-circle cups draw themselves. Watch the pen.",
-            accent: [160, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, ratio(t, None, self.seed), phase_unit(t), self.seed);

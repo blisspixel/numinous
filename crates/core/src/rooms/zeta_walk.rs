@@ -5,7 +5,7 @@
 //! the heights where the Riemann zeta function vanishes, that spiral folds
 //! back toward the origin. `t` climbs the ambient height. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
@@ -168,16 +168,6 @@ impl ZetaWalk {
 }
 
 impl Room for ZetaWalk {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "zeta-walk",
-            title: "The Zeta Walk",
-            wing: "Number & Pattern",
-            blurb: "Partial sums of the alternating eta series on the critical line draw a spiral \
-                    that folds home at Riemann zeros. t climbs the imag height. The Prime Spirals egg, made playable.",
-            accent: [140, 100, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let h = ambient_height(t, self.seed);

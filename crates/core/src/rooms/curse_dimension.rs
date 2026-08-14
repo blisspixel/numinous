@@ -3,7 +3,7 @@
 //! In high dimension the "middle" of a unit ball empties; mass crowds the
 //! surface. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -110,15 +110,6 @@ impl CurseDimension {
 }
 
 impl Room for CurseDimension {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "curse-dimension",
-            title: "The Curse of Dimension",
-            wing: "Shape & Space",
-            blurb: "Almost all volume of a high-D ball sits in a thin shell; the middle empties.",
-            accent: [200, 100, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let d = dim(t, None)

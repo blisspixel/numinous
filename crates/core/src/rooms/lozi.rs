@@ -2,7 +2,7 @@
 //!
 //! (x,y) -> (1 - a |x| + y, b x). See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 8_000;
@@ -112,15 +112,6 @@ impl Lozi {
 }
 
 impl Room for Lozi {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "lozi",
-            title: "The Lozi Map",
-            wing: "Motion & Dynamics",
-            blurb: "Piecewise-linear Henon: absolute value folds the plane.",
-            accent: [200, 80, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b) = params(t, None, self.seed);

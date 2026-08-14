@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE BASE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -83,15 +83,6 @@ impl Benford {
 }
 
 impl Room for Benford {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "benford",
-            title: "Benford Law",
-            wing: "Chance & Order",
-            blurb: "Leading digits: log law P(d)=log(1+1/d).",
-            accent: [40, 90, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, base_param(t, None, self.seed), self.seed);

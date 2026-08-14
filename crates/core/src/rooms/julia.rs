@@ -7,7 +7,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::{MAX_DIM, Surface};
 
 use super::FRACTAL_MAX_ITER;
@@ -157,16 +157,6 @@ fn render_with_c(canvas: &mut dyn Surface, width: usize, height: usize, cx: f64,
 }
 
 impl Room for Julia {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "julia",
-            title: "Julia Set",
-            wing: "Fractals & the Infinite",
-            blurb: "The same rule as Mandelbrot, but c is fixed and the whole plane is the seed. \
-                    Every c grows a different fractal; t walks c around a circle to morph it.",
-            accent: [255, 120, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let Some((width, height)) = drawing_dims(canvas) else {

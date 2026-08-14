@@ -2,7 +2,7 @@
 //!
 //! Midpoint subdivision removes centers. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -85,15 +85,6 @@ impl SierpinskiTri {
 }
 
 impl Room for SierpinskiTri {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sierpinski-tri",
-            title: "Sierpinski Triangle",
-            wing: "Fractals",
-            blurb: "Recursive midpoint gasket (not the chaos game).",
-            accent: [200, 80, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, depth(t, None), self.seed);

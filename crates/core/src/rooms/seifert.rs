@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE TWIST. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -98,15 +98,6 @@ impl Seifert {
 }
 
 impl Room for Seifert {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "seifert",
-            title: "Seifert Film",
-            wing: "Shape & Space",
-            blurb: "A surface spanning a link.",
-            accent: [80, 60, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, twist(t, None, self.seed), self.seed);

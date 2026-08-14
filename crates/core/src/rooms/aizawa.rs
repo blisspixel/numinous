@@ -2,7 +2,7 @@
 //!
 //! Projected to xy. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 7_000;
@@ -125,15 +125,6 @@ impl Aizawa {
 }
 
 impl Room for Aizawa {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "aizawa",
-            title: "Aizawa Ring",
-            wing: "Motion & Dynamics",
-            blurb: "Continuous 3D chaos with a ring-like attractor, projected.",
-            accent: [60, 140, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let e = epsilon(t, None, self.seed);

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE ANGLE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -100,15 +100,6 @@ impl SnellPrism {
 }
 
 impl Room for SnellPrism {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "snell-prism",
-            title: "Prism Dispersion",
-            wing: "Waves & Sound",
-            blurb: "n(lambda) splits white light in a prism.",
-            accent: [140, 40, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, apex(t, None, self.seed), self.seed);

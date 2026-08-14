@@ -9,7 +9,7 @@ use std::sync::OnceLock;
 
 use crate::font::draw_text;
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta, renderable_poke_count};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, renderable_poke_count};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
@@ -355,15 +355,6 @@ impl CultOfPi {
 }
 
 impl Room for CultOfPi {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "cult-of-pi",
-            title: "Cult of Pi",
-            wing: "Number & Pattern",
-            blurb: "The exact digits of pi enter a finite channel, age, and develop faults. Click to restore and hold one local patch exact, but no finite screen can ever contain all of pi.",
-            accent: [40, 210, 90],
-        }
-    }
 
     fn render(&self, surface: &mut dyn Surface, t: f64) {
         render_field(surface, self.seed, t, &[]);
@@ -461,7 +452,7 @@ mod tests {
     };
     use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{Room, RoomMetadata};
     use crate::surface::Surface;
 
     #[test]

@@ -5,7 +5,7 @@
 //! See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const SEED: u64 = 0xB0DD_AB00_7000_0001;
@@ -123,16 +123,6 @@ impl Buddhabrot {
 }
 
 impl Room for Buddhabrot {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "buddhabrot",
-            title: "The Ghost in the Set",
-            wing: "Fractals",
-            blurb: "Buddhabrot: density of escaping Mandelbrot orbits paints a ghostly figure. t \
-                    deepens iterations.",
-            accent: [200, 180, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (width, height) = canvas.draw_bounds();

@@ -3,7 +3,7 @@
 //! L-system rewrite on 60-degree turns.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -141,15 +141,6 @@ impl SierpinskiArrowhead {
 }
 
 impl Room for SierpinskiArrowhead {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sierpinski-arrowhead",
-            title: "Sierpinski Arrowhead",
-            wing: "Fractals",
-            blurb: "A continuous path whose limit is the Sierpinski gasket.",
-            accent: [200, 80, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, &path(order(t, None), self.seed));

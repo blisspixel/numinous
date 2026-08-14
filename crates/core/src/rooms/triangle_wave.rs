@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET HARMONICS. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -106,15 +106,6 @@ impl TriangleWave {
 }
 
 impl Room for TriangleWave {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "triangle-wave",
-            title: "Triangle Wave",
-            wing: "Waves & Sound",
-            blurb: "Odd harmonics with 1/k squared: soft corners.",
-            accent: [60, 140, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, harmonics(0.45, None), phase_unit(t), self.seed);

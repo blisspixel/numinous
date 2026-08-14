@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE FIBER. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -91,15 +91,6 @@ impl HopfFibration {
 }
 
 impl Room for HopfFibration {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "hopf-fibration",
-            title: "Hopf Fibration",
-            wing: "Shape & Space",
-            blurb: "S3 fibers as linked circles.",
-            accent: [40, 80, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, fiber(t, None, self.seed), self.seed);

@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET MODE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -132,15 +132,6 @@ impl StandingWave {
 }
 
 impl Room for StandingWave {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "standing-wave",
-            title: "Standing Wave",
-            wing: "Waves & Sound",
-            blurb: "Fixed-end string modes that breathe. Watch the antinodes.",
-            accent: [40, 100, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, mode(None, self.seed), phase_unit(t), self.seed);

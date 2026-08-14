@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SPACING. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -104,15 +104,6 @@ impl Interference {
 }
 
 impl Room for Interference {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "interference",
-            title: "Interference",
-            wing: "Waves & Sound",
-            blurb: "Two sources paint bright and dark fringes.",
-            accent: [60, 80, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, spacing(t, None, self.seed), self.seed);

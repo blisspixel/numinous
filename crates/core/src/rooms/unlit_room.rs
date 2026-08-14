@@ -7,7 +7,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const RAYS: usize = 72;
@@ -112,16 +112,6 @@ impl UnlitRoom {
 }
 
 impl Room for UnlitRoom {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "unlit-room",
-            title: "The Unlit Room",
-            wing: "Shape & Space",
-            blurb: "Most rooms light everywhere from any lamp; Tokarsky built one that does not. \
-                    A marked dark point stays unlit. t turns the beam.",
-            accent: [80, 80, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let lantern = (0.28, 0.28);

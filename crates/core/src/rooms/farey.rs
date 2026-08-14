@@ -3,7 +3,7 @@
 //! Distinct from Ford circles: points on a strip, mediants as neighbors.
 //! DRAG: SET Q. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -113,15 +113,6 @@ impl Farey {
 }
 
 impl Room for Farey {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "farey",
-            title: "Farey Sequence",
-            wing: "Number & Pattern",
-            blurb: "All reduced fractions up to denominator Q as a comb.",
-            accent: [100, 120, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, max_q(t, None), self.seed);

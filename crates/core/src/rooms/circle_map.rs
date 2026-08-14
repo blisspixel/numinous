@@ -3,7 +3,7 @@
 //! theta' = theta + omega - (K/2pi) sin(2pi theta).
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 400;
@@ -137,15 +137,6 @@ impl CircleMap {
 }
 
 impl Room for CircleMap {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "circle-map",
-            title: "Arnold Circle Map",
-            wing: "Motion & Dynamics",
-            blurb: "Mode locking and winding-number staircase on the circle.",
-            accent: [80, 100, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (k, omega) = params(t, None, self.seed);

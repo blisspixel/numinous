@@ -2,7 +2,7 @@
 //!
 //! x' = x exp(r (1 - x)). See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ORBIT: usize = 200;
@@ -113,15 +113,6 @@ impl Ricker {
 }
 
 impl Room for Ricker {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "ricker",
-            title: "Ricker Map",
-            wing: "Motion & Dynamics",
-            blurb: "Population boom-bust: x exp(r(1-x)).",
-            accent: [40, 160, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, r_param(t, None, self.seed), self.seed);

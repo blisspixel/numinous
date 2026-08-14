@@ -7,7 +7,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Ambient sources when the hand has not yet dropped a pebble.
@@ -164,16 +164,6 @@ impl Ripple {
 }
 
 impl Room for Ripple {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "ripple",
-            title: "The Ripple Tank",
-            wing: "Waves & Sound",
-            blurb: "Drop pebbles; circular waves interfere into bright fans and dead-calm lanes. \
-                    Two sources build the double slit by hand. t ages the phase.",
-            accent: [70, 160, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let age = phase_unit(t);

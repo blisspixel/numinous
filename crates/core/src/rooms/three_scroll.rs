@@ -3,7 +3,7 @@
 //! A continuous 3D flow that can show multi-scroll structure.
 //! DRAG: TUNE C. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 11_000;
@@ -126,15 +126,6 @@ impl ThreeScroll {
 }
 
 impl Room for ThreeScroll {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "three-scroll",
-            title: "Three-Scroll Chaos",
-            wing: "Motion & Dynamics",
-            blurb: "Continuous multi-scroll chaotic flow, projected.",
-            accent: [100, 80, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, &integrate(c_param(t, None, self.seed)));

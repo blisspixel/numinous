@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE PHI. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -118,15 +118,6 @@ impl HopfLink {
 }
 
 impl Room for HopfLink {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "hopf-link",
-            title: "Hopf Link",
-            wing: "Shape & Space",
-            blurb: "Two circles, each through the other once.",
-            accent: [90, 70, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         // Ambient phase also walks separation so t is not a silent re-phase.

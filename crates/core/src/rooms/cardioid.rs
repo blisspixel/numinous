@@ -3,7 +3,7 @@
 //! Ambient phase rolls the generating circle and walks a pen along the heart.
 //! DRAG: TUNE SCALE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -153,15 +153,6 @@ impl Cardioid {
 }
 
 impl Room for Cardioid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "cardioid",
-            title: "Cardioid",
-            wing: "Shape & Space",
-            blurb: "One-cusped heart from a rolling circle. Watch it draw.",
-            accent: [220, 60, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale(t, None, self.seed), phase_unit(t), self.seed);

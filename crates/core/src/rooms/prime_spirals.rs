@@ -4,7 +4,7 @@
 //! the primes. The primes, famously unpredictable, snap into unmistakable
 //! diagonal streaks. `t` shifts the starting number. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta, renderable_poke_count};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, renderable_poke_count};
 use crate::surface::{MAX_DIM, Surface};
 
 /// How far `t` shifts the starting number (41 gives Euler's long prime diagonal).
@@ -224,16 +224,6 @@ fn draw_spiral(
 }
 
 impl Room for PrimeSpirals {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "prime-spirals",
-            title: "Prime Spirals",
-            wing: "Number & Pattern",
-            blurb: "Whole numbers spiral from the center and only primes light up. Click a point \
-                    to trace the two prime-rich diagonals crossing there.",
-            accent: [190, 70, 170],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (width, height) = canvas.draw_bounds();
@@ -366,7 +356,7 @@ mod tests {
     use crate::canvas::Canvas;
     use crate::raster::Raster;
     use crate::room::MAX_ROOM_POKES;
-    use crate::room::{Room, RoomInput};
+    use crate::room::{Room, RoomInput, RoomMetadata};
 
     fn char_at(canvas: &Canvas, x: usize, y: usize) -> char {
         canvas

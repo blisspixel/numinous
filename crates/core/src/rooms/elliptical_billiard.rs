@@ -3,7 +3,7 @@
 //! Trajectories in an ellipse with conserved product of angular momenta.
 //! DRAG: SET THE LAUNCH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const BOUNCES: usize = 80;
@@ -164,15 +164,6 @@ impl EllipticalBilliard {
 }
 
 impl Room for EllipticalBilliard {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "elliptical-billiard",
-            title: "Elliptical Billiard",
-            wing: "Shape & Space",
-            blurb: "Bounces in an ellipse; caustics and foci.",
-            accent: [40, 140, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (phi, dir) = launch(t, None, self.seed);

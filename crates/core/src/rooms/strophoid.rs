@@ -3,7 +3,7 @@
 //! Ambient phase walks a pen along the loop and arms.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -132,15 +132,6 @@ impl Strophoid {
 }
 
 impl Room for Strophoid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "strophoid",
-            title: "Strophoid",
-            wing: "Shape & Space",
-            blurb: "Twisted belt draws its loop and asymptote. Watch the pen.",
-            accent: [160, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale(t, None, self.seed), phase_unit(t), self.seed);

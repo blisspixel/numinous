@@ -3,7 +3,7 @@
 //! Marks successive bifurcation parameters of the logistic map.
 //! DRAG: SET THE GENERATION. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -105,15 +105,6 @@ impl Feigenbaum {
 }
 
 impl Room for Feigenbaum {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "feigenbaum",
-            title: "Feigenbaum Ladder",
-            wing: "Motion & Dynamics",
-            blurb: "Period-doubling cascade of the logistic map, marked.",
-            accent: [220, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, generation(t, None), self.seed);

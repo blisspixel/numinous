@@ -4,7 +4,7 @@
 //! distance. Lines through the center stay lines; other lines become circles
 //! through the inverse of infinity. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -135,16 +135,6 @@ impl Inversion {
 }
 
 impl Room for Inversion {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "inversion",
-            title: "The Mirror That Bends",
-            wing: "Shape & Space",
-            blurb: "Circle inversion: lines become circles, infinity becomes a point. The hub of \
-                    Apollonian and Steiner geometry. t drifts props.",
-            accent: [140, 180, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let cx = 0.48

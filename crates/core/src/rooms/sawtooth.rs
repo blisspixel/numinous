@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET HARMONICS. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -100,15 +100,6 @@ impl Sawtooth {
 }
 
 impl Room for Sawtooth {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sawtooth",
-            title: "Sawtooth",
-            wing: "Waves & Sound",
-            blurb: "Fourier partials of a ramp: all harmonics.",
-            accent: [180, 60, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         // Ambient scrolls the wave; hand retunes harmonic count.

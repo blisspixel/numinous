@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET THE ORDER. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -101,15 +101,6 @@ impl Cesaro {
 }
 
 impl Room for Cesaro {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "cesaro",
-            title: "Cesaro Fractal",
-            wing: "Fractals",
-            blurb: "Torn square: Koch rewrite with right angles.",
-            accent: [180, 100, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let mut o = order(t, None);

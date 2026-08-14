@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE LOOP. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -129,15 +129,6 @@ impl Berry {
 }
 
 impl Room for Berry {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "berry",
-            title: "Berry Phase",
-            wing: "Waves & Sound",
-            blurb: "Holonomy after a closed parameter loop.",
-            accent: [160, 80, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, loop_r(t, None, self.seed), self.seed);

@@ -6,7 +6,7 @@
 //! shape. `t` sets ambient temperature. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Lattice side.
@@ -153,17 +153,6 @@ impl TheMagnet {
 }
 
 impl Room for TheMagnet {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "the-magnet",
-            title: "The Magnet",
-            wing: "Emergence",
-            blurb: "Spins lock with their neighbors until heat wins. Cross the critical temperature \
-                    and order dissolves. t sets the heat. Universality: one \
-                    cliff for many microscopics.",
-            accent: [200, 60, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let temp = ambient_temp(t);

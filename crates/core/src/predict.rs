@@ -501,7 +501,7 @@ mod tests {
     fn overflowing_truth_rate_reports_a_feedback_error() {
         struct OverflowRoom;
 
-        impl crate::room::Room for OverflowRoom {
+        impl crate::room::RoomMetadata for OverflowRoom {
             fn meta(&self) -> crate::room::RoomMeta {
                 crate::room::RoomMeta {
                     id: "overflow-room",
@@ -511,7 +511,9 @@ mod tests {
                     accent: [0, 0, 0],
                 }
             }
+        }
 
+        impl crate::room::Room for OverflowRoom {
             fn render(&self, _surface: &mut dyn crate::surface::Surface, _t: f64) {}
 
             fn reveal(&self) -> &'static str {

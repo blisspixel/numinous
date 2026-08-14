@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SCALE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -110,15 +110,6 @@ impl Deltoid {
 }
 
 impl Room for Deltoid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "deltoid",
-            title: "Deltoid",
-            wing: "Shape & Space",
-            blurb: "Three-cusped hypocycloid draws itself. Watch the pen.",
-            accent: [80, 160, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale(t, None, self.seed), phase_unit(t), self.seed);

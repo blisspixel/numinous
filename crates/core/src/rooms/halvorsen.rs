@@ -2,7 +2,7 @@
 //!
 //! x' = -a x - 4 y - 4 z - y^2 (cyclic). See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 6_500;
@@ -116,15 +116,6 @@ impl Halvorsen {
 }
 
 impl Room for Halvorsen {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "halvorsen",
-            title: "Halvorsen Attractor",
-            wing: "Motion & Dynamics",
-            blurb: "Continuous cyclic chaos with quadratic folds.",
-            accent: [200, 80, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, &integrate(a_param(t, None, self.seed)));

@@ -3,7 +3,7 @@
 //! The limit of recursive U-turns visits every point of the unit square. Finite
 //! generations approximate space-filling without crossings. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -108,16 +108,6 @@ impl Hilbert {
 }
 
 impl Room for Hilbert {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "hilbert",
-            title: "The Space-Filling Path",
-            wing: "Shape & Space",
-            blurb: "Hilbert curve: a continuous path that fills the square in the limit. Finite \
-                    folds approximate without crossing.",
-            accent: [180, 140, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let o = order(t, None);

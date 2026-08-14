@@ -2,7 +2,7 @@
 //!
 //! x'' - mu (1 - x^2) x' + x = 0. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 5_000;
@@ -122,15 +122,6 @@ impl VanDerPol {
 }
 
 impl Room for VanDerPol {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "van-der-pol",
-            title: "Van der Pol Cycle",
-            wing: "Motion & Dynamics",
-            blurb: "Nonlinear damping births a stable limit cycle.",
-            accent: [220, 160, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let m = mu(t, None, self.seed);

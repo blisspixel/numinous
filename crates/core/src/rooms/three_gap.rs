@@ -6,7 +6,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_N: usize = 48;
@@ -131,16 +131,6 @@ impl ThreeGap {
 }
 
 impl Room for ThreeGap {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "three-gap",
-            title: "The Spinner",
-            wing: "Number & Pattern",
-            blurb: "Points at n*theta on a circle show at most three gap sizes; the largest is the \
-                    sum of the other two. t grows n.",
-            accent: [120, 180, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let th = theta(t, None, self.seed);

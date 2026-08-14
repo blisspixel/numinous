@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE K. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -102,15 +102,6 @@ impl Unknot {
 }
 
 impl Room for Unknot {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "unknot",
-            title: "Unknot",
-            wing: "Shape & Space",
-            blurb: "A tangled circle that is still the unknot.",
-            accent: [50, 80, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, kink(t, None, self.seed), self.seed);

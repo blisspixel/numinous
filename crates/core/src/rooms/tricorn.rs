@@ -2,7 +2,7 @@
 //!
 //! z -> conjugate(z)^2 + c. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_ITER: u32 = 40;
@@ -106,15 +106,6 @@ impl Tricorn {
 }
 
 impl Room for Tricorn {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "tricorn",
-            title: "Tricorn",
-            wing: "Fractals",
-            blurb: "Mandelbar set: conjugate squaring, three-lobed body.",
-            accent: [120, 60, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (cx, cy, s) = window(t, None);

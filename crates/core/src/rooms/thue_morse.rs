@@ -3,7 +3,7 @@
 //! t_n = sum of binary digits of n mod 2. Cube-free, overlap-free. Drawn as a
 //! staircase and beat tape. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -91,15 +91,6 @@ impl ThueMorse {
 }
 
 impl Room for ThueMorse {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "thue-morse",
-            title: "Thue-Morse Weather",
-            wing: "Number & Pattern",
-            blurb: "Parity of binary digit sum: cube-free automatic sequence.",
-            accent: [80, 180, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, window(t, None), self.seed);

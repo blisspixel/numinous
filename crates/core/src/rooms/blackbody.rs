@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE TEMP. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -111,15 +111,6 @@ impl Blackbody {
 }
 
 impl Room for Blackbody {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "blackbody",
-            title: "Blackbody Spectrum",
-            wing: "Waves & Sound",
-            blurb: "Planck curve and Wien peak shift with T.",
-            accent: [180, 80, 30],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, temp(t, None, self.seed), self.seed);

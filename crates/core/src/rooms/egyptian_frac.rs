@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE Q. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -113,15 +113,6 @@ impl EgyptianFrac {
 }
 
 impl Room for EgyptianFrac {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "egyptian-frac",
-            title: "Egyptian Fractions",
-            wing: "Number & Pattern",
-            blurb: "Greedy unit fractions for p/q.",
-            accent: [150, 110, 50],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (n, d) = fraction(t, None, self.seed);

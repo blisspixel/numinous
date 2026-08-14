@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE PHASE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -112,15 +112,6 @@ impl Viviani {
 }
 
 impl Room for Viviani {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "viviani",
-            title: "Viviani Curve",
-            wing: "Shape & Space",
-            blurb: "Sphere meets a tangent cylinder.",
-            accent: [50, 120, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, phase(t, None, self.seed), 1.0, self.seed);

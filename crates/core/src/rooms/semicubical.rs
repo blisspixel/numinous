@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SCALE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -99,15 +99,6 @@ impl Semicubical {
 }
 
 impl Room for Semicubical {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "semicubical",
-            title: "Semicubical",
-            wing: "Shape & Space",
-            blurb: "Cuspidal cubic y squared equals x cubed.",
-            accent: [180, 120, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale(t, None, self.seed), self.seed);

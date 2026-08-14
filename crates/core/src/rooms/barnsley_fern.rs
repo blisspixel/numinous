@@ -7,7 +7,7 @@
 
 use crate::MAX_ROOM_POKES;
 use crate::rng::SplitMix64;
-use crate::room::{Room, RoomInput, RoomMeta};
+use crate::room::{Room, RoomInput};
 use crate::surface::Surface;
 
 /// Fixed seed so the fern grows the same way every time.
@@ -145,16 +145,6 @@ fn next_point(x: f64, y: f64, r: f64) -> (f64, f64) {
 }
 
 impl Room for BarnsleyFern {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "barnsley-fern",
-            title: "Barnsley Fern",
-            wing: "Fractals & the Infinite",
-            blurb: "Pick one of four simple transformations at random, over and over, and a fern \
-                    grows out of the noise. Click to plant a smaller self-similar fern.",
-            accent: [60, 200, 90],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();

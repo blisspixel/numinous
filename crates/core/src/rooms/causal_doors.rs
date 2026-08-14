@@ -5,7 +5,7 @@
 //! See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const SEED: u64 = 0xCADA_1004_0000_0001;
@@ -156,16 +156,6 @@ impl CausalDoors {
 }
 
 impl Room for CausalDoors {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "causal-doors",
-            title: "Causal Doors",
-            wing: "Number & Pattern",
-            blurb: "Watching is not intervening. Force rain or the sprinkler and wetness answers \
-                    differently.",
-            accent: [100, 160, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let i = interv(t, None);

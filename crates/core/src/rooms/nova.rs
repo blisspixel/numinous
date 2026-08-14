@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE POWER. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_ITER: u32 = 28;
@@ -132,15 +132,6 @@ impl Nova {
 }
 
 impl Room for Nova {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "nova",
-            title: "Nova Fractal",
-            wing: "Fractals",
-            blurb: "Newton-style rational map as an escape portrait.",
-            accent: [200, 80, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, power(t, None), self.seed);

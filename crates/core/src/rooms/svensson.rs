@@ -3,7 +3,7 @@
 //! x' = d sin(a x) - sin(b y); y' = c cos(a x) + cos(b y).
 //! DRAG: TUNE A AND B. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 9_000;
@@ -98,15 +98,6 @@ impl Svensson {
 }
 
 impl Room for Svensson {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "svensson",
-            title: "Svensson Map",
-            wing: "Motion & Dynamics",
-            blurb: "Trigonometric map with dense attractor clouds.",
-            accent: [160, 80, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b, c, d) = params(t, None, self.seed);

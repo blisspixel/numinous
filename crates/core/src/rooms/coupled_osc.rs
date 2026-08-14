@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE K. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -101,15 +101,6 @@ impl CoupledOsc {
 }
 
 impl Room for CoupledOsc {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "coupled-osc",
-            title: "Coupled Oscillators",
-            wing: "Motion & Dynamics",
-            blurb: "Two masses, three springs: normal modes.",
-            accent: [80, 100, 50],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, couple(t, None, self.seed), self.seed);

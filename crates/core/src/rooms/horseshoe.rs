@@ -3,7 +3,7 @@
 //! Discrete geometry of the horseshoe map.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -113,15 +113,6 @@ impl Horseshoe {
 }
 
 impl Room for Horseshoe {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "horseshoe",
-            title: "Smale Horseshoe",
-            wing: "Motion & Dynamics",
-            blurb: "Stretch and fold a square into a horseshoe: chaos geometry.",
-            accent: [200, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, iters(t, None), self.seed);

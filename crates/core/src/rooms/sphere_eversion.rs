@@ -6,7 +6,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -114,16 +114,6 @@ impl SphereEversion {
 }
 
 impl Room for SphereEversion {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sphere-eversion",
-            title: "Sphere Eversion",
-            wing: "Shape & Space",
-            blurb: "A sphere can turn inside out without creases if you allow it to pass through \
-                    itself smoothly.",
-            accent: [120, 180, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, morph(t, None), self.seed);

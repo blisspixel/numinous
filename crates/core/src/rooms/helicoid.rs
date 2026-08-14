@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE PITCH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -108,15 +108,6 @@ impl Helicoid {
 }
 
 impl Room for Helicoid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "helicoid",
-            title: "Helicoid",
-            wing: "Shape & Space",
-            blurb: "Ruled minimal screw surface.",
-            accent: [80, 140, 90],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, pitch(t, None, self.seed), self.seed);

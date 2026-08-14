@@ -498,7 +498,7 @@ mod tests {
     /// shape any future room has on the day it is born.
     struct Newborn;
 
-    impl Room for Newborn {
+    impl numinous_core::RoomMetadata for Newborn {
         fn meta(&self) -> numinous_core::RoomMeta {
             numinous_core::RoomMeta {
                 id: "newborn",
@@ -508,6 +508,9 @@ mod tests {
                 accent: [0, 0, 0],
             }
         }
+    }
+
+    impl Room for Newborn {
         fn render(&self, _surface: &mut dyn numinous_core::surface::Surface, _t: f64) {}
         fn reveal(&self) -> &'static str {
             "Even a newborn room teaches what hands do."

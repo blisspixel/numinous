@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE TURNS. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -101,15 +101,6 @@ impl Involute {
 }
 
 impl Room for Involute {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "involute",
-            title: "Involute",
-            wing: "Shape & Space",
-            blurb: "Unwrapping a taut string from a circle.",
-            accent: [100, 140, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, turns(t, None, self.seed), self.seed);

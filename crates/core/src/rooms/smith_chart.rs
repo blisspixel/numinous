@@ -7,7 +7,7 @@
 //! electrical length (one full chart lap equals half a wavelength). See
 //! `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Chart center in normalized surface coordinates.
@@ -287,16 +287,6 @@ impl SmithChart {
 }
 
 impl Room for SmithChart {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "smith-chart",
-            title: "The Scariest Chart",
-            wing: "Waves & Sound",
-            blurb: "Smith chart: the infinite impedance plane folded into a unit \
-                    circle of reflection. Phase walks the line.",
-            accent: [60, 200, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, None, t, self.seed);

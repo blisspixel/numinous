@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE DECAY. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -104,15 +104,6 @@ impl DampedSine {
 }
 
 impl Room for DampedSine {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "damped-sine",
-            title: "Damped Sine",
-            wing: "Waves & Sound",
-            blurb: "Exponential envelope on a pure oscillation.",
-            accent: [40, 160, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, decay(t, None, self.seed), self.seed);

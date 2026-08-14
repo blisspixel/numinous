@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE P. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -83,15 +83,6 @@ impl TorusKnot {
 }
 
 impl Room for TorusKnot {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "torus-knot",
-            title: "Torus Knot",
-            wing: "Shape & Space",
-            blurb: "T(p,q) winds the torus both ways.",
-            accent: [120, 50, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, p_winds(t, None, self.seed), self.seed);

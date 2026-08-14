@@ -3,7 +3,7 @@
 //! x' = -y - z, y' = x + a y, z' = b + z(x - c).
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 6_000;
@@ -127,15 +127,6 @@ impl Rossler {
 }
 
 impl Room for Rossler {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "rossler",
-            title: "The Rossler Scroll",
-            wing: "Motion & Dynamics",
-            blurb: "One-scroll chaotic attractor in three dimensions, projected.",
-            accent: [200, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b, c) = params(t, None, self.seed);

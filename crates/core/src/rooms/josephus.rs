@@ -2,7 +2,7 @@
 //!
 //! Classic counting-out on a circle. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -124,15 +124,6 @@ impl Josephus {
 }
 
 impl Room for Josephus {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "josephus",
-            title: "Josephus Circle",
-            wing: "Number & Pattern",
-            blurb: "Every k-th seat is removed until one remains.",
-            accent: [160, 40, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (n, k) = nk(t, None);

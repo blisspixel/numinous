@@ -6,7 +6,7 @@
 
 use std::f64::consts::PI;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAPS: [&str; 6] = ["z^2", "z^2+c", "1/z", "sin z", "e^z", "z^3-1"];
@@ -189,16 +189,6 @@ impl FunctionPainter {
 }
 
 impl Room for FunctionPainter {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "function-painter",
-            title: "Function Painter",
-            wing: "Fractals",
-            blurb: "Domain coloring of complex maps: phase is symbol, magnitude is density. z^2, \
-                    z^2+c, 1/z, sin z, e^z, z^3-1. t and DRAG pick the map and tune c.",
-            accent: [255, 120, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let kind = map_index(t, None, self.seed);

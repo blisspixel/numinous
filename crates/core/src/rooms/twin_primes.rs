@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE N. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -129,15 +129,6 @@ impl TwinPrimes {
 }
 
 impl Room for TwinPrimes {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "twin-primes",
-            title: "Twin Primes",
-            wing: "Number & Pattern",
-            blurb: "Primes that come in pairs (p, p+2).",
-            accent: [90, 70, 50],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, limit(t, None, self.seed), self.seed);

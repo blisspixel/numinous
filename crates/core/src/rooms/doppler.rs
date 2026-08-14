@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SPEED. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -105,15 +105,6 @@ impl Doppler {
 }
 
 impl Room for Doppler {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "doppler",
-            title: "Doppler",
-            wing: "Waves & Sound",
-            blurb: "Moving source packs wavefronts ahead.",
-            accent: [200, 100, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, speed(t, None, self.seed), self.seed);

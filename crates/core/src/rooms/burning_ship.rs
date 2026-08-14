@@ -2,7 +2,7 @@
 //!
 //! z -> (|Re z| + i |Im z|)^2 + c. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_ITER: u32 = 40;
@@ -108,15 +108,6 @@ impl BurningShip {
 }
 
 impl Room for BurningShip {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "burning-ship",
-            title: "Burning Ship",
-            wing: "Fractals",
-            blurb: "Absolute-value Mandelbrot cousin with a ship silhouette.",
-            accent: [200, 40, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (cx, cy, s) = window(t, None);

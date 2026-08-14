@@ -8,7 +8,7 @@
 
 mod release_sound;
 
-use crate::room::{Room, RoomMeta};
+use crate::room::{Room};
 use crate::sound::ParametricSound;
 use crate::surface::Surface;
 
@@ -479,16 +479,6 @@ fn divergence_status(first: f64, second: f64, w1: f64, w2: f64, steps: usize) ->
 }
 
 impl Room for DoublePendulum {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "double-pendulum",
-            title: "Double Pendulum",
-            wing: "Chaos & Order",
-            blurb: "One pendulum hanging from another. A deterministic integration shows how a \
-                    shadow twin a breath away can peel off before your eyes.",
-            accent: [255, 110, 110],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         // The standard drop is the hand-state drawing with the classic
@@ -634,7 +624,7 @@ mod tests {
         DoublePendulum, MAX_STEPS, State, arm_points, hand_drop_angles, trace, trace_from_angles,
     };
     use crate::canvas::Canvas;
-    use crate::room::{Room, RoomInput};
+    use crate::room::{Room, RoomInput, RoomMetadata};
     use crate::stereo_signal_metrics;
 
     #[test]

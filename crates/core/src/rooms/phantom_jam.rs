@@ -5,7 +5,7 @@
 //! phantom jam (Sugiyama 2008).
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const CARS: usize = 48;
@@ -170,17 +170,6 @@ impl PhantomJam {
 }
 
 impl Room for PhantomJam {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "phantom-jam",
-            title: "Phantom Jam",
-            wing: "Emergence",
-            blurb: "One brake on a ring of cars births a dense jam that rolls backward against \
-                    traffic. No accident, no bottleneck: just follow-the-leader (Sugiyama 2008). \
-                    t runs the ring.",
-            accent: [230, 120, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let steps = ENTRY_STEPS + (phase_unit(t) * (MAX_STEPS - ENTRY_STEPS) as f64) as usize;

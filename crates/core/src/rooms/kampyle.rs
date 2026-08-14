@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE A. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -103,15 +103,6 @@ impl Kampyle {
 }
 
 impl Room for Kampyle {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "kampyle",
-            title: "Kampyle of Eudoxus",
-            wing: "Shape & Space",
-            blurb: "Horn curve x^4 = a^2 (x^2+y^2).",
-            accent: [140, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, param_a(t, None, self.seed), self.seed);

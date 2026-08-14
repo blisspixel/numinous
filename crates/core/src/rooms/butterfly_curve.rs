@@ -3,7 +3,7 @@
 //! Ambient phase draws the Temple-Fay wings with a pen.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -121,15 +121,6 @@ impl ButterflyCurve {
 }
 
 impl Room for ButterflyCurve {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "butterfly-curve",
-            title: "Butterfly Curve",
-            wing: "Shape & Space",
-            blurb: "Temple-Fay wings draw themselves. Watch the pen.",
-            accent: [160, 50, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, spin(t, None, self.seed), phase_unit(t), self.seed);

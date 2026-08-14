@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE S. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -115,15 +115,6 @@ impl DirichletEta {
 }
 
 impl Room for DirichletEta {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "dirichlet-eta",
-            title: "Dirichlet Eta",
-            wing: "Analysis",
-            blurb: "Alternating zeta: eta(s)=sum (-1)^{n-1}/n^s.",
-            accent: [70, 70, 110],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, s_param(t, None, self.seed), self.seed);

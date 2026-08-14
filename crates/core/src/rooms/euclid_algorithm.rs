@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET THE PAIR. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -168,15 +168,6 @@ impl EuclidAlgorithm {
 }
 
 impl Room for EuclidAlgorithm {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "euclid",
-            title: "Euclid Algorithm",
-            wing: "Number & Pattern",
-            blurb: "Square-cutting dance that finds gcd.",
-            accent: [80, 80, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b) = pair(t, None, self.seed);

@@ -3,7 +3,7 @@
 //! Start with a square; punch the center; recurse on the eight remaining.
 //! DRAG: DEEPEN THE CUT. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -89,16 +89,6 @@ impl SierpinskiCarpet {
 }
 
 impl Room for SierpinskiCarpet {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sierpinski-carpet",
-            title: "The Carpet",
-            wing: "Fractals",
-            blurb: "Sierpinski carpet: punch the middle ninth, forever. Area vanishes; dimension \
-                    stays between 1 and 2.",
-            accent: [200, 100, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let d = depth(t, None)

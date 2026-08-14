@@ -3,7 +3,7 @@
 //! Walk n along the integers; gap to the next prime is the weather. Twin primes
 //! are calm days. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -122,16 +122,6 @@ impl PrimeGaps {
 }
 
 impl Room for PrimeGaps {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "prime-gaps",
-            title: "Prime Gap Weather",
-            wing: "Number & Pattern",
-            blurb: "Gaps between primes as a landscape; twins are calm. Open \
-                    doors stay open.",
-            accent: [100, 200, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let n = start_n(t, None, self.seed);

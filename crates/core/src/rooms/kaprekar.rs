@@ -3,7 +3,7 @@
 //! Every four-digit number with not all digits equal reaches 6174 in at most
 //! seven Kaprekar steps (largest rearrangement minus smallest). See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const TARGET: u32 = 6174;
@@ -129,16 +129,6 @@ impl Kaprekar {
 }
 
 impl Room for Kaprekar {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "kaprekar",
-            title: "The Number That Eats Numbers",
-            wing: "Number & Pattern",
-            blurb: "Kaprekar's routine: rearrange digits large minus small. Every mixed 4-digit \
-                    number falls to 6174 in at most seven steps. t picks a start.",
-            accent: [220, 160, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let start = start_from(t, self.seed, None);

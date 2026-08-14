@@ -4,7 +4,7 @@
 //! finds. The boundaries are fractal. See
 //! `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_ITER: u32 = 24;
@@ -130,16 +130,6 @@ impl Newton {
 }
 
 impl Room for Newton {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "newton",
-            title: "Newton's Basins",
-            wing: "Fractals",
-            blurb: "Newton's method on z^n-1 paints which root each seed finds. Basin boundaries \
-                    are fractal.",
-            accent: [255, 100, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let n = degree(t, None);

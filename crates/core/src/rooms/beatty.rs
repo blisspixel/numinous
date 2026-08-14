@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE R. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -87,15 +87,6 @@ impl Beatty {
 }
 
 impl Room for Beatty {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "beatty",
-            title: "Beatty Sequence",
-            wing: "Number & Pattern",
-            blurb: "floor(n r) and floor(n s) partition N.",
-            accent: [100, 60, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, r_param(t, None, self.seed), self.seed);

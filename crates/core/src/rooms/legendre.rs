@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE N. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -110,15 +110,6 @@ impl Legendre {
 }
 
 impl Room for Legendre {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "legendre",
-            title: "Legendre P_n",
-            wing: "Number & Pattern",
-            blurb: "Orthogonal polynomials on [-1,1].",
-            accent: [40, 120, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, level(t, None, self.seed), self.seed);

@@ -5,7 +5,7 @@
 //! unit circle, and the north pole is infinity. Phase walks ambient |z| toward infinity. See
 //! `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Half-width of the complex plane window in surface coordinates (around center).
@@ -311,16 +311,6 @@ impl RiemannSphere {
 }
 
 impl Room for RiemannSphere {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "riemann-sphere",
-            title: "Riemann Sphere",
-            wing: "Shape & Space",
-            blurb: "One sphere holds every complex number and infinity. \
-                    Stereographic projection.",
-            accent: [180, 140, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, None, t, self.seed);

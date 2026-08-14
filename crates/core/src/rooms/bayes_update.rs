@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE L. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -98,15 +98,6 @@ impl BayesUpdate {
 }
 
 impl Room for BayesUpdate {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "bayes-update",
-            title: "Bayes Update",
-            wing: "Chance & Noise",
-            blurb: "Prior times likelihood becomes posterior.",
-            accent: [100, 80, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let pr = prior(self.seed);

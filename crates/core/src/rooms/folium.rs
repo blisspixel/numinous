@@ -3,7 +3,7 @@
 //! Ambient phase draws the leaf with a pen.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -152,15 +152,6 @@ impl Folium {
 }
 
 impl Room for Folium {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "folium",
-            title: "Folium",
-            wing: "Shape & Space",
-            blurb: "Descartes leaf draws its loop and asymptote. Watch the pen.",
-            accent: [60, 140, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE ANGLE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -123,15 +123,6 @@ impl Bragg {
 }
 
 impl Room for Bragg {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "bragg",
-            title: "Bragg Diffraction",
-            wing: "Waves & Sound",
-            blurb: "n lambda = 2 d sin theta on crystal planes.",
-            accent: [40, 100, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, angle(t, None, self.seed), self.seed);

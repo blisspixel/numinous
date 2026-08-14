@@ -7,7 +7,7 @@
 //! this is the shape of consciousness emerging from recursion. See
 //! docs/DIGITAL_MINDS.md and INSIGHTS.md.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::{MAX_DIM, Surface};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -103,15 +103,6 @@ impl StrangeLoop {
 }
 
 impl Room for StrangeLoop {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "strange-loop",
-            title: "Strange Loop",
-            wing: "Mind & Computation",
-            blurb: "A U that contains a smaller U that contains a smaller U... A finite rule that loops back to itself across levels. This is how 'I' might emerge from symbols referring to symbols.",
-            accent: [180, 100, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let Some((width, height)) = drawing_dims(canvas) else {

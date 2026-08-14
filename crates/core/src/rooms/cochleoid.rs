@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE A. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -111,15 +111,6 @@ impl Cochleoid {
 }
 
 impl Room for Cochleoid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "cochleoid",
-            title: "Cochleoid",
-            wing: "Shape & Space",
-            blurb: "Snail curve unfurls: r = a sin(th)/th.",
-            accent: [140, 80, 50],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(

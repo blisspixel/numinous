@@ -6,7 +6,7 @@
 //! probability build an empirical binomial distribution. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::sound::ParametricSound;
 use crate::surface::{MAX_DIM, Surface};
 
@@ -433,16 +433,6 @@ fn unit(value: f64, fallback: f64) -> f64 {
 }
 
 impl Room for GaltonBoard {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "galton-board",
-            title: "Galton Board",
-            wing: "Chance & Order",
-            blurb: "Choose a left, fair, or right-leaning coin. Each click drops 64 balls through \
-                    16 peg rows; repeat it and watch chance settle into a binomial pile.",
-            accent: [80, 120, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, _t: f64) {
         let Some((_width, _height)) = drawing_dims(canvas) else {
@@ -615,7 +605,7 @@ mod tests {
         path_sound, selected_run,
     };
     use crate::canvas::Canvas;
-    use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
+    use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMetadata};
     use crate::stereo_signal_metrics;
     use crate::surface::{MAX_DIM, Surface};
 

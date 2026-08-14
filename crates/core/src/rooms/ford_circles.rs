@@ -7,7 +7,7 @@
 //! hand. The golden ratio leaves the deepest unfilled crevice. See
 //! `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Denominator at first contact.
@@ -285,17 +285,6 @@ impl FordCircles {
 }
 
 impl Room for FordCircles {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "ford-circles",
-            title: "Ford Circles",
-            wing: "Number & Pattern",
-            blurb: "Every reduced fraction p/q owns a circle of radius 1/(2q^2). Circles never \
-                    overlap; they kiss exactly for Farey neighbors. t deepens denominators; \
-                    a click births the mediant that fills the gap under the hand.",
-            accent: [180, 140, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let circles = self.ambient(t);

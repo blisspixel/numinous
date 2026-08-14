@@ -5,7 +5,7 @@
 //! `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const SEED: u64 = 0x4A11_5EED_0000_0001;
@@ -179,15 +179,6 @@ impl MessageHeals {
 }
 
 impl Room for MessageHeals {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "message-heals",
-            title: "The Message That Heals",
-            wing: "Number & Pattern",
-            blurb: "Hamming(7,4) parity bits heal single flips mid-flight until noise wins.",
-            accent: [100, 200, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let nibble = 0b1011u8;

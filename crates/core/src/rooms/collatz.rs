@@ -5,7 +5,7 @@
 //! do. This room plots the (log-scaled) trajectory of a starting number as it
 //! falls. `t` picks the number. See `docs/ROOMS.md` and `docs/INSIGHTS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::sound::{Note, SoundSpec};
 use crate::surface::{MAX_DIM, Surface};
 
@@ -48,16 +48,6 @@ impl Collatz {
 }
 
 impl Room for Collatz {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "collatz",
-            title: "Collatz",
-            wing: "Emergence",
-            blurb: "Halve it if even, triple it and add one if odd, and repeat. Every tested \
-                    start reaches 1, but nobody has proved that all do. t picks the number.",
-            accent: [220, 130, 50],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();
@@ -249,7 +239,7 @@ fn draw_orbit(canvas: &mut dyn Surface, orbit: &[u64], ink: char) {
 mod tests {
     use super::{Collatz, collatz_orbit, phase_for, poked_starts, start_from_poke};
     use crate::canvas::Canvas;
-    use crate::room::{MAX_ROOM_POKES, Room};
+    use crate::room::{MAX_ROOM_POKES, Room, RoomMetadata};
     use crate::surface::Surface;
 
     #[test]

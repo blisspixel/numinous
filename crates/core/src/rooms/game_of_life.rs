@@ -7,7 +7,7 @@
 //! bounded no matter how large the surface is. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::sound::SoundSpec;
 use crate::surface::{MAX_DIM, Surface};
 
@@ -315,16 +315,6 @@ impl GameOfLife {
 }
 
 impl Room for GameOfLife {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "game-of-life",
-            title: "Game of Life",
-            wing: "Emergence",
-            blurb: "Aim at a quiet patch and place five living cells. Birth with 3 neighbors and \
-                    survival with 2 or 3 make that glider move by itself.",
-            accent: [90, 210, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let mut session = LifeSession::new(self.seed);

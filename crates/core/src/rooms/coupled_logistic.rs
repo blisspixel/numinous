@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE COUPLING. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 400;
@@ -99,15 +99,6 @@ impl CoupledLogistic {
 }
 
 impl Room for CoupledLogistic {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "coupled-logistic",
-            title: "Coupled Logistic",
-            wing: "Motion & Dynamics",
-            blurb: "Two logistic maps cross-talk into sync or chaos.",
-            accent: [200, 120, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, coupling(t, None, self.seed), self.seed);

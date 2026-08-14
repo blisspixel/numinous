@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE GROWTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -111,15 +111,6 @@ impl LogSpiral {
 }
 
 impl Room for LogSpiral {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "log-spiral",
-            title: "Logarithmic Spiral",
-            wing: "Shape & Space",
-            blurb: "Equiangular growth r = a e^{b theta}.",
-            accent: [40, 140, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, growth(t, None, self.seed), phase_unit(t), self.seed);

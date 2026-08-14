@@ -3,7 +3,7 @@
 //! Ambient phase rolls the wheel and lays the path cup by cup.
 //! DRAG: TUNE CUPS. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -141,15 +141,6 @@ impl Cycloid {
 }
 
 impl Room for Cycloid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "cycloid",
-            title: "Cycloid",
-            wing: "Shape & Space",
-            blurb: "A rim point lays cups as a wheel rolls. Watch it roll.",
-            accent: [200, 140, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, cups(t, None, self.seed), phase_unit(t), self.seed);

@@ -4,7 +4,7 @@
 //! die. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const SEED: u64 = 0xC0C5_E17A_7100_0001;
@@ -115,16 +115,6 @@ impl Concentration {
 }
 
 impl Room for Concentration {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "concentration",
-            title: "The Concentration Bell",
-            wing: "Number & Pattern",
-            blurb: "Random points in high dimension all sit near the same radius; extremes die. t \
-                    raises d.",
-            accent: [100, 180, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let d = dim(t, None);

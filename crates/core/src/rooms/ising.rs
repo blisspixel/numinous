@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE TEMPERATURE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 2_000;
@@ -108,15 +108,6 @@ impl Ising {
 }
 
 impl Room for Ising {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "ising",
-            title: "Ising Lattice",
-            wing: "Chance & Order",
-            blurb: "Spins freeze or melt across a critical heat.",
-            accent: [180, 40, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let _ = draw(canvas, temp(t, None, self.seed), self.seed);

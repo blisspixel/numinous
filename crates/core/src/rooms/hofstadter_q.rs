@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET THE LENGTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -93,15 +93,6 @@ impl HofstadterQ {
 }
 
 impl Room for HofstadterQ {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "hofstadter-q",
-            title: "Hofstadter Q",
-            wing: "Number & Pattern",
-            blurb: "Chaotic integer recursion as a skyline.",
-            accent: [100, 40, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, length(t, None), self.seed);

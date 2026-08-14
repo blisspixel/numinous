@@ -3,7 +3,7 @@
 //! Ambient phase draws the ovals with a pen.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -176,15 +176,6 @@ impl Cassini {
 }
 
 impl Room for Cassini {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "cassini",
-            title: "Cassini Ovals",
-            wing: "Shape & Space",
-            blurb: "Two-foci product curves draw themselves. Watch the pen.",
-            accent: [140, 60, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, ratio(t, None, self.seed), phase_unit(t), self.seed);

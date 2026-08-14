@@ -9,7 +9,7 @@
 use std::f64::consts::PI;
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Fixed seed so the throw reproduces exactly (determinism, see `docs/QUALITY.md`).
@@ -194,16 +194,6 @@ impl BuffonNeedle {
 }
 
 impl Room for BuffonNeedle {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "buffon-needle",
-            title: "Buffon's Needle",
-            wing: "Chance & Order",
-            blurb: "Throw sticks onto parallel floorboards. Bright sticks cross a line; the ratio \
-                    of crossings to throws wanders toward pi, with no circle anywhere in sight.",
-            accent: [140, 100, 230],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         self.render_scene(canvas, t, false);
@@ -326,7 +316,7 @@ mod tests {
     use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
     use crate::raster::Raster;
-    use crate::room::{Room, RoomInput};
+    use crate::room::{Room, RoomInput, RoomMetadata};
     use std::f64::consts::PI;
 
     #[test]

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE N. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -108,15 +108,6 @@ impl CentralLimit {
 }
 
 impl Room for CentralLimit {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "central-limit",
-            title: "Central Limit",
-            wing: "Chance & Order",
-            blurb: "Means of uniforms become a bell as n grows.",
-            accent: [60, 100, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, n_param(t, None, self.seed), self.seed);

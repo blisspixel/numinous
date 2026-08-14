@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE RATIO. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -97,15 +97,6 @@ impl Lissajous3d {
 }
 
 impl Room for Lissajous3d {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "lissajous-3d",
-            title: "Lissajous 3D",
-            wing: "Waves & Sound",
-            blurb: "Three orthogonal sines draw a space knot.",
-            accent: [30, 140, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, ratio(t, None, self.seed), self.seed);

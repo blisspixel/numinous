@@ -2,7 +2,7 @@
 //!
 //! Ambient phase unfurls the arm. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -122,15 +122,6 @@ impl Archimedean {
 }
 
 impl Room for Archimedean {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "archimedean",
-            title: "Archimedean Spiral",
-            wing: "Shape & Space",
-            blurb: "Arithmetic arm unfurls at constant gap. Watch the tip.",
-            accent: [90, 120, 50],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, pitch(t, None, self.seed), phase_unit(t), self.seed);

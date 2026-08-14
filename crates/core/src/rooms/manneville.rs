@@ -3,7 +3,7 @@
 //! Near-tangent fixed point produces laminar phases then chaotic bursts.
 //! DRAG: TUNE EPSILON. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ORBIT: usize = 240;
@@ -103,15 +103,6 @@ impl Manneville {
 }
 
 impl Room for Manneville {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "manneville",
-            title: "Manneville Map",
-            wing: "Motion & Dynamics",
-            blurb: "Intermittency: long laminar waits, then chaotic bursts.",
-            accent: [200, 140, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, epsilon(t, None, self.seed), self.seed);

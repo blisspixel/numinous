@@ -6,7 +6,7 @@
 //! bifurcation diagram. `t` zooms the left edge into the chaos. See `docs/ROOMS.md`.
 
 use super::variation_unit;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Iterations discarded so only the long-run attractor is drawn.
@@ -101,16 +101,6 @@ fn lyapunov(r: f64) -> f64 {
 }
 
 impl Room for LogisticMap {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "logistic-map",
-            title: "Logistic Map",
-            wing: "Chaos & Order",
-            blurb: "Sweep the growth rate of x into r x (1 - x) across the screen and plot where \
-                    the population lands: one value, then two, then four, then chaos. t zooms in.",
-            accent: [230, 200, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (width, height) = canvas.draw_bounds();

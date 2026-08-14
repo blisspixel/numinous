@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE P. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -143,15 +143,6 @@ impl MarkovChain {
 }
 
 impl Room for MarkovChain {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "markov-chain",
-            title: "Markov Chain",
-            wing: "Chance & Noise",
-            blurb: "Memoryless walk on states.",
-            accent: [90, 60, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, stay(t, None, self.seed), self.seed);

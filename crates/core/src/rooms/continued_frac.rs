@@ -3,7 +3,7 @@
 //! Walk the continued fraction of a real (ambient golden, or under the hand).
 //! Convergents are the best rational hits. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -138,15 +138,6 @@ impl ContinuedFrac {
 }
 
 impl Room for ContinuedFrac {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "continued-frac",
-            title: "The Ladder of Approximations",
-            wing: "Number & Pattern",
-            blurb: "Continued fractions peel best rationals from a real. Golden is the hardest.",
-            accent: [160, 200, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let x = target(t, None, self.seed);

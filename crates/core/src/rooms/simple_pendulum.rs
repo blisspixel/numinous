@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE ENERGY. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -120,15 +120,6 @@ impl SimplePendulum {
 }
 
 impl Room for SimplePendulum {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "simple-pendulum",
-            title: "Simple Pendulum",
-            wing: "Motion & Dynamics",
-            blurb: "Phase portrait: librations and rotations.",
-            accent: [40, 80, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, energy(t, None, self.seed), self.seed);

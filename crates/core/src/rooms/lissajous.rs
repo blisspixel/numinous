@@ -8,7 +8,7 @@
 use std::f64::consts::{FRAC_PI_2, TAU};
 
 use super::variation_unit;
-use crate::room::{Room, RoomInput, RoomMeta, pokes_from_inputs};
+use crate::room::{Room, RoomInput, pokes_from_inputs};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
@@ -112,16 +112,6 @@ impl Lissajous {
 }
 
 impl Room for Lissajous {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "lissajous",
-            title: "Lissajous",
-            wing: "Waves & Sound",
-            blurb: "Two perpendicular oscillations, one per axis; a simple frequency ratio traces a \
-                    stable figure and off-ratio it tumbles. t sweeps the second frequency.",
-            accent: [230, 90, 130],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();

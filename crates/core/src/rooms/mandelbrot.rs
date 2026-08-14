@@ -5,7 +5,7 @@
 //! escape, shaded by how fast, form its infinitely detailed halo. `t` zooms from
 //! the whole set toward the seahorse valley. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::{MAX_DIM, Surface};
 
 use super::FRACTAL_MAX_ITER;
@@ -354,16 +354,6 @@ fn dive_events(inputs: &[RoomInput], width: usize, height: usize) -> Vec<DiveEve
 }
 
 impl Room for Mandelbrot {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "mandelbrot",
-            title: "Mandelbrot Set",
-            wing: "Fractals & the Infinite",
-            blurb: "Iterate z into z squared plus c and ask if it stays bounded. The points that \
-                    do form the most complex object in mathematics. t zooms toward the seahorses.",
-            accent: [70, 130, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let Some((width, height)) = drawing_dims(canvas) else {

@@ -6,7 +6,7 @@
 //! parameter through the onset of chaos. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room};
 use crate::surface::Surface;
 
 /// Prandtl number.
@@ -180,16 +180,6 @@ fn bounded_shadow_starts(pokes: &[(f64, f64)]) -> Vec<(f64, f64, f64)> {
 }
 
 impl Room for Lorenz {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "lorenz",
-            title: "Lorenz Attractor",
-            wing: "Chaos & Order",
-            blurb: "Three equations for toy weather. The path never repeats and never escapes its \
-                    butterfly-shaped set. t raises the parameter through the onset of chaos.",
-            accent: [80, 180, 230],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();

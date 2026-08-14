@@ -7,7 +7,7 @@
 //! this is the visual of self-reference and the strange loop at the heart of
 //! "I". See docs/INSIGHTS.md and DIGITAL_MINDS.md.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::{MAX_DIM, Surface};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -107,15 +107,6 @@ impl Quine {
 }
 
 impl Room for Quine {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "quine",
-            title: "The Quine",
-            wing: "Mind & Computation",
-            blurb: "A circle that draws a smaller copy of itself inside; the copy draws a smaller copy, forever. A finite rule that contains its own description at every scale.",
-            accent: [200, 150, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let Some((width, height)) = drawing_dims(canvas) else {

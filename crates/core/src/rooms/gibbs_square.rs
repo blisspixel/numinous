@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET HARMONICS. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -100,15 +100,6 @@ impl GibbsSquare {
 }
 
 impl Room for GibbsSquare {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "gibbs-square",
-            title: "Gibbs Square",
-            wing: "Waves & Sound",
-            blurb: "Fourier square partials overshoot at jumps.",
-            accent: [200, 80, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, harmonics(t, None), self.seed);

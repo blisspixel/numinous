@@ -3,7 +3,7 @@
 //! Distinct from orbit/cobweb rooms: plots lambda(r).
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -100,15 +100,6 @@ impl Lyapunov {
 }
 
 impl Room for Lyapunov {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "lyapunov",
-            title: "Lyapunov Weather",
-            wing: "Motion & Dynamics",
-            blurb: "Logistic Lyapunov exponent lambda(r): chaos when positive.",
-            accent: [200, 40, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b) = r_window(t, None);

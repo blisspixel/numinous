@@ -3,7 +3,7 @@
 //! x' = sin(a y) + c cos(a x); y' = sin(b x) + d cos(b y).
 //! DRAG: TUNE A AND B. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 10_000;
@@ -110,15 +110,6 @@ impl Clifford {
 }
 
 impl Room for Clifford {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "clifford",
-            title: "Clifford Attractor",
-            wing: "Motion & Dynamics",
-            blurb: "Sin/cos iterated map with dense organic attractors.",
-            accent: [80, 200, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b, c, d) = params(t, None, self.seed);

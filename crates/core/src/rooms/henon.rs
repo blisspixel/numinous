@@ -2,7 +2,7 @@
 //!
 //! (x,y) -> (1 - a x^2 + y, b x). See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 8_000;
@@ -103,15 +103,6 @@ impl Henon {
 }
 
 impl Room for Henon {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "henon",
-            title: "The Henon Map",
-            wing: "Fractals",
-            blurb: "Henon attractor: one quadratic map, a folded horseshoe of chaos.",
-            accent: [180, 100, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b) = params(t, None, self.seed);

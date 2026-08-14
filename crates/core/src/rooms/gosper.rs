@@ -2,7 +2,7 @@
 //!
 //! L-system with 60-degree turns. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -164,15 +164,6 @@ impl Gosper {
 }
 
 impl Room for Gosper {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "gosper",
-            title: "Gosper Curve",
-            wing: "Fractals",
-            blurb: "Flowsnake: space-filling path on a hexagonal lattice.",
-            accent: [60, 180, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, &path(order(t, None), self.seed));

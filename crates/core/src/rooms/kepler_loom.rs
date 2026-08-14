@@ -7,7 +7,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Softened gravity constant.
@@ -169,17 +169,6 @@ impl KeplerLoom {
 }
 
 impl Room for KeplerLoom {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "kepler-loom",
-            title: "Kepler's Loom",
-            wing: "Motion & Dynamics",
-            blurb: "Fling a moon around a sun: every bound path is an ellipse with the sun at a \
-                    focus. Equal areas in equal times is the metronome. t advances the orbit; \
-                    a drag flings a moon.",
-            accent: [220, 200, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (sx, sy) = sun_pos(self.seed);

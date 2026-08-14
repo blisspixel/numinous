@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE F. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 2_000;
@@ -114,15 +114,6 @@ impl Oregonator {
 }
 
 impl Room for Oregonator {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "oregonator",
-            title: "Oregonator",
-            wing: "Motion & Dynamics",
-            blurb: "BZ chemical clock reduced to three variables.",
-            accent: [200, 40, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, f_param(t, None, self.seed), self.seed);

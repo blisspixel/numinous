@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE X. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -144,15 +144,6 @@ impl LambertW {
 }
 
 impl Room for LambertW {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "lambert-w",
-            title: "Lambert W",
-            wing: "Analysis",
-            blurb: "Inverse of w e^w, principal branch.",
-            accent: [90, 80, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, arg(t, None, self.seed), self.seed);

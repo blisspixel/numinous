@@ -2,7 +2,7 @@
 //!
 //! p' = p + K sin(theta); theta' = theta + p'. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ORBITS: usize = 24;
@@ -95,15 +95,6 @@ impl StandardMap {
 }
 
 impl Room for StandardMap {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "standard-map",
-            title: "Chirikov Map",
-            wing: "Motion & Dynamics",
-            blurb: "Kicked rotor on a torus: KAM curves break into chaos.",
-            accent: [160, 40, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, k_param(t, None, self.seed), self.seed);

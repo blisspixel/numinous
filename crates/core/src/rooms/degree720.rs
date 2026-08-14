@@ -6,7 +6,7 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -132,17 +132,6 @@ impl Degree720 {
 }
 
 impl Room for Degree720 {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "degree-720",
-            title: "The 720 Degree Room",
-            wing: "Shape & Space",
-            blurb: "A tethered stone needs two full turns to untwist the belt: 360 is not enough, \
-                    720 is. Dirac's belt trick; the quaternion double cover of rotations. t spins; \
-                    DRAG rotates the stone.",
-            accent: [160, 120, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (ang, twist) = angle_from(t, &[], self.seed);

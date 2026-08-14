@@ -3,7 +3,7 @@
 //! Sum of odd harmonics toward a square wave.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -103,15 +103,6 @@ impl FourierSquare {
 }
 
 impl Room for FourierSquare {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "fourier-square",
-            title: "Gibbs Overshoot",
-            wing: "Waves & Sound",
-            blurb: "Odd-harmonic Fourier sums toward a square wave; ringing refuses to die.",
-            accent: [40, 100, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, terms(t, None), self.seed);

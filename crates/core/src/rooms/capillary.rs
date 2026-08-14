@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE CONTACT. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -121,15 +121,6 @@ impl Capillary {
 }
 
 impl Room for Capillary {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "capillary",
-            title: "Capillary Meniscus",
-            wing: "Motion & Dynamics",
-            blurb: "Young-Laplace rise vs contact angle.",
-            accent: [40, 120, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, contact(t, None, self.seed), self.seed);

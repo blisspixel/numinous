@@ -6,7 +6,7 @@
 //! `t` advances the ambient mission clock. Missed probes keep flying as comets.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{Gesture, Room, RoomInput, RoomMeta, latest_gesture, pokes_from_inputs};
+use crate::room::{Gesture, Room, RoomInput, latest_gesture, pokes_from_inputs};
 use crate::surface::Surface;
 
 /// Softened Newtonian constant (normalized plate units).
@@ -411,17 +411,6 @@ impl Slingshot {
 }
 
 impl Room for Slingshot {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "slingshot",
-            title: "Slingshot",
-            wing: "Motion & Dynamics",
-            blurb: "Pull and release to launch a probe past suns. Gravity assists are discovered, \
-                    not taught; missed shots become comets, never failures. t advances the mission \
-                    clock; HOLD grows a sun under the hand.",
-            accent: [240, 180, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let m = mission(t, self.seed, &[]);

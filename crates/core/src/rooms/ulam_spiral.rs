@@ -3,7 +3,7 @@
 //! Write 1 at the center, spiral out; mark primes. Diagonals light with primes.
 //! DRAG: ZOOM THE SPIRAL. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -130,15 +130,6 @@ impl UlamSpiral {
 }
 
 impl Room for UlamSpiral {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "ulam-spiral",
-            title: "The Ulam Spiral",
-            wing: "Number & Pattern",
-            blurb: "Naturals on a square spiral; primes light diagonals.",
-            accent: [100, 140, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let n = max_n(t, None)

@@ -3,7 +3,7 @@
 //! Ambient phase walks a pen along the fetter.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -129,15 +129,6 @@ impl Hippopede {
 }
 
 impl Room for Hippopede {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "hippopede",
-            title: "Hippopede",
-            wing: "Shape & Space",
-            blurb: "Proclus horse-fetter draws itself. Watch the pen.",
-            accent: [100, 70, 50],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, ecc(t, None, self.seed), phase_unit(t), self.seed);

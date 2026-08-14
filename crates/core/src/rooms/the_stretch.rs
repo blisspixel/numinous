@@ -5,7 +5,7 @@
 //! CLICK any galaxy. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const N: usize = 64;
@@ -115,16 +115,6 @@ impl TheStretch {
 }
 
 impl Room for TheStretch {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "the-stretch",
-            title: "The Stretch",
-            wing: "Shape & Space",
-            blurb: "Click any galaxy: everyone is the center. Hubble flow makes the rest recede; \
-                    redshift grows with distance. t sets H0; CLICK a galaxy to stand there.",
-            accent: [180, 100, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let gs = galaxies(self.seed);

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE N. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -122,15 +122,6 @@ impl Zeckendorf {
 }
 
 impl Room for Zeckendorf {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "zeckendorf",
-            title: "Zeckendorf",
-            wing: "Number & Pattern",
-            blurb: "Unique Fibonacci base, no adjacent 1s.",
-            accent: [100, 70, 130],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, max_n(t, None, self.seed), self.seed);
