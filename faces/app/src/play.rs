@@ -194,17 +194,6 @@ pub fn answer_quiz(quiz: &mut QuizPlay, letter: char) -> Option<bool> {
     Some(correct)
 }
 
-/// Combo math: cleared stages multiply what follows.
-pub fn gauntlet_total(scores: &[i64], cleared: &[bool]) -> i64 {
-    let mut total = 0;
-    let mut combo = 1;
-    for (score, &clear) in scores.iter().zip(cleared) {
-        total += score * combo;
-        combo = if clear { combo + 1 } else { 1 };
-    }
-    total
-}
-
 #[cfg(test)]
 mod tests {
     use std::time::{Duration, UNIX_EPOCH};

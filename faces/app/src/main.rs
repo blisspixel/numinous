@@ -44,7 +44,7 @@ mod wager;
 use crate::audio_state::Program as AudioProgram;
 use crate::session_audio::SessionAudio;
 use numinous_app::{controls, game_draw, input_legend, play, room_phase};
-use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total};
+use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay};
 use room_phase::{effective_room_phase, has_finite_parameter_input};
 
 /// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
@@ -988,11 +988,13 @@ impl App {
         self.the_show = false;
         self.paused = false;
         let seed = play::daily_seed();
+        let puzzle = numinous_core::GauntletPuzzle::new(seed);
+        let secret = puzzle.bomb_code().to_vec();
         self.gauntlet = Some(GauntletPlay {
             seed,
             stage: 0,
             munch: MunchPlay {
-                board: numinous_core::build_board(seed, 0),
+                board: puzzle.munch,
                 seed,
                 round: 0,
                 cursor: 0,
@@ -1001,11 +1003,11 @@ impl App {
                 bite_flash: None,
             },
             quiz: QuizPlay {
-                round: numinous_core::build_round(seed, 1, 44, 18),
+                round: puzzle.shape,
                 flash: None,
             },
-            scan: numinous_core::build_scan(seed, 4),
-            secret: numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4),
+            scan: puzzle.sky,
+            secret,
             wire: String::new(),
             wire_lines: Vec::new(),
             scores: Vec::new(),
@@ -1043,9 +1045,9 @@ impl App {
             what.to_string()
         };
         if run.stage == 4 {
-            let total = gauntlet_total(&run.scores, &run.cleared);
+            let total = numinous_core::gauntlet_total(&run.scores, &run.cleared);
             let seed = run.seed;
-            self.post_score(&format!("gauntlet seed:{seed}"), total);
+            self.post_score(&numinous_core::gauntlet_score_key(seed), total);
         }
     }
 
@@ -1067,8 +1069,7 @@ impl App {
                     Key::Named(NamedKey::Enter) => {
                         let bites: Vec<usize> = play.bites.iter().copied().collect();
                         let outcome = numinous_core::grade_munch(&play.board, &bites);
-                        let clean =
-                            outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
+                        let clean = numinous_core::munch_clean_win(&outcome);
                         let (points, what) = (outcome.score, format!("MUNCH +{}.", outcome.score));
                         self.gauntlet_bank(points, clean, &what);
                     }
@@ -1095,7 +1096,8 @@ impl App {
                             run.quiz.round.answer,
                             run.quiz.round.answer_title.to_uppercase()
                         );
-                        self.gauntlet_bank(if correct { 25 } else { 0 }, correct, &what);
+                        let grade = numinous_core::gauntlet_choice_grade(correct);
+                        self.gauntlet_bank(grade.score, grade.clean, &what);
                     }
                 }
             }
@@ -1107,7 +1109,8 @@ impl App {
                     if run.scan.channels.iter().any(|ch| ch.letter == letter) {
                         let correct = letter == run.scan.answer;
                         let what = format!("THE SIGNAL WAS {}.", run.scan.answer);
-                        self.gauntlet_bank(if correct { 25 } else { 0 }, correct, &what);
+                        let grade = numinous_core::gauntlet_choice_grade(correct);
+                        self.gauntlet_bank(grade.score, grade.clean, &what);
                     }
                 }
             }
@@ -1125,20 +1128,27 @@ impl App {
                     if guess.len() != 4 {
                         return;
                     }
-                    let feedback = numinous_core::grade(&run.secret, &guess);
-                    if feedback.locked == 4 {
-                        let spare = 4 - run.wire_lines.len() as i64;
-                        self.gauntlet_bank(10 * spare.max(0), true, "DEFUSED.");
+                    let attempt = run.wire_lines.len() + 1;
+                    let Some(grade) =
+                        numinous_core::gauntlet_wire_grade(&run.secret, attempt, &guess)
+                    else {
+                        return;
+                    };
+                    if grade.stage.clean {
+                        self.gauntlet_bank(grade.stage.score, true, "DEFUSED.");
                         return;
                     }
                     run.wire_lines.push(format!(
                         "{}: {} LOCKED, {} LOOSE",
-                        run.wire, feedback.locked, feedback.loose
+                        run.wire, grade.feedback.locked, grade.feedback.loose
                     ));
                     run.wire.clear();
                     if run.wire_lines.len() >= 5 {
-                        let code: String =
-                            run.secret.iter().map(|&d| char::from(b'0' + d)).collect();
+                        let code: String = run
+                            .secret
+                            .iter()
+                            .map(|&digit| char::from(b'0' + digit))
+                            .collect();
                         self.gauntlet_bank(0, false, &format!("BOOM. IT WAS {code}."));
                     }
                 }
@@ -9770,7 +9780,10 @@ mod tests {
         let run = app.gauntlet.as_ref().unwrap();
         assert_eq!(run.stage, 4, "the run is complete");
         // Scores: 0 (miss), then 25*1, 25*2, 40*3 = 195.
-        assert_eq!(super::gauntlet_total(&run.scores, &run.cleared), 195);
+        assert_eq!(
+            numinous_core::gauntlet_total(&run.scores, &run.cleared),
+            195
+        );
         assert_eq!(app.journey.plays, 4);
         assert_eq!(app.journey.wins, 3);
         let _ = std::fs::remove_file(&app.journey_file);

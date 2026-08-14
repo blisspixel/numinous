@@ -2,7 +2,7 @@ use numinous_core::{Raster, Room, Surface};
 
 use crate::{
     input_legend::{self, ControllerCopy, InputMode},
-    play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total},
+    play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay},
 };
 
 #[cfg(test)]
@@ -316,7 +316,7 @@ fn gauntlet_result_lines<C: Into<ControllerCopy> + Copy>(
     width: usize,
     scale: i32,
 ) -> Vec<String> {
-    let total = gauntlet_total(&run.scores, &run.cleared);
+    let total = numinous_core::gauntlet_total(&run.scores, &run.cleared);
     let clears = run.cleared.iter().filter(|&&clean| clean).count();
     let names = ["MUNCH", "SHAPE", "SKY", "BOMB"];
     let mut semantic = vec![format!("RUN COMPLETE  {clears}/4 CLEAN")];
@@ -1439,7 +1439,10 @@ mod tests {
         run.stage = 4;
         run.scores = vec![10, 20, 30, 40];
         run.cleared = vec![true, true, false, true];
-        assert_eq!(gauntlet_total(&run.scores, &run.cleared), 10 + 40 + 90 + 40);
+        assert_eq!(
+            numinous_core::gauntlet_total(&run.scores, &run.cleared),
+            10 + 40 + 90 + 40
+        );
         assert_visible(
             "gauntlet done",
             draw_gauntlet(

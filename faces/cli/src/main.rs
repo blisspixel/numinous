@@ -5347,19 +5347,6 @@ fn nim_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRead) ->
     }
 }
 
-/// Combo math for the Gauntlet: cleared stages multiply what follows.
-/// The multiplier starts at 1, rises by 1 after every cleared stage, and falls
-/// back to 1 after a miss. Pure, so it is tested.
-fn gauntlet_total(stage_scores: &[i64], cleared: &[bool]) -> i64 {
-    let mut total = 0i64;
-    let mut combo = 1i64;
-    for (score, &clear) in stage_scores.iter().zip(cleared) {
-        total += score * combo;
-        combo = if clear { combo + 1 } else { 1 };
-    }
-    total
-}
-
 /// The first answer letter in one already-read input line.
 fn letter_from_line(line: &str) -> Option<char> {
     line.chars()
@@ -5387,6 +5374,7 @@ fn gauntlet_run(
     journey: &mut Journey,
     input: &mut impl BufRead,
 ) -> (ExitCode, Option<i64>) {
+    let puzzle = numinous_core::GauntletPuzzle::new(seed);
     let mut stage_scores = Vec::new();
     let mut cleared = Vec::new();
     println!(
@@ -5395,9 +5383,9 @@ fn gauntlet_run(
     );
 
     // Stage 1: one munch board.
-    let board = numinous_core::build_board(seed, 0);
+    let board = &puzzle.munch;
     println!("STAGE 1 of 4  MUNCH: {}", board.rule.describe());
-    print!("{}", numinous_core::board_text(&board));
+    print!("{}", numinous_core::board_text(board));
     let line = loop {
         let Some(line) = read_game_line(input, "Your bites > ") else {
             return (ExitCode::SUCCESS, None);
@@ -5413,22 +5401,22 @@ fn gauntlet_run(
         .filter(|&n| n >= 1)
         .map(|n| n - 1)
         .collect();
-    let outcome = numinous_core::grade_munch(&board, &bites);
-    let clear = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
+    let grade = puzzle.grade_munch(&bites);
+    let clear = grade.stage.clean;
     if clear {
         journey.win();
     }
     println!(
         "  +{} points{}
 ",
-        outcome.score,
+        grade.stage.score,
         if clear { "  CLEAN" } else { "" }
     );
-    stage_scores.push(outcome.score);
+    stage_scores.push(grade.stage.score);
     cleared.push(clear);
 
     // Stage 2: one mystery shape.
-    let round = numinous_core::build_round(seed, 1, 44, 18);
+    let round = &puzzle.shape;
     println!("STAGE 2 of 4  THE SHAPE:");
     print!("{}", round.art);
     for choice in &round.choices {
@@ -5448,11 +5436,12 @@ fn gauntlet_run(
         break guess;
     };
     journey.play();
-    let clear = guess == round.answer;
+    let grade = puzzle.grade_shape(Some(guess));
+    let clear = grade.clean;
     if clear {
         journey.win();
     }
-    let points = if clear { 25 } else { 0 };
+    let points = grade.score;
     println!(
         "  It was {} ({}). +{points} points{}
 ",
@@ -5464,7 +5453,7 @@ fn gauntlet_run(
     cleared.push(clear);
 
     // Stage 3: one sky scan.
-    let scan = numinous_core::build_scan(seed, 4);
+    let scan = &puzzle.sky;
     println!("STAGE 3 of 4  THE SKY:");
     for channel in &scan.channels {
         println!(
@@ -5486,11 +5475,12 @@ fn gauntlet_run(
         break guess;
     };
     journey.play();
-    let clear = guess == scan.answer;
+    let grade = puzzle.grade_sky(Some(guess));
+    let clear = grade.clean;
     if clear {
         journey.win();
     }
-    let points = if clear { 25 } else { 0 };
+    let points = grade.score;
     println!(
         "  The signal was {}. +{points} points{}
 ",
@@ -5501,15 +5491,17 @@ fn gauntlet_run(
     cleared.push(clear);
 
     // Stage 4: the bomb, four digits, five tries.
-    let secret = numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4);
     println!("STAGE 4 of 4  THE BOMB. Four digits, five tries.");
-    println!("  Clue: {}", numinous_core::hint(&secret));
+    println!("  Clue: {}", puzzle.bomb_hint());
     let mut points = 0i64;
     let mut clear = false;
     let mut played = false;
-    let mut attempt: i64 = 1;
-    while attempt <= 5 {
-        let Some(line) = read_game_line(input, &format!("Wire {attempt}/5 > ")) else {
+    let mut attempt = 1usize;
+    while attempt <= numinous_core::GAUNTLET_MAX_WIRES {
+        let Some(line) = read_game_line(
+            input,
+            &format!("Wire {attempt}/{} > ", numinous_core::GAUNTLET_MAX_WIRES),
+        ) else {
             return (ExitCode::SUCCESS, None);
         };
         // Help and typos are free here as they are in every other stage and
@@ -5532,30 +5524,35 @@ fn gauntlet_run(
             journey.play();
             played = true;
         }
-        let feedback = numinous_core::grade(&secret, &guess);
-        if feedback.locked == 4 {
+        let Some(grade) = puzzle.grade_wire(attempt, &guess) else {
+            println!("  Four digits.");
+            continue;
+        };
+        if grade.stage.clean {
             clear = true;
-            points = 10 * (5 - attempt);
+            points = grade.stage.score;
             journey.win();
             word_in_lights("DEFUSED", [90, 230, 120], 5);
             println!("  +{points} points  CLEAN\n");
             break;
         }
-        println!("  {} locked, {} loose.", feedback.locked, feedback.loose);
+        println!(
+            "  {} locked, {} loose.",
+            grade.feedback.locked, grade.feedback.loose
+        );
         attempt += 1;
     }
     if !clear {
-        let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
         word_in_lights("BOOM", [255, 90, 40], 5);
-        println!("  It was {code}. +0 points\n");
+        println!("  It was {}. +0 points\n", puzzle.bomb_code_text());
     }
     stage_scores.push(points);
     cleared.push(clear);
 
     // The one honest number.
-    let total = gauntlet_total(&stage_scores, &cleared);
+    let total = numinous_core::gauntlet_total(&stage_scores, &cleared);
     let clears = cleared.iter().filter(|&&c| c).count();
-    post_score(&format!("gauntlet seed:{seed}"), total);
+    post_score(&numinous_core::gauntlet_score_key(seed), total);
     println!("RUN COMPLETE  {clears}/4 clean  TOTAL {total}  (gauntlet seed:{seed})");
     (ExitCode::SUCCESS, Some(total))
 }
@@ -8401,17 +8398,17 @@ mod tests {
     fn gauntlet_combo_multiplies_clears_and_forgives_misses() {
         // All four cleared: 10*1 + 25*2 + 25*3 + 40*4 = 295.
         assert_eq!(
-            super::gauntlet_total(&[10, 25, 25, 40], &[true, true, true, true]),
+            numinous_core::gauntlet_total(&[10, 25, 25, 40], &[true, true, true, true]),
             295
         );
         // A miss resets the combo: 10*1 + 0*2 + 25*1 + 40*2 = 115.
         assert_eq!(
-            super::gauntlet_total(&[10, 0, 25, 40], &[true, false, true, true]),
+            numinous_core::gauntlet_total(&[10, 0, 25, 40], &[true, false, true, true]),
             115
         );
         // Nothing cleared, nothing multiplied.
-        assert_eq!(super::gauntlet_total(&[5, 0, 0, 0], &[false; 4]), 5);
-        assert_eq!(super::gauntlet_total(&[], &[]), 0);
+        assert_eq!(numinous_core::gauntlet_total(&[5, 0, 0, 0], &[false; 4]), 5);
+        assert_eq!(numinous_core::gauntlet_total(&[], &[]), 0);
     }
 
     #[test]
