@@ -91,6 +91,7 @@ pub mod sims;
 pub mod sound;
 pub mod spectrum;
 pub mod studio;
+pub mod studio_request;
 pub mod surface;
 pub mod trophies;
 
@@ -189,9 +190,14 @@ pub use spectrum::{
     spectrum_time_scale,
 };
 pub use studio::{
-    Expr, MAX_META_TEXT_CHARS, MAX_SHARE_INPUT_BYTES, MAX_STUDIO_SOURCE_CHARS, NumFileError,
-    STUDIO_RECIPES, StudioCreation, eval, parse, plot_text, studio_auto_recipe, studio_recipe,
-    studio_recipe_count, to_melody,
+    Expr, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_SHARE_INPUT_BYTES, MAX_STUDIO_SOURCE_CHARS,
+    NumFileError, STUDIO_RECIPES, StudioCreation, eval, parse, plot_text, studio_auto_recipe,
+    studio_recipe, studio_recipe_count, to_melody,
+};
+pub use studio_request::{
+    DEFAULT_MELODY_NOTES, DEFAULT_PLOT_HEIGHT, DEFAULT_PLOT_WIDTH, DEFAULT_STUDIO_PARAMETER,
+    DEFAULT_STUDIO_XMAX, DEFAULT_STUDIO_XMIN, PlotDiscovery, PlotRequest, PlotResult, PlotSource,
+    SingRequest, StudioRequestError,
 };
 pub use surface::Surface;
 pub use trophies::{Trophy, trophies};

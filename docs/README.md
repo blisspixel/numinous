@@ -19,13 +19,11 @@ discovery and play-first guidance. The opt-in experience journal persists across
 clean MCP processes and supports inspection, immutable correction, native or
 Open Knowledge Format v0.2 export, and confirmed erase.
 
-**Critical path now:** finish the Universal Wager and its flagship ahas. The
-generic call is available through all three faces; Times Tables, Buffon's
-Needle, Galton Board, Double Pendulum, Kepler Areas, and Parrondo's Trap carry
-staged five-beat ahas across the App and MCP. Parrondo grades A, B, or ABB
-against an exact Markov expectation and draws all three expected-capital paths.
-Nontransitive dice is next.
-Mind's Seat presence and retrieval follow, then the measured Sensory Lift spike. The 0.4
+**Critical path now:** preserve the completed seven-room Universal Wager, close
+the remaining structural Polish Wave debts, then build the Mind's Seat. Shared
+Studio plot and melody request types have removed the first cross-face request
+copy; the `RoomMeta` table and remaining god-file seams are next. Mind's Seat
+presence and retrieval follow, then the measured Sensory Lift spike. The 0.4
 Understanding Alpha cohort waits on an owner ruling; its method dry-run and
 dual automated auditors are already in CI. Soft-thin densify, bulk new rooms,
 and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and

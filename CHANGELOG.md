@@ -5,6 +5,22 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Studio plotting and singing now cross one face-neutral request boundary in
+  the core. `PlotRequest` and `SingRequest` own expression parsing, curated
+  discovery, window and knob defaults, size and note bounds, and undefined
+  function refusals; CLI and MCP now parse transport and present the shared
+  result instead of sampling formulas independently.
+- App, CLI, and MCP now use one 32-note default melody. This resolves the
+  recorded 24, 32, and 48-note disagreement, removes its source-parsing lock,
+  and makes an omitted note count mean the same musical phrase in every face.
+- The CLI's default Studio plot now uses the same 72 by 26 frame as MCP. The
+  real creator-parity cohort passes all 22 plot and melody comparisons through
+  the built binaries. The exact 24-sample Formula Jam tactile theorem now pins
+  its own grid instead of depending on an interface default.
+- The full Windows release gate passes in 1,489 seconds with 3,518 passing
+  all-target Rust cases, three expensive ignored diagnostics, 95.09% region
+  coverage, and 95.19% line coverage.
+
 ## [0.3.0-alpha.4] - 2026-08-13
 
 - Nontransitive Dice now carries the seventh room-owned Universal Wager across

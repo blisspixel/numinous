@@ -533,7 +533,7 @@ impl NativeReplay {
                 &replay.expression,
                 replay.xmin,
                 replay.xmax,
-                32,
+                numinous_core::DEFAULT_MELODY_NOTES,
                 replay.parameter,
             )),
             // Nim stays silent: the board is pure combinatorial text and pixels.

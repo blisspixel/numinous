@@ -1856,7 +1856,10 @@ fn build_tools_catalog() -> Value {
                             "type": "integer",
                             "minimum": 1,
                             "maximum": 64,
-                            "description": "Number of notes (default 24, at most 64)."
+                            "description": format!(
+                                "Number of notes (default {}, at most 64).",
+                                numinous_core::DEFAULT_MELODY_NOTES
+                            )
                         },
                         "a": {
                             "type": "number",
@@ -6499,7 +6502,6 @@ fn journey_tool(path: &std::path::Path) -> Value {
 
 /// The `plot_expression` tool: Formula Jam discovery and still plots.
 fn plot_expression_tool(args: &Value) -> Value {
-    use std::f64::consts::TAU;
     if args.get("list_recipes").and_then(Value::as_bool) == Some(true) {
         let recipes: Vec<Value> = numinous_core::STUDIO_RECIPES
             .iter()
@@ -6540,99 +6542,102 @@ fn plot_expression_tool(args: &Value) -> Value {
         return tool_error("auto_step requires seed (stateless Auto walk over the curated bank).");
     }
 
-    let (expr, discovery, recipe_index): (String, &str, Option<u64>) = if has_expr {
-        let source = args
-            .get("expr")
-            .and_then(Value::as_str)
-            .expect("expr present")
-            .to_string();
-        (source, "manual", None)
+    let source = if has_expr {
+        numinous_core::PlotSource::Manual(
+            args.get("expr")
+                .and_then(Value::as_str)
+                .expect("expr present")
+                .to_string(),
+        )
     } else if has_recipe {
         let Some(index) = args.get("recipe").and_then(Value::as_u64) else {
             return tool_error("Argument 'recipe' must be a non-negative integer.");
         };
-        let source = numinous_core::studio_recipe(index).to_string();
-        let wrapped = index % numinous_core::studio_recipe_count() as u64;
-        (source, "recipe", Some(wrapped))
+        numinous_core::PlotSource::Recipe(index)
     } else {
         let Some(seed) = args.get("seed").and_then(Value::as_u64) else {
             return tool_error("Argument 'seed' must be a non-negative integer.");
         };
         let step = args.get("auto_step").and_then(Value::as_u64).unwrap_or(0);
-        let index = seed.wrapping_add(step) % numinous_core::studio_recipe_count() as u64;
-        let source = numinous_core::studio_auto_recipe(seed, step).to_string();
-        let discovery = if has_auto_step { "auto" } else { "random" };
-        (source, discovery, Some(index))
+        numinous_core::PlotSource::Seeded {
+            seed,
+            auto_step: has_auto_step.then_some(step),
+        }
     };
 
-    let xmin = args.get("xmin").and_then(Value::as_f64).unwrap_or(-TAU);
-    let xmax = args.get("xmax").and_then(Value::as_f64).unwrap_or(TAU);
-    let a = args.get("a").and_then(Value::as_f64).unwrap_or(1.0);
-    match numinous_core::plot_text(&expr, xmin, xmax, a, 72, 26) {
-        Ok((text, ymin, ymax)) => {
+    let request = match numinous_core::PlotRequest::new(
+        source,
+        args.get("xmin").and_then(Value::as_f64),
+        args.get("xmax").and_then(Value::as_f64),
+        args.get("a").and_then(Value::as_f64),
+        None,
+        None,
+    ) {
+        Ok(request) => request,
+        Err(error) => return tool_error(&error.to_string()),
+    };
+    match request.execute() {
+        Ok(result) => {
+            let expr = request.source();
+            let discovery = request.discovery().as_str();
+            let xmin = request.xmin();
+            let xmax = request.xmax();
+            let a = request.parameter();
             let summary = format!(
-                "y = {expr}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\nDiscovery: {discovery}\n\n{text}"
+                "y = {expr}    x in [{xmin:.3}, {xmax:.3}]    y in [{:.3}, {:.3}]\nDiscovery: {discovery}\n\n{}",
+                result.ymin, result.ymax, result.text
             );
             tool_structured(
                 &summary,
                 json!({
                     "expression": expr,
                     "discovery": discovery,
-                    "recipeIndex": recipe_index,
+                    "recipeIndex": request.recipe_index(),
                     "recipeCount": numinous_core::studio_recipe_count(),
                     "a": a,
                     "xmin": xmin,
                     "xmax": xmax,
-                    "ymin": ymin,
-                    "ymax": ymax,
+                    "ymin": result.ymin,
+                    "ymax": result.ymax,
                     "valid": true,
-                    "plot": text
+                    "plot": result.text
                 }),
             )
         }
-        Err(message) => tool_error(&message),
+        Err(numinous_core::StudioRequestError::Undefined) => {
+            tool_error("Nothing to plot: the function is undefined across this range.")
+        }
+        Err(error) => tool_error(&error.to_string()),
     }
 }
 
 /// The `sing_expression` tool: an agent's function becomes readable music.
 fn sing_expression_tool(args: &Value) -> Value {
-    use std::f64::consts::TAU;
     let Some(source) = args.get("expr").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'expr'.");
     };
-    let notes = args.get("notes").and_then(Value::as_u64).unwrap_or(24) as usize;
-    let expr = match numinous_core::parse(source) {
-        Ok(expr) => expr,
-        Err(message) => return tool_error(&message),
+    let notes = match args.get("notes").and_then(Value::as_u64) {
+        Some(notes @ 1..=64) => Some(notes as usize),
+        Some(_) => return tool_error("Argument 'notes' must be an integer from 1 through 64."),
+        None => None,
     };
-    // The knob, as `plot_expression` has always had it. Without it this face
-    // could only ever sing `a = 1`, and the terminal face could only ever sing
-    // `a = 0`, so the two sang different music for the same expression and no
-    // caller could ask either of them for the other.
-    let a = args.get("a").and_then(Value::as_f64).unwrap_or(1.0);
-    if !a.is_finite() {
-        return tool_error("Argument 'a' must be a finite number.");
-    }
-    // The range, as `plot_expression` and the terminal face both have it. This
-    // face could only ever sing one window, so a peer could hear a curve over
-    // -tau to tau and nowhere else while a person could ask for any span.
-    // The defaults are the same window it always sang, so nothing a caller
-    // already asked for changes answer.
-    let xmin = args.get("xmin").and_then(Value::as_f64).unwrap_or(-TAU);
-    let xmax = args.get("xmax").and_then(Value::as_f64).unwrap_or(TAU);
-    if !xmin.is_finite() || !xmax.is_finite() {
-        return tool_error("Arguments 'xmin' and 'xmax' must be finite numbers.");
-    }
-    if xmax <= xmin {
-        return tool_error("Need xmax greater than xmin.");
-    }
-    let spec = numinous_core::to_melody(&expr, xmin, xmax, notes.clamp(1, 64), a);
-    // An expression undefined across the whole window melts to zero notes.
-    // Reporting that as a successful 0.1 second melody would be the singing
-    // twin of the plot path's "nothing to plot", so it refuses the same way.
-    if spec.notes.is_empty() {
-        return tool_error("Nothing to sing: the function is undefined across this range.");
-    }
+    let request = match numinous_core::SingRequest::new(
+        source,
+        args.get("xmin").and_then(Value::as_f64),
+        args.get("xmax").and_then(Value::as_f64),
+        args.get("a").and_then(Value::as_f64),
+        notes,
+    ) {
+        Ok(request) => request,
+        Err(error) => return tool_error(&error.to_string()),
+    };
+    let spec = match request.execute() {
+        Ok(spec) => spec,
+        Err(numinous_core::StudioRequestError::Undefined) => {
+            return tool_error("Nothing to sing: the function is undefined across this range.");
+        }
+        Err(error) => return tool_error(&error.to_string()),
+    };
     let mut lines = vec![format!(
         "y = {source} as a melody: {:.1}s, {} notes.",
         spec.duration,

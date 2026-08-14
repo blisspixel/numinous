@@ -17,8 +17,8 @@ use std::time::Duration;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use numinous_core::{
-    CUT_LEVELS, Canvas, Journey, Raster, Room, RoomMeta, Surface, all_rooms, all_rooms_with,
-    draw_text, hidden_room_by_id, room_by_id,
+    CUT_LEVELS, Canvas, Journey, PlotRequest, PlotSource, Raster, Room, RoomMeta, SingRequest,
+    Surface, all_rooms, all_rooms_with, draw_text, hidden_room_by_id, room_by_id,
 };
 
 const MAX_ENV_FILE_BYTES: u64 = 16 * 1024;
@@ -451,13 +451,13 @@ enum Command {
         #[arg(long)]
         list_recipes: bool,
         /// Left edge of the x range.
-        #[arg(long, default_value_t = -std::f64::consts::TAU)]
+        #[arg(long, default_value_t = numinous_core::DEFAULT_STUDIO_XMIN)]
         xmin: f64,
         /// Right edge of the x range.
-        #[arg(long, default_value_t = std::f64::consts::TAU)]
+        #[arg(long, default_value_t = numinous_core::DEFAULT_STUDIO_XMAX)]
         xmax: f64,
         /// Value of the parameter a (constant unless animating).
-        #[arg(long, default_value_t = 1.0)]
+        #[arg(long, default_value_t = numinous_core::DEFAULT_STUDIO_PARAMETER)]
         a: f64,
         /// Animate: sweep a from amin to amax, Ctrl+C to stop.
         #[arg(long)]
@@ -469,10 +469,10 @@ enum Command {
         #[arg(long, default_value_t = std::f64::consts::TAU)]
         amax: f64,
         /// Plot width in columns.
-        #[arg(long, default_value_t = 72)]
+        #[arg(long, default_value_t = numinous_core::DEFAULT_PLOT_WIDTH)]
         width: usize,
         /// Plot height in rows.
-        #[arg(long, default_value_t = 24)]
+        #[arg(long, default_value_t = numinous_core::DEFAULT_PLOT_HEIGHT)]
         height: usize,
         /// Save this Studio expression as a portable .num file and print its link.
         #[arg(long)]
@@ -550,7 +550,7 @@ enum Command {
         #[arg(long)]
         xmax: Option<f64>,
         /// Number of notes.
-        #[arg(long, default_value_t = 48)]
+        #[arg(long, default_value_t = numinous_core::DEFAULT_MELODY_NOTES)]
         notes: usize,
         /// Value of the parameter a, matching what `plot` uses (default 1; a
         /// Studio input supplies its own).
@@ -2092,10 +2092,6 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 lines.push(String::new());
                 return emit(Ok(lines.join("\n")));
             }
-            let expr = match resolve_plot_expression(expr.as_deref(), recipe, seed, auto_step) {
-                Ok(source) => source,
-                Err(message) => return emit(Err(message)),
-            };
             if animate && save.is_some() {
                 return emit(Err(
                     "--save is for still Studio plots; omit --animate to save a .num file\n"
@@ -2107,6 +2103,22 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                     "a title or author names a saved creation; add --save\n".to_string(),
                 ));
             }
+            let source = match resolve_plot_source(expr.as_deref(), recipe, seed, auto_step) {
+                Ok(source) => source,
+                Err(message) => return emit(Err(message)),
+            };
+            let request = match PlotRequest::new(
+                source,
+                Some(xmin),
+                Some(xmax),
+                Some(if animate { amin } else { a }),
+                Some(width),
+                Some(height),
+            ) {
+                Ok(request) => request,
+                Err(error) => return emit(Err(plot_request_error(error))),
+            };
+            let expr = request.source().to_string();
             if animate {
                 if let Err(message) = plot_report(&expr, xmin, xmax, amin, width, height) {
                     return emit(Err(message));
@@ -2713,24 +2725,10 @@ fn sing_wav(
     a: f64,
     path: &Path,
 ) -> Result<String, String> {
-    let expr =
-        numinous_core::parse(source).map_err(|error| format!("{}\n", terminal_safe(&error)))?;
-    // A non-finite bound passes `xmax <= xmin` because NaN compares false, so
-    // the finiteness check has to be its own door rather than a comparison.
-    if !xmin.is_finite() || !xmax.is_finite() {
-        return Err("need finite xmin and xmax\n".to_string());
-    }
-    if !a.is_finite() {
-        return Err("need finite a\n".to_string());
-    }
-    if xmax <= xmin {
-        return Err("need xmax > xmin\n".to_string());
-    }
+    let request = SingRequest::new(source, Some(xmin), Some(xmax), Some(a), Some(notes))
+        .map_err(sing_request_error)?;
     let sample_rate = 44_100u32;
-    let spec = numinous_core::to_melody(&expr, xmin, xmax, notes, a);
-    if spec.notes.is_empty() {
-        return Err("nothing to sing: the function is undefined across this range\n".to_string());
-    }
+    let spec = request.execute().map_err(sing_request_error)?;
     write_wav(path, &spec.render(sample_rate), sample_rate, 1)?;
     Ok(format!(
         "wrote {} ({:.1}s, {} notes) from y = {}\n",
@@ -2741,13 +2739,13 @@ fn sing_wav(
     ))
 }
 
-/// Resolve manual, recipe, or seeded bank discovery into one Studio source.
-fn resolve_plot_expression(
+/// Translate mutually exclusive CLI discovery flags into one core source.
+fn resolve_plot_source(
     expr: Option<&str>,
     recipe: Option<u64>,
     seed: Option<u64>,
     auto_step: u64,
-) -> Result<String, String> {
+) -> Result<PlotSource, String> {
     let modes =
         usize::from(expr.is_some()) + usize::from(recipe.is_some()) + usize::from(seed.is_some());
     if modes != 1 {
@@ -2757,16 +2755,19 @@ fn resolve_plot_expression(
         );
     }
     if let Some(source) = expr {
-        return Ok(source.to_string());
+        return Ok(PlotSource::Manual(source.to_string()));
     }
     if let Some(index) = recipe {
         if auto_step != 0 {
             return Err("--auto-step is only valid with --seed\n".to_string());
         }
-        return Ok(numinous_core::studio_recipe(index).to_string());
+        return Ok(PlotSource::Recipe(index));
     }
     let seed = seed.expect("seed present when exclusive");
-    Ok(numinous_core::studio_auto_recipe(seed, auto_step).to_string())
+    Ok(PlotSource::Seeded {
+        seed,
+        auto_step: (auto_step != 0).then_some(auto_step),
+    })
 }
 
 /// Plot `source` as y = f(x, a) over `[xmin, xmax]`, auto-scaling y.
@@ -2778,48 +2779,50 @@ fn plot_report(
     width: usize,
     height: usize,
 ) -> Result<String, String> {
-    validate_render_dimensions(width, height)?;
-    if width < 2 || height < 2 || xmax <= xmin {
-        return Err("need width >= 2, height >= 2, and xmax > xmin\n".to_string());
-    }
-    let expr =
-        numinous_core::parse(source).map_err(|error| format!("{}\n", terminal_safe(&error)))?;
-    let samples: Vec<(f64, f64)> = (0..width)
-        .map(|i| {
-            let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
-            (x, numinous_core::eval(&expr, x, a))
-        })
-        .filter(|(_, y)| y.is_finite())
-        .collect();
-    if samples.is_empty() {
-        return Err("nothing to plot: the function is undefined across this range\n".to_string());
-    }
-    let ymin = samples.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
-    let ymax = samples
-        .iter()
-        .map(|p| p.1)
-        .fold(f64::NEG_INFINITY, f64::max);
-    let yspan = (ymax - ymin).max(1e-9);
-
-    let mut canvas = Canvas::new(width, height);
-    let to_screen = |x: f64, y: f64| -> (i32, i32) {
-        let sx = ((x - xmin) / (xmax - xmin) * (width as f64 - 1.0)) as i32;
-        let sy = ((height as f64 - 1.0) - (y - ymin) / yspan * (height as f64 - 1.0)) as i32;
-        (sx, sy)
-    };
-    let mut previous: Option<(i32, i32)> = None;
-    for &(x, y) in &samples {
-        let (sx, sy) = to_screen(x, y);
-        if let Some((px, py)) = previous {
-            canvas.line(px, py, sx, sy, '#');
-        }
-        previous = Some((sx, sy));
-    }
+    let request = PlotRequest::new(
+        PlotSource::Manual(source.to_string()),
+        Some(xmin),
+        Some(xmax),
+        Some(a),
+        Some(width),
+        Some(height),
+    )
+    .map_err(plot_request_error)?;
+    let result = request.execute().map_err(plot_request_error)?;
     Ok(format!(
-        "y = {}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\n\n{}",
+        "y = {}    x in [{xmin:.3}, {xmax:.3}]    y in [{:.3}, {:.3}]\n\n{}",
         terminal_safe(source),
-        canvas.to_text()
+        result.ymin,
+        result.ymax,
+        result.text
     ))
+}
+
+fn plot_request_error(error: numinous_core::StudioRequestError) -> String {
+    match error {
+        numinous_core::StudioRequestError::Undefined => {
+            "nothing to plot: the function is undefined across this range\n".to_string()
+        }
+        numinous_core::StudioRequestError::InvalidPlotSize { .. } => {
+            "need width >= 2, height >= 2, and xmax > xmin\n".to_string()
+        }
+        numinous_core::StudioRequestError::PlotTooLarge { width, height } => {
+            match validate_render_dimensions(width, height) {
+                Err(message) => message,
+                Ok(()) => format!("plot size {width}x{height} exceeds the core limit\n"),
+            }
+        }
+        other => format!("{}\n", terminal_safe(&other.to_string())),
+    }
+}
+
+fn sing_request_error(error: numinous_core::StudioRequestError) -> String {
+    match error {
+        numinous_core::StudioRequestError::Undefined => {
+            "nothing to sing: the function is undefined across this range\n".to_string()
+        }
+        other => format!("{}\n", terminal_safe(&other.to_string())),
+    }
 }
 
 /// Save a Studio creation as a `.num` file and return the share link. The
@@ -9211,19 +9214,22 @@ mod tests {
     #[test]
     fn plot_discovery_resolves_recipe_seed_and_list() {
         assert_eq!(
-            super::resolve_plot_expression(Some("x"), None, None, 0).expect("manual"),
-            "x"
+            super::resolve_plot_source(Some("x"), None, None, 0).expect("manual"),
+            numinous_core::PlotSource::Manual("x".to_string())
         );
         assert_eq!(
-            super::resolve_plot_expression(None, Some(0), None, 0).expect("recipe"),
-            numinous_core::studio_recipe(0)
+            super::resolve_plot_source(None, Some(0), None, 0).expect("recipe"),
+            numinous_core::PlotSource::Recipe(0)
         );
         assert_eq!(
-            super::resolve_plot_expression(None, None, Some(7), 2).expect("auto"),
-            numinous_core::studio_auto_recipe(7, 2)
+            super::resolve_plot_source(None, None, Some(7), 2).expect("auto"),
+            numinous_core::PlotSource::Seeded {
+                seed: 7,
+                auto_step: Some(2)
+            }
         );
-        assert!(super::resolve_plot_expression(None, None, None, 0).is_err());
-        assert!(super::resolve_plot_expression(Some("x"), Some(1), None, 0).is_err());
+        assert!(super::resolve_plot_source(None, None, None, 0).is_err());
+        assert!(super::resolve_plot_source(Some("x"), Some(1), None, 0).is_err());
         let mut journey = numinous_core::Journey::default();
         let code = run(
             Command::Plot {

@@ -9,7 +9,7 @@ built, so an aspiration is never mistaken for a result.
 ## Evidence snapshot, 2026-08-13
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 3,512 passing all-target test cases plus three expensive ignored
+  doctests, 3,518 passing all-target test cases plus three expensive ignored
   diagnostics, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
   three-OS test-and-build matrix. The current measured coverage is 95.09%
@@ -22,7 +22,7 @@ built, so an aspiration is never mistaken for a result.
   licenses, package URLs, and registry checksums. Fifteen release-package
   regressions parse all packaged 64-bit PE, ELF, and Mach-O executables and bind
   exact hashes, formats, architectures, and unique direct header imports into
-  that inventory. Ten release-workflow regressions require an exact audited
+  that inventory. Eleven release-workflow regressions require an exact audited
   artifact allowlist with no additional files, tag-only least-privilege keyless
   build and SBOM attestations, archive-only subjects from the audited release
   set, both retained signed bundles, and publication ordered after audit and
