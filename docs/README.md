@@ -21,12 +21,12 @@ Open Knowledge Format v0.2 export, and confirmed erase.
 
 **Critical path now:** preserve the completed seven-room Universal Wager, close
 the remaining structural Polish Wave debts, then build the Mind's Seat. Shared
-Studio plot and melody request types have removed the first cross-face request
-copy; the `RoomMeta` table and remaining god-file seams are next. Mind's Seat
-presence and retrieval follow, then the measured Sensory Lift spike. The 0.4
-Understanding Alpha cohort waits on an owner ruling; its method dry-run and
-dual automated auditors are already in CI. Soft-thin densify, bulk new rooms,
-and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and
+Studio requests, the typed room catalog, the typed Gauntlet, and local-state
+path resolution now have one core owner; the remaining god-file seams are next.
+Mind's Seat presence and retrieval follow, then the measured Sensory Lift spike.
+The 0.4 Understanding Alpha cohort waits on an owner ruling; its method dry-run
+and dual automated auditors are already in CI. Soft-thin densify, bulk new
+rooms, and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and
 **Critical path right now** in `ROADMAP.md`. These docs remain the plan of
 record; Built, Measured, Observed, Designed, and Hypothesis have the meanings
 defined in `RESEARCH.md`.

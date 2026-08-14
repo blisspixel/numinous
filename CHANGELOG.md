@@ -5,6 +5,25 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- One core local-state resolver now owns the environment precedence and default
+  names for Journey, scores, Cairn drafts, the opt-in experience journal,
+  generated-radio cache, and App crash log. App, CLI, and MCP no longer carry
+  independent home-directory and override logic, and the CLI no longer derives
+  a stray `journal.txt` path from the Cairn location.
+- Complete local-state inventory and erasure now include the opt-in experience
+  journal. CLI and MCP previews disclose its path and bytes, each face exposes
+  a separate journal consent flag, and `all_local` now locks, preflights,
+  erases, and verifies every store it claims to cover.
+- Erasure path validation now rejects parent traversal, resolves the deepest
+  existing ancestor, and compares unresolved suffixes case-insensitively on
+  Windows. An alias can no longer change targets after lock creation or evade
+  a duplicate check by spelling. A `NUMINOUS_RADIO` soundtrack that overlaps
+  the managed cache also blocks the entire transaction before mutation,
+  preserving the user-selected source.
+- The full Windows release gate passes in 1,764.6 seconds with 3,535 passing
+  all-target Rust cases, three expensive ignored diagnostics, 95.15% region
+  coverage, and 95.13% line coverage. Core persistence has 94.73% region and
+  95.33% line coverage.
 - One typed core Gauntlet now owns the four seeded stages, choice and wire
   grading, combo total, canonical reveals, and leaderboard identity used by
   App, CLI, MCP, and Watch Agent. The four faces no longer carry independent
@@ -15,10 +34,6 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 - Engineering policy now makes the language boundary explicit: Rust owns
   product truth, while Python is reserved for outside-in executable driving,
   release artifact inspection, study evidence, and packaging checks.
-- The full Windows release gate passes in 1,698 seconds with 3,530 passing
-  all-target Rust cases, three expensive ignored diagnostics, and 95.12%
-  region and 95.09% line coverage. The new core Gauntlet module has 98.61%
-  region and 99.10% line coverage.
 - CI now pins `taiki-e/install-action` v2.85.13, and release provenance now
   pins `actions/attest` v4.2.2. Both references use the publishers' immutable
   commit SHAs.
@@ -36,9 +51,6 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   built-in room no longer requires coordinated metadata, module, and registry
   copies. All 355 prior per-room metadata blocks moved into the single catalog
   declaration with semantic parity checked against the released source.
-- The full Windows release gate passes in 1,621.6 seconds with 3,524 passing
-  all-target Rust cases, three expensive ignored diagnostics, and 95.04%
-  region and line coverage.
 
 ## [0.3.0-alpha.5] - 2026-08-13
 

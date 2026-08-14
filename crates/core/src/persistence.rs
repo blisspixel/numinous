@@ -32,7 +32,8 @@ static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 const MAX_MANAGED_CACHE_ENTRIES: usize = 4096;
 const MAX_MANAGED_SIDECARS: usize = 4096;
 
-/// Resolved locations for every Numinous-managed local state store.
+/// Resolved locations for every Numinous-managed local state store and the
+/// user-selected radio source protected from managed cache erasure.
 ///
 /// User-selected exports and the installed application tree are deliberately
 /// outside this set because their locations and ownership have separate
@@ -49,8 +50,46 @@ pub struct LocalStatePaths {
     pub journal: PathBuf,
     /// Flat directory of generated radio WAV files.
     pub radio_cache: PathBuf,
+    /// User-selected soundtrack source, if configured. This path is never
+    /// inventoried or erased; it exists here only to reject cache overlap.
+    pub protected_radio_source: Option<PathBuf>,
     /// App crash diagnostic text file.
     pub crash_log: PathBuf,
+}
+
+/// Resolve every Numinous-managed local state location through one shared
+/// environment precedence rule.
+///
+/// `NUMINOUS_JOURNEY`, `NUMINOUS_SCORES`, `NUMINOUS_CAIRN`, and
+/// `NUMINOUS_JOURNAL` override their individual stores. Other paths are rooted
+/// at `HOME`, then `USERPROFILE`, then the current directory when neither home
+/// variable exists. `NUMINOUS_RADIO` selects a playable soundtrack pack. It is
+/// carried only as a protected path so it can never silently become a managed
+/// cache erasure target.
+#[must_use]
+pub fn resolve_local_state_paths() -> LocalStatePaths {
+    resolve_local_state_paths_with(|name| std::env::var_os(name))
+}
+
+fn resolve_local_state_paths_with(
+    mut read_environment: impl FnMut(&str) -> Option<OsString>,
+) -> LocalStatePaths {
+    let home = read_environment("HOME")
+        .or_else(|| read_environment("USERPROFILE"))
+        .map_or_else(|| PathBuf::from("."), PathBuf::from);
+    let protected_radio_source = read_environment("NUMINOUS_RADIO").map(PathBuf::from);
+    let mut managed_file = |variable: &str, fallback: &str| {
+        read_environment(variable).map_or_else(|| home.join(fallback), PathBuf::from)
+    };
+    LocalStatePaths {
+        journey: managed_file("NUMINOUS_JOURNEY", ".numinous-journey"),
+        scores: managed_file("NUMINOUS_SCORES", ".numinous-scores"),
+        cairn: managed_file("NUMINOUS_CAIRN", ".numinous-cairn"),
+        journal: managed_file("NUMINOUS_JOURNAL", ".numinous-journal"),
+        radio_cache: home.join(".numinous-radio"),
+        protected_radio_source,
+        crash_log: home.join(".numinous-crash.log"),
+    }
 }
 
 /// Metadata for one expected regular state file.
@@ -139,6 +178,8 @@ pub struct LocalStateInventory {
     pub scores: LocalScoresInventory,
     /// Local Cairn inventory and valid draft count.
     pub cairn: LocalCairnInventory,
+    /// Opt-in experience journal inventory.
+    pub journal: LocalFileInventory,
     /// Generated-radio cache inventory.
     pub radio_cache: LocalCacheInventory,
     /// App crash-log inventory.
@@ -157,6 +198,8 @@ impl LocalStateInventory {
             .saturating_add(self.scores.file.sidecar_bytes)
             .saturating_add(self.cairn.file.bytes)
             .saturating_add(self.cairn.file.sidecar_bytes)
+            .saturating_add(self.journal.bytes)
+            .saturating_add(self.journal.sidecar_bytes)
             .saturating_add(self.radio_cache.bytes)
             .saturating_add(self.radio_cache.sidecar_bytes)
             .saturating_add(self.crash_log.bytes)
@@ -171,6 +214,7 @@ impl LocalStateInventory {
             self.journey.file.exists || self.journey.file.sidecar_files != 0,
             self.scores.file.exists || self.scores.file.sidecar_files != 0,
             self.cairn.file.exists || self.cairn.file.sidecar_files != 0,
+            self.journal.exists || self.journal.sidecar_files != 0,
             self.radio_cache.exists || self.radio_cache.sidecar_files != 0,
             self.crash_log.exists || self.crash_log.sidecar_files != 0,
         ]
@@ -189,6 +233,8 @@ pub struct LocalStateEraseSelection {
     pub scores: bool,
     /// Erase player-owned local Cairn drafts.
     pub cairn: bool,
+    /// Erase the opt-in experience journal.
+    pub journal: bool,
     /// Erase recognized generated radio tracks.
     pub radio_cache: bool,
     /// Erase the App crash diagnostic.
@@ -203,6 +249,7 @@ impl LocalStateEraseSelection {
             journey: true,
             scores: true,
             cairn: true,
+            journal: true,
             radio_cache: true,
             crash_log: true,
         }
@@ -421,21 +468,103 @@ fn is_generated_radio_file(name: &std::ffi::OsStr) -> bool {
     })
 }
 
-fn resolved_path_for_comparison(path: &Path) -> io::Result<PathBuf> {
-    if path.exists() {
-        return fs::canonicalize(path);
+fn lexical_absolute_path(path: &Path) -> io::Result<PathBuf> {
+    if path
+        .components()
+        .any(|component| component == std::path::Component::ParentDir)
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "{} contains parent traversal, which managed erasure does not accept",
+                path.display()
+            ),
+        ));
     }
     let absolute = if path.is_absolute() {
         path.to_path_buf()
     } else {
         std::env::current_dir()?.join(path)
     };
-    if let (Some(parent), Some(name)) = (absolute.parent(), absolute.file_name())
-        && parent.exists()
-    {
-        return fs::canonicalize(parent).map(|parent| parent.join(name));
+    let mut normalized = PathBuf::new();
+    for component in absolute.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!(
+                        "{} contains parent traversal, which managed erasure does not accept",
+                        path.display()
+                    ),
+                ));
+            }
+            std::path::Component::Prefix(_)
+            | std::path::Component::RootDir
+            | std::path::Component::Normal(_) => normalized.push(component.as_os_str()),
+        }
     }
-    Ok(absolute)
+    Ok(normalized)
+}
+
+fn resolved_path_for_comparison(path: &Path) -> io::Result<PathBuf> {
+    let normalized = lexical_absolute_path(path)?;
+    let mut ancestor = normalized.as_path();
+    let mut missing_suffix = Vec::new();
+    loop {
+        match fs::symlink_metadata(ancestor) {
+            Ok(_) => {
+                let mut resolved = fs::canonicalize(ancestor)?;
+                for name in missing_suffix.iter().rev() {
+                    resolved.push(name);
+                }
+                return Ok(resolved);
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                let name = ancestor.file_name().ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        format!("{} has no resolvable filesystem ancestor", path.display()),
+                    )
+                })?;
+                missing_suffix.push(name.to_os_string());
+                ancestor = ancestor.parent().ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        format!("{} has no resolvable filesystem ancestor", path.display()),
+                    )
+                })?;
+            }
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn paths_equal_for_erasure(left: &Path, right: &Path) -> bool {
+    left == right
+}
+
+#[cfg(windows)]
+fn paths_equal_for_erasure(left: &Path, right: &Path) -> bool {
+    left.to_string_lossy().to_lowercase() == right.to_string_lossy().to_lowercase()
+}
+
+#[cfg(not(windows))]
+fn paths_overlap_for_erasure(left: &Path, right: &Path) -> bool {
+    left.starts_with(right) || right.starts_with(left)
+}
+
+#[cfg(windows)]
+fn paths_overlap_for_erasure(left: &Path, right: &Path) -> bool {
+    let folded_components = |path: &Path| {
+        path.components()
+            .map(|component| component.as_os_str().to_string_lossy().to_lowercase())
+            .collect::<Vec<_>>()
+    };
+    let left = folded_components(left);
+    let right = folded_components(right);
+    left.starts_with(&right) || right.starts_with(&left)
 }
 
 fn validate_local_state_paths(paths: &LocalStatePaths) -> io::Result<()> {
@@ -443,6 +572,7 @@ fn validate_local_state_paths(paths: &LocalStatePaths) -> io::Result<()> {
         ("journey", &paths.journey),
         ("scores", &paths.scores),
         ("Cairn drafts", &paths.cairn),
+        ("experience journal", &paths.journal),
         ("crash log", &paths.crash_log),
     ]
     .map(|(name, path)| Ok((name, resolved_path_for_comparison(path)?)))
@@ -450,7 +580,7 @@ fn validate_local_state_paths(paths: &LocalStatePaths) -> io::Result<()> {
     .collect::<io::Result<Vec<_>>>()?;
     for (index, (left_name, left)) in files.iter().enumerate() {
         for (right_name, right) in files.iter().skip(index + 1) {
-            if left == right {
+            if paths_equal_for_erasure(left, right) {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
                     format!("{left_name} and {right_name} resolve to the same path"),
@@ -460,10 +590,19 @@ fn validate_local_state_paths(paths: &LocalStatePaths) -> io::Result<()> {
     }
     let cache = resolved_path_for_comparison(&paths.radio_cache)?;
     for (name, file) in &files {
-        if file.starts_with(&cache) || cache.starts_with(file) {
+        if paths_overlap_for_erasure(file, &cache) {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 format!("{name} and radio cache paths overlap"),
+            ));
+        }
+    }
+    if let Some(source) = paths.protected_radio_source.as_deref() {
+        let source = resolved_path_for_comparison(source)?;
+        if paths_overlap_for_erasure(&source, &cache) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "selected radio source and managed radio cache paths overlap",
             ));
         }
     }
@@ -475,6 +614,7 @@ pub fn inspect_local_state(paths: &LocalStatePaths) -> io::Result<LocalStateInve
     let journey_file = inspect_managed_file(&paths.journey)?;
     let scores_file = inspect_managed_file(&paths.scores)?;
     let cairn_file = inspect_managed_file(&paths.cairn)?;
+    let journal = inspect_managed_file(&paths.journal)?;
     let journey = if journey_file.managed_file {
         load_journey_file(&paths.journey)
     } else {
@@ -506,6 +646,7 @@ pub fn inspect_local_state(paths: &LocalStatePaths) -> io::Result<LocalStateInve
             file: cairn_file,
             local_drafts,
         },
+        journal,
         radio_cache: inspect_managed_cache(&paths.radio_cache)?,
         crash_log: inspect_managed_file(&paths.crash_log)?,
     })
@@ -610,6 +751,7 @@ fn acquire_erasure_locks(
         (selection.journey, "journey", &paths.journey),
         (selection.scores, "scores", &paths.scores),
         (selection.cairn, "Cairn drafts", &paths.cairn),
+        (selection.journal, "experience journal", &paths.journal),
         (selection.radio_cache, "radio cache", &paths.radio_cache),
         (selection.crash_log, "crash log", &paths.crash_log),
     ] {
@@ -640,6 +782,7 @@ fn preflight_selected_state(
         (selection.journey, "journey", &paths.journey),
         (selection.scores, "scores", &paths.scores),
         (selection.cairn, "Cairn drafts", &paths.cairn),
+        (selection.journal, "experience journal", &paths.journal),
         (selection.crash_log, "crash log", &paths.crash_log),
     ] {
         if enabled {
@@ -684,6 +827,7 @@ pub fn erase_local_state(
         })?;
     }
     erase_file_target(selection.crash_log, "crash log", &paths.crash_log)?;
+    erase_file_target(selection.journal, "experience journal", &paths.journal)?;
     erase_file_target(selection.cairn, "Cairn drafts", &paths.cairn)?;
     erase_file_target(selection.scores, "scores", &paths.scores)?;
     erase_file_target(selection.journey, "journey", &paths.journey)?;
@@ -1516,7 +1660,10 @@ mod tests {
         Journey, LocalStateEraseSelection, LocalStatePaths, Scoreboard, erase_journal_file,
         erase_local_state, inspect_local_state, load_journey_file, load_scoreboard_file,
         persist_journey_delta, record_journal_file, record_score_file, remove_persisted_file,
+        resolve_local_state_paths_with,
     };
+    use std::collections::BTreeMap;
+    use std::ffi::OsString;
     use std::fs::File;
     use std::io;
     use std::path::PathBuf;
@@ -1529,6 +1676,53 @@ mod tests {
     use std::time::Duration;
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    fn resolved_paths(values: &[(&str, &str)]) -> LocalStatePaths {
+        let environment: BTreeMap<&str, OsString> = values
+            .iter()
+            .map(|&(name, value)| (name, OsString::from(value)))
+            .collect();
+        resolve_local_state_paths_with(|name| environment.get(name).cloned())
+    }
+
+    #[test]
+    fn one_state_resolver_owns_home_precedence_and_default_names() {
+        let paths = resolved_paths(&[("HOME", "home"), ("USERPROFILE", "profile")]);
+        assert_eq!(paths.journey, PathBuf::from("home/.numinous-journey"));
+        assert_eq!(paths.scores, PathBuf::from("home/.numinous-scores"));
+        assert_eq!(paths.cairn, PathBuf::from("home/.numinous-cairn"));
+        assert_eq!(paths.journal, PathBuf::from("home/.numinous-journal"));
+        assert_eq!(paths.radio_cache, PathBuf::from("home/.numinous-radio"));
+        assert_eq!(paths.crash_log, PathBuf::from("home/.numinous-crash.log"));
+
+        let profile = resolved_paths(&[("USERPROFILE", "profile")]);
+        assert_eq!(profile.journey, PathBuf::from("profile/.numinous-journey"));
+
+        let current = resolved_paths(&[]);
+        assert_eq!(current.journey, PathBuf::from("./.numinous-journey"));
+    }
+
+    #[test]
+    fn individual_overrides_do_not_move_unrelated_or_user_owned_paths() {
+        let paths = resolved_paths(&[
+            ("HOME", "home"),
+            ("NUMINOUS_JOURNEY", "custom/journey"),
+            ("NUMINOUS_SCORES", "custom/scores"),
+            ("NUMINOUS_CAIRN", "custom/cairn"),
+            ("NUMINOUS_JOURNAL", "custom/journal"),
+            ("NUMINOUS_RADIO", "user/soundtrack"),
+        ]);
+        assert_eq!(paths.journey, PathBuf::from("custom/journey"));
+        assert_eq!(paths.scores, PathBuf::from("custom/scores"));
+        assert_eq!(paths.cairn, PathBuf::from("custom/cairn"));
+        assert_eq!(paths.journal, PathBuf::from("custom/journal"));
+        assert_eq!(paths.radio_cache, PathBuf::from("home/.numinous-radio"));
+        assert_eq!(
+            paths.protected_radio_source,
+            Some(PathBuf::from("user/soundtrack"))
+        );
+        assert_eq!(paths.crash_log, PathBuf::from("home/.numinous-crash.log"));
+    }
 
     struct LiveChild(std::process::Child);
 
@@ -1587,6 +1781,7 @@ mod tests {
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
+            protected_radio_source: None,
             crash_log: root.join("crash.log"),
         }
     }
@@ -1600,6 +1795,7 @@ mod tests {
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
+            protected_radio_source: None,
             crash_log: root.join("crash.log"),
         };
         std::fs::create_dir_all(&paths.radio_cache).expect("fixture directories");
@@ -1610,6 +1806,7 @@ mod tests {
         .expect("journey fixture");
         std::fs::write(&paths.scores, b"50\tmunch seed:1 board:0\n").expect("score fixture");
         std::fs::write(&paths.cairn, b"a tester\tthere is no last prime\n").expect("cairn fixture");
+        std::fs::write(&paths.journal, b"one opted-in experience\n").expect("journal fixture");
         std::fs::write(paths.radio_cache.join("trance-001.wav"), b"RIFFfixture")
             .expect("radio fixture");
         std::fs::write(&paths.crash_log, b"bounded crash receipt").expect("crash fixture");
@@ -1623,6 +1820,8 @@ mod tests {
         assert_eq!(before.journey.wins, 1);
         assert_eq!(before.scores.entries, 1);
         assert_eq!(before.cairn.local_drafts, 1);
+        assert!(before.journal.exists);
+        assert!(before.journal.managed_file);
         assert_eq!(before.radio_cache.files, 1);
         assert_eq!(before.radio_cache.unexpected_entries, 0);
         assert_eq!(before.radio_cache.sidecar_files, 1);
@@ -1637,6 +1836,7 @@ mod tests {
             &paths.journey,
             &paths.scores,
             &paths.cairn,
+            &paths.journal,
             &paths.radio_cache,
             &paths.crash_log,
         ] {
@@ -1660,6 +1860,7 @@ mod tests {
             cairn: relative_root.join("cairn.txt"),
             journal: relative_root.join("journal.txt"),
             radio_cache: relative_root.join("radio"),
+            protected_radio_source: None,
             crash_log: relative_root.join("crash.log"),
         };
 
@@ -1669,6 +1870,7 @@ mod tests {
             &inventory.journey.file.path,
             &inventory.scores.file.path,
             &inventory.cairn.file.path,
+            &inventory.journal.path,
             &inventory.radio_cache.path,
             &inventory.crash_log.path,
         ] {
@@ -1686,6 +1888,7 @@ mod tests {
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
+            protected_radio_source: None,
             crash_log: root.join("crash.log"),
         };
         let guard = super::lock_local_state(&paths.radio_cache).expect("cache writer lock");
@@ -1784,6 +1987,7 @@ mod tests {
                 journey: true,
                 scores: false,
                 cairn: false,
+                journal: false,
                 radio_cache: true,
                 crash_log: false,
             },
@@ -1848,6 +2052,7 @@ mod tests {
                 journey: false,
                 scores: false,
                 cairn: false,
+                journal: false,
                 radio_cache: true,
                 crash_log: false,
             },
@@ -1878,6 +2083,7 @@ mod tests {
                 journey: true,
                 scores: false,
                 cairn: false,
+                journal: false,
                 radio_cache: false,
                 crash_log: false,
             },
@@ -1931,6 +2137,7 @@ mod tests {
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
+            protected_radio_source: None,
             crash_log: root.join("crash.log"),
         };
         std::fs::create_dir_all(&root).expect("fixture root");
@@ -1951,6 +2158,7 @@ mod tests {
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
+            protected_radio_source: None,
             crash_log: root.join("crash.log"),
         };
         std::fs::create_dir_all(&paths.radio_cache).expect("cache fixture");
@@ -1975,6 +2183,7 @@ mod tests {
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
+            protected_radio_source: None,
             crash_log: root.join("crash.log"),
         };
         std::fs::create_dir_all(&paths.radio_cache).expect("fixture cache");
@@ -1986,6 +2195,7 @@ mod tests {
                 journey: true,
                 scores: false,
                 cairn: false,
+                journal: false,
                 radio_cache: true,
                 crash_log: false,
             },
@@ -2012,6 +2222,7 @@ mod tests {
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
+            protected_radio_source: None,
             crash_log: root.join("crash.log"),
         };
         let error = erase_local_state(
@@ -2020,6 +2231,7 @@ mod tests {
                 journey: true,
                 scores: false,
                 cairn: false,
+                journal: false,
                 radio_cache: false,
                 crash_log: false,
             },
@@ -2034,6 +2246,139 @@ mod tests {
     }
 
     #[test]
+    fn unresolved_parent_alias_fails_before_lock_creation_or_erasure() {
+        let root = temp_file("unresolved_parent_alias").with_extension("");
+        std::fs::create_dir_all(&root).expect("fixture root");
+        let shared = root.join("shared.txt");
+        std::fs::write(&shared, b"50\tfixture\n").expect("shared fixture");
+        let mut paths = local_state_paths(&root);
+        paths.journey = root.join("missing").join("..").join("shared.txt");
+        paths.scores = shared.clone();
+
+        let error = erase_local_state(
+            &paths,
+            LocalStateEraseSelection {
+                journey: true,
+                scores: false,
+                cairn: false,
+                journal: false,
+                radio_cache: false,
+                crash_log: false,
+            },
+        )
+        .expect_err("lexical alias must fail before acquiring a lock");
+
+        assert_eq!(error.target(), "local-state path layout");
+        assert!(error.to_string().contains("parent traversal"));
+        assert_eq!(
+            std::fs::read(&shared).expect("unselected score remains"),
+            b"50\tfixture\n"
+        );
+        assert!(!root.join("missing").exists());
+        std::fs::remove_dir_all(&root).expect("fixture cleanup");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlink_parent_traversal_cannot_bypass_file_or_radio_protection() {
+        let base = temp_file("symlink_parent_alias").with_extension("");
+        let root = base.join("root");
+        let other = base.join("other");
+        std::fs::create_dir_all(other.join("child")).expect("symlink target");
+        std::fs::create_dir_all(&root).expect("fixture root");
+        std::os::unix::fs::symlink(other.join("child"), root.join("link"))
+            .expect("directory symlink");
+        let shared = other.join("shared.txt");
+        std::fs::write(&shared, b"50\tfixture\n").expect("shared fixture");
+        let mut paths = local_state_paths(&root);
+        paths.journey = root.join("link").join("..").join("shared.txt");
+        paths.scores = shared.clone();
+
+        let file_error = erase_local_state(
+            &paths,
+            LocalStateEraseSelection {
+                journey: true,
+                scores: false,
+                cairn: false,
+                journal: false,
+                radio_cache: false,
+                crash_log: false,
+            },
+        )
+        .expect_err("symlink traversal must fail before mutation");
+        assert!(file_error.to_string().contains("parent traversal"));
+        assert!(shared.exists());
+
+        paths.journey = root.join("journey.txt");
+        paths.scores = root.join("scores.txt");
+        paths.radio_cache = other.join("radio");
+        paths.protected_radio_source = Some(root.join("link").join(".."));
+        std::fs::create_dir_all(&paths.radio_cache).expect("radio cache");
+        let track = paths.radio_cache.join("trance-001.wav");
+        std::fs::write(&track, b"RIFF protected").expect("radio fixture");
+
+        let radio_error = erase_local_state(&paths, LocalStateEraseSelection::complete())
+            .expect_err("symlink traversal must not hide protected overlap");
+        assert!(radio_error.to_string().contains("parent traversal"));
+        assert!(track.exists());
+        std::fs::remove_dir_all(&base).expect("fixture cleanup");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn missing_case_aliases_fail_before_lock_creation() {
+        let root = temp_file("missing_case_aliases").with_extension("");
+        std::fs::create_dir_all(&root).expect("fixture root");
+        let mut paths = local_state_paths(&root);
+        paths.journey = root.join("Journey.txt");
+        paths.scores = root.join("journey.txt");
+
+        let error = erase_local_state(&paths, LocalStateEraseSelection::complete())
+            .expect_err("case-folded duplicate must fail before locking");
+
+        assert_eq!(error.target(), "local-state path layout");
+        assert!(error.to_string().contains("same path"));
+        assert_eq!(
+            std::fs::read_dir(&root)
+                .expect("inspect untouched root")
+                .count(),
+            0
+        );
+        std::fs::remove_dir(&root).expect("fixture cleanup");
+    }
+
+    #[test]
+    fn selected_radio_source_overlap_blocks_complete_erasure() {
+        let root = temp_file("protected_radio_overlap").with_extension("");
+        let mut paths = local_state_paths(&root);
+        paths.protected_radio_source = Some(paths.radio_cache.clone());
+        std::fs::create_dir_all(&paths.radio_cache).expect("radio fixture");
+        let track = paths.radio_cache.join("trance-001.wav");
+        std::fs::write(&track, b"RIFF protected").expect("protected track");
+        std::fs::write(&paths.journey, b"plays 1\n").expect("journey fixture");
+
+        let error = erase_local_state(&paths, LocalStateEraseSelection::complete())
+            .expect_err("selected soundtrack must not become an erasure target");
+
+        assert_eq!(error.target(), "local-state path layout");
+        assert!(error.to_string().contains("selected radio source"));
+        assert_eq!(
+            std::fs::read(&track).expect("protected track remains"),
+            b"RIFF protected"
+        );
+        assert!(
+            paths.journey.exists(),
+            "other state remains before mutation"
+        );
+
+        paths.protected_radio_source = Some(root.clone());
+        let ancestor_error = super::validate_local_state_paths(&paths)
+            .expect_err("ancestor soundtrack path must also fail closed");
+        assert!(ancestor_error.to_string().contains("selected radio source"));
+        std::fs::remove_dir_all(&root).expect("fixture cleanup");
+    }
+
+    #[test]
     fn complete_erasure_preflights_every_store_before_mutation() {
         let root = temp_file("complete_preflight").with_extension("");
         let paths = LocalStatePaths {
@@ -2042,11 +2387,13 @@ mod tests {
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
+            protected_radio_source: None,
             crash_log: root.join("crash.log"),
         };
         std::fs::create_dir_all(&paths.journey).expect("invalid Journey object");
         std::fs::write(&paths.scores, b"50\tfixture\n").expect("score fixture");
         std::fs::write(&paths.cairn, b"Ada\ttruth\n").expect("Cairn fixture");
+        std::fs::write(&paths.journal, b"remembered experience\n").expect("journal fixture");
         std::fs::create_dir(&paths.radio_cache).expect("cache fixture");
         std::fs::write(paths.radio_cache.join("trance-001.wav"), b"RIFF").expect("radio fixture");
         std::fs::write(&paths.crash_log, b"diagnostic").expect("crash fixture");
@@ -2062,6 +2409,10 @@ mod tests {
         assert_eq!(
             std::fs::read(&paths.cairn).expect("Cairn remains"),
             b"Ada\ttruth\n"
+        );
+        assert_eq!(
+            std::fs::read(&paths.journal).expect("journal remains"),
+            b"remembered experience\n"
         );
         assert!(paths.radio_cache.join("trance-001.wav").is_file());
         assert_eq!(
@@ -2080,6 +2431,7 @@ mod tests {
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
+            protected_radio_source: None,
             crash_log: root.join("crash.log"),
         };
         std::fs::create_dir_all(&paths.radio_cache).expect("cache fixture");
@@ -2096,6 +2448,7 @@ mod tests {
                     journey: false,
                     scores: false,
                     cairn: false,
+                    journal: false,
                     radio_cache: true,
                     crash_log: false,
                 },

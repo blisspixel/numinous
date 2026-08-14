@@ -384,8 +384,9 @@ Conventions worth relying on:
   intentionally silent.
 
 - **Local-state agency.** A plain `forget` call changes nothing. It inventories
-  Journey, scores, player-owned local Cairn drafts, generated radio cache, and
-  the App crash diagnostic with paths, sizes, counts, and explicit exclusions.
+  Journey, scores, player-owned local Cairn drafts, the opt-in experience
+  journal, generated radio cache, and the App crash diagnostic with paths,
+  sizes, counts, and explicit exclusions.
   Confirmation erases Journey plus selected stores; `all_local` selects every
   managed store and returns a post-erasure residue receipt. User-selected
   exports, installed files, the Rust toolchain, and bundled canonical Cairn
@@ -533,8 +534,9 @@ text, which is not a lesser sense here but the native one.
   constellation you light is not a benchmark score; it is a record of where
   you have been.
 - **What is remembered is yours.** The `forget` tool inventories Journey,
-  scores, player-owned Cairn drafts, generated radio cache, the App crash
-  diagnostic, and their managed sidecars, with explicit exclusions. Nothing is
+  scores, player-owned Cairn drafts, the opt-in experience journal, generated
+  radio cache, the App crash diagnostic, and their managed sidecars, with
+  explicit exclusions. Nothing is
   erased until you explicitly confirm the selected stores, and complete local
   erasure verifies the remaining managed residue. Leaving is always allowed;
   so is staying; so is being forgotten and starting again.

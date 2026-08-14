@@ -312,6 +312,9 @@ enum Command {
         /// Also erase player-owned local Cairn drafts.
         #[arg(long)]
         cairn: bool,
+        /// Also erase the opt-in experience journal.
+        #[arg(long)]
+        journal: bool,
         /// Also erase generated radio tracks in the managed cache.
         #[arg(long)]
         radio_cache: bool,
@@ -1199,20 +1202,7 @@ fn test_state_path(kind: &str) -> PathBuf {
 }
 
 fn journey_path() -> PathBuf {
-    #[cfg(test)]
-    {
-        test_state_path("journey")
-    }
-    #[cfg(not(test))]
-    {
-        if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
-            return PathBuf::from(path);
-        }
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".numinous-journey")
-    }
+    local_state_paths().journey
 }
 
 /// Load the journey, or start a fresh one.
@@ -1242,68 +1232,25 @@ fn load_journey() -> (Journey, bool) {
 
 /// Where the high-score table lives: `NUMINOUS_SCORES` if set, else home.
 fn scores_path() -> PathBuf {
-    #[cfg(test)]
-    {
-        test_state_path("scores")
-    }
-    #[cfg(not(test))]
-    {
-        if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
-            return PathBuf::from(path);
-        }
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".numinous-scores")
-    }
-}
-
-/// Where player-owned local Cairn drafts live.
-fn cairn_path() -> PathBuf {
-    #[cfg(test)]
-    {
-        test_state_path("cairn")
-    }
-    #[cfg(not(test))]
-    {
-        if let Ok(path) = std::env::var("NUMINOUS_CAIRN") {
-            return PathBuf::from(path);
-        }
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".numinous-cairn")
-    }
-}
-
-fn crash_log_path() -> PathBuf {
-    #[cfg(test)]
-    {
-        test_state_path("crash")
-    }
-    #[cfg(not(test))]
-    {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".numinous-crash.log")
-    }
+    local_state_paths().scores
 }
 
 fn local_state_paths() -> numinous_core::LocalStatePaths {
-    numinous_core::LocalStatePaths {
-        journey: journey_path(),
-        scores: scores_path(),
-        cairn: cairn_path(),
-        journal: std::env::var_os("NUMINOUS_JOURNAL")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                let mut p = cairn_path();
-                p.set_file_name("journal.txt");
-                p
-            }),
-        radio_cache: radio_dir(),
-        crash_log: crash_log_path(),
+    #[cfg(test)]
+    {
+        numinous_core::LocalStatePaths {
+            journey: test_state_path("journey"),
+            scores: test_state_path("scores"),
+            cairn: test_state_path("cairn"),
+            journal: test_state_path("journal"),
+            radio_cache: test_state_path("radio"),
+            protected_radio_source: None,
+            crash_log: test_state_path("crash"),
+        }
+    }
+    #[cfg(not(test))]
+    {
+        numinous_core::resolve_local_state_paths()
     }
 }
 
@@ -1376,6 +1323,7 @@ fn local_state_inventory_report(
         selection.journey.then_some("journey"),
         selection.scores.then_some("scores"),
         selection.cairn.then_some("Cairn drafts"),
+        selection.journal.then_some("experience journal"),
         selection.radio_cache.then_some("radio cache"),
         selection.crash_log.then_some("crash log"),
     ]
@@ -1384,7 +1332,7 @@ fn local_state_inventory_report(
     .collect::<Vec<_>>()
     .join(", ");
     format!(
-        "Numinous-managed local state:\n\n{}\n{}\n{}\n  {:<12} {}; path {}\n{}\n\nSelected for confirmed erasure: {}.\nNo state was erased by this preview. Use `numinous forget --confirm` for the Journey, add individual flags for other stores, or use `numinous forget --confirm --all-local` for every store above.\n\nNot inventoried or erased: user-selected exports such as PNG, APNG, WAV, and `.num` files; installed application files; the Rust toolchain; and bundled canonical Cairn stones. Local Cairn drafts store author and message as bounded plaintext until erased or separately submitted.",
+        "Numinous-managed local state:\n\n{}\n{}\n{}\n{}\n  {:<12} {}; path {}\n{}\n\nSelected for confirmed erasure: {}.\nNo state was erased by this preview. Use `numinous forget --confirm` for the Journey, add individual flags for other stores, or use `numinous forget --confirm --all-local` for every store above.\n\nNot inventoried or erased: user-selected exports such as PNG, APNG, WAV, and `.num` files; installed application files; the Rust toolchain; and bundled canonical Cairn stones. Local Cairn drafts store author and message as bounded plaintext until erased or separately submitted.",
         managed_file_line(
             "journey",
             &inventory.journey.file,
@@ -1406,6 +1354,7 @@ fn local_state_inventory_report(
             &inventory.cairn.file,
             &format!("{} local plaintext drafts", inventory.cairn.local_drafts)
         ),
+        managed_file_line("journal", &inventory.journal, "opt-in experience records"),
         "radio cache",
         radio_state,
         radio_path,
@@ -1417,23 +1366,9 @@ fn local_state_inventory_report(
 fn forget_local_state(
     paths: &numinous_core::LocalStatePaths,
     confirm: bool,
-    scores: bool,
-    cairn: bool,
-    radio_cache: bool,
-    crash_log: bool,
+    selection: numinous_core::LocalStateEraseSelection,
     all_local: bool,
 ) -> Result<String, String> {
-    let selection = if all_local {
-        numinous_core::LocalStateEraseSelection::complete()
-    } else {
-        numinous_core::LocalStateEraseSelection {
-            journey: true,
-            scores,
-            cairn,
-            radio_cache,
-            crash_log,
-        }
-    };
     let before = numinous_core::inspect_local_state(paths)
         .map_err(|error| format!("Could not inventory local state: {error}."))?;
     if !confirm {
@@ -1974,27 +1909,34 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             confirm,
             scores,
             cairn,
+            journal,
             radio_cache,
             crash_log,
             all_local,
-        } => match forget_local_state(
-            &local_state_paths(),
-            confirm,
-            scores,
-            cairn,
-            radio_cache,
-            crash_log,
-            all_local,
-        ) {
-            Ok(report) => {
-                println!("{report}");
-                ExitCode::SUCCESS
+        } => {
+            let selection = if all_local {
+                numinous_core::LocalStateEraseSelection::complete()
+            } else {
+                numinous_core::LocalStateEraseSelection {
+                    journey: true,
+                    scores,
+                    cairn,
+                    journal,
+                    radio_cache,
+                    crash_log,
+                }
+            };
+            match forget_local_state(&local_state_paths(), confirm, selection, all_local) {
+                Ok(report) => {
+                    println!("{report}");
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("{error}");
+                    ExitCode::FAILURE
+                }
             }
-            Err(error) => {
-                eprintln!("{error}");
-                ExitCode::FAILURE
-            }
-        },
+        }
         Command::Crack {
             seed,
             daily,
@@ -2314,10 +2256,7 @@ fn env_file_key_from(path: &Path) -> Result<String, std::env::VarError> {
 
 /// Where fetched radio tracks live.
 fn radio_dir() -> PathBuf {
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(".numinous-radio")
+    local_state_paths().radio_cache
 }
 
 /// Tune a station: call ElevenLabs Music with the station's brief, receive
@@ -8286,6 +8225,7 @@ mod tests {
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
+            protected_radio_source: None,
             crash_log: root.join("crash.log"),
         };
         std::fs::create_dir_all(&paths.radio_cache).expect("fixture directory");
@@ -8293,16 +8233,23 @@ mod tests {
             .expect("journey fixture");
         std::fs::write(&paths.scores, b"50\tmunch seed:1 board:0\n").expect("score fixture");
         std::fs::write(&paths.cairn, b"Ada\tproof is a program\n").expect("Cairn fixture");
+        std::fs::write(&paths.journal, b"an opt-in experience\n").expect("journal fixture");
         std::fs::write(paths.radio_cache.join("trance-001.wav"), b"RIFF").expect("radio fixture");
         let crash_temp = root.join(".crash.log.999.1.tmp");
         std::fs::write(&crash_temp, b"orphan diagnostic temp").expect("crash temp fixture");
 
-        let preview = super::forget_local_state(&paths, false, false, false, false, false, true)
-            .expect("preview");
+        let preview = super::forget_local_state(
+            &paths,
+            false,
+            numinous_core::LocalStateEraseSelection::complete(),
+            true,
+        )
+        .expect("preview");
         for expected in [
             "journey",
             "scores",
             "Cairn",
+            "journal",
             "radio cache",
             "crash log",
             "local plaintext drafts",
@@ -8317,8 +8264,13 @@ mod tests {
         );
         assert!(paths.journey.exists(), "preview is non-destructive");
 
-        let erased = super::forget_local_state(&paths, true, false, false, false, false, true)
-            .expect("complete erasure");
+        let erased = super::forget_local_state(
+            &paths,
+            true,
+            numinous_core::LocalStateEraseSelection::complete(),
+            true,
+        )
+        .expect("complete erasure");
         assert!(erased.contains("0 managed stores and 0 known bytes remain"));
         assert_eq!(
             numinous_core::inspect_local_state(&paths)
