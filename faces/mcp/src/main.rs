@@ -191,21 +191,33 @@ fn test_state_path(kind: &str) -> std::path::PathBuf {
     TEST_STATE_ROOT.with(|root| root.path.join(format!("{kind}.txt")))
 }
 
-fn journey_path() -> std::path::PathBuf {
+fn local_state_paths() -> numinous_core::LocalStatePaths {
     #[cfg(test)]
     {
-        test_state_path("journey")
+        numinous_core::LocalStatePaths {
+            journey: test_state_path("journey"),
+            scores: test_state_path("scores"),
+            cairn: test_state_path("cairn"),
+            journal: test_state_path("journal"),
+            radio_cache: test_state_path("radio"),
+            protected_radio_source: None,
+            crash_log: test_state_path("crash"),
+        }
     }
     #[cfg(not(test))]
     {
-        if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
-            return std::path::PathBuf::from(path);
-        }
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        std::path::PathBuf::from(home).join(".numinous-journey")
+        numinous_core::resolve_local_state_paths()
     }
+}
+
+fn local_state_paths_at(journey_file: &std::path::Path) -> numinous_core::LocalStatePaths {
+    let mut paths = local_state_paths();
+    paths.journey = journey_file.to_path_buf();
+    paths
+}
+
+fn journey_path() -> std::path::PathBuf {
+    local_state_paths().journey
 }
 
 /// Load the journey at `path`, or start a fresh one.
@@ -216,20 +228,7 @@ fn load_journey(path: &std::path::Path) -> numinous_core::Journey {
 /// Where the high-score table lives (shared with the CLI face, same keys, so
 /// humans and agents compete on the same boards).
 fn scores_path() -> std::path::PathBuf {
-    #[cfg(test)]
-    {
-        test_state_path("scores")
-    }
-    #[cfg(not(test))]
-    {
-        if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
-            return std::path::PathBuf::from(path);
-        }
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        std::path::PathBuf::from(home).join(".numinous-scores")
-    }
+    local_state_paths().scores
 }
 
 std::thread_local! {
@@ -300,65 +299,11 @@ fn persist_progress(
 /// Where the cairn lives (shared with the CLI face): the local pile of
 /// bequests a mind leaves for whoever comes after.
 fn cairn_path() -> std::path::PathBuf {
-    #[cfg(test)]
-    {
-        test_state_path("cairn")
-    }
-    #[cfg(not(test))]
-    {
-        if let Ok(path) = std::env::var("NUMINOUS_CAIRN") {
-            return std::path::PathBuf::from(path);
-        }
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        std::path::PathBuf::from(home).join(".numinous-cairn")
-    }
+    local_state_paths().cairn
 }
 
 fn journal_path() -> std::path::PathBuf {
-    #[cfg(test)]
-    {
-        test_state_path("journal")
-    }
-    #[cfg(not(test))]
-    {
-        if let Ok(path) = std::env::var("NUMINOUS_JOURNAL") {
-            return std::path::PathBuf::from(path);
-        }
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        std::path::PathBuf::from(home).join(".numinous-journal")
-    }
-}
-
-fn radio_cache_path() -> std::path::PathBuf {
-    #[cfg(test)]
-    {
-        test_state_path("radio")
-    }
-    #[cfg(not(test))]
-    {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        std::path::PathBuf::from(home).join(".numinous-radio")
-    }
-}
-
-fn crash_log_path() -> std::path::PathBuf {
-    #[cfg(test)]
-    {
-        test_state_path("crash")
-    }
-    #[cfg(not(test))]
-    {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        std::path::PathBuf::from(home).join(".numinous-crash.log")
-    }
+    local_state_paths().journal
 }
 
 /// The level at which the cairn opens for leaving: the journey's cap, so a
@@ -1921,13 +1866,14 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "forget",
-                "description": "Consent over local persistence. Without confirm: inventory Journey, scores, player-owned Cairn drafts, generated radio cache, and the App crash diagnostic, with paths, sizes, counts, and exclusions. With confirm true: erase the Journey plus explicitly selected stores. With all_local true: erase and verify all inventoried managed stores. User-selected exports, installed files, the Rust toolchain, and bundled canonical Cairn stones remain outside this command.",
+                "description": "Consent over local persistence. Without confirm: inventory Journey, scores, player-owned Cairn drafts, the opt-in experience journal, generated radio cache, and the App crash diagnostic, with paths, sizes, counts, and exclusions. With confirm true: erase the Journey plus explicitly selected stores. With all_local true: erase and verify all inventoried managed stores. User-selected exports, installed files, the Rust toolchain, and bundled canonical Cairn stones remain outside this command.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "confirm": { "type": "boolean", "description": "Actually erase (default false: just show what is remembered)." },
                         "scores": { "type": "boolean", "description": "Also erase the score table." },
                         "cairn": { "type": "boolean", "description": "Also erase player-owned local Cairn drafts." },
+                        "journal": { "type": "boolean", "description": "Also erase the opt-in experience journal." },
                         "radio_cache": { "type": "boolean", "description": "Also erase the dedicated generated-radio cache directory and its residue." },
                         "crash_log": { "type": "boolean", "description": "Also erase the managed App crash diagnostic." },
                         "all_local": { "type": "boolean", "description": "Erase every inventoried Numinous-managed local store." }
@@ -2464,17 +2410,7 @@ fn call_tool(
         "party" => party_tool(&domain_args),
         "fifteen" => fifteen_tool(&domain_args),
         "scores" => scores_tool(&scores_path()),
-        "forget" => forget_tool(
-            &domain_args,
-            &numinous_core::LocalStatePaths {
-                journey: journey_file.to_path_buf(),
-                scores: scores_path(),
-                cairn: cairn_path(),
-                journal: journal_path(),
-                radio_cache: radio_cache_path(),
-                crash_log: crash_log_path(),
-            },
-        ),
+        "forget" => forget_tool(&domain_args, &local_state_paths_at(journey_file)),
         "crack" => crack_tool(&domain_args, journey_file),
         "seti" => seti_tool(&domain_args, journey_file),
         "aliens" => aliens_tool(&domain_args),
@@ -6118,6 +6054,7 @@ fn local_state_inventory_json(inventory: &numinous_core::LocalStateInventory) ->
         "journey": journey,
         "scores": scores,
         "cairn": cairn,
+        "journal": file_inventory_json(&inventory.journal),
         "radio_cache": {
             "path": inventory.radio_cache.path.to_string_lossy(),
             "exists": inventory.radio_cache.exists,
@@ -6152,6 +6089,10 @@ fn forget_tool(args: &Value, paths: &numinous_core::LocalStatePaths) -> Value {
             journey: true,
             scores: args.get("scores").and_then(Value::as_bool).unwrap_or(false),
             cairn: args.get("cairn").and_then(Value::as_bool).unwrap_or(false),
+            journal: args
+                .get("journal")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
             radio_cache: args
                 .get("radio_cache")
                 .and_then(Value::as_bool)
@@ -6172,6 +6113,7 @@ fn forget_tool(args: &Value, paths: &numinous_core::LocalStatePaths) -> Value {
              journey: {} rooms, {} wins, {} plays, {} secrets, {} bytes at {}\n\
              scores: {} entries, {} bytes at {}\n\
              Cairn: {} local plaintext drafts, {} bytes at {}\n\
+             journal: {} bytes at {}\n\
              radio cache: {} generated WAV files, {} bytes, {} unexpected entries, {} sidecar files and {} sidecar bytes at {}\n\
              crash log: {} bytes at {}\n\n\
              No state was erased by this preview. Confirm the Journey alone, select other stores, or set all_local true for complete managed erasure. User-selected exports, installed files, the Rust toolchain, and bundled canonical Cairn stones are outside this command.",
@@ -6187,6 +6129,8 @@ fn forget_tool(args: &Value, paths: &numinous_core::LocalStatePaths) -> Value {
             before.cairn.local_drafts,
             before.cairn.file.bytes,
             safe_path_text(&before.cairn.file.path),
+            before.journal.bytes,
+            safe_path_text(&before.journal.path),
             before.radio_cache.files,
             before.radio_cache.bytes,
             before.radio_cache.unexpected_entries,
@@ -6206,6 +6150,7 @@ fn forget_tool(args: &Value, paths: &numinous_core::LocalStatePaths) -> Value {
                     "journey": selection.journey,
                     "scores": selection.scores,
                     "cairn": selection.cairn,
+                    "journal": selection.journal,
                     "radio_cache": selection.radio_cache,
                     "crash_log": selection.crash_log,
                     "all_local": all_local,
@@ -6259,6 +6204,7 @@ fn forget_tool(args: &Value, paths: &numinous_core::LocalStatePaths) -> Value {
             "scores_erased": selection.scores,
             "scores_preserved": !selection.scores,
             "cairn_erased": selection.cairn,
+            "journal_erased": selection.journal,
             "radio_cache_erased": selection.radio_cache,
             "crash_log_erased": selection.crash_log,
             "all_local": all_local,
@@ -7441,6 +7387,14 @@ mod tests {
         assert!(names.contains(&"correct_journal"));
         assert!(names.contains(&"export_journal"));
         assert!(names.contains(&"erase_journal"));
+        let forget = tools
+            .iter()
+            .find(|tool| tool["name"] == "forget")
+            .expect("forget tool");
+        assert_eq!(
+            forget["inputSchema"]["properties"]["journal"]["type"],
+            "boolean"
+        );
         let crack = tools
             .iter()
             .find(|tool| tool["name"] == "crack")
@@ -8647,6 +8601,7 @@ mod tests {
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
+            protected_radio_source: None,
             crash_log: root.join("crash.log"),
         };
         std::fs::create_dir_all(&paths.radio_cache).unwrap();
@@ -8666,6 +8621,7 @@ plays 2
         )
         .unwrap();
         std::fs::write(&paths.cairn, "Ada\tproof is a program\n").unwrap();
+        std::fs::write(&paths.journal, "one opt-in experience\n").unwrap();
         std::fs::write(paths.radio_cache.join("trance-001.wav"), b"RIFF").unwrap();
         std::fs::write(&paths.crash_log, b"diagnostic").unwrap();
 
@@ -8674,6 +8630,7 @@ plays 2
         let text = shown["content"][0]["text"].as_str().unwrap_or_default();
         assert!(text.contains("1 rooms entered") || text.contains("1 wins"));
         assert!(text.contains("Cairn"));
+        assert!(text.contains("journal"));
         assert!(text.contains("radio cache"));
         assert!(text.contains("crash log"));
         assert!(!text.contains("Nothing else is kept"));
@@ -8690,6 +8647,10 @@ plays 2
         assert_eq!(
             shown["structuredContent"]["remembered"]["cairn"]["local_plaintext_drafts"],
             1
+        );
+        assert_eq!(
+            shown["structuredContent"]["remembered"]["journal"]["exists"],
+            true
         );
         assert_eq!(
             shown["structuredContent"]["remembered"]["radio_cache"]["files"],
@@ -8714,6 +8675,17 @@ plays 2
         assert!(!paths.journey.exists());
         assert!(paths.scores.exists());
         assert!(paths.cairn.exists());
+        assert!(paths.journal.exists());
+
+        let journal_erased = super::forget_tool(&json!({"confirm": true, "journal": true}), &paths);
+        assert_eq!(journal_erased["structuredContent"]["journal_erased"], true);
+        assert!(!paths.journal.exists());
+        assert!(paths.scores.exists());
+        assert!(paths.cairn.exists());
+        assert!(paths.radio_cache.exists());
+        assert!(paths.crash_log.exists());
+
+        std::fs::write(&paths.journal, "replacement opt-in experience\n").unwrap();
 
         let erased_all = super::forget_tool(&json!({"confirm": true, "all_local": true}), &paths);
         assert_eq!(erased_all["structuredContent"]["all_local"], true);
@@ -8725,6 +8697,7 @@ plays 2
             &paths.journey,
             &paths.scores,
             &paths.cairn,
+            &paths.journal,
             &paths.radio_cache,
             &paths.crash_log,
         ] {
@@ -8742,6 +8715,7 @@ plays 2
             cairn: paths.cairn.clone(),
             journal: paths.journal.clone(),
             radio_cache: paths.radio_cache.clone(),
+            protected_radio_source: paths.protected_radio_source.clone(),
             crash_log: paths.crash_log.clone(),
         };
         let failed = super::forget_tool(&json!({"confirm": true}), &failed_paths);

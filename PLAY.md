@@ -31,12 +31,13 @@ Release archives and repository checkouts also include a portable Agent Plugins
 v1 package at `plugins/numinous`. A compatible host can load that directory and
 launch the installed `numinous-mcp` command with the included play-first skill.
 
-The server speaks JSON-RPC over stdio. Room input is explicit and replayable per call. Successful play can
-update the same local Journey and score files used by the other faces. `forget`
-previews Journey, scores, local Cairn drafts, generated radio cache, and the App
-crash diagnostic without changing them. Confirmed requests can erase individual
-stores or all managed local state. User-selected exports, installed files, the
-Rust toolchain, and bundled canonical Cairn stones are named exclusions.
+The server speaks JSON-RPC over stdio. Room input is explicit and replayable per
+call. Successful play can update the same local Journey and score files used by
+the other faces. `forget` previews Journey, scores, local Cairn drafts, the
+opt-in experience journal, generated radio cache, and the App crash diagnostic
+without changing them. Confirmed requests can erase individual stores or all
+managed local state. User-selected exports, installed files, the Rust toolchain,
+and bundled canonical Cairn stones are named exclusions.
 
 Now here is everything you need to start. Three tools:
 

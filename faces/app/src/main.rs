@@ -6031,18 +6031,27 @@ fn test_state_path(kind: &str) -> std::path::PathBuf {
     TEST_STATE_ROOT.with(|root| root.path.join(format!("{kind}.txt")))
 }
 
-fn crash_log_path() -> std::path::PathBuf {
+fn local_state_paths() -> numinous_core::LocalStatePaths {
     #[cfg(test)]
     {
-        test_state_path("crash")
+        numinous_core::LocalStatePaths {
+            journey: test_state_path("journey"),
+            scores: test_state_path("scores"),
+            cairn: test_state_path("cairn"),
+            journal: test_state_path("journal"),
+            radio_cache: test_state_path("radio"),
+            protected_radio_source: None,
+            crash_log: test_state_path("crash"),
+        }
     }
     #[cfg(not(test))]
     {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        std::path::PathBuf::from(home).join(".numinous-crash.log")
+        numinous_core::resolve_local_state_paths()
     }
+}
+
+fn crash_log_path() -> std::path::PathBuf {
+    local_state_paths().crash_log
 }
 
 fn append_crash_log_at(path: &std::path::Path, entry: &str) -> std::io::Result<()> {
@@ -6058,20 +6067,7 @@ fn append_crash_log_at(path: &std::path::Path, entry: &str) -> std::io::Result<(
 
 /// The journey file: the same one the CLI and MCP level (env-overridable).
 fn journey_path() -> std::path::PathBuf {
-    #[cfg(test)]
-    {
-        test_state_path("journey")
-    }
-    #[cfg(not(test))]
-    {
-        if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
-            return std::path::PathBuf::from(path);
-        }
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        std::path::PathBuf::from(home).join(".numinous-journey")
-    }
+    local_state_paths().journey
 }
 
 fn app_icon() -> Option<Icon> {
@@ -6095,20 +6091,7 @@ fn app_icon() -> Option<Icon> {
 
 /// The score table, read for the journey overlay's trophy evidence.
 fn scores_path() -> std::path::PathBuf {
-    #[cfg(test)]
-    {
-        test_state_path("scores")
-    }
-    #[cfg(not(test))]
-    {
-        if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
-            return std::path::PathBuf::from(path);
-        }
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        std::path::PathBuf::from(home).join(".numinous-scores")
-    }
+    local_state_paths().scores
 }
 
 fn main() {
