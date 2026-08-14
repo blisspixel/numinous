@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.3.0-alpha.5] - 2026-08-13
+
 - Studio plotting and singing now cross one face-neutral request boundary in
   the core. `PlotRequest` and `SingRequest` own expression parsing, curated
   discovery, window and knob defaults, size and note bounds, and undefined
