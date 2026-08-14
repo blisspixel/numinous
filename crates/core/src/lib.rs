@@ -57,6 +57,7 @@ pub mod dichromacy;
 pub mod era;
 pub mod fifteen;
 pub mod font;
+pub mod gauntlet;
 pub mod hackenbush;
 pub mod humor;
 pub mod insights;
@@ -117,6 +118,12 @@ pub use codebreaker::{
 pub use concepts::{concept, explain_text};
 pub use era::Era;
 pub use font::{draw_text, text_width, wrap_text};
+pub use gauntlet::{
+    GAUNTLET_BOMB_DIGITS, GAUNTLET_CHOICE_POINTS, GAUNTLET_MAX_WIRES, GAUNTLET_STAGES,
+    GauntletAnswers, GauntletBombGrade, GauntletGrade, GauntletMunchGrade, GauntletPuzzle,
+    GauntletStageGrade, GauntletWireGrade, gauntlet_choice_grade, gauntlet_score_key,
+    gauntlet_total, gauntlet_wire_grade,
+};
 pub use humor::{Joke, explain_joke, jokes};
 pub use journal::{
     JOURNAL_SCHEMA_VERSION, JOURNAL_SOURCE_LEGACY_IMPORT, JOURNAL_SOURCE_NUMINOUS_RESULT,

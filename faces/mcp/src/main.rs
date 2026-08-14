@@ -743,8 +743,9 @@ fn record_progress(request: &Value, path: &std::path::Path) {
         "gauntlet" => {
             if let Some(answers) = args.get("answers") {
                 let seed = effective_seed(&args);
-                let (_, scores, cleared) = gauntlet_grade(seed, answers);
-                for &clear in &cleared {
+                let puzzle = numinous_core::GauntletPuzzle::new(seed);
+                let grade = puzzle.grade(&gauntlet_answers_from_json(answers));
+                for clear in grade.cleared() {
                     journey.play();
                     if clear {
                         journey.win();
@@ -752,8 +753,8 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 }
                 post_score(
                     &scores_path(),
-                    &format!("gauntlet seed:{seed}"),
-                    gauntlet_total(&scores, &cleared),
+                    &numinous_core::gauntlet_score_key(seed),
+                    grade.total(),
                 );
             }
         }
@@ -5439,132 +5440,69 @@ fn aliens_tool(args: &Value) -> Value {
     }
 }
 
-/// One gauntlet run, graded: (stage lines, stage scores, cleared flags).
-/// Decorrelates the gauntlet's bomb from the crack game at the same seed.
-const GAUNTLET_BOMB_MIX: u64 = 0x0000_6A17_0000_0B0B;
-
-fn gauntlet_grade(seed: u64, answers: &Value) -> (Vec<String>, Vec<i64>, Vec<bool>) {
-    let mut lines = Vec::new();
-    let mut scores = Vec::new();
-    let mut cleared = Vec::new();
-
-    let board = numinous_core::build_board(seed, 0);
-    let bites: Vec<usize> = answers
+/// Convert the validated JSON transport shape into the core request type.
+fn gauntlet_answers_from_json(answers: &Value) -> numinous_core::GauntletAnswers {
+    let bites = answers
         .get("bites")
         .and_then(Value::as_array)
         .map(|list| {
             list.iter()
                 .filter_map(Value::as_u64)
                 .filter(|&n| n >= 1)
-                .map(|n| (n - 1) as usize)
+                .filter_map(|n| usize::try_from(n - 1).ok())
                 .collect()
         })
         .unwrap_or_default();
-    let outcome = numinous_core::grade_munch(&board, &bites);
-    let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
-    lines.push(format!(
-        "MUNCH: +{}{}",
-        outcome.score,
-        if clean { "  CLEAN" } else { "" }
-    ));
-    scores.push(outcome.score);
-    cleared.push(clean);
-
-    let round = numinous_core::build_round(seed, 1, 44, 18);
-    let guess = answers
+    let shape = answers
         .get("shape")
         .and_then(Value::as_str)
-        .and_then(|g| g.trim().chars().next())
-        .map(|c| c.to_ascii_uppercase());
-    let clean = guess == Some(round.answer);
-    lines.push(format!(
-        "SHAPE: it was {} ({}). +{}{}",
-        round.answer,
-        round.answer_title,
-        if clean { 25 } else { 0 },
-        if clean { "  CLEAN" } else { "" }
-    ));
-    scores.push(if clean { 25 } else { 0 });
-    cleared.push(clean);
-
-    let scan = numinous_core::build_scan(seed, 4);
-    let guess = answers
+        .and_then(|guess| guess.trim().chars().next());
+    let sky = answers
         .get("sky")
         .and_then(Value::as_str)
-        .and_then(|g| g.trim().chars().next())
-        .map(|c| c.to_ascii_uppercase());
-    let clean = guess == Some(scan.answer);
-    lines.push(format!(
-        "SKY: the signal was {}. +{}{}",
-        scan.answer,
-        if clean { 25 } else { 0 },
-        if clean { "  CLEAN" } else { "" }
-    ));
-    scores.push(if clean { 25 } else { 0 });
-    cleared.push(clean);
-
-    let secret = numinous_core::secret_code(seed ^ GAUNTLET_BOMB_MIX, 4);
-    let mut bomb_points = 0i64;
-    let mut clean = false;
-    let wires: Vec<&str> = answers
+        .and_then(|guess| guess.trim().chars().next());
+    let wires = answers
         .get("wires")
         .and_then(Value::as_array)
-        .map(|list| list.iter().filter_map(Value::as_str).collect())
+        .map(|list| {
+            list.iter()
+                .filter_map(Value::as_str)
+                .map(|raw| {
+                    raw.chars()
+                        .filter(char::is_ascii_digit)
+                        .map(|digit| digit as u8 - b'0')
+                        .collect()
+                })
+                .collect()
+        })
         .unwrap_or_default();
-    for (i, raw) in wires.iter().take(5).enumerate() {
-        let guess: Vec<u8> = raw
-            .chars()
-            .filter(char::is_ascii_digit)
-            .map(|c| c as u8 - b'0')
-            .collect();
-        if guess.len() == 4 && numinous_core::grade(&secret, &guess).locked == 4 {
-            clean = true;
-            bomb_points = 10 * (5 - i as i64 - 1).max(0);
-            break;
-        }
+    numinous_core::GauntletAnswers {
+        bites,
+        shape,
+        sky,
+        wires,
     }
-    let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
-    lines.push(if clean {
-        format!("BOMB: DEFUSED. +{bomb_points}  CLEAN")
-    } else {
-        format!("BOMB: BOOM. It was {code}. +0")
-    });
-    scores.push(bomb_points);
-    cleared.push(clean);
-
-    (lines, scores, cleared)
-}
-
-/// Combo math: cleared stages multiply what follows (the CLI's rule).
-fn gauntlet_total(scores: &[i64], cleared: &[bool]) -> i64 {
-    let mut total = 0;
-    let mut combo = 1;
-    for (score, &clear) in scores.iter().zip(cleared) {
-        total += score * combo;
-        combo = if clear { combo + 1 } else { 1 };
-    }
-    total
 }
 
 /// The `gauntlet` tool: present all four stages, or grade the whole run.
 fn gauntlet_tool(args: &Value) -> Value {
     let seed = effective_seed(args);
+    let puzzle = numinous_core::GauntletPuzzle::new(seed);
     let Some(answers) = args.get("answers") else {
-        let board = numinous_core::build_board(seed, 0);
-        let round = numinous_core::build_round(seed, 1, 44, 18);
-        let choices: Vec<String> = round
+        let choices: Vec<String> = puzzle
+            .shape
             .choices
             .iter()
             .map(|c| format!("{}) {}", c.letter, c.title))
             .collect();
-        let scan = numinous_core::build_scan(seed, 4);
-        let traces: Vec<String> = scan
+        let traces: Vec<String> = puzzle
+            .sky
             .channels
             .iter()
             .map(|c| format!("{})  {:>10}  |{}|", c.letter, c.frequency, c.trace))
             .collect();
-        let secret = numinous_core::secret_code(seed ^ GAUNTLET_BOMB_MIX, 4);
-        let sky_rows: Vec<Value> = scan
+        let sky_rows: Vec<Value> = puzzle
+            .sky
             .channels
             .iter()
             .map(|c| json!({ "letter": c.letter.to_string(), "frequency": c.frequency, "trace": c.trace }))
@@ -5572,12 +5510,12 @@ fn gauntlet_tool(args: &Value) -> Value {
         return tool_structured(
             &format!(
                 "THE GAUNTLET (seed {seed}). Four stages; clean stages build your combo.\n\nSTAGE 1  MUNCH: {}\n{}\nSTAGE 2  THE SHAPE:\n{}\n{}\nSTAGE 3  THE SKY:\n{}\nSTAGE 4  THE BOMB: four digits, five wires. Clue: {}\n\nCall again with answers: bites, shape, sky, wires.",
-                board.rule.describe(),
-                numinous_core::board_text(&board),
-                round.art,
+                puzzle.munch.rule.describe(),
+                numinous_core::board_text(&puzzle.munch),
+                puzzle.shape.art,
                 choices.join("\n"),
                 traces.join("\n"),
-                numinous_core::hint(&secret)
+                puzzle.bomb_hint()
             ),
             // The whole four-stage puzzle rides in structuredContent, so a mind
             // on a structured-content client can actually play it, not just read
@@ -5585,17 +5523,19 @@ fn gauntlet_tool(args: &Value) -> Value {
             json!({
                 "game": "gauntlet",
                 "seed": seed,
-                "stages": 4,
-                "munch": { "rule": board.rule.describe(), "board": numinous_core::board_text(&board) },
-                "shape": { "art": round.art, "choices": choices },
+                "stages": numinous_core::GAUNTLET_STAGES,
+                "munch": { "rule": puzzle.munch.rule.describe(), "board": numinous_core::board_text(&puzzle.munch) },
+                "shape": { "art": puzzle.shape.art, "choices": choices },
                 "sky": sky_rows,
-                "bomb": { "clue": numinous_core::hint(&secret) }
+                "bomb": { "clue": puzzle.bomb_hint() }
             }),
         );
     };
-    let (lines, scores, cleared) = gauntlet_grade(seed, answers);
-    let total = gauntlet_total(&scores, &cleared);
-    let clears = cleared.iter().filter(|&&c| c).count();
+    let grade = puzzle.grade(&gauntlet_answers_from_json(answers));
+    let lines = grade.reveal_lines(&puzzle);
+    let scores = grade.stage_scores();
+    let total = grade.total();
+    let clears = grade.clean_count();
     tool_structured(
         &format!(
             "{}\n\nRUN COMPLETE  {clears}/4 clean  TOTAL {total}  (gauntlet seed:{seed})",
@@ -8542,6 +8482,22 @@ mod tests {
         assert_eq!(sc["game"], "gauntlet");
         assert!(sc["total"].as_i64().is_some());
         assert!(sc["clean"].as_u64().is_some());
+    }
+
+    #[test]
+    fn malformed_gauntlet_wire_does_not_consume_an_attempt() {
+        let puzzle = numinous_core::GauntletPuzzle::new(5);
+        let code = puzzle.bomb_code_text();
+        let run = handle_request(&json!({
+            "jsonrpc":"2.0","id":97,"method":"tools/call",
+            "params":{"name":"gauntlet","arguments":{"seed":5,"answers":{
+                "bites":[],"shape":"","sky":"","wires":["not a wire", code]
+            }}}
+        }))
+        .expect("must respond");
+        let sc = &run["result"]["structuredContent"];
+        assert_eq!(sc["stageScores"][3], 40);
+        assert_eq!(sc["reveals"][3], "BOMB: DEFUSED. +40  CLEAN");
     }
 
     #[test]

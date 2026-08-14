@@ -5,6 +5,20 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- One typed core Gauntlet now owns the four seeded stages, choice and wire
+  grading, combo total, canonical reveals, and leaderboard identity used by
+  App, CLI, MCP, and Watch Agent. The four faces no longer carry independent
+  copies of the bomb mix, stage construction parameters, score math, or reveal
+  rules.
+- Malformed MCP bomb guesses no longer consume one of the five valid wires,
+  matching the CLI's documented free correction for a malformed entry.
+- Engineering policy now makes the language boundary explicit: Rust owns
+  product truth, while Python is reserved for outside-in executable driving,
+  release artifact inspection, study evidence, and packaging checks.
+- The full Windows release gate passes in 1,698 seconds with 3,530 passing
+  all-target Rust cases, three expensive ignored diagnostics, and 95.12%
+  region and 95.09% line coverage. The new core Gauntlet module has 98.61%
+  region and 99.10% line coverage.
 - CI now pins `taiki-e/install-action` v2.85.13, and release provenance now
   pins `actions/attest` v4.2.2. Both references use the publishers' immutable
   commit SHAs.
