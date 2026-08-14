@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE A. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -127,15 +127,6 @@ impl WitchOfAgnesi {
 }
 
 impl Room for WitchOfAgnesi {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "witch-of-agnesi",
-            title: "Witch of Agnesi",
-            wing: "Shape & Space",
-            blurb: "Maria Agnesi's classical cubic bell curve.",
-            accent: [160, 80, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(

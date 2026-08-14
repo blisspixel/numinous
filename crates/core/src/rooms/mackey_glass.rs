@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE DELAY. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const HIST: usize = 200;
@@ -110,15 +110,6 @@ impl MackeyGlass {
 }
 
 impl Room for MackeyGlass {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "mackey-glass",
-            title: "Mackey-Glass",
-            wing: "Motion & Dynamics",
-            blurb: "Delayed feedback births a strange attractor.",
-            accent: [40, 140, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, delay_steps(t, None, self.seed), self.seed);

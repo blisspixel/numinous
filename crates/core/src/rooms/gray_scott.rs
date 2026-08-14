@@ -3,7 +3,7 @@
 //! u and v diffuse and react; feed and kill rates pick the pattern class.
 //! DRAG: TUNE FEED/KILL. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const W: usize = 48;
@@ -159,16 +159,6 @@ impl GrayScott {
 }
 
 impl Room for GrayScott {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "gray-scott",
-            title: "The Chemical Garden",
-            wing: "Emergence",
-            blurb: "Gray-Scott reaction-diffusion: two chemicals paint spots, stripes, and coral. \
-                    t drifts feed/kill.",
-            accent: [80, 200, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (f, k) = rates(t, None);

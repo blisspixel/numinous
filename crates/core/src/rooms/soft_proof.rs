@@ -6,7 +6,7 @@
 
 use std::f64::consts::PI;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -107,16 +107,6 @@ impl SoftProof {
 }
 
 impl Room for SoftProof {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "soft-proof",
-            title: "The Soft Proof",
-            wing: "Shape & Space",
-            blurb: "Homotopy: continuously deform a path without tearing endpoints free. t sets \
-                    the stage.",
-            accent: [200, 160, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b) = endpoints(self.seed);

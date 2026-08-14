@@ -3,7 +3,7 @@
 //! Ambient phase draws the pear from stem to body.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -132,15 +132,6 @@ impl Piriform {
 }
 
 impl Room for Piriform {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "piriform",
-            title: "Piriform Curve",
-            wing: "Shape & Space",
-            blurb: "Pear curve draws from stem to body. Watch the pen.",
-            accent: [120, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(

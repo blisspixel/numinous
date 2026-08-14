@@ -2,7 +2,7 @@
 //!
 //! Mediant walk from 0/1 and 1/0. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -157,15 +157,6 @@ impl SternBrocot {
 }
 
 impl Room for SternBrocot {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "stern-brocot",
-            title: "Stern-Brocot Tree",
-            wing: "Number & Pattern",
-            blurb: "Every positive rational once, via mediants of 0/1 and 1/0.",
-            accent: [80, 140, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, levels(t, None), self.seed);

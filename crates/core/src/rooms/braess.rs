@@ -3,7 +3,7 @@
 //! Two paths A-B and C-D; an optional bridge that can make selfish routing
 //! worse. BUILD: A SHORTCUT. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -119,16 +119,6 @@ impl Braess {
 }
 
 impl Room for Braess {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "braess",
-            title: "Braess Trap",
-            wing: "Emergence",
-            blurb: "Add a free shortcut and selfish drivers can all take longer. t toggles the \
-                    bridge.",
-            accent: [220, 80, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let bridge = bridge_on(t, None);

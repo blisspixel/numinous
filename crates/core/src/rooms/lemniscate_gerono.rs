@@ -2,7 +2,7 @@
 //!
 //! x^4 = a^2 (x^2 - y^2). See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -86,15 +86,6 @@ impl LemniscateGerono {
 }
 
 impl Room for LemniscateGerono {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "gerono",
-            title: "Gerono Eight",
-            wing: "Shape & Space",
-            blurb: "Figure-eight from x = a cos t, y = a sin t cos t.",
-            accent: [180, 60, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale(t, None, self.seed), self.seed);

@@ -3,7 +3,7 @@
 //! Recursive square removal with a different motif than menger-slice.
 //! DRAG: SET THE DEPTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -88,15 +88,6 @@ impl Menger {
 }
 
 impl Room for Menger {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "menger-carpet",
-            title: "Menger Carpet",
-            wing: "Fractals",
-            blurb: "Sierpinski carpet of removed center squares.",
-            accent: [100, 100, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, depth(t, None), self.seed);

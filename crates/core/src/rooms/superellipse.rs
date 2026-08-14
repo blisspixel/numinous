@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE N. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -91,15 +91,6 @@ impl Superellipse {
 }
 
 impl Room for Superellipse {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "superellipse",
-            title: "Superellipse",
-            wing: "Shape & Space",
-            blurb: "Lame curve |x|^n+|y|^n=1 from diamond to square.",
-            accent: [70, 110, 90],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, exponent(t, None, self.seed), self.seed);

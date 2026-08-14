@@ -2,7 +2,7 @@
 //!
 //! x -> r x / (1 + x). See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 80;
@@ -102,15 +102,6 @@ impl BevertonHolt {
 }
 
 impl Room for BevertonHolt {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "beverton-holt",
-            title: "Beverton-Holt",
-            wing: "Motion & Dynamics",
-            blurb: "Saturating recruitment map for a fishery.",
-            accent: [40, 140, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, r_param(t, None, self.seed), self.seed);

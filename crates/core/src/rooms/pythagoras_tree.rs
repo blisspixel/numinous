@@ -2,7 +2,7 @@
 //!
 //! Each square sprouts two smaller squares at a right angle. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -158,15 +158,6 @@ impl PythagorasTree {
 }
 
 impl Room for PythagorasTree {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "pythagoras-tree",
-            title: "The Pythagoras Tree",
-            wing: "Fractals",
-            blurb: "Squares on the sides of right triangles branch forever.",
-            accent: [80, 180, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let d = depth(t, None);

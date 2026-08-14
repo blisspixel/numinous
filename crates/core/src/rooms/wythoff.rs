@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE ROWS. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -86,15 +86,6 @@ impl Wythoff {
 }
 
 impl Room for Wythoff {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "wythoff",
-            title: "Wythoff Array",
-            wing: "Number & Pattern",
-            blurb: "Golden Beatty pairs A_k, B_k.",
-            accent: [160, 120, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, rows(t, None, self.seed), self.seed);

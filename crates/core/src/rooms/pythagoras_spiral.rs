@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET THE STEPS. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -106,15 +106,6 @@ impl PythagorasSpiral {
 }
 
 impl Room for PythagorasSpiral {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "theodorus",
-            title: "Spiral of Theodorus",
-            wing: "Number & Pattern",
-            blurb: "Stacked right triangles build a root spiral.",
-            accent: [160, 120, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, steps(t, None), self.seed);

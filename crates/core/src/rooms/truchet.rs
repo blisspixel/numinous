@@ -4,7 +4,7 @@
 //! the coin and mazes become loops, or loops become mazes. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const SEED: u64 = 0x0010_0717_714E_0001;
@@ -81,16 +81,6 @@ impl Truchet {
 }
 
 impl Room for Truchet {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "truchet",
-            title: "The Weave",
-            wing: "Emergence",
-            blurb: "One tile, two rotations, a coin flip per cell: Truchet and 10 PRINT mazes from \
-                    nothing. t drifts bias.",
-            accent: [100, 180, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let b = bias(t, None);

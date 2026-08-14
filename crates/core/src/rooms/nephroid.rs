@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SCALE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -112,15 +112,6 @@ impl Nephroid {
 }
 
 impl Room for Nephroid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "nephroid",
-            title: "Nephroid",
-            wing: "Shape & Space",
-            blurb: "Two-cusped kidney curve from a rolling circle.",
-            accent: [180, 100, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale(t, None, self.seed), phase_unit(t), self.seed);

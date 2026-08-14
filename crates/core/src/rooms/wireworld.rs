@@ -3,7 +3,7 @@
 //! Empty, conductor, electron head, electron tail. Electrons race the wires;
 //! gates are patterns. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const W: usize = 40;
@@ -186,16 +186,6 @@ impl Wireworld {
 }
 
 impl Room for Wireworld {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "wireworld",
-            title: "The Visible Computer",
-            wing: "Emergence",
-            blurb: "Wireworld: four states, electrons on copper, gates you can watch. t steps the \
-                    clock.",
-            accent: [255, 200, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let steps = (phase_unit(t) * 40.0) as usize;

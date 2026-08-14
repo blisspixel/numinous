@@ -4,7 +4,7 @@
 //! sibling Random Walk is begging for. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const SEED: u64 = 0xD1A0_F105_7001;
@@ -137,16 +137,6 @@ impl DlaFrost {
 }
 
 impl Room for DlaFrost {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "dla-frost",
-            title: "The Frost",
-            wing: "Emergence",
-            blurb: "Diffusion-limited aggregation: random walkers freeze on contact and grow \
-                    lightning and coral. t grows the swarm.",
-            accent: [180, 220, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let n = 80 + (phase_unit(t) * WALKERS as f64) as usize;

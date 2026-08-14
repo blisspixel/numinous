@@ -3,7 +3,7 @@
 //! Ambient phase draws the petals with a traveling pen.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -115,15 +115,6 @@ impl Rose {
 }
 
 impl Room for Rose {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "rose",
-            title: "Rose Curve",
-            wing: "Shape & Space",
-            blurb: "Rhodonea petals draw themselves. Watch the pen.",
-            accent: [220, 40, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, petals(t, None, self.seed), phase_unit(t), self.seed);

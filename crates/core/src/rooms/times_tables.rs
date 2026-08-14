@@ -7,7 +7,7 @@
 
 use std::f64::consts::{FRAC_PI_2, TAU};
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::sound::{ParametricSound, SoundSpec};
 use crate::surface::Surface;
 
@@ -186,16 +186,6 @@ impl TimesTables {
 }
 
 impl Room for TimesTables {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "times-tables",
-            title: "Times Tables",
-            wing: "Number & Pattern",
-            blurb: "From each point n on a circle, draw a chord to point (n times k); \
-                    a cardioid blooms out of the two-times table.",
-            accent: [40, 150, 190],
-        }
-    }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
         Some(crate::motifs::Motif {
@@ -287,7 +277,7 @@ mod tests {
     use super::TimesTables;
     use crate::canvas::Canvas;
     use crate::raster::Raster;
-    use crate::room::{Room, RoomInput};
+    use crate::room::{Room, RoomInput, RoomMetadata};
 
     #[test]
     fn a_drag_directly_turns_the_shared_dial() {

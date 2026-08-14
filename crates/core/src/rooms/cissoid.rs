@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SCALE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -149,15 +149,6 @@ impl Cissoid {
 }
 
 impl Room for Cissoid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "cissoid",
-            title: "Cissoid",
-            wing: "Shape & Space",
-            blurb: "Diocles' ivy curve for doubling the cube.",
-            accent: [80, 140, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, scale(t, None, self.seed), phase_unit(t), self.seed);

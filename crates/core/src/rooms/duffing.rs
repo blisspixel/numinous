@@ -3,7 +3,7 @@
 //! x'' + delta x' + alpha x + beta x^3 = gamma cos(omega t).
 //! DRAG: TUNE DRIVE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 6_000;
@@ -120,15 +120,6 @@ impl Duffing {
 }
 
 impl Room for Duffing {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "duffing",
-            title: "The Duffing Well",
-            wing: "Motion & Dynamics",
-            blurb: "Driven cubic oscillator: double-well chaos under strong drive.",
-            accent: [180, 80, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let g = gamma(t, None, self.seed);

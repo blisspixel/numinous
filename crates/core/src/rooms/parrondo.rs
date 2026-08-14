@@ -5,7 +5,7 @@
 //! that meets B's bad coin and yields positive drift. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const SEED: u64 = 0x0A44_0AD0_0000_0001;
@@ -207,15 +207,6 @@ impl Parrondo {
 }
 
 impl Room for Parrondo {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "parrondo",
-            title: "Parrondo's Trap",
-            wing: "Number & Pattern",
-            blurb: "Two losing games, scheduled as ABB, can win.",
-            accent: [180, 100, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let pol = policy(t, None);

@@ -5,7 +5,7 @@
 
 use std::f64::consts::PI;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -106,15 +106,6 @@ impl Uncertainty {
 }
 
 impl Room for Uncertainty {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "uncertainty",
-            title: "The Uncertainty Dial",
-            wing: "Waves & Sound",
-            blurb: "Narrower in time, wider in frequency: you cannot own both.",
-            accent: [255, 200, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let s = sigma_t(t, None)

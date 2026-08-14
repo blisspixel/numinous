@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE SLICE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -108,15 +108,6 @@ impl WhitneyUmbrella {
 }
 
 impl Room for WhitneyUmbrella {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "whitney-umbrella",
-            title: "Whitney Umbrella",
-            wing: "Shape & Space",
-            blurb: "Cross-cap singularity x=uv, y=u, z=v^2.",
-            accent: [90, 70, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, slice(t, None, self.seed), self.seed);

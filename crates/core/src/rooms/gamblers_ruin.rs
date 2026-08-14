@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE P. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -125,15 +125,6 @@ impl GamblersRuin {
 }
 
 impl Room for GamblersRuin {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "gamblers-ruin",
-            title: "Gamblers Ruin",
-            wing: "Chance & Order",
-            blurb: "Random walk absorbed at 0 or N.",
-            accent: [130, 40, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, p_win(t, None, self.seed), self.seed);

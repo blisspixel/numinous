@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE TIME. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -108,15 +108,6 @@ impl HeatKernel {
 }
 
 impl Room for HeatKernel {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "heat-kernel",
-            title: "Heat Kernel",
-            wing: "Change",
-            blurb: "Gaussian spreads as sqrt(t).",
-            accent: [200, 80, 30],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, time_p(t, None, self.seed), self.seed);

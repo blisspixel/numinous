@@ -3,7 +3,7 @@
 //! x' = frac(1/x) for x!=0, with a soft escape.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ORBIT: usize = 180;
@@ -110,15 +110,6 @@ impl GaussMap {
 }
 
 impl Room for GaussMap {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "gauss-map",
-            title: "Gauss Map",
-            wing: "Number & Pattern",
-            blurb: "Continued-fraction engine: x -> frac(1/x).",
-            accent: [120, 80, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, seed_x(t, None, self.seed));

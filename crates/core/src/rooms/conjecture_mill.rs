@@ -6,7 +6,7 @@
 
 use crate::font;
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const COEFF_MIN: i32 = -4;
@@ -585,17 +585,6 @@ impl ConjectureMill {
 }
 
 impl Room for ConjectureMill {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "conjecture-mill",
-            title: "The Conjecture Mill",
-            wing: "Number & Pattern",
-            blurb: "Typed formulas crawl across a blackboard. Exact counterexamples erase the \
-                    bad; coefficient proof stamps the survivor. Time runs a complete finite \
-                    search.",
-            accent: [120, 220, 170],
-        }
-    }
 
     fn render(&self, surface: &mut dyn Surface, t: f64) {
         let (steering, search) = state(self.seed, t, &[]);

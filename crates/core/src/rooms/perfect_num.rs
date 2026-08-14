@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE K. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -136,15 +136,6 @@ impl PerfectNum {
 }
 
 impl Room for PerfectNum {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "perfect-num",
-            title: "Perfect Numbers",
-            wing: "Number & Pattern",
-            blurb: "Even perfects from Mersenne primes.",
-            accent: [110, 90, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, count(t, None, self.seed), self.seed);

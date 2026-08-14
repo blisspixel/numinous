@@ -4,7 +4,7 @@
 //! DRAG THE FOUR CONSTANTS (plate x/y sets a pair; phase the rest). See
 //! `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 12_000;
@@ -122,16 +122,6 @@ impl Menagerie {
 }
 
 impl Room for Menagerie {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "menagerie",
-            title: "The Menagerie",
-            wing: "Fractals",
-            blurb: "Clifford attractor: four numbers and a long orbit condense a luminous alien. \
-                    t drifts constants.",
-            accent: [180, 90, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b, c, d) = params(t, None, self.seed);

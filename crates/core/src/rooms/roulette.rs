@@ -3,7 +3,7 @@
 //! Distinct from pure hypotrochoid/epitrochoid rooms: dual overlay.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -107,15 +107,6 @@ impl Roulette {
 }
 
 impl Room for Roulette {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "roulette",
-            title: "Roulette Gallery",
-            wing: "Shape & Space",
-            blurb: "Epi and hypo rolling paths overlaid.",
-            accent: [180, 40, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, k_param(t, None, self.seed), self.seed);

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE LENGTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -121,15 +121,6 @@ impl WattCurve {
 }
 
 impl Room for WattCurve {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "watt-curve",
-            title: "Watt Curve",
-            wing: "Shape & Space",
-            blurb: "Midpoint of a two-bar linkage.",
-            accent: [90, 90, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, rod(t, None, self.seed), self.seed);

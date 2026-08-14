@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE A. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const CELLS: usize = 64;
@@ -125,15 +125,6 @@ impl Brusselator {
 }
 
 impl Room for Brusselator {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "brusselator",
-            title: "Brusselator",
-            wing: "Motion & Dynamics",
-            blurb: "Chemical oscillator waves in space-time.",
-            accent: [160, 80, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, a_param(t, None, self.seed), self.seed);

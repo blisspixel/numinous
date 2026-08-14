@@ -3,7 +3,7 @@
 //! x' = 2x mod 1; y' = lambda y + cos(4 pi x).
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 8_000;
@@ -89,15 +89,6 @@ impl KaplanYorke {
 }
 
 impl Room for KaplanYorke {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "kaplan-yorke",
-            title: "Kaplan-Yorke Map",
-            wing: "Motion & Dynamics",
-            blurb: "Doubling in x, damped drive in y: fractal attractor.",
-            accent: [80, 160, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, lambda(t, None, self.seed));

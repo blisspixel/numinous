@@ -3,7 +3,7 @@
 //! Ambient phase unfurls both equal-area arms.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -144,15 +144,6 @@ impl FermatSpiral {
 }
 
 impl Room for FermatSpiral {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "fermat-spiral",
-            title: "Fermat Spiral",
-            wing: "Shape & Space",
-            blurb: "Equal-area arms unfurl together. Watch the tips.",
-            accent: [200, 160, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, turns(t, None, self.seed), phase_unit(t), self.seed);

@@ -8,7 +8,7 @@
 use std::f64::consts::TAU;
 
 use super::variation_unit;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// The ring radius.
@@ -102,16 +102,6 @@ fn edge_points(width: usize, height: usize, aspect: f64) -> Vec<((i32, i32), f64
 }
 
 impl Room for Mobius {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "mobius",
-            title: "Mobius Strip",
-            wing: "Shape & Space",
-            blurb: "A band with a half twist: one side, one edge. The ant walks a full lap and \
-                    arrives on the other side without crossing anything. Two laps to get home.",
-            accent: [120, 200, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();

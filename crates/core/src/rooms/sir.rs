@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE R0. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 200;
@@ -103,15 +103,6 @@ impl Sir {
 }
 
 impl Room for Sir {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sir",
-            title: "SIR Epidemic",
-            wing: "Chance & Order",
-            blurb: "Susceptible, infected, recovered curves.",
-            accent: [180, 40, 60],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let _ = draw(canvas, r0(t, None, self.seed), self.seed);

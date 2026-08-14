@@ -3,7 +3,7 @@
 //! Contour energy orbits in the famous potential.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 5_000;
@@ -123,15 +123,6 @@ impl HenonHeiles {
 }
 
 impl Room for HenonHeiles {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "henon-heiles",
-            title: "Henon-Heiles",
-            wing: "Motion & Dynamics",
-            blurb: "Galactic potential toy: energy steers order into chaos.",
-            accent: [80, 40, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let e = energy(t, None, self.seed);

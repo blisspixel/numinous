@@ -3,7 +3,7 @@
 //! W(x) = sum a^n cos(b^n pi x) with 0<a<1, ab>1+3pi/2 classically.
 //! DRAG: TUNE A AND B. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const TERMS: usize = 18;
@@ -117,15 +117,6 @@ impl Weierstrass {
 }
 
 impl Room for Weierstrass {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "weierstrass",
-            title: "Nowhere Smooth",
-            wing: "Fractals",
-            blurb: "Weierstrass sum: continuous everywhere, differentiable nowhere.",
-            accent: [40, 120, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b) = params(t, None, self.seed);

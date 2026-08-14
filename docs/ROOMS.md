@@ -2,7 +2,7 @@
 
 The content catalog: the phenomena Numinous is built from. Each **room** is one playable mathematical object. Rooms are grouped into **Wings** by feeling, not by curriculum.
 
-**Current status (as of 2026-07):** 354 catalog rooms across the wings plus
+**Current status (as of 2026-08):** 354 catalog rooms across the wings plus
 hidden content. Per-visit variation seed is threaded through registry/app/CLI/
 MCP; every catalog room uses it for replay novelty, while hidden content stays
 outside the catalog replay contract. Every catalog room has `verb()` +
@@ -18,6 +18,12 @@ motion covers flagship classical curves through cycle 167; cycle 168 re-zeroed
 phase-thin and dead-domain regressions (Log Spiral, Coffee Cup, Degree-720,
 Stretch, Catenary). Six-question filter: `RESEARCH.md`. See `CHANGELOG.md` and
 the Progress section of `ROADMAP.md`. See `ARCADE.md` for design.
+
+The authoritative declaration is `crates/core/src/rooms/catalog.rs`. One entry
+owns a listed room's module, type, static `RoomMeta`, and replayable constructor;
+the registry and public `ROOM_CATALOG` are generated from it. Rendering,
+interaction, sound, and revelations remain in the room's own module. Hidden
+content follows a separate declaration and never appears in listed discovery.
 
 Every room is scored on two axes to help sequencing:
 

@@ -2,7 +2,7 @@
 //!
 //! x -> r x (1-x) drawn as cobweb against y=x. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -111,15 +111,6 @@ impl LogisticCobweb {
 }
 
 impl Room for LogisticCobweb {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "logistic-cobweb",
-            title: "The Cobweb",
-            wing: "Motion & Dynamics",
-            blurb: "Logistic map as cobweb: climb the parabola, slide to y=x.",
-            accent: [255, 140, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let r = r_param(t, None);

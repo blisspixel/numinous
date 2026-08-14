@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE PHASE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -110,15 +110,6 @@ impl FigureEightKnot {
 }
 
 impl Room for FigureEightKnot {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "figure-eight-knot",
-            title: "Figure-Eight Knot",
-            wing: "Shape & Space",
-            blurb: "Second simplest prime knot.",
-            accent: [100, 70, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, phase(t, None, self.seed), self.seed);

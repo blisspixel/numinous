@@ -2,7 +2,7 @@
 //!
 //! A light-cone diagram in 1+1 dimensions. Causality refuses to break. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -106,16 +106,6 @@ impl TiltCone {
 }
 
 impl Room for TiltCone {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "tilt-cone",
-            title: "Tilt the Cone",
-            wing: "Shape & Space",
-            blurb: "Boost the frame: planes of simultaneity tip, light stays at 45 degrees, \
-                    causality holds. Lorentz pair with Starbow.",
-            accent: [100, 180, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, beta_from(t, &[], self.seed));

@@ -8,7 +8,7 @@
 use std::f64::consts::TAU;
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Fixed seed so the desert is the same desert every time.
@@ -103,16 +103,6 @@ impl Voronoi {
 }
 
 impl Room for Voronoi {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "voronoi",
-            title: "Voronoi Territories",
-            wing: "Shape & Space",
-            blurb: "Fourteen wells in a desert; every point belongs to its nearest one. The \
-                    borders are the ties. Giraffes, dragonflies, and mud cracks all know this map.",
-            accent: [235, 180, 90],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (width, height) = canvas.draw_bounds();

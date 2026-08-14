@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE MOD INDEX. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -89,15 +89,6 @@ impl AmModulation {
 }
 
 impl Room for AmModulation {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "am-modulation",
-            title: "AM Modulation",
-            wing: "Waves & Sound",
-            blurb: "Carrier times slow envelope: radio AM.",
-            accent: [80, 160, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, mod_index(t, None, self.seed), self.seed);

@@ -19,7 +19,7 @@ use broadcast::{SessionBroadcast, SessionSnapshot};
 use numinous_broadcast::{
     PLAY_ROOM_MAX_HEIGHT as MAX_TOOL_HEIGHT, PLAY_ROOM_MAX_WIDTH as MAX_TOOL_WIDTH, PublicTool,
 };
-use numinous_core::{Canvas, all_rooms, all_rooms_with, room_by_id};
+use numinous_core::{Canvas, room_by_id};
 use serde_json::{Map, Value, json};
 
 /// Default legacy MCP revision when an initialization request has no preference.
@@ -452,16 +452,10 @@ fn record_progress(request: &Value, path: &std::path::Path) {
             }
         }
         "play_room" | "listen_room" => {
-            if let Some(id) = args.get("id").and_then(Value::as_str) {
-                let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
-                let has_room = if variation != 0 {
-                    all_rooms_with(variation).iter().any(|r| r.meta().id == id)
-                } else {
-                    room_by_id(id).is_some()
-                };
-                if has_room {
-                    journey.visit(id);
-                }
+            if let Some(id) = args.get("id").and_then(Value::as_str)
+                && numinous_core::room_meta_by_id(id).is_some()
+            {
+                journey.visit(id);
             }
         }
         "run_sim" | "sing_expression" => journey.play(),
@@ -2909,13 +2903,7 @@ fn listen_room_tool(args: &Value) -> Value {
         Err(message) => return tool_error(&message),
     };
     let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
-    let room = if variation != 0 {
-        all_rooms_with(variation)
-            .into_iter()
-            .find(|r| r.meta().id == id)
-    } else {
-        room_by_id(id)
-    };
+    let room = numinous_core::room_by_id_with(id, variation);
     let Some(room) = room else {
         return tool_error(&unknown_room(id));
     };
@@ -3258,16 +3246,14 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
         Err(message) => return tool_error(&message),
     };
 
-    let room = if variation != 0 {
-        all_rooms_with(variation)
-            .into_iter()
-            .find(|r| r.meta().id == id)
-    } else {
+    let room = if variation == 0 {
         // The same veil door describe and reveal use: a hidden room is
         // unlisted, not nonexistent, and a learner the terminal admits is
         // the same learner here. Variation stays a catalog contract, which
         // is the terminal's rule too.
         find_room_for(id, journey)
+    } else {
+        numinous_core::room_by_id_with(id, variation)
     };
 
     match room {
@@ -4297,13 +4283,7 @@ fn predict_tool(args: &Value) -> Value {
     // the answer, so grading variation 5's model against variation 0 would call a
     // faithful prediction wrong. Pass the same seed and variation to both calls.
     let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
-    let room = if variation != 0 {
-        all_rooms_with(variation)
-            .into_iter()
-            .find(|r| r.meta().id == id)
-    } else {
-        room_by_id(id)
-    };
+    let room = numinous_core::room_by_id_with(id, variation);
     let Some(room) = room else {
         return tool_error(&unknown_room(id));
     };
@@ -6481,7 +6461,7 @@ fn journey_tool(path: &std::path::Path) -> Value {
             journey.sparks(),
             numinous_core::constellation(&journey, 60, 18),
             journey.visited.len(),
-            all_rooms().len(),
+            numinous_core::ROOM_CATALOG.len(),
             journey.wins,
             journey.secrets,
             journey.rank().name()
@@ -6491,7 +6471,7 @@ fn journey_tool(path: &std::path::Path) -> Value {
             "maxLevel": numinous_core::MAX_LEVEL,
             "xp": journey.sparks(),
             "starsLit": journey.visited.len(),
-            "starsTotal": all_rooms().len(),
+            "starsTotal": numinous_core::ROOM_CATALOG.len(),
             "wins": journey.wins,
             "plays": journey.plays,
             "secrets": journey.secrets,
@@ -6689,24 +6669,19 @@ fn unknown_sim(id: &str) -> String {
 }
 
 fn list_rooms_text() -> String {
-    all_rooms()
+    numinous_core::ROOM_CATALOG
         .iter()
-        .map(|room| {
-            let m = room.meta();
-            format!("{}  [{}]  {}", m.id, m.wing, m.title)
-        })
+        .map(|metadata| format!("{}  [{}]  {}", metadata.id, metadata.wing, metadata.title))
         .collect::<Vec<_>>()
         .join("\n")
 }
 
 fn list_rooms_tool() -> Value {
-    let rooms = all_rooms();
-    let structured_rooms = rooms
+    let structured_rooms = numinous_core::ROOM_CATALOG
         .iter()
-        .map(|room| {
-            let meta = room.meta();
-            json!({ "id": meta.id, "title": meta.title, "wing": meta.wing })
-        })
+        .map(
+            |metadata| json!({ "id": metadata.id, "title": metadata.title, "wing": metadata.wing }),
+        )
         .collect::<Vec<_>>();
     tool_structured(
         &list_rooms_text(),
@@ -8970,6 +8945,33 @@ plays 2
             .unwrap_or_default();
         assert!(text.contains("LV"), "got: {text}");
         assert!(text.contains("2 XP"), "a play and a visit: {text}");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn varied_progress_records_only_listed_rooms_once() {
+        let path = std::env::temp_dir().join("numinous_mcp_varied_progress_test.txt");
+        let _ = std::fs::remove_file(&path);
+        for (id, variation) in [
+            ("times-tables", 42),
+            ("times-tables", 42),
+            ("tetractys", 42),
+            ("missing", 42),
+        ] {
+            super::record_progress(
+                &json!({
+                    "jsonrpc":"2.0","id":53,"method":"tools/call",
+                    "params":{"name":"play_room","arguments":{"id":id,"variation":variation}}
+                }),
+                &path,
+            );
+        }
+
+        let journey = super::load_journey(&path);
+        assert_eq!(journey.visited.len(), 1);
+        assert!(journey.visited.contains("times-tables"));
+        assert!(!journey.visited.contains("tetractys"));
+        assert!(!journey.visited.contains("missing"));
         let _ = std::fs::remove_file(&path);
     }
 
@@ -12262,11 +12264,13 @@ plays 2
             .as_str()
             .expect("text content");
         assert!(text.contains("times-tables"));
+        assert!(!text.contains("tetractys"));
         assert_eq!(resp["result"]["isError"], false);
         let structured = &resp["result"]["structuredContent"];
         assert_eq!(structured["count"], 354);
         let rooms = structured["rooms"].as_array().expect("room catalog");
         assert_eq!(rooms.len(), 354);
+        assert!(rooms.iter().all(|room| room["id"] != "tetractys"));
         assert!(rooms.iter().all(|room| {
             room["id"].is_string() && room["title"].is_string() && room["wing"].is_string()
         }));

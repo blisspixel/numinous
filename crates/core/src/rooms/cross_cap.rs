@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE A. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -91,15 +91,6 @@ impl CrossCap {
 }
 
 impl Room for CrossCap {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "cross-cap",
-            title: "Cross-Cap",
-            wing: "Shape & Space",
-            blurb: "RP2 immersion: a cap that crosses itself.",
-            accent: [100, 60, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, amp(t, None, self.seed), self.seed);

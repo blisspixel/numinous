@@ -8,7 +8,7 @@
 
 use std::f64::consts::PI;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
@@ -158,17 +158,6 @@ impl Chladni {
 }
 
 impl Room for Chladni {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "chladni",
-            title: "Chladni Figures",
-            wing: "Waves & Sound",
-            blurb: "Sand flees a singing plate and draws the silence: nodal curves of a free square \
-                    plate under two mode numbers. t walks the mode gallery; DRAG tunes n and m, and \
-                    the drive tone is the figure.",
-            accent: [200, 190, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (n, m) = self.modes_at(t);

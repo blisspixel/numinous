@@ -3,7 +3,7 @@
 //! Ambient phase draws the roulette with a pen.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -123,15 +123,6 @@ impl Epitrochoid {
 }
 
 impl Room for Epitrochoid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "epitrochoid",
-            title: "Epitrochoid",
-            wing: "Shape & Space",
-            blurb: "Outer rolling roulette draws itself. Watch the pen.",
-            accent: [80, 60, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, ratio(t, None, self.seed), phase_unit(t), self.seed);

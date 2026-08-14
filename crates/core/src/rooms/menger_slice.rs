@@ -3,7 +3,7 @@
 //! At each step, remove the center of each 3x3.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -90,15 +90,6 @@ impl MengerSlice {
 }
 
 impl Room for MengerSlice {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "menger-slice",
-            title: "Menger Face",
-            wing: "Fractals",
-            blurb: "Face of the Menger sponge: remove center squares forever.",
-            accent: [100, 100, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, depth(t, None), self.seed);

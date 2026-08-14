@@ -7,7 +7,7 @@
 //! tiles. See the Full Map in `docs/ROOMS.md`.
 
 use super::variation_unit;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// How many halvings `t` reaches (past ~14 the tiles are subpixel anyway).
@@ -86,16 +86,6 @@ fn runner_hops(target: (f64, f64), hops: usize) -> Vec<(f64, f64)> {
 }
 
 impl Room for Zeno {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "zeno",
-            title: "Zeno's Square",
-            wing: "Change",
-            blurb: "Half the square, then half of what's left, then half of that, forever. \
-                    Infinitely many tiles, and they fit exactly. The sum of the halves is one.",
-            accent: [200, 160, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (width, height) = canvas.draw_bounds();

@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE LENGTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -107,15 +107,6 @@ impl Kolakoski {
 }
 
 impl Room for Kolakoski {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "kolakoski",
-            title: "Kolakoski Sequence",
-            wing: "Number & Pattern",
-            blurb: "Self-describing runs of 1 and 2.",
-            accent: [80, 100, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, length(t, None, self.seed), self.seed);

@@ -7,7 +7,7 @@
 //! ends. `t` runs the clock. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Simulation grid side (fixed, toroidal), independent of the surface.
@@ -170,16 +170,6 @@ fn draw_grid(canvas: &mut dyn Surface, grid: &[bool], width: usize, height: usiz
 }
 
 impl Room for LangtonsAnt {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "langtons-ant",
-            title: "Langton's Ant",
-            wing: "Emergence",
-            blurb: "One ant, two rules: turn on the color under you, flip it, step. It makes chaos \
-                    for ten thousand steps and then builds a highway forever. t runs the clock.",
-            accent: [120, 200, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (width, height) = canvas.draw_bounds();

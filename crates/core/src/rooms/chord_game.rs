@@ -4,7 +4,7 @@
 //! their chord (or tangent) reflected across the x-axis: the group law that
 //! locks credit cards. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Curve parameters for a nice non-singular real curve.
@@ -161,16 +161,6 @@ impl ChordGame {
 }
 
 impl Room for ChordGame {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "chord-game",
-            title: "The Chord Game",
-            wing: "Number & Pattern",
-            blurb: "Elliptic addition: chord two points on y^2 = x^3 + a x + b, flip the third \
-                    intersection. The group law behind public-key crypto.",
-            accent: [180, 160, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (p, q) = ambient_points(t, self.seed);

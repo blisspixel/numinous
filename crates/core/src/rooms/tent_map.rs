@@ -3,7 +3,7 @@
 //! T_mu(x) = mu min(x, 1-x). Orbit cobweb and density.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ORBIT: usize = 120;
@@ -137,15 +137,6 @@ impl TentMap {
 }
 
 impl Room for TentMap {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "tent-map",
-            title: "The Tent Map",
-            wing: "Motion & Dynamics",
-            blurb: "Piecewise-linear map on [0,1]: cobweb and density.",
-            accent: [40, 160, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, mu(t, None, self.seed), self.seed);

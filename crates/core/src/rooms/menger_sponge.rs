@@ -3,7 +3,7 @@
 //! Distinct from menger-carpet and menger-slice.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -103,15 +103,6 @@ impl MengerSponge {
 }
 
 impl Room for MengerSponge {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "menger-sponge",
-            title: "Menger Sponge",
-            wing: "Fractals",
-            blurb: "3D cross-removal fractal in twin slices.",
-            accent: [100, 100, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, depth(t, None), self.seed);

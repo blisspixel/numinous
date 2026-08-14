@@ -6,7 +6,6 @@
 //! (see `docs/PLAYFUL.md`). Names are deadpan; each one is also true.
 
 use crate::journey::Journey;
-use crate::registry::all_rooms;
 use crate::scores::Scoreboard;
 
 /// One trophy: a name, what it honors, and whether the evidence exists.
@@ -39,7 +38,7 @@ fn played(board: &Scoreboard, prefix: &str) -> bool {
 /// Compute the full case from the evidence.
 #[must_use]
 pub fn trophies(journey: &Journey, board: &Scoreboard) -> Vec<Trophy> {
-    let rooms = all_rooms().len();
+    let rooms = crate::rooms::ROOM_CATALOG.len();
     let games = ["munch", "quiz", "seti", "aliens", "crack"];
     let all_games = games.iter().all(|g| played(board, g));
     vec![

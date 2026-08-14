@@ -3,7 +3,7 @@
 //! x' = y + a(1 - b y^2)y + f(x); y' = -x + f(x'); f(x)=mu x + 2(1-mu)x^2/(1+x^2).
 //! DRAG: TUNE MU. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ITERS: usize = 8_000;
@@ -103,15 +103,6 @@ impl GumowskiMira {
 }
 
 impl Room for GumowskiMira {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "gumowski-mira",
-            title: "Gumowski-Mira",
-            wing: "Motion & Dynamics",
-            blurb: "Accelerator beam map that paints butterfly-like attractors.",
-            accent: [100, 60, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, mu(t, None, self.seed));

@@ -3,7 +3,7 @@
 //! Recursive nine-subdivision (Hilbert is already a room; this is Peano's
 //! original idea). See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -122,15 +122,6 @@ impl PeanoCurve {
 }
 
 impl Room for PeanoCurve {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "peano-curve",
-            title: "Peano's Path",
-            wing: "Fractals",
-            blurb: "A continuous curve that fills the square (order recursion).",
-            accent: [100, 200, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let mut o = order(t, None);

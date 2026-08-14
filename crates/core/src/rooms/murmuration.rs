@@ -5,7 +5,7 @@
 //! advances the flight. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const N: usize = 96;
@@ -184,16 +184,6 @@ impl Murmuration {
 }
 
 impl Room for Murmuration {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "murmuration",
-            title: "Murmuration",
-            wing: "Emergence",
-            blurb: "Boids with seven neighbors: separate, align, cohere. The flock shape lives in \
-                    no single bird. t flies the cloud.",
-            accent: [80, 100, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let steps = 12 + (phase_unit(t) * STEPS as f64) as usize;

@@ -3,7 +3,7 @@
 //! x' = sin(y) - b x; y' = sin(z) - b y; z' = sin(x) - b z.
 //! DRAG: TUNE B. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 7_000;
@@ -117,15 +117,6 @@ impl Thomas {
 }
 
 impl Room for Thomas {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "thomas",
-            title: "Thomas Attractor",
-            wing: "Motion & Dynamics",
-            blurb: "Cyclically symmetric continuous chaos.",
-            accent: [80, 200, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, &integrate(b_param(t, None, self.seed)));

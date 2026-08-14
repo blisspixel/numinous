@@ -6,7 +6,7 @@
 
 use std::f64::consts::PI;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const SAMPLES: usize = 80;
@@ -228,16 +228,6 @@ impl FastestFall {
 }
 
 impl Room for FastestFall {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "fastest-fall",
-            title: "The Fastest Fall",
-            wing: "Change",
-            blurb: "The fastest path down under gravity is a cycloid, not a straight line. Draw \
-                    any other track and lose the race. t runs the beads.",
-            accent: [100, 180, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b) = endpoints(self.seed);

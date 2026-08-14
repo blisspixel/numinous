@@ -3,7 +3,7 @@
 //! Distinct from the existing Koch coast room (if open-path); this is the
 //! closed triangular snowflake. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -103,15 +103,6 @@ impl KochSnowflake {
 }
 
 impl Room for KochSnowflake {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "koch-snowflake",
-            title: "Koch Snowflake",
-            wing: "Fractals",
-            blurb: "Closed Koch curve: infinite coast, finite area.",
-            accent: [100, 180, 220],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let mut o = order(t, None);

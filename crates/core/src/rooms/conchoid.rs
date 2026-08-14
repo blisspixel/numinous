@@ -3,7 +3,7 @@
 //! Ambient phase draws both branches with pens.
 //! See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -140,15 +140,6 @@ impl Conchoid {
 }
 
 impl Room for Conchoid {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "conchoid",
-            title: "Conchoid",
-            wing: "Shape & Space",
-            blurb: "Nicomedes shell draws both branches. Watch the pen.",
-            accent: [40, 120, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(

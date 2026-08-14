@@ -2,7 +2,7 @@
 //!
 //! Orbit cobweb for real c. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ORBIT: usize = 160;
@@ -106,15 +106,6 @@ impl QuadraticMap {
 }
 
 impl Room for QuadraticMap {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "quadratic-map",
-            title: "Quadratic Map",
-            wing: "Motion & Dynamics",
-            blurb: "Real map x -> x^2 + c: Mandelbrot's one-dimensional cousin.",
-            accent: [60, 100, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (c, x0) = params(t, None, self.seed);

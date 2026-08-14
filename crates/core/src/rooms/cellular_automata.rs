@@ -6,7 +6,7 @@
 //! triangle; Rule 30 pours out chaos; Rule 110 is Turing-complete. See
 //! `docs/ROOMS.md` and `docs/INSIGHTS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// A curated tour of notable elementary rules, indexed by phase `t`.
@@ -113,16 +113,6 @@ fn render_history(
 }
 
 impl Room for CellularAutomata {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "cellular-automata",
-            title: "Cellular Automata",
-            wing: "Emergence",
-            blurb: "One line of cells and one tiny rule per cell; sweep t across notable rules, \
-                    where Rule 90 draws a Sierpinski triangle and Rule 30 pours out chaos.",
-            accent: [70, 200, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (width, height) = canvas.draw_bounds();

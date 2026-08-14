@@ -2,7 +2,7 @@
 //!
 //! z_{n+1} = z_n^2 + c + p * z_{n-1}. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_ITER: u32 = 36;
@@ -113,15 +113,6 @@ impl Phoenix {
 }
 
 impl Room for Phoenix {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "phoenix",
-            title: "Phoenix Fractal",
-            wing: "Fractals",
-            blurb: "Escape set with a one-step memory of z.",
-            accent: [220, 120, 40],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, p_param(t, None, self.seed), self.seed);

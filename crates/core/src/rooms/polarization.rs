@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE ANGLE. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -118,15 +118,6 @@ impl Polarization {
 }
 
 impl Room for Polarization {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "polarization",
-            title: "Polarization",
-            wing: "Waves & Sound",
-            blurb: "Malus: intensity falls as cos squared of angle.",
-            accent: [180, 40, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, angle(t, None, self.seed), self.seed);

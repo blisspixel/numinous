@@ -6,7 +6,7 @@
 //! coordinate for the pure-state ray. Phase precesses around
 //! the Z axis (Larmor-style). See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 /// Sphere center and radius in normalized surface coordinates.
@@ -278,16 +278,6 @@ impl BlochSphere {
 }
 
 impl Room for BlochSphere {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "bloch-sphere",
-            title: "Bloch Sphere",
-            wing: "Shape & Space",
-            blurb: "Every pure qubit state is a point on a sphere. |0> and |1> \
-                    are poles; the equator is equal superpositions.",
-            accent: [100, 200, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, None, t, self.seed);

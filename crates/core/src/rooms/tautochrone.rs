@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE STARTS. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -108,15 +108,6 @@ impl Tautochrone {
 }
 
 impl Room for Tautochrone {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "tautochrone",
-            title: "Tautochrone",
-            wing: "Motion & Dynamics",
-            blurb: "Beads on a cycloid finish together.",
-            accent: [70, 110, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, race(t, None, self.seed), self.seed);

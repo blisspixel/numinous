@@ -2,7 +2,7 @@
 //!
 //! DRAG: SET THE DEPTH. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -114,15 +114,6 @@ impl HTree {
 }
 
 impl Room for HTree {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "h-tree",
-            title: "H-Tree",
-            wing: "Fractals",
-            blurb: "Self-similar H strokes that tile the plane.",
-            accent: [80, 140, 80],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, depth(t, None), self.seed);

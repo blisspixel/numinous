@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE POWER AND WINDOW. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_ITER: u32 = 32;
@@ -109,15 +109,6 @@ impl Multibrot {
 }
 
 impl Room for Multibrot {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "multibrot",
-            title: "Multibrot",
-            wing: "Fractals",
-            blurb: "z^d + c: Mandelbrot power raised.",
-            accent: [160, 40, 180],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (p, z) = params(t, None);

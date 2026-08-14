@@ -4,7 +4,7 @@
 //! Integer curvatures (Descartes Circle Theorem). CLICK A GAP to seed a
 //! local generation. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const MAX_CIRCLES: usize = 180;
@@ -231,16 +231,6 @@ impl Apollonian {
 }
 
 impl Room for Apollonian {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "apollonian",
-            title: "The Kissing Circles",
-            wing: "Number & Pattern",
-            blurb: "Apollonian gasket: Descartes' theorem fills every gap with a kissing circle. \
-                    Integer curvatures cascade. t deepens recursion; CLICK A GAP.",
-            accent: [100, 160, 200],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let depth = 1 + (phase_unit(t) * 4.0) as usize;

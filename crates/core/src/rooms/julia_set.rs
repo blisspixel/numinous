@@ -5,7 +5,7 @@
 //! Distinct from the flagship Julia room: a compact filled set toy for the catalog
 //! invent loop (id `julia-filled`).
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -88,15 +88,6 @@ impl JuliaFilled {
 }
 
 impl Room for JuliaFilled {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "julia-filled",
-            title: "Filled Julia",
-            wing: "Fractals",
-            blurb: "Filled set for z^2+c.",
-            accent: [20, 100, 140],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (cr, ci) = c_param(t, None, self.seed);

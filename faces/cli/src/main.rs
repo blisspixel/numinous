@@ -18,7 +18,7 @@ use std::time::Duration;
 use clap::{Parser, Subcommand, ValueEnum};
 use numinous_core::{
     CUT_LEVELS, Canvas, Journey, PlotRequest, PlotSource, Raster, Room, RoomMeta, SingRequest,
-    Surface, all_rooms, all_rooms_with, draw_text, hidden_room_by_id, room_by_id,
+    Surface, all_rooms, draw_text, hidden_room_by_id, room_by_id,
 };
 
 const MAX_ENV_FILE_BYTES: u64 = 16 * 1024;
@@ -1638,13 +1638,7 @@ fn find_room(id: &str, allow_hidden: bool) -> Option<Box<dyn Room>> {
 /// Find a room for commands that may request per-visit variation. Variation
 /// only applies to catalog rooms; hidden rooms still answer after rank checks.
 fn find_room_with_variation(id: &str, allow_hidden: bool, variation: u64) -> Option<Box<dyn Room>> {
-    if variation == 0 {
-        return find_room(id, allow_hidden);
-    }
-    all_rooms_with(variation)
-        .into_iter()
-        .find(|room| room.meta().id == id)
-        .or_else(|| find_room(id, allow_hidden))
+    numinous_core::room_by_id_with(id, variation).or_else(|| find_room(id, allow_hidden))
 }
 
 /// Run one command, recording the journey as it goes.
@@ -3122,16 +3116,18 @@ fn emit(report: Result<String, String>) -> ExitCode {
 
 /// The catalog listing, as human text or JSON.
 fn rooms_report(json: bool) -> String {
-    let rooms = all_rooms();
     if json {
-        let arr: Vec<serde_json::Value> = rooms.iter().map(|r| meta_json(&r.meta())).collect();
+        let arr: Vec<serde_json::Value> =
+            numinous_core::ROOM_CATALOG.iter().map(meta_json).collect();
         format!("{}\n", to_pretty(&serde_json::Value::Array(arr)))
     } else {
-        let lines: Vec<String> = rooms
+        let lines: Vec<String> = numinous_core::ROOM_CATALOG
             .iter()
-            .map(|r| {
-                let m = r.meta();
-                format!("{:<16} {:<20} {}", m.id, m.wing, m.title)
+            .map(|metadata| {
+                format!(
+                    "{:<16} {:<20} {}",
+                    metadata.id, metadata.wing, metadata.title
+                )
             })
             .collect();
         format!("{}\n", lines.join("\n"))
@@ -3891,7 +3887,7 @@ fn journey_report(journey: &Journey, board: &numinous_core::Scoreboard, today: u
         journey.sparks(),
         numinous_core::constellation(journey, 60, 18),
         journey.visited.len(),
-        all_rooms().len(),
+        numinous_core::ROOM_CATALOG.len(),
         journey.wins,
         journey.secrets,
         match journey.live_streak(today) {
@@ -6404,14 +6400,18 @@ mod tests {
 
     #[test]
     fn rooms_report_lists_times_tables() {
-        assert!(rooms_report(false).contains("times-tables"));
+        let report = rooms_report(false);
+        assert!(report.contains("times-tables"));
+        assert!(!report.contains("tetractys"));
     }
 
     #[test]
     fn rooms_report_json_is_a_non_empty_array() {
         let text = rooms_report(true);
         let value: Value = serde_json::from_str(&text).expect("valid json");
-        assert!(value.as_array().is_some_and(|a| !a.is_empty()));
+        let rooms = value.as_array().expect("room catalog");
+        assert!(!rooms.is_empty());
+        assert!(rooms.iter().all(|room| room["id"] != "tetractys"));
     }
 
     #[test]

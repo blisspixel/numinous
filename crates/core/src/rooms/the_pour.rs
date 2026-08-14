@@ -7,7 +7,7 @@
 //! Full Map in `docs/ROOMS.md`.
 
 use super::variation_unit;
-use crate::room::{Room, RoomInput, RoomMeta, pokes_from_inputs};
+use crate::room::{Room, RoomInput, pokes_from_inputs};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
@@ -93,16 +93,6 @@ impl ThePour {
 }
 
 impl Room for ThePour {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "the-pour",
-            title: "The Pour",
-            wing: "Change",
-            blurb: "A curve holds water. t pours area in from the left; the rising total traces a \
-                    second curve above. You are watching the fundamental theorem of calculus.",
-            accent: [80, 160, 255],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (width, height) = canvas.draw_bounds();

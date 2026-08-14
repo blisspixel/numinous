@@ -334,6 +334,14 @@ mod tests {
             .map(|(_, room)| *room)
     }
 
+    fn source_room_id(stem: &str) -> Option<&'static str> {
+        crate::rooms::ROOM_SOURCE_IDS
+            .iter()
+            .find(|(module, _)| *module == stem)
+            .map(|(_, id)| *id)
+            .or_else(|| helper_parent(stem))
+    }
+
     #[test]
     fn every_helper_names_a_room_that_exists() {
         for (helper, room) in HELPER_ROOMS {
@@ -383,15 +391,10 @@ mod tests {
                     .file_stem()
                     .and_then(|stem| stem.to_str())
                     .expect("a room source has a readable name");
-                let Some(id) = source
-                    .split_once("id: \"")
-                    .and_then(|(_, rest)| rest.split_once('"'))
-                    .map(|(id, _)| id)
-                    .or_else(|| helper_parent(stem))
-                else {
+                let Some(id) = source_room_id(stem) else {
                     continue;
                 };
-                let Some(room) = crate::registry::room_by_id(id) else {
+                let Some(metadata) = crate::rooms::room_meta_by_id(id) else {
                     continue;
                 };
                 // A helper draws on its parent's raster, so its marks belong to
@@ -403,7 +406,7 @@ mod tests {
                         }
                     }
                 } else {
-                    found.push((id.to_string(), room.meta().accent, marks));
+                    found.push((id.to_string(), metadata.accent, marks));
                 }
             }
         }
@@ -440,28 +443,21 @@ mod tests {
                 if !literals.iter().all(|wanted| source.contains(wanted)) {
                     continue;
                 }
-                // The id the room declares, so the mapping never depends on a
-                // file name happening to match it.
                 let stem = path
                     .file_stem()
                     .and_then(|stem| stem.to_str())
                     .expect("a room source has a readable name");
-                let id = source
-                    .split_once("id: \"")
-                    .and_then(|(_, rest)| rest.split_once('"'))
-                    .map(|(id, _)| id)
-                    .or_else(|| helper_parent(stem))
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "{path:?} draws with {literal} and declares no room id, so this scan \
-                             cannot tell which accent it is drawn against. If it draws on behalf \
-                             of another room, add it to HELPER_ROOMS naming that room; if it \
-                             draws nowhere, it should not be reaching for a mark."
-                        )
-                    });
-                let room = crate::registry::room_by_id(id)
-                    .unwrap_or_else(|| panic!("{id} is declared in {path:?} but not registered"));
-                found.push((id.to_string(), room.meta().accent));
+                let id = source_room_id(stem).unwrap_or_else(|| {
+                    panic!(
+                        "{path:?} draws with {literal} and has no catalog source mapping, so \
+                             this scan cannot tell which accent it is drawn against. If it draws \
+                             on behalf of another room, add it to HELPER_ROOMS naming that room; \
+                             if it draws nowhere, it should not be reaching for a mark."
+                    )
+                });
+                let metadata = crate::rooms::room_meta_by_id(id)
+                    .unwrap_or_else(|| panic!("{id} is mapped from {path:?} but not registered"));
+                found.push((id.to_string(), metadata.accent));
             }
         }
         found.sort();

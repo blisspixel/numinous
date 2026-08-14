@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE A. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 5_000;
@@ -113,15 +113,6 @@ impl Sprott {
 }
 
 impl Room for Sprott {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "sprott",
-            title: "Sprott Attractor",
-            wing: "Motion & Dynamics",
-            blurb: "Minimal quadratic chaos in three dimensions.",
-            accent: [120, 80, 160],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, a_param(t, None, self.seed), self.seed);

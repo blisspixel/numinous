@@ -182,10 +182,11 @@ impl PublicToolEvent {
 
 /// Builds the shared App and MCP replay identity from current public catalogs.
 pub fn numinous_compatibility() -> Result<Compatibility, CompatibilityError> {
-    let rooms = numinous_core::all_rooms();
     let simulations = numinous_core::all_sims();
     Compatibility::from_catalogs(
-        rooms.iter().map(|room| room.meta().id),
+        numinous_core::ROOM_CATALOG
+            .iter()
+            .map(|metadata| metadata.id),
         simulations.iter().map(|simulation| simulation.meta().id),
         NUMINOUS_GAME_IDS,
     )
@@ -213,7 +214,10 @@ impl Error for ProjectionError {}
 
 #[cfg(test)]
 mod tests {
-    use super::{ALL_PUBLIC_TOOLS, PublicTool, PublicToolEvent, numinous_compatibility};
+    use super::{
+        ALL_PUBLIC_TOOLS, Compatibility, NUMINOUS_GAME_IDS, PublicTool, PublicToolEvent,
+        numinous_compatibility,
+    };
     use serde_json::json;
     use std::collections::HashSet;
 
@@ -252,5 +256,26 @@ mod tests {
         let second = numinous_compatibility().expect("same catalog identity");
         assert_eq!(first, second);
         assert!(!first.fingerprint.as_bytes().iter().all(|byte| *byte == 0));
+
+        let rooms = numinous_core::all_rooms();
+        let simulations = numinous_core::all_sims();
+        let constructed = Compatibility::from_catalogs(
+            rooms.iter().map(|room| room.meta().id),
+            simulations.iter().map(|simulation| simulation.meta().id),
+            NUMINOUS_GAME_IDS,
+        )
+        .expect("constructed catalog identity");
+        assert_eq!(first, constructed);
+
+        let with_hidden = Compatibility::from_catalogs(
+            numinous_core::ROOM_CATALOG
+                .iter()
+                .map(|metadata| metadata.id)
+                .chain(std::iter::once("tetractys")),
+            simulations.iter().map(|simulation| simulation.meta().id),
+            NUMINOUS_GAME_IDS,
+        )
+        .expect("identity with hidden room");
+        assert_ne!(first, with_hidden);
     }
 }

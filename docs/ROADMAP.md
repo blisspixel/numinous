@@ -54,7 +54,7 @@ unclaimed until run.
 | Priority | What | Why |
 | --- | --- | --- |
 | **1. Keep agent first contact CI-green** | Agent hallway and tactile cohorts run on every PR; optional local-model visits exercise genuine choice after meaningful MCP experience changes | Deterministic cohorts guard 0.2 and 0.3 regressions, while real-model visits can expose interaction failures without turning free play into a flaky or expensive gate |
-| **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio plot and melody requests are now in core; workstream 7 still owns the `RoomMeta` data table and the remaining god-file seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
+| **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests and the typed room catalog are now in core; workstream 7 still owns the state-file resolution chain, gauntlet scoring, and remaining god-file seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
 | **3. The Mind's Seat** | Bounded frames with a temporal delta so one call carries becoming; MCP creation parity (save, sign, fork; a capsule link as a journal subject); journal surfacing at the door of a remembered room; the threshold (three doors instead of an index, the Strange Loop walk exposed); exact ratio annotations on note pairs. The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
 | **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | Splats, float accumulation, and bloom inside `Raster`; one shared audio bus with reverb and shaped envelopes; global dissolve and damped-spring input. The spike that precedes it: `crates/gpu` rendering into the existing Surface contract behind a feature flag, and a measured bloom budget on the CPU path | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
@@ -161,10 +161,15 @@ The workstreams, in landing order:
    and clean-win rule are core functions instead of three inline copies.
    Face-neutral `PlotRequest` and `SingRequest` types now own Studio source
    resolution, defaults, bounds, and execution for CLI and MCP; all three
-   faces use one 32-note default instead of 24, 32, and 48. The rest
-   (state-file resolution chain, gauntlet scoring, god-file seams, and the
-   `RoomMeta` table) continues under the drag report's map alongside the
-   Sensory Lift.
+   faces use one 32-note default instead of 24, 32, and 48. A single typed
+   catalog now generates module declarations, static metadata implementations,
+   and replayable constructors for all 354 listed rooms, with hidden content
+   held outside public discovery. Exact lockstep tests and a frozen
+   v0.3.0-alpha.5 checksum over every ordered public metadata field preserve
+   identity and order; a separate invariant keeps listed and hidden IDs
+   disjoint. The
+   state-file resolution chain, gauntlet scoring, and remaining god-file seams
+   continue under the drag report's map alongside the Sensory Lift.
 
 ### The Three Ceilings (August 2026): what holds exceptional back
 
@@ -202,12 +207,15 @@ Beneath all three sits the drag the fourth researcher measured: every feature
 is built three times at the face boundary (the sing-knob parity bug was this),
 catalog copy is spread across 358 files (the blurb voice pass had to touch
 322), and the full-price gate runs the whole workspace for every commit.
-Workstream 7 already schedules the debts. The first extraction is complete:
+Workstream 7 already schedules the debts. The first two extractions are complete:
 face-neutral `PlotRequest` and `SingRequest` types own Studio expression
 defaults, bounds, discovery, and execution in core, and the real creator-parity
-cohort passes all 22 comparisons. The `RoomMeta` data table is the next
-extraction. The Done log's triplication (progress, scorecards, and phase notes
-repeating the same facts) is recorded here as editorial debt for the same pass.
+cohort passes all 22 comparisons. `ROOM_CATALOG` now owns every listed room's
+static identity and generates metadata implementations, module declarations,
+and replayable constructors from one entry. The registry no longer carries a
+354-constructor hand list, and metadata-only lookups do not allocate rooms. The
+Done log's triplication (progress, scorecards, and phase notes repeating the
+same facts) is recorded here as editorial debt for the same pass.
 
 **The rocks, reordered (2026-08-08).** After polish workstreams 5 to 7
 close:

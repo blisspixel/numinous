@@ -2,7 +2,7 @@
 //!
 //! DRAG: TUNE D. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 fn phase_unit(t: f64) -> f64 {
@@ -189,15 +189,6 @@ impl PellPath {
 }
 
 impl Room for PellPath {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "pell-path",
-            title: "Pell Path",
-            wing: "Number & Pattern",
-            blurb: "Convergents of sqrt(d) chase the Pell hyperbola.",
-            accent: [60, 120, 100],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, disc(t, None, self.seed), self.seed);

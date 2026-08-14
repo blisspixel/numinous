@@ -3,7 +3,7 @@
 //! A 2D loss landscape; drop a seeker and watch gradient steps. Local minima
 //! and ridges teach that the landscape lies. DROP: A SEEKER. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const STEPS: usize = 40;
@@ -141,16 +141,6 @@ impl GradientValley {
 }
 
 impl Room for GradientValley {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "gradient-valley",
-            title: "The Gradient Valley",
-            wing: "Number & Pattern",
-            blurb: "Descent finds a basin; a ridge blocks another. The landscape lies to the \
-                    seeker. t drifts start.",
-            accent: [80, 160, 120],
-        }
-    }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let a = phase_unit(t) * std::f64::consts::TAU;
