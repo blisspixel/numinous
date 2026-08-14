@@ -5,6 +5,24 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- `play_room` now accepts an optional exact origin phase, `from_t`, alongside
+  an explicit destination `t`. The additive `structuredContent.temporal`
+  carries both phases, the origin status and ASCII render, and a typed
+  origin-to-destination cell delta while the existing top-level render, status,
+  goal, reveal, engineered aha, and touch delta retain their meanings.
+- Temporal play is deterministic, stateless, and bounded to two observations
+  of at most 2,304 cells each. Core owns the validated phase pair, the shared
+  broadcast contract owns the output budget, MCP owns the projection, and
+  Watch Agent revalidates the temporal action. It reconstructs ordinary
+  destinations natively and retains exact public text for engineered Aha
+  overlays until that overlay contract is core-owned. Focused unit and real
+  stdio tests prove replay parity, decreasing and equal-phase direction,
+  interaction-versus-temporal-delta separation, compact parity, the coarse
+  Journey visit without journal promotion, and public-event size margin.
+- A catalog-wide maximum-variation temporal sweep also hardened five room seed
+  calculations against schema-valid `u64` overflow. Every listed room now
+  completes the maximum temporal replay and enters the real bounded consent
+  queue.
 - MCP protocol discovery, negotiation, server identity, and the immutable
   35-tool JSON Schema catalog now live in a dedicated Rust module instead of
   the request god-file. Transport validation, dispatch, result decoration, and
@@ -33,9 +51,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   a duplicate check by spelling. A `NUMINOUS_RADIO` soundtrack that overlaps
   the managed cache also blocks the entire transaction before mutation,
   preserving the user-selected source.
-- The full Windows release gate passes in 1,764.6 seconds with 3,535 passing
-  all-target Rust cases, three expensive ignored diagnostics, 95.15% region
-  coverage, and 95.13% line coverage. Core persistence has 94.73% region and
+- The full Windows release gate passes in 1,702.5 seconds with 3,551 passing
+  all-target Rust cases, three expensive ignored diagnostics, 95.32% region
+  coverage, and 95.34% line coverage. Core persistence has 94.73% region and
   95.33% line coverage.
 - One typed core Gauntlet now owns the four seeded stages, choice and wire
   grading, combo total, canonical reveals, and leaderboard identity used by

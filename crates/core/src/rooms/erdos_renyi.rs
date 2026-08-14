@@ -75,7 +75,11 @@ fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) {
     }
     for i in 0..n {
         for j in (i + 1)..n {
-            let u = hash_u(i as u64, j as u64, seed.wrapping_mul(17) + 3);
+            let u = hash_u(
+                i as u64,
+                j as u64,
+                seed.wrapping_mul(17).wrapping_add(3),
+            );
             if u < p {
                 canvas.line(pts[i].0, pts[i].1, pts[j].0, pts[j].1, '#');
                 canvas.line(pts[i].0, pts[i].1 + 1, pts[j].0, pts[j].1 + 1, '*');
@@ -98,7 +102,11 @@ fn edge_count(n: usize, p: f64, seed: u64) -> usize {
     let mut edges = 0usize;
     for i in 0..n {
         for j in (i + 1)..n {
-            let u = hash_u(i as u64, j as u64, seed.wrapping_mul(17) + 3);
+            let u = hash_u(
+                i as u64,
+                j as u64,
+                seed.wrapping_mul(17).wrapping_add(3),
+            );
             if u < p {
                 edges += 1;
             }
