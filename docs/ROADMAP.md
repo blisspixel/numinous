@@ -35,7 +35,7 @@ know it is done), and the **risk it retires**.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.3.0-alpha.6, Tactile Alpha exit met on the
+**Current release state: 0.3.0-alpha.7, Tactile Alpha exit met on the
 agent-and-machine bar.** The 0.1 Public Foundation and 0.2 Flagship Proof remain
 complete. Human stranger sessions sit with 0.8 Closed Beta and 1.0 First Light.
 Independent macOS/Linux App execution sessions and accessibility review remain
@@ -1209,7 +1209,7 @@ without relying on the founder's machine or undocumented context?"
 ### 0.2 Flagship Proof ("does it slap?")
 
 **Status:** exit met on the agent-and-machine bar (2026-07-24). The current
-`0.3.0-alpha.6` line preserves that evidence. Human stranger hallway is **not**
+`0.3.0-alpha.7` line preserves that evidence. Human stranger hallway is **not**
 part of this exit; it is deferred to 0.8 / 1.0.
 
 **Goal:** Build **one** flagship room (and a second on the same pattern) to
@@ -1803,9 +1803,9 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-08-13)
+## Where we stand (reviewed 2026-08-14)
 
-The package is **0.3.0-alpha.6**. The 0.1 Public Foundation exit criterion is
+The package is **0.3.0-alpha.7**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -1850,7 +1850,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.3.0-alpha.6** because the Tactile Alpha agent-and-machine
+Package label is **0.3.0-alpha.7** because the Tactile Alpha agent-and-machine
 exit is met. Open 0.4 and later work constrains claims, not progress on useful
 later foundations.
 

@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.3.0-alpha.7] - 2026-08-14
+
 - `play_room` now accepts an optional exact origin phase, `from_t`, alongside
   an explicit destination `t`. The additive `structuredContent.temporal`
   carries both phases, the origin status and ASCII render, and a typed
