@@ -1239,12 +1239,13 @@ fn app_viewer_reconstructs_a_real_gauntlet_agent_opening() {
 
     let frame = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
     let rooms = numinous_core::all_rooms();
-    let board = numinous_core::build_board(seed, 0);
+    let puzzle = numinous_core::GauntletPuzzle::new(seed);
+    let secret = puzzle.bomb_code().to_vec();
     let expected_play = numinous_app::play::GauntletPlay {
         seed,
         stage: 0,
         munch: numinous_app::play::MunchPlay {
-            board,
+            board: puzzle.munch,
             seed,
             round: 0,
             cursor: 30,
@@ -1253,11 +1254,11 @@ fn app_viewer_reconstructs_a_real_gauntlet_agent_opening() {
             bite_flash: None,
         },
         quiz: numinous_app::play::QuizPlay {
-            round: numinous_core::build_round(seed, 1, 44, 18),
+            round: puzzle.shape,
             flash: None,
         },
-        scan: numinous_core::build_scan(seed, 4),
-        secret: numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4),
+        scan: puzzle.sky,
+        secret,
         wire: String::new(),
         wire_lines: Vec::new(),
         scores: Vec::new(),

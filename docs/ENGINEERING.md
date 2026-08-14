@@ -60,6 +60,16 @@ and the published crate records for
 
 ## Language and idioms (edition 2024)
 
+- **Rust owns product truth.** Gameplay rules, scoring, identity, defaults,
+  persistence semantics, and protocol-neutral request behavior belong in the
+  Rust workspace, normally in `numinous-core`. Faces translate transport and
+  presentation around those shared types instead of reimplementing them.
+- **Python stays outside the product boundary.** Scripts may drive compiled
+  executables as black boxes, inspect installers and release artifacts, collect
+  study evidence, or check cross-platform packaging. A script must not become
+  a second owner of domain rules. When a Python harness needs a product fact,
+  expose that fact through a typed Rust interface or machine-readable artifact.
+  Do not rewrite a stable black-box harness merely to change its language.
 - **Make illegal states unrepresentable.** Lean on the type system: newtypes over raw primitives (no primitive obsession, especially for units, ids, seeds, and mathematical quantities), enums for state, `#[non_exhaustive]` on public enums/structs where forward-compat matters.
 - **All public types derive `Debug`** (and `Clone`/`PartialEq`/`Eq`/`Hash` where sensible). Follow the Rust API Guidelines for naming and common-trait implementation.
 - **Errors are typed at library boundaries, contextual at the app.** Library crates return concrete error enums (`thiserror`-style); binaries/faces use a context-carrying error (`anyhow`/`eyre`-style). 

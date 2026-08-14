@@ -238,7 +238,9 @@ catalog metadata. It never owns gameplay or persistence. MCP depends on that
 crate through a thin producer adapter. The App depends on it through a
 face-local loopback listener and read-only presentation adapter. Rooms are core
 modules declared through one catalog and constructed through the registry
-facade.
+facade. The Gauntlet follows the same rule: one typed core puzzle owns seeded
+construction, stage grading, combo math, reveal semantics, and leaderboard
+identity. App, CLI, MCP, and Watch Agent only collect or present its values.
 
 **Headless in production today.** Core rendering and audio synthesis work without
 a window. The CLI, MCP server, exporters, and automated suite all use that seam.

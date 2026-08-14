@@ -1316,11 +1316,13 @@ fn studio_morph_screen(width: usize, height: usize) -> Raster {
 }
 
 fn gauntlet(seed: u64) -> play::GauntletPlay {
+    let puzzle = numinous_core::GauntletPuzzle::new(seed);
+    let secret = puzzle.bomb_code().to_vec();
     play::GauntletPlay {
         seed,
         stage: 0,
         munch: play::MunchPlay {
-            board: numinous_core::build_board(seed, 0),
+            board: puzzle.munch,
             seed,
             round: 0,
             cursor: 0,
@@ -1329,11 +1331,11 @@ fn gauntlet(seed: u64) -> play::GauntletPlay {
             bite_flash: None,
         },
         quiz: play::QuizPlay {
-            round: numinous_core::build_round(seed, 1, 44, 18),
+            round: puzzle.shape,
             flash: None,
         },
-        scan: numinous_core::build_scan(seed, 4),
-        secret: numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4),
+        scan: puzzle.sky,
+        secret,
         wire: "314".to_string(),
         wire_lines: vec!["1 LOCKED  1 LOOSE".to_string()],
         scores: vec![80, 100, 60, 50],
