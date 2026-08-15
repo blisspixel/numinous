@@ -718,6 +718,27 @@ Detail below and in the version sections.
   during the prime beat, so the superseding call is reachable there by digit
   key rather than by the band. See `docs/PLAYTESTS.md` for the evidence
   boundary.
+- **Done (third source-blind packaged playtest, August 15, 2026):** an external
+  agentic player attacked the alpha.4 supersede claim on the published binaries
+  and it held on all seven staged rooms, Buffon included at three of three. Two
+  contract breaks were real and were the same failure twice: the product
+  answering what the player had not asked. Three doorways printed a graded call,
+  and the audit the report prompted found two the tester had not reached, so
+  Buffon no longer names pi, Parrondo no longer names ABB, and the Coffee Cup no
+  longer hands over the Times Tables reveal, with a catalog-wide regression
+  behind them. Landing an ordinary room's goal no longer returns its
+  explanation; a met goal opens `reveal_room` instead of speaking through it,
+  while the staged rooms still answer their own summon. Three rooms also stopped
+  claiming a commitment the player never made. Arecibo's action now names its
+  dial, `starters` carry title and wing, and `PLAY.md` leads with the packaged
+  binary. One release-note claim was corrected rather than defended: the
+  second-wager and post-summon refusals are visit properties, true on the App
+  and in core, and not observable across the stateless MCP face.
+  Open design input, recorded and unbuilt: the player wanted a **stay** verb,
+  because every look is a new stateless call and a room cannot know a player
+  never left; and the Analysis plotters and attractor drawer were named as
+  rooms that function and earn nothing, which is keep-or-cut input rather than
+  a defect. See `docs/PLAYTESTS.md` for the evidence boundary.
 - **Done (Parrondo policy wager, sixth aha room):** one completed rule
   selection primes A, B, or ABB. App keys and its bottom band, plus MCP
   `policy_wager`, reach the same pure five-beat machine. The room's former ABAB

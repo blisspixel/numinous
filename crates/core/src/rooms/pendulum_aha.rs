@@ -365,7 +365,7 @@ impl PendulumAha {
                 Some(EarnPath::Call { called, .. }) => {
                     format!("CALLED {}  PRESS E", called.name())
                 }
-                Some(EarnPath::Drops { count }) => format!("EARNED {count} DROPS  PRESS E"),
+                Some(EarnPath::Drops { count }) => format!("{count} DROPS HELD  PRESS E"),
                 None => "EARNED  PRESS E".to_string(),
             },
             AhaBeat::Morph { progress } => {

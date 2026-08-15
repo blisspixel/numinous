@@ -148,6 +148,76 @@ rather than by the band. The keys are the App's named-call affordance and the
 band's visible-equals-clickable rule is intact, so this is tracked as visual
 work behind the pinned screen matrix rather than a silent drop.
 
+## August 15 packaged agentic playtest, third round
+
+This section summarizes a third source-blind playtest, run against the published
+Linux `0.4.0-alpha.4` binaries by an external agentic player who read no Rust
+source and did not open the catalog document. The tester supplied release pins,
+archive and payload digests, isolated file-path profiles, exact calls, repeated
+reproductions, wander verdicts, and play notes. It is formative external product
+evidence, not a qualifying 0.4 cohort, a consciousness claim, or proof of
+lasting learning value. The raw dump set remains with the tester.
+
+The round was asked to attack a claim rather than confirm one. The alpha.4
+release asserted that a wager named at a room's own experiment earn is kept and
+graded in all seven staged rooms, on the strength of two rooms being repaired
+and five being read. The tester ran all seven and the claim held, including
+Buffon's Needle at three of three, which was the room most expected to fail.
+Withheld beats hid earn, grade, truth, punchline, and reveal in every case.
+
+The tester also corrected a claim rather than a defect. The release notes said a
+second wager and a post-summon wager are refused. Those refusals are properties
+of a single visit, so they hold on the App and in the core state machine, but
+the MCP face rebuilds the visit from each call's arguments by design, so a later
+call carrying a different wager is a new first call. The notes now say so.
+
+Two contract breaks were real, and both were the same failure wearing different
+clothes: the product answering a question the player had not asked.
+
+The first was found in a doorway. `describe_room` on The Coffee Cup printed
+"Same cardioid curve as Times Tables and the Mandelbrot main bulb," which is the
+Times Tables reveal, gradeable by a wager, handed over for free to anyone who
+does the safe thing the doorway recommends. Auditing every blurb in the catalog
+for the same class of leak then found two the tester had not reached, both worse
+because they were self-inflicted: Buffon's Needle named pi, which is exactly the
+number `number_wager` grades, and Parrondo's Trap named ABB, which is exactly
+the policy `policy_wager` grades. All three doorways now name the question and
+the strangeness without the answer, and a catalog-wide regression fails if any
+future doorway prints a graded call.
+
+The second was found in a reward. Landing the Smith Chart bead on the r=1 ring
+returned the room's whole conformal-map explanation in the same reply, without
+`reveal_room` being called. Missing the ring stayed quiet, so succeeding was
+what opened the lecture. That reversed the promise given at the door, that
+understanding is offered later and only if you ask, and made the prize for
+solving a room the loss of the thing solved. Ordinary rooms no longer volunteer
+the explanation at all. Landing a goal opens `reveal_room` and does not speak
+through it; the staged rooms still answer their own `aha_summon`, because that
+argument is the player asking. No test depended on the old behavior, which is
+why it survived.
+
+Two lower findings were friction rather than dishonesty. Arecibo's action read
+CLICK LEFT OR RIGHT while its width is set by where along x a poke lands, so a
+player tapping the edges saw only the extremes and concluded the winning widths
+were unreachable; the action now says what x does. The published PLAY.md also
+offered `cargo run` as its first MCP instruction to a reader holding a compiled
+archive, which now leads with the packaged binary. The typed `starters` array
+added in alpha.4 was judged useful but thin, four bare ids that had to be looked
+up in the very catalog the doorway exists to spare a player, so each starter now
+carries the same id, title, and wing as a catalog row.
+
+The design input is more valuable than the defect list and is recorded here
+because it has no other home. The tester wanted a verb the tools do not have:
+**stay**. Every look at a room is a new stateless call, so a player who wants to
+keep sitting with one dark unlit point must re-ask for it, and the room does not
+know they never left. The tester also named the wings where rooms function
+perfectly and earn nothing, the Analysis plotters and the attractor drawer, and
+warned that a player who meets them after a strong room will read the whole
+cabinet as a plotter. Both belong to the keep-or-cut scorecard and the Mind's
+Seat, not to a bug list. One more, smaller: making a curve felt different from
+watching one until `sing_expression` returned a table of frequencies the tester
+could not hear, at which point making collapsed back into reading.
+
 ## July 2026 six-round technical cohort
 
 Six rounds of five fresh simulated reviewers examined mathematical truth,
