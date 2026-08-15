@@ -68,6 +68,14 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// Open a room's explanation after playing it.
+    Reveal {
+        /// Room id, e.g. "times-tables".
+        id: String,
+        /// Emit machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// Render a room as ASCII in the terminal, or as a PNG image with --out.
     Render {
         /// Room id, e.g. "times-tables".
@@ -1223,9 +1231,14 @@ fn load_journey() -> (Journey, bool) {
         Ok(journey) => (journey, true),
         Err(error) => {
             let where_it_lives = terminal_safe_path(&path);
-            report_diagnostic(&terminal_safe(&format!(
-                "your progress file could not be read, so this run cannot see your journey: {error}"
-            )));
+            let explanation = if path.is_dir() {
+                format!("NUMINOUS_JOURNEY must name a file, but {where_it_lives} is a directory")
+            } else {
+                format!(
+                    "your progress file could not be read, so this run cannot see your journey: {error}"
+                )
+            };
+            report_diagnostic(&terminal_safe(&explanation));
             report_diagnostic(&format!(
                 "nothing will be written over it. Fix or move {where_it_lives}, then play on."
             ));
@@ -1462,6 +1475,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             }
             emit(report)
         }
+        Command::Reveal { id, json } => emit(reveal_report(&id, json, allow_hidden, journey)),
         Command::Render {
             id,
             width,
@@ -2937,9 +2951,8 @@ fn describe_report(
     id: &str,
     json: bool,
     allow_hidden: bool,
-    journey: &Journey,
+    _journey: &Journey,
 ) -> Result<String, String> {
-    let level = journey.level();
     let Some(room) = find_room(id, allow_hidden) else {
         // Not every name in the world is a room. A few of them answer anyway,
         // and a few more answer only for those who have been listening a while.
@@ -2953,62 +2966,103 @@ fn describe_report(
             None => Err(not_found_message(id)),
         };
     };
-    // The knowledge is the loot: deeper cuts unlock as the journey deepens.
-    let mut cuts = String::new();
-    let mut unlocked = Vec::new();
-    for (i, cut) in room.deep_cuts().iter().enumerate() {
-        let need = CUT_LEVELS.get(i).copied().unwrap_or(u32::MAX);
-        let by_boon = journey.chosen.contains(&format!("cut:{id}:{i}"));
-        if level >= need || by_boon {
-            let label = if i == 0 { "Deeper" } else { "Deeper still" };
-            cuts.push_str(&format!("\n{label}: {cut}\n"));
-            unlocked.push((*cut).to_string());
-        } else {
-            cuts.push_str(&format!("\nLOCKED: a deeper cut opens at LV {need}.\n"));
-            break;
-        }
-    }
     let m = room.meta();
     let action = numinous_core::room_action(room.as_ref());
     let goal = room.goal();
-    let cut0_by_boon = journey.chosen.contains(&format!("cut:{id}:0"));
-    let citation = numinous_core::room_citation_unlocked(id, level, cut0_by_boon);
     Ok(if json {
         let mut value = meta_json(&m);
         value["action"] = serde_json::Value::String(action.to_string());
         if let Some(goal) = goal {
             value["goal"] = serde_json::Value::String(goal.to_string());
         }
-        value["reveal"] = serde_json::Value::String(room.reveal().to_string());
-        if let Some(concept) = room.concept() {
-            value["concept"] = serde_json::Value::String(concept.to_string());
-        }
-        value["deep_cuts"] = serde_json::Value::Array(
-            unlocked
-                .into_iter()
-                .map(serde_json::Value::String)
-                .collect(),
-        );
-        if let Some(citation) = citation {
-            value["citation"] = serde_json::Value::String(citation.to_string());
-        }
+        value["next"] = serde_json::json!({
+            "command": format!("numinous render {}", m.id),
+        });
         format!("{}\n", to_pretty(&value))
     } else {
         let goal = goal.map_or_else(String::new, |goal| format!("\nGoal: {goal}"));
-        let reading = citation.map(|c| format!("\n{c}\n")).unwrap_or_default();
-        let concept = room
-            .concept()
-            .map(|c| format!("\n\n{c}"))
-            .unwrap_or_default();
         format!(
-            "{} ({})\nWing: {}\nAction: {}{goal}\n\n{}{concept}\n\nReveal: {}\n{cuts}{reading}",
+            "{} ({})\nWing: {}\nAction: {}{goal}\n\n{}\n\nPlay: numinous render {}\n",
             m.title,
             m.id,
             m.wing,
             terminal_action_line(room.as_ref()),
             m.blurb,
-            room.reveal()
+            m.id,
         )
+    })
+}
+
+/// One room's earned explanation, or a guiding error when play is incomplete.
+fn reveal_report(
+    id: &str,
+    json: bool,
+    allow_hidden: bool,
+    journey: &Journey,
+) -> Result<String, String> {
+    let Some(room) = find_room(id, allow_hidden) else {
+        return Err(not_found_message(id));
+    };
+    let m = room.meta();
+    if numinous_core::is_engineered_aha_room(m.id) && !journey.has_consolidated(m.id) {
+        return Err(
+            "This explanation is still closed. Complete the room's wager and summon in the App or through play_room first."
+                .to_string(),
+        );
+    }
+    if !numinous_core::is_engineered_aha_room(m.id) && !journey.visited.contains(m.id) {
+        return Err(
+            "This explanation is still closed. Render or play the room once, then ask again."
+                .to_string(),
+        );
+    }
+
+    let level = journey.level();
+    let mut cuts = String::new();
+    let mut structured_cuts = Vec::new();
+    for (i, cut) in room.deep_cuts().iter().enumerate() {
+        let need = CUT_LEVELS.get(i).copied().unwrap_or(u32::MAX);
+        let by_boon = journey.chosen.contains(&format!("cut:{}:{i}", m.id));
+        if level >= need || by_boon {
+            let label = if i == 0 { "Deeper" } else { "Deeper still" };
+            cuts.push_str(&format!("\n{label}: {cut}\n"));
+            structured_cuts.push(serde_json::json!({
+                "index": i,
+                "status": "available",
+                "unlock_level": need,
+                "text": cut,
+            }));
+        } else {
+            cuts.push_str(&format!("\nLOCKED: a deeper cut opens at LV {need}.\n"));
+            structured_cuts.push(serde_json::json!({
+                "index": i,
+                "status": "locked",
+                "unlock_level": need,
+            }));
+            break;
+        }
+    }
+    let cut0_by_boon = journey.chosen.contains(&format!("cut:{}:0", m.id));
+    let citation = numinous_core::room_citation_unlocked(m.id, level, cut0_by_boon);
+
+    Ok(if json {
+        let mut value = meta_json(&m);
+        value["reveal"] = serde_json::Value::String(room.reveal().to_string());
+        if let Some(concept) = room.concept() {
+            value["concept"] = serde_json::Value::String(concept.to_string());
+        }
+        value["deep_cuts"] = serde_json::Value::Array(structured_cuts);
+        if let Some(citation) = citation {
+            value["citation"] = serde_json::Value::String(citation.to_string());
+        }
+        format!("{}\n", to_pretty(&value))
+    } else {
+        let mut text = numinous_core::explain_text(m.id, room.reveal());
+        text.push_str(&cuts);
+        if let Some(citation) = citation {
+            text.push_str(&format!("\n{citation}\n"));
+        }
+        format!("{text}\n")
     })
 }
 
@@ -3101,6 +3155,9 @@ fn scrub_touch_fragments(status: &str) -> String {
 /// The Action line, translated for a keyboard face: the lever keeps its
 /// name, and the hand becomes the flag that actually moves it here.
 fn terminal_action_line(room: &dyn Room) -> String {
+    if room.meta().id == "times-tables" {
+        return "TURN THE DIAL (phase here: numinous render times-tables --t 0.375; --poke x,y is a second hand)".to_string();
+    }
     match room.verb() {
         Some(verb) => {
             let lever = verb.split_once(':').map_or(verb, |(_, lever)| lever.trim());
@@ -6243,7 +6300,7 @@ mod tests {
         .expect("known room");
         assert!(text.contains("Number & Pattern"));
         assert!(text.contains(
-            "Action: TURN THE DIAL (the hand here: numinous render times-tables --poke x,y)"
+            "Action: TURN THE DIAL (phase here: numinous render times-tables --t 0.375; --poke x,y is a second hand)"
         ));
         assert!(text.contains("Goal: LAND ON EXACTLY 4 LOBES"));
     }
@@ -6264,7 +6321,7 @@ mod tests {
     }
 
     #[test]
-    fn describe_includes_the_reveal() {
+    fn describe_is_a_safe_doorway_without_the_reveal() {
         let text = describe_report(
             "times-tables",
             false,
@@ -6272,12 +6329,13 @@ mod tests {
             &numinous_core::Journey::default(),
         )
         .expect("known room");
-        assert!(text.contains("Reveal:"));
-        assert!(text.contains("Mandelbrot"));
+        assert!(!text.contains("Reveal:"));
+        assert!(!text.contains("Set the dial to 2"));
+        assert!(text.contains("Play: numinous render times-tables"));
     }
 
     #[test]
-    fn describe_json_includes_the_reveal() {
+    fn describe_json_omits_explanation_fields() {
         let text = describe_report(
             "times-tables",
             true,
@@ -6286,11 +6344,10 @@ mod tests {
         )
         .expect("known room");
         let value: Value = serde_json::from_str(&text).expect("valid json");
-        assert!(
-            value["reveal"]
-                .as_str()
-                .is_some_and(|s| s.contains("Mandelbrot"))
-        );
+        for field in ["reveal", "concept", "deep_cuts", "citation"] {
+            assert!(value.get(field).is_none(), "{field} leaked: {value}");
+        }
+        assert_eq!(value["next"]["command"], "numinous render times-tables");
     }
 
     #[test]
@@ -6311,7 +6368,7 @@ mod tests {
             .expect("known room");
         assert!(text.contains('*'));
         assert!(text.contains(
-            "Action: TURN THE DIAL (the hand here: numinous render times-tables --poke x,y)"
+            "Action: TURN THE DIAL (phase here: numinous render times-tables --t 0.375; --poke x,y is a second hand)"
         ));
         assert!(text.contains("Goal: LAND ON EXACTLY 4 LOBES"));
         assert!(!text.contains("Aha earned:"));
@@ -6336,7 +6393,7 @@ mod tests {
     }
 
     #[test]
-    fn times_tables_ambient_target_does_not_claim_an_earned_discovery() {
+    fn times_tables_exact_phase_meets_the_goal_without_opening_the_reveal() {
         let report = render_report(
             "times-tables",
             72,
@@ -6347,9 +6404,28 @@ mod tests {
         )
         .expect("ambient target render");
 
-        assert!(report.contains("Status: K 5.00  CLOSED  4 LOBES  TARGET 4"));
-        assert!(!report.contains("FOUND"));
+        assert!(report.contains("Status: K 5.00  CLOSED  4 LOBES  FOUND"));
         assert!(!report.contains("Aha earned:"));
+        assert!(!report.contains("Reveal:"));
+    }
+
+    #[test]
+    fn reveal_requires_play_and_engineered_consolidation() {
+        let fresh = numinous_core::Journey::default();
+        assert!(super::reveal_report("mandelbrot", false, false, &fresh).is_err());
+
+        let mut played = fresh.clone();
+        played.visit("mandelbrot");
+        let ordinary = super::reveal_report("mandelbrot", false, false, &played)
+            .expect("played ordinary room reveals");
+        assert!(ordinary.contains("zoom") && ordinary.contains("Times Tables"));
+
+        played.visit("times-tables");
+        assert!(super::reveal_report("times-tables", false, false, &played).is_err());
+        played.consolidate("times-tables");
+        let aha = super::reveal_report("times-tables", false, false, &played)
+            .expect("consolidated Aha reveals");
+        assert!(aha.contains("Mandelbrot"));
     }
 
     #[test]
@@ -7969,40 +8045,28 @@ mod tests {
 
     #[test]
     fn deep_cuts_unlock_with_level() {
-        let low = super::describe_report(
-            "mandelbrot",
-            false,
-            false,
-            &numinous_core::Journey::default(),
-        )
-        .expect("describe");
+        let mut low_journey = numinous_core::Journey::default();
+        low_journey.visit("mandelbrot");
+        let low = super::reveal_report("mandelbrot", false, false, &low_journey).expect("reveal");
         assert!(
             low.contains("LOCKED: a deeper cut opens at LV 5"),
             "got: {low}"
         );
         assert!(!low.contains("Shishikura"));
-        let mid = super::describe_report(
-            "mandelbrot",
-            false,
-            false,
-            &numinous_core::Journey {
-                plays: 10,
-                ..Default::default()
-            },
-        )
-        .expect("describe");
+        let mut mid_journey = numinous_core::Journey {
+            plays: 10,
+            ..Default::default()
+        };
+        mid_journey.visit("mandelbrot");
+        let mid = super::reveal_report("mandelbrot", false, false, &mid_journey).expect("reveal");
         assert!(mid.contains("Deeper:"));
         assert!(mid.contains("LOCKED: a deeper cut opens at LV 12"));
-        let high = super::describe_report(
-            "mandelbrot",
-            false,
-            false,
-            &numinous_core::Journey {
-                plays: 66,
-                ..Default::default()
-            },
-        )
-        .expect("describe");
+        let mut high_journey = numinous_core::Journey {
+            plays: 66,
+            ..Default::default()
+        };
+        high_journey.visit("mandelbrot");
+        let high = super::reveal_report("mandelbrot", false, false, &high_journey).expect("reveal");
         assert!(high.contains("Deeper still:") && high.contains("Shishikura"));
 
         let mut at_cap = numinous_core::Journey {
@@ -8014,8 +8078,9 @@ mod tests {
         for i in 0..256 {
             at_cap.visit(&format!("room-{i}"));
         }
+        at_cap.visit("cult-of-pi");
         assert_eq!(at_cap.level(), numinous_core::MAX_LEVEL);
-        let cap = super::describe_report("cult-of-pi", false, false, &at_cap).expect("describe");
+        let cap = super::reveal_report("cult-of-pi", false, false, &at_cap).expect("reveal");
         assert!(
             cap.contains("Feynman point"),
             "third cut is reachable: {cap}"
@@ -8026,13 +8091,8 @@ mod tests {
             "citation unlocks with deep cuts: {cap}"
         );
 
-        let locked = super::describe_report(
-            "mandelbrot",
-            false,
-            false,
-            &numinous_core::Journey::default(),
-        )
-        .expect("describe");
+        let locked =
+            super::reveal_report("mandelbrot", false, false, &low_journey).expect("reveal");
         assert!(
             !locked.contains("See also:"),
             "fresh journey keeps further reading locked: {locked}"
@@ -8042,8 +8102,9 @@ mod tests {
     #[test]
     fn a_boon_opens_a_cut_ahead_of_level() {
         let mut journey = numinous_core::Journey::default(); // level 1
+        journey.visit("mandelbrot");
         journey.chosen.insert("cut:mandelbrot:0".to_string());
-        let text = super::describe_report("mandelbrot", false, false, &journey).expect("describe");
+        let text = super::reveal_report("mandelbrot", false, false, &journey).expect("reveal");
         assert!(text.contains("Deeper:"), "the chosen cut is open: {text}");
         assert!(
             text.contains("LOCKED: a deeper cut opens at LV 12"),

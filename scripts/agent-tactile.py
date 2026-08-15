@@ -135,7 +135,9 @@ PROBES = [
         },
         # Opening must lead with the drop invite, not coin inventory alone.
         invite_tokens=("CLICK", "DROP", "PICK", "COIN", "BET"),
-        hand_tokens=("DROP", "P.40", "M6.4"),
+        # Keep the observed landing and selected coin, but require the prime
+        # beat to ask for the peak instead of printing the theoretical mode.
+        hand_tokens=("DROP", "L5R", "P.40", "PEAK?"),
         expect_status_change=True,
         sonic_open_args={"id": "galton-board", "t": 0.0},
         sonic_hand_args={"id": "galton-board", "t": 0.0, "pokes": [[0.20, 0.50]]},

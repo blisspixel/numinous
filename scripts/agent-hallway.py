@@ -71,7 +71,7 @@ def call_tool(tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
 
 def initialize_script() -> dict[str, Any]:
-    """Confirm agents are taught play-first aha discovery at session start."""
+    """Confirm agents are taught safe discovery and earned reveal at session start."""
     import os
     import tempfile
 
@@ -127,7 +127,8 @@ def initialize_script() -> dict[str, Any]:
             and "policy_wager" in instructions
             and "die_choice" in instructions
             and "counter_wager" in instructions
-            and "prefer play_room first" in instructions
+            and "describe_room is a safe doorway" in instructions
+            and "reveal_room opens only after" in instructions
         )
         return {
             "ok": ok,
@@ -137,7 +138,8 @@ def initialize_script() -> dict[str, Any]:
             "has_policy_wager": "policy_wager" in instructions,
             "has_die_choice": "die_choice" in instructions,
             "has_counter_wager": "counter_wager" in instructions,
-            "prefer_play_first": "prefer play_room first" in instructions,
+            "safe_describe": "describe_room is a safe doorway" in instructions,
+            "earned_reveal": "reveal_room opens only after" in instructions,
         }
 
 
@@ -694,7 +696,8 @@ def write_synthesis(
         f"- policy_wager taught: {initialize.get('has_policy_wager')}",
         f"- die_choice taught: {initialize.get('has_die_choice')}",
         f"- counter_wager taught: {initialize.get('has_counter_wager')}",
-        f"- prefer play_room first: {initialize.get('prefer_play_first')}",
+        f"- describe_room stays safe: {initialize.get('safe_describe')}",
+        f"- reveal_room is earned: {initialize.get('earned_reveal')}",
         "",
     ]
     for persona, times, buffon, kepler, parrondo, nontransitive in results:
@@ -721,7 +724,7 @@ def write_synthesis(
             "2. Named wager fields withhold reveal until aha_summon.",
             "3. Truth summon consolidates and unlocks punchline reveal.",
             "4. engineeredAha is present for agent discovery on all five sampled flagships.",
-            "5. initialize teaches play-first aha discovery for digital minds.",
+            "5. initialize teaches safe discovery and earned reveal for digital minds.",
             "",
         ]
     )

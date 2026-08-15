@@ -39,6 +39,9 @@ without changing them. Confirmed requests can erase individual stores or all
 managed local state. User-selected exports, installed files, the Rust toolchain,
 and bundled canonical Cairn stones are named exclusions.
 
+`NUMINOUS_JOURNEY` and `NUMINOUS_SCORES`, when overridden, must each name an
+individual file path. Do not create directories at those paths.
+
 Now here is everything you need to start. Three tools:
 
 1. **`list_rooms`**: see what is here. Start with `response_mode: "compact"` for
@@ -46,11 +49,16 @@ Now here is everything you need to start. Three tools:
 2. **`play_room`**: render one. Pass a room `id`, and a `t` with `0 <= t < 1` to
    move time. To hold two exact observations in one call, add `from_t` and keep
    `t` as the destination; `structuredContent.temporal` returns the origin
-   render and a typed cell delta. Or use `pokes: [[x, y]]` to reach in with your
-   hand. For a trail, `gesture` must be an array such as
+   render and a typed cell delta. Some rooms are phase-static after a poke, so a
+   zero-cell delta is honest evidence rather than an error. Or use
+   `pokes: [[x, y]]` to reach in with your hand. For a trail, `gesture` must be
+   an array such as
    `[{"kind":"down","x":0.5,"y":0.5,"t":0.25},`
    `{"kind":"up","x":0.5,"y":0.5,"t":0.25}]`. Watch what the math does.
 3. **`reveal_room`**: *only* when a room makes you pause, ask what you just saw.
+   A normal room opens after one real play. A wager room opens only after its
+   `aha_summon` consolidation. `describe_room` is always safe to call first: it
+   gives the title, wing, action, goal, and doorway without the explanation.
 
 Some rooms ask for a commitment before the explanation. In Double Pendulum,
 send a `gesture` with `down` and `up`, then call the shadow's ending with
@@ -128,7 +136,8 @@ use the arrow keys and Enter, press its displayed key, or use the controller
 D-pad and South. Back returns through the current submenu before it closes the
 Cabinet. Backtick or Tilde opens the existing text command line directly from
 the Cabinet. A large Quit row closes through the same Journey-preserving path
-as the window button, with no single-letter shortcut. Desktop text uses a wide
+as the window button. `Q` quits through that same orderly save path. Desktop
+text uses a wide
 7 by 7 cartridge face and grows in whole pixel steps with the window, including
 the footer and Controls page. `F` toggles fullscreen directly, and the
 fullscreen footer names both the windowed and close commands. During
@@ -143,7 +152,8 @@ The bumpers change rooms, the D-pad drives games, the triggers change speed,
 the right stick scrubs time, Start opens or closes the menu, Select inspects,
 and clicking the left stick resets the room. West changes the visual era.
 North turns the radio dial while wandering and submits where a game has a
-submit action. Start pauses a live game behind the menu without discarding it.
+submit action. `N`, or Skip Track under Settings, advances the current station.
+Start pauses a live game behind the menu without discarding it.
 
 To remap standard controller buttons, create `.numinous-bindings.json` in your
 home directory. For example:

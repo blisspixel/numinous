@@ -854,7 +854,10 @@ mod tests {
         );
         assert!(fitted.contains("1x64=64"));
         assert!(fitted.contains("P.70"), "probability stays: {fitted}");
-        assert!(fitted.contains('~'));
+        assert!(
+            !fitted.contains('~'),
+            "the theoretical mode stays closed: {fitted}"
+        );
         assert!(fitted.contains('R'));
 
         let controller = footer_copy(
@@ -899,7 +902,10 @@ mod tests {
         assert_eq!(fitted, footer.status);
         assert!(fitted.starts_with("DROP FULL"), "full drop leads: {fitted}");
         assert!(fitted.contains("P.70"), "probability stays: {fitted}");
-        assert!(fitted.contains('~'));
+        assert!(
+            !fitted.contains('~'),
+            "the theoretical mode stays closed: {fitted}"
+        );
         assert!(fitted.contains('R'));
     }
 

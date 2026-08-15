@@ -1191,6 +1191,9 @@ fn merge_journey_delta(before: &Journey, after: &Journey, latest: &mut Journey) 
     for id in after.visited.difference(&before.visited) {
         latest.visit(id);
     }
+    for id in after.consolidated.difference(&before.consolidated) {
+        latest.consolidate(id);
+    }
     for id in after.chosen.difference(&before.chosen) {
         latest.chosen.insert(id.clone());
     }
@@ -2617,6 +2620,7 @@ mod tests {
         let base = Journey::default();
         let mut first = base.clone();
         first.visit("lorenz");
+        first.consolidate("times-tables");
         first.play();
         persist_journey_delta(&path, &base, &first).expect("first write");
 
@@ -2627,6 +2631,7 @@ mod tests {
 
         assert!(merged.visited.contains("lorenz"));
         assert!(merged.visited.contains("julia"));
+        assert!(merged.has_consolidated("times-tables"));
         assert_eq!(merged.plays, 1);
         assert_eq!(merged.wins, 1);
         assert_eq!(load_journey_file(&path), merged);

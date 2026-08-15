@@ -324,14 +324,11 @@ impl TimesTablesAha {
                 format!("WHERE? 1=M 2=N 3=C{hover}")
             }
             AhaBeat::Withheld => match self.earn {
-                Some(EarnPath::Wager { guess }) if guess.is_truth() => {
-                    "EARNED NAILED  PRESS E".to_string()
-                }
                 Some(EarnPath::Wager { guess }) => {
-                    format!("EARNED {}  PRESS E", guess.tag())
+                    format!("WAGERED {}  PRESS E", guess.tag())
                 }
-                Some(EarnPath::FourLobes) => "EARNED 4 LOBES  PRESS E".to_string(),
-                None => "EARNED  PRESS E".to_string(),
+                Some(EarnPath::FourLobes) => "4 LOBES HELD  PRESS E".to_string(),
+                None => "READY  PRESS E".to_string(),
             },
             AhaBeat::Morph { progress } => {
                 let pct = (progress * 100.0).round() as i32;

@@ -32,9 +32,9 @@ class AuditorTests(unittest.TestCase):
     def valid_registration(self) -> dict:
         return {
             "schemaVersion": "numinous-understanding-registration-v1",
-            "protocolVersion": "0.4-v5",
+            "protocolVersion": "0.4-v6",
             "track": "agent-and-machine",
-            "runnerVersion": "numinous-understanding-runner-v5",
+            "runnerVersion": "numinous-understanding-runner-v6",
             "bankCommitmentSha256": "a" * 64,
             "allocationSeed": "numinous-understanding-alpha-v1",
             "plannedPrimaryPairs": 20,

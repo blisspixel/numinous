@@ -317,13 +317,13 @@ impl BuffonAha {
                 format!("GUESS 1.5-4.5{hover}")
             }
             AhaBeat::Withheld => match self.earn {
-                Some(EarnPath::Wager { guess, band }) => {
-                    format!("EARNED {:.2} {}  E", guess, band.name())
+                Some(EarnPath::Wager { guess, .. }) => {
+                    format!("WAGERED {guess:.2}  PRESS E")
                 }
                 Some(EarnPath::Throws { count }) => {
-                    format!("EARNED {count} THROW  PRESS E")
+                    format!("{count} THROWS HELD  PRESS E")
                 }
-                None => "EARNED  PRESS E".to_string(),
+                None => "READY  PRESS E".to_string(),
             },
             AhaBeat::Morph { progress } => {
                 let pct = (progress * 100.0).round() as i32;

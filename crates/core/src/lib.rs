@@ -138,7 +138,8 @@ pub use journal_okf::{
     export_journal_okf,
 };
 pub use journey::{
-    Boon, CUT_LEVELS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options, constellation, level_lore,
+    Boon, CUT_LEVELS, ENGINEERED_AHA_ROOM_IDS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options,
+    constellation, is_engineered_aha_room, level_lore,
 };
 pub use motifs::{MAX_ROOM_BED_EVENTS, Motif, ROOM_BED_SOURCE_RATE};
 pub use motion::{Motion, REDUCED_MOTION_VAR, setting_is_on};

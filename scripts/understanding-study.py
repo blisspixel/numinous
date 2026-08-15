@@ -37,7 +37,7 @@ def load_source_integrity():
 source_integrity = load_source_integrity()
 FIXTURE_PROBE_BANK_PATH = ROOT / "scripts" / "understanding-probes.fixture.json"
 ENCOUNTER_SPEC_PATH = ROOT / "scripts" / "understanding-encounters.json"
-RUNNER_VERSION = "numinous-understanding-runner-v5"
+RUNNER_VERSION = "numinous-understanding-runner-v6"
 MCP_PROTOCOL_REVISION = "2026-07-28"
 ALLOCATION_SEED = "numinous-understanding-alpha-v1"
 BOOTSTRAP_SEED = "numinous-understanding-alpha-bootstrap-v1"
@@ -47,7 +47,7 @@ EVENT_SCHEMA = "numinous-understanding-events-v5"
 REPORT_SCHEMA = "numinous-understanding-report-v5"
 RECEIPT_SCHEMA = "numinous-understanding-receipt-v1"
 RECEIPT_ANCHOR_SCHEMA = "numinous-understanding-receipt-anchor-v1"
-PROTOCOL_VERSION = "0.4-v5"
+PROTOCOL_VERSION = "0.4-v6"
 MCP_BUILD_RECEIPT_SCHEMA = "numinous-mcp-build-receipt-v1"
 ERASED_PARTICIPANT_TOOL_CONTENT = {"participantContentErased": True}
 BOOTSTRAP_RESAMPLES = 100_000
@@ -1103,7 +1103,7 @@ def validate_encounter_spec(spec: Any) -> dict[str, Any]:
         raise StudyError("encounter specification must be an object")
     if set(spec) != {"schemaVersion", "protocolVersion", "rooms"}:
         raise StudyError("encounter specification contains unknown or missing fields")
-    if spec.get("schemaVersion") != "numinous-understanding-encounters-v5":
+    if spec.get("schemaVersion") != "numinous-understanding-encounters-v6":
         raise StudyError("unsupported encounter specification schema")
     if spec.get("protocolVersion") != PROTOCOL_VERSION:
         raise StudyError("encounter specification protocol does not match the runner")
@@ -1112,6 +1112,39 @@ def validate_encounter_spec(spec: Any) -> dict[str, Any]:
         raise StudyError(
             "encounter specification must contain the five flagships in order"
         )
+    earned_reveal_arguments = {
+        "times-tables": {
+            "aha_summon": True,
+            "id": "times-tables",
+            "place_wager": "mandelbrot",
+            "response_mode": "compact",
+            "t": 0.375,
+        },
+        "double-pendulum": {
+            "aha_summon": True,
+            "ending_wager": "together",
+            "gesture": [
+                {"kind": "down", "t": 0.1, "x": 0.55, "y": 0.35},
+                {"kind": "up", "t": 0.15, "x": 0.7, "y": 0.55},
+            ],
+            "id": "double-pendulum",
+            "response_mode": "compact",
+            "t": 0.15,
+        },
+        "game-of-life": {
+            "id": "game-of-life",
+            "response_mode": "compact",
+            "t": 0.5,
+        },
+        "galton-board": {
+            "aha_summon": True,
+            "bin_wager": 8,
+            "id": "galton-board",
+            "pokes": [[0.5, 0.5]],
+            "response_mode": "compact",
+            "t": 0.375,
+        },
+    }
     for room in rooms:
         room_id = room["id"]
         expected_room_fields = {
@@ -1140,11 +1173,19 @@ def validate_encounter_spec(spec: Any) -> dict[str, Any]:
             if not isinstance(role, str) or not role:
                 raise StudyError(f"encounter {room_id} call role must be nonempty")
             if tool == "play_room":
-                allowed_arguments = {"id", "t", "response_mode", "pokes"}
-                if not {"id", "t", "response_mode"}.issubset(arguments) or set(
-                    arguments
-                ) - allowed_arguments:
-                    raise StudyError(f"encounter {room_id} play_room arguments differ")
+                if role == "reveal":
+                    if arguments != earned_reveal_arguments.get(room_id):
+                        raise StudyError(
+                            f"encounter {room_id} earned reveal arguments differ"
+                        )
+                else:
+                    allowed_arguments = {"id", "t", "response_mode", "pokes"}
+                    if not {"id", "t", "response_mode"}.issubset(arguments) or set(
+                        arguments
+                    ) - allowed_arguments:
+                        raise StudyError(
+                            f"encounter {room_id} play_room arguments differ"
+                        )
                 if (
                     arguments["id"] != room_id
                     or arguments["response_mode"] != "compact"
@@ -1153,15 +1194,16 @@ def validate_encounter_spec(spec: Any) -> dict[str, Any]:
                 phase = require_number(arguments, "t")
                 if not 0.0 <= phase < 1.0:
                     raise StudyError(f"encounter {room_id} play_room phase is invalid")
-                if "pokes" in arguments and arguments["pokes"] != [[0.5, 0.5]]:
+                if (
+                    role != "reveal"
+                    and "pokes" in arguments
+                    and arguments["pokes"] != [[0.5, 0.5]]
+                ):
                     if not (
                         room_id == "double-pendulum"
                         and arguments["pokes"] == [[0.2, 0.8]]
                     ):
                         raise StudyError(f"encounter {room_id} interaction differs")
-            elif tool == "reveal_room":
-                if arguments != {"id": room_id}:
-                    raise StudyError(f"encounter {room_id} reveal arguments differ")
             elif tool == "plot_expression":
                 if set(arguments) != {"expr"} or not isinstance(arguments["expr"], str):
                     raise StudyError("Formula Jam plot expression is invalid")
@@ -1181,7 +1223,7 @@ def validate_encounter_spec(spec: Any) -> dict[str, Any]:
                 ("play_room", "encounter"),
                 ("play_room", "interaction"),
                 ("play_room", "continuation"),
-                ("reveal_room", "reveal"),
+                ("play_room", "reveal"),
             )
         )
         observed_calls = tuple((call["tool"], call["role"]) for call in calls)

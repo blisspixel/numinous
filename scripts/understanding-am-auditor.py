@@ -44,8 +44,10 @@ def auditor_a(artifact: dict[str, Any]) -> list[str]:
             defects.append(f"missing registration field {key}")
     if artifact.get("track") != "agent-and-machine":
         defects.append("track must be agent-and-machine")
-    if artifact.get("protocolVersion") != "0.4-v5":
-        defects.append("protocolVersion must be 0.4-v5")
+    if artifact.get("protocolVersion") != "0.4-v6":
+        defects.append("protocolVersion must be 0.4-v6")
+    if artifact.get("runnerVersion") != "numinous-understanding-runner-v6":
+        defects.append("runnerVersion must be numinous-understanding-runner-v6")
     if artifact.get("schemaVersion") != "numinous-understanding-registration-v1":
         defects.append("unexpected schemaVersion")
     commitment = artifact.get("bankCommitmentSha256")

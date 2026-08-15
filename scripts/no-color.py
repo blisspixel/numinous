@@ -71,6 +71,8 @@ class Probe(NamedTuple):
     # None for anything that exits on its own. A number for the live loops,
     # which never do.
     deadline: float | None = None
+    # Optional exact Journey fixture for state-gated read-only commands.
+    journey: str | None = None
 
     @property
     def label(self) -> str:
@@ -87,6 +89,7 @@ PROBES: tuple[Probe, ...] = (
     Probe(["access"]),
     Probe(["rooms"]),
     Probe(["describe", "lorenz"]),
+    Probe(["reveal", "lorenz"], journey="visited lorenz\n"),
     Probe(["render", "lorenz", "--width", "40", "--height", "20"]),
     Probe(["render", "lorenz", "--color", "--width", "40", "--height", "20"]),
     Probe(["plot", "sin(x)"]),
@@ -207,6 +210,8 @@ def sgr_count(cli: str, probe: Probe, no_color: bool) -> int:
     with tempfile.TemporaryDirectory(
         prefix="numinous-no-color-", ignore_cleanup_errors=True
     ) as home:
+        if probe.journey is not None:
+            (Path(home) / "journey").write_text(probe.journey, encoding="utf-8")
         proc = subprocess.Popen(
             [cli, *probe.argv],
             stdin=subprocess.PIPE,

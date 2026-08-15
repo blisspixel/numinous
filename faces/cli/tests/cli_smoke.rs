@@ -2,6 +2,17 @@
 
 use std::process::Command;
 
+fn isolated_command(root: &std::path::Path, args: &[&str]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_numinous"))
+        .args(args)
+        .env("NUMINOUS_JOURNEY", root.join("journey.txt"))
+        .env("NUMINOUS_SCORES", root.join("scores.txt"))
+        .env("NUMINOUS_CAIRN", root.join("cairn.txt"))
+        .env("NUMINOUS_PREFERENCES", root.join("preferences.txt"))
+        .output()
+        .expect("launch the public CLI binary")
+}
+
 #[test]
 fn public_binary_crosses_the_explicit_command_stack() {
     let state_root =
@@ -25,6 +36,55 @@ fn public_binary_crosses_the_explicit_command_stack() {
     assert!(stdout.contains("room-bed"));
     assert!(stdout.contains("--variation <VARIATION>"));
     assert!(!state_root.exists(), "help must not create player state");
+}
+
+#[test]
+fn public_describe_is_safe_and_reveal_is_earned() {
+    let root =
+        std::env::temp_dir().join(format!("numinous-cli-reveal-smoke-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+
+    let described = isolated_command(&root, &["describe", "kepler-laws"]);
+    assert!(described.status.success());
+    let described = String::from_utf8(described.stdout).expect("description is UTF-8");
+    assert!(described.contains("Kepler Areas"));
+    assert!(described.contains("Play: numinous render kepler-laws"));
+    assert!(!described.contains("Reveal:"));
+    assert!(!described.contains("second law"));
+
+    let early = isolated_command(&root, &["reveal", "lissajous"]);
+    assert!(!early.status.success());
+    let early = String::from_utf8(early.stderr).expect("early refusal is UTF-8");
+    assert!(early.contains("Render or play the room once, then ask again"));
+
+    let played = isolated_command(
+        &root,
+        &["render", "lissajous", "--width", "24", "--height", "12"],
+    );
+    assert!(played.status.success());
+    let revealed = isolated_command(&root, &["reveal", "lissajous"]);
+    assert!(revealed.status.success());
+    let revealed = String::from_utf8(revealed.stdout).expect("reveal is UTF-8");
+    assert!(revealed.contains("rational frequency ratio"));
+
+    std::fs::remove_dir_all(root).expect("fixture cleanup");
+}
+
+#[test]
+fn public_journey_override_names_the_file_contract() {
+    let root = std::env::temp_dir().join(format!(
+        "numinous-cli-directory-contract-{}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("journey.txt")).expect("Journey directory fixture");
+
+    let output = isolated_command(&root, &["journey"]);
+    let stderr = String::from_utf8(output.stderr).expect("diagnostic is UTF-8");
+    assert!(stderr.contains("NUMINOUS_JOURNEY must name a file"));
+    assert!(stderr.contains("is a directory"));
+
+    std::fs::remove_dir_all(root).expect("fixture cleanup");
 }
 
 #[test]

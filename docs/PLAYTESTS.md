@@ -52,6 +52,53 @@ agent players, reproduce blockers, and improve the playable product before the
 because preregistration should constrain measurement, not preserve known setup
 friction.
 
+## August 14 packaged agentic playtest
+
+This section summarizes a source-blind playtest of the published Linux
+`0.4.0-alpha.2` CLI and MCP binaries. The tester supplied the release tag,
+commit, archive digest, isolated state paths, exact calls, repeated
+reproductions, and positive play notes. It is formative external product
+evidence, not a qualifying 0.4 cohort, a consciousness claim, or proof of
+lasting learning value. The large raw dump set remains with the tester and is
+not copied into the repository.
+
+The successful path matters. Compact discovery gave four workable doorways.
+Times Tables made its lobe relation legible, Kepler answered a tuned ellipse,
+Double Pendulum required a completed throw, Galton built a visible pile, and
+Mandelbrot retargeted under a poke. Typed temporal evidence, independent pokes,
+causal gestures, journal inspection, in-memory OKF v0.2 export, installer
+self-test with `SHELL` unset, and isolated `forget` preview all worked. The
+tester described the rooms as a dark arcade and identified the visual play as
+the reason to continue.
+
+The strongest trust failure was equally clear. `describe_room`, CLI `describe`,
+and an early `reveal_room` printed the engineered punchline before any play or
+wager. Withheld wager status and `earn` fields then disclosed right, wrong, or
+nailed before `aha_summon`. The tester called those moments an answer key and a
+pre-marked paper. Repeated calls also proved that Times Tables reported a closed
+four-lobe target while `goalMet` remained false, `kepler-areas` and
+`kepler-laws` counted as separate Journey stars, the Times Tables CLI action
+taught `--poke` instead of the working `--t` doorway, and Galton prime status
+printed the theoretical mode. A Journey override pointed at a directory failed
+correctly but did not explain that the variable names a file.
+
+The resulting correction is one contract across faces. Description is now a
+safe doorway with no answer-bearing fields. Reveal requires one real play for
+ordinary rooms and persisted consolidation for the seven engineered wager
+rooms. A withheld beat keeps the committed wager visible while status stays
+neutral and earn, grade, truth, measurements, and punchline stay absent. The
+Times Tables goal reads the same live K=5 state as its status, aliases resolve
+before Journey mutation, Galton prime hides the theoretical mode, terminal
+Times Tables teaches `--t 0.375`, and the CLI names the Journey file-path
+contract. Real CLI and MCP subprocess regressions replay the reported failure
+sequence through the public binaries.
+
+One low-severity observation remains a documented semantic boundary rather
+than a fake animation fix. Reapplying one Kepler poke at two phases can produce
+a zero-cell temporal delta because that view tunes a static ellipse. The tool
+and play skill now say so and point causal play toward gestures or the staged
+speed wager.
+
 ## July 2026 six-round technical cohort
 
 Six rounds of five fresh simulated reviewers examined mathematical truth,

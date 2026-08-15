@@ -1,9 +1,9 @@
 {
   "schemaVersion": "numinous-understanding-registration-v1",
-  "protocolVersion": "0.4-v5",
+  "protocolVersion": "0.4-v6",
   "track": "agent-and-machine",
-  "runnerVersion": "numinous-understanding-runner-v5",
-  "bankCommitmentSha256": "a29796f54f82c3044b2771c2f6e30a19f88ed1b5027cc33a7892b6bf8dc68b55",
+  "runnerVersion": "numinous-understanding-runner-v6",
+  "bankCommitmentSha256": "3767ae44f7450eda7bdd0061155b9c35ee18c0a8f6fd5b8d68ab41dbb3b3ee6d",
   "bankKind": "public-fixture-dry-run",
   "allocationSeed": "numinous-understanding-alpha-v1",
   "plannedPrimaryPairs": 20,

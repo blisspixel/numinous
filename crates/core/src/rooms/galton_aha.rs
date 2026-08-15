@@ -326,17 +326,13 @@ impl GaltonAha {
                 // readout beside it names the pile on screen, so a player
                 // who wandered to another coin reads two plain facts
                 // instead of one contradiction.
-                Some(EarnPath::Wager { bin, band, coin }) => {
-                    format!(
-                        "EARNED BIN {bin} {} ON {}  PRESS E",
-                        band.name(),
-                        coin_label(coin)
-                    )
+                Some(EarnPath::Wager { bin, coin, .. }) => {
+                    format!("WAGERED BIN {bin} ON {}  PRESS E", coin_label(coin))
                 }
                 Some(EarnPath::Waves { count, coin }) => {
-                    format!("EARNED {count} WAVES ON {}  PRESS E", coin_label(coin))
+                    format!("{count} WAVES HELD ON {}  PRESS E", coin_label(coin))
                 }
-                None => "EARNED  PRESS E".to_string(),
+                None => "READY  PRESS E".to_string(),
             },
             AhaBeat::Morph { progress } => {
                 let pct = (progress * 100.0).round() as i32;

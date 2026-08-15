@@ -52,17 +52,17 @@ your hands already know it:
 | E | inspect: why this matters |
 | U | call the readout: wager the number before you look, then meet it |
 | H | bring the Cabinet back; choose Modes, Games, Settings, or Controls |
-| Q | swap the visual era (phosphor, 8-bit, vector, modern) |
+| Q | quit after saving the Journey, including from fullscreen |
 | R | reset the current room, including its clock and interactions |
 | F | toggle fullscreen; press it again to return directly to a window |
-| Alt+F4, or QUIT on the Cabinet | close the App after saving the Journey |
+| Alt+F4, or QUIT on the Cabinet | alternate orderly close paths |
 | M | global sound on / off, including games, pause, radio, and Studio |
 | B or Enter | The Show: sit back, rooms play themselves (the room tour) |
 | Esc | the opaque text Cabinet; Esc returns through its pages before closing it |
 | M (on the Cabinet front page) | open the short Modes list |
 | W / P / C (in Modes) | WATCH the collection wander, PLAY the waiting room, or CREATE in Studio |
 | G (in the Cabinet) | open Games |
-| Q (in Games) | the quiz: name the math |
+| Games, then arrows and Enter | the quiz: name the math |
 | M (in Games) | Munch: cursor over the board, eat what fits |
 | N (in Games) | Nim: aim your take, beat the Order |
 | G (in Games) | the Gauntlet: four stages, a combo, one number |
@@ -73,7 +73,7 @@ your hands already know it:
 | L | keep the motion: saves a short looping APNG of this visit |
 | F9 | save a local hallway-test note in repo-root `logs/` |
 | ` or ~ | power-user console: load rooms, set phase, variation, era, mute |
-| Y | the radio dial: off, trance, chill, arcade (42 built-in tracks) |
+| Y / N | radio dial / next track on the selected station |
 | [ / ] | global volume down / up; - / = are aliases outside Studio |
 | mouse | hover or click every visible Cabinet row; activation requires press and release on the same row |
 | controller left stick / south | move the visible virtual hand / touch or confirm |
@@ -104,6 +104,8 @@ Options persist master volume, mute, Visual Era, and window mode in the
 versioned local preference store. `numinous forget` inventories that store;
 `numinous forget --confirm --all-local` erases it with the other managed local
 state. A selective Journey or journal erasure leaves Options intact.
+Settings also carries a full-size Skip Track row. It advances the current
+station without hiding the action in the small footer legend.
 Radio stations appear only when compatible local tracks are present. Visible
 controller legends infer Xbox or PlayStation face names from known product
 names and use generic compass names for unknown pads. Those legends describe
@@ -188,6 +190,8 @@ numinous call lorenz              name the readout before you look, then meet it
 numinous watch julia              full-color animation, with sound
 numinous watch lorenz --era phosphor
 numinous play times-tables        classic ASCII
+numinous describe times-tables    safe title, action, goal, and play doorway
+numinous reveal times-tables      explanation after its wager is consolidated
 numinous render double-pendulum --poke 0.2,0.8
 numinous render double-pendulum --gesture down:0.3,0.4,0.1 --gesture up:0.6,0.5,0.15
 numinous render game-of-life --variation 7 --t 0.5 --gesture down:0.5,0.5,0.1 --gesture up:0.5,0.5,0.12
@@ -227,14 +231,17 @@ Playing anything earns XP. Every level-up is announced with that number's own
 lore line (each of the 42 has one) and whatever it unlocked. Levels run 1 to
 42, and everything that opens along
 the way is an extra, never a toll. Wrong answers still teach: every game tells
-you exactly which judgments were wrong, and every room will explain itself if
-you ask (`numinous describe <room>`). Some things are not listed anywhere. If
-you ever wonder whether a name means something, ask about it.
+you exactly which judgments were wrong. `numinous describe <room>` is a safe
+doorway that never prints the punchline. `numinous reveal <room>` opens the
+explanation after a normal room has been played, or after an engineered wager
+has been consolidated. Some things are not listed anywhere. If you ever wonder
+whether a name means something, ask about it.
 
 The level belongs to the local Journey, not to the room you just entered. The J
 overlay shows how many plays that profile contains. To try a clean profile
 without deleting or changing an existing history, point both persistence files
-at new paths before launching. In PowerShell:
+at new paths before launching. Each override is a file path, not a directory.
+Do not create a folder at either path. In PowerShell:
 
 ```
 $env:NUMINOUS_JOURNEY="$HOME/.numinous-journey-try"
@@ -331,8 +338,8 @@ input without hidden session state:
 | Tool | What it does |
 |---|---|
 | `list_rooms` | the catalog; start with `response_mode: "compact"` for a short doorway while retaining the complete structured room list |
-| `describe_room` | a room's story, action, and optional goal (some unlisted names also answer) |
-| `reveal_room` | the insight that reframes the room |
+| `describe_room` | a safe doorway: title, wing, action, optional goal, and play prompt, never the revelation |
+| `reveal_room` | the insight after one real play, or after consolidation for an engineered wager room |
 | `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array. Add `from_t` with explicit destination `t` for two exact observations and a typed temporal delta; the top-level frame remains the destination. Returns goal state and an earned reveal where available. On Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` / `speed_wager` / `policy_wager` / `counter_wager` plus `aha_summon` walk generation-before-reveal without App session state. Nontransitive Dice also accepts typed `die_choice` instead of coordinate input |
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
@@ -423,10 +430,14 @@ Conventions worth relying on:
   exceed 2,304 for this two-observation form. The order is the direction of
   comparison only, not a duration or inferred path. Compact poke coordinates
   are reapplied independently at both phases. Use a phase-stamped gesture when
-  the room should interpret one causal event history.
-- **Flagship engineered aha (MCP).** Prefer `play_room` before `describe_room`
-  or `reveal_room` on Times Tables, Buffon's Needle, the Galton Board, Double
-  Pendulum, Kepler Areas, Parrondo's Trap, or Nontransitive Dice so you do not skip the generation act. Pass `place_wager`
+  the room should interpret one causal event history. A phase-static room can
+  honestly return zero changed cells. Kepler's poke-tuned ellipse is one such
+  view: use its staged wager or a causal gesture instead of assuming phase alone
+  moves the picture.
+- **Flagship engineered aha (MCP).** `describe_room` is a safe doorway on Times
+  Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas,
+  Parrondo's Trap, and Nontransitive Dice. `reveal_room` remains closed until
+  the generation act is consolidated. Pass `place_wager`
   (`mandelbrot` | `nephroid` | `circle`), `number_wager` (1.5..4.5),
   `bin_wager` (0..16, the Galton pile's peak), or `ending_wager` (`together` |
   `drifted` | `lost`) after a Double Pendulum gesture containing a completed
@@ -437,7 +448,9 @@ Conventions worth relying on:
   on Nontransitive Dice,
   then `aha_summon: true` to consolidate and unlock
   the punchline. Read `structuredContent.engineeredAha` for beat, earn, and
-  allowReveal. The App path is the ordinary visit with bottom-band or key
+  allowReveal. Before consolidation, the wager and summon invitation remain
+  visible while `earn`, grading, truth, and the punchline remain absent. The
+  App path is the ordinary visit with bottom-band or key
   wagers and E; F9 captures hallway notes for human facilitators. Double
   Pendulum grades the exact release replayed in that call, and a held gesture
   alone cannot prime it. Kepler grades the exact selected eccentricity and

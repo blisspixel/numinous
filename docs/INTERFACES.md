@@ -11,7 +11,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
 **Implementation boundary, 2026-07-18:** all three faces are shipped from the
-same headless core in 0.4.0-alpha.2. Descriptions below mix current behavior
+same headless core in 0.4.0-alpha.3. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -69,6 +69,9 @@ The full interactive audiovisual experience. The UX is specified in depth across
   Keyboard M, [, and ] provide the same global controls. A persistent audio
   badge reports source, level, and effective silence without relying on a
   transient banner.
+  Keyboard Q requests orderly shutdown outside text entry, including
+  fullscreen. Keyboard N and the full-size Settings row advance the current
+  radio station, while Y keeps station selection.
   Input-aware legends cover rooms, all games, The Show, the Journey, and the
   Studio. The Cabinet retains its opaque text screen and divides its old flat
   index into Modes, Games, Settings, and Controls lists of no more than six
@@ -123,8 +126,9 @@ For automation, pipelines, CI, power users, and agents through a shell:
   projection of the stable 16 kHz stereo App source and rejects phase or hand
   controls that cannot affect it. Both layers accept replayable room variation. Terminal output stays
   scriptable instead of tied to an interactive session.
-- **Current command families:** `rooms`, `describe`, `render`, `gallery`, and
-  `contact-sheet` cover the catalog and images; `tour`, `watch`, `play`, games,
+- **Current command families:** `rooms`, safe `describe`, gated `reveal`,
+  `render`, `gallery`, and `contact-sheet` cover the catalog and images;
+  `tour`, `watch`, `play`, games,
   sims, and Journey commands cover live play; `plot`, `open-studio`, `fork`,
   `sing`, `tune`, and `sonify` cover creation and audio. `call` poses the
   universal wager on any room with a moving readout and grades a committed
@@ -236,10 +240,14 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   numbers, rejects names not owned by the selected simulation, and rejects
   values outside that lever's advertised range. Invalid calls return a guiding
   tool error and do not record progress.
-- **Structured discovery (built):** `list_rooms`, `describe_room`,
-  `reveal_room`, and `listen_room` return typed catalog, action, optional goal, revelation,
-  deep-cut availability, ambient motif, stable ambient-bed summary, and bounded
-  mathematical-sonification note data for all 354 rooms. `listen_room` names
+- **Structured discovery (built):** `list_rooms` returns the complete typed
+  catalog. `describe_room` is a safe doorway with title, wing, action, optional
+  goal, blurb, and the next play call, but no revelation, concept, deep cut, or
+  citation. `reveal_room` returns the explanation and level-gated deep cuts only
+  after one real play, or after persisted consolidation for one of the seven
+  engineered wager rooms. `listen_room` returns ambient motif, stable
+  ambient-bed summary, and bounded mathematical-sonification note data for all
+  354 rooms. `listen_room` names
   all three sound roles
   separately because a specialized room sound can intentionally differ from
   the ambient score. The `motif` field is the authored theme; `ambient_bed` is
@@ -252,31 +260,34 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   forget previews are similarly structured, and confirmed erasure reports only
   successful filesystem outcomes.
 - **Earned room goal, first slice (built):** Times Tables exposes `LAND ON
-  EXACTLY 4 LOBES`. `play_room` returns `goal`, `goalMet`, and a null reveal
-  until accepted K=5 input closes four lobes. The earned response then includes
-  the same reveal the App points to. Ambient phase alone cannot earn it.
+  EXACTLY 4 LOBES`. `play_room` returns `goalMet: true` whenever the live dial
+  is exactly K=5, including the deterministic `t: 0.375` doorway and equivalent
+  hand input. Status and goal state therefore cannot disagree. Reaching the
+  geometric target permits the staged wager but does not disclose the answer;
+  the reveal remains closed until consolidation.
 - **Engineered aha wagers, MCP slice (built):** on Times Tables, Buffon's
   Needle, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and
   Nontransitive Dice, `play_room`
   always includes
-  `structuredContent.engineeredAha` with beat, status, earn, allowReveal, and
-  canSummon. Optional `place_wager` (`mandelbrot` | `nephroid` | `circle`),
+  `structuredContent.engineeredAha` with beat, status, wager, earn, allowReveal,
+  and canSummon. Optional `place_wager` (`mandelbrot` | `nephroid` | `circle`),
   `number_wager` (finite, 1.5..4.5), `bin_wager` (0..16), `ending_wager`
   (`together` | `drifted` | `lost`), or `speed_wager` (`faster` | `slower` |
   `same`), `policy_wager` (`a` | `b` | `abb`), or `counter_wager` (`a` | `b` |
   `c`) is a generation act. Nontransitive Dice also accepts the typed
-  `die_choice` (`a` | `b` | `c`) instead of a coordinate input. Each committed wager
-  comes back typed beside its truth and one graded sentence, with a band where
-  the room's model uses one, because a commitment that is collected and never
-  answered is theater. Double Pendulum requires a completed release event and
+  `die_choice` (`a` | `b` | `c`) instead of a coordinate input. Each committed
+  wager remains visible during the withheld beat, while status stays neutral
+  and `earn`, truth, grading, answer-bearing measurements, and reveal remain
+  absent. Consolidation returns the truth and a graded sentence, with a band
+  where the room's model uses one. Double Pendulum requires a completed release event and
   measures truth from that exact release's angles and velocity; a held bob does
   not count. The Galton call is about the pile the request's pokes
   build, which is the newest coin's run; this face is stateless, so a longer
   poke history is honestly a different question, and every reply names the
   coin it answered. Optional `aha_summon: true` advances through morph to
   consolidated and unlocks punchline reveal when generation has occurred.
-  Generation args withhold `reveal` until consolidation; the established K5
-  goal path still unlocks reveal without those args. Stateless and
+  All seven engineered rooms withhold `reveal` until consolidation, including
+  the established Times Tables K5 goal path. Stateless and
   fail-closed on wrong rooms or hostile values. App F9 notes and
   `scripts/agent-hallway.py` exercise the same five-beat story for human
   facilitators and agent cohorts; agent notes are not a human stranger gate.
@@ -312,12 +323,19 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   bounded event history for room-defined causal behavior. Equal phases and
   zero visible deltas are valid. A zero delta says
   only that the ASCII cells match at that resolution. The supplied order does
-  not assert elapsed duration, frame rate, or an interpolated path.
+  not assert elapsed duration, frame rate, or an interpolated path. In
+  particular, Kepler's poke-tuned ellipse can be phase-static; this is honest
+  evidence about that view, not fabricated motion.
   Two-observation calls are limited to 2,304 cells per render so a complete
   consented public event retains wire margin. Omitting `from_t` omits
   `temporal` and preserves the existing result. This evidence is stateless and
   creates no receipt or journal entry. Successful play still follows the
   existing coarse Journey visit policy.
+- **Canonical persistent progress (built):** compatibility aliases are resolved
+  before Journey mutation. Playing `kepler-areas` and then `kepler-laws` lights
+  one canonical star. The Journey also persists the bounded canonical set of
+  engineered rooms whose summon beat consolidated, so a later CLI or MCP
+  process can enforce the reveal gate without hidden session state.
 - **Phase-zero causality (built):** a room that claims retained state must answer
   before animation supplies an incidental difference. Cult of Pi therefore
   draws each held patch boundary through the shared surface in the App, CLI,
