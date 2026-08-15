@@ -57,6 +57,10 @@ EXPECTED_TOOL_NAMES = frozenset(
     }
 )
 EXPECTED_TOOL_COUNT = len(EXPECTED_TOOL_NAMES)
+CLI_TIMES_TABLES_ACTION = (
+    "Action: TURN THE DIAL (phase here: numinous render times-tables --t 0.375; "
+    "--poke x,y is a second hand)"
+)
 PROCESS_TIMEOUT_SECONDS = 20
 READER_SHUTDOWN_TIMEOUT_SECONDS = 1
 MAX_OUTPUT_BYTES = 1_048_576
@@ -229,7 +233,7 @@ def validate_cli_render(render: str) -> None:
     validate_render_body(render)
     required = (
         "Status:",
-        "Action: TURN THE DIAL (the hand here: numinous render times-tables --poke x,y)",
+        CLI_TIMES_TABLES_ACTION,
         "Goal: LAND ON EXACTLY 4 LOBES",
     )
     missing = [marker for marker in required if marker not in render]
