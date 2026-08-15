@@ -51,27 +51,31 @@ your hands already know it:
 | Space | pause or resume while wandering |
 | E | inspect: why this matters |
 | U | call the readout: wager the number before you look, then meet it |
-| H | bring the help overlay back after it is dismissed |
+| H | bring the Cabinet back; choose Modes, Games, Settings, or Controls |
 | Q | swap the visual era (phosphor, 8-bit, vector, modern) |
 | R | reset the current room, including its clock and interactions |
-| F | fullscreen |
+| F | toggle fullscreen; press it again to return directly to a window |
+| Alt+F4, or QUIT on the Cabinet | close the App after saving the Journey |
 | M | global sound on / off, including games, pause, radio, and Studio |
 | B or Enter | The Show: sit back, rooms play themselves (the room tour) |
-| Esc | the menu: all games, Show, Studio, Journey, and every control |
-| G (in the menu) | the quiz: name the math |
-| C (in the menu) | Munch: cursor over the board, eat what fits |
-| N (in the menu) | Nim: aim your take, beat the Order |
-| T (in the menu) | the Gauntlet: four stages, a combo, one number |
-| V (in the menu) | the Arcade: eat while the Vexations hunt |
+| Esc | the opaque text Cabinet; Esc returns through its pages before closing it |
+| M (on the Cabinet front page) | open the short Modes list |
+| W / P / C (in Modes) | WATCH the collection wander, PLAY the waiting room, or CREATE in Studio |
+| G (in the Cabinet) | open Games |
+| Q (in Games) | the quiz: name the math |
+| M (in Games) | Munch: cursor over the board, eat what fits |
+| N (in Games) | Nim: aim your take, beat the Order |
+| G (in Games) | the Gauntlet: four stages, a combo, one number |
+| A (in Games) | the Arcade: eat while the Vexations hunt |
 | J | your journey: level, rank, trophies, resonances |
-| X | Watch Agent: open a consented read-only local MCP session viewer |
+| X | Shared Play: open a consented read-only local MCP session viewer |
 | P | keep the picture: saves the room as a PNG postcard |
 | L | keep the motion: saves a short looping APNG of this visit |
 | F9 | save a local hallway-test note in repo-root `logs/` |
 | ` or ~ | power-user console: load rooms, set phase, variation, era, mute |
 | Y | the radio dial: off, trance, chill, arcade (42 built-in tracks) |
 | [ / ] | global volume down / up; - / = are aliases outside Studio |
-| mouse | hover or click all nine menu destinations; click every window game |
+| mouse | hover or click every visible Cabinet row; activation requires press and release on the same row |
 | controller left stick / south | move the visible virtual hand / touch or confirm |
 | controller bumpers / D-pad | change rooms / choose and navigate games |
 | controller triggers / right stick | change speed / scrub time |
@@ -83,7 +87,8 @@ your hands already know it:
 | Tab | the Studio: type math, watch and hear it live |
 | Esc | menu |
 
-The art keeps the frame. Room titles, arrival hints, and inspection copy use
+The art keeps the frame, including behind the Cabinet. Room titles,
+arrival hints, and inspection copy use
 separate quiet bands rather than sitting on the active visual. Arrival hints
 fade on their own, E toggles inspection, H restores help, and Esc closes an
 open overlay. A clean install always has the four-cycle stereo programmatic
@@ -95,6 +100,10 @@ and radio boundaries, then rejoins a selected station live when Studio closes.
 A persistent top-right audio badge names the active source, volume level, mute,
 zero-volume, background-silent, or no-device state. A separate `JOURNEY LV`
 label reports accumulated progress in the local profile, not room difficulty.
+Options persist master volume, mute, Visual Era, and window mode in the
+versioned local preference store. `numinous forget` inventories that store;
+`numinous forget --confirm --all-local` erases it with the other managed local
+state. A selective Journey or journal erasure leaves Options intact.
 Radio stations appear only when compatible local tracks are present. Visible
 controller legends infer Xbox or PlayStation face names from known product
 names and use generic compass names for unknown pads. Those legends describe

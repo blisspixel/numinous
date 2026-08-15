@@ -241,7 +241,7 @@ modules declared through one catalog and constructed through the registry
 facade. The Gauntlet follows the same rule: one typed core puzzle owns seeded
 construction, stage grading, combo math, reveal semantics, and leaderboard
 identity. App, CLI, MCP, and Watch Agent only collect or present its values.
-Core persistence also resolves the six managed local-state paths through one
+Core persistence also resolves the seven managed local-state paths through one
 environment precedence rule. Faces consume those resolved paths rather than
 reimplementing home-directory fallback or per-store overrides. A selected
 `NUMINOUS_RADIO` soundtrack remains user-owned and outside managed cache
@@ -251,6 +251,11 @@ module reimplements persistence rules. The MCP face also keeps protocol
 discovery, legacy negotiation, server identity, and its immutable 35-tool JSON
 Schema catalog in a focused `catalog` module. The request entry point retains
 transport validation, dispatch, result decoration, and domain invocation.
+The App preference store uses a strict std-only core schema for volume, mute,
+Visual Era, and window mode. Core owns bounded reads, lock coordination, atomic
+replacement, inventory, and complete erasure. The App owns only applying those
+values to its window and audio adapters. Unsupported or malformed preference
+documents apply no partial state and are preserved for diagnosis.
 Core also owns `TemporalPair`, the exact validated origin and destination used
 for two-observation room comparison. MCP renders both observations through the
 ordinary `Room` contract and projects their existing `Canvas::delta`; no room

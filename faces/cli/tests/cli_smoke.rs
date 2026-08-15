@@ -11,6 +11,7 @@ fn public_binary_crosses_the_explicit_command_stack() {
         .env("NUMINOUS_JOURNEY", state_root.join("journey.txt"))
         .env("NUMINOUS_SCORES", state_root.join("scores.txt"))
         .env("NUMINOUS_CAIRN", state_root.join("cairn.txt"))
+        .env("NUMINOUS_PREFERENCES", state_root.join("preferences.txt"))
         .output()
         .expect("launch the public CLI binary");
 
@@ -36,6 +37,7 @@ fn public_forget_previews_fails_closed_and_erases_isolated_state() {
     let scores = root.join("scores.txt");
     let cairn = root.join("cairn.txt");
     let journal = home.join(".numinous-journal");
+    let preferences = home.join(".numinous-preferences");
     let radio = home.join(".numinous-radio");
     let crash = home.join(".numinous-crash.log");
     std::fs::create_dir_all(&journey).expect("unexpected Journey directory");
@@ -44,6 +46,11 @@ fn public_forget_previews_fails_closed_and_erases_isolated_state() {
     std::fs::write(&cairn, b"Ada\ttruth survives inspection\n").expect("Cairn fixture");
     std::fs::create_dir_all(&home).expect("state home fixture");
     std::fs::write(&journal, b"NUMINOUS_JOURNAL\t2\n").expect("journal fixture");
+    std::fs::write(
+        &preferences,
+        numinous_core::AppPreferences::default().to_text(),
+    )
+    .expect("preferences fixture");
     std::fs::write(radio.join("trance-001.wav"), b"RIFF").expect("radio fixture");
     std::fs::write(&crash, b"isolated diagnostic").expect("crash fixture");
 
@@ -54,6 +61,7 @@ fn public_forget_previews_fails_closed_and_erases_isolated_state() {
             .env("NUMINOUS_JOURNEY", &journey)
             .env("NUMINOUS_SCORES", &scores)
             .env("NUMINOUS_CAIRN", &cairn)
+            .env("NUMINOUS_PREFERENCES", &preferences)
             .env("HOME", &home)
             .env("USERPROFILE", &home)
             .env_remove("NUMINOUS_RADIO");
@@ -85,7 +93,15 @@ fn public_forget_previews_fails_closed_and_erases_isolated_state() {
     assert!(!protected.status.success());
     let protected_text = String::from_utf8(protected.stderr).expect("failure is UTF-8");
     assert!(protected_text.contains("selected radio source"));
-    for path in [&journey, &scores, &cairn, &journal, &radio, &crash] {
+    for path in [
+        &journey,
+        &scores,
+        &cairn,
+        &journal,
+        &preferences,
+        &radio,
+        &crash,
+    ] {
         assert!(path.exists(), "{} must be preserved", path.display());
     }
 
@@ -96,7 +112,7 @@ fn public_forget_previews_fails_closed_and_erases_isolated_state() {
         !journal.exists(),
         "explicit journal selection must erase it"
     );
-    for path in [&scores, &cairn, &radio, &crash] {
+    for path in [&scores, &cairn, &preferences, &radio, &crash] {
         assert!(path.exists(), "{} must be preserved", path.display());
     }
 
@@ -110,7 +126,15 @@ fn public_forget_previews_fails_closed_and_erases_isolated_state() {
     );
     let erased_text = String::from_utf8(erased.stdout).expect("receipt is UTF-8");
     assert!(erased_text.contains("0 managed stores and 0 known bytes remain"));
-    for path in [&journey, &scores, &cairn, &journal, &radio, &crash] {
+    for path in [
+        &journey,
+        &scores,
+        &cairn,
+        &journal,
+        &preferences,
+        &radio,
+        &crash,
+    ] {
         assert!(!path.exists(), "{} must be absent", path.display());
     }
     std::fs::remove_dir_all(root).expect("fixture cleanup");

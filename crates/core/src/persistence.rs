@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::{Journal, JournalRecord, Journey, Scoreboard};
+use crate::{AppPreferences, Journal, JournalRecord, Journey, Scoreboard};
 
 const LOCK_RETRIES: usize = 2500;
 const LOCK_SLEEP: Duration = Duration::from_millis(2);
@@ -28,6 +28,7 @@ const MAX_JOURNEY_FILE_BYTES: u64 = 64 * 1024;
 const MAX_LOCK_FILE_BYTES: u64 = 4 * 1024;
 const MAX_JOURNAL_FILE_BYTES: u64 = 1024 * 1024;
 const MAX_SCOREBOARD_FILE_BYTES: u64 = 1024 * 1024;
+const MAX_PREFERENCES_FILE_BYTES: u64 = 4 * 1024;
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 const MAX_MANAGED_CACHE_ENTRIES: usize = 4096;
 const MAX_MANAGED_SIDECARS: usize = 4096;
@@ -48,6 +49,8 @@ pub struct LocalStatePaths {
     pub cairn: PathBuf,
     /// Player-owned opt-in MCP experience journal.
     pub journal: PathBuf,
+    /// Versioned App preferences file.
+    pub preferences: PathBuf,
     /// Flat directory of generated radio WAV files.
     pub radio_cache: PathBuf,
     /// User-selected soundtrack source, if configured. This path is never
@@ -60,12 +63,12 @@ pub struct LocalStatePaths {
 /// Resolve every Numinous-managed local state location through one shared
 /// environment precedence rule.
 ///
-/// `NUMINOUS_JOURNEY`, `NUMINOUS_SCORES`, `NUMINOUS_CAIRN`, and
-/// `NUMINOUS_JOURNAL` override their individual stores. Other paths are rooted
-/// at `HOME`, then `USERPROFILE`, then the current directory when neither home
-/// variable exists. `NUMINOUS_RADIO` selects a playable soundtrack pack. It is
-/// carried only as a protected path so it can never silently become a managed
-/// cache erasure target.
+/// `NUMINOUS_JOURNEY`, `NUMINOUS_SCORES`, `NUMINOUS_CAIRN`,
+/// `NUMINOUS_JOURNAL`, and `NUMINOUS_PREFERENCES` override their individual
+/// stores. Other paths are rooted at `HOME`, then `USERPROFILE`, then the
+/// current directory when neither home variable exists. `NUMINOUS_RADIO`
+/// selects a playable soundtrack pack. It is carried only as a protected path
+/// so it can never silently become a managed cache erasure target.
 #[must_use]
 pub fn resolve_local_state_paths() -> LocalStatePaths {
     resolve_local_state_paths_with(|name| std::env::var_os(name))
@@ -86,6 +89,7 @@ fn resolve_local_state_paths_with(
         scores: managed_file("NUMINOUS_SCORES", ".numinous-scores"),
         cairn: managed_file("NUMINOUS_CAIRN", ".numinous-cairn"),
         journal: managed_file("NUMINOUS_JOURNAL", ".numinous-journal"),
+        preferences: managed_file("NUMINOUS_PREFERENCES", ".numinous-preferences"),
         radio_cache: home.join(".numinous-radio"),
         protected_radio_source,
         crash_log: home.join(".numinous-crash.log"),
@@ -180,6 +184,8 @@ pub struct LocalStateInventory {
     pub cairn: LocalCairnInventory,
     /// Opt-in experience journal inventory.
     pub journal: LocalFileInventory,
+    /// Versioned App preferences inventory.
+    pub preferences: LocalFileInventory,
     /// Generated-radio cache inventory.
     pub radio_cache: LocalCacheInventory,
     /// App crash-log inventory.
@@ -200,6 +206,8 @@ impl LocalStateInventory {
             .saturating_add(self.cairn.file.sidecar_bytes)
             .saturating_add(self.journal.bytes)
             .saturating_add(self.journal.sidecar_bytes)
+            .saturating_add(self.preferences.bytes)
+            .saturating_add(self.preferences.sidecar_bytes)
             .saturating_add(self.radio_cache.bytes)
             .saturating_add(self.radio_cache.sidecar_bytes)
             .saturating_add(self.crash_log.bytes)
@@ -215,6 +223,7 @@ impl LocalStateInventory {
             self.scores.file.exists || self.scores.file.sidecar_files != 0,
             self.cairn.file.exists || self.cairn.file.sidecar_files != 0,
             self.journal.exists || self.journal.sidecar_files != 0,
+            self.preferences.exists || self.preferences.sidecar_files != 0,
             self.radio_cache.exists || self.radio_cache.sidecar_files != 0,
             self.crash_log.exists || self.crash_log.sidecar_files != 0,
         ]
@@ -235,6 +244,8 @@ pub struct LocalStateEraseSelection {
     pub cairn: bool,
     /// Erase the opt-in experience journal.
     pub journal: bool,
+    /// Erase versioned App preferences.
+    pub preferences: bool,
     /// Erase recognized generated radio tracks.
     pub radio_cache: bool,
     /// Erase the App crash diagnostic.
@@ -250,6 +261,7 @@ impl LocalStateEraseSelection {
             scores: true,
             cairn: true,
             journal: true,
+            preferences: true,
             radio_cache: true,
             crash_log: true,
         }
@@ -573,6 +585,7 @@ fn validate_local_state_paths(paths: &LocalStatePaths) -> io::Result<()> {
         ("scores", &paths.scores),
         ("Cairn drafts", &paths.cairn),
         ("experience journal", &paths.journal),
+        ("App preferences", &paths.preferences),
         ("crash log", &paths.crash_log),
     ]
     .map(|(name, path)| Ok((name, resolved_path_for_comparison(path)?)))
@@ -615,6 +628,7 @@ pub fn inspect_local_state(paths: &LocalStatePaths) -> io::Result<LocalStateInve
     let scores_file = inspect_managed_file(&paths.scores)?;
     let cairn_file = inspect_managed_file(&paths.cairn)?;
     let journal = inspect_managed_file(&paths.journal)?;
+    let preferences = inspect_managed_file(&paths.preferences)?;
     let journey = if journey_file.managed_file {
         load_journey_file(&paths.journey)
     } else {
@@ -647,6 +661,7 @@ pub fn inspect_local_state(paths: &LocalStatePaths) -> io::Result<LocalStateInve
             local_drafts,
         },
         journal,
+        preferences,
         radio_cache: inspect_managed_cache(&paths.radio_cache)?,
         crash_log: inspect_managed_file(&paths.crash_log)?,
     })
@@ -752,6 +767,7 @@ fn acquire_erasure_locks(
         (selection.scores, "scores", &paths.scores),
         (selection.cairn, "Cairn drafts", &paths.cairn),
         (selection.journal, "experience journal", &paths.journal),
+        (selection.preferences, "App preferences", &paths.preferences),
         (selection.radio_cache, "radio cache", &paths.radio_cache),
         (selection.crash_log, "crash log", &paths.crash_log),
     ] {
@@ -783,6 +799,7 @@ fn preflight_selected_state(
         (selection.scores, "scores", &paths.scores),
         (selection.cairn, "Cairn drafts", &paths.cairn),
         (selection.journal, "experience journal", &paths.journal),
+        (selection.preferences, "App preferences", &paths.preferences),
         (selection.crash_log, "crash log", &paths.crash_log),
     ] {
         if enabled {
@@ -827,6 +844,7 @@ pub fn erase_local_state(
         })?;
     }
     erase_file_target(selection.crash_log, "crash log", &paths.crash_log)?;
+    erase_file_target(selection.preferences, "App preferences", &paths.preferences)?;
     erase_file_target(selection.journal, "experience journal", &paths.journal)?;
     erase_file_target(selection.cairn, "Cairn drafts", &paths.cairn)?;
     erase_file_target(selection.scores, "scores", &paths.scores)?;
@@ -867,6 +885,47 @@ pub fn load_journey_file(path: &Path) -> Journey {
 /// Propagates the read failure for every case except a missing file.
 pub fn read_journey_file(path: &Path) -> io::Result<Journey> {
     try_load_journey_file(path)
+}
+
+/// Load the versioned App preferences, returning defaults on first launch.
+///
+/// # Errors
+///
+/// Returns an error for unreadable, oversized, unsupported, or malformed
+/// preference files. Callers should surface that failure and retain defaults.
+pub fn read_app_preferences_file(path: &Path) -> io::Result<AppPreferences> {
+    match read_local_text_bounded(path, MAX_PREFERENCES_FILE_BYTES) {
+        Ok(text) => AppPreferences::try_from_text(&text)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error)),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(AppPreferences::default()),
+        Err(error) => Err(error),
+    }
+}
+
+/// Atomically replace the complete versioned App preference snapshot.
+///
+/// An existing unreadable or malformed file is preserved rather than silently
+/// overwritten, matching the fail-closed behavior of other managed stores.
+///
+/// # Errors
+///
+/// Returns an error when validation, locking, or the atomic replacement fails.
+pub fn persist_app_preferences_file(path: &Path, preferences: AppPreferences) -> io::Result<()> {
+    let text = preferences.to_text();
+    if text.len() as u64 > MAX_PREFERENCES_FILE_BYTES {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "App preferences exceed the managed size limit",
+        ));
+    }
+    let _lock = PersistLock::acquire(path)?;
+    match read_local_text_bounded(path, MAX_PREFERENCES_FILE_BYTES) {
+        Ok(existing) => AppPreferences::try_from_text(&existing)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => AppPreferences::default(),
+        Err(error) => return Err(error),
+    };
+    atomic_write(path, text.as_bytes())
 }
 
 /// Load a score file, repairing malformed text through [`Scoreboard::from_text`].
@@ -1659,9 +1718,11 @@ mod tests {
     use super::{
         Journey, LocalStateEraseSelection, LocalStatePaths, Scoreboard, erase_journal_file,
         erase_local_state, inspect_local_state, load_journey_file, load_scoreboard_file,
-        persist_journey_delta, record_journal_file, record_score_file, remove_persisted_file,
+        persist_app_preferences_file, persist_journey_delta, read_app_preferences_file,
+        record_journal_file, record_score_file, remove_persisted_file,
         resolve_local_state_paths_with,
     };
+    use crate::{AppPreferences, Era, WindowModePreference};
     use std::collections::BTreeMap;
     use std::ffi::OsString;
     use std::fs::File;
@@ -1692,6 +1753,10 @@ mod tests {
         assert_eq!(paths.scores, PathBuf::from("home/.numinous-scores"));
         assert_eq!(paths.cairn, PathBuf::from("home/.numinous-cairn"));
         assert_eq!(paths.journal, PathBuf::from("home/.numinous-journal"));
+        assert_eq!(
+            paths.preferences,
+            PathBuf::from("home/.numinous-preferences")
+        );
         assert_eq!(paths.radio_cache, PathBuf::from("home/.numinous-radio"));
         assert_eq!(paths.crash_log, PathBuf::from("home/.numinous-crash.log"));
 
@@ -1710,12 +1775,14 @@ mod tests {
             ("NUMINOUS_SCORES", "custom/scores"),
             ("NUMINOUS_CAIRN", "custom/cairn"),
             ("NUMINOUS_JOURNAL", "custom/journal"),
+            ("NUMINOUS_PREFERENCES", "custom/preferences"),
             ("NUMINOUS_RADIO", "user/soundtrack"),
         ]);
         assert_eq!(paths.journey, PathBuf::from("custom/journey"));
         assert_eq!(paths.scores, PathBuf::from("custom/scores"));
         assert_eq!(paths.cairn, PathBuf::from("custom/cairn"));
         assert_eq!(paths.journal, PathBuf::from("custom/journal"));
+        assert_eq!(paths.preferences, PathBuf::from("custom/preferences"));
         assert_eq!(paths.radio_cache, PathBuf::from("home/.numinous-radio"));
         assert_eq!(
             paths.protected_radio_source,
@@ -1780,6 +1847,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
@@ -1794,6 +1862,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
@@ -1807,6 +1876,8 @@ mod tests {
         std::fs::write(&paths.scores, b"50\tmunch seed:1 board:0\n").expect("score fixture");
         std::fs::write(&paths.cairn, b"a tester\tthere is no last prime\n").expect("cairn fixture");
         std::fs::write(&paths.journal, b"one opted-in experience\n").expect("journal fixture");
+        persist_app_preferences_file(&paths.preferences, AppPreferences::default())
+            .expect("preferences fixture");
         std::fs::write(paths.radio_cache.join("trance-001.wav"), b"RIFFfixture")
             .expect("radio fixture");
         std::fs::write(&paths.crash_log, b"bounded crash receipt").expect("crash fixture");
@@ -1822,6 +1893,8 @@ mod tests {
         assert_eq!(before.cairn.local_drafts, 1);
         assert!(before.journal.exists);
         assert!(before.journal.managed_file);
+        assert!(before.preferences.exists);
+        assert!(before.preferences.managed_file);
         assert_eq!(before.radio_cache.files, 1);
         assert_eq!(before.radio_cache.unexpected_entries, 0);
         assert_eq!(before.radio_cache.sidecar_files, 1);
@@ -1837,6 +1910,7 @@ mod tests {
             &paths.scores,
             &paths.cairn,
             &paths.journal,
+            &paths.preferences,
             &paths.radio_cache,
             &paths.crash_log,
         ] {
@@ -1845,6 +1919,37 @@ mod tests {
         assert!(!journey_temp.exists(), "orphan state temp must be absent");
         assert!(!cache_temp.exists(), "orphan cache temp must be absent");
         let _ = std::fs::remove_dir(&root);
+    }
+
+    #[test]
+    fn preferences_are_bounded_atomic_and_preserve_invalid_existing_state() {
+        let path = temp_file("preferences");
+        let preferences = AppPreferences {
+            volume_percent: 65,
+            muted: true,
+            era: Era::EightBit,
+            window_mode: WindowModePreference::Borderless,
+        };
+
+        assert_eq!(
+            read_app_preferences_file(&path).expect("missing preferences use defaults"),
+            AppPreferences::default()
+        );
+        persist_app_preferences_file(&path, preferences).expect("persist preferences");
+        assert_eq!(
+            read_app_preferences_file(&path).expect("read preferences"),
+            preferences
+        );
+
+        std::fs::write(&path, b"broken preferences\n").expect("malformed fixture");
+        let error = persist_app_preferences_file(&path, AppPreferences::default())
+            .expect_err("malformed state must not be overwritten");
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(
+            std::fs::read(&path).expect("malformed state remains"),
+            b"broken preferences\n"
+        );
+        std::fs::remove_file(path).expect("fixture cleanup");
     }
 
     #[test]
@@ -1859,6 +1964,7 @@ mod tests {
             scores: relative_root.join("scores.txt"),
             cairn: relative_root.join("cairn.txt"),
             journal: relative_root.join("journal.txt"),
+            preferences: relative_root.join("preferences.txt"),
             radio_cache: relative_root.join("radio"),
             protected_radio_source: None,
             crash_log: relative_root.join("crash.log"),
@@ -1871,6 +1977,7 @@ mod tests {
             &inventory.scores.file.path,
             &inventory.cairn.file.path,
             &inventory.journal.path,
+            &inventory.preferences.path,
             &inventory.radio_cache.path,
             &inventory.crash_log.path,
         ] {
@@ -1887,6 +1994,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
@@ -1988,6 +2096,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                preferences: false,
                 radio_cache: true,
                 crash_log: false,
             },
@@ -2053,6 +2162,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                preferences: false,
                 radio_cache: true,
                 crash_log: false,
             },
@@ -2084,6 +2194,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                preferences: false,
                 radio_cache: false,
                 crash_log: false,
             },
@@ -2136,6 +2247,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
@@ -2157,6 +2269,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
@@ -2182,6 +2295,7 @@ mod tests {
             scores: root.join("radio").join("trance-001.wav"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
@@ -2196,6 +2310,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                preferences: false,
                 radio_cache: true,
                 crash_log: false,
             },
@@ -2221,6 +2336,7 @@ mod tests {
             scores: shared.clone(),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
@@ -2232,6 +2348,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                preferences: false,
                 radio_cache: false,
                 crash_log: false,
             },
@@ -2262,6 +2379,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                preferences: false,
                 radio_cache: false,
                 crash_log: false,
             },
@@ -2301,6 +2419,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                preferences: false,
                 radio_cache: false,
                 crash_log: false,
             },
@@ -2386,6 +2505,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
@@ -2394,6 +2514,8 @@ mod tests {
         std::fs::write(&paths.scores, b"50\tfixture\n").expect("score fixture");
         std::fs::write(&paths.cairn, b"Ada\ttruth\n").expect("Cairn fixture");
         std::fs::write(&paths.journal, b"remembered experience\n").expect("journal fixture");
+        persist_app_preferences_file(&paths.preferences, AppPreferences::default())
+            .expect("preferences fixture");
         std::fs::create_dir(&paths.radio_cache).expect("cache fixture");
         std::fs::write(paths.radio_cache.join("trance-001.wav"), b"RIFF").expect("radio fixture");
         std::fs::write(&paths.crash_log, b"diagnostic").expect("crash fixture");
@@ -2414,6 +2536,7 @@ mod tests {
             std::fs::read(&paths.journal).expect("journal remains"),
             b"remembered experience\n"
         );
+        assert!(paths.preferences.is_file());
         assert!(paths.radio_cache.join("trance-001.wav").is_file());
         assert_eq!(
             std::fs::read(&paths.crash_log).expect("crash log remains"),
@@ -2430,6 +2553,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
@@ -2449,6 +2573,7 @@ mod tests {
                     scores: false,
                     cairn: false,
                     journal: false,
+                    preferences: false,
                     radio_cache: true,
                     crash_log: false,
                 },

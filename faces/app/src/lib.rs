@@ -16,6 +16,9 @@ pub mod game_draw;
 #[allow(missing_docs)]
 pub mod input_legend;
 #[allow(missing_docs)]
+pub mod menu;
+mod menu_font;
+#[allow(missing_docs)]
 pub mod play;
 #[allow(missing_docs)]
 pub mod room_phase;

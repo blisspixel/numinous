@@ -693,6 +693,11 @@ add_path_line() {
     printf '\n%s\n' "$line" >>"$profile"
 }
 
+zsh_profile_is_relevant() {
+    [ -f "$HOME/.zshrc" ] \
+        || { [ -n "${SHELL:-}" ] && [ "${SHELL##*/}" = "zsh" ]; }
+}
+
 run_self_test() {
     have tar || fail "installer self-test requires tar"
     test_base="$(mktemp -d "${TMPDIR:-/tmp}/numinous-installer-test.XXXXXX")" \
@@ -702,6 +707,19 @@ run_self_test() {
     export HOME
     mkdir "$HOME"
     chmod 700 "$HOME" 2>/dev/null || self_test_without_posix_modes
+
+    if (unset SHELL; zsh_profile_is_relevant); then
+        fail "profile self-test: an unset SHELL selected a missing zsh profile"
+    fi
+    : >"$HOME/.zshrc"
+    (unset SHELL; zsh_profile_is_relevant) \
+        || fail "profile self-test: an existing zsh profile was not selected"
+    rm -f -- "$HOME/.zshrc"
+    (SHELL=/bin/zsh; export SHELL; zsh_profile_is_relevant) \
+        || fail "profile self-test: an active zsh shell was not selected"
+    if (SHELL=/bin/bash; export SHELL; zsh_profile_is_relevant); then
+        fail "profile self-test: bash selected a missing zsh profile"
+    fi
 
     content_a="$test_base/content-a"
     content_b="$test_base/content-b"
@@ -1138,7 +1156,7 @@ if [ "$MODIFY_PATH" -eq 1 ]; then
             add_path_line "$profile" "$path_line"
         fi
     done
-    if [ -f "$HOME/.zshrc" ] || [ "${SHELL##*/}" = "zsh" ]; then
+    if zsh_profile_is_relevant; then
         add_path_line "$HOME/.zshrc" "$path_line"
     fi
     if [ -d "$HOME/.config/fish" ]; then

@@ -12,6 +12,49 @@ use std::path::{Path, PathBuf};
 
 use numinous_core::{Journey, Raster, Room, RoomInput, Scoreboard, Surface, all_rooms};
 
+fn draw_cabinet_menu(raster: &mut Raster, mode: numinous_app::input_legend::InputMode) {
+    let state = numinous_app::menu::MenuState::launch();
+    draw_cabinet_menu_state(raster, &state, mode);
+}
+
+fn draw_cabinet_menu_state(
+    raster: &mut Raster,
+    state: &numinous_app::menu::MenuState,
+    mode: numinous_app::input_legend::InputMode,
+) {
+    draw_cabinet_menu_state_with_display(raster, state, mode, false);
+}
+
+fn draw_cabinet_menu_state_with_display(
+    raster: &mut Raster,
+    state: &numinous_app::menu::MenuState,
+    mode: numinous_app::input_legend::InputMode,
+    fullscreen: bool,
+) {
+    let audio = audio_state::describe(
+        audio_state::Program::RoomScore,
+        None,
+        0.45,
+        false,
+        true,
+        true,
+    );
+    hud::draw_audio_state(raster, &audio, raster.width());
+    let _ = numinous_app::menu::draw_menu(
+        raster,
+        state,
+        mode,
+        numinous_app::input_legend::ControllerFace::Generic.into(),
+        numinous_app::menu::MenuReadout {
+            volume_percent: 45,
+            muted: false,
+            era: "phosphor",
+            window_mode: if fullscreen { "borderless" } else { "windowed" },
+            fullscreen,
+        },
+    );
+}
+
 #[path = "../src/audio_state.rs"]
 mod audio_state;
 #[allow(dead_code)]
@@ -42,6 +85,7 @@ mod studio_panel;
 
 const OUTPUT: &str = "renders/qa-app";
 const DEFAULT_SIZE: (usize, usize) = (900, 700);
+const FULLSCREEN_SIZE: (usize, usize) = (1920, 1080);
 const ROOM_SIZE: (usize, usize) = DEFAULT_SIZE;
 const SMALL_SIZE: (usize, usize) = (360, 240);
 const DEFAULT_MIN_CHANGED_PIXELS: usize = 100;
@@ -144,7 +188,9 @@ fn save_with_audio(
     );
     assert!(raster.lit_count() > 20, "{relative} is not a blank screen");
     let mut presented = raster.clone();
-    hud::draw_audio_state(&mut presented, &state, raster.width());
+    if !relative.starts_with("menu/") && !relative.starts_with("overlays/launch-help") {
+        hud::draw_audio_state(&mut presented, &state, raster.width());
+    }
     let path = Path::new(OUTPUT).join(relative);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).expect("create screenshot directory");
@@ -174,8 +220,10 @@ fn expected_dimensions(relative: &str) -> (usize, usize) {
                 ROOM_SIZE
             }
         }
-        Some("games" | "overlays" | "flows") => {
-            if relative.contains("-small-") {
+        Some("games" | "overlays" | "flows" | "menu") => {
+            if relative.contains("-fullscreen-") {
+                FULLSCREEN_SIZE
+            } else if relative.contains("-small-") {
                 SMALL_SIZE
             } else {
                 DEFAULT_SIZE
@@ -1353,6 +1401,66 @@ fn main() {
     }
     let rooms = all_rooms();
     let mut manifest = Vec::new();
+    if std::env::args().any(|argument| argument == "--menu-only") {
+        let room = room_by_id(&rooms, "times-tables");
+        let mut states = vec![("home", numinous_app::menu::MenuState::launch())];
+        let mut modes = numinous_app::menu::MenuState::launch();
+        let _ = modes.activate_shortcut('m');
+        states.push(("modes", modes));
+        let mut games = numinous_app::menu::MenuState::launch();
+        let _ = games.activate_shortcut('g');
+        states.push(("games", games));
+        let mut options = numinous_app::menu::MenuState::launch();
+        let _ = options.activate_shortcut('s');
+        states.push(("options", options));
+        let mut pause = numinous_app::menu::MenuState::launch();
+        pause.open_pause(numinous_app::menu::ActivityKind::Quiz);
+        states.push(("pause", pause));
+        for (label, state) in states {
+            let mut frame = room_screen(room, 0.12, &[], DEFAULT_SIZE, 0, false, 1);
+            draw_cabinet_menu_state(
+                &mut frame,
+                &state,
+                numinous_app::input_legend::InputMode::KeyboardMouse,
+            );
+            save(
+                &frame,
+                &format!("menu/{label}-{}x{}.png", DEFAULT_SIZE.0, DEFAULT_SIZE.1),
+                &mut manifest,
+            );
+        }
+        let fullscreen_state = numinous_app::menu::MenuState::launch();
+        let mut fullscreen = room_screen(room, 0.12, &[], FULLSCREEN_SIZE, 0, false, 1);
+        draw_cabinet_menu_state_with_display(
+            &mut fullscreen,
+            &fullscreen_state,
+            numinous_app::input_legend::InputMode::KeyboardMouse,
+            true,
+        );
+        save(
+            &fullscreen,
+            &format!(
+                "menu/home-fullscreen-{}x{}.png",
+                FULLSCREEN_SIZE.0, FULLSCREEN_SIZE.1
+            ),
+            &mut manifest,
+        );
+        let mut compact = room_screen(room, 0.12, &[], SMALL_SIZE, 0, false, 1);
+        draw_cabinet_menu(
+            &mut compact,
+            numinous_app::input_legend::InputMode::Controller,
+        );
+        save(
+            &compact,
+            &format!(
+                "menu/home-controller-small-{}x{}.png",
+                SMALL_SIZE.0, SMALL_SIZE.1
+            ),
+            &mut manifest,
+        );
+        println!("wrote {} menu previews", manifest.len());
+        return;
+    }
     let mut interaction_kinds = BTreeSet::new();
     let mut changed_status_oracles = 0;
     let mut explained_action_oracles = 0;
@@ -1725,14 +1833,9 @@ fn main() {
     for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
         let (width, height) = size;
         let mut help = room_screen(launch, 0.12, &[], size, 0, false, 1);
-        overlays::draw_help_overlay_with_controller(
+        draw_cabinet_menu(
             &mut help,
-            width,
-            height,
-            None,
-            input_legend::InputMode::KeyboardMouse,
-            false,
-            input_legend::ControllerFace::Generic.into(),
+            numinous_app::input_legend::InputMode::KeyboardMouse,
         );
         save(
             &help,
@@ -2164,14 +2267,9 @@ fn main() {
 
     let mut controller_help =
         room_screen_with_mode(launch, 0.12, &[], SMALL_SIZE, 0, false, 1, controller);
-    overlays::draw_help_overlay_with_controller(
+    draw_cabinet_menu(
         &mut controller_help,
-        SMALL_SIZE.0,
-        SMALL_SIZE.1,
-        Some(5),
-        controller,
-        false,
-        input_legend::ControllerFace::Generic.into(),
+        numinous_app::input_legend::InputMode::Controller,
     );
     save(
         &controller_help,

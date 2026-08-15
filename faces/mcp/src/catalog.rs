@@ -569,7 +569,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "forget",
-                "description": "Consent over local persistence. Without confirm: inventory Journey, scores, player-owned Cairn drafts, the opt-in experience journal, generated radio cache, and the App crash diagnostic, with paths, sizes, counts, and exclusions. With confirm true: erase the Journey plus explicitly selected stores. With all_local true: erase and verify all inventoried managed stores. User-selected exports, installed files, the Rust toolchain, and bundled canonical Cairn stones remain outside this command.",
+                "description": "Consent over local persistence. Without confirm: inventory Journey, scores, player-owned Cairn drafts, the opt-in experience journal, versioned App preferences, generated radio cache, and the App crash diagnostic, with paths, sizes, counts, and exclusions. With confirm true: erase the Journey plus explicitly selected stores. With all_local true: erase and verify all inventoried managed stores. User-selected exports, installed files, the Rust toolchain, and bundled canonical Cairn stones remain outside this command.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -579,7 +579,7 @@ fn build_tools_catalog() -> Value {
                         "journal": { "type": "boolean", "description": "Also erase the opt-in experience journal." },
                         "radio_cache": { "type": "boolean", "description": "Also erase the dedicated generated-radio cache directory and its residue." },
                         "crash_log": { "type": "boolean", "description": "Also erase the managed App crash diagnostic." },
-                        "all_local": { "type": "boolean", "description": "Erase every inventoried Numinous-managed local store." }
+                        "all_local": { "type": "boolean", "description": "Erase every inventoried Numinous-managed local store, including App preferences." }
                     },
                     "additionalProperties": false
                 }

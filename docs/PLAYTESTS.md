@@ -596,7 +596,8 @@ arrival cards, help, Show, Journey, Studio, Quiz, Munch, Arcade, Nim, and every
 Gauntlet stage. The last meaningful input selects keyboard and pointer or
 controller copy; passive mouse movement, unsupported buttons, zero wheel
 movement, and stick deadzones do not steal that state. The controller opens and
-leaves all nine menu destinations, R3 pauses, D-pad left and right adjust Nim
+leaves every Cabinet, Games, Options, Controls, and contextual-pause route, R3 pauses,
+D-pad left and right adjust Nim
 takes, and South leaves Arcade game over. Studio names its keyboard requirement
 without pretending that controller editing exists.
 
