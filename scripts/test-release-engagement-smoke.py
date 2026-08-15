@@ -50,7 +50,7 @@ def valid_render() -> str:
     rows.extend(
         (
             "Status: K 4.00  CLOSED  3 LOBES  TARGET 4",
-            "Action: TURN THE DIAL (the hand here: numinous render times-tables --poke x,y)",
+            SMOKE.CLI_TIMES_TABLES_ACTION,
             "Goal: LAND ON EXACTLY 4 LOBES",
         )
     )
@@ -146,12 +146,20 @@ class ReleaseEngagementSmokeTests(unittest.TestCase):
 
     def test_room_render_requires_substantive_semantic_markers(self) -> None:
         SMOKE.validate_cli_render(valid_render())
+        old_action = (
+            "Action: TURN THE DIAL (the hand here: numinous render "
+            "times-tables --poke x,y)"
+        )
+        with self.assertRaisesRegex(SMOKE.SmokeError, "phase here"):
+            SMOKE.validate_cli_render(
+                valid_render().replace(SMOKE.CLI_TIMES_TABLES_ACTION, old_action)
+            )
         with self.assertRaisesRegex(SMOKE.SmokeError, "Goal"):
             SMOKE.validate_cli_render(valid_render().replace("Goal:", "Missing:"))
         with self.assertRaisesRegex(SMOKE.SmokeError, "too few rows"):
             SMOKE.validate_cli_render(
-                "Status:\nAction: TURN THE DIAL (the hand here: numinous render "
-                "times-tables --poke x,y)\nGoal: LAND ON EXACTLY 4 LOBES\n"
+                f"Status:\n{SMOKE.CLI_TIMES_TABLES_ACTION}\n"
+                "Goal: LAND ON EXACTLY 4 LOBES\n"
             )
 
     def test_inventory_requires_exact_unique_tool_set(self) -> None:
