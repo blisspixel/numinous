@@ -6,14 +6,14 @@ comfort, and voluntary return play. Only part of that system is automated today.
 This document names both the enforced checks and the quality loops still to be
 built, so an aspiration is never mistaken for a result.
 
-## Evidence snapshot, 2026-08-14
+## Evidence snapshot, 2026-08-15
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 3,563 passing all-target test cases plus three expensive ignored
+  doctests, 3,572 passing all-target test cases plus three expensive ignored
   diagnostics, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
   three-OS test-and-build matrix. The current measured coverage is 95.27%
-  regions and 95.27% lines under the documented exclusions. Each of the four
+  regions and 95.26% lines under the documented exclusions. Each of the four
   packaged release targets installs into a disposable root, renders Times
   Tables through the installed CLI, and completes modern MCP discovery, the
   exact 35-tool inventory, and a real `play_room` call from an isolated profile.

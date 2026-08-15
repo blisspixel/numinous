@@ -399,6 +399,11 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 && numinous_core::room_meta_by_id(id).is_some()
             {
                 journey.visit(id);
+                if name == "play_room"
+                    && args.get("aha_summon").and_then(Value::as_bool) == Some(true)
+                {
+                    journey.consolidate(id);
+                }
             }
         }
         "run_sim" | "sing_expression" => journey.play(),
@@ -1895,63 +1900,30 @@ fn describe_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey
     match find_room_for(id, journey) {
         Some(room) => {
             let m = room.meta();
-            // Deep cuts open by level or by a spent boon, exactly as in the
-            // terminal: knowledge is the loot on every face.
-            let mut cuts = String::new();
-            let mut structured_cuts = Vec::new();
-            for (i, cut) in room.deep_cuts().iter().enumerate() {
-                let need = numinous_core::CUT_LEVELS
-                    .get(i)
-                    .copied()
-                    .unwrap_or(u32::MAX);
-                let by_boon = journey.chosen.contains(&format!("cut:{id}:{i}"));
-                if journey.level() >= need || by_boon {
-                    cuts.push_str(&format!("\n\nDeeper: {cut}"));
-                    structured_cuts.push(json!({
-                        "index": i,
-                        "status": "available",
-                        "unlock_level": need,
-                        "text": cut,
-                    }));
-                } else {
-                    cuts.push_str(&format!("\n\nLOCKED: a deeper cut opens at LV {need}."));
-                    structured_cuts.push(json!({
-                        "index": i,
-                        "status": "locked",
-                        "unlock_level": need,
-                    }));
-                    break;
-                }
-            }
             let goal_line = room
                 .goal()
                 .map(|goal| format!("\nGoal: {goal}"))
                 .unwrap_or_default();
-            let cut0_by_boon = journey.chosen.contains(&format!("cut:{id}:0"));
-            let citation = numinous_core::room_citation_unlocked(id, journey.level(), cut0_by_boon);
-            let reading = citation.map(|c| format!("\n\n{c}")).unwrap_or_default();
             let text = format!(
-                "{} ({})\nWing: {}\nAction: {}{goal_line}\n\n{}\n\nReveal: {}{cuts}{reading}",
+                "{} ({})\nWing: {}\nAction: {}{goal_line}\n\n{}\n\nPlay this room before asking reveal_room for its explanation.",
                 m.title,
                 m.id,
                 m.wing,
                 numinous_core::room_action(room.as_ref()),
                 m.blurb,
-                room.reveal()
             );
-            let mut structured = json!({
+            let structured = json!({
                 "room": m.id,
                 "title": m.title,
                 "wing": m.wing,
                 "action": numinous_core::room_action(room.as_ref()),
                 "goal": room.goal(),
                 "blurb": m.blurb,
-                "reveal": room.reveal(),
-                "deep_cuts": structured_cuts,
+                "next": {
+                    "tool": "play_room",
+                    "id": m.id,
+                },
             });
-            if let Some(citation) = citation {
-                structured["citation"] = json!(citation);
-            }
             tool_structured(&text, structured)
         }
         // Not every name is a room. A few answer anyway, and a few answer
@@ -2217,9 +2189,48 @@ fn reveal_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) 
     };
     match find_room_for(id, journey) {
         Some(room) => {
-            let cut0_by_boon = journey.chosen.contains(&format!("cut:{id}:0"));
-            let citation = numinous_core::room_citation_unlocked(id, journey.level(), cut0_by_boon);
+            let room_id = room.meta().id;
+            if numinous_core::is_engineered_aha_room(room_id) && !journey.has_consolidated(room_id)
+            {
+                return tool_error(
+                    "This explanation is still closed. Play the room, commit its wager, then call play_room with aha_summon true.",
+                );
+            }
+            if !numinous_core::is_engineered_aha_room(room_id) && !journey.visited.contains(room_id)
+            {
+                return tool_error(
+                    "This explanation is still closed. Play the room once, then ask reveal_room again.",
+                );
+            }
+            let cut0_by_boon = journey.chosen.contains(&format!("cut:{room_id}:0"));
+            let citation =
+                numinous_core::room_citation_unlocked(room_id, journey.level(), cut0_by_boon);
             let mut body = numinous_core::explain_text(room.meta().id, room.reveal());
+            let mut structured_cuts = Vec::new();
+            for (i, cut) in room.deep_cuts().iter().enumerate() {
+                let need = numinous_core::CUT_LEVELS
+                    .get(i)
+                    .copied()
+                    .unwrap_or(u32::MAX);
+                let by_boon = journey.chosen.contains(&format!("cut:{room_id}:{i}"));
+                if journey.level() >= need || by_boon {
+                    body.push_str(&format!("\n\nDeeper: {cut}"));
+                    structured_cuts.push(json!({
+                        "index": i,
+                        "status": "available",
+                        "unlock_level": need,
+                        "text": cut,
+                    }));
+                } else {
+                    body.push_str(&format!("\n\nLOCKED: a deeper cut opens at LV {need}."));
+                    structured_cuts.push(json!({
+                        "index": i,
+                        "status": "locked",
+                        "unlock_level": need,
+                    }));
+                    break;
+                }
+            }
             if let Some(citation) = citation {
                 body = format!("{body}\n\n{citation}");
             }
@@ -2227,6 +2238,7 @@ fn reveal_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) 
                 "room": room.meta().id,
                 "title": room.meta().title,
                 "reveal": room.reveal(),
+                "deep_cuts": structured_cuts,
             });
             if let Some(concept) = room.concept() {
                 structured["concept"] = json!(concept);
@@ -2553,9 +2565,10 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
                 Err(message) => return tool_error(&message),
             };
             render_engineered_aha_overlay(canonical_id, engineered_aha.as_ref(), &mut canvas);
-            // Room-owned wagers gate reveal on aha consolidation. The
-            // established K5/goal path still unlocks reveal without aha args.
-            let aha_gates_reveal = aha_request.uses_generation_args();
+            // Every engineered Aha gates its answer on consolidation. A goal
+            // can be visibly met before the player asks the measured gap to
+            // answer, so goalMet and reveal are intentionally separate facts.
+            let aha_gates_reveal = numinous_core::is_engineered_aha_room(canonical_id);
             let aha_allows_reveal = engineered_aha
                 .as_ref()
                 .and_then(|value| value.get("allowReveal"))
@@ -2567,10 +2580,8 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
                 goal_met.then(|| room.reveal())
             };
             // Prefer aha footer for generation-arg visits and for prime/morph/
-            // confirm/consolidated beats. Keep dial/throw status for pure
-            // explore and for the established K5 goal path (four-lobe earn
-            // without place_wager), so PRESS E does not appear when reveal is
-            // already unlocked by goalMet.
+            // confirm/consolidated beats. Keep the room readout for a pure K5
+            // goal path so the public goal and its visible status stay aligned.
             let status = projected_play_status(room_status, aha_request, engineered_aha.as_ref());
             let temporal_evidence = if let Some(pair) = temporal_pair {
                 let from_t = pair.from_t();
@@ -3027,7 +3038,7 @@ fn project_flagship_aha(
                 "kind": "place",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(dial.as_deref())),
-                "earn": aha.earn_label(),
+                "earn": consolidated.then(|| aha.earn_label()).flatten(),
                 "allowReveal": aha.allow_reveal_text(),
                 "canSummon": aha.can_summon()
                     || matches!(aha.beat(), AhaBeat::Morph { .. }),
@@ -3067,7 +3078,7 @@ fn project_flagship_aha(
                 "kind": "number",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(throw_status.as_deref())),
-                "earn": aha.earn_label(),
+                "earn": consolidated.then(|| aha.earn_label()).flatten(),
                 "allowReveal": aha.allow_reveal_text(),
                 "canSummon": aha.can_summon()
                     || matches!(aha.beat(), AhaBeat::Morph { .. }),
@@ -3131,7 +3142,7 @@ fn project_flagship_aha(
                 "kind": "bin",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(room_status.as_deref())),
-                "earn": aha.earn_label(),
+                "earn": consolidated.then(|| aha.earn_label()).flatten(),
                 "allowReveal": aha.allow_reveal_text(),
                 "canSummon": aha.can_summon()
                     || matches!(aha.beat(), AhaBeat::Morph { .. }),
@@ -3201,7 +3212,7 @@ fn project_flagship_aha(
                 "kind": "ending",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(room_status.as_deref())),
-                "earn": aha.earn_label(),
+                "earn": consolidated.then(|| aha.earn_label()).flatten(),
                 "allowReveal": aha.allow_reveal_text(),
                 "canSummon": aha.can_summon()
                     || matches!(aha.beat(), AhaBeat::Morph { .. }),
@@ -3257,7 +3268,7 @@ fn project_flagship_aha(
                 "kind": "speed",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(room_status.as_deref())),
-                "earn": aha.earn_label(),
+                "earn": consolidated.then(|| aha.earn_label()).flatten(),
                 "allowReveal": aha.allow_reveal_text(),
                 "canSummon": aha.can_summon()
                     || matches!(aha.beat(), AhaBeat::Morph { .. }),
@@ -3318,7 +3329,7 @@ fn project_flagship_aha(
                 "kind": "policy",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(room_status.as_deref())),
-                "earn": aha.earn_label(),
+                "earn": consolidated.then(|| aha.earn_label()).flatten(),
                 "allowReveal": aha.allow_reveal_text(),
                 "canSummon": aha.can_summon()
                     || matches!(aha.beat(), AhaBeat::Morph { .. }),
@@ -3395,7 +3406,7 @@ fn project_flagship_aha(
                 "kind": "counter",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(room_status.as_deref())),
-                "earn": aha.earn_label(),
+                "earn": consolidated.then(|| aha.earn_label()).flatten(),
                 "allowReveal": aha.allow_reveal_text(),
                 "canSummon": aha.can_summon()
                     || matches!(aha.beat(), AhaBeat::Morph { .. }),
@@ -6100,8 +6111,9 @@ mod tests {
             "instructions teach flagship aha args: {instructions}"
         );
         assert!(
-            instructions.contains("prefer play_room first"),
-            "instructions warn that describe/reveal can spoil: {instructions}"
+            instructions.contains("describe_room is a safe doorway")
+                && instructions.contains("reveal_room opens only after"),
+            "instructions state the discovery and reveal gates: {instructions}"
         );
         let preferred = handle_request(&json!({
             "jsonrpc":"2.0","id":2,"method":"initialize",
@@ -6983,13 +6995,17 @@ mod tests {
     #[test]
     fn viewer_results_do_not_reveal_journey_levels_or_private_boon_choices() {
         let describe_args = json!({"id": "cult-of-pi"});
-        let baseline_journey = numinous_core::Journey::default();
-        let mut boon_journey = numinous_core::Journey::default();
+        let mut baseline_journey = numinous_core::Journey::default();
+        baseline_journey.visit("cult-of-pi");
+        let mut boon_journey = baseline_journey.clone();
         boon_journey.chosen.insert("cut:cult-of-pi:0".to_string());
         let baseline_description =
             super::describe_room_tool_for_journey(&describe_args, &baseline_journey);
         let boon_description = super::describe_room_tool_for_journey(&describe_args, &boon_journey);
-        assert_ne!(baseline_description, boon_description);
+        assert_eq!(
+            baseline_description, boon_description,
+            "safe descriptions never expose private progression"
+        );
 
         let crack_args = json!({"seed": 11, "digits": 5});
         let seti_args = json!({"seed": 12, "channels": 5});
@@ -6998,12 +7014,6 @@ mod tests {
         let baseline_reveal = super::reveal_room_tool_for_journey(&reveal_args, &baseline_journey);
         let boon_reveal = super::reveal_room_tool_for_journey(&reveal_args, &boon_journey);
         let cases = [
-            (
-                PublicTool::DescribeRoom,
-                describe_args,
-                baseline_description,
-                boon_description,
-            ),
             (
                 PublicTool::RevealRoom,
                 reveal_args,
@@ -8023,10 +8033,30 @@ mod tests {
                 &path,
             );
         }
+        super::record_progress(
+            &json!({
+                "jsonrpc":"2.0","id":54,"method":"tools/call",
+                "params":{"name":"play_room","arguments":{
+                    "id":"kepler-areas","pokes":[[0.8,0.5]],
+                    "speed_wager":"faster","aha_summon":true
+                }}
+            }),
+            &path,
+        );
+        super::record_progress(
+            &json!({
+                "jsonrpc":"2.0","id":55,"method":"tools/call",
+                "params":{"name":"play_room","arguments":{"id":"kepler-laws"}}
+            }),
+            &path,
+        );
 
         let journey = super::load_journey(&path);
-        assert_eq!(journey.visited.len(), 1);
+        assert_eq!(journey.visited.len(), 2);
         assert!(journey.visited.contains("times-tables"));
+        assert!(journey.visited.contains("kepler-laws"));
+        assert!(!journey.visited.contains("kepler-areas"));
+        assert!(journey.has_consolidated("kepler-laws"));
         assert!(!journey.visited.contains("tetractys"));
         assert!(!journey.visited.contains("missing"));
         let _ = std::fs::remove_file(&path);
@@ -8753,6 +8783,7 @@ mod tests {
             &journey,
         );
         assert_eq!(played["isError"], false, "{played}");
+        journey.visit(id);
         let revealed = super::reveal_room_tool_for_journey(&json!({ "id": id }), &journey);
         assert_eq!(revealed["isError"], false, "{revealed}");
 
@@ -8917,21 +8948,18 @@ mod tests {
 
     #[test]
     fn reveal_room_returns_the_insight() {
-        let resp = handle_request(&json!({
-            "jsonrpc":"2.0","id":15,"method":"tools/call",
-            "params":{"name":"reveal_room","arguments":{"id":"times-tables"}}
-        }))
-        .expect("tools/call must respond");
-        let text = resp["result"]["content"][0]["text"]
-            .as_str()
-            .unwrap_or_default();
+        let mut journey = numinous_core::Journey::default();
+        journey.visit("times-tables");
+        journey.consolidate("times-tables");
+        let result = super::reveal_room_tool_for_journey(&json!({"id":"times-tables"}), &journey);
+        let text = result["content"][0]["text"].as_str().unwrap_or_default();
         assert!(text.contains("Mandelbrot"));
         assert!(
             text.contains("THE CONCEPT:"),
             "flagship rooms carry an optional concept before the reveal"
         );
         assert!(
-            resp["result"]["structuredContent"]["concept"]
+            result["structuredContent"]["concept"]
                 .as_str()
                 .unwrap_or_default()
                 .starts_with("THE CONCEPT:"),
@@ -8940,10 +8968,30 @@ mod tests {
         // Fresh journey is below the first deep cut: no citation yet.
         assert!(!text.contains("See also:"));
         assert!(
-            resp["result"]["structuredContent"]["citation"].is_null()
-                || resp["result"]["structuredContent"]
-                    .get("citation")
-                    .is_none()
+            result["structuredContent"]["citation"].is_null()
+                || result["structuredContent"].get("citation").is_none()
+        );
+    }
+
+    #[test]
+    fn reveal_room_requires_play_and_engineered_consolidation() {
+        let fresh = numinous_core::Journey::default();
+        let ordinary = super::reveal_room_tool_for_journey(&json!({"id":"mandelbrot"}), &fresh);
+        assert_eq!(ordinary["isError"], true);
+
+        let mut played = fresh.clone();
+        played.visit("mandelbrot");
+        assert_eq!(
+            super::reveal_room_tool_for_journey(&json!({"id":"mandelbrot"}), &played)["isError"],
+            false
+        );
+        played.visit("times-tables");
+        let held = super::reveal_room_tool_for_journey(&json!({"id":"times-tables"}), &played);
+        assert_eq!(held["isError"], true);
+        assert!(
+            held["content"][0]["text"]
+                .as_str()
+                .is_some_and(|text| text.contains("aha_summon"))
         );
     }
 
@@ -8953,10 +9001,11 @@ mod tests {
             "numinous-mcp-reveal-cite-{}.txt",
             std::process::id()
         ));
-        let at_cut = numinous_core::Journey {
+        let mut at_cut = numinous_core::Journey {
             plays: 20,
             ..Default::default()
         };
+        at_cut.visit("mandelbrot");
         // Level 5 needs T(4)=10 sparks; twenty plays clears the first cut.
         assert!(at_cut.level() >= numinous_core::CUT_LEVELS[0]);
         std::fs::write(&journey, at_cut.to_text()).expect("journey");
@@ -9035,31 +9084,32 @@ mod tests {
     }
 
     #[test]
-    fn times_tables_reveals_only_after_the_k5_goal_is_earned() {
-        let unearned = call(
+    fn times_tables_k5_goal_is_true_but_reveal_waits_for_summon() {
+        let held = call(
             "play_room",
             json!({"id":"times-tables","t":0.375,"width":40,"height":20}),
         );
-        let unearned_content = &unearned["result"]["structuredContent"];
-        assert_eq!(unearned_content["goal"], "LAND ON EXACTLY 4 LOBES");
-        assert_eq!(unearned_content["goalMet"], false);
-        assert!(unearned_content["reveal"].is_null());
+        let held_content = &held["result"]["structuredContent"];
+        assert_eq!(held_content["goal"], "LAND ON EXACTLY 4 LOBES");
+        assert_eq!(held_content["goalMet"], true);
+        assert!(held_content["reveal"].is_null());
         assert!(
-            !unearned["result"]["content"][0]["text"]
+            !held["result"]["content"][0]["text"]
                 .as_str()
                 .unwrap_or_default()
                 .contains("Reveal:")
         );
-        assert_eq!(unearned_content["engineeredAha"]["kind"], "place");
-        assert_eq!(unearned_content["engineeredAha"]["beat"], "explore");
-        assert_eq!(unearned_content["engineeredAha"]["allowReveal"], false);
+        assert_eq!(held_content["engineeredAha"]["kind"], "place");
+        assert_eq!(held_content["engineeredAha"]["beat"], "withheld");
+        assert_eq!(held_content["engineeredAha"]["allowReveal"], false);
+        assert!(held_content["engineeredAha"]["earn"].is_null());
         assert!(
-            unearned_content["status"]
+            held_content["status"]
                 .as_str()
                 .unwrap_or_default()
-                .starts_with("DRAG:DIAL"),
-            "ambient target keeps dial invite: {}",
-            unearned_content["status"]
+                .contains("FOUND"),
+            "goal and status must agree: {}",
+            held_content["status"]
         );
 
         let earned_arguments = json!({
@@ -9073,22 +9123,34 @@ mod tests {
         let earned = call("play_room", earned_arguments.clone());
         let earned_content = &earned["result"]["structuredContent"];
         assert_eq!(earned_content["variation"], 42);
-        // K5 goal path keeps dial status; aha footer is reserved for wager args.
         assert_eq!(earned_content["status"], "K 5.00  CLOSED  4 LOBES  FOUND");
-        assert_eq!(earned_content["engineeredAha"]["earn"], "four-lobes");
+        assert!(earned_content["engineeredAha"]["earn"].is_null());
         assert_eq!(earned_content["goalMet"], true);
+        assert!(earned_content["reveal"].is_null());
         assert!(
-            earned_content["reveal"]
-                .as_str()
-                .is_some_and(|reveal| reveal.contains("Mandelbrot"))
-        );
-        assert!(
-            earned["result"]["content"][0]["text"]
+            !earned["result"]["content"][0]["text"]
                 .as_str()
                 .unwrap_or_default()
                 .contains("Reveal:")
         );
 
+        let mut consolidated_args = earned_arguments.clone();
+        consolidated_args["aha_summon"] = json!(true);
+        let consolidated = call(
+            "play_room",
+            with_response_mode(consolidated_args, "compact"),
+        );
+        let consolidated_content = &consolidated["result"]["structuredContent"];
+        assert_eq!(
+            consolidated_content["engineeredAha"]["beat"],
+            "consolidated"
+        );
+        assert_eq!(consolidated_content["engineeredAha"]["earn"], "four-lobes");
+        assert!(
+            consolidated_content["reveal"]
+                .as_str()
+                .is_some_and(|reveal| reveal.contains("Mandelbrot"))
+        );
         let compact = call("play_room", with_response_mode(earned_arguments, "compact"));
         assert_eq!(
             compact["result"]["structuredContent"],
@@ -9215,6 +9277,26 @@ mod tests {
                 aha.get("wager").is_some_and(|wager| !wager.is_null()),
                 "the player's wager remains visible: {arguments}"
             );
+            assert!(
+                aha.get("earn").is_some_and(Value::is_null),
+                "the internal earn receipt stays closed: {arguments}"
+            );
+            let status = aha
+                .get("status")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            for leaked_grade in ["RIGHT", "WRONG", "NAILED", "CLOSE", "WILD"] {
+                assert!(
+                    !status.contains(leaked_grade),
+                    "grade token {leaked_grade} leaked in {status:?} for {arguments}"
+                );
+            }
+            if arguments["id"] == "galton-board" {
+                assert!(
+                    !status.contains('~'),
+                    "theoretical mode leaked in {status:?}"
+                );
+            }
             for field in answer_fields {
                 assert!(
                     !aha.contains_key(*field),
@@ -9791,7 +9873,7 @@ mod tests {
         );
         let content = &wagered["result"]["structuredContent"];
         assert_eq!(content["engineeredAha"]["beat"], "withheld");
-        assert_eq!(content["engineeredAha"]["earn"], "wager:circle");
+        assert!(content["engineeredAha"]["earn"].is_null());
         assert_eq!(content["engineeredAha"]["allowReveal"], false);
         assert!(content["reveal"].is_null());
         assert!(
@@ -9906,11 +9988,7 @@ mod tests {
         let content = &wagered["result"]["structuredContent"];
         assert_eq!(content["engineeredAha"]["beat"], "withheld");
         assert!(content["reveal"].is_null());
-        assert!(
-            content["engineeredAha"]["earn"]
-                .as_str()
-                .is_some_and(|e| e.starts_with("wager:3.000:"))
-        );
+        assert!(content["engineeredAha"]["earn"].is_null());
 
         let done = call(
             "play_room",
@@ -11778,8 +11856,13 @@ mod tests {
         assert_eq!(structured["wing"], "Number & Pattern");
         assert!(structured["action"].is_string());
         assert_eq!(structured["goal"], "LAND ON EXACTLY 4 LOBES");
-        assert!(structured["reveal"].is_string());
-        assert!(structured["deep_cuts"].is_array());
+        assert_eq!(structured["next"]["tool"], "play_room");
+        for field in ["reveal", "concept", "deep_cuts", "citation"] {
+            assert!(
+                structured.get(field).is_none(),
+                "{field} leaked: {structured}"
+            );
+        }
     }
 
     #[test]
@@ -11791,6 +11874,12 @@ mod tests {
         let _ = std::fs::remove_file(&journey);
         let rooms = numinous_core::all_rooms();
         assert_eq!(rooms.len(), 354);
+        let mut earned = numinous_core::Journey::default();
+        for room in &rooms {
+            earned.visit(room.meta().id);
+            earned.consolidate(room.meta().id);
+        }
+        std::fs::write(&journey, earned.to_text()).expect("earned journey");
 
         for room in rooms {
             let meta = room.meta();
@@ -11810,8 +11899,12 @@ mod tests {
                 meta.id
             );
             assert_eq!(description["blurb"], meta.blurb, "describe {}", meta.id);
-            assert_eq!(description["reveal"], room.reveal(), "describe {}", meta.id);
-            assert!(description["deep_cuts"].is_array(), "describe {}", meta.id);
+            assert!(description.get("reveal").is_none(), "describe {}", meta.id);
+            assert!(
+                description.get("deep_cuts").is_none(),
+                "describe {}",
+                meta.id
+            );
 
             let revealed = super::reveal_room_tool(&args, &journey);
             assert_eq!(revealed["isError"], false, "reveal {}", meta.id);
@@ -11819,6 +11912,7 @@ mod tests {
             assert_eq!(revelation["room"], meta.id, "reveal {}", meta.id);
             assert_eq!(revelation["title"], meta.title, "reveal {}", meta.id);
             assert_eq!(revelation["reveal"], room.reveal(), "reveal {}", meta.id);
+            assert!(revelation["deep_cuts"].is_array(), "reveal {}", meta.id);
 
             let listened = super::listen_room_tool(&args);
             assert_eq!(listened["isError"], false, "listen {}", meta.id);
@@ -11899,12 +11993,13 @@ mod tests {
         for i in 0..256 {
             journey.visit(&format!("room-{i}"));
         }
+        journey.visit("cult-of-pi");
         assert_eq!(journey.level(), numinous_core::MAX_LEVEL);
         std::fs::write(&path, journey.to_text()).expect("journey");
         let resp = handle_request_with(
             &json!({
                 "jsonrpc":"2.0","id":111,"method":"tools/call",
-                "params":{"name":"describe_room","arguments":{"id":"cult-of-pi"}}
+                "params":{"name":"reveal_room","arguments":{"id":"cult-of-pi"}}
             }),
             &path,
         )

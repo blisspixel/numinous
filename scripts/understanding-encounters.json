@@ -1,12 +1,12 @@
 {
-  "protocolVersion": "0.4-v5",
+  "protocolVersion": "0.4-v6",
   "rooms": [
     {
       "calls": [
         {"arguments": {"id": "times-tables", "response_mode": "compact", "t": 0.125}, "role": "encounter", "tool": "play_room"},
         {"arguments": {"id": "times-tables", "pokes": [[0.5, 0.5]], "response_mode": "compact", "t": 0.25}, "role": "interaction", "tool": "play_room"},
         {"arguments": {"id": "times-tables", "response_mode": "compact", "t": 0.375}, "role": "continuation", "tool": "play_room"},
-        {"arguments": {"id": "times-tables"}, "role": "reveal", "tool": "reveal_room"}
+        {"arguments": {"aha_summon": true, "id": "times-tables", "place_wager": "mandelbrot", "response_mode": "compact", "t": 0.375}, "role": "reveal", "tool": "play_room"}
       ],
       "controlPrompt": "Explain how the revealed modular rule should govern a new point before continuing.",
       "expectedAnswer": "increase",
@@ -21,7 +21,7 @@
         {"arguments": {"id": "double-pendulum", "response_mode": "compact", "t": 0.125}, "role": "encounter", "tool": "play_room"},
         {"arguments": {"id": "double-pendulum", "pokes": [[0.2, 0.8]], "response_mode": "compact", "t": 0.25}, "role": "interaction", "tool": "play_room"},
         {"arguments": {"id": "double-pendulum", "response_mode": "compact", "t": 0.375}, "role": "continuation", "tool": "play_room"},
-        {"arguments": {"id": "double-pendulum"}, "role": "reveal", "tool": "reveal_room"}
+        {"arguments": {"aha_summon": true, "ending_wager": "together", "gesture": [{"kind": "down", "t": 0.1, "x": 0.55, "y": 0.35}, {"kind": "up", "t": 0.15, "x": 0.7, "y": 0.55}], "id": "double-pendulum", "response_mode": "compact", "t": 0.15}, "role": "reveal", "tool": "play_room"}
       ],
       "controlPrompt": "Explain how deterministic evolution and predictability differ before continuing.",
       "expectedAnswer": "reset-near-zero",
@@ -36,7 +36,7 @@
         {"arguments": {"id": "game-of-life", "response_mode": "compact", "t": 0.125}, "role": "encounter", "tool": "play_room"},
         {"arguments": {"id": "game-of-life", "pokes": [[0.5, 0.5]], "response_mode": "compact", "t": 0.25}, "role": "interaction", "tool": "play_room"},
         {"arguments": {"id": "game-of-life", "response_mode": "compact", "t": 0.375}, "role": "continuation", "tool": "play_room"},
-        {"arguments": {"id": "game-of-life"}, "role": "reveal", "tool": "reveal_room"}
+        {"arguments": {"id": "game-of-life", "response_mode": "compact", "t": 0.5}, "role": "reveal", "tool": "play_room"}
       ],
       "controlPrompt": "Explain how the revealed B3/S23 rule determines a cell update before continuing.",
       "expectedAnswer": "plants-glider",
@@ -51,7 +51,7 @@
         {"arguments": {"id": "galton-board", "response_mode": "compact", "t": 0.125}, "role": "encounter", "tool": "play_room"},
         {"arguments": {"id": "galton-board", "pokes": [[0.5, 0.5]], "response_mode": "compact", "t": 0.25}, "role": "interaction", "tool": "play_room"},
         {"arguments": {"id": "galton-board", "response_mode": "compact", "t": 0.375}, "role": "continuation", "tool": "play_room"},
-        {"arguments": {"id": "galton-board"}, "role": "reveal", "tool": "reveal_room"}
+        {"arguments": {"aha_summon": true, "bin_wager": 8, "id": "galton-board", "pokes": [[0.5, 0.5]], "response_mode": "compact", "t": 0.375}, "role": "reveal", "tool": "play_room"}
       ],
       "controlPrompt": "Explain how repeated independent left or right turns create the revealed landing distribution before continuing.",
       "expectedAnswer": "center",
@@ -78,5 +78,5 @@
       "revealMaterial": "For y = sin(k*x), nonzero integer k changes period to 2*pi/abs(k) while preserving odd parity. For y = cos(k*x), it changes period the same way while preserving even parity. Adding unlike sine and cosine terms usually yields neither parity."
     }
   ],
-  "schemaVersion": "numinous-understanding-encounters-v5"
+  "schemaVersion": "numinous-understanding-encounters-v6"
 }

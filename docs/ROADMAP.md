@@ -36,7 +36,7 @@ know it is done), and the **risk it retires**.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.4.0-alpha.2, Understanding Alpha active with its exit
+**Current release state: 0.4.0-alpha.3, Understanding Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are complete. Human stranger sessions sit with 0.8
 Closed Beta and 1.0 First Light.
@@ -349,7 +349,7 @@ journal
 sovereignty is complete on the clean-process machine acceptance bar.
 Detail below and in the version sections.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,563 passing all-target test cases plus three expensive ignored diagnostics, locked build, Windows release gate, 95.27% region coverage, and 95.27% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,572 passing all-target test cases plus three expensive ignored diagnostics, locked build, Windows release gate, 95.27% region coverage, and 95.26% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -685,6 +685,22 @@ Detail below and in the version sections.
   with its exact apsidal speed ratio. Four tunings earn the observation path
   without forcing a call. Core, App, MCP, keyless-prompt, and visual-evidence
   regressions are green.
+- **Done (source-blind packaged playtest correction, August 15, 2026):** an
+  external agentic player exercised the published Linux CLI and MCP binaries
+  without reading Rust source and supplied exact calls plus repeated
+  reproductions. Safe description is now separate from earned reveal; the
+  seven withheld wager beats retain the commitment but hide every grade and
+  answer-bearing field; Times Tables goal state and status share one live K=5
+  predicate; Kepler aliases share one canonical Journey star; Galton prime
+  hides the theoretical mode; the terminal action teaches the working phase
+  doorway; and local profile overrides name their file-path contract. Real CLI
+  and MCP subprocess tests lock the reported paths. The same App polish slice
+  makes Q quit from fullscreen and restores Skip Track as a full-size Settings
+  action. The unregistered Understanding Alpha dry-run advances to protocol
+  `0.4-v6`, whose fourth call earns the room reveal in one stateless request
+  rather than bypassing the public gate from a fresh profile. Both method
+  auditors accept the refreshed registration. See `docs/PLAYTESTS.md` for the
+  evidence boundary.
 - **Done (Parrondo policy wager, sixth aha room):** one completed rule
   selection primes A, B, or ABB. App keys and its bottom band, plus MCP
   `policy_wager`, reach the same pure five-beat machine. The room's former ABAB
@@ -1232,7 +1248,7 @@ without relying on the founder's machine or undocumented context?"
 ### 0.2 Flagship Proof ("does it slap?")
 
 **Status:** exit met on the agent-and-machine bar (2026-07-24). The current
-`0.4.0-alpha.2` line preserves that evidence. Human stranger hallway is **not**
+`0.4.0-alpha.3` line preserves that evidence. Human stranger hallway is **not**
 part of this exit; it is deferred to 0.8 / 1.0.
 
 **Goal:** Build **one** flagship room (and a second on the same pattern) to
@@ -1828,7 +1844,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-08-14)
 
-The package is **0.4.0-alpha.2**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.3**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -1856,7 +1872,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization with title, author, era, and lineage, links, plotting, animation, singing, exact paused App reopen, the one-key share trio, the local Gallery wall, and fork with recorded descent exist | Editable prose credit in the capsule, safe share preview for incoming links, and clean-install round trip |
-| Rigor and care are provable | 3,563 passing all-target test cases plus three expensive ignored diagnostics, 95.27% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a separately attested SPDX Rust plus packaged-native SBOM | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
+| Rigor and care are provable | 3,572 passing all-target test cases plus three expensive ignored diagnostics, 95.26% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a separately attested SPDX Rust plus packaged-native SBOM | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
@@ -1873,7 +1889,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.4.0-alpha.2** because Understanding Alpha is the active
+Package label is **0.4.0-alpha.3** because Understanding Alpha is the active
 milestone. The alpha suffix says its exit remains open. External registration,
 calibration, fresh independent review, allocation freeze, and the qualifying
 cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active

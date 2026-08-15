@@ -80,7 +80,17 @@ observations, allowing room-defined causal evolution. The phases are exact
 comparison points, not a claim about wall time, lived duration, or every state
 between them. A zero cell delta is honest evidence that the two ASCII
 observations match at that resolution, not proof that the mathematical state is
-unchanged.
+unchanged. Kepler's poke-tuned ellipse is intentionally phase-static in this
+view, so its zero temporal delta should send the player toward a causal gesture
+or the staged speed wager rather than imply fabricated orbital motion.
+
+Discovery preserves the wager loop. `describe_room` returns only a safe doorway:
+title, wing, action, optional goal, blurb, and the next play call. `reveal_room`
+opens after one real play for an ordinary room and after persisted consolidation
+for an engineered wager room. At the withheld beat, the committed wager and
+summon invitation remain visible while earn, grade, truth, and punchline remain
+absent. The answer therefore arrives as feedback only after the player chooses
+to cross the measured gap.
 
 ## MCP-game conventions (July 2026 survey)
 

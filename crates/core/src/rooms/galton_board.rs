@@ -487,23 +487,12 @@ impl Room for GaltonBoard {
         let p_right = COIN_PROBABILITIES[coin];
         let rights = trace.last().copied().unwrap_or(0);
         let balls = wave_count.saturating_mul(BALLS_PER_WAVE);
-        let counts = Self::experiment_histogram(coin, wave_count, self.seed);
-        let weighted: f64 = counts
-            .iter()
-            .enumerate()
-            .map(|(bin, &count)| bin as f64 * count as f64)
-            .sum();
-        let mean = if balls == 0 {
-            0.0
-        } else {
-            weighted / balls as f64
-        };
-        let expected = BOARD_ROWS as f64 * p_right;
         let probability = format!("{p_right:.2}");
         let probability = probability.strip_prefix('0').unwrap_or(&probability);
-        // Action result first (DROP + last landing), then probability and
-        // mean-versus-expectation metrics. Optional B{n}H/M grades a
-        // move-committed one-ball bet against the highlighted last ball.
+        // Action result first (DROP + last landing), then the selected coin.
+        // The theoretical mode stays absent until the staged wager resolves.
+        // Optional B{n}H/M grades a move-committed one-ball bet against the
+        // highlighted last ball, which is a separate immediate hand action.
         // Compact enough for the App 360-wide footer budget.
         let grade = bet.map(|bin| {
             if bin == rights {
@@ -521,7 +510,7 @@ impl Room for GaltonBoard {
             format!("DROP {wave_count}x64={balls}")
         };
         Some(format!(
-            "{drop} L{rights}R P{probability} M{mean:.1}~{expected:.1}{grade}"
+            "{drop} L{rights}R P{probability}{grade}"
         ))
     }
 
@@ -1214,8 +1203,8 @@ mod tests {
             status.contains("P.70"),
             "probability stays legible: {status}"
         );
-        assert!(status.contains('M'));
-        assert!(status.contains("~11.2")); // 16 rows * 0.70
+        assert!(!status.contains("~"), "the theoretical peak stays closed: {status}");
+        assert!(!status.contains("M11"), "the answer stays closed: {status}");
         assert!(status.contains('L'));
         assert!(status.contains('R'));
         assert!(

@@ -2274,6 +2274,7 @@ impl App {
             }
             menu::MenuIntent::CycleEra => self.cycle_visual_era(),
             menu::MenuIntent::CycleWindowMode => self.cycle_window_mode(),
+            menu::MenuIntent::SkipRadioTrack => self.skip_radio_track(),
             menu::MenuIntent::ToggleFullscreen => self.toggle_fullscreen(),
             menu::MenuIntent::Quit => self.quit_requested = true,
             menu::MenuIntent::RestartActivity(kind) => {
@@ -2356,6 +2357,21 @@ impl App {
         };
         self.apply_menu_intent(intent);
         true
+    }
+
+    fn handle_quit_key(&mut self, key: &Key, repeat: bool) -> bool {
+        if repeat || self.studio || self.console.is_open() {
+            return false;
+        }
+        if matches!(
+            key,
+            Key::Character(text) if text.as_str().eq_ignore_ascii_case("q")
+        ) {
+            self.input_mode = input_legend::InputMode::KeyboardMouse;
+            self.quit_requested = true;
+            return true;
+        }
+        false
     }
 
     fn show_mode_active(&self) -> bool {
@@ -3233,6 +3249,31 @@ impl App {
             Some(_) => None,
         };
         self.tune_in();
+    }
+
+    fn skip_radio_track(&mut self) {
+        self.clear_pointer_state();
+        let Some(station) = self.radio else {
+            self.banner = Some(feedback::radio_skip_needs_station());
+            return;
+        };
+        let station_name = numinous_core::STATIONS[station].name;
+        let track_count = self.radio_paths.len();
+        if track_count == 0 {
+            self.banner = Some(feedback::radio_skip_unavailable(station_name));
+            return;
+        }
+        self.radio_index = (self.radio_index + 1) % track_count;
+        if self.radio_play_or_advance(0.0) {
+            self.banner = Some(feedback::radio_skip(
+                station_name,
+                self.radio_index + 1,
+                track_count,
+            ));
+        } else {
+            self.update_audio();
+            self.banner = Some(feedback::radio_skip_unavailable(station_name));
+        }
     }
 
     fn handle_gamepad_command(&mut self, command: gamepad::Command) {
@@ -4354,6 +4395,23 @@ impl App {
         self.nontransitive_aha.note_choices(chosen, choices);
     }
 
+    fn record_current_aha_consolidation(&mut self) {
+        let room_id = self.rooms[self.current].meta().id;
+        let consolidated = match room_id {
+            "times-tables" => self.times_tables_aha.allow_reveal_text(),
+            "buffon-needle" => self.buffon_aha.allow_reveal_text(),
+            "galton-board" => self.galton_aha.allow_reveal_text(),
+            "double-pendulum" => self.pendulum_aha.allow_reveal_text(),
+            "kepler-laws" => self.kepler_aha.allow_reveal_text(),
+            "parrondo" => self.parrondo_aha.allow_reveal_text(),
+            "nontransitive" => self.nontransitive_aha.allow_reveal_text(),
+            _ => false,
+        };
+        if consolidated && self.journey.consolidate(room_id) {
+            self.journey_changed();
+        }
+    }
+
     /// E / Inspect: summon staged aha on flagship rooms; elsewhere toggle reveal.
     fn toggle_inspect(&mut self) {
         if self.the_show || self.studio {
@@ -4370,6 +4428,7 @@ impl App {
             {
                 if self.times_tables_aha.summon() {
                     self.show_info = false;
+                    self.record_current_aha_consolidation();
                 }
                 return;
             }
@@ -4388,6 +4447,7 @@ impl App {
             {
                 if self.buffon_aha.summon() {
                     self.show_info = false;
+                    self.record_current_aha_consolidation();
                 }
                 return;
             }
@@ -4405,6 +4465,7 @@ impl App {
             {
                 if self.galton_aha.summon() {
                     self.show_info = false;
+                    self.record_current_aha_consolidation();
                 }
                 return;
             }
@@ -4422,6 +4483,7 @@ impl App {
             {
                 if self.pendulum_aha.summon() {
                     self.show_info = false;
+                    self.record_current_aha_consolidation();
                 }
                 return;
             }
@@ -4439,6 +4501,7 @@ impl App {
             {
                 if self.kepler_aha.summon() {
                     self.show_info = false;
+                    self.record_current_aha_consolidation();
                 }
                 return;
             }
@@ -4456,6 +4519,7 @@ impl App {
             {
                 if self.parrondo_aha.summon() {
                     self.show_info = false;
+                    self.record_current_aha_consolidation();
                 }
                 return;
             }
@@ -4473,6 +4537,7 @@ impl App {
             {
                 if self.nontransitive_aha.summon() {
                     self.show_info = false;
+                    self.record_current_aha_consolidation();
                 }
                 return;
             }
@@ -5529,6 +5594,9 @@ impl ApplicationHandler for App {
                 ..
             } => {
                 self.clear_pointer_state();
+                if self.handle_quit_key(&logical_key, repeat) {
+                    return;
+                }
                 if self.handle_menu_key(&logical_key, repeat) {
                     self.input_mode = input_legend::InputMode::KeyboardMouse;
                     return;
@@ -5908,10 +5976,6 @@ impl ApplicationHandler for App {
                                 let _ = self.commit_nontransitive_call(die);
                             }
                         }
-                        // Q swaps the era, like swapping weapons.
-                        Key::Character(c) if c.as_str() == "q" => {
-                            self.cycle_visual_era();
-                        }
                         // R returns this visit to its initial state. Moving to a
                         // different room still deals the next variation.
                         Key::Character(c) if c.as_str() == "r" => {
@@ -5962,6 +6026,10 @@ impl ApplicationHandler for App {
                         // Y turns the radio dial: off, then station by station.
                         Key::Character(c) if c.as_str() == "y" && !repeat => {
                             self.cycle_radio();
+                        }
+                        // N advances the current radio station by one track.
+                        Key::Character(c) if c.as_str().eq_ignore_ascii_case("n") => {
+                            self.skip_radio_track();
                         }
                         // P keeps the picture: the postcard key.
                         Key::Character(c) if c.as_str() == "p" => {
@@ -8474,6 +8542,21 @@ mod tests {
     }
 
     #[test]
+    fn q_quits_outside_text_entry_and_never_repeats() {
+        let mut app = headless("numinous_app_test_q_quit.txt");
+        assert!(app.handle_quit_key(&Key::Character("Q".into()), false));
+        assert!(app.quit_requested);
+
+        app.quit_requested = false;
+        assert!(!app.handle_quit_key(&Key::Character("q".into()), true));
+        assert!(!app.quit_requested);
+        app.studio = true;
+        assert!(!app.handle_quit_key(&Key::Character("q".into()), false));
+        assert!(!app.quit_requested, "Studio keeps q as formula text");
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
     fn journey_banner_preserves_the_first_contact_clock_and_card() {
         let mut banner = Some(super::feedback::level_up(2, 0));
         let mut phase = 0.0;
@@ -8624,13 +8707,20 @@ mod tests {
         assert!(app.menu.focus(MenuItemId::Settings));
         app.handle_gamepad_command(Command::PrimaryDown);
         assert_eq!(app.menu.route(), MenuRoute::Settings);
+        assert!(app.menu.focus(MenuItemId::SkipTrack));
+        app.handle_gamepad_command(Command::PrimaryDown);
+        assert_eq!(app.menu.route(), MenuRoute::Settings);
+        assert_eq!(
+            app.banner.as_ref().map(|banner| banner.lines()),
+            Some(&["RADIO OFF".to_string(), "Y CHOOSES A STATION".to_string()][..])
+        );
+        app.handle_gamepad_command(Command::Back);
+        assert_eq!(app.menu.route(), MenuRoute::Home);
         assert!(app.menu.focus(MenuItemId::Controls));
         app.handle_gamepad_command(Command::PrimaryDown);
         assert_eq!(app.menu.route(), MenuRoute::Controls);
         app.handle_gamepad_command(Command::PrimaryDown);
         assert!(app.show_help, "Controls has no hidden launch action");
-        assert_eq!(app.menu.route(), MenuRoute::Settings);
-        app.handle_gamepad_command(Command::Back);
         assert_eq!(app.menu.route(), MenuRoute::Home);
 
         let _ = std::fs::remove_file(&app.journey_file);
@@ -10277,6 +10367,38 @@ mod tests {
             "the record has music in it"
         );
         let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn skip_track_advances_the_rotation_and_explains_unavailable_states() {
+        let dir = std::env::temp_dir().join("numinous_radio_skip_test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create dir");
+        let first = dir.join("trance-001.wav");
+        let second = dir.join("trance-002.wav");
+        write_test_wav(&first, 1, 2);
+        write_test_wav(&second, 1, 2);
+
+        let mut app = headless("numinous_app_test_radio_skip.txt");
+        app.skip_radio_track();
+        assert_eq!(
+            app.banner.as_ref().map(|banner| banner.lines()),
+            Some(&["RADIO OFF".to_string(), "Y CHOOSES A STATION".to_string()][..])
+        );
+
+        app.radio = Some(0);
+        app.radio_paths = vec![first, second];
+        app.radio_index = 0;
+        app.skip_radio_track();
+        assert_eq!(app.radio_index, 1);
+        assert!(!app.radio_track.is_empty());
+        assert_eq!(
+            app.banner.as_ref().map(|banner| banner.lines()),
+            Some(&["RADIO: NUMINA FM".to_string(), "NEXT TRACK 2/2".to_string()][..])
+        );
+
+        let _ = std::fs::remove_dir_all(dir);
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
