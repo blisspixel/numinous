@@ -4097,9 +4097,26 @@ macro_rules! hidden_constructor_array {
 const CATALOG_CONSTRUCTORS: &[RoomConstructor] = &catalog_rooms!(catalog_constructor_array);
 const HIDDEN_ROOM_CONSTRUCTORS: &[HiddenRoomConstructor] = &hidden_rooms!(hidden_constructor_array);
 
+/// Compatibility spellings that resolve to one canonical listed-room id.
+///
+/// Aliases never appear in discovery, Journey state, or serialized replay.
+/// Construction returns the canonical room, whose metadata remains the only
+/// identity every face publishes.
+const ROOM_ID_ALIASES: &[(&str, &str)] = &[("kepler-areas", "kepler-laws")];
+
+/// Return the catalog identity for a listed room or compatibility alias.
+#[must_use]
+pub fn canonical_room_id(id: &str) -> &str {
+    ROOM_ID_ALIASES
+        .iter()
+        .find_map(|(alias, canonical)| (*alias == id).then_some(*canonical))
+        .unwrap_or(id)
+}
+
 /// Find listed room metadata without constructing or rendering a room.
 #[must_use]
 pub fn room_meta_by_id(id: &str) -> Option<RoomMeta> {
+    let id = canonical_room_id(id);
     ROOM_CATALOG
         .iter()
         .find(|metadata| metadata.id == id)
@@ -4114,6 +4131,7 @@ pub(crate) fn construct_all(variation: u64) -> Vec<Box<dyn Room>> {
 }
 
 pub(crate) fn construct_by_id(id: &str, variation: u64) -> Option<Box<dyn Room>> {
+    let id = canonical_room_id(id);
     ROOM_CATALOG
         .iter()
         .position(|metadata| metadata.id == id)
@@ -4168,13 +4186,25 @@ mod tests {
     }
 
     #[test]
-    fn metadata_lookup_is_listed_only() {
+    fn metadata_lookup_hides_hidden_rooms_and_resolves_aliases() {
         assert_eq!(
             room_meta_by_id("times-tables").map(|metadata| metadata.title),
             Some("Times Tables")
         );
+        assert_eq!(
+            room_meta_by_id("kepler-areas").map(|metadata| metadata.id),
+            Some("kepler-laws")
+        );
         assert!(room_meta_by_id("tetractys").is_none());
         assert!(room_meta_by_id("missing").is_none());
+    }
+
+    #[test]
+    fn compatibility_alias_constructs_the_canonical_varied_room() {
+        let alias = construct_by_id("kepler-areas", 17).expect("known alias");
+        let canonical = construct_by_id("kepler-laws", 17).expect("canonical room");
+        assert_eq!(alias.meta(), canonical.meta());
+        assert_eq!(alias.meta().id, "kepler-laws");
     }
 
     #[test]
@@ -4187,6 +4217,16 @@ mod tests {
                     .all(|earlier| earlier.id != current.id),
                 "duplicate listed or hidden room id: {}",
                 current.id
+            );
+        }
+        for (alias, canonical) in ROOM_ID_ALIASES {
+            assert!(
+                metadata.iter().all(|room| room.id != *alias),
+                "room alias collides with listed or hidden id: {alias}"
+            );
+            assert!(
+                ROOM_CATALOG.iter().any(|room| room.id == *canonical),
+                "room alias points outside the listed catalog: {alias}"
             );
         }
     }

@@ -170,6 +170,10 @@ fn compact_mode_is_discoverable_and_compatible_over_real_stdio() {
         call(4, Some("compact")),
         call(5, Some("brief")),
         json!({"jsonrpc":"2.0","id":6,"method":"ping"}),
+        json!({
+            "jsonrpc":"2.0","id":7,"method":"tools/call",
+            "params":{"name":"list_rooms","arguments":{"response_mode":"compact"}}
+        }),
     ]);
     let by_id = |id: u64| -> &Value {
         replies
@@ -200,6 +204,22 @@ fn compact_mode_is_discoverable_and_compatible_over_real_stdio() {
     assert!(
         by_id(6)["result"].is_object(),
         "server continues after error"
+    );
+    let compact_catalog = text_of(by_id(7));
+    for starter in [
+        "times-tables",
+        "double-pendulum",
+        "kepler-laws",
+        "mandelbrot",
+    ] {
+        assert!(
+            compact_catalog.contains(starter),
+            "compact catalog omitted {starter}: {compact_catalog}"
+        );
+    }
+    assert_eq!(
+        by_id(7)["result"]["structuredContent"]["count"].as_u64(),
+        Some(numinous_core::ROOM_CATALOG.len() as u64)
     );
 }
 

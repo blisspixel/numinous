@@ -5,6 +5,51 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.2] - 2026-08-14
+
+- The native App keeps its original opaque, text-first Cabinet and power
+  console character while replacing the long flat help index with four short
+  categories: Modes, Games, Settings, and Controls. No selectable page has
+  more than six rows. Compact windows show three adjacent rows so the menu's
+  shape remains visible, and the existing text command line opens directly
+  from the Cabinet with Backtick or Tilde.
+- Desktop menu type now scales in whole pixel steps from the live viewport,
+  including the selected description, Controls page, and command legend.
+  A dedicated wide 7 by 7 cartridge face separates the Cabinet from the more
+  compact room HUD. Fullscreen no longer leaves the footer at its smallest
+  scale. `F` is a direct fullscreen toggle, the fullscreen legend explicitly
+  says how to return to windowed mode, and Enter on the Window Mode setting
+  still cycles windowed, borderless, and exclusive display.
+- The Cabinet front page has a large `QUIT` row with no letter shortcut. It
+  closes through the same Journey-preserving path as the window button, while
+  the keyboard legend also names `Alt+F4` as the system-wide close command.
+- Modes, Games, Settings, and Controls use focused text submenus. An activity opens its own
+  nondestructive pause menu with Resume, truthful restart availability,
+  contextual controls, options, and leave. Keyboard, pointer, and controller
+  navigation share one typed state model and one layout for drawing and hit
+  testing. Pointer activation requires press and release on the same target,
+  repeated keys do not fire actions, and hidden shortcuts cannot activate
+  invisible destinations. No client, tool, or model identity appears in the
+  App menu.
+- Volume, mute, Visual Era, and window mode now persist through a strict
+  versioned Rust preference document. Reads are bounded, writes use the shared
+  lock and atomic replacement path, malformed existing state is preserved and
+  reported, and complete local erasure inventories and removes the preference
+  store while selective erasure leaves it alone.
+- Engineered Aha answer fields now remain absent until consolidation in Times
+  Tables, Buffon's Needle, Galton Board, Double Pendulum, Kepler Areas,
+  Parrondo's Trap, and Nontransitive Dice. The wager remains visible while the
+  truth, grading, punchline, and other answer-bearing measurements stay closed.
+- `kepler-areas` is a compatibility alias for the canonical `kepler-laws` room
+  across metadata lookup, construction, wager routing, and MCP results. Compact
+  room discovery now names four stable starter ids, and the POSIX installer
+  handles an unset `SHELL` without failing its profile check.
+- The complete Windows release gate passes with 3,563 all-target Rust cases,
+  three expensive ignored diagnostics, 95.27% region coverage, and 95.27% line
+  coverage under the documented exclusions. The same gate validates all 2,913
+  deterministic App screens, external player and agent cohorts, packaging,
+  installer safety, Agent Plugins, provenance, and supply-chain policy.
+
 ## [0.4.0-alpha.1] - 2026-08-14
 
 - The development line advances to `0.4.0-alpha.1`. The package minor now

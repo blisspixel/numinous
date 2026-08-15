@@ -75,6 +75,7 @@ pub mod party;
 pub mod persistence;
 pub mod photosensitivity;
 pub mod predict;
+pub mod preferences;
 pub mod quiz;
 pub mod radio;
 pub mod raster;
@@ -154,9 +155,9 @@ pub use persistence::{
     LocalScoresInventory, LocalStateEraseError, LocalStateEraseSelection, LocalStateInventory,
     LocalStateLock, LocalStatePaths, correct_journal_file, erase_journal_file, erase_local_state,
     inspect_journal_file, inspect_local_state, load_journal_file, load_journey_file,
-    load_scoreboard_file, lock_local_state, persist_journey_delta, read_journey_file,
-    record_journal_file, record_score_file, remove_persisted_file, resolve_local_state_paths,
-    try_load_journal_file,
+    load_scoreboard_file, lock_local_state, persist_app_preferences_file, persist_journey_delta,
+    read_app_preferences_file, read_journey_file, record_journal_file, record_score_file,
+    remove_persisted_file, resolve_local_state_paths, try_load_journal_file,
 };
 pub use photosensitivity::{
     DARK_CEILING, GENERAL_FLASH_DELTA, MAX_FLASHES_PER_SECOND, count_flashes, flashes_per_second,
@@ -166,6 +167,9 @@ pub use predict::{
     Band, Prediction, PredictionCurveError, PredictionCurveGrade, PredictionCurveSample,
     PredictionGrade, grade_prediction, grade_prediction_curve, pose_prediction,
     prediction_rate_window,
+};
+pub use preferences::{
+    AppPreferences, PREFERENCES_SCHEMA_VERSION, PreferencesError, WindowModePreference,
 };
 pub use quiz::{ICONIC, QuizChoice, QuizRound, build_round, build_round_pool, build_round_sized};
 pub use radio::{STATIONS, Station, brief_for, length_for, station};
@@ -182,7 +186,7 @@ pub use room::{
     RoomInput, RoomMeta, RoomMetadata, held_pokes_from_inputs, inputs_from_pokes, latest_gesture,
     pokes_from_inputs, renderable_poke_count, room_action, room_touch_action,
 };
-pub use rooms::{ROOM_CATALOG, room_meta_by_id};
+pub use rooms::{ROOM_CATALOG, canonical_room_id, room_meta_by_id};
 pub use scores::Scoreboard;
 pub use secret::{akousma, behind_the_veil, deep_akousma};
 pub use seti::{SetiChannel, SetiScan, build_scan};

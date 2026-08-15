@@ -3,7 +3,7 @@
 How Numinous feels, moment to moment, and the rules that keep it feeling that way.
 
 **Implementation boundary, 2026-07-13:** this is the experience specification,
-not a claim that every element below ships in 0.4.0-alpha.1. The native app,
+not a claim that every element below ships in 0.4.0-alpha.2. The native app,
 CLI, MCP face, catalog, Show, deterministic room voices, four Visual Eras,
 Studio expression surface, and PNG postcard export are built. The full theme
 system, loop export, native deep-link reopening, creator platform, and complete
@@ -135,12 +135,25 @@ its resource and compatibility contracts are proven. See **`STUDIO.md`**.
 
 ## The Cabinet (the shell / hub)
 
-The connective tissue between rooms. It must feel like a *place*, not a menu.
+The connective tissue between rooms. Its front door is deliberately a dark,
+opaque, cartridge-era text screen, not a modern dashboard or a wall of cards.
 
-- A dark hall of glowing tiles, each a **live, animated preview** of its room (a looping micro-visual, the room breathing).
-- Rooms grouped into **Wings** by theme (see `ROOMS.md`): *Emergence, Waves & Sound, Infinity & Fractals, Number & Pattern, Shape & Space, Chance & Order.*
-- Gentle **meta-progression**: playing a room to its Revelation "collects a Constant" (π, e, φ, i, ℵ₀, …), a light, optional completionist thread, purely for the joy of the set, never a gate.
-- An **Ambient / Performance mode**: pick rooms into a playlist and let Numinous run itself as generative art / a screensaver / a VJ backdrop, the "just leave it on, it's beautiful" mode that also seeds sharing.
+- Four large category choices open short Modes, Games, Settings, and Controls
+  lists, followed by a deliberate Quit row. No selectable page has more than
+  six rows.
+- A fixed arrow, single-letter shortcuts, a wide 7 by 7 cartridge face, and
+  generous negative space preserve the directness of an NES or SNES command
+  menu. Desktop type grows in whole pixel steps with the viewport, including
+  descriptions and the command legend.
+- Rooms remain grouped into **Wings** by theme (see `ROOMS.md`): *Emergence,
+  Waves & Sound, Infinity & Fractals, Number & Pattern, Shape & Space, Chance &
+  Order.* Discovery of those places belongs inside play, not in a crowded front
+  page.
+- Gentle **meta-progression** keeps Constants as a light, optional thread,
+  purely for the joy of the set and never as a gate.
+- The **Watch** mode lets Numinous wander as generative art. A future live room
+  gallery can be an in-world destination, but it must not replace the readable
+  text front door.
 
 ## The anti-patterns list (paste this above your monitor)
 

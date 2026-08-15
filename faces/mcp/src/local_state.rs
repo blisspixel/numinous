@@ -44,6 +44,7 @@ fn inventory_json(inventory: &LocalStateInventory) -> Value {
         "scores": scores,
         "cairn": cairn,
         "journal": file_inventory_json(&inventory.journal),
+        "preferences": file_inventory_json(&inventory.preferences),
         "radio_cache": {
             "path": inventory.radio_cache.path.to_string_lossy(),
             "exists": inventory.radio_cache.exists,
@@ -82,6 +83,7 @@ pub(super) fn forget_tool(args: &Value, paths: &LocalStatePaths) -> Value {
                 .get("journal")
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
+            preferences: false,
             radio_cache: args
                 .get("radio_cache")
                 .and_then(Value::as_bool)
@@ -105,6 +107,7 @@ pub(super) fn forget_tool(args: &Value, paths: &LocalStatePaths) -> Value {
              scores: {} entries, {} bytes at {}\n\
              Cairn: {} local plaintext drafts, {} bytes at {}\n\
              journal: {} bytes at {}\n\
+             App preferences: {} bytes at {}\n\
              radio cache: {} generated WAV files, {} bytes, {} unexpected entries, {} sidecar files and {} sidecar bytes at {}\n\
              crash log: {} bytes at {}\n\n\
              No state was erased by this preview. Confirm the Journey alone, select other stores, or set all_local true for complete managed erasure. User-selected exports, installed files, the Rust toolchain, and bundled canonical Cairn stones are outside this command.",
@@ -122,6 +125,8 @@ pub(super) fn forget_tool(args: &Value, paths: &LocalStatePaths) -> Value {
             safe_path_text(&before.cairn.file.path),
             before.journal.bytes,
             safe_path_text(&before.journal.path),
+            before.preferences.bytes,
+            safe_path_text(&before.preferences.path),
             before.radio_cache.files,
             before.radio_cache.bytes,
             before.radio_cache.unexpected_entries,
@@ -142,6 +147,7 @@ pub(super) fn forget_tool(args: &Value, paths: &LocalStatePaths) -> Value {
                     "scores": selection.scores,
                     "cairn": selection.cairn,
                     "journal": selection.journal,
+                    "preferences": selection.preferences,
                     "radio_cache": selection.radio_cache,
                     "crash_log": selection.crash_log,
                     "all_local": all_local,
@@ -196,6 +202,7 @@ pub(super) fn forget_tool(args: &Value, paths: &LocalStatePaths) -> Value {
             "scores_preserved": !selection.scores,
             "cairn_erased": selection.cairn,
             "journal_erased": selection.journal,
+            "preferences_erased": selection.preferences,
             "radio_cache_erased": selection.radio_cache,
             "crash_log_erased": selection.crash_log,
             "all_local": all_local,
@@ -208,7 +215,7 @@ pub(super) fn forget_tool(args: &Value, paths: &LocalStatePaths) -> Value {
 #[cfg(test)]
 mod tests {
     use super::forget_tool;
-    use numinous_core::LocalStatePaths;
+    use numinous_core::{AppPreferences, LocalStatePaths};
     use serde_json::json;
 
     #[test]
@@ -220,6 +227,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
@@ -237,6 +245,7 @@ plays 2
         std::fs::write(&paths.scores, "50\tmunch seed:1 board:0\n").unwrap();
         std::fs::write(&paths.cairn, "Ada\tproof is a program\n").unwrap();
         std::fs::write(&paths.journal, "one opt-in experience\n").unwrap();
+        std::fs::write(&paths.preferences, AppPreferences::default().to_text()).unwrap();
         std::fs::write(paths.radio_cache.join("trance-001.wav"), b"RIFF").unwrap();
         std::fs::write(&paths.crash_log, b"diagnostic").unwrap();
 
@@ -245,6 +254,7 @@ plays 2
         assert!(text.contains("1 rooms entered") || text.contains("1 wins"));
         assert!(text.contains("Cairn"));
         assert!(text.contains("journal"));
+        assert!(text.contains("App preferences"));
         assert!(text.contains("radio cache"));
         assert!(text.contains("crash log"));
         assert!(!text.contains("Nothing else is kept"));
@@ -264,6 +274,10 @@ plays 2
         );
         assert_eq!(
             shown["structuredContent"]["remembered"]["journal"]["exists"],
+            true
+        );
+        assert_eq!(
+            shown["structuredContent"]["remembered"]["preferences"]["exists"],
             true
         );
         assert_eq!(
@@ -289,6 +303,7 @@ plays 2
         assert!(paths.scores.exists());
         assert!(paths.cairn.exists());
         assert!(paths.journal.exists());
+        assert!(paths.preferences.exists());
 
         let journal_erased = forget_tool(&json!({"confirm": true, "journal": true}), &paths);
         assert_eq!(journal_erased["structuredContent"]["journal_erased"], true);
@@ -311,6 +326,7 @@ plays 2
             &paths.scores,
             &paths.cairn,
             &paths.journal,
+            &paths.preferences,
             &paths.radio_cache,
             &paths.crash_log,
         ] {
@@ -327,6 +343,7 @@ plays 2
             scores: paths.scores.clone(),
             cairn: paths.cairn.clone(),
             journal: paths.journal.clone(),
+            preferences: paths.preferences.clone(),
             radio_cache: paths.radio_cache.clone(),
             protected_radio_source: paths.protected_radio_source.clone(),
             crash_log: paths.crash_log.clone(),
