@@ -233,12 +233,23 @@ impl BuffonAha {
         self.hover = guess.and_then(|g| g.is_finite().then_some(g.clamp(GUESS_MIN, GUESS_MAX)));
     }
 
-    /// Commit the number wager. First generation act wins.
+    /// Commit the number wager.
+    ///
+    /// Explore accepts a wager because pi is already in the machine before
+    /// any needle is thrown. A visit that already earned by throwing enough
+    /// needles does not refuse either. Naming a number is the stronger
+    /// commitment, because the named number is what consolidation grades,
+    /// and a player who does both must not have the call silently dropped.
+    /// Only another wager, or the summon that starts the morph, closes the
+    /// door.
     pub fn commit_wager(&mut self, guess: f64) -> bool {
-        if self.earn.is_some() {
+        if matches!(self.earn, Some(EarnPath::Wager { .. })) {
             return false;
         }
-        if !matches!(self.beat, AhaBeat::Prime | AhaBeat::Explore) {
+        if !matches!(
+            self.beat,
+            AhaBeat::Explore | AhaBeat::Prime | AhaBeat::Withheld
+        ) {
             return false;
         }
         if !guess.is_finite() {
@@ -530,6 +541,36 @@ mod tests {
         aha.note_throws(8);
         assert_eq!(aha.earn(), Some(EarnPath::Throws { count: 8 }));
         assert_eq!(aha.beat(), AhaBeat::Withheld);
+    }
+
+    #[test]
+    fn naming_a_number_after_eight_throws_keeps_the_call() {
+        let mut aha = BuffonAha::new();
+        aha.note_throws(MIN_THROWS_TO_EARN);
+        assert_eq!(aha.earn(), Some(EarnPath::Throws { count: 8 }));
+        // The stronger commitment supersedes the completed experiment, and
+        // the withheld beat shows the call back instead of swallowing it.
+        assert!(aha.commit_wager(3.0));
+        assert_eq!(aha.wager().map(|(guess, _)| guess), Some(3.0));
+        assert_eq!(aha.beat(), AhaBeat::Withheld);
+        assert!(!aha.allow_reveal_text());
+        // A later throw count cannot take the named call back.
+        aha.note_throws(MIN_THROWS_TO_EARN + 4);
+        assert_eq!(aha.wager().map(|(guess, _)| guess), Some(3.0));
+        // A second number is still refused: the first named call owns the visit.
+        assert!(!aha.commit_wager(PI));
+        assert_eq!(aha.wager().map(|(guess, _)| guess), Some(3.0));
+    }
+
+    #[test]
+    fn a_summoned_morph_closes_the_number_call() {
+        let mut aha = BuffonAha::new();
+        aha.note_throws(MIN_THROWS_TO_EARN);
+        assert!(aha.summon());
+        // Past the morph the answer is already arriving; a late call would be
+        // grading a hypothesis the player never had to hold.
+        assert!(!aha.commit_wager(PI));
+        assert!(aha.wager().is_none());
     }
 
     #[test]

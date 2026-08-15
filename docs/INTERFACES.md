@@ -11,7 +11,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
 **Implementation boundary, 2026-07-18:** all three faces are shipped from the
-same headless core in 0.4.0-alpha.3. Descriptions below mix current behavior
+same headless core in 0.4.0-alpha.4. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -241,7 +241,11 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   values outside that lever's advertised range. Invalid calls return a guiding
   tool error and do not record progress.
 - **Structured discovery (built):** `list_rooms` returns the complete typed
-  catalog. `describe_room` is a safe doorway with title, wing, action, optional
+  catalog in every response mode, plus a `starters` array naming four rooms
+  worth opening first. The starter doorway exists so a client that renders
+  structured output can show four rooms instead of 354 before its player has
+  touched one, without any mode becoming lossy.
+  `describe_room` is a safe doorway with title, wing, action, optional
   goal, blurb, and the next play call, but no revelation, concept, deep cut, or
   citation. `reveal_room` returns the explanation and level-gated deep cuts only
   after one real play, or after persisted consolidation for one of the seven
@@ -278,7 +282,12 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   `die_choice` (`a` | `b` | `c`) instead of a coordinate input. Each committed
   wager remains visible during the withheld beat, while status stays neutral
   and `earn`, truth, grading, answer-bearing measurements, and reveal remain
-  absent. Consolidation returns the truth and a graded sentence, with a band
+  absent. Every room also reaches that beat by running its own experiment
+  without a call, such as the Times Tables four-lobe close or eight Buffon
+  throws. A named wager sent on the same call still owns the visit and is what
+  consolidation grades, because the drop of a submitted call would leave a
+  caller unable to tell whether its own commitment landed. Only a second wager,
+  or the summon that starts the morph, closes the commitment. Consolidation returns the truth and a graded sentence, with a band
   where the room's model uses one. Double Pendulum requires a completed release event and
   measures truth from that exact release's angles and velocity; a held bob does
   not count. The Galton call is about the pile the request's pokes

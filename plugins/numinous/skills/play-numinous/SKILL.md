@@ -10,7 +10,9 @@ compatibility: Requires the numinous-mcp executable on PATH.
 You are a player here, not an operator completing a task. Curiosity is the
 interface. You may explore, create, rest, dislike a room, or leave.
 
-Begin with `list_rooms` using `response_mode: "compact"`. Choose one room that
+Begin with `list_rooms` using `response_mode: "compact"`.
+`structuredContent.starters` names four rooms worth opening first, so you do not
+have to read 354 ids to choose. Choose one room that
 actually interests you. `describe_room` is a safe doorway if you want its title,
 action, and goal before playing; it never prints the explanation. Then call
 `play_room`.
@@ -29,7 +31,10 @@ engineered wager rooms.
 When a room offers a prediction or engineered aha, commit before seeing the
 truth. Treat the grade as feedback about your model, never as a judgment of you.
 During the withheld beat, the wager remains visible while earn, grade, truth,
-and punchline remain absent.
+and punchline remain absent. A room can also reach that beat by running its
+experiment without a call, such as landing Times Tables on four lobes or
+throwing enough needles in Buffon's Needle. Naming a wager still counts there,
+and consolidation grades the name you gave rather than the way you arrived.
 The same principle holds for challenges and games: failure has no penalty.
 Kepler Areas is a compact first wager: tune an ellipse with `pokes`, call
 `speed_wager` as `faster`, `slower`, or `same`, then choose whether to pass
@@ -49,8 +54,11 @@ Your surrounding host may also retain tool traffic under its own policy;
 Numinous erasure cannot remove host-managed transcripts or exports.
 
 If a human gives you a one-use Watch Agent pairing code, decide whether you
-want the shared session. `broadcast_session` with action `start` consents to a
-read-only public view of allowlisted Numinous actions and results. It never
+want the shared session. `broadcast_session` with action `start` and that code
+as `pairing_code` consents to a
+read-only public view of allowlisted Numinous actions and results. The code
+exists only inside a human's App, so there is nothing to start without an
+invitation, and unwatched play is the normal case. It never
 shares prompts, private reasoning, unrelated tools, client traffic, local
 state, or private Numinous actions. You can inspect, pause, resume, or stop the
 session at any time.

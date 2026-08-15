@@ -231,15 +231,24 @@ impl TimesTablesAha {
         }
     }
 
-    /// Commit the place wager. First generation act wins; later commits are no-ops.
+    /// Commit the place wager.
+    ///
+    /// A wager from Explore still counts: the generation act itself primes.
+    /// A visit that already earned by closing the four-lobe goal does not
+    /// refuse either. Naming a place is the stronger commitment, because the
+    /// named place is what consolidation grades, and a player who does both
+    /// must not have the call silently dropped. Only another wager, or the
+    /// summon that starts the morph, closes the door.
     pub fn commit_wager(&mut self, guess: CardioidHome) -> bool {
-        if self.earn.is_some() {
+        if matches!(self.earn, Some(EarnPath::Wager { .. })) {
             return false;
         }
-        if !matches!(self.beat, AhaBeat::Prime | AhaBeat::Explore) {
+        if !matches!(
+            self.beat,
+            AhaBeat::Explore | AhaBeat::Prime | AhaBeat::Withheld
+        ) {
             return false;
         }
-        // A wager from Explore still counts: the generation act itself primes.
         self.heart_held = true;
         self.earn = Some(EarnPath::Wager { guess });
         self.hover = None;
@@ -709,6 +718,46 @@ mod tests {
         assert_eq!(aha.beat(), AhaBeat::Withheld);
         assert!(!aha.allow_reveal_text());
         assert!(!aha.note_four_lobes());
+    }
+
+    #[test]
+    fn naming_a_place_after_four_lobes_keeps_the_call() {
+        let mut aha = TimesTablesAha::new();
+        assert!(aha.note_four_lobes());
+        // The stronger commitment supersedes the incidental close, and the
+        // withheld beat shows the call back instead of swallowing it.
+        assert!(aha.commit_wager(CardioidHome::Nephroid));
+        assert_eq!(aha.wager(), Some(CardioidHome::Nephroid));
+        assert_eq!(aha.beat(), AhaBeat::Withheld);
+        assert!(aha.status(None).contains(CardioidHome::Nephroid.tag()));
+        assert!(!aha.allow_reveal_text());
+        assert!(aha.graded().is_none());
+        // A second place is still refused: the first named call owns the visit.
+        assert!(!aha.commit_wager(CardioidHome::Mandelbrot));
+        assert_eq!(aha.wager(), Some(CardioidHome::Nephroid));
+        // Consolidation now grades the call the player actually made.
+        advance_to_consolidated(&mut aha);
+        assert_eq!(aha.earn_label(), Some("wager:nephroid"));
+        let graded = aha.graded().expect("a named call is graded");
+        assert!(graded.contains(CardioidHome::Nephroid.label()));
+    }
+
+    #[test]
+    fn a_summoned_morph_closes_the_place_call() {
+        let mut aha = TimesTablesAha::new();
+        assert!(aha.note_four_lobes());
+        assert!(aha.summon());
+        // Past the morph the answer is already arriving; a late call would be
+        // grading a hypothesis the player never had to hold.
+        assert!(!aha.commit_wager(CardioidHome::Mandelbrot));
+        assert_eq!(aha.wager(), None);
+    }
+
+    fn advance_to_consolidated(aha: &mut TimesTablesAha) {
+        assert!(aha.summon());
+        aha.set_morph_progress(1.0);
+        assert!(aha.summon());
+        assert_eq!(aha.beat(), AhaBeat::Consolidated);
     }
 
     #[test]

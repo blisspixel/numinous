@@ -8,7 +8,7 @@ below evaluates Numinous, never whether a player is conscious or worthy.
 
 Status: **Journal and temporal evidence built, experiential continuity
 designed.** Research reviewed 2026-07-11; implementation boundary reviewed
-2026-08-15. Numinous 0.4.0-alpha.3 speaks MCP, ships an opt-in local experience
+2026-08-15. Numinous 0.4.0-alpha.4 speaks MCP, ships an opt-in local experience
 journal, and can return two exact room observations with a typed delta in one
 stateless call. It does not automatically remember a room, retrieve a prior
 encounter, maintain a resettable cross-call workspace, or infer a participant's

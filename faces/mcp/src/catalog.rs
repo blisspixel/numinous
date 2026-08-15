@@ -181,7 +181,7 @@ fn build_tools_catalog() -> Value {
         "tools": [
             {
                 "name": "list_rooms",
-                "description": "List the catalog of mathematical rooms you can explore and play. For a short first look, pass response_mode compact; structuredContent still carries every room.",
+                "description": "List the catalog of mathematical rooms you can explore and play. structuredContent.starters names four rooms worth opening first; structuredContent.rooms carries every room in every mode. For a short first look, pass response_mode compact.",
                 "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
             },
             {

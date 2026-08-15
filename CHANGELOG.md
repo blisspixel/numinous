@@ -5,6 +5,26 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.4] - 2026-08-15
+
+- A wager named at the same moment a room finishes its own experiment is now
+  kept and graded. Times Tables closing the four-lobe goal and Buffon's Needle
+  reaching eight throws both used to swallow a `place_wager` or `number_wager`
+  sent on that call, leaving a caller unable to tell whether its commitment
+  landed and letting the summon open the punchline through a path that never
+  required a hypothesis. The named call is the stronger commitment and now owns
+  the visit, matching the five staged rooms that already worked this way. A
+  second wager, or one sent after the summon starts the morph, is still
+  refused, and the withheld beat still hides earn, grade, truth, and punchline.
+- `list_rooms` returns a typed `starters` array naming four rooms worth opening
+  first. Compact discovery named those rooms only in prose, so a client that
+  renders structured output saw all 354 ids before touching one room. Every
+  response mode still carries the complete catalog, so no mode became lossy.
+- A rejected Watch Agent start now names where a real pairing code comes from.
+  The old failure reported only that pairing was rejected, which left an
+  unaided caller nothing to try except another invented code. Other broadcast
+  failures stay terse, because they fail on state a caller can inspect.
+
 ## [0.4.0-alpha.3] - 2026-08-15
 
 - Room descriptions are now safe doorways across CLI and MCP: title, wing,
