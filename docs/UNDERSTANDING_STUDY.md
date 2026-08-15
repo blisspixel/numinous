@@ -219,13 +219,28 @@ credentials, filesystem paths, unrelated local state, or other players' data.
 
 The fourth call is also stateless and self-contained. For an engineered wager
 room it repeats the required generation input, commits the frozen wager, and
-sets `aha_summon: true` in one `play_room` request. For Game of Life it uses a
-final ordinary `play_room` observation, whose result carries the same earned
-reveal material. The study never seeds private Journey state and never bypasses
-the public `reveal_room` play or consolidation gate. This is protocol
-`0.4-v6`; the earlier dry-run bank used a fresh-profile reveal call and was
-retired before registration after source-blind playtesting proved that path was
-a product spoiler.
+sets `aha_summon: true` in one `play_room` request, and that reply carries the
+room's revelation. For Game of Life it is a final ordinary `play_room`
+observation. The study never seeds private Journey state and never bypasses the
+public `reveal_room` play or consolidation gate. This is protocol `0.4-v6`; the
+earlier dry-run bank used a fresh-profile reveal call and was retired before
+registration after source-blind playtesting proved that path was a product
+spoiler.
+
+**Known method gap, stated rather than silently carried.** Game of Life has no
+goal and is not an engineered wager room, so its fourth call returns an
+observation and no revelation. The room therefore contributes an encounter to
+both arms but no Reveal intervention to the generation arm, which the three
+staged rooms do deliver. Earlier drafts described that call as carrying "the
+same earned reveal material"; it never did, and after the August 2026 decision
+that an ordinary room must not volunteer its explanation on a met goal, no
+ordinary `play_room` reply can. Closing this means either replacing Game of Life
+with a fourth staged room, or adding a genuine `reveal_room` call placed after
+the room has really been played in the same session, which is the public gate
+working rather than the retired fresh-profile bypass. Both change the
+instrument, so the choice belongs to the registration ruling this cohort is
+already waiting on, and is recorded here rather than decided here. No qualifying
+result is claimed from the current shape.
 
 ### Conditions
 
