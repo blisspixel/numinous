@@ -19,7 +19,7 @@ hidden_rooms!(declare_room_modules);
 
 #[cfg(test)]
 pub(crate) use catalog::ROOM_SOURCE_IDS;
-pub use catalog::{ROOM_CATALOG, room_meta_by_id};
+pub use catalog::{ROOM_CATALOG, canonical_room_id, room_meta_by_id};
 pub(crate) use catalog::{construct_all, construct_by_id, construct_hidden_by_id};
 
 pub mod buffon_aha;

@@ -119,9 +119,22 @@ counts as set the moment it is present and not empty, so `=0` still turns it
 on. Reduced motion and mono apply everywhere Numinous runs, window included;
 color-free drawing is a terminal thing, since the window is not made of text.
 
-Mouse, keyboard, and controller can all navigate the App. Hover and click any
-opening-menu destination, press its displayed key, or use the controller D-pad
-and South. Letter commands remain active with Shift or Caps Lock. In a room, U
+Mouse, keyboard, and controller can all navigate the App. The Cabinet opens
+as the original opaque text screen. Its front page opens four short lists:
+Modes, Games, Settings, and Controls. Modes contains Watch, return to Play,
+Create, Journey, and Shared Play. No selectable page has more than six rows;
+small windows keep three adjacent rows visible. Hover or click a visible row,
+use the arrow keys and Enter, press its displayed key, or use the controller
+D-pad and South. Back returns through the current submenu before it closes the
+Cabinet. Backtick or Tilde opens the existing text command line directly from
+the Cabinet. A large Quit row closes through the same Journey-preserving path
+as the window button, with no single-letter shortcut. Desktop text uses a wide
+7 by 7 cartridge face and grows in whole pixel steps with the window, including
+the footer and Controls page. `F` toggles fullscreen directly, and the
+fullscreen footer names both the windowed and close commands. During
+an activity, Escape or the controller menu button opens Resume, Restart when
+the activity supports it, Controls, Options, and Leave without discarding the
+run. Letter commands remain active with Shift or Caps Lock. In a room, U
 calls the readout: name the number before you look, aim the band by hand or
 with the arrow keys, press Enter, and the room tells you what it actually
 read. During play,
@@ -157,14 +170,14 @@ generic button names. An action with no route says `UNBOUND`; when several
 buttons route the same action, compact copy names the first stable button and
 the number of additional routes.
 
-To watch a separately consenting MCP player, press X or choose Watch Agent in
-the controller menu. Give that player the one-use code shown in the App. Arrow
+To watch a separately consenting MCP player, press X or choose Shared Play in
+the Cabinet. Give that player the one-use code shown in the App. Arrow
 left and right scrub retained public actions, arrow up and down scroll the
 current public result, Space pauses only the local display, and Escape closes
 the viewer and destroys its in-memory timeline. A and D pan fixed-width result
 text horizontally. On a controller, the viewer names the effective event,
 result, pan, pause, and close buttons; the default layout uses the D-pad, LB and
-RB, R3, and East. M, or North held with South, controls global sound. Watch Agent
+RB, R3, and East. M, or North held with South, controls global sound. Shared Play
 cannot send a tool call or change the MCP player's state. When the selected
 action is `play_room`, Watch Agent reconstructs that
 exact public room state as a native frame. A successful `plot_expression`

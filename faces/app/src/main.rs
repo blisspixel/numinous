@@ -43,7 +43,7 @@ mod wager;
 
 use crate::audio_state::Program as AudioProgram;
 use crate::session_audio::SessionAudio;
-use numinous_app::{controls, game_draw, input_legend, play, room_phase};
+use numinous_app::{controls, game_draw, input_legend, menu, play, room_phase};
 use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay};
 use room_phase::{effective_room_phase, has_finite_parameter_input};
 
@@ -197,6 +197,14 @@ fn bounded_tick_seconds(elapsed: Duration) -> f64 {
     elapsed.as_secs_f64().clamp(0.0, MAX_TICK_SECONDS)
 }
 
+fn fullscreen_toggle_target(is_fullscreen: bool) -> Option<winit::window::Fullscreen> {
+    if is_fullscreen {
+        None
+    } else {
+        Some(winit::window::Fullscreen::Borderless(None))
+    }
+}
+
 /// How much of this tick the ambient world may consume.
 ///
 /// Reduced motion hands it zero seconds, so everything that moves whether or
@@ -318,12 +326,15 @@ fn selected_room_interaction_audio(
 enum SaveStore {
     Journey,
     Scores,
+    Preferences,
 }
 
 /// The two save-trouble warning lines, named so the level-up celebration can
 /// recognize a warning on screen and decline to paint over it.
 const JOURNEY_SAVE_WARNING: &str = "PROGRESS IS NOT SAVING  SEE .NUMINOUS-CRASH.LOG";
 const SCORE_SAVE_WARNING: &str = "SCORES ARE NOT SAVING  SEE .NUMINOUS-CRASH.LOG";
+const PREFERENCES_SAVE_WARNING: &str = "SETTINGS ARE NOT SAVING  SEE .NUMINOUS-CRASH.LOG";
+const PREFERENCES_LOAD_WARNING: &str = "SETTINGS COULD NOT BE LOADED  SEE .NUMINOUS-CRASH.LOG";
 
 /// The application state driven by the winit event loop.
 /// Which naming field the keyboard currently feeds.
@@ -460,18 +471,26 @@ struct App {
     muted: bool,
     /// Master volume, 0.0 to 1.0 ('[' and ']' step it globally).
     volume: f32,
+    /// Window presentation saved for the next launch.
+    preferred_window_mode: numinous_core::WindowModePreference,
     /// The program that owns the player source, independent of focus and gain.
     audio_program: AudioProgram,
-    /// The help overlay ('h' toggles; shown at launch so nobody is lost).
+    /// Whether menu or contextual help chrome is visible.
     show_help: bool,
-    /// Start in fullscreen (from --fullscreen / -f arg or env). Supports user's request for full screen view.
+    /// Typed Cabinet navigation state, shared by drawing and every input path.
+    menu: menu::MenuState,
+    /// Start in fullscreen from the launch option or environment.
     start_fullscreen: bool,
+    /// A menu action requested the same orderly shutdown as the window button.
+    quit_requested: bool,
     /// Whether the player has already been told the journey file is failing,
     /// so one trouble spell warns once instead of on every play.
     journey_save_warned: bool,
     /// The same spell for the scores file, held separately: the two stores
     /// fail independently, so one must not speak for the other.
     score_save_warned: bool,
+    /// The same once-per-spell warning latch for App preferences.
+    preferences_save_warned: bool,
     /// Where this App writes its diagnostics. The real crash log in the
     /// player's home by default; headless tests point it at scratch so a
     /// test failure cannot append to a real player's file.
@@ -519,8 +538,6 @@ struct App {
     arcade: Option<ArcadePlay>,
     /// Controller-selected digit for the Gauntlet code stage.
     controller_digit: u8,
-    /// Controller-selected game in the launch menu.
-    controller_menu_selection: usize,
     /// The chiptune bed for the current room, rendered once per room.
     tune: Arc<Vec<f32>>,
     /// The journey overlay ('j' toggles): level, rank, trophies, resonances.
@@ -556,15 +573,38 @@ struct App {
     journey_file: std::path::PathBuf,
     /// Where scores persist (the shared table; a scratch file in tests).
     scores_file: std::path::PathBuf,
+    /// Where versioned App display and audio preferences persist.
+    preferences_file: std::path::PathBuf,
     /// Power-user console (` / ~): room load, phase, variation, and friends.
     console: console::Console,
 }
 
 impl App {
     fn new() -> Self {
-        let journey_file = journey_path();
-        let scores_file = scores_path();
+        let state_paths = local_state_paths();
+        let journey_file = state_paths.journey.clone();
+        let scores_file = state_paths.scores.clone();
+        let preferences_file = state_paths.preferences.clone();
+        let crash_log = state_paths.crash_log.clone();
         let journey = numinous_core::load_journey_file(&journey_file);
+        #[cfg(test)]
+        let (preferences, preferences_load_error) =
+            (numinous_core::AppPreferences::default(), None::<String>);
+        #[cfg(not(test))]
+        let (preferences, preferences_load_error) =
+            match numinous_core::read_app_preferences_file(&preferences_file) {
+                Ok(preferences) => (preferences, None),
+                Err(error) => (
+                    numinous_core::AppPreferences::default(),
+                    Some(error.to_string()),
+                ),
+            };
+        if let Some(error) = preferences_load_error.as_deref() {
+            let _ = append_crash_log_at(
+                &crash_log,
+                &format!("App preference load failed: {error}\n"),
+            );
+        }
         Self {
             window: None,
             surface: None,
@@ -609,15 +649,19 @@ impl App {
             session_audio: SessionAudio::default(),
             gpu: None,
             live_scale: live_render::LiveScale::new(),
-            era: numinous_core::Era::default(),
-            muted: false,
-            volume: 0.45,
+            era: preferences.era,
+            muted: preferences.muted,
+            volume: f32::from(preferences.volume_percent) / 100.0,
+            preferred_window_mode: preferences.window_mode,
             audio_program: AudioProgram::RoomScore,
             show_help: true,
+            menu: menu::MenuState::launch(),
             start_fullscreen: false,
+            quit_requested: false,
             journey_save_warned: false,
             score_save_warned: false,
-            crash_log: crash_log_path(),
+            preferences_save_warned: false,
+            crash_log,
             start_open: None,
             frame: 0,
             motion: numinous_core::Motion::from_env(),
@@ -628,7 +672,8 @@ impl App {
             journey: journey.clone(),
             journey_saved: journey,
             level_seen: 1,
-            banner: None,
+            banner: preferences_load_error
+                .map(|_| feedback::Banner::status(PREFERENCES_LOAD_WARNING, 240)),
             screen_shake: 0,
             goal_announced: false,
             quiz: None,
@@ -640,7 +685,6 @@ impl App {
             gauntlet: None,
             arcade: None,
             controller_digit: 0,
-            controller_menu_selection: 0,
             tune: Arc::new(Vec::new()),
             show_journey: false,
             mouse: (0.0, 0.0),
@@ -658,6 +702,7 @@ impl App {
             radio_until: None,
             journey_file,
             scores_file,
+            preferences_file,
             console: console::Console::default(),
         }
     }
@@ -682,6 +727,7 @@ impl App {
         let (warned, line) = match store {
             SaveStore::Journey => (&mut self.journey_save_warned, JOURNEY_SAVE_WARNING),
             SaveStore::Scores => (&mut self.score_save_warned, SCORE_SAVE_WARNING),
+            SaveStore::Preferences => (&mut self.preferences_save_warned, PREFERENCES_SAVE_WARNING),
         };
         if *warned {
             return false;
@@ -697,10 +743,11 @@ impl App {
     /// call raised.
     fn save_warning_showing(&self) -> bool {
         self.banner.as_ref().is_some_and(|banner| {
-            banner
-                .lines()
-                .first()
-                .is_some_and(|line| line == JOURNEY_SAVE_WARNING || line == SCORE_SAVE_WARNING)
+            banner.lines().first().is_some_and(|line| {
+                line == JOURNEY_SAVE_WARNING
+                    || line == SCORE_SAVE_WARNING
+                    || line == PREFERENCES_SAVE_WARNING
+            })
         })
     }
 
@@ -1847,7 +1894,7 @@ impl App {
     fn enter_studio_shell(&mut self) {
         self.the_show = false;
         self.paused = false;
-        self.show_help = false;
+        self.close_menu();
         self.show_journey = false;
         self.studio = true;
         self.audio_program = AudioProgram::Studio;
@@ -1965,7 +2012,7 @@ impl App {
     fn open_session_viewer(&mut self) {
         self.the_show = false;
         self.paused = false;
-        self.show_help = false;
+        self.close_menu();
         self.show_journey = false;
         self.banner = None;
         match self.session_viewer.open() {
@@ -2036,7 +2083,7 @@ impl App {
     fn toggle_show(&mut self) {
         self.the_show = !self.the_show;
         if self.the_show {
-            self.show_help = false;
+            self.close_menu();
             self.show_journey = false;
             // The Show is watching, not playing: it strips inputs, so a
             // call left posed would sit there with a live band and no
@@ -2058,7 +2105,7 @@ impl App {
                 window.set_title(&self.title());
             }
         }
-        self.show_help = false;
+        self.close_menu();
         self.show_journey = !self.show_journey;
     }
 
@@ -2079,26 +2126,235 @@ impl App {
             || self.arcade.is_some()
     }
 
-    fn help_menu_selection(&self) -> Option<usize> {
-        (!self.modal_mode_active()).then_some(self.controller_menu_selection)
+    fn menu_layout(&self) -> menu::MenuLayout {
+        let (width, height) = self.window.as_ref().map_or((900, 700), |window| {
+            let size = window.inner_size();
+            (size.width as usize, size.height as usize)
+        });
+        menu::MenuLayout::new(&self.menu, width, height)
     }
 
-    fn hover_menu_choice(&mut self, choice: usize) -> bool {
-        if self.controller_menu_selection == choice {
-            return false;
+    fn activity_kind(&self) -> Option<menu::ActivityKind> {
+        if self.session_viewer.is_open() {
+            Some(menu::ActivityKind::SharedPlay)
+        } else if self.studio {
+            Some(menu::ActivityKind::Studio)
+        } else if self.arcade.is_some() {
+            Some(menu::ActivityKind::Arcade)
+        } else if self.gauntlet.is_some() {
+            Some(menu::ActivityKind::Gauntlet)
+        } else if self.nim.is_some() {
+            Some(menu::ActivityKind::Nim)
+        } else if self.munch.is_some() {
+            Some(menu::ActivityKind::Munch)
+        } else if self.quiz.is_some() {
+            Some(menu::ActivityKind::Quiz)
+        } else {
+            None
         }
-        self.controller_menu_selection = choice;
-        true
     }
 
-    fn handle_modal_help_key(&mut self, key: &Key) -> bool {
-        if !(self.show_help && self.modal_mode_active()) {
+    fn open_home_menu(&mut self) {
+        self.show_help = true;
+        self.menu.open_home(menu::MenuOrigin::Room);
+    }
+
+    fn open_activity_menu(&mut self, kind: menu::ActivityKind) {
+        self.show_help = true;
+        self.menu.open_pause(kind);
+        self.clear_pointer_state();
+    }
+
+    fn close_menu(&mut self) {
+        self.show_help = false;
+        self.menu.close();
+    }
+
+    fn menu_back(&mut self) {
+        let intent = self.menu.back();
+        self.apply_menu_intent(intent);
+    }
+
+    fn cycle_visual_era(&mut self) {
+        self.era = self.era.next();
+        if let Some(window) = &self.window {
+            window.set_title(&self.title());
+        }
+        self.persist_preferences();
+    }
+
+    fn cycle_window_mode(&mut self) {
+        let Some(window) = &self.window else {
+            return;
+        };
+        let next = match window.fullscreen() {
+            Some(winit::window::Fullscreen::Borderless(_)) => window
+                .primary_monitor()
+                .and_then(|monitor| monitor.video_modes().next())
+                .map(winit::window::Fullscreen::Exclusive),
+            Some(winit::window::Fullscreen::Exclusive(_)) => None,
+            None => Some(winit::window::Fullscreen::Borderless(None)),
+        };
+        self.set_window_mode(next);
+    }
+
+    fn toggle_fullscreen(&mut self) {
+        let Some(window) = &self.window else {
+            return;
+        };
+        let next = fullscreen_toggle_target(window.fullscreen().is_some());
+        self.set_window_mode(next);
+    }
+
+    fn set_window_mode(&mut self, next: Option<winit::window::Fullscreen>) {
+        let Some(window) = &self.window else {
+            return;
+        };
+        let label = match &next {
+            Some(winit::window::Fullscreen::Borderless(_)) => "BORDERLESS".to_string(),
+            Some(winit::window::Fullscreen::Exclusive(mode)) => {
+                let size = mode.size();
+                format!("EXCLUSIVE {}x{}", size.width, size.height)
+            }
+            None => "WINDOWED".to_string(),
+        };
+        self.preferred_window_mode = match &next {
+            Some(winit::window::Fullscreen::Borderless(_)) => {
+                numinous_core::WindowModePreference::Borderless
+            }
+            Some(winit::window::Fullscreen::Exclusive(_)) => {
+                numinous_core::WindowModePreference::Exclusive
+            }
+            None => numinous_core::WindowModePreference::Windowed,
+        };
+        window.set_fullscreen(next);
+        self.banner = Some(feedback::fullscreen(&label));
+        self.persist_preferences();
+    }
+
+    fn leave_activity(&mut self, kind: menu::ActivityKind) {
+        match kind {
+            menu::ActivityKind::Quiz => self.quiz = None,
+            menu::ActivityKind::Munch => self.munch = None,
+            menu::ActivityKind::Nim => self.nim = None,
+            menu::ActivityKind::Gauntlet => self.gauntlet = None,
+            menu::ActivityKind::Arcade => {
+                if let Some(play) = self.arcade.take() {
+                    self.post_score(&format!("arcade seed:{}", play.seed), play.run.score);
+                }
+            }
+            menu::ActivityKind::Studio => self.exit_studio(),
+            menu::ActivityKind::SharedPlay => self.close_session_viewer(),
+        }
+        self.update_audio();
+    }
+
+    fn restart_activity(&mut self, kind: menu::ActivityKind) {
+        match kind {
+            menu::ActivityKind::Quiz => self.quiz_next(),
+            menu::ActivityKind::Munch => self.munch_start(),
+            menu::ActivityKind::Nim => self.nim_start(),
+            menu::ActivityKind::Gauntlet => self.gauntlet_start(),
+            menu::ActivityKind::Arcade => self.arcade_start(),
+            menu::ActivityKind::Studio | menu::ActivityKind::SharedPlay => {}
+        }
+    }
+
+    fn apply_menu_intent(&mut self, intent: menu::MenuIntent) {
+        match intent {
+            menu::MenuIntent::None => {}
+            menu::MenuIntent::Close | menu::MenuIntent::ResumeActivity => self.close_menu(),
+            menu::MenuIntent::Choose(choice) => self.activate_menu_choice(choice),
+            menu::MenuIntent::VolumeDelta(percent) => {
+                self.change_volume(f32::from(percent) / 100.0);
+            }
+            menu::MenuIntent::ToggleMute => {
+                self.toggle_mute();
+                self.banner = Some(feedback::volume(self.volume, self.muted));
+            }
+            menu::MenuIntent::CycleEra => self.cycle_visual_era(),
+            menu::MenuIntent::CycleWindowMode => self.cycle_window_mode(),
+            menu::MenuIntent::ToggleFullscreen => self.toggle_fullscreen(),
+            menu::MenuIntent::Quit => self.quit_requested = true,
+            menu::MenuIntent::RestartActivity(kind) => {
+                self.close_menu();
+                self.restart_activity(kind);
+            }
+            menu::MenuIntent::LeaveActivity(kind) => {
+                self.close_menu();
+                self.leave_activity(kind);
+            }
+        }
+    }
+
+    fn activate_selected_menu_action(&mut self) {
+        self.menu.clear_pointer();
+        let intent = self.menu.activate_focused();
+        self.apply_menu_intent(intent);
+    }
+
+    fn handle_menu_key(&mut self, key: &Key, repeat: bool) -> bool {
+        if !self.show_help || !self.menu.is_open() {
             return false;
         }
-        if key == &Key::Named(NamedKey::Escape) {
-            self.input_mode = input_legend::InputMode::KeyboardMouse;
-            self.show_help = false;
+        if repeat {
+            return true;
         }
+        if let Key::Character(text) = key
+            && console::is_toggle_key(text.as_str())
+            && !matches!(self.menu.origin(), menu::MenuOrigin::Activity(_))
+        {
+            self.close_menu();
+            self.console.open();
+            return true;
+        }
+        self.menu.clear_pointer();
+        let layout = self.menu_layout();
+        let intent = match key {
+            Key::Named(NamedKey::Escape) => self.menu.back(),
+            Key::Named(NamedKey::ArrowUp) => {
+                if layout.is_compact() {
+                    self.menu.focus_next(-1);
+                } else {
+                    self.menu.move_spatial(&layout, menu::Direction::Up);
+                }
+                menu::MenuIntent::None
+            }
+            Key::Named(NamedKey::ArrowDown) => {
+                if layout.is_compact() {
+                    self.menu.focus_next(1);
+                } else {
+                    self.menu.move_spatial(&layout, menu::Direction::Down);
+                }
+                menu::MenuIntent::None
+            }
+            Key::Named(NamedKey::ArrowLeft) => {
+                if let Some(intent) = self.menu.adjust_focused(-10) {
+                    intent
+                } else {
+                    self.menu.move_spatial(&layout, menu::Direction::Left);
+                    menu::MenuIntent::None
+                }
+            }
+            Key::Named(NamedKey::ArrowRight) => {
+                if let Some(intent) = self.menu.adjust_focused(10) {
+                    intent
+                } else {
+                    self.menu.move_spatial(&layout, menu::Direction::Right);
+                    menu::MenuIntent::None
+                }
+            }
+            Key::Named(NamedKey::Enter) => self.menu.activate_focused(),
+            Key::Character(text) if text.as_str().eq_ignore_ascii_case("f") => {
+                menu::MenuIntent::ToggleFullscreen
+            }
+            Key::Character(text) if text.chars().count() == 1 => self
+                .menu
+                .activate_shortcut(text.chars().next().expect("one character"))
+                .unwrap_or(menu::MenuIntent::None),
+            _ => menu::MenuIntent::None,
+        };
+        self.apply_menu_intent(intent);
         true
     }
 
@@ -2190,10 +2446,32 @@ impl App {
         self.banner = Some(feedback::playtest_note(result));
     }
 
+    fn preferences(&self) -> numinous_core::AppPreferences {
+        numinous_core::AppPreferences {
+            volume_percent: (self.volume * 100.0).round().clamp(0.0, 100.0) as u8,
+            muted: self.muted,
+            era: self.era,
+            window_mode: self.preferred_window_mode,
+        }
+    }
+
+    fn persist_preferences(&mut self) {
+        match numinous_core::persist_app_preferences_file(
+            &self.preferences_file,
+            self.preferences(),
+        ) {
+            Ok(()) => self.preferences_save_warned = false,
+            Err(error) => {
+                self.report_save_trouble(SaveStore::Preferences, "App preference save", &error);
+            }
+        }
+    }
+
     fn change_volume(&mut self, step: f32) {
         self.volume = (self.volume + step).clamp(0.0, 1.0);
         self.banner = Some(feedback::volume(self.volume, self.muted));
         self.apply_master_gain();
+        self.persist_preferences();
     }
 
     fn apply_master_gain(&self) {
@@ -2205,6 +2483,7 @@ impl App {
     fn toggle_mute(&mut self) {
         self.muted = !self.muted;
         self.apply_master_gain();
+        self.persist_preferences();
     }
 
     fn handle_global_audio_key(&mut self, key: &Key, repeat: bool) -> bool {
@@ -2715,7 +2994,7 @@ impl App {
     fn apply_wheel_delta(&mut self, lines: f64) -> bool {
         if self.studio
             || self.paused
-            || self.show_help && self.modal_mode_active()
+            || self.show_help && self.menu.is_open()
             || lines == 0.0
             || !lines.is_finite()
         {
@@ -2736,20 +3015,43 @@ impl App {
     }
 
     fn gamepad_direction(&mut self, command: gamepad::Command) {
-        if self.show_help && self.modal_mode_active() {
-            return;
-        }
         if self.show_help {
-            let count = input_legend::MenuChoice::ALL.len();
-            self.controller_menu_selection = match command {
-                gamepad::Command::Up | gamepad::Command::Left => {
-                    (self.controller_menu_selection + count - 1) % count
+            let layout = self.menu_layout();
+            match command {
+                gamepad::Command::Up => {
+                    if layout.is_compact() {
+                        self.menu.focus_next(-1);
+                    } else {
+                        self.menu.move_spatial(&layout, menu::Direction::Up);
+                    }
                 }
-                gamepad::Command::Down | gamepad::Command::Right => {
-                    (self.controller_menu_selection + 1) % count
+                gamepad::Command::Down => {
+                    if layout.is_compact() {
+                        self.menu.focus_next(1);
+                    } else {
+                        self.menu.move_spatial(&layout, menu::Direction::Down);
+                    }
                 }
-                _ => return,
-            };
+                gamepad::Command::Left => {
+                    if let Some(intent) = self.menu.adjust_focused(-10) {
+                        self.apply_menu_intent(intent);
+                    } else if layout.is_compact() {
+                        self.menu.focus_next(-1);
+                    } else {
+                        self.menu.move_spatial(&layout, menu::Direction::Left);
+                    }
+                }
+                gamepad::Command::Right => {
+                    if let Some(intent) = self.menu.adjust_focused(10) {
+                        self.apply_menu_intent(intent);
+                    } else if layout.is_compact() {
+                        self.menu.focus_next(1);
+                    } else {
+                        self.menu.move_spatial(&layout, menu::Direction::Right);
+                    }
+                }
+                _ => {}
+            }
             return;
         }
         if self.studio || self.show_journey || self.the_show {
@@ -2832,10 +3134,8 @@ impl App {
     }
 
     fn gamepad_primary(&mut self) {
-        if self.show_help && self.modal_mode_active() {
-            self.show_help = false;
-        } else if self.show_help {
-            self.activate_menu_choice(input_legend::MenuChoice::at(self.controller_menu_selection));
+        if self.show_help {
+            self.activate_selected_menu_action();
         } else if let Some(over) = self.arcade.as_ref().map(|play| play.over) {
             if over {
                 self.arcade = None;
@@ -2863,7 +3163,7 @@ impl App {
     }
 
     fn activate_menu_choice(&mut self, choice: input_legend::MenuChoice) {
-        self.show_help = false;
+        self.close_menu();
         match choice {
             input_legend::MenuChoice::Quiz => self.quiz_next(),
             input_legend::MenuChoice::Munch => self.munch_start(),
@@ -2879,29 +3179,15 @@ impl App {
 
     fn gamepad_back(&mut self) {
         if self.show_help {
-            self.show_help = false;
+            self.menu_back();
         } else if self.the_show {
             self.toggle_show();
         } else if self.show_journey {
             self.show_journey = false;
-        } else if self.arcade.is_some() {
-            if let Some(play) = self.arcade.take() {
-                self.post_score(&format!("arcade seed:{}", play.seed), play.run.score);
-            }
-            self.update_audio();
-        } else if self.gauntlet.is_some() {
-            self.gauntlet_key(&Key::Named(NamedKey::Escape));
-        } else if self.munch.is_some() {
-            self.munch_key(&Key::Named(NamedKey::Escape));
-        } else if self.nim.is_some() {
-            self.nim_key(&Key::Named(NamedKey::Escape));
-        } else if self.quiz.is_some() {
-            self.quiz = None;
-            self.update_audio();
-        } else if self.studio {
-            self.exit_studio();
+        } else if let Some(kind) = self.activity_kind() {
+            self.open_activity_menu(kind);
         } else {
-            self.show_help = !self.show_help;
+            self.open_home_menu();
         }
     }
 
@@ -2911,14 +3197,20 @@ impl App {
             self.toggle_show();
         }
         self.show_journey = false;
-        self.show_help = !self.show_help;
+        if self.show_help {
+            self.close_menu();
+        } else if let Some(kind) = self.activity_kind() {
+            self.open_activity_menu(kind);
+        } else {
+            self.open_home_menu();
+        }
     }
 
     fn gamepad_confirm_secondary(&mut self) {
         if self.arcade.is_some()
             || self.quiz.is_some()
             || self.studio
-            || self.show_help && self.modal_mode_active()
+            || self.show_help && self.menu.is_open()
         {
             return;
         }
@@ -2929,14 +3221,18 @@ impl App {
         } else if self.nim.is_some() {
             self.nim_key(&Key::Named(NamedKey::Enter));
         } else {
-            let stations = numinous_core::STATIONS.len();
-            self.radio = match self.radio {
-                None => Some(0),
-                Some(i) if i + 1 < stations => Some(i + 1),
-                Some(_) => None,
-            };
-            self.tune_in();
+            self.cycle_radio();
         }
+    }
+
+    fn cycle_radio(&mut self) {
+        let stations = numinous_core::STATIONS.len();
+        self.radio = match self.radio {
+            None => Some(0),
+            Some(i) if i + 1 < stations => Some(i + 1),
+            Some(_) => None,
+        };
+        self.tune_in();
     }
 
     fn handle_gamepad_command(&mut self, command: gamepad::Command) {
@@ -2958,15 +3254,28 @@ impl App {
             }
             _ => {}
         }
+        if self.show_help {
+            self.input_mode = input_legend::InputMode::Controller;
+            match command {
+                gamepad::Command::Up
+                | gamepad::Command::Down
+                | gamepad::Command::Left
+                | gamepad::Command::Right => self.gamepad_direction(command),
+                gamepad::Command::PrimaryDown => self.gamepad_primary(),
+                gamepad::Command::CycleRadio => self.cycle_radio(),
+                gamepad::Command::Back => self.gamepad_back(),
+                gamepad::Command::Menu => self.gamepad_menu(),
+                _ => {}
+            }
+            return;
+        }
         if self.session_viewer.is_open() {
             if command != gamepad::Command::CancelPointer {
                 self.input_mode = input_legend::InputMode::Controller;
             }
             match command {
-                gamepad::Command::Back => self.close_session_viewer(),
-                gamepad::Command::Menu => {
-                    self.close_session_viewer();
-                    self.show_help = true;
+                gamepad::Command::Back | gamepad::Command::Menu => {
+                    self.open_activity_menu(menu::ActivityKind::SharedPlay);
                 }
                 gamepad::Command::Pause => self.session_viewer.toggle_display_pause(),
                 gamepad::Command::Left => self.session_viewer.scrub(-1),
@@ -3028,7 +3337,7 @@ impl App {
             | gamepad::Command::Down
             | gamepad::Command::Left
             | gamepad::Command::Right => self.gamepad_direction(command),
-            gamepad::Command::CycleEra => self.era = self.era.next(),
+            gamepad::Command::CycleEra => self.cycle_visual_era(),
             gamepad::Command::CycleRadio => self.gamepad_confirm_secondary(),
             gamepad::Command::Pause => self.toggle_pause(),
             gamepad::Command::PointerMoved { point, held } => {
@@ -3498,6 +3807,7 @@ impl App {
                     if let Some(window) = &self.window {
                         window.set_title(&self.title());
                     }
+                    self.persist_preferences();
                     vec![format!("era {}", era.name())]
                 }
                 None => vec![format!("unknown era '{name}'")],
@@ -3506,18 +3816,21 @@ impl App {
                 self.muted = true;
                 self.apply_master_gain();
                 self.banner = Some(feedback::volume(self.volume, self.muted));
+                self.persist_preferences();
                 vec!["muted".into()]
             }
             Command::Unmute => {
                 self.muted = false;
                 self.apply_master_gain();
                 self.banner = Some(feedback::volume(self.volume, self.muted));
+                self.persist_preferences();
                 vec!["unmuted".into()]
             }
             Command::Volume(v) => {
                 self.volume = v.clamp(0.0, 1.0);
                 self.apply_master_gain();
                 self.banner = Some(feedback::volume(self.volume, self.muted));
+                self.persist_preferences();
                 vec![format!("volume {:.0}%", self.volume * 100.0)]
             }
             Command::Speed(s) => {
@@ -4506,7 +4819,7 @@ impl App {
         if !self.window_active
             || self.paused
             || self.dragging
-            || self.show_help && self.modal_mode_active()
+            || self.show_help && self.menu.is_open()
         {
             return 0;
         }
@@ -4558,9 +4871,6 @@ impl App {
     }
 
     fn modal_frame(&self, width: usize, height: usize) -> Option<Raster> {
-        if self.show_help && self.modal_mode_active() {
-            return None;
-        }
         let copy = self.gamepad.controller_copy();
         if let Some(play) = &self.arcade {
             Some(game_draw::draw_arcade(
@@ -4924,18 +5234,6 @@ impl App {
             height,
         );
 
-        if self.show_help && !self.the_show {
-            overlays::draw_help_overlay_with_controller(
-                raster,
-                width,
-                height,
-                self.help_menu_selection(),
-                self.input_mode,
-                self.modal_mode_active(),
-                self.gamepad.controller_copy(),
-            );
-        }
-
         if self.show_journey && !self.the_show {
             let board = numinous_core::load_scoreboard_file(&self.scores_file);
             overlays::draw_journey_overlay_with_controller(
@@ -4958,6 +5256,31 @@ impl App {
         {
             gamepad::draw_cursor(raster, point, width, height);
         }
+    }
+
+    fn draw_menu_overlay(&self, raster: &mut Raster) {
+        if !self.show_help || !self.menu.is_open() {
+            return;
+        }
+        let (window_mode, fullscreen) =
+            match self.window.as_ref().and_then(|window| window.fullscreen()) {
+                Some(winit::window::Fullscreen::Borderless(_)) => ("borderless", true),
+                Some(winit::window::Fullscreen::Exclusive(_)) => ("exclusive", true),
+                None => ("windowed", false),
+            };
+        let _ = menu::draw_menu(
+            raster,
+            &self.menu,
+            self.input_mode,
+            self.gamepad.controller_copy(),
+            menu::MenuReadout {
+                volume_percent: (self.volume * 100.0).round().clamp(0.0, 100.0) as u8,
+                muted: self.muted,
+                era: self.era.name(),
+                window_mode,
+                fullscreen,
+            },
+        );
     }
 
     fn present_raster(&mut self, mut raster: Raster, width: usize, height: usize) {
@@ -5007,6 +5330,7 @@ impl App {
             }
             self.spectrum_prev = bands;
         }
+        self.draw_menu_overlay(&mut raster);
         let (rw, rh) = (raster.width(), raster.height());
         let mut rgba = raster.to_rgba();
         self.era.apply(&mut rgba, rw, rh);
@@ -5084,6 +5408,22 @@ impl App {
         }
         let _ = buffer.present();
     }
+
+    fn exit_app(&mut self, event_loop: &ActiveEventLoop) {
+        self.quit_requested = false;
+        self.session_viewer.close();
+        if let Err(error) = numinous_core::persist_journey_delta(
+            &self.journey_file,
+            &self.journey_saved,
+            &self.journey,
+        ) {
+            let _ = append_crash_log_at(
+                &self.crash_log,
+                &format!("journey save at exit failed: {error}\n"),
+            );
+        }
+        event_loop.exit();
+    }
 }
 
 impl ApplicationHandler for App {
@@ -5120,11 +5460,23 @@ impl ApplicationHandler for App {
         };
         self.window = Some(window);
         self.surface = Some(surface);
-        // Apply initial fullscreen if requested (borderless for broad compat; exclusive available via F cycle).
-        if self.start_fullscreen
-            && let Some(w) = &self.window
-        {
-            w.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+        if let Some(window) = &self.window {
+            let mode = if self.start_fullscreen {
+                Some(winit::window::Fullscreen::Borderless(None))
+            } else {
+                match self.preferred_window_mode {
+                    numinous_core::WindowModePreference::Windowed => None,
+                    numinous_core::WindowModePreference::Borderless => {
+                        Some(winit::window::Fullscreen::Borderless(None))
+                    }
+                    numinous_core::WindowModePreference::Exclusive => window
+                        .primary_monitor()
+                        .and_then(|monitor| monitor.video_modes().next())
+                        .map(winit::window::Fullscreen::Exclusive)
+                        .or(Some(winit::window::Fullscreen::Borderless(None))),
+                }
+            };
+            window.set_fullscreen(mode);
         }
         self.player = match numinous_audio::LoopPlayer::new() {
             Ok(player) => Some(player),
@@ -5163,20 +5515,7 @@ impl ApplicationHandler for App {
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         match event {
             WindowEvent::CloseRequested => {
-                self.session_viewer.close();
-                // The window is closing, so a banner has nowhere to live; the
-                // crash log is the one place this failure can still speak.
-                if let Err(error) = numinous_core::persist_journey_delta(
-                    &self.journey_file,
-                    &self.journey_saved,
-                    &self.journey,
-                ) {
-                    let _ = append_crash_log_at(
-                        &self.crash_log,
-                        &format!("journey save at exit failed: {error}\n"),
-                    );
-                }
-                event_loop.exit();
+                self.exit_app(event_loop);
             }
             WindowEvent::RedrawRequested => self.draw(),
             WindowEvent::KeyboardInput {
@@ -5190,6 +5529,10 @@ impl ApplicationHandler for App {
                 ..
             } => {
                 self.clear_pointer_state();
+                if self.handle_menu_key(&logical_key, repeat) {
+                    self.input_mode = input_legend::InputMode::KeyboardMouse;
+                    return;
+                }
                 if self.handle_global_audio_key(&logical_key, repeat) {
                     return;
                 }
@@ -5212,7 +5555,7 @@ impl ApplicationHandler for App {
                     self.nim = None;
                     self.gauntlet = None;
                     self.arcade = None;
-                    self.show_help = false;
+                    self.close_menu();
                     self.show_journey = false;
                     self.console.open();
                     return;
@@ -5220,7 +5563,9 @@ impl ApplicationHandler for App {
                 if self.session_viewer.is_open() {
                     self.input_mode = input_legend::InputMode::KeyboardMouse;
                     match logical_key {
-                        Key::Named(NamedKey::Escape) => self.close_session_viewer(),
+                        Key::Named(NamedKey::Escape) => {
+                            self.open_activity_menu(menu::ActivityKind::SharedPlay);
+                        }
                         Key::Named(NamedKey::Space) => {
                             self.session_viewer.toggle_display_pause();
                         }
@@ -5249,11 +5594,14 @@ impl ApplicationHandler for App {
                     }
                     return;
                 }
-                if self.handle_modal_help_key(&logical_key) {
-                    return;
-                }
                 self.input_mode = input_legend::InputMode::KeyboardMouse;
                 if self.handle_playtest_shortcut(&logical_key, repeat) {
+                    return;
+                }
+                if logical_key == Key::Named(NamedKey::Escape)
+                    && let Some(kind) = self.activity_kind()
+                {
+                    self.open_activity_menu(kind);
                     return;
                 }
                 if let Some(play) = &mut self.arcade {
@@ -5406,9 +5754,9 @@ impl ApplicationHandler for App {
                         Key::Named(NamedKey::Escape) => {
                             if self.the_show {
                                 self.toggle_show();
-                                self.show_help = false;
+                                self.close_menu();
                             } else {
-                                self.show_help = !self.show_help;
+                                self.open_home_menu();
                             }
                         }
                         // A posed call owns the aiming keys until it is
@@ -5562,52 +5910,18 @@ impl ApplicationHandler for App {
                         }
                         // Q swaps the era, like swapping weapons.
                         Key::Character(c) if c.as_str() == "q" => {
-                            self.era = self.era.next();
-                            if let Some(window) = &self.window {
-                                window.set_title(&self.title());
-                            }
+                            self.cycle_visual_era();
                         }
                         // R returns this visit to its initial state. Moving to a
                         // different room still deals the next variation.
                         Key::Character(c) if c.as_str() == "r" => {
                             self.reset_current_room();
                         }
-                        // F cycles fullscreen modes for full screen view + options (windowed, borderless, exclusive).
-                        // Borderless for compat; exclusive uses primary monitor's first video mode for "true" fullscreen.
-                        // Shows current in banner (like volume) to surface the video setting.
-                        Key::Character(c) if c.as_str() == "f" => {
-                            if let Some(window) = &self.window {
-                                let next = match window.fullscreen() {
-                                    Some(winit::window::Fullscreen::Borderless(_)) => {
-                                        // Try exclusive on primary monitor first mode.
-                                        if let Some(monitor) = window.primary_monitor() {
-                                            monitor
-                                                .video_modes()
-                                                .next()
-                                                .map(winit::window::Fullscreen::Exclusive)
-                                        } else {
-                                            None
-                                        }
-                                    }
-                                    Some(winit::window::Fullscreen::Exclusive(_)) => None,
-                                    None => Some(winit::window::Fullscreen::Borderless(None)),
-                                };
-                                window.set_fullscreen(next.clone());
-                                let label = match &next {
-                                    Some(winit::window::Fullscreen::Borderless(_)) => {
-                                        "BORDERLESS".to_string()
-                                    }
-                                    Some(winit::window::Fullscreen::Exclusive(m)) => {
-                                        let size = m.size();
-                                        format!("EXCLUSIVE {}x{}", size.width, size.height)
-                                    }
-                                    None => "WINDOWED".to_string(),
-                                };
-                                self.banner = Some(feedback::fullscreen(&label));
-                            }
+                        Key::Character(c) if c.as_str().eq_ignore_ascii_case("f") => {
+                            self.toggle_fullscreen();
                         }
                         Key::Character(c) if c.as_str() == "h" => {
-                            self.show_help = !self.show_help;
+                            self.open_home_menu();
                         }
                         // G deals the quiz: guess the shape, in the window.
                         Key::Character(c) if c.as_str() == "g" && self.show_help => {
@@ -5647,13 +5961,7 @@ impl ApplicationHandler for App {
                         }
                         // Y turns the radio dial: off, then station by station.
                         Key::Character(c) if c.as_str() == "y" && !repeat => {
-                            let stations = numinous_core::STATIONS.len();
-                            self.radio = match self.radio {
-                                None => Some(0),
-                                Some(i) if i + 1 < stations => Some(i + 1),
-                                Some(_) => None,
-                            };
-                            self.tune_in();
+                            self.cycle_radio();
                         }
                         // P keeps the picture: the postcard key.
                         Key::Character(c) if c.as_str() == "p" => {
@@ -5732,28 +6040,20 @@ impl ApplicationHandler for App {
                 ..
             } => {
                 let point = self.normalized_mouse_point();
-                if self.show_help && !self.modal_mode_active() {
+                if self.show_help && self.menu.is_open() {
                     self.clear_pointer_state();
-                    let input_mode = self.input_mode;
-                    let selected = self.help_menu_selection();
-                    let controller_copy = self.gamepad.controller_copy();
-                    if state == ElementState::Pressed
-                        && let Some(choice) = point.and_then(|point| {
-                            let window = self.window.as_ref()?;
-                            let size = window.inner_size();
-                            overlays::help_menu_choice_at_with_controller(
-                                point,
-                                size.width as usize,
-                                size.height as usize,
-                                input_mode,
-                                selected,
-                                controller_copy,
-                            )
-                        })
-                    {
-                        self.input_mode = input_legend::InputMode::KeyboardMouse;
-                        self.controller_menu_selection = choice;
-                        self.activate_menu_choice(input_legend::MenuChoice::at(choice));
+                    let layout = self.menu_layout();
+                    let target = point.and_then(|point| layout.item_at(point));
+                    self.input_mode = input_legend::InputMode::KeyboardMouse;
+                    match state {
+                        ElementState::Pressed => self.menu.pointer_down(target),
+                        ElementState::Released => {
+                            let intent = self.menu.pointer_up(target);
+                            self.apply_menu_intent(intent);
+                        }
+                    }
+                    if let Some(window) = &self.window {
+                        window.request_redraw();
                     }
                     return;
                 }
@@ -5762,10 +6062,6 @@ impl ApplicationHandler for App {
                     return;
                 }
                 if self.console.is_open() {
-                    self.clear_pointer_state();
-                    return;
-                }
-                if self.show_help && self.modal_mode_active() {
                     self.clear_pointer_state();
                     return;
                 }
@@ -5785,6 +6081,7 @@ impl ApplicationHandler for App {
             WindowEvent::Focused(false) => {
                 self.suspend_presentation_clock(Instant::now());
                 self.clear_pointer_state();
+                self.menu.clear_pointer();
                 if let Some(command) = self.gamepad.deactivate() {
                     self.handle_gamepad_command(command);
                 }
@@ -5817,29 +6114,13 @@ impl ApplicationHandler for App {
             }
             WindowEvent::CursorMoved { position, .. } => {
                 self.mouse = (position.x, position.y);
-                if self.show_help && !self.modal_mode_active() {
-                    let input_mode = self.input_mode;
-                    let selected = self.help_menu_selection();
-                    let controller_copy = self.gamepad.controller_copy();
-                    let hovered = self.window.as_ref().and_then(|window| {
-                        let size = window.inner_size();
-                        let point = mouse_input::normalized_window_point(
-                            (position.x, position.y),
-                            (size.width, size.height),
-                        )?;
-                        overlays::help_menu_choice_at_with_controller(
-                            point,
-                            size.width as usize,
-                            size.height as usize,
-                            input_mode,
-                            selected,
-                            controller_copy,
-                        )
-                    });
-                    if let Some(choice) = hovered
-                        && self.hover_menu_choice(choice)
-                        && let Some(window) = &self.window
-                    {
+                if self.show_help && self.menu.is_open() {
+                    let layout = self.menu_layout();
+                    let hovered = self
+                        .normalized_mouse_point()
+                        .and_then(|point| layout.item_at(point));
+                    let changed = self.menu.pointer_move(hovered);
+                    if changed && let Some(window) = &self.window {
                         window.request_redraw();
                     }
                     return;
@@ -5870,11 +6151,22 @@ impl ApplicationHandler for App {
                     self.update_audio();
                 }
             }
+            WindowEvent::CursorLeft { .. } => {
+                self.menu.clear_pointer();
+                self.clear_pointer_state();
+                if let Some(window) = &self.window {
+                    window.request_redraw();
+                }
+            }
             _ => {}
         }
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        if self.quit_requested {
+            self.exit_app(event_loop);
+            return;
+        }
         let now = Instant::now();
         event_loop.set_control_flow(ControlFlow::WaitUntil(now + FRAME_INTERVAL));
         let since_last_tick = now.saturating_duration_since(self.last_tick);
@@ -5894,7 +6186,8 @@ impl ApplicationHandler for App {
         self.refresh_pointer_state();
         let first_contact_obscured = self.banner.is_some() && self.room_card > 0;
         let ambient = ambient_tick_seconds(elapsed, self.motion);
-        if !first_contact_obscured {
+        let menu_open = self.show_help && self.menu.is_open();
+        if !first_contact_obscured && !menu_open {
             self.advance_life_if_active(ambient);
             self.advance_times_tables_morph(elapsed);
             self.advance_buffon_morph(elapsed);
@@ -5904,7 +6197,7 @@ impl ApplicationHandler for App {
             self.advance_parrondo_morph(elapsed);
             self.advance_nontransitive_morph(elapsed);
         }
-        if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
+        if !(self.paused || self.dragging || menu_open) {
             let motion = self.time_scale * self.visualizer_scale;
             if !first_contact_obscured && self.rooms[self.current].meta().id == "mandelbrot" {
                 self.mandelbrot_camera.advance(ambient * motion);
@@ -6039,6 +6332,7 @@ fn local_state_paths() -> numinous_core::LocalStatePaths {
             scores: test_state_path("scores"),
             cairn: test_state_path("cairn"),
             journal: test_state_path("journal"),
+            preferences: test_state_path("preferences"),
             radio_cache: test_state_path("radio"),
             protected_radio_source: None,
             crash_log: test_state_path("crash"),
@@ -6066,6 +6360,7 @@ fn append_crash_log_at(path: &std::path::Path, entry: &str) -> std::io::Result<(
 }
 
 /// The journey file: the same one the CLI and MCP level (env-overridable).
+#[cfg(test)]
 fn journey_path() -> std::path::PathBuf {
     local_state_paths().journey
 }
@@ -6090,6 +6385,7 @@ fn app_icon() -> Option<Icon> {
 }
 
 /// The score table, read for the journey overlay's trophy evidence.
+#[cfg(test)]
 fn scores_path() -> std::path::PathBuf {
     local_state_paths().scores
 }
@@ -6140,10 +6436,10 @@ fn main() {
 mod tests {
     use super::{
         App, AudioProgram, TestStateRoot, advance_gallery_phase, app_icon, append_crash_log_at,
-        bounded_tick_seconds, effective_room_phase, julia_gpu_c, julia_gpu_vertical_span,
-        life_step_audio_owned, live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
-        room_transient_audio_owned, selected_life_step_audio, selected_parameter_sound,
-        selected_room_interaction_audio,
+        bounded_tick_seconds, effective_room_phase, fullscreen_toggle_target, julia_gpu_c,
+        julia_gpu_vertical_span, life_step_audio_owned, live_mandelbrot_gpu_view,
+        mandelbrot_gpu_view, radio_cache, room_transient_audio_owned, selected_life_step_audio,
+        selected_parameter_sound, selected_room_interaction_audio,
     };
     use crate::input_legend::{InputMode, MenuChoice};
     use numinous_core::ROOM_BED_SOURCE_RATE;
@@ -6200,6 +6496,21 @@ mod tests {
         app.console.open();
         assert!(app.handle_console_key(&Key::Character("~".into())));
         assert!(!app.console.is_open());
+    }
+
+    #[test]
+    fn text_menu_opens_the_existing_power_console_without_an_intermediate_screen() {
+        let mut app = headless("menu-console-toggle");
+        assert!(app.show_help && app.menu.is_open());
+
+        assert!(app.handle_menu_key(&Key::Character("`".into()), false));
+
+        assert!(!app.show_help);
+        assert!(!app.menu.is_open());
+        assert!(app.console.is_open());
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
     }
 
     #[test]
@@ -8143,6 +8454,26 @@ mod tests {
     }
 
     #[test]
+    fn fullscreen_shortcut_returns_directly_to_windowed_mode() {
+        assert!(fullscreen_toggle_target(true).is_none());
+        assert!(matches!(
+            fullscreen_toggle_target(false),
+            Some(winit::window::Fullscreen::Borderless(None))
+        ));
+    }
+
+    #[test]
+    fn cabinet_quit_requests_the_orderly_exit_path() {
+        let mut app = headless("numinous_app_test_cabinet_quit.txt");
+        assert!(app.menu.focus(numinous_app::menu::MenuItemId::Quit));
+        let intent = app.menu.activate_focused();
+        assert_eq!(intent, numinous_app::menu::MenuIntent::Quit);
+        app.apply_menu_intent(intent);
+        assert!(app.quit_requested);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
     fn journey_banner_preserves_the_first_contact_clock_and_card() {
         let mut banner = Some(super::feedback::level_up(2, 0));
         let mut phase = 0.0;
@@ -8207,16 +8538,42 @@ mod tests {
 
     #[test]
     fn controller_can_open_and_leave_every_menu_destination() {
-        for selection in 0..MenuChoice::ALL.len() {
+        use numinous_app::menu::{MenuItemId, MenuRoute};
+
+        for (choice, item, games_page) in [
+            (MenuChoice::Quiz, MenuItemId::Quiz, true),
+            (MenuChoice::Munch, MenuItemId::Munch, true),
+            (MenuChoice::Nim, MenuItemId::Nim, true),
+            (MenuChoice::Gauntlet, MenuItemId::Gauntlet, true),
+            (MenuChoice::Arcade, MenuItemId::Arcade, true),
+            (MenuChoice::Show, MenuItemId::Watch, false),
+            (MenuChoice::Studio, MenuItemId::Create, false),
+            (MenuChoice::Journey, MenuItemId::Journey, false),
+            (MenuChoice::WatchAgent, MenuItemId::SharedPlay, false),
+        ] {
             let mut app = headless(&format!(
-                "numinous_app_test_controller_destination_{selection}.txt"
+                "numinous_app_test_controller_destination_{choice:?}.txt"
             ));
-            app.controller_menu_selection = selection;
+            if games_page {
+                assert_eq!(
+                    app.menu.activate_shortcut('g'),
+                    Some(numinous_app::menu::MenuIntent::None)
+                );
+                assert_eq!(app.menu.route(), MenuRoute::Games);
+            } else {
+                assert_eq!(
+                    app.menu.activate_shortcut('m'),
+                    Some(numinous_app::menu::MenuIntent::None)
+                );
+                assert_eq!(app.menu.route(), MenuRoute::Modes);
+            }
+            let _ = app.menu.focus(item);
+            assert_eq!(app.menu.focused(), item);
 
             app.handle_gamepad_command(crate::gamepad::Command::PrimaryDown);
 
             assert!(!app.show_help);
-            match MenuChoice::at(selection) {
+            match choice {
                 MenuChoice::Quiz => assert!(app.quiz.is_some()),
                 MenuChoice::Munch => assert!(app.munch.is_some()),
                 MenuChoice::Nim => assert!(app.nim.is_some()),
@@ -8228,38 +8585,103 @@ mod tests {
                 MenuChoice::WatchAgent => assert!(app.session_viewer.is_open()),
             }
 
-            app.handle_gamepad_command(crate::gamepad::Command::Back);
-            assert!(!app.the_show);
-            assert!(!app.studio);
-            assert!(!app.show_journey);
+            if app.activity_kind().is_some() {
+                app.handle_gamepad_command(crate::gamepad::Command::Back);
+                assert!(app.show_help, "Back opens the contextual pause menu");
+                assert!(app.menu.focus(MenuItemId::LeaveActivity));
+                app.handle_gamepad_command(crate::gamepad::Command::PrimaryDown);
+            } else {
+                app.handle_gamepad_command(crate::gamepad::Command::Back);
+            }
+            assert!(!app.the_show && !app.studio && !app.show_journey);
             assert!(!app.session_viewer.is_open());
-            assert!(
-                app.quiz.is_none()
-                    && app.munch.is_none()
-                    && app.nim.is_none()
-                    && app.gauntlet.is_none()
-                    && app.arcade.is_none(),
-                "controller Back leaves menu destination {selection}"
-            );
+            assert!(app.quiz.is_none() && app.munch.is_none() && app.nim.is_none());
+            assert!(app.gauntlet.is_none() && app.arcade.is_none());
             let _ = std::fs::remove_file(&app.journey_file);
             let _ = std::fs::remove_file(&app.scores_file);
         }
     }
 
     #[test]
+    fn controller_moves_through_menu_pages_before_leaving_the_room() {
+        use crate::gamepad::Command;
+        use numinous_app::menu::{MenuItemId, MenuRoute};
+
+        let mut app = headless("numinous_app_test_controller_menu_pages.txt");
+        assert!(app.menu.focus(MenuItemId::Games));
+        app.handle_gamepad_command(Command::PrimaryDown);
+        assert!(app.show_help);
+        assert_eq!(app.menu.route(), MenuRoute::Games);
+        assert_eq!(app.menu.focused(), MenuItemId::Quiz);
+
+        app.handle_gamepad_command(Command::Back);
+        assert!(app.show_help);
+        assert_eq!(app.menu.route(), MenuRoute::Home);
+        app.handle_gamepad_command(Command::Back);
+        assert!(!app.show_help);
+
+        app.open_home_menu();
+        assert!(app.menu.focus(MenuItemId::Settings));
+        app.handle_gamepad_command(Command::PrimaryDown);
+        assert_eq!(app.menu.route(), MenuRoute::Settings);
+        assert!(app.menu.focus(MenuItemId::Controls));
+        app.handle_gamepad_command(Command::PrimaryDown);
+        assert_eq!(app.menu.route(), MenuRoute::Controls);
+        app.handle_gamepad_command(Command::PrimaryDown);
+        assert!(app.show_help, "Controls has no hidden launch action");
+        assert_eq!(app.menu.route(), MenuRoute::Settings);
+        app.handle_gamepad_command(Command::Back);
+        assert_eq!(app.menu.route(), MenuRoute::Home);
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn keyboard_menu_shortcuts_only_activate_visible_actions() {
+        use numinous_app::menu::MenuRoute;
+
+        let mut app = headless("numinous_app_test_keyboard_menu_pages.txt");
+        assert!(app.handle_menu_key(&Key::Character("m".into()), false));
+        assert!(app.quiz.is_none(), "Quiz is not a root-menu action");
+        assert_eq!(app.menu.route(), MenuRoute::Modes);
+
+        assert!(app.handle_menu_key(&Key::Character("g".into()), false));
+        assert_eq!(app.menu.route(), MenuRoute::Modes);
+        assert!(app.handle_menu_key(&Key::Named(NamedKey::Escape), false));
+        assert_eq!(app.menu.route(), MenuRoute::Home);
+
+        assert!(app.handle_menu_key(&Key::Character("g".into()), false));
+        assert_eq!(app.menu.route(), MenuRoute::Games);
+        assert!(app.show_help);
+        assert!(app.handle_menu_key(&Key::Character("m".into()), false));
+        assert!(app.munch.is_some());
+        assert!(!app.show_help);
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
     fn pointer_hover_keeps_the_visible_controller_menu_layout_stable() {
+        use numinous_app::menu::MenuItemId;
+
         let mut app = headless("controller-menu-pointer-hover");
         app.input_mode = InputMode::Controller;
-        app.controller_menu_selection = 0;
+        assert_eq!(
+            app.menu.activate_shortcut('m'),
+            Some(numinous_app::menu::MenuIntent::None)
+        );
 
-        assert!(app.hover_menu_choice(1));
-        assert_eq!(app.controller_menu_selection, 1);
+        assert!(app.menu.pointer_move(Some(MenuItemId::Create)));
+        assert_eq!(app.menu.hovered(), Some(MenuItemId::Create));
+        assert_eq!(app.menu.focused(), MenuItemId::Watch);
         assert_eq!(
             app.input_mode,
             InputMode::Controller,
             "hover and press must resolve against the same visible layout"
         );
-        assert!(!app.hover_menu_choice(1));
+        assert!(!app.menu.pointer_move(Some(MenuItemId::Create)));
 
         let _ = std::fs::remove_file(&app.journey_file);
         let _ = std::fs::remove_file(&app.scores_file);
@@ -8315,20 +8737,15 @@ mod tests {
         app.handle_gamepad_command(crate::gamepad::Command::Menu);
         assert!(app.show_help);
         assert!(app.quiz.is_some());
-        assert!(app.modal_frame(320, 220).is_none());
-        assert_eq!(app.help_menu_selection(), None);
+        assert!(app.modal_frame(320, 220).is_some());
         assert_eq!(
-            crate::input_legend::help_lines(app.input_mode, app.help_menu_selection(), true),
-            [
-                "ACTIVITY PAUSED",
-                "SOUTH / START / EAST RETURN",
-                "THE CURRENT RUN STAYS INTACT"
-            ]
+            app.menu.route(),
+            numinous_app::menu::MenuRoute::Pause(numinous_app::menu::ActivityKind::Quiz)
         );
+        assert_eq!(app.menu.focused(), numinous_app::menu::MenuItemId::Resume);
 
-        let selection = app.controller_menu_selection;
         app.handle_gamepad_command(crate::gamepad::Command::Right);
-        assert_eq!(app.controller_menu_selection, selection);
+        assert_eq!(app.menu.focused(), numinous_app::menu::MenuItemId::Resume);
         assert!(app.quiz.as_ref().is_some_and(|quiz| quiz.flash.is_none()));
 
         app.handle_gamepad_command(crate::gamepad::Command::PrimaryDown);
@@ -8339,16 +8756,16 @@ mod tests {
     }
 
     #[test]
-    fn modal_help_blocks_keyboard_gameplay_until_escape_returns() {
+    fn contextual_pause_blocks_keyboard_gameplay_until_escape_returns() {
         let mut app = headless("numinous_app_test_modal_help_keyboard.txt");
         app.show_help = false;
         app.quiz_next();
-        app.show_help = true;
+        app.open_activity_menu(numinous_app::menu::ActivityKind::Quiz);
 
-        assert!(app.handle_modal_help_key(&Key::Character("a".into())));
+        assert!(app.handle_menu_key(&Key::Character("a".into()), false));
         assert!(app.quiz.as_ref().is_some_and(|quiz| quiz.flash.is_none()));
         assert!(app.show_help);
-        assert!(app.handle_modal_help_key(&Key::Named(NamedKey::Escape)));
+        assert!(app.handle_menu_key(&Key::Named(NamedKey::Escape), false));
         assert!(!app.show_help);
         assert!(app.quiz.is_some());
         let _ = std::fs::remove_file(&app.journey_file);
@@ -8359,7 +8776,7 @@ mod tests {
         let mut app = headless("numinous_app_test_modal_help_wheel.txt");
         app.show_help = false;
         app.quiz_next();
-        app.show_help = true;
+        app.open_activity_menu(numinous_app::menu::ActivityKind::Quiz);
         app.input_mode = InputMode::Controller;
         app.t = 0.4;
 
@@ -8720,6 +9137,49 @@ mod tests {
         let banner = app.banner.as_ref().expect("volume banner");
         assert_eq!(banner.lines()[0], "VOLUME 55%");
         assert_eq!(app.radio_track.as_slice(), [0.25, -0.25, 0.5, -0.5]);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn app_options_persist_one_versioned_preference_snapshot() {
+        let mut app = headless("numinous_app_test_preferences.txt");
+        let path = app.preferences_file.clone();
+        let _ = std::fs::remove_file(&path);
+
+        app.change_volume(0.1);
+        app.toggle_mute();
+        app.cycle_visual_era();
+
+        assert_eq!(
+            numinous_core::read_app_preferences_file(&path).expect("saved preferences"),
+            numinous_core::AppPreferences {
+                volume_percent: 55,
+                muted: true,
+                era: numinous_core::Era::Phosphor,
+                window_mode: numinous_core::WindowModePreference::Windowed,
+            }
+        );
+        let _ = std::fs::remove_file(path);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn app_options_preserve_and_report_a_malformed_preference_file() {
+        let mut app = headless("numinous_app_test_preferences_invalid.txt");
+        let path = app.preferences_file.clone();
+        std::fs::write(&path, b"not a preference schema\n").expect("malformed fixture");
+
+        app.change_volume(0.1);
+
+        assert_eq!(
+            std::fs::read(&path).expect("malformed file remains"),
+            b"not a preference schema\n"
+        );
+        assert_eq!(
+            app.banner.as_ref().expect("save warning").lines()[0],
+            super::PREFERENCES_SAVE_WARNING
+        );
+        let _ = std::fs::remove_file(path);
         let _ = std::fs::remove_file(&app.journey_file);
     }
 

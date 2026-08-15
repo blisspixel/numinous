@@ -74,6 +74,7 @@ fn inventory_report(
         selection.scores.then_some("scores"),
         selection.cairn.then_some("Cairn drafts"),
         selection.journal.then_some("experience journal"),
+        selection.preferences.then_some("App preferences"),
         selection.radio_cache.then_some("radio cache"),
         selection.crash_log.then_some("crash log"),
     ]
@@ -82,7 +83,7 @@ fn inventory_report(
     .collect::<Vec<_>>()
     .join(", ");
     format!(
-        "Numinous-managed local state:\n\n{}\n{}\n{}\n{}\n  {:<12} {}; path {}\n{}\n\nSelected for confirmed erasure: {}.\nNo state was erased by this preview. Use `numinous forget --confirm` for the Journey, add individual flags for other stores, or use `numinous forget --confirm --all-local` for every store above.\n\nNot inventoried or erased: user-selected exports such as PNG, APNG, WAV, and `.num` files; installed application files; the Rust toolchain; and bundled canonical Cairn stones. Local Cairn drafts store author and message as bounded plaintext until erased or separately submitted.",
+        "Numinous-managed local state:\n\n{}\n{}\n{}\n{}\n{}\n  {:<12} {}; path {}\n{}\n\nSelected for confirmed erasure: {}.\nNo state was erased by this preview. Use `numinous forget --confirm` for the Journey, add individual flags for other stores, or use `numinous forget --confirm --all-local` for every store above.\n\nNot inventoried or erased: user-selected exports such as PNG, APNG, WAV, and `.num` files; installed application files; the Rust toolchain; and bundled canonical Cairn stones. Local Cairn drafts store author and message as bounded plaintext until erased or separately submitted.",
         managed_file_line(
             "journey",
             &inventory.journey.file,
@@ -105,6 +106,11 @@ fn inventory_report(
             &format!("{} local plaintext drafts", inventory.cairn.local_drafts)
         ),
         managed_file_line("journal", &inventory.journal, "opt-in experience records"),
+        managed_file_line(
+            "preferences",
+            &inventory.preferences,
+            "App display and audio choices"
+        ),
         "radio cache",
         radio_state,
         radio_path,
@@ -154,7 +160,9 @@ pub(super) fn forget_local_state(
 #[cfg(test)]
 mod tests {
     use super::forget_local_state;
-    use numinous_core::{LocalStateEraseSelection, LocalStatePaths, inspect_local_state};
+    use numinous_core::{
+        AppPreferences, LocalStateEraseSelection, LocalStatePaths, inspect_local_state,
+    };
 
     #[test]
     fn inventories_and_completely_erases_managed_local_state() {
@@ -169,6 +177,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
@@ -179,6 +188,8 @@ mod tests {
         std::fs::write(&paths.scores, b"50\tmunch seed:1 board:0\n").expect("score fixture");
         std::fs::write(&paths.cairn, b"Ada\tproof is a program\n").expect("Cairn fixture");
         std::fs::write(&paths.journal, b"an opt-in experience\n").expect("journal fixture");
+        std::fs::write(&paths.preferences, AppPreferences::default().to_text())
+            .expect("preferences fixture");
         std::fs::write(paths.radio_cache.join("trance-001.wav"), b"RIFF").expect("radio fixture");
         let crash_temp = root.join(".crash.log.999.1.tmp");
         std::fs::write(&crash_temp, b"orphan diagnostic temp").expect("crash temp fixture");
@@ -190,6 +201,7 @@ mod tests {
             "scores",
             "Cairn",
             "journal",
+            "preferences",
             "radio cache",
             "crash log",
             "local plaintext drafts",

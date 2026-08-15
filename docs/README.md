@@ -5,7 +5,7 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.4.0-alpha.1.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
+Status: **0.4.0-alpha.2.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
 0.3 Tactile Alpha agent-and-machine exits are met. Understanding Alpha is the
 active line, and its 0.4 exit remains open. The
 headless core, CLI, MCP server, windowed App, GPU and audio adapters, 354 catalog

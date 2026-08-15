@@ -2,7 +2,7 @@
 # artifacts into renders\. See VERIFY.md.
 $ErrorActionPreference = "Stop"
 $savedEnvironment = @{}
-foreach ($name in @("Path", "NUMINOUS_JOURNEY", "NUMINOUS_SCORES", "NUMINOUS_CAIRN")) {
+foreach ($name in @("Path", "NUMINOUS_JOURNEY", "NUMINOUS_SCORES", "NUMINOUS_CAIRN", "NUMINOUS_PREFERENCES")) {
     $item = Get-Item "Env:$name" -ErrorAction SilentlyContinue
     $savedEnvironment[$name] = @{
         Present = $null -ne $item
@@ -15,6 +15,7 @@ New-Item -ItemType Directory -Force $verifyState | Out-Null
 $env:NUMINOUS_JOURNEY = Join-Path $verifyState "journey.txt"
 $env:NUMINOUS_SCORES = Join-Path $verifyState "scores.txt"
 $env:NUMINOUS_CAIRN = Join-Path $verifyState "cairn.txt"
+$env:NUMINOUS_PREFERENCES = Join-Path $verifyState "preferences.txt"
 
 function Step($name, $block) {
     Write-Host ""

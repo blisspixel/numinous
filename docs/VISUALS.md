@@ -5,7 +5,7 @@ screenshot-worthy.** If you pause at a random instant and it is not beautiful,
 that is a bug. This document owns both the current rendering boundary and the
 target visual system.
 
-**Implementation boundary, 2026-07-13:** 0.4.0-alpha.1 renders every room
+**Implementation boundary, 2026-07-13:** 0.4.0-alpha.2 renders every room
 deterministically through CPU `Surface` implementations and presents app frames
 with `softbuffer`. Mandelbrot and Julia alone have targeted `wgpu` paths. Four
 CPU-styled Eras ship: phosphor, 8-bit, vector, and modern. PNG room renders,
@@ -35,6 +35,13 @@ visual surface against these invariants:
   that idea without competing with it.
 - Reuse shared typography, spacing, chrome, palette, Era, and motion primitives
   before introducing a local treatment.
+- Keep Cabinet text on whole pixel scales and derive desktop scale from the
+  viewport. The selected description, Controls reference, and command legend
+  must remain comfortably readable in fullscreen, never collapse into tiny
+  utility text, and never overlap the selectable rows.
+- Use the Cabinet's wide 7 by 7 cartridge face for its title, choices,
+  descriptions, values, Controls reference, and legend. The compact 5 by 7 HUD
+  face remains appropriate where room chrome must leave the art primary.
 - Make motion causal, continuous, and restrained. A quieter reduced-motion
   treatment must preserve the same information and visual hierarchy.
 - Check the default frame, compact frame, and at least one consequential

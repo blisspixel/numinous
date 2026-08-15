@@ -11,7 +11,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
 **Implementation boundary, 2026-07-18:** all three faces are shipped from the
-same headless core in 0.4.0-alpha.1. Descriptions below mix current behavior
+same headless core in 0.4.0-alpha.2. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -70,7 +70,10 @@ The full interactive audiovisual experience. The UX is specified in depth across
   badge reports source, level, and effective silence without relying on a
   transient banner.
   Input-aware legends cover rooms, all games, The Show, the Journey, and the
-  Studio. The controller opens and closes all nine menu destinations; Studio
+  Studio. The Cabinet retains its opaque text screen and divides its old flat
+  index into Modes, Games, Settings, and Controls lists of no more than six
+  selectable rows. The controller opens every visible row and every contextual
+  pause action; Studio
   formula entry remains honestly keyboard-required.
   Focus loss or disconnect cancels a held gesture. Controller bindings load
   from `.numinous-bindings.json` in the player's home directory, with an
@@ -366,7 +369,7 @@ tools, replay-safe daily seed normalization, and separate nonblocking writer
 and disconnect-monitor workers. Twenty-three tools are explicitly public, nine
 progression or local-state tools are private, and the consent control broadcasts
 neither itself nor progress. The native App now ships the human Watch Agent
-surface. X or the ninth controller-menu destination opens the ephemeral
+surface. X or the identity-neutral Shared Play item in the Cabinet opens the ephemeral
 listener. The surface shows pairing, consent state, typed public actions,
 input JSON, human-readable text from MCP `content` result blocks, exact producer
 gaps, and local retention loss. For `play_room`, it strictly revalidates the
