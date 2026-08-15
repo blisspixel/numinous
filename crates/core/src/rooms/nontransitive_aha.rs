@@ -331,11 +331,21 @@ impl NontransitiveAha {
                 "WHAT BEATS {}? 1=A 2=B 3=C",
                 self.chosen.map_or("?", Die::name)
             ),
-            AhaBeat::Withheld => format!(
-                "CALLED {} AGAINST {}  PRESS E",
-                self.call().map_or("EXPERIMENT", Die::name),
-                self.chosen.map_or("?", Die::name)
-            ),
+            // The experiment path earns without a call, so it must not borrow
+            // the CALLED sentence. Telling a player they called something they
+            // never called is the same lie as hiding a call they did make.
+            AhaBeat::Withheld => match self.earn {
+                Some(EarnPath::Call { called, .. }) => format!(
+                    "CALLED {} AGAINST {}  PRESS E",
+                    called.name(),
+                    self.chosen.map_or("?", Die::name)
+                ),
+                Some(EarnPath::Choices { count }) => format!(
+                    "{count} CHOICES HELD ON {}  PRESS E",
+                    self.chosen.map_or("?", Die::name)
+                ),
+                None => "READY  PRESS E".to_string(),
+            },
             AhaBeat::Morph { progress } => {
                 format!("36 OUTCOMES {:>3}%", (progress * 100.0).round() as u8)
             }

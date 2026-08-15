@@ -218,7 +218,11 @@ impl Room for Arecibo {
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK LEFT OR RIGHT: TRY A WIDTH")
+        // Width is a dial across the whole span, not a two-way stepper. The
+        // old copy sent players tapping left and right between the extremes
+        // while every width in between, including the ones that lock, sat
+        // untouched under the middle of the room.
+        Some("CLICK ANYWHERE ACROSS: X SETS WIDTH 6 TO 18")
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {

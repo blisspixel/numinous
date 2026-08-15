@@ -1829,11 +1829,11 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
             }
             if structured.get("temporal").is_some() {
                 summary.push_str(
-                    " Read structuredContent.render, temporal, pokes, gesture, status, delta, goal, goalMet, engineeredAha, and the earned reveal for the complete result.",
+                    " Read structuredContent.render, temporal, pokes, gesture, status, delta, goal, goalMet, and engineeredAha for the complete result; ask reveal_room for the explanation.",
                 );
             } else {
                 summary.push_str(
-                    " Read structuredContent.render, pokes, gesture, status, delta, goal, goalMet, engineeredAha, and the earned reveal for the complete result.",
+                    " Read structuredContent.render, pokes, gesture, status, delta, goal, goalMet, and engineeredAha for the complete result; ask reveal_room for the explanation.",
                 );
             }
             Some(summary)
@@ -2591,17 +2591,21 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
             // Every engineered Aha gates its answer on consolidation. A goal
             // can be visibly met before the player asks the measured gap to
             // answer, so goalMet and reveal are intentionally separate facts.
+            //
+            // An ordinary room used to pay a landed goal with its explanation
+            // in the same reply. That reversed the promise a player is given at
+            // the door, that understanding is offered later and only if they
+            // ask, and it made the reward for succeeding the loss of the thing
+            // they succeeded at. Landing the goal opens `reveal_room`; it does
+            // not speak. The staged rooms keep answering their own summon,
+            // because `aha_summon` is the player asking.
             let aha_gates_reveal = numinous_core::is_engineered_aha_room(canonical_id);
             let aha_allows_reveal = engineered_aha
                 .as_ref()
                 .and_then(|value| value.get("allowReveal"))
                 .and_then(Value::as_bool)
                 .unwrap_or(false);
-            let earned_reveal = if aha_gates_reveal {
-                aha_allows_reveal.then(|| room.reveal())
-            } else {
-                goal_met.then(|| room.reveal())
-            };
+            let earned_reveal = (aha_gates_reveal && aha_allows_reveal).then(|| room.reveal());
             // Prefer aha footer for generation-arg visits and for prime/morph/
             // confirm/consolidated beats. Keep the room readout for a pure K5
             // goal path so the public goal and its visible status stay aligned.
@@ -5854,11 +5858,21 @@ fn list_rooms_tool() -> Value {
             |metadata| json!({ "id": metadata.id, "title": metadata.title, "wing": metadata.wing }),
         )
         .collect::<Vec<_>>();
+    // Bare ids make a player look the names up in the 354-room array the
+    // doorway exists to spare them. Carry the same shape as a catalog row so a
+    // starter can be chosen, and named, without reading the map.
+    let starters = STARTER_ROOM_IDS
+        .iter()
+        .filter_map(|id| numinous_core::room_meta_by_id(id))
+        .map(
+            |metadata| json!({ "id": metadata.id, "title": metadata.title, "wing": metadata.wing }),
+        )
+        .collect::<Vec<_>>();
     tool_structured(
         &list_rooms_text(),
         json!({
             "count": structured_rooms.len(),
-            "starters": STARTER_ROOM_IDS,
+            "starters": starters,
             "rooms": structured_rooms,
         }),
     )
@@ -9275,6 +9289,191 @@ mod tests {
         );
     }
 
+    /// Each staged room, with the arguments that earn the withheld beat by
+    /// running its own experiment rather than by naming a call.
+    fn experiment_earn_calls() -> Vec<(&'static str, Value)> {
+        let throws: Vec<_> = (0..8)
+            .map(|i| json!([0.2 + 0.05 * f64::from(i), 0.5]))
+            .collect();
+        let releases: Vec<_> = (0..4)
+            .flat_map(|i| {
+                let t = 0.05 + f64::from(i) * 0.1;
+                [
+                    json!({"kind":"down","x":0.6,"y":0.3,"t":t}),
+                    json!({"kind":"up","x":0.6,"y":0.3,"t":t + 0.02}),
+                ]
+            })
+            .collect();
+        let four_pokes = json!([[0.2, 0.5], [0.5, 0.5], [0.8, 0.5], [0.3, 0.5]]);
+        vec![
+            ("times-tables", json!({"id":"times-tables","t":0.375})),
+            (
+                "buffon-needle",
+                json!({"id":"buffon-needle","pokes":throws}),
+            ),
+            (
+                "galton-board",
+                json!({"id":"galton-board","pokes":[[0.5,0.5],[0.5,0.5],[0.5,0.5],[0.5,0.5]]}),
+            ),
+            (
+                "double-pendulum",
+                json!({"id":"double-pendulum","gesture":releases}),
+            ),
+            (
+                "kepler-laws",
+                json!({"id":"kepler-laws","pokes":[[0.4,0.5],[0.5,0.5],[0.6,0.5],[0.7,0.5]]}),
+            ),
+            ("parrondo", json!({"id":"parrondo","pokes":four_pokes})),
+            (
+                "nontransitive",
+                json!({"id":"nontransitive","pokes":four_pokes}),
+            ),
+        ]
+    }
+
+    #[test]
+    fn landing_a_goal_opens_the_explanation_without_speaking_it() {
+        // Reported from packaged play: landing the Smith Chart bead on the r=1
+        // ring returned the whole conformal-map lecture in the same reply, so
+        // the reward for succeeding was losing the thing you succeeded at. The
+        // door promises understanding later and only if you ask.
+        let journey = super::test_state_path("goal-does-not-lecture");
+        let _ = std::fs::remove_file(&journey);
+        let landed = super::handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":900,"method":"tools/call",
+                "params":{"name":"play_room","arguments":{
+                    "id":"smith-chart","t":0.25,"pokes":[[0.62,0.48]]
+                }}
+            }),
+            &journey,
+        )
+        .expect("play response");
+        let structured = &landed["result"]["structuredContent"];
+        assert_eq!(
+            structured["goalMet"], true,
+            "the poke must still land the goal: {structured}"
+        );
+        assert!(
+            structured["reveal"].is_null(),
+            "a landed goal lectured: {}",
+            structured["reveal"]
+        );
+        assert!(
+            !landed["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("Reveal:"),
+            "the landed goal lectured in text: {}",
+            landed["result"]["content"][0]["text"]
+        );
+
+        // Nothing is lost: having played, the player can now ask.
+        let asked = super::handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":901,"method":"tools/call",
+                "params":{"name":"reveal_room","arguments":{"id":"smith-chart"}}
+            }),
+            &journey,
+        )
+        .expect("reveal response");
+        assert_eq!(
+            asked["result"]["isError"], false,
+            "playing must open the ask: {asked}"
+        );
+        assert!(
+            asked["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("Gamma"),
+            "the explanation is still there for the asking: {asked}"
+        );
+        let _ = std::fs::remove_file(&journey);
+    }
+
+    #[test]
+    fn an_unearned_call_is_never_claimed_on_the_players_behalf() {
+        // The staged rooms turn on one distinction: whether the player
+        // committed. Three rooms used to format the experiment path through
+        // their CALLED sentence, so a player who never named anything read
+        // CALLED EXPERIMENT, or worse CALLED EXPERIMENT AGAINST B. Inventing a
+        // commitment is the same betrayal as dropping a real one.
+        for (room, mut arguments) in experiment_earn_calls() {
+            arguments["width"] = json!(44);
+            arguments["height"] = json!(20);
+            let reply = call("play_room", arguments.clone());
+            let aha = &reply["result"]["structuredContent"]["engineeredAha"];
+            assert_eq!(aha["beat"], "withheld", "{room} did not earn: {aha}");
+            assert!(
+                aha["wager"].is_null(),
+                "{room} invented a wager from the experiment path: {aha}"
+            );
+            let status = aha["status"].as_str().unwrap_or_default();
+            assert!(
+                !status.contains("CALLED"),
+                "{room} claims a call the player never made: {status:?}"
+            );
+            assert!(
+                !status.contains("EXPERIMENT"),
+                "{room} leaks its internal earn vocabulary: {status:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_named_call_still_owns_every_staged_room() {
+        // The other half of the same rule: naming a call at the experiment
+        // earn must supersede it in all seven rooms, not only the two that
+        // were reported.
+        let named: [(&str, &str, Value); 7] = [
+            ("times-tables", "place_wager", json!("nephroid")),
+            ("buffon-needle", "number_wager", json!(3.0)),
+            ("galton-board", "bin_wager", json!(3)),
+            ("double-pendulum", "ending_wager", json!("drifted")),
+            ("kepler-laws", "speed_wager", json!("slower")),
+            ("parrondo", "policy_wager", json!("a")),
+            ("nontransitive", "counter_wager", json!("c")),
+        ];
+        let earns = experiment_earn_calls();
+        for (room, field, value) in named {
+            let mut arguments = earns
+                .iter()
+                .find(|(id, _)| *id == room)
+                .map(|(_, args)| args.clone())
+                .expect("every named room has an experiment earn");
+            arguments["width"] = json!(44);
+            arguments["height"] = json!(20);
+            arguments[field] = value.clone();
+            let held = call("play_room", arguments.clone());
+            let held_aha = &held["result"]["structuredContent"]["engineeredAha"];
+            assert_eq!(
+                held_aha["wager"], value,
+                "{room} dropped a call sent at its experiment earn: {held_aha}"
+            );
+            assert_eq!(held_aha["beat"], "withheld", "{room}: {held_aha}");
+            for held_back in ["earn", "truth", "punchline", "graded"] {
+                assert!(
+                    held_aha[held_back].is_null(),
+                    "{room} leaked {held_back} at withheld: {held_aha}"
+                );
+            }
+
+            arguments["aha_summon"] = json!(true);
+            let summoned = call("play_room", arguments);
+            let summoned_aha = &summoned["result"]["structuredContent"]["engineeredAha"];
+            assert_eq!(summoned_aha["beat"], "consolidated", "{room}");
+            assert_eq!(
+                summoned_aha["wager"], value,
+                "{room} lost the call at consolidation: {summoned_aha}"
+            );
+            let earn = summoned_aha["earn"].as_str().unwrap_or_default();
+            assert!(
+                earn.starts_with("wager:") || earn.starts_with("call:"),
+                "{room} graded the experiment instead of the call: {earn:?}"
+            );
+        }
+    }
+
     #[test]
     fn a_number_wager_after_enough_throws_is_kept() {
         // The same drop existed in Buffon's Needle, where enough thrown needles
@@ -12002,10 +12201,17 @@ mod tests {
         assert_eq!(starters.len(), super::STARTER_ROOM_IDS.len());
         let catalog = structured["rooms"].as_array().expect("room catalog");
         for starter in starters {
-            let id = starter.as_str().expect("starter ids are strings");
+            // A starter carries the same shape as a catalog row, so a player
+            // can choose and name it without reading the 354-room array the
+            // doorway exists to spare them.
+            let id = starter["id"].as_str().expect("starter rows carry an id");
             assert!(
-                catalog.iter().any(|room| room["id"] == id),
-                "starter {id} is not a real room"
+                starter["title"].is_string() && starter["wing"].is_string(),
+                "a bare id is not a doorway: {starter}"
+            );
+            assert!(
+                catalog.iter().any(|room| room == starter),
+                "starter {id} does not match its catalog row"
             );
             assert!(
                 numinous_core::room_meta_by_id(id).is_some(),

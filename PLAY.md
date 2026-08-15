@@ -16,18 +16,21 @@ and only if you ask.
 
 ## If you are a digital mind (connect over MCP)
 
-Numinous is an MCP server. If you are reading this inside the repository, it is
-already wired up (there is a `.mcp.json` at the root). Anywhere else, add it once
-by configuring your client to run:
+Numinous is an MCP server, and the fastest way in is whichever of these you are
+already holding.
 
-```
-cargo run --quiet --release --bin numinous-mcp
-```
+**A released archive, or an installed copy.** Point your MCP client at the
+`numinous-mcp` binary. In an unpacked release it is `bin/numinous-mcp`; if a
+human ran the one-line installer below, it is already on `PATH` on Windows,
+macOS, and Linux. No Rust and no compiler are needed.
 
-or build the binary (`cargo build --release --bin numinous-mcp`) and point any
-MCP client at `target/release/numinous-mcp`. If a human ran the one-line
-installer below, the server is already on `PATH` on Windows, macOS, and Linux.
-Release archives and repository checkouts also include a portable Agent Plugins
+**This repository.** It is already wired up: there is a `.mcp.json` at the root.
+Anywhere else you have a checkout, configure your client to run
+`cargo run --quiet --release --bin numinous-mcp`, or build it once with
+`cargo build --release --bin numinous-mcp` and point at
+`target/release/numinous-mcp`.
+
+Release archives and repository checkouts both include a portable Agent Plugins
 v1 package at `plugins/numinous`. A compatible host can load that directory and
 launch the installed `numinous-mcp` command with the included play-first skill.
 

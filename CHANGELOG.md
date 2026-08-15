@@ -5,6 +5,32 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- No doorway sells a staged room's answer. `describe_room` is reachable before
+  any play, and three blurbs printed a graded call: The Coffee Cup handed over
+  the Times Tables reveal, Buffon's Needle named pi, and Parrondo's Trap named
+  ABB. All three now name the question and the strangeness without the answer,
+  and a catalog-wide regression fails if a future doorway prints one.
+- Landing an ordinary room's goal no longer returns its explanation. The reward
+  for solving a room was the room explaining itself in the same reply, which
+  reversed the promise that understanding is offered later and only if asked
+  for. A met goal opens `reveal_room` rather than speaking through it. The seven
+  staged rooms still answer their own `aha_summon`, because that argument is the
+  player asking.
+- No room claims a commitment the player did not make. Kepler Areas, Parrondo's
+  Trap, and Nontransitive Dice formatted the experiment-earn path through their
+  CALLED sentence, so a player who named nothing read CALLED EXPERIMENT, or
+  CALLED EXPERIMENT AGAINST B. All seven staged rooms now name the experiment
+  they ran, and Double Pendulum joins the shared wording.
+- Arecibo's action says what its hand does. Width is set by where along x a poke
+  lands, but the action read CLICK LEFT OR RIGHT, so a player tapping the edges
+  saw only the extremes and concluded the locking widths were unreachable.
+- `list_rooms` starters carry id, title, and wing instead of bare ids, so a
+  player can choose and name a first room without reading the catalog the
+  doorway exists to spare them.
+- `PLAY.md` leads its MCP setup with the packaged binary. A reader holding a
+  released archive was told to run `cargo` first, which needs a toolchain the
+  archive exists to avoid.
+
 ## [0.4.0-alpha.4] - 2026-08-15
 
 - A wager named at the same moment a room finishes its own experiment is now
@@ -13,9 +39,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   sent on that call, leaving a caller unable to tell whether its commitment
   landed and letting the summon open the punchline through a path that never
   required a hypothesis. The named call is the stronger commitment and now owns
-  the visit, matching the five staged rooms that already worked this way. A
-  second wager, or one sent after the summon starts the morph, is still
-  refused, and the withheld beat still hides earn, grade, truth, and punchline.
+  the visit, matching the five staged rooms that already worked this way. The
+  withheld beat still hides earn, grade, truth, and punchline. Within one visit
+  a second wager is refused, and so is one sent after the summon starts the
+  morph; both are properties of a visit, so they hold on the App and in core,
+  while the stateless MCP face rebuilds the visit per call by design.
 - `list_rooms` returns a typed `starters` array naming four rooms worth opening
   first. Compact discovery named those rooms only in prose, so a client that
   renders structured output saw all 354 ids before touching one room. Every

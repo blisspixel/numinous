@@ -198,7 +198,8 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
   visible dial spans K=2 through K=10 and snaps near exact integers. K=5 closes
   into four lobes, raises one earned Aha, and points to the inspectable Reveal.
   Resolution-aware chord sampling keeps compact CLI output legible. App, CLI,
-  and MCP share the same goal, status, accepted hand state, and earned reveal.
+  and MCP share the same goal, status, accepted hand state, and the explanation
+  a player can ask for once they have played.
 - **Reveal:** *"Set the dial to 2 and the chords wrap a cardioid. Up to scale and rotation, that shape outlines the Mandelbrot set's main body, and Fourier Epicycles draw it with only two rotating vectors: arithmetic, fractals, and waves meet in one heart."*
 - **Sound:** The room bed stays continuous while the accepted multiplier drives
   a quiet two-voice ratio `k:(k-1)`: K=2 is an octave, K=3 a fifth, K=4 a
