@@ -106,7 +106,7 @@ bash scripts/check-style.sh
 echo "== POSIX installer safety =="
 bash scripts/install.sh --self-test
 
-echo "== regenerate 2,913-screen app QA matrix =="
+echo "== regenerate 2,937-screen app QA matrix =="
 cargo run -q -p numinous-app --example screens
 echo "== regenerate remaining artifacts into renders/ =="
 cargo run -q --bin numinous -- gallery --dir renders --width 600 --height 600

@@ -1698,7 +1698,26 @@ fn broadcast_session_tool(args: &Value, broadcast: &ConnectionBroadcast) -> Valu
             ),
             broadcast_status_json(&status),
         ),
-        Err(error) => tool_error(&format!("Broadcast unchanged: {error}.")),
+        Err(error) => tool_error(&format!(
+            "Broadcast unchanged: {error}.{}",
+            broadcast_failure_hint(action, error)
+        )),
+    }
+}
+
+/// A rejected start is the one broadcast failure a caller cannot reason its
+/// way out of. Every other action fails on state the caller can inspect, but a
+/// pairing code exists only inside a human's App, so an unaided caller can do
+/// nothing but invent codes. Name where the real one comes from instead.
+fn broadcast_failure_hint(action: &str, error: broadcast::SessionError) -> &'static str {
+    match (action, error) {
+        ("start", broadcast::SessionError::PairingRejected) => {
+            " A pairing code cannot be guessed or reused: a human running the App \
+             chooses Shared Play, and the one-use code it shows is the only code \
+             that starts a viewer. Without that invitation there is nothing to join, \
+             and your play continues unwatched."
+        }
+        _ => "",
     }
 }
 
@@ -1748,7 +1767,11 @@ fn apply_response_mode(name: &str, response_mode: Option<&str>, mut result: Valu
     result
 }
 
-const COMPACT_STARTER_ROOM_IDS: [&str; 4] = [
+/// The four rooms first contact is pointed at. `PLAY.md` withholds the map on
+/// purpose, so the catalog needs a small typed doorway beside the full list: a
+/// client that renders `structuredContent` should be able to show four rooms
+/// rather than 354 before its player has touched one.
+const STARTER_ROOM_IDS: [&str; 4] = [
     "times-tables",
     "double-pendulum",
     "kepler-laws",
@@ -1758,9 +1781,9 @@ const COMPACT_STARTER_ROOM_IDS: [&str; 4] = [
 fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
     match name {
         "list_rooms" => Some(format!(
-            "{} rooms. Start with {}. Read structuredContent.rooms for every id, title, and wing.",
+            "{} rooms. Start with {}, also in structuredContent.starters. Read structuredContent.rooms for every id, title, and wing.",
             structured.get("count")?.as_u64()?,
-            COMPACT_STARTER_ROOM_IDS.join(", ")
+            STARTER_ROOM_IDS.join(", ")
         )),
         "describe_room" => Some(format!(
             "{} ({}) in {}. Action: {}. Read structuredContent for the goal, blurb, reveal, and deep cuts.",
@@ -5833,7 +5856,11 @@ fn list_rooms_tool() -> Value {
         .collect::<Vec<_>>();
     tool_structured(
         &list_rooms_text(),
-        json!({ "count": structured_rooms.len(), "rooms": structured_rooms }),
+        json!({
+            "count": structured_rooms.len(),
+            "starters": STARTER_ROOM_IDS,
+            "rooms": structured_rooms,
+        }),
     )
 }
 
@@ -7108,6 +7135,39 @@ mod tests {
         let encoded = rejected.to_string();
         assert!(!encoded.contains(secret));
         assert!(!journey.exists());
+        // Reported from packaged play: a rejected start said only that pairing
+        // failed, so the one recovery left was guessing another code. Name the
+        // human invitation instead, without echoing what was tried.
+        let guidance = rejected["result"]["content"][0]["text"]
+            .as_str()
+            .expect("rejection text");
+        assert!(
+            guidance.contains("Shared Play"),
+            "a rejected start must name where a real code comes from: {guidance}"
+        );
+        assert!(
+            !guidance.contains(secret),
+            "guidance must not echo the attempted code: {guidance}"
+        );
+
+        // Every other failure is inspectable state, so it stays terse.
+        let no_session = super::handle_request_with_session(
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 703,
+                "method": "tools/call",
+                "params": {"name": "broadcast_session", "arguments": {"action": "pause"}}
+            }),
+            &journey,
+            &session,
+        )
+        .expect("pause response");
+        assert!(
+            !no_session["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("Shared Play")
+        );
     }
 
     #[test]
@@ -7332,7 +7392,7 @@ mod tests {
             );
             assert!(compact_text.contains("structuredContent"), "{tool}");
             if tool == "list_rooms" {
-                for starter in super::COMPACT_STARTER_ROOM_IDS {
+                for starter in super::STARTER_ROOM_IDS {
                     assert!(
                         compact_text.contains(starter),
                         "compact discovery omitted {starter}: {compact_text}"
@@ -9156,6 +9216,91 @@ mod tests {
             compact["result"]["structuredContent"],
             earned["result"]["structuredContent"]
         );
+    }
+
+    #[test]
+    fn a_place_wager_at_the_four_lobe_close_is_kept_and_graded() {
+        // Reported from packaged play: landing four lobes and naming a place in
+        // the same call showed the four-lobe close back and dropped the named
+        // wager, so the caller could not tell whether its own call landed. The
+        // named place is the hypothesis consolidation grades, so it owns the
+        // visit; the other five staged rooms already worked this way.
+        let arguments = json!({
+            "id":"times-tables",
+            "t":0.375,
+            "place_wager":"mandelbrot",
+            "width":40,
+            "height":16
+        });
+        let held = call("play_room", arguments.clone());
+        let held_aha = &held["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(held_aha["beat"], "withheld");
+        assert_eq!(held_aha["wager"], "mandelbrot");
+        assert_eq!(held["result"]["structuredContent"]["goalMet"], true);
+        // Withholding is unchanged: the call is visible, the answer is not.
+        for held_back in ["earn", "reveal", "truth", "punchline", "graded"] {
+            assert!(
+                held_aha[held_back].is_null(),
+                "{held_back} leaked at withheld: {held_aha}"
+            );
+        }
+
+        let mut summoned_arguments = arguments.clone();
+        summoned_arguments["aha_summon"] = json!(true);
+        let summoned = call("play_room", summoned_arguments);
+        let summoned_aha = &summoned["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(summoned_aha["beat"], "consolidated");
+        assert_eq!(summoned_aha["wager"], "mandelbrot");
+        assert_eq!(summoned_aha["earn"], "wager:mandelbrot");
+        assert!(
+            summoned_aha["graded"]
+                .as_str()
+                .is_some_and(|graded| graded.contains("MANDELBROT")),
+            "a kept call is graded at consolidation: {summoned_aha}"
+        );
+
+        // A wrong call is kept just as faithfully; grading is what makes the
+        // commitment real, and the four-lobe close must not launder a miss.
+        let mut missed_arguments = arguments;
+        missed_arguments["place_wager"] = json!("nephroid");
+        missed_arguments["aha_summon"] = json!(true);
+        let missed = call("play_room", missed_arguments);
+        let missed_aha = &missed["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(missed_aha["wager"], "nephroid");
+        assert!(
+            missed_aha["graded"]
+                .as_str()
+                .is_some_and(|graded| graded.contains("NEPHROID")),
+            "a missed call is graded too: {missed_aha}"
+        );
+    }
+
+    #[test]
+    fn a_number_wager_after_enough_throws_is_kept() {
+        // The same drop existed in Buffon's Needle, where enough thrown needles
+        // earn the withheld beat on their own.
+        let throws: Vec<_> = (0..numinous_core::rooms::buffon_aha::MIN_THROWS_TO_EARN)
+            .map(|throw| json!([0.2 + 0.05 * throw as f64, 0.5]))
+            .collect();
+        let held = call(
+            "play_room",
+            json!({
+                "id":"buffon-needle",
+                "pokes":throws,
+                "number_wager":3.0,
+                "width":40,
+                "height":20
+            }),
+        );
+        let held_aha = &held["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(held_aha["beat"], "withheld");
+        assert_eq!(held_aha["wager"], 3.0);
+        for held_back in ["earn", "truth", "punchline", "graded"] {
+            assert!(
+                held_aha[held_back].is_null(),
+                "{held_back} leaked at withheld: {held_aha}"
+            );
+        }
     }
 
     #[test]
@@ -11836,6 +11981,43 @@ mod tests {
         assert!(rooms.iter().all(|room| {
             room["id"].is_string() && room["title"].is_string() && room["wing"].is_string()
         }));
+    }
+
+    #[test]
+    fn list_rooms_offers_a_typed_starter_doorway() {
+        // Reported from packaged play: a client that renders structuredContent
+        // dumped 354 ids on the first call, because the four starters lived
+        // only in compact prose. The typed doorway is the map-withholding
+        // promise kept for structured clients too, without making any mode
+        // lossy.
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":10,"method":"tools/call",
+            "params":{"name":"list_rooms"}
+        }))
+        .expect("tools/call must respond");
+        let structured = &resp["result"]["structuredContent"];
+        let starters = structured["starters"]
+            .as_array()
+            .expect("a typed starter doorway");
+        assert_eq!(starters.len(), super::STARTER_ROOM_IDS.len());
+        let catalog = structured["rooms"].as_array().expect("room catalog");
+        for starter in starters {
+            let id = starter.as_str().expect("starter ids are strings");
+            assert!(
+                catalog.iter().any(|room| room["id"] == id),
+                "starter {id} is not a real room"
+            );
+            assert!(
+                numinous_core::room_meta_by_id(id).is_some(),
+                "starter {id} left the catalog"
+            );
+        }
+        assert!(
+            starters.len() * 20 < catalog.len(),
+            "a doorway that large is the map again: {} of {}",
+            starters.len(),
+            catalog.len()
+        );
     }
 
     #[test]

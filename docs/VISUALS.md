@@ -5,7 +5,7 @@ screenshot-worthy.** If you pause at a random instant and it is not beautiful,
 that is a bug. This document owns both the current rendering boundary and the
 target visual system.
 
-**Implementation boundary, 2026-07-13:** 0.4.0-alpha.3 renders every room
+**Implementation boundary, 2026-07-13:** 0.4.0-alpha.4 renders every room
 deterministically through CPU `Surface` implementations and presents app frames
 with `softbuffer`. Mandelbrot and Julia alone have targeted `wgpu` paths. Four
 CPU-styled Eras ship: phosphor, 8-bit, vector, and modern. PNG room renders,

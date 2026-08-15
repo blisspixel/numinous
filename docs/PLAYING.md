@@ -337,7 +337,7 @@ input without hidden session state:
 
 | Tool | What it does |
 |---|---|
-| `list_rooms` | the catalog; start with `response_mode: "compact"` for a short doorway while retaining the complete structured room list |
+| `list_rooms` | the catalog; start with `response_mode: "compact"` for a short doorway. `structuredContent.starters` names four rooms worth opening first, while `structuredContent.rooms` retains the complete typed list in every mode |
 | `describe_room` | a safe doorway: title, wing, action, optional goal, and play prompt, never the revelation |
 | `reveal_room` | the insight after one real play, or after consolidation for an engineered wager room |
 | `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array. Add `from_t` with explicit destination `t` for two exact observations and a typed temporal delta; the top-level frame remains the destination. Returns goal state and an earned reveal where available. On Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` / `speed_wager` / `policy_wager` / `counter_wager` plus `aha_summon` walk generation-before-reveal without App session state. Nontransitive Dice also accepts typed `die_choice` instead of coordinate input |

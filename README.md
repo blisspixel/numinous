@@ -73,7 +73,7 @@ with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 
 ## Status
 
-**0.4.0-alpha.3** is playable today: 354 catalog rooms, games, Journey,
+**0.4.0-alpha.4** is playable today: 354 catalog rooms, games, Journey,
 Studio, controllers, and Watch Agent (consented local MCP session viewing).
 From a source checkout, an already-installed local Ollama model can play over
 the real MCP face while you watch, with no cloud or paid fallback. See
@@ -99,6 +99,16 @@ automated auditors are already in CI). The creator loop is built end to end:
 save, exact paused reopen, one-key named share trio, Gallery wall with the
 remix tree, and fork with recorded lineage on both the App and the terminal.
 Nightly am-QA re-runs the full agent suite.
+
+Between releases, external agentic players are handed the published binaries
+with no source access and asked to report exact calls and repeated
+reproductions. Two such rounds have run, and every finding they raised is
+either fixed with a regression that replays the reported call or recorded as a
+stated open boundary. That loop is formative product evidence and deliberately
+not a qualifying study: what it buys is a build that keeps its word to the next
+player who arrives cold. Rounds and boundaries:
+[`docs/PLAYTESTS.md`](docs/PLAYTESTS.md).
+
 Humans may play; product exits do not wait on human QA panels. Map:
 [`docs/ROADMAP.md`](docs/ROADMAP.md). Gates: [`VERIFY.md`](VERIFY.md). History:
 [`CHANGELOG.md`](CHANGELOG.md).
