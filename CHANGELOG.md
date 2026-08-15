@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.5] - 2026-08-15
+
 - No doorway sells a staged room's answer. `describe_room` is reachable before
   any play, and three blurbs printed a graded call: The Coffee Cup handed over
   the Times Tables reveal, Buffon's Needle named pi, and Parrondo's Trap named
@@ -30,6 +32,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 - `PLAY.md` leads its MCP setup with the packaged binary. A reader holding a
   released archive was told to run `cargo` first, which needs a toolchain the
   archive exists to avoid.
+- The Understanding Alpha contract no longer claims that Game of Life's fourth
+  call carries the same earned reveal material. It never did, because that room
+  has no goal, so it contributes an encounter to both arms and no Reveal
+  intervention to the generation arm. The gap and the two ways to close it are
+  stated in `UNDERSTANDING_STUDY.md` and left to the registration ruling the
+  cohort already waits on.
 
 ## [0.4.0-alpha.4] - 2026-08-15
 
