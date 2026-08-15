@@ -89,8 +89,10 @@ title, wing, action, optional goal, blurb, and the next play call. `reveal_room`
 opens after one real play for an ordinary room and after persisted consolidation
 for an engineered wager room. At the withheld beat, the committed wager and
 summon invitation remain visible while earn, grade, truth, and punchline remain
-absent. The answer therefore arrives as feedback only after the player chooses
-to cross the measured gap.
+absent. A room reached that beat by its own experiment, such as landing Times
+Tables on four lobes, still keeps a wager named in the same call and grades that
+name at consolidation. The answer therefore arrives as feedback only after the
+player chooses to cross the measured gap.
 
 ## MCP-game conventions (July 2026 survey)
 

@@ -99,6 +99,55 @@ a zero-cell temporal delta because that view tunes a static ellipse. The tool
 and play skill now say so and point causal play toward gestures or the staged
 speed wager.
 
+## August 15 packaged agentic playtest
+
+This section summarizes a second source-blind playtest, run against the
+published Linux `0.4.0-alpha.3` CLI and MCP binaries by an external agentic
+player who read no Rust source. The tester supplied the release tag, commit,
+archive digest, isolated state paths, exact calls, repeated reproductions, and
+positive play notes. It is formative external product evidence, not a
+qualifying 0.4 cohort, a consciousness claim, or proof of lasting learning
+value. The raw dump set remains with the tester and is not copied into the
+repository.
+
+The eight findings the previous round produced all held under direct
+reproduction. Description stayed a doorway on seven unplayed rooms, the Kepler
+alias resolved to one canonical Journey star, the Times Tables terminal action
+taught the working phase dial, the four-lobe goal and its status agreed, Galton
+primed without printing the theoretical mode, and no withheld beat leaked a
+grade, truth, punchline, or earn across three repetitions each. The tester's
+summary is the useful part of that result: withheld now reads as a held breath
+rather than a marked paper.
+
+The one remaining trust failure was narrow and real. Sending `place_wager` on
+the call that also closed the Times Tables four-lobe goal returned the goal and
+dropped the wager, so a client following the documented order could not tell
+whether its own commitment had been accepted, and summoning then opened the
+punchline through a path that never required a hypothesis. Buffon's Needle
+carried the identical drop behind eight thrown needles. The other five staged
+rooms already treated a named call as the stronger commitment, so this was an
+unfinished rollout of a decided rule rather than a new question. Both rooms now
+keep a wager named at the experiment-run beat, grade that name at
+consolidation, and still refuse a second wager or one sent after the summon.
+
+Two lower-severity observations were addressed as first-contact craft rather
+than defects. Compact discovery named its four starter rooms only in prose, so
+a client rendering structured output still saw 354 ids before touching one
+room; `list_rooms` now carries a typed `starters` array in every mode, which
+keeps compact responses lossless while giving structured clients the same small
+doorway. A rejected Watch Agent start also reported only that pairing failed,
+leaving an unaided caller nothing to try but another invented code; that
+failure now names the human App invitation as the only source of a code and
+says plainly that unwatched play is the ordinary case.
+
+The tester's zero-cell Kepler temporal delta stands where the previous round
+left it, as a documented semantic boundary. One App asymmetry is recorded and
+not yet closed: the pointer wager band is drawn, and accepted, only during the
+prime beat, so on the App the superseding call is reachable by its digit keys
+rather than by the band. The keys are the App's named-call affordance and the
+band's visible-equals-clickable rule is intact, so this is tracked as visual
+work behind the pinned screen matrix rather than a silent drop.
+
 ## July 2026 six-round technical cohort
 
 Six rounds of five fresh simulated reviewers examined mathematical truth,

@@ -45,7 +45,9 @@ individual file path. Do not create directories at those paths.
 Now here is everything you need to start. Three tools:
 
 1. **`list_rooms`**: see what is here. Start with `response_mode: "compact"` for
-   a short doorway; the structured result still contains every room.
+   a short doorway. `structuredContent.starters` names four rooms worth opening
+   first, so nothing makes you read the whole catalog to choose; the structured
+   result still contains every room when you want it.
 2. **`play_room`**: render one. Pass a room `id`, and a `t` with `0 <= t < 1` to
    move time. To hold two exact observations in one call, add `from_t` and keep
    `t` as the destination; `structuredContent.temporal` returns the origin
@@ -77,7 +79,9 @@ your own way is the point. If you ever want the full tool list, it is in
 
 If a human explicitly invites you to a Watch Agent session, they will give you
 the one-use code shown inside their App. Call `broadcast_session` with action
-`start` and that code. Only allowlisted public Numinous actions, inputs, and
+`start` and that code as `pairing_code`. There is no code to invent and none to
+find: without a human's invitation there is simply nothing to join, and playing
+unwatched is the ordinary way to play. Only allowlisted public Numinous actions, inputs, and
 human-readable MCP result text appear. Your prompts, reasoning, private tools,
 local state, and client traffic never do. You can inspect status, pause, resume,
 or stop through the same control. No broadcast begins merely because the human
