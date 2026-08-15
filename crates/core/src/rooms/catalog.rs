@@ -114,9 +114,11 @@ macro_rules! catalog_rooms {
                 id: "coffee-cup",
                 title: "The Coffee Cup",
                 wing: "Shape & Space",
-                blurb: "Rays bounce once in a circle and condense into a cardioid. t walks the sun on \
-                        the rim. Same cardioid curve as Times Tables and the \
-                        Mandelbrot main bulb.",
+                // The shared-cardioid connection is the Times Tables reveal and
+                // the thing its wager is graded on. A doorway that hands it over
+                // sells another room's aha to a player who has not bought it.
+                blurb: "Rays bounce once in a circle and condense into a bright cusped curve. \
+                        t walks the sun on the rim.",
                 accent: [230, 150, 90],
             }
         ),
@@ -792,7 +794,9 @@ macro_rules! catalog_rooms {
                 id: "parrondo",
                 title: "Parrondo's Trap",
                 wing: "Number & Pattern",
-                blurb: "Two losing games, scheduled as ABB, can win.",
+                // ABB is exactly what policy_wager asks the player to call, so
+                // the doorway names the question and not the answer.
+                blurb: "Two games that each lose on their own. Schedule them and the pile can climb.",
                 accent: [180, 100, 200],
             }
         ),
@@ -1022,8 +1026,11 @@ macro_rules! catalog_rooms {
                 id: "buffon-needle",
                 title: "Buffon's Needle",
                 wing: "Chance & Order",
+                // Pi is the number number_wager asks the player to call, so the
+                // doorway keeps the strangeness and drops the answer.
                 blurb: "Throw sticks onto parallel floorboards. Bright sticks cross a line; the ratio \
-                        of crossings to throws wanders toward pi, with no circle anywhere in sight.",
+                        of crossings to throws settles on one exact number, with no circle \
+                        anywhere in sight.",
                 accent: [140, 100, 230],
             }
         ),
@@ -4149,7 +4156,7 @@ pub(crate) fn construct_hidden_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::*;
 
-    const ALPHA5_ORDERED_METADATA_CHECKSUM: u64 = 0xce86_8296_ac23_d3ae;
+    const ALPHA5_ORDERED_METADATA_CHECKSUM: u64 = 0x82d9_d564_a8cf_5a71;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {
@@ -4237,5 +4244,47 @@ mod tests {
             ordered_metadata_checksum(),
             ALPHA5_ORDERED_METADATA_CHECKSUM
         );
+    }
+
+    #[test]
+    fn no_doorway_sells_a_staged_rooms_answer() {
+        // `describe_room` is reachable before any play, so a blurb is the one
+        // piece of a staged room a player can read without committing. Three
+        // doorways used to carry a graded answer: Buffon named pi, Parrondo
+        // named ABB, and the Coffee Cup handed over the Times Tables reveal.
+        // A doorway may name the question and the strangeness, never the call.
+        fn names(blurb: &str, word: &str) -> bool {
+            blurb
+                .split(|c: char| !c.is_ascii_alphanumeric())
+                .any(|found| found == word)
+        }
+
+        // A staged room must not print the call it grades.
+        const OWN_ANSWER: [(&str, &str); 4] = [
+            ("buffon-needle", "pi"),
+            ("parrondo", "abb"),
+            ("times-tables", "mandelbrot"),
+            ("nontransitive", "nontransitive"),
+        ];
+        for metadata in ROOM_CATALOG {
+            let blurb = metadata.blurb.to_ascii_lowercase();
+            for (room, answer) in OWN_ANSWER {
+                assert!(
+                    metadata.id != room || !names(&blurb, answer),
+                    "the {room} doorway prints the call it grades ({answer:?}): {}",
+                    metadata.blurb
+                );
+            }
+            // The cardioid-is-the-main-bulb identity is the Times Tables
+            // reveal. Naming the Mandelbrot set is fine; asserting that
+            // identity in any doorway sells an aha the player has not bought.
+            let claims_identity = names(&blurb, "cardioid") && names(&blurb, "mandelbrot")
+                || blurb.contains("main bulb");
+            assert!(
+                !claims_identity,
+                "the {} doorway asserts the Times Tables identity: {}",
+                metadata.id, metadata.blurb
+            );
+        }
     }
 }

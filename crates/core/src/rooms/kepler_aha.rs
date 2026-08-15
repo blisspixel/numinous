@@ -388,10 +388,18 @@ impl KeplerAha {
         match self.beat {
             AhaBeat::Explore => room_status.unwrap_or("DRAG:TUNE ECC").to_string(),
             AhaBeat::Prime => "NEAR SUN? 1=FASTER 2=SLOWER 3=SAME".to_string(),
-            AhaBeat::Withheld => format!(
-                "CALLED {}  PRESS E",
-                self.call().map_or("EXPERIMENT", SpeedRelation::name)
-            ),
+            // The experiment path earns without a call, so it must not borrow
+            // the CALLED sentence. Telling a player they called something they
+            // never called is the same lie as hiding a call they did make.
+            AhaBeat::Withheld => match self.earn {
+                Some(EarnPath::Call { called, .. }) => {
+                    format!("CALLED {}  PRESS E", called.name())
+                }
+                Some(EarnPath::Tunings { count }) => {
+                    format!("{count} TUNINGS HELD  PRESS E")
+                }
+                None => "READY  PRESS E".to_string(),
+            },
             AhaBeat::Morph { progress } => {
                 format!("EQUAL TIME MARKS {:>3}%", (progress * 100.0).round() as u8)
             }
