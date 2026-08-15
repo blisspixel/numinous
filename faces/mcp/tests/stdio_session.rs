@@ -384,6 +384,89 @@ fn temporal_play_records_the_coarse_journey_visit_without_touching_the_journal()
 }
 
 #[test]
+fn descriptions_and_withheld_wagers_stay_honest_over_real_stdio() {
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous_mcp_reveal_gate_{}_{}",
+        std::process::id(),
+        session
+    ));
+    std::fs::create_dir(&root).expect("fresh reveal gate root");
+    let journey = root.join("journey.txt");
+    let journal = root.join("journal.txt");
+
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{"name":name,"arguments":arguments}
+        })
+    };
+    let replies = run_session_with_state(
+        &[
+            call(1, "describe_room", json!({"id":"kepler-laws"})),
+            call(2, "reveal_room", json!({"id":"kepler-laws"})),
+            call(
+                3,
+                "play_room",
+                json!({
+                    "id":"times-tables", "t":0.375,
+                    "place_wager":"mandelbrot", "width":40, "height":18
+                }),
+            ),
+            call(4, "reveal_room", json!({"id":"times-tables"})),
+            call(
+                5,
+                "play_room",
+                json!({
+                    "id":"times-tables", "t":0.375,
+                    "place_wager":"mandelbrot", "aha_summon":true,
+                    "width":40, "height":18
+                }),
+            ),
+            call(6, "reveal_room", json!({"id":"times-tables"})),
+        ],
+        &journey,
+        &journal,
+    );
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+
+    let description = &by_id(1)["result"];
+    assert_eq!(description["isError"], false);
+    assert!(description["structuredContent"].get("reveal").is_none());
+    assert!(!text_of(by_id(1)).contains("second law"));
+    assert_eq!(by_id(2)["result"]["isError"], true);
+
+    let withheld = &by_id(3)["result"]["structuredContent"];
+    assert_eq!(withheld["goalMet"], true);
+    assert_eq!(withheld["engineeredAha"]["beat"], "withheld");
+    assert_eq!(withheld["engineeredAha"]["earn"], Value::Null);
+    assert_eq!(withheld["engineeredAha"]["truth"], Value::Null);
+    assert!(
+        !withheld["status"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("NAILED")
+    );
+    assert_eq!(by_id(4)["result"]["isError"], true);
+
+    let consolidated = &by_id(5)["result"]["structuredContent"];
+    assert_eq!(consolidated["engineeredAha"]["beat"], "consolidated");
+    assert_eq!(consolidated["engineeredAha"]["truth"], "mandelbrot");
+    assert_eq!(by_id(6)["result"]["isError"], false);
+    assert!(by_id(6)["result"]["structuredContent"]["reveal"].is_string());
+
+    let persisted = numinous_core::load_journey_file(&journey);
+    assert!(persisted.has_consolidated("times-tables"));
+    numinous_core::remove_persisted_file(&journey).expect("erase test journey");
+    std::fs::remove_dir(&root).expect("empty reveal gate root");
+}
+
+#[test]
 fn modern_stateless_discovery_tools_and_prediction_work_over_real_stdio() {
     let replies = run_session(&[
         json!({
@@ -741,7 +824,7 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
     assert_eq!(by_id(6)["result"]["structuredContent"]["goalMet"], true);
     assert_eq!(
         by_id(6)["result"]["structuredContent"]["engineeredAha"]["earn"],
-        "four-lobes"
+        Value::Null
     );
     assert_eq!(by_id(7)["result"]["isError"], false);
     assert!(by_id(7)["result"]["structuredContent"]["temporal"].is_object());
@@ -1562,12 +1645,12 @@ fn a_full_agent_session_walks_every_tool() {
         json!({"jsonrpc":"2.0","id":2,"method":"tools/list"}),
         call(3, "list_rooms", json!({})),
         call(4, "describe_room", json!({"id":"mandelbrot"})),
-        call(5, "reveal_room", json!({"id":"times-tables"})),
         call(
-            6,
+            5,
             "play_room",
             json!({"id":"lorenz","t":0.7,"width":50,"height":24}),
         ),
+        call(6, "reveal_room", json!({"id":"lorenz"})),
         call(7, "listen_room", json!({"id":"lissajous","t":0.0})),
         call(8, "list_sims", json!({})),
         call(
@@ -1614,8 +1697,8 @@ fn a_full_agent_session_walks_every_tool() {
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));
-    assert!(text_of(by_id(5)).contains("Mandelbrot"));
-    assert!(text_of(by_id(6)).contains('#'), "the butterfly has ink");
+    assert!(text_of(by_id(5)).contains('#'), "the butterfly has ink");
+    assert!(text_of(by_id(6)).contains("Lorenz"));
     assert!(text_of(by_id(7)).contains("Hz"));
     assert!(text_of(by_id(8)).contains("tribbles"));
     assert!(text_of(by_id(9)).contains("STALL"));

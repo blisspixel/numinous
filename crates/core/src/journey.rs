@@ -12,12 +12,32 @@ use std::collections::BTreeSet;
 
 use crate::registry::all_rooms;
 use crate::rng::SplitMix64;
+use crate::rooms::canonical_room_id;
+
+/// Rooms whose explanation is earned through a staged wager and summon.
+pub const ENGINEERED_AHA_ROOM_IDS: [&str; 7] = [
+    "times-tables",
+    "buffon-needle",
+    "galton-board",
+    "double-pendulum",
+    "kepler-laws",
+    "parrondo",
+    "nontransitive",
+];
+
+/// Whether a room uses the staged wager and summon explanation contract.
+#[must_use]
+pub fn is_engineered_aha_room(room_id: &str) -> bool {
+    ENGINEERED_AHA_ROOM_IDS.contains(&canonical_room_id(room_id))
+}
 
 /// The persistent record of one player's journey.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Journey {
     /// Room ids entered at least once.
     pub visited: BTreeSet<String>,
+    /// Engineered Aha rooms whose wager and summon loop was consolidated.
+    pub consolidated: BTreeSet<String>,
     /// Games won (any of them).
     pub wins: u32,
     /// Secrets heard (the whispers).
@@ -167,7 +187,19 @@ impl Journey {
 
     /// Mark a room entered. Returns true if this is new to the record.
     pub fn visit(&mut self, room_id: &str) -> bool {
-        self.visited.insert(room_id.to_string())
+        self.visited.insert(canonical_room_id(room_id).to_string())
+    }
+
+    /// Mark an engineered Aha room consolidated. Returns true when newly earned.
+    pub fn consolidate(&mut self, room_id: &str) -> bool {
+        let room_id = canonical_room_id(room_id);
+        is_engineered_aha_room(room_id) && self.consolidated.insert(room_id.to_string())
+    }
+
+    /// Whether an engineered Aha room has completed its wager and summon loop.
+    #[must_use]
+    pub fn has_consolidated(&self, room_id: &str) -> bool {
+        self.consolidated.contains(canonical_room_id(room_id))
     }
 
     /// Record a game won.
@@ -234,10 +266,12 @@ impl Journey {
     #[must_use]
     pub fn to_text(&self) -> String {
         let visited: Vec<&str> = self.visited.iter().map(String::as_str).collect();
+        let consolidated: Vec<&str> = self.consolidated.iter().map(String::as_str).collect();
         let chosen: Vec<&str> = self.chosen.iter().map(String::as_str).collect();
         format!(
-            "visited {}\nwins {}\nsecrets {}\nplays {}\nchosen {}\nstreak {} {}\n",
+            "visited {}\nconsolidated {}\nwins {}\nsecrets {}\nplays {}\nchosen {}\nstreak {} {}\n",
             visited.join(" "),
+            consolidated.join(" "),
             self.wins,
             self.secrets,
             self.plays,
@@ -256,7 +290,17 @@ impl Journey {
             let mut parts = line.split_whitespace();
             match parts.next() {
                 Some("visited") => {
-                    journey.visited = bounded_token_set(parts);
+                    journey.visited = bounded_token_set(parts)
+                        .into_iter()
+                        .map(|room_id| canonical_room_id(&room_id).to_string())
+                        .collect();
+                }
+                Some("consolidated") => {
+                    journey.consolidated = bounded_token_set(parts)
+                        .into_iter()
+                        .filter(|room_id| is_engineered_aha_room(room_id))
+                        .map(|room_id| canonical_room_id(&room_id).to_string())
+                        .collect();
                 }
                 Some("wins") => {
                     journey.wins = parts.next().and_then(|v| v.parse().ok()).unwrap_or(0);
@@ -766,6 +810,40 @@ mod tests {
         assert!(journey.visit("lorenz"));
         assert!(!journey.visit("lorenz"));
         assert_eq!(journey.sparks(), 1);
+    }
+
+    #[test]
+    fn aliases_share_one_persistent_star() {
+        let mut journey = Journey::default();
+        assert!(journey.visit("kepler-areas"));
+        assert!(!journey.visit("kepler-laws"));
+        assert_eq!(journey.visited.len(), 1);
+        assert!(journey.visited.contains("kepler-laws"));
+
+        let migrated = Journey::from_text("visited kepler-areas kepler-laws\n");
+        assert_eq!(migrated.visited.len(), 1);
+        assert!(migrated.visited.contains("kepler-laws"));
+    }
+
+    #[test]
+    fn engineered_aha_consolidation_is_canonical_bounded_and_persistent() {
+        let mut journey = Journey::default();
+        assert!(journey.consolidate("kepler-areas"));
+        assert!(!journey.consolidate("kepler-laws"));
+        assert!(!journey.consolidate("mandelbrot"));
+        assert!(journey.has_consolidated("kepler-laws"));
+        assert!(journey.has_consolidated("kepler-areas"));
+
+        let back = Journey::from_text(&journey.to_text());
+        assert_eq!(back, journey);
+        let filtered =
+            Journey::from_text("consolidated kepler-areas mandelbrot bad/slash times-tables\n");
+        assert_eq!(
+            filtered.consolidated,
+            ["kepler-laws".to_string(), "times-tables".to_string()]
+                .into_iter()
+                .collect()
+        );
     }
 
     #[test]

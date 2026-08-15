@@ -5,6 +5,47 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.3] - 2026-08-15
+
+- Room descriptions are now safe doorways across CLI and MCP: title, wing,
+  action, goal, blurb, and the next play call, with no revelation, concept,
+  deep cut, or citation. The new CLI `reveal` command and MCP `reveal_room`
+  require one real play for ordinary rooms and persisted consolidation for the
+  seven engineered wager rooms.
+- Engineered wager withholding is honest across all seven loops. The committed
+  wager and summon invitation remain visible, while status stays neutral and
+  `earn`, grade, truth, answer-bearing measurements, and punchline remain absent
+  until consolidation. Real MCP subprocess coverage locks the complete
+  describe, wager, summon, persistence, and reveal sequence.
+- Times Tables now derives `goalMet` and status from the same live multiplier,
+  so `t: 0.375` reports the four-lobe target as met without disclosing its
+  explanation. Its CLI action teaches `--t 0.375` as the phase doorway and
+  names `--poke` as a second hand. Galton prime status no longer prints the
+  theoretical mode before its wager.
+- Journey persistence canonicalizes compatibility aliases before counting
+  visits, migrates an old `kepler-areas` star into `kepler-laws`, and records a
+  bounded canonical set of consolidated engineered rooms. Playing both Kepler
+  names now lights one star, and later processes enforce the same earned reveal
+  gate without hidden session state.
+- The App now treats `Q` as an orderly quit shortcut outside text entry,
+  including fullscreen. Settings has a full-size Skip Track row, `N` advances
+  the selected radio station during room play, and the Controls page and menu
+  footer name both actions at readable menu scale.
+- `NUMINOUS_JOURNEY` and `NUMINOUS_SCORES` are documented as individual file
+  paths. A CLI Journey override that names a directory now says so directly.
+  Temporal documentation also states that a phase-static view, including a
+  poke-tuned Kepler ellipse, can honestly return zero changed cells.
+- The unregistered Understanding Alpha dry-run advances to protocol `0.4-v6`.
+  Its fourth per-room call now earns the reveal inside one self-contained
+  `play_room` request instead of asking `reveal_room` to bypass an empty
+  Journey. All 20 public calls remain fresh-process isolated, and the refreshed
+  dry-run registration passes both independent method auditors.
+- The complete Windows release gate passes with 3,572 all-target Rust cases,
+  three expensive ignored diagnostics, 95.27% region coverage, and 95.26% line
+  coverage under the documented exclusions. The same gate validates all 2,913
+  deterministic App screens, external player and agent cohorts, packaging,
+  installer safety, Agent Plugins, provenance, and supply-chain policy.
+
 ## [0.4.0-alpha.2] - 2026-08-14
 
 - The native App keeps its original opaque, text-first Cabinet and power

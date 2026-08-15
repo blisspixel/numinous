@@ -206,18 +206,17 @@ impl Room for TimesTables {
     }
 
     fn status(&self, t: f64) -> Option<String> {
+        let multiplier = K_MIN + K_SWEEP * self.phase_for(t);
         Some(Self::status_for_multiplier(
-            K_MIN + K_SWEEP * self.phase_for(t),
-            false,
+            multiplier,
+            (multiplier - TARGET_K).abs() < 1e-9,
         ))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let pokes = Self::pokes(inputs);
         let multiplier = self.multiplier(t, &pokes);
-        let earned = self
-            .input_multiplier(&pokes)
-            .is_some_and(|k| (k - TARGET_K).abs() < f64::EPSILON);
+        let earned = (multiplier - TARGET_K).abs() < 1e-9;
         Some(Self::status_for_multiplier(multiplier, earned))
     }
 
@@ -253,10 +252,8 @@ impl Room for TimesTables {
         Some("LAND ON EXACTLY 4 LOBES")
     }
 
-    fn goal_met(&self, _t: f64, inputs: &[RoomInput]) -> bool {
-        let pokes = Self::pokes(inputs);
-        self.input_multiplier(&pokes)
-            .is_some_and(|k| (k - TARGET_K).abs() < f64::EPSILON)
+    fn goal_met(&self, t: f64, inputs: &[RoomInput]) -> bool {
+        (self.live_multiplier(t, inputs) - TARGET_K).abs() < 1e-9
     }
 
     fn parameter_sound(&self, t: f64, inputs: &[RoomInput]) -> Option<ParametricSound> {
@@ -479,11 +476,13 @@ mod tests {
     }
 
     #[test]
-    fn ambient_passage_through_four_lobes_does_not_claim_the_hand_goal() {
+    fn exact_phase_and_status_agree_that_four_lobes_meet_the_public_goal() {
+        let room = TimesTables::new();
         assert_eq!(
-            TimesTables::new().status(0.375).as_deref(),
-            Some("DRAG:DIAL  K 5.00  CLOSED  4 LOBES  TARGET 4")
+            room.status(0.375).as_deref(),
+            Some("K 5.00  CLOSED  4 LOBES  FOUND")
         );
+        assert!(room.goal_met(0.375, &[]));
     }
 
     #[test]

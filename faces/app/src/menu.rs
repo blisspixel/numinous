@@ -74,6 +74,7 @@ pub enum MenuItemId {
     Mute,
     VisualEra,
     WindowMode,
+    SkipTrack,
     Controls,
     Resume,
     Restart,
@@ -91,6 +92,7 @@ pub enum MenuIntent {
     ToggleMute,
     CycleEra,
     CycleWindowMode,
+    SkipRadioTrack,
     ToggleFullscreen,
     Quit,
     ResumeActivity,
@@ -147,7 +149,7 @@ const HOME_ITEMS: [MenuItem; 5] = [
         id: MenuItemId::Quit,
         title: "QUIT",
         description: "CLOSE NUMINOUS AND KEEP THIS JOURNEY.",
-        shortcut: None,
+        shortcut: Some('q'),
         action: MenuAction::Intent(MenuIntent::Quit),
     },
 ];
@@ -202,7 +204,7 @@ const GAME_ITEMS: [MenuItem; 6] = [
         id: MenuItemId::Quiz,
         title: "THE QUIZ",
         description: "NAME THE MATHEMATICS THAT MADE THE ROOM.",
-        shortcut: Some('q'),
+        shortcut: None,
         action: MenuAction::Intent(MenuIntent::Choose(MenuChoice::Quiz)),
     },
     MenuItem {
@@ -272,11 +274,11 @@ const SETTINGS_ITEMS: [MenuItem; 6] = [
         action: MenuAction::Intent(MenuIntent::CycleWindowMode),
     },
     MenuItem {
-        id: MenuItemId::Controls,
-        title: "CONTROLS",
-        description: "SEE THE CONTROLS FOR THE WAY YOU ARE PLAYING.",
-        shortcut: Some('c'),
-        action: MenuAction::Open(MenuRoute::Controls),
+        id: MenuItemId::SkipTrack,
+        title: "SKIP TRACK",
+        description: "PLAY THE NEXT CACHED TRACK ON THE CURRENT RADIO STATION.",
+        shortcut: Some('n'),
+        action: MenuAction::Intent(MenuIntent::SkipRadioTrack),
     },
     MenuItem {
         id: MenuItemId::Back,
@@ -947,10 +949,10 @@ pub fn draw_menu(
                 "F FULLSCREEN"
             };
             if layout.compact || matches!(state.origin(), MenuOrigin::Activity(_)) {
-                format!("ARROWS MOVE   ENTER SELECT   ESC BACK   {display}   ALT+F4 QUIT")
+                format!("ARROWS MOVE   ENTER SELECT   ESC BACK   {display}   Q QUIT")
             } else {
                 format!(
-                    "ARROWS MOVE   ENTER SELECT   ESC BACK   {display}   ALT+F4 QUIT   BACKTICK TEXT ENTRY"
+                    "ARROWS MOVE   ENTER SELECT   ESC BACK   {display}   Q QUIT   BACKTICK TEXT ENTRY"
                 )
             }
         }
@@ -1058,7 +1060,9 @@ fn control_lines(input_mode: InputMode, copy: ControllerCopy) -> Vec<String> {
             "E / ?     EXPLAIN".to_string(),
             "R         RESET ROOM".to_string(),
             "SPACE     PAUSE".to_string(),
+            "Y / N     RADIO / NEXT TRACK".to_string(),
             "H / ESC   MENU / BACK".to_string(),
+            "Q         QUIT".to_string(),
         ]
         .to_vec(),
         InputMode::Controller => vec![
@@ -1187,11 +1191,13 @@ mod tests {
     }
 
     #[test]
-    fn quit_is_a_deliberate_visible_choice_without_a_letter_shortcut() {
-        let mut state = MenuState::launch();
-        assert_eq!(state.activate_shortcut('q'), None);
-        assert!(state.focus(MenuItemId::Quit));
-        assert_eq!(state.activate_focused(), MenuIntent::Quit);
+    fn quit_is_a_deliberate_visible_choice_with_the_global_shortcut() {
+        let mut visible = MenuState::launch();
+        assert!(visible.focus(MenuItemId::Quit));
+        assert_eq!(visible.activate_focused(), MenuIntent::Quit);
+
+        let mut shortcut = MenuState::launch();
+        assert_eq!(shortcut.activate_shortcut('q'), Some(MenuIntent::Quit));
     }
 
     #[test]

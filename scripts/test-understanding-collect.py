@@ -1917,14 +1917,14 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual(len(tool_events), 20)
         self.assertEqual(len({call[2] for call in calls}), 1)
         self.assertEqual(
-            sum("goal" in event["structuredResult"] for event in tool_events), 12
+            sum("goal" in event["structuredResult"] for event in tool_events), 16
         )
         self.assertEqual(
             sum(
                 event["structuredResult"].get("goal", object()) is None
                 for event in tool_events
             ),
-            9,
+            12,
         )
 
     def test_attempt_start_receipt_is_required_and_exactly_bound(self) -> None:

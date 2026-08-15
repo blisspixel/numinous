@@ -117,6 +117,33 @@ pub(crate) fn radio_off() -> Banner {
     )
 }
 
+pub(crate) fn radio_skip_needs_station() -> Banner {
+    Banner::new(
+        vec!["RADIO OFF".to_string(), "Y CHOOSES A STATION".to_string()],
+        RADIO_FRAMES,
+    )
+}
+
+pub(crate) fn radio_skip(station_name: &str, track: usize, track_count: usize) -> Banner {
+    Banner::new(
+        vec![
+            format!("RADIO: {station_name}"),
+            format!("NEXT TRACK {track}/{track_count}"),
+        ],
+        RADIO_FRAMES,
+    )
+}
+
+pub(crate) fn radio_skip_unavailable(station_name: &str) -> Banner {
+    Banner::new(
+        vec![
+            format!("RADIO: {station_name}"),
+            "NO PLAYABLE CACHED TRACKS".to_string(),
+        ],
+        RADIO_FRAMES,
+    )
+}
+
 pub(crate) fn room_goal(goal: &str) -> Banner {
     let heading = match goal {
         "LAND ON EXACTLY 4 LOBES" => "FOUR LOBES FOUND".to_string(),
@@ -203,6 +230,9 @@ mod tests {
         let ready = super::radio("Axiom FM", "axiom", 3);
         let sound = super::sound_device_unavailable("no device");
         let off = super::radio_off();
+        let needs_station = super::radio_skip_needs_station();
+        let skipped = super::radio_skip("Axiom FM", 2, 3);
+        let unavailable = super::radio_skip_unavailable("Axiom FM");
 
         assert_eq!(empty.lines()[0], "RADIO: Axiom FM");
         assert_eq!(empty.lines()[2], "IN A TERMINAL: NUMINOUS TUNE2 AXIOM");
@@ -213,6 +243,12 @@ mod tests {
         assert_eq!(sound.frames_left(), 600);
         assert_eq!(off.lines(), ["RADIO OFF", "ROOM MUSIC"]);
         assert_eq!(off.frames_left(), 180);
+        assert_eq!(needs_station.lines(), ["RADIO OFF", "Y CHOOSES A STATION"]);
+        assert_eq!(skipped.lines(), ["RADIO: Axiom FM", "NEXT TRACK 2/3"]);
+        assert_eq!(
+            unavailable.lines(),
+            ["RADIO: Axiom FM", "NO PLAYABLE CACHED TRACKS"]
+        );
     }
 
     #[test]

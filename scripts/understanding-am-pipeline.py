@@ -33,9 +33,9 @@ def build_registration(*, dry_run: bool) -> dict[str, Any]:
     # Dry-run registration documents the method surface only.
     return {
         "schemaVersion": "numinous-understanding-registration-v1",
-        "protocolVersion": "0.4-v5",
+        "protocolVersion": "0.4-v6",
         "track": "agent-and-machine",
-        "runnerVersion": "numinous-understanding-runner-v5",
+        "runnerVersion": "numinous-understanding-runner-v6",
         "bankCommitmentSha256": commitment,
         "bankKind": "public-fixture-dry-run" if dry_run else "concealed",
         "allocationSeed": "numinous-understanding-alpha-v1",

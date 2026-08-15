@@ -99,7 +99,7 @@ its limitations.
 
 The receipt is a strict JSON object stored under `.agent/`. Its
 `schemaVersion` is `numinous-understanding-attempt-start-receipt-v1`, its
-`protocolVersion` is `0.4-v5`, and its `startCommitmentSha256` is the digest
+`protocolVersion` is `0.4-v6`, and its `startCommitmentSha256` is the digest
 printed by the refused start. `mechanism` is exactly
 `append-only-external-log` or `independent-reconciler-ledger`. `witnessId` and
 `recordSha256` are lowercase SHA-256 digests, `witnessedAt` is a UTC timestamp
@@ -216,6 +216,16 @@ visible text used in the study, plus the exact source-bound MCP build receipt.
 The private binary is copied out of Cargo's fresh target and checked before and
 after every execution. It never records host prompts, hidden reasoning,
 credentials, filesystem paths, unrelated local state, or other players' data.
+
+The fourth call is also stateless and self-contained. For an engineered wager
+room it repeats the required generation input, commits the frozen wager, and
+sets `aha_summon: true` in one `play_room` request. For Game of Life it uses a
+final ordinary `play_room` observation, whose result carries the same earned
+reveal material. The study never seeds private Journey state and never bypasses
+the public `reveal_room` play or consolidation gate. This is protocol
+`0.4-v6`; the earlier dry-run bank used a fresh-profile reveal call and was
+retired before registration after source-blind playtesting proved that path was
+a product spoiler.
 
 ### Conditions
 
