@@ -5,6 +5,21 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- A player can stay in a room. `play_room` accepts `dwell` with two to eight
+  phases and returns a typed invariant: how many cells never changed, never
+  lit, or always carried ink across every look, the box that did move, and
+  blank cells fully ringed by cells that were never dark. It is the dual of the
+  two-phase delta, answering what staying establishes rather than what moving
+  causes. A packaged playtest asked for exactly this verb, because every look
+  was a new stateless call and returning to one dark point bought nothing.
+  What staying earns is a measurement the player extracted, never an
+  explanation the room volunteered, and a repeated phase honestly reports that
+  nothing moved. Looks times width times height is bounded, and no elapsed
+  time, order, or path between looks is asserted. The measure reads the drawn
+  character grid rather than the underlying mathematics, so a positive enclosed
+  count is a real hole in the light while a zero is unproven rather than
+  evidence of none.
+
 ## [0.4.0-alpha.5] - 2026-08-15
 
 - No doorway sells a staged room's answer. `describe_room` is reachable before

@@ -104,7 +104,7 @@ pub use cairn::{
     Bequest, CairnRead, CairnStone, count as cairn_count, deposit, draw_stone, encode,
     founding_bequests, picture, read_at, submission_line,
 };
-pub use canvas::{Canvas, RenderDelta};
+pub use canvas::{Canvas, RenderDelta, RenderInvariant};
 pub use challenge::{
     Challenge, ChallengeGrade, ParameterGoal, ParameterGrade, grade_challenge, grade_parameter,
     pose_challenge, pose_parameter_goal,
@@ -215,5 +215,5 @@ pub use studio_request::{
     SingRequest, StudioRequestError,
 };
 pub use surface::Surface;
-pub use temporal::TemporalPair;
+pub use temporal::{DwellWindow, MAX_DWELL_LOOKS, MIN_DWELL_LOOKS, TemporalPair};
 pub use trophies::{Trophy, trophies};

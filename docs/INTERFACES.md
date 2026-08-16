@@ -274,7 +274,14 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   Nontransitive Dice, `play_room`
   always includes
   `structuredContent.engineeredAha` with beat, status, wager, earn, allowReveal,
-  and canSummon. Optional `place_wager` (`mandelbrot` | `nephroid` | `circle`),
+  and canSummon. Optional `dwell` carries two to eight phases and returns a
+  typed invariant instead of a delta: how many cells never changed, never lit,
+  or always carried ink across every look, the box that did move, and blank
+  cells fully ringed by cells that were never dark. It is the dual of the
+  two-phase delta, answering what a player who stays establishes rather than
+  what a player who moves causes. Looks times width times height is bounded, no
+  elapsed time or path between looks is asserted, repeated phases are valid and
+  honestly report that nothing moved, and a dwell never returns an explanation. Optional `place_wager` (`mandelbrot` | `nephroid` | `circle`),
   `number_wager` (finite, 1.5..4.5), `bin_wager` (0..16), `ending_wager`
   (`together` | `drifted` | `lost`), or `speed_wager` (`faster` | `slower` |
   `same`), `policy_wager` (`a` | `b` | `abb`), or `counter_wager` (`a` | `b` |

@@ -24,6 +24,13 @@ pub const PLAY_ROOM_MAX_HEIGHT: u64 = 256;
 /// the 72 by 32 default canvas.
 pub const PLAY_ROOM_MAX_TEMPORAL_CELLS: u64 = 2_304;
 
+/// Maximum cells summed across every look in one public `play_room` dwell.
+///
+/// A dwell renders the room once per look but returns counts rather than a
+/// stack of frames, so the wire cost is small and the real cost is drawing.
+/// Four looks at the 72 by 32 default canvas sit exactly on this bound.
+pub const PLAY_ROOM_MAX_DWELL_CELLS: u64 = 9_216;
+
 /// Stable game identities whose replays may cross the local broadcast seam.
 pub const NUMINOUS_GAME_IDS: [&str; 11] = [
     "aliens",
