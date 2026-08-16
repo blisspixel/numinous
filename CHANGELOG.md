@@ -5,6 +5,21 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- New room: **The Only Move** (`the-only-move`, Chance & Order), the playable
+  core of a design that had been specced and unbuilt since July 2026. A machine
+  holds a three by three grid and answers every touch with a move from its own
+  best-move set, so it never hands a player a win it could refuse. Which of the
+  eight lines count as a win is the room's dial, carried on `variation`, so a
+  player can walk all 256 rulebooks. Exactly one can be won by the player who
+  moves first, and none is ever won by the player who moves second; both facts
+  are measured by exhaustive test rather than quoted, as is the 5,478-position
+  reachable space that makes the search finishable. Adding the middle row and
+  column back destroys the win, because a winning condition you share is one you
+  hand your opponent. The doorway names the dial and the invitation and sells
+  neither the value nor its shape, and the same catalog-wide guard that stops a
+  staged room printing its graded call now covers this room too. The self-play
+  burn, the second game, and the decline beat remain designed and unbuilt.
+
 ## [0.4.0-alpha.6] - 2026-08-16
 
 - A player can stay in a room. `play_room` accepts `dwell` with two to eight
