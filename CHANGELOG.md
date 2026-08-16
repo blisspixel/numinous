@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.6] - 2026-08-16
+
 - A player can stay in a room. `play_room` accepts `dwell` with two to eight
   phases and returns a typed invariant: how many cells never changed, never
   lit, or always carried ink across every look, the box that did move, and
