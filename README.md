@@ -73,7 +73,7 @@ with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 
 ## Status
 
-**0.4.0-alpha.6** is playable today: 354 catalog rooms, games, Journey,
+**0.4.0-alpha.6** is playable today: 355 catalog rooms, games, Journey,
 Studio, controllers, and Watch Agent (consented local MCP session viewing).
 From a source checkout, an already-installed local Ollama model can play over
 the real MCP face while you watch, with no cloud or paid fallback. See

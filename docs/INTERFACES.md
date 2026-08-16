@@ -243,7 +243,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Structured discovery (built):** `list_rooms` returns the complete typed
   catalog in every response mode, plus a `starters` array naming four rooms
   worth opening first. The starter doorway exists so a client that renders
-  structured output can show four rooms instead of 354 before its player has
+  structured output can show four rooms instead of 355 before its player has
   touched one, without any mode becoming lossy.
   `describe_room` is a safe doorway with title, wing, action, optional
   goal, blurb, and the next play call, but no revelation, concept, deep cut, or
@@ -251,7 +251,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   after one real play, or after persisted consolidation for one of the seven
   engineered wager rooms. `listen_room` returns ambient motif, stable
   ambient-bed summary, and bounded mathematical-sonification note data for all
-  354 rooms. `listen_room` names
+  355 rooms. `listen_room` names
   all three sound roles
   separately because a specialized room sound can intentionally differ from
   the ambient score. The `motif` field is the authored theme; `ambient_bed` is

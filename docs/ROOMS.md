@@ -618,11 +618,27 @@ which model changes made the orbital, relativistic, and string views possible.
 Math review, accessibility review, deterministic replay, stable frame pacing,
 and an engaging opponent all remain release gates.
 
-## Founder's room idea (July 2026): The Only Move
+## The Only Move (designed July 2026, first slice built August 2026)
 
-**Status:** designed, not built. Roadmap position: 1.x, after the current
-flagship gates, alongside The Long Shot. Wing: Decision (games and fairness),
-with a Computation resonance.
+**Status:** the playable core is built and in the catalog as `the-only-move`
+(Chance & Order). A machine holds the grid, answers every touch with a move
+from its own best-move set, and never hands the player a win it could refuse.
+Which of the eight lines count is the room's dial, carried on `variation`, so a
+player can walk all 256 rulebooks. Exactly one of them can be won by the player
+who moves first, and none is ever won by the player who moves second; both
+facts are measured by an exhaustive test rather than quoted.
+
+**Not yet built** from the design below: the self-play burn visualization and
+its `HOLD` verb, the war-shaped second game, the decline beat, and the
+sonification. The burn is the piece with no precedent in the codebase, because
+every existing consolidation opens something and this one has to close.
+
+Original design follows.
+
+Roadmap position: 1.x, after the current
+flagship gates, alongside The Long Shot. Wing as designed: Decision (games and
+fairness), with a Computation resonance; the built slice sits in Chance & Order
+because that wing exists.
 
 A machine asks you to play. The premise recalls the 1983 film *WarGames*,
 where a computer offered a menu of games ending in one nobody could win; the

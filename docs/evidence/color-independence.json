@@ -11,7 +11,7 @@
       "the WCAG 2.3.1 flashing area rule, measured whole-frame instead"
     ]
   },
-  "roomsAudited": 354,
+  "roomsAudited": 355,
   "roomsWithAColorAlonePair": 19,
   "rooms": [
     {"id": "agm-mean", "marks": "#", "closestPair": null, "colorAlone": []},
@@ -327,6 +327,7 @@
     {"id": "tent-map", "marks": "#*", "closestPair": "#*", "normal": 38.8, "folded": 32.1, "dichromacy": "deuteranopia", "colorAlone": []},
     {"id": "the-lens", "marks": "#*", "closestPair": "#*", "normal": 42.0, "folded": 41.5, "dichromacy": "deuteranopia", "colorAlone": []},
     {"id": "the-magnet", "marks": "#*", "closestPair": "#*", "normal": 19.4, "folded": 18.9, "dichromacy": "deuteranopia", "colorAlone": []},
+    {"id": "the-only-move", "marks": "*", "closestPair": null, "colorAlone": []},
     {"id": "the-pour", "marks": "#*", "closestPair": "#*", "normal": 65.3, "folded": 52.8, "dichromacy": "tritanopia", "colorAlone": []},
     {"id": "the-stretch", "marks": "#*", "closestPair": "#*", "normal": 29.3, "folded": 29.5, "dichromacy": "deuteranopia", "colorAlone": []},
     {"id": "theodorus", "marks": "#*", "closestPair": "#*", "normal": 39.0, "folded": 39.3, "dichromacy": "protanopia", "colorAlone": []},
