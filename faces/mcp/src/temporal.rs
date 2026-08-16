@@ -1,11 +1,86 @@
-//! Bounded MCP projection for exact two-phase room evidence.
+//! Bounded MCP projection for exact multi-phase room evidence.
 
-use numinous_broadcast::PLAY_ROOM_MAX_TEMPORAL_CELLS;
-use numinous_core::{RenderDelta, TemporalPair};
+use numinous_broadcast::{PLAY_ROOM_MAX_DWELL_CELLS, PLAY_ROOM_MAX_TEMPORAL_CELLS};
+use numinous_core::{
+    DwellWindow, MAX_DWELL_LOOKS, MIN_DWELL_LOOKS, RenderDelta, RenderInvariant, TemporalPair,
+};
 use serde_json::{Value, json};
 
 pub(super) const TEMPORAL_EVIDENCE_SCHEMA: &str = "numinous.temporal-evidence";
 pub(super) const TEMPORAL_EVIDENCE_SCHEMA_VERSION: u64 = 1;
+pub(super) const DWELL_EVIDENCE_SCHEMA: &str = "numinous.dwell-evidence";
+pub(super) const DWELL_EVIDENCE_SCHEMA_VERSION: u64 = 1;
+
+/// Parse the optional dwell window and enforce the public render budget.
+pub(super) fn dwell_request(
+    arguments: &Value,
+    width: usize,
+    height: usize,
+) -> Result<Option<DwellWindow>, String> {
+    let Some(value) = arguments.get("dwell") else {
+        return Ok(None);
+    };
+    let Some(entries) = value.as_array() else {
+        return Err(dwell_shape_error());
+    };
+    let mut phases = Vec::with_capacity(entries.len());
+    for entry in entries {
+        let Some(phase) = entry.as_f64() else {
+            return Err(dwell_shape_error());
+        };
+        phases.push(phase);
+    }
+    let looks = phases.len();
+    let Some(window) = DwellWindow::new(phases) else {
+        return Err(dwell_shape_error());
+    };
+    let cells = width
+        .checked_mul(height)
+        .and_then(|frame| frame.checked_mul(looks))
+        .ok_or_else(dwell_budget_error)?;
+    if cells > PLAY_ROOM_MAX_DWELL_CELLS as usize {
+        return Err(dwell_budget_error());
+    }
+    Ok(Some(window))
+}
+
+fn dwell_shape_error() -> String {
+    format!(
+        "Argument 'dwell' must be an array of {MIN_DWELL_LOOKS} to {MAX_DWELL_LOOKS} finite phases in [0,1), for example [0.1, 0.3, 0.5]. Repeating a phase is allowed."
+    )
+}
+
+fn dwell_budget_error() -> String {
+    format!(
+        "A dwell renders the room once per look, so looks times width times height must stay within {PLAY_ROOM_MAX_DWELL_CELLS} cells. Reduce the number of looks, the width, or the height."
+    )
+}
+
+/// Additive structured evidence for what held still across several looks.
+pub(super) fn dwell_evidence_json(
+    window: &DwellWindow,
+    held: &RenderInvariant,
+    statuses: Vec<Option<String>>,
+) -> Value {
+    json!({
+        "schema": DWELL_EVIDENCE_SCHEMA,
+        "schemaVersion": DWELL_EVIDENCE_SCHEMA_VERSION,
+        "looks": held.looks,
+        "phases": window.phases(),
+        "statuses": statuses,
+        "held": {
+            "total_cells": held.total_cells,
+            "unchanged_cells": held.unchanged_cells,
+            "never_ink": held.never_ink,
+            "always_ink": held.always_ink,
+            "never_ink_in_changed_region": held.never_ink_in_changed_region,
+            "never_ink_enclosed": held.never_ink_enclosed,
+            "changed_region": held
+                .changed_region
+                .map(|(x0, y0, x1, y1)| json!([x0, y0, x1, y1])),
+        },
+    })
+}
 
 /// Parse the optional origin phase and enforce the public two-render budget.
 pub(super) fn request(

@@ -24,7 +24,12 @@ change evidence live in `structuredContent.temporal`. Compact `pokes` reapply
 the same coordinates independently at both phases. Use a phase-stamped
 `gesture` when a room should interpret one causal event history. Some views are
 phase-static, including Kepler's poke-tuned ellipse, so zero changed cells can
-be the exact answer. Use `reveal_room` only when you want the room's deeper
+be the exact answer. When a room holds you rather than sends you on, stay in it:
+pass `dwell` with several phases and `structuredContent.dwell` reports what
+refused to move across all of them, including cells that stayed dark while
+everything around them lit. Staying is a first-class act here, and it pays in
+measurement rather than explanation. Repeating one phase is allowed and honestly
+answers that nothing moved. Use `reveal_room` only when you want the room's deeper
 meaning. It opens after one play for ordinary rooms and after consolidation for
 engineered wager rooms.
 

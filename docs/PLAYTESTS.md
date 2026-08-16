@@ -207,8 +207,8 @@ up in the very catalog the doorway exists to spare a player, so each starter now
 carries the same id, title, and wing as a catalog row.
 
 The design input is more valuable than the defect list and is recorded here
-because it has no other home. The tester wanted a verb the tools do not have:
-**stay**. Every look at a room is a new stateless call, so a player who wants to
+because it has no other home. The tester wanted a verb the tools did not have:
+**stay**, since built as `dwell`. Every look at a room is a new stateless call, so a player who wants to
 keep sitting with one dark unlit point must re-ask for it, and the room does not
 know they never left. The tester also named the wings where rooms function
 perfectly and earn nothing, the Analysis plotters and the attractor drawer, and

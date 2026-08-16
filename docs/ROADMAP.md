@@ -734,11 +734,24 @@ Detail below and in the version sections.
   binary. One release-note claim was corrected rather than defended: the
   second-wager and post-summon refusals are visit properties, true on the App
   and in core, and not observable across the stateless MCP face.
-  Open design input, recorded and unbuilt: the player wanted a **stay** verb,
-  because every look is a new stateless call and a room cannot know a player
-  never left; and the Analysis plotters and attractor drawer were named as
-  rooms that function and earn nothing, which is keep-or-cut input rather than
-  a defect. See `docs/PLAYTESTS.md` for the evidence boundary.
+  Design input from the same round: the player wanted a **stay** verb, because
+  every look is a new stateless call and a room cannot know a player never
+  left. That one is now built (below). The Analysis plotters and attractor
+  drawer were named as rooms that function and earn nothing, which is
+  keep-or-cut input held for the post-Sensory-Lift review rather than a defect.
+  See `docs/PLAYTESTS.md` for the evidence boundary.
+- **Done (Mind's Seat, staying, August 15, 2026):** `play_room` accepts `dwell`
+  with two to eight phases and returns a typed invariant, the dual of the
+  two-phase delta: cells that never changed, never lit, or always carried ink
+  across every look, the box that did move, and blank cells fully ringed by
+  cells that were never dark. Staying is now a first-class act on the one face
+  that could not express it, and it pays in a measurement the player extracted
+  rather than an explanation the room volunteered. Statelessness is preserved:
+  the player carries the looks, the room does the arithmetic, and no session
+  state, elapsed duration, ordering, or path between looks is created or
+  implied. Bounded per call, deterministic, and swept across all 354 rooms. The
+  measure reads the drawn character grid, so an enclosed-hole count is real
+  when positive and unproven when zero.
 - **Done (Parrondo policy wager, sixth aha room):** one completed rule
   selection primes A, B, or ABB. App keys and its bottom band, plus MCP
   `policy_wager`, reach the same pure five-beat machine. The room's former ABAB

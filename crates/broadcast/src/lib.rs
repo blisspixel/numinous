@@ -36,8 +36,8 @@ pub use pairing::{
 };
 pub use projection::{
     ALL_PUBLIC_TOOLS, NUMINOUS_GAME_IDS, PLAY_ROOM_DEFAULT_HEIGHT, PLAY_ROOM_DEFAULT_WIDTH,
-    PLAY_ROOM_MAX_HEIGHT, PLAY_ROOM_MAX_TEMPORAL_CELLS, PLAY_ROOM_MAX_WIDTH, ProjectionError,
-    PublicTool, PublicToolEvent, numinous_compatibility,
+    PLAY_ROOM_MAX_DWELL_CELLS, PLAY_ROOM_MAX_HEIGHT, PLAY_ROOM_MAX_TEMPORAL_CELLS,
+    PLAY_ROOM_MAX_WIDTH, ProjectionError, PublicTool, PublicToolEvent, numinous_compatibility,
 };
 pub use queue::{EventQueueStatus, MAX_QUEUED_BYTES, MAX_QUEUED_EVENTS, PreparedEvent};
 pub use receiver::{PublicReceiver, ReceiveError, ReceiveOutcome, ReceiverState};

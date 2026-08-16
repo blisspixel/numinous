@@ -27,7 +27,7 @@ use numinous_broadcast::{
 };
 use numinous_core::{Canvas, room_by_id};
 use serde_json::{Map, Value, json};
-use temporal::{evidence_json as temporal_evidence_json, render_delta_json};
+use temporal::{dwell_evidence_json, evidence_json as temporal_evidence_json, render_delta_json};
 
 /// Stateless MCP revision implemented by the per-request metadata path.
 const MODERN_PROTOCOL_VERSION: &str = "2026-07-28";
@@ -1361,6 +1361,7 @@ fn validate_domain_tool_arguments(name: &str, arguments: &Value) -> Result<(), S
             .and_then(Value::as_u64)
             .unwrap_or(DEFAULT_HEIGHT) as usize;
         temporal::request(arguments, width, height)?;
+        temporal::dwell_request(arguments, width, height)?;
     }
     if name == "munch_arcade"
         && let Some(actions) = arguments.get("actions").and_then(Value::as_array)
@@ -1820,6 +1821,14 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
                     temporal.get("delta")?.get("cells_changed")?.as_u64()?
                 ));
             }
+            if let Some(dwell) = structured.get("dwell") {
+                summary.push_str(&format!(
+                    " Dwell across {} looks, {} of {} cells held still.",
+                    dwell.get("looks")?.as_u64()?,
+                    dwell.get("held")?.get("unchanged_cells")?.as_u64()?,
+                    dwell.get("held")?.get("total_cells")?.as_u64()?
+                ));
+            }
             if let Some(beat) = structured
                 .get("engineeredAha")
                 .and_then(|aha| aha.get("beat"))
@@ -1827,15 +1836,18 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
             {
                 summary.push_str(&format!(" Aha beat: {beat}."));
             }
-            if structured.get("temporal").is_some() {
-                summary.push_str(
-                    " Read structuredContent.render, temporal, pokes, gesture, status, delta, goal, goalMet, and engineeredAha for the complete result; ask reveal_room for the explanation.",
-                );
-            } else {
-                summary.push_str(
-                    " Read structuredContent.render, pokes, gesture, status, delta, goal, goalMet, and engineeredAha for the complete result; ask reveal_room for the explanation.",
-                );
-            }
+            let optional_fields = match (
+                structured.get("temporal").is_some(),
+                structured.get("dwell").is_some(),
+            ) {
+                (true, true) => "render, temporal, dwell, ",
+                (true, false) => "render, temporal, ",
+                (false, true) => "render, dwell, ",
+                (false, false) => "render, ",
+            };
+            summary.push_str(&format!(
+                " Read structuredContent.{optional_fields}pokes, gesture, status, delta, goal, goalMet, and engineeredAha for the complete result; ask reveal_room for the explanation."
+            ));
             Some(summary)
         }
         "listen_room" => Some(format!(
@@ -2522,6 +2534,10 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
         Ok(pair) => pair,
         Err(message) => return tool_error(&message),
     };
+    let dwell_window = match temporal::dwell_request(args, width, height) {
+        Ok(window) => window,
+        Err(message) => return tool_error(&message),
+    };
     let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
     let inputs = match parse_room_inputs(args) {
         Ok(inputs) => inputs,
@@ -2610,43 +2626,67 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
             // confirm/consolidated beats. Keep the room readout for a pure K5
             // goal path so the public goal and its visible status stay aligned.
             let status = projected_play_status(room_status, aha_request, engineered_aha.as_ref());
-            let temporal_evidence = if let Some(pair) = temporal_pair {
-                let from_t = pair.from_t();
-                let from_poke_inputs = numinous_core::inputs_from_pokes(&inputs.pokes, from_t);
-                let from_inputs = if inputs.gesture.is_empty() {
-                    from_poke_inputs.as_slice()
+            // One observation at one phase, with the same hand. Both the
+            // two-phase delta and the multi-look dwell are built from this, so
+            // the two kinds of evidence cannot drift apart in how they render.
+            let observe = |phase: f64| -> Result<(Canvas, Option<String>), String> {
+                let phase_poke_inputs = numinous_core::inputs_from_pokes(&inputs.pokes, phase);
+                let phase_inputs = if inputs.gesture.is_empty() {
+                    phase_poke_inputs.as_slice()
                 } else {
                     inputs.gesture.as_slice()
                 };
-                let mut from_canvas = Canvas::new(width, height);
-                render_room_observation(room.as_ref(), &mut from_canvas, from_t, from_inputs);
-                let from_goal_met = goal.is_some() && room.goal_met(from_t, from_inputs);
-                let from_engineered_aha = match project_flagship_aha(
+                let mut frame = Canvas::new(width, height);
+                render_room_observation(room.as_ref(), &mut frame, phase, phase_inputs);
+                let phase_goal_met = goal.is_some() && room.goal_met(phase, phase_inputs);
+                let phase_aha = project_flagship_aha(
                     canonical_id,
                     variation,
-                    from_t,
-                    from_inputs,
+                    phase,
+                    phase_inputs,
                     completed_actions,
-                    from_goal_met,
+                    phase_goal_met,
                     aha_request,
-                ) {
-                    Ok(value) => value,
+                )?;
+                render_engineered_aha_overlay(canonical_id, phase_aha.as_ref(), &mut frame);
+                let phase_status = projected_play_status(
+                    room_status_at(room.as_ref(), phase, phase_inputs),
+                    aha_request,
+                    phase_aha.as_ref(),
+                );
+                Ok((frame, phase_status))
+            };
+            let temporal_evidence = if let Some(pair) = temporal_pair {
+                let (from_canvas, from_status) = match observe(pair.from_t()) {
+                    Ok(observation) => observation,
                     Err(message) => return tool_error(&message),
                 };
-                render_engineered_aha_overlay(
-                    canonical_id,
-                    from_engineered_aha.as_ref(),
-                    &mut from_canvas,
-                );
-                let from_status = projected_play_status(
-                    room_status_at(room.as_ref(), from_t, from_inputs),
-                    aha_request,
-                    from_engineered_aha.as_ref(),
-                );
                 let temporal_delta = from_canvas
                     .delta(&canvas)
                     .expect("temporal observations use identical dimensions");
                 Some((pair, from_status, from_canvas.to_text(), temporal_delta))
+            } else {
+                None
+            };
+            // Staying is its own act. The room draws once per look and reports
+            // what refused to move, so the reward for returning is a
+            // measurement the player extracted rather than a paragraph the
+            // room volunteered.
+            let dwell_evidence = if let Some(window) = dwell_window.as_ref() {
+                let mut frames = Vec::with_capacity(window.looks());
+                let mut statuses = Vec::with_capacity(window.looks());
+                for &phase in window.phases() {
+                    match observe(phase) {
+                        Ok((frame, phase_status)) => {
+                            frames.push(frame);
+                            statuses.push(phase_status);
+                        }
+                        Err(message) => return tool_error(&message),
+                    }
+                }
+                let held = Canvas::invariant(&frames)
+                    .expect("a dwell window renders every look at identical dimensions");
+                Some((window, held, statuses))
             } else {
                 None
             };
@@ -2721,6 +2761,24 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
             if let Some((pair, from_status, from_render, temporal_delta)) = temporal_evidence {
                 structured["temporal"] =
                     temporal_evidence_json(pair, from_status, from_render, temporal_delta);
+            }
+            let text = match dwell_evidence.as_ref() {
+                Some((_, held, _)) => format!(
+                    "{text}\nDwell: across {} looks, {} of {} cells held still{}",
+                    held.looks,
+                    held.unchanged_cells,
+                    held.total_cells,
+                    held.changed_region
+                        .map(|_| format!(
+                            ", and {} stayed dark inside the region that moved",
+                            held.never_ink_in_changed_region
+                        ))
+                        .unwrap_or_else(|| ", and nothing moved at all".to_string()),
+                ),
+                None => text,
+            };
+            if let Some((window, held, statuses)) = dwell_evidence {
+                structured["dwell"] = dwell_evidence_json(window, &held, statuses);
             }
             tool_structured(&text, structured)
         }
@@ -9329,6 +9387,111 @@ mod tests {
                 json!({"id":"nontransitive","pokes":four_pokes}),
             ),
         ]
+    }
+
+    #[test]
+    fn a_dwell_reports_what_refused_to_move() {
+        // Staying is the verb a packaged playtest asked for: every look was a
+        // new stateless call, so returning to one dark point bought nothing.
+        // What staying earns is a measurement the player extracted, never a
+        // paragraph the room volunteered.
+        let stayed = call(
+            "play_room",
+            json!({
+                "id":"lorenz","t":0.5,
+                "dwell":[0.1,0.3,0.5,0.7],
+                "width":40,"height":20
+            }),
+        );
+        let structured = &stayed["result"]["structuredContent"];
+        let dwell = &structured["dwell"];
+        assert_eq!(dwell["schema"], "numinous.dwell-evidence");
+        assert_eq!(dwell["schemaVersion"], 1);
+        assert_eq!(dwell["looks"], 4);
+        assert_eq!(dwell["phases"], json!([0.1, 0.3, 0.5, 0.7]));
+        let held = &dwell["held"];
+        assert_eq!(held["total_cells"], 800);
+        // Staying must never become a second way to be told the answer.
+        assert!(
+            structured["reveal"].is_null(),
+            "a dwell lectured: {structured}"
+        );
+        assert!(
+            !stayed["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("Reveal:")
+        );
+        // The counts partition the same cell map they measure.
+        let total = held["total_cells"].as_u64().expect("total");
+        for field in ["unchanged_cells", "never_ink", "always_ink"] {
+            assert!(
+                held[field].as_u64().expect(field) <= total,
+                "{field} exceeds the cell map: {held}"
+            );
+        }
+        assert!(
+            held["never_ink"].as_u64().expect("never_ink")
+                <= held["unchanged_cells"].as_u64().expect("unchanged"),
+            "a cell blank in every look cannot have changed: {held}"
+        );
+        assert!(
+            held["never_ink_enclosed"].as_u64().expect("enclosed")
+                <= held["never_ink"].as_u64().expect("never_ink"),
+            "an enclosed hole is a blank cell: {held}"
+        );
+
+        // Looking twice at one moment is honest about finding nothing.
+        let still = call(
+            "play_room",
+            json!({"id":"lorenz","t":0.5,"dwell":[0.4,0.4,0.4],"width":40,"height":20}),
+        );
+        let held = &still["result"]["structuredContent"]["dwell"]["held"];
+        assert_eq!(held["unchanged_cells"], held["total_cells"]);
+        assert!(held["changed_region"].is_null(), "{held}");
+        assert!(
+            still["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("nothing moved at all")
+        );
+
+        // A dwell is deterministic, like every other observation here.
+        let again = call(
+            "play_room",
+            json!({
+                "id":"lorenz","t":0.5,
+                "dwell":[0.1,0.3,0.5,0.7],
+                "width":40,"height":20
+            }),
+        );
+        assert_eq!(
+            again["result"]["structuredContent"]["dwell"],
+            stayed["result"]["structuredContent"]["dwell"]
+        );
+    }
+
+    #[test]
+    fn a_dwell_refuses_a_crowd_a_lone_look_and_an_unpayable_budget() {
+        for (arguments, expected) in [
+            (json!({"id":"lorenz","dwell":[0.5]}), "at least 2"),
+            (
+                json!({"id":"lorenz","dwell":[0.1,0.2],"width":200,"height":100}),
+                "within 9216 cells",
+            ),
+            (json!({"id":"lorenz","dwell":[0.1,1.0]}), "less than 1"),
+            (json!({"id":"lorenz","dwell":"soon"}), "must be an array"),
+        ] {
+            let refused = call("play_room", arguments.clone());
+            assert_eq!(refused["result"]["isError"], true, "{arguments}");
+            let text = refused["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default();
+            assert!(
+                text.contains(expected),
+                "refusal for {arguments} must guide, got: {text}"
+            );
+        }
     }
 
     #[test]

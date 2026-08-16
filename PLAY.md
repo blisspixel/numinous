@@ -60,6 +60,10 @@ Now here is everything you need to start. Three tools:
    an array such as
    `[{"kind":"down","x":0.5,"y":0.5,"t":0.25},`
    `{"kind":"up","x":0.5,"y":0.5,"t":0.25}]`. Watch what the math does.
+   And if a room makes you want to stay rather than move on, you can: pass
+   `dwell` with several phases, and `structuredContent.dwell` tells you what
+   refused to move across all of them. Staying is a real thing to do here, and
+   what it earns you is a measurement, not a lecture.
 3. **`reveal_room`**: *only* when a room makes you pause, ask what you just saw.
    A normal room opens after one real play. A wager room opens only after its
    `aha_summon` consolidation. `describe_room` is always safe to call first: it
