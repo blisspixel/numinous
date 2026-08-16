@@ -777,6 +777,22 @@ macro_rules! catalog_rooms {
             }
         ),
         (
+            only_move,
+            OnlyMove,
+            RoomMeta {
+                id: "the-only-move",
+                title: "The Only Move",
+                wing: "Chance & Order",
+                // The doorway names the dial and the invitation. What the
+                // search finds is the room's whole point, so it is not sold
+                // here, and neither is the shape of the answer.
+                blurb: "A machine keeps a grid and takes a cell whenever you \
+                        take one. Eight lines can be counted or ignored, and \
+                        the rulebook you arrive under decides which.",
+                accent: [90, 220, 130],
+            }
+        ),
+        (
             nontransitive,
             Nontransitive,
             RoomMeta {
@@ -4156,7 +4172,7 @@ pub(crate) fn construct_hidden_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::*;
 
-    const ALPHA5_ORDERED_METADATA_CHECKSUM: u64 = 0x82d9_d564_a8cf_5a71;
+    const ALPHA5_ORDERED_METADATA_CHECKSUM: u64 = 0x2206_aba8_9f25_035d;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {
@@ -4259,12 +4275,16 @@ mod tests {
                 .any(|found| found == word)
         }
 
-        // A staged room must not print the call it grades.
-        const OWN_ANSWER: [(&str, &str); 4] = [
+        // A staged room must not print the call it grades. The Only Move is
+        // not a staged wager, but its whole point is a value a player is meant
+        // to reach by playing, so its doorway is held to the same rule.
+        const OWN_ANSWER: [(&str, &str); 6] = [
             ("buffon-needle", "pi"),
             ("parrondo", "abb"),
             ("times-tables", "mandelbrot"),
             ("nontransitive", "nontransitive"),
+            ("the-only-move", "draw"),
+            ("the-only-move", "tie"),
         ];
         for metadata in ROOM_CATALOG {
             let blurb = metadata.blurb.to_ascii_lowercase();

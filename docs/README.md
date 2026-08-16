@@ -8,7 +8,7 @@ you find yourself duplicating a concept, stop and link instead.
 Status: **0.4.0-alpha.6.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
 0.3 Tactile Alpha agent-and-machine exits are met. Understanding Alpha is the
 active line, and its 0.4 exit remains open. The
-headless core, CLI, MCP server, windowed App, GPU and audio adapters, 354 catalog
+headless core, CLI, MCP server, windowed App, GPU and audio adapters, 355 catalog
 rooms plus hidden content, 6 sims, 11+ games, Journey, standard-controller
 input, Studio, and a built-in 42-track radio are built.
 
