@@ -5,7 +5,7 @@ resolver = "3"
 members = ["crates/audio", "crates/broadcast", "crates/core", "crates/gpu", "faces/app", "faces/cli", "faces/mcp"]
 
 [workspace.package]
-version = "0.4.0-alpha.6"
+version = "0.4.0-alpha.7"
 edition = "2024"
 # Public repository license, matched by LICENSE and the README.
 license = "Apache-2.0"
@@ -15,10 +15,10 @@ repository = "https://github.com/blisspixel/numinous"
 
 [workspace.dependencies]
 # Internal crates.
-numinous-core = { version = "0.4.0-alpha.6", path = "crates/core" }
-numinous-audio = { version = "0.4.0-alpha.6", path = "crates/audio" }
-numinous-broadcast = { version = "0.4.0-alpha.6", path = "crates/broadcast" }
-numinous-gpu = { version = "0.4.0-alpha.6", path = "crates/gpu" }
+numinous-core = { version = "0.4.0-alpha.7", path = "crates/core" }
+numinous-audio = { version = "0.4.0-alpha.7", path = "crates/audio" }
+numinous-broadcast = { version = "0.4.0-alpha.7", path = "crates/broadcast" }
+numinous-gpu = { version = "0.4.0-alpha.7", path = "crates/gpu" }
 # Shared third-party versions; Cargo.lock pins the resolved public baseline.
 clap = { version = "4", features = ["derive"] }
 ctrlc = "3"
