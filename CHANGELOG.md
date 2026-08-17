@@ -5,6 +5,63 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- No ordinary doorway prints the fact its own reveal repeats. A packaged
+  playtest wandered into Kaprekar, The Fastest Fall, and The First Rain and
+  read 6174, the cycloid, and the percolation threshold at the door, each of
+  them the discovery the room exists to let a player make. The alpha.5 fix
+  covered only the staged rooms whose call is graded; this class is the same
+  broken promise in ordinary rooms, and an audit of every doorway against its
+  own reveal found ten more, including the Basel problem's closed form and
+  BB(5). All thirteen now name the question and the strangeness without the
+  answer. Two guards hold it: a mechanical one failing any doorway that states
+  a multi-digit value its own reveal states, carrying a short list of the
+  numbers a doorway may legitimately share with a stated reason for each, and
+  the enumerated guard extended to the named answers that take judgment rather
+  than arithmetic.
+- The longest stay the tools advertise now fits the picture a room draws
+  itself. `dwell` offers two to eight looks, but the render budget admitted
+  exactly four at the default canvas, so the first stay a packaged playtest
+  attempted, at the size it had just been handed, was an error. The budget is
+  derived from the advertisement instead of chosen beside it, and a refusal now
+  names the canvas it is judging, what that canvas costs per look, and how many
+  looks do fit, rather than quoting a cap to a caller who never chose a size.
+- Phantom Jam is a traffic jam again. It drew the same ring at every phase,
+  answered no touch, and reported a mean speed of exactly zero: forty-eight cars
+  sat closer together than the headway every driver insisted on, so every car
+  chose a target speed of zero on the first step and the ring never moved
+  again. A parking lot cannot have a phantom jam. The ring is now an
+  optimal-velocity model with a car length, tuned so an evenly spread ring is
+  linearly unstable and clots without being told to. Cars drive forward while
+  the cluster they make travels backward, and the readout prints both signed
+  numbers and the cluster's position without ever saying which way a jam moves.
+  Tests measure the flow, the upstream drift, that traffic outruns the jam, and
+  that the cluster closes to bumper length. The readout also used to run a
+  different brake seat than the picture under a variation seed.
+- Making a melody is no longer reading a table. `sing_expression` answered a
+  curve with a list of frequencies, so a player who had shaped two hills could
+  see them and not hear them. Each note now carries the step taken to reach it:
+  its size in cents, which is a measurement; the equal-tempered name when the
+  step is near enough to take one; and the whole number ratio when a simple one
+  sits close enough, always with how far off it sits. Simplicity bounds the
+  ratio search, because a ratio is a claim about consonance: a semitone is
+  offered none, since none explains it, and an equal-tempered major third is
+  reported as the fourteen cents sharp of 5:4 that it is. The tool now returns
+  structured content beside its text.
+- The Busy Beaver's dial does what its door says. Sweeping every room for the
+  shape that made Phantom Jam dead, one picture at every phase, found six.
+  Five answer the hand and promise nothing about a phase. The sixth said "t
+  extends the step budget" while the budget opened at 200 steps and the machine
+  halts long before that, so the dial a player was sent to moved nothing and
+  the room showed a block that had already stopped. The phase now walks the
+  machine through its own run: the tape fills as you turn the dial, and the
+  stop is a moment you arrive at. A catalog guard now asks the question that
+  can be dishonest, which is whether a doorway naming a dial has one.
+- The compact `list_rooms` sentence names its starters. It listed four bare
+  ids while the structured array carried titles, sending a text-only reader
+  into the 355-room catalog the short mode exists to spare them.
+- The Berry Phase doorway poses its loop instead of captioning it.
+- Two App postcard tests wiped a fixed temp directory on entry and then wrote
+  into it, so two concurrent runs of the suite deleted each other's files.
 - New room: **The Only Move** (`the-only-move`, Chance & Order), the playable
   core of a design that had been specced and unbuilt since July 2026. A machine
   holds a three by three grid and answers every touch with a move from its own

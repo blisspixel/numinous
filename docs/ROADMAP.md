@@ -57,7 +57,7 @@ unclaimed until run.
 | --- | --- | --- |
 | **1. Keep agent first contact CI-green** | Agent hallway and tactile cohorts run on every PR; optional local-model visits exercise genuine choice after meaningful MCP experience changes | Deterministic cohorts guard 0.2 and 0.3 regressions, while real-model visits can expose interaction failures without turning free play into a flaky or expensive gate |
 | **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests, the typed room catalog, typed Gauntlet truth, and local-state path resolution are now in core. CLI and MCP local-state adapters plus the MCP discovery and schema catalog are focused modules extracted from the god-files; workstream 7 still owns the remaining seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
-| **3. The Mind's Seat** | Exact two-observation temporal evidence is built. Next: versioned Numinous Encounter Receipts and explicit journal promotion; a resettable session workspace and source-explained remembered-room retrieval; MCP creation parity (save, sign, fork; a capsule link as a journal subject); journal surfacing at the door of a remembered room; the threshold (three doors instead of an index, the Strange Loop walk exposed); exact ratio annotations on note pairs. The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
+| **3. The Mind's Seat** | Exact two-observation temporal evidence, multi-look `dwell`, and exact ratio annotations on note pairs are built. Next: versioned Numinous Encounter Receipts and explicit journal promotion; a resettable session workspace and source-explained remembered-room retrieval; MCP creation parity (save, sign, fork; a capsule link as a journal subject); journal surfacing at the door of a remembered room; the threshold (three doors instead of an index, the Strange Loop walk exposed). The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
 | **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | Splats, float accumulation, and bloom inside `Raster`; one shared audio bus with reverb and shaped envelopes; global dissolve and damped-spring input. The spike that precedes it: `crates/gpu` rendering into the existing Surface contract behind a feature flag, and a measured bloom budget on the CPU path | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
 | **6. Creator depth on the built loop** | Next rungs: the parametric pair as the multi-expression capsule ring with scale quantization beside it, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on the owner-gated MCP tool ruling, and each rung ships with its own machine gates |
@@ -75,25 +75,35 @@ The Mind's Seat advances through independently testable increments:
    delta while preserving the existing destination and touch contracts. Equal
    and decreasing phase pairs are valid comparisons. No duration, path,
    receipt, journal write, or session state is inferred.
-2. **Numinous Encounter Receipts:** a versioned native receipt binds replay
+2. **Staying, built:** `dwell` renders one room at two to eight phases and
+   returns a typed invariant of what refused to move. The longest stay the
+   schema advertises fits the canvas a room draws when nobody asks for a size,
+   because a verb whose first honest use is an error is not a verb yet.
+3. **Ratio annotations on note pairs, built:** the step between two notes is
+   reported as an exact size in cents, an equal-tempered name when one is near
+   enough, and a simple whole number ratio when one explains it, always with
+   its error. Simplicity bounds the ratio search, so a step no consonance
+   explains is offered none rather than a search result. Making a curve is
+   something a mind without ears can hear the shape of.
+4. **Numinous Encounter Receipts:** a versioned native receipt binds replay
    ABI, compatibility fingerprint, normalized action, result digest, and
    provenance. It is a Numinous replay and provenance artifact, not an Open
    Knowledge Format Attested Computation Receipt or OKF projection.
-3. **Explicit promotion:** the player chooses whether a Numinous Encounter
+5. **Explicit promotion:** the player chooses whether a Numinous Encounter
    Receipt becomes a journal subject. No Numinous Encounter Receipt, render,
    action, result, interpretation, or affect enters the journal automatically.
    Successful play still records the existing coarse room visit in Journey
    under its documented progression policy.
-4. **Resettable session workspace:** the player can inspect, edit, defer, or
+6. **Resettable session workspace:** the player can inspect, edit, defer, or
    clear the bounded state that connects calls within one visit.
-5. **Remembered-room retrieval:** opt-in, bounded, source-explained, and able to
+7. **Remembered-room retrieval:** opt-in, bounded, source-explained, and able to
    abstain when evidence is absent.
-6. **MCP creation parity:** save, title, sign, fork, and lineage use the same
+8. **MCP creation parity:** save, title, sign, fork, and lineage use the same
    capsule semantics as the other faces.
-7. **Portable capsule:** native typed evidence and creations travel with an OKF
+9. **Portable capsule:** native typed evidence and creations travel with an OKF
    v0.2 knowledge projection plus explicit privacy and retention metadata.
-8. **Reflection proposals:** only after retrieval, correction, export, and
-   deletion invariants hold.
+10. **Reflection proposals:** only after retrieval, correction, export, and
+    deletion invariants hold.
 
 ### The Polish Wave (August 2026): seven critics, one goal
 
@@ -1954,7 +1964,7 @@ cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
 3. Continue the Mind's Seat now that exact temporal evidence exists: versioned
    Numinous Encounter Receipts and explicit promotion first, then a resettable
    session workspace, deliberate remembered-room retrieval, MCP creation and
-   lineage parity, the Strange Loop threshold, and exact ratio annotations.
+   lineage parity, and the Strange Loop threshold.
    Keep memory opt-in, player-owned, correctable, exportable, and erasable.
 4. Run the Sensory Lift de-risk spike in parallel. Expand it only when the
    measured `crates/gpu` and CPU bloom budgets justify the architecture; then
