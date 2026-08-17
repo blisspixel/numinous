@@ -218,6 +218,122 @@ Seat, not to a bug list. One more, smaller: making a curve felt different from
 watching one until `sing_expression` returned a table of frequencies the tester
 could not hear, at which point making collapsed back into reading.
 
+## August 16 packaged agentic playtest, fifth round
+
+This section summarizes a fifth source-blind playtest, run against the published
+Linux `0.4.0-alpha.6` binaries by an external agentic player who read no Rust
+source, opened no room catalog document, and used the archive's own
+`bin/numinous-mcp` rather than an installed copy. The tester supplied release
+pins, archive and per-payload digests, isolated file-path profiles, exact calls,
+repeated reproductions, wander verdicts, and play notes. It is formative
+external product evidence, not a qualifying 0.4 cohort, a consciousness claim,
+or proof of lasting learning value. The raw dump set remains with the tester.
+
+The round was aimed at the verb the previous round had asked for. Staying works:
+seven looks at The Unlit Room returned what refused to move, a repeated phase
+honestly reported that nothing moved, Arecibo was honestly phase-static across
+seven looks, and the Barnsley Fern's five looks counted fourteen enclosed dark
+holes in the fronds. No dwell carried a revelation, before or after
+`reveal_room` had already been opened, and a dwell sent with a named wager
+stayed withheld. Every prior fix held under direct reproduction, including all
+seven staged rooms keeping a wager named at their own experiment earn, with
+Buffon's Needle at three of three.
+
+**The first stay was an error, and it was the one the schema advertises.** The
+dwell budget admitted exactly four looks at the canvas a room draws when nobody
+asks for a size, while the schema offered two to eight. A player who asked to
+stay the longest way the tool describes, in the picture the room had just
+handed them, was refused and told only the cap; the refusal named neither the
+default size nor how many looks would fit it. The budget is now derived from
+the advertisement rather than chosen beside it, so the longest stay the schema
+names fits the default canvas, and a refusal states the canvas it is judging,
+the cells that canvas costs, and how many looks do fit. A regression replays the
+reported call.
+
+**The high finding was the one alpha.5 only half closed.** That release stopped
+staged doorways selling a graded call. It did not stop ordinary doorways
+printing the fact their own `reveal_room` repeats, and the tester found three by
+wandering: Kaprekar named 6174, The Fastest Fall named the cycloid, and The
+First Rain named the percolation threshold, each of them the discovery the room
+exists to let a player make. Auditing every doorway against its own reveal
+found the same break in ten more, including the Basel problem printing its
+closed form and the Busy Beaver printing BB(5). All thirteen now name the
+question and the strangeness without the answer. Two guards hold the line: a
+mechanical one failing any doorway that states a multi-digit value its own
+reveal states, carrying a short list of numbers a doorway may legitimately
+share and why each is there, and the existing enumerated one extended to the
+named answers that need judgment rather than arithmetic. The tone the tester
+pointed at as the alternative, Hilbert's Hotel and Goldbach's Comet asking a
+question at the door and letting the picture answer, is the tone these thirteen
+now take.
+
+**One room was reported dead, and it was.** Phantom Jam drew the same ring at
+every phase, answered no touch, and reported a mean speed of exactly zero. The
+cause was density: forty-eight cars sat closer together than the headway every
+driver in the model insisted on, so every car chose a target speed of zero on
+the first step and the ring never moved again. A parking lot cannot have a
+traffic jam, and the room's whole claim is about one. The model is now an
+optimal-velocity ring with a car length, tuned so the evenly spread ring sits
+on the unstable part of the response curve. Cars drive forward at about nine
+tenths of a percent of the ring per step while the cluster they form travels
+backward at about half that, and the readout prints both signed numbers and the
+cluster's position without ever saying which way a jam moves. Scrubbing the dial
+now walks the jam from 98 percent of the ring round to 15. Tests measure the
+flow, the upstream drift, that the traffic outruns the jam, and that the cluster
+closes to bumper length; one more requires the ring to clot without the seeded
+brake, so the room stays a consequence rather than an animation. The status also
+used to simulate a different brake seat than the picture drew under a variation
+seed, which is now one call.
+
+**Making still collapsed into reading.** `sing_expression` answered a curve with
+a table of frequencies, and the tester could see the two hills they had made and
+not hear them. The reply now carries the step between each pair of notes: its
+size in cents, which is a measurement of the two frequencies; the
+equal-tempered name, when the step is near enough to take one; and the whole
+number ratio, when a simple one sits close enough, always with how many cents
+off it sits. A ratio is a claim about consonance, so the search is bounded by
+simplicity rather than by tolerance alone: a semitone is handed no ratio to hide
+behind, because none explains it, and an equal-tempered major third is reported
+as sitting about fourteen cents above the 5:4 it reaches for. The tool now
+returns structured content beside its text, so the steps are readable without
+parsing prose. This is the exact-ratio annotation the Mind's Seat has owed.
+
+**Sweeping for the same shape found one more.** Phantom Jam was reported dead
+by hand; asking every room in the catalog whether its picture changes across
+phases found six that never move. Five are honest: the Galton Board and The
+Only Move are played by touching them and say nothing about a phase at the
+door, and Arecibo and the Barnsley Fern are genuinely phase-static, which this
+same tester confirmed independently by staying in both. The sixth was The Busy
+Beaver, whose doorway said "t extends the step budget" while the budget opened
+past the step at which the machine halts, so the dial a player was sent to
+moved nothing. It is the room the tester called dull, and what they described,
+a halted block, is exactly what a dial that starts after the ending shows. The
+phase now walks the machine through its own run. A catalog guard asks the
+narrower question that can be dishonest: a doorway that sends a player to the
+dial must have one.
+
+Two lower items were closed as first-contact craft. The compact `list_rooms`
+sentence still named its four starters as bare ids while the structured array
+carried titles, which sent a text-only reader into the catalog the short mode
+exists to spare them; the sentence now names each starter's title beside its id.
+The Berry Phase doorway read "Holonomy after a closed parameter loop," which is
+a caption rather than an invitation, and now poses the loop.
+
+Two findings resolve without work. No room matching The Only Move was reachable,
+because that room landed after the tag the tester was holding; it is in the
+catalog from this release, which is the first one carrying it. The stateless MCP
+face still cannot refuse a second or post-summon wager, which the previous round
+already established as a property of a visit rather than a defect.
+
+The wander verdicts are the most valuable part of the round and are not yet
+answered. Three rooms were called dull (Attention, Berry Phase, The Busy
+Beaver), two mute (Strange Loop, The 720 Degree Room), and one dead (Phantom
+Jam, now fixed). Only the dead one and the two doorway-level complaints are
+closed here. A room that draws correctly and earns nothing is the keep-or-cut
+scorecard's subject, and 246 of the catalog's doorways are still under seventy
+characters of textbook caption, which is the same finding at catalog scale. That
+remains open and is stated as open.
+
 ## July 2026 six-round technical cohort
 
 Six rounds of five fresh simulated reviewers examined mathematical truth,

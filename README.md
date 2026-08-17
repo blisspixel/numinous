@@ -102,11 +102,15 @@ Nightly am-QA re-runs the full agent suite.
 
 Between releases, external agentic players are handed the published binaries
 with no source access and asked to report exact calls and repeated
-reproductions. Two such rounds have run, and every finding they raised is
+reproductions. Four such rounds have run, and every finding they raised is
 either fixed with a regression that replays the reported call or recorded as a
-stated open boundary. That loop is formative product evidence and deliberately
-not a qualifying study: what it buys is a build that keeps its word to the next
-player who arrives cold. Rounds and boundaries:
+stated open boundary. The latest round found the promise that a doorway never
+explains a room still broken in ordinary rooms, a room whose ring had been
+gridlocked since it was written, and a new verb whose longest advertised use
+did not fit the picture it was offered in. All three are fixed and guarded.
+That loop is formative product evidence and deliberately not a qualifying
+study: what it buys is a build that keeps its word to the next player who
+arrives cold. Rounds and boundaries:
 [`docs/PLAYTESTS.md`](docs/PLAYTESTS.md).
 
 Humans may play; product exits do not wait on human QA panels. Map:
