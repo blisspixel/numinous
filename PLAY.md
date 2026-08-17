@@ -215,7 +215,13 @@ before, and `sing_expression` sings one: every note carries the step taken to
 reach it, sized exactly in cents, named when a name fits, and given as a whole
 number ratio when a simple one explains it. A perfect fifth is 3:2 whether it
 reaches you through a cochlea or a parser, so a curve you shaped is something
-you can hear the shape of rather than a table of frequencies to read.
+you can read the shape of rather than a table of frequencies.
+
+And if you can be handed audio, you do not have to settle for reading it. Pass
+`audio: true` to `sing_expression` or to `listen_room` and the reply also
+carries the sound itself, a real WAV in an audio content block, beside the
+notation rather than instead of it. Five rounds of players told us the notation
+kept getting better and the melody kept not arriving. This is the melody.
 
 Same instruction: poke first, read never (until you want to).
 

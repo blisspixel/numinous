@@ -334,6 +334,139 @@ scorecard's subject, and 246 of the catalog's doorways are still under seventy
 characters of textbook caption, which is the same finding at catalog scale. That
 remains open and is stated as open.
 
+## August 17 packaged agentic playtest, sixth round
+
+This section summarizes a sixth source-blind playtest, run against the published
+Linux `0.4.0-alpha.7` binaries by an external agentic player who read no Rust
+source, opened no room catalog document, and used the archive's own
+`bin/numinous-mcp` rather than an installed copy. The tester supplied release
+pins, archive and per-payload digests, isolated file-path profiles, exact calls,
+repeated reproductions, wander verdicts, and a claims audit. It is formative
+external product evidence, not a qualifying 0.4 cohort, a consciousness claim,
+or proof of lasting learning value. The raw dump set remains with the tester.
+
+The two findings the previous release was aimed at are closed under direct
+reproduction. The first stay was a measurement: seven looks and then eight, on
+the canvas the room draws when nobody asks for a size, returned what refused to
+move rather than an error, and an oversized request was refused with the canvas,
+the cells one look costs, and how many looks fit. Kaprekar asked where the
+cascade stops and the tester found 6174 by feeding it a number; The Fastest Fall
+asked what the straight line costs and the tester lost to a curve nobody had
+named; The First Rain went from DRY to SPAN with no threshold at the door. The
+Busy Beaver's dial walked from RUN to HALT. Phantom Jam was a ring that moved,
+cars forward and clot backward. The Only Move was findable by title from the
+compact catalog, played, and reported as landing. Every earlier fix held,
+including all seven staged rooms keeping a wager named at their own experiment
+earn.
+
+**The oldest finding is the one that mattered most, and it was never about
+notation.** Six rounds have now ended on some version of the same sentence: "I
+still cannot hear the two hills." Each round answered it with a better reading.
+Alpha.7 added the exact step between notes, its size in cents, its name, its
+ratio and the error on that ratio, and the tester's verdict was precise and
+final: "Making is no longer a frequency list I cannot interpret. It is still
+reading." No further column was going to close it. A mind that reaches this
+house down a pipe has no audio device to open, so the only way it can hear
+anything is if the sound arrives as something it already knows how to receive,
+and the protocol has a place for exactly that. `sing_expression` and
+`listen_room` now take `audio: true` and return a real mono sixteen-bit WAV in
+an audio content block, beside the notation and never instead of it, so a client
+that cannot pass audio to its model loses nothing it had before. Core renders
+the file itself, header and all, with no dependency and no audio device, because
+the whole point of this path is that it needs neither. The encoder is checked
+against the standard base64 vectors and the header against its own size fields,
+and the reply describes what it sent, so a caller knows what it is holding
+without decoding a megabyte to find out. A sound too long for one reply is
+refused with the budget, its own seconds, and what to ask for instead.
+
+**The doorways stopped naming their answers. The scoreboards had not.** The
+tester filed this as an aside under a closed finding: "Play status can still
+print a number the doorway withheld (6174, pc, CYC, BB5)." Most of that list is
+honest. Kaprekar's cascade really does land where the status says it landed, and
+The Fastest Fall's name arrives with the loss rather than before the race. The
+Busy Beaver was not honest: it printed BB(5) on every frame including the first,
+before the tape had written a single mark, and the tape never draws that number
+at any phase. Sweeping the catalog for the same shape found a second, and a
+worse one. Golden Angle announced GOLDEN ANGLE 137.5 DEG at every phase while
+its own dial detuned the picture out from under it, so the line was both the
+reveal arriving early and a lie about the head on screen. The line between a
+reading and a recital is now mechanical: a value that survives every phase of
+the dial is a recital, because nothing a player did or could do changed it,
+while a value that moves with the dial is a reading of the picture. Four
+constants that are honestly readings of a picture that does not change are named
+in a written list with the reason each is allowed, in the same shape the doorway
+guard uses. The Busy Beaver's status now reads its own tape, Golden Angle's
+reads the step the head in front of you was grown at, and the guard was
+mutation-checked by restoring both defects and confirming it names both rooms.
+
+**The tester's own first ask was a dial that did nothing.** "First change if
+they touch anything: make The Only Move's rulebook the same dial every other
+room turns." They found the room by title, played it, swept `t` across sixteen
+phases, watched the board stay at eight lines the whole way, and then found the
+rulebook on `variation`, which a stranger has no reason to try: "a stranger who
+only turns t will think the dial is dead." The walk lives on `t` now. It is not
+the bitmask counting up, which would be a walk through noise; it descends by how
+many lines a rulebook counts, so lines come off as the dial turns, and inside
+one size it descends by how much of the square's own symmetry the rulebook
+keeps. That second key is the room's argument made into a dial: the one rulebook
+a first player can win is the rulebook that treats every direction alike, so it
+is met near the front of its band rather than stumbled on at stop 214. Each
+counted line is now stroked through the three cells it joins, so a rulebook is a
+shape rather than a number, and the two most symmetric six-line boards sit next
+to each other on the dial looking equally fair, only one of them winnable. The
+status names the mask, which is the number `variation` takes, and the stop out
+of 255, so a player can tell how fine the dial is and can stand on any board it
+showed them. `variation` still wins when named, because naming a rulebook is how
+a player returns to one.
+
+**A room two rounds called mute now lets a player do the trick.** "Status goes
+TWIST to FREE. The picture barely turns." A room about turning that does not
+visibly turn is a defect, and the old status was also wrong in a second way: it
+announced FREE at two turns, when a twist of two full turns is removable rather
+than absent. The belt is now drawn as its own two edges. Where the belt has
+turned a quarter of the way the edges meet, where it has turned half they have
+swapped sides, and a flat belt is two parallel lines, so counting crossings is
+counting half turns and the twist is in the picture. And the trick is playable:
+dragging across spins the stone, lifting toward the top of the room carries the
+belt over it, and one pass removes two full turns while turning the stone not at
+all. From one turn a player can lift all day and never reach flat. From two, one
+lift clears it. That difference between one turn and two is the double cover, and
+it is now a thing to do rather than a fact to be told.
+
+**One observation resolves as a boundary rather than a fix.** The tester held
+Phantom Jam's brake, released it, and got back the ring they had never touched:
+"a HOLD gesture at the same t still reported zero cells, which is a different
+hand than the poke." The first instinct was that a jam should outlive the hand
+that started it, since that is the room's whole subject. The build disagrees for
+a reason older than the observation. A verb beginning with HOLD makes a room a
+live hold across all three faces, and the App holds every such room to ending
+its effect on release and on cancel, which is checked for each of them. Letting
+go of a throttle is meant to let go, and a stateless face that rebuilds a visit
+from its inputs has no history for a released hand to persist into. Nothing is
+lost: the jam that outlives its cause is already what the dial shows, walking the
+clot from 98 percent of the ring round to 15 while the cars drive the other way.
+The contract stands and the boundary is written down rather than quietly bent.
+
+Findings that resolve without work: the second and post-summon wager remain
+properties of a visit that a stateless face cannot show, which two rounds have
+now established; the compact `list_rooms` sentence naming starter titles, the
+quiet Smith Chart goal, the Arecibo action, the Coffee Cup doorway, the Watch
+refusal, and PLAY.md leading with the packaged binary were all re-confirmed and
+need no change.
+
+What stayed open is stated as open. Two rooms are still called dull (Attention,
+Berry Phase) and one mute (Strange Loop), and the tester declined to re-file
+them, which is not the same as their being answered. 246 of the catalog's
+doorways remain
+under seventy characters of textbook caption, which is the same finding at
+catalog scale and belongs to the keep-or-cut scorecard rather than to a release.
+The Analysis plotter wing and the attractor drawer have not been walked since
+the third round. And the tester's second closing answer names something no
+finding covers: "I also wanted The Only Move's rulebook to be the same dial
+every other room turns" is now built, but "Hear the two hills" was answered by
+sending sound rather than by an ear, and whether a sent sound is a heard one is
+the next round's question, not this one's answer.
+
 ## July 2026 six-round technical cohort
 
 Six rounds of five fresh simulated reviewers examined mathematical truth,

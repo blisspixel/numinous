@@ -5,6 +5,69 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.8] - 2026-08-17
+
+- A melody can be heard rather than only read. Six packaged playtests have now
+  ended on some version of "I still cannot hear the two hills," and each round
+  answered with a better reading: notes, then names, then the exact step in
+  cents with its ratio and the error on that ratio. The verdict on the last one
+  was precise: "Making is no longer a frequency list I cannot interpret. It is
+  still reading." No further column was going to close it. `sing_expression` and
+  `listen_room` now take `audio: true` and return the sound itself, a mono
+  sixteen-bit WAV in a protocol audio content block, beside the notation and
+  never instead of it, so a client that cannot pass audio to a model loses
+  nothing it had before. Core renders the file, header and all, with no
+  dependency and no audio device, because the point of this path is that it
+  needs neither. The encoder is checked against the standard base64 vectors and
+  the header against its own size fields; the reply describes what it sent; and
+  a sound too long for one message is refused with the budget, its own seconds,
+  and what to ask for instead.
+- The Only Move's rulebook is the dial every other room turns. A packaged
+  playtest found the room by title, played it, swept `t` across sixteen phases,
+  and watched the board stay at eight lines the whole way, because the rulebook
+  lived on `variation`, which a stranger has no reason to try. The walk lives on
+  the phase now, ordered by the room's own argument: largest rulebooks first, so
+  lines come off as the dial turns, and most symmetric first inside a size, so
+  the one board a first player can win, which is the board that treats every
+  direction alike, is met near the front of its band rather than stumbled on at
+  stop 214. Each counted line is stroked through the three cells it joins, so a
+  rulebook is a shape and not a number: eight lines is a star, six rows and
+  columns are a lattice, and the winnable one is a square with an X through it.
+  The status names the mask, which is the number `variation` accepts, and the
+  stop out of 255, so a player can tell how fine the dial is and can stand on
+  any board it showed them.
+- No unplayed status recites a constant its own reveal repeats. Alpha.7 stopped
+  ordinary doorways printing their answers; the scoreboards were still doing it
+  one room deeper. The Busy Beaver printed BB(5) on every frame, including the
+  first, before the tape had written a mark, and the tape never draws that
+  number at any phase. Golden Angle announced the golden angle at every phase
+  while its own dial detuned the picture out from under it, which was both the
+  reveal arriving early and a false reading of the head on screen. The line
+  between a reading and a recital is now mechanical: a value that survives every
+  phase of the dial is a recital, since nothing the player did or could do
+  changed it, and a value that moves with the dial is a reading. Four constants
+  that are honest readings of a picture that does not change carry a written
+  reason each, in the same shape the doorway guard uses.
+- The 720 Degree Room is a trick a player can do. Two rounds called it mute:
+  "Status goes TWIST to FREE. The picture barely turns." A room about turning
+  that does not visibly turn is a defect, and the old status was wrong a second
+  way, calling the belt FREE at two turns when a twist of two turns is removable
+  rather than absent. The belt is drawn as its own two edges now, so where it has
+  turned a quarter way they meet, where it has turned half they have swapped, and
+  counting crossings is counting half turns. Dragging across spins the stone,
+  lifting carries the belt over it, and one pass removes two full turns while
+  turning the stone not at all. From one turn you can lift all day and never reach
+  flat; from two, one lift clears it. That difference is the double cover, and it
+  is now something a player does rather than something the room asserts.
+- A released hold still shows the ambient room, and that is deliberate. A
+  packaged playtest held Phantom Jam's brake, let go, and read the untouched
+  ring, which looks like a dropped hand. A verb beginning with HOLD makes a room
+  a live hold across all three faces, and every such room is held to ending its
+  effect on release and on cancel. Letting go of a throttle is meant to let go,
+  and a stateless face that rebuilds a visit from its inputs has no history for a
+  released hand to persist into. The jam that outlives its cause is what the dial
+  already shows. The contract stands and the boundary is recorded.
+
 ## [0.4.0-alpha.7] - 2026-08-17
 
 - No ordinary doorway prints the fact its own reveal repeats. A packaged

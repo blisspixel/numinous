@@ -57,7 +57,7 @@ unclaimed until run.
 | --- | --- | --- |
 | **1. Keep agent first contact CI-green** | Agent hallway and tactile cohorts run on every PR; optional local-model visits exercise genuine choice after meaningful MCP experience changes | Deterministic cohorts guard 0.2 and 0.3 regressions, while real-model visits can expose interaction failures without turning free play into a flaky or expensive gate |
 | **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests, the typed room catalog, typed Gauntlet truth, and local-state path resolution are now in core. CLI and MCP local-state adapters plus the MCP discovery and schema catalog are focused modules extracted from the god-files; workstream 7 still owns the remaining seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
-| **3. The Mind's Seat** | Exact two-observation temporal evidence, multi-look `dwell`, and exact ratio annotations on note pairs are built. Next: versioned Numinous Encounter Receipts and explicit journal promotion; a resettable session workspace and source-explained remembered-room retrieval; MCP creation parity (save, sign, fork; a capsule link as a journal subject); journal surfacing at the door of a remembered room; the threshold (three doors instead of an index, the Strange Loop walk exposed). The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
+| **3. The Mind's Seat** | Exact two-observation temporal evidence, multi-look `dwell`, exact ratio annotations on note pairs, and sound returned as a real audio file rather than as notation about one are built. Next: versioned Numinous Encounter Receipts and explicit journal promotion; a resettable session workspace and source-explained remembered-room retrieval; MCP creation parity (save, sign, fork; a capsule link as a journal subject); journal surfacing at the door of a remembered room; the threshold (three doors instead of an index, the Strange Loop walk exposed). The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
 | **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | Splats, float accumulation, and bloom inside `Raster`; one shared audio bus with reverb and shaped envelopes; global dissolve and damped-spring input. The spike that precedes it: `crates/gpu` rendering into the existing Surface contract behind a feature flag, and a measured bloom budget on the CPU path | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
 | **6. Creator depth on the built loop** | Next rungs: the parametric pair as the multi-expression capsule ring with scale quantization beside it, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on the owner-gated MCP tool ruling, and each rung ships with its own machine gates |
@@ -85,24 +85,30 @@ The Mind's Seat advances through independently testable increments:
    its error. Simplicity bounds the ratio search, so a step no consonance
    explains is offered none rather than a search result. Making a curve is
    something a mind without ears can hear the shape of.
-4. **Numinous Encounter Receipts:** a versioned native receipt binds replay
+4. **Sound as sound, built:** `sing_expression` and `listen_room` take
+   `audio: true` and return a mono sixteen-bit WAV in a protocol audio content
+   block, beside the notation and never instead of it. Core encodes the file
+   with no dependency and no audio device. Six packaged rounds asked for this in
+   the same words each time, and no further column of notation was going to
+   answer it: a mind that cannot open a device can still be handed a file.
+5. **Numinous Encounter Receipts:** a versioned native receipt binds replay
    ABI, compatibility fingerprint, normalized action, result digest, and
    provenance. It is a Numinous replay and provenance artifact, not an Open
    Knowledge Format Attested Computation Receipt or OKF projection.
-5. **Explicit promotion:** the player chooses whether a Numinous Encounter
+6. **Explicit promotion:** the player chooses whether a Numinous Encounter
    Receipt becomes a journal subject. No Numinous Encounter Receipt, render,
    action, result, interpretation, or affect enters the journal automatically.
    Successful play still records the existing coarse room visit in Journey
    under its documented progression policy.
-6. **Resettable session workspace:** the player can inspect, edit, defer, or
+7. **Resettable session workspace:** the player can inspect, edit, defer, or
    clear the bounded state that connects calls within one visit.
-7. **Remembered-room retrieval:** opt-in, bounded, source-explained, and able to
+8. **Remembered-room retrieval:** opt-in, bounded, source-explained, and able to
    abstain when evidence is absent.
-8. **MCP creation parity:** save, title, sign, fork, and lineage use the same
+9. **MCP creation parity:** save, title, sign, fork, and lineage use the same
    capsule semantics as the other faces.
-9. **Portable capsule:** native typed evidence and creations travel with an OKF
+10. **Portable capsule:** native typed evidence and creations travel with an OKF
    v0.2 knowledge projection plus explicit privacy and retention metadata.
-10. **Reflection proposals:** only after retrieval, correction, export, and
+11. **Reflection proposals:** only after retrieval, correction, export, and
     deletion invariants hold.
 
 ### The Polish Wave (August 2026): seven critics, one goal
@@ -1905,7 +1911,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-08-17)
 
-The package is **0.4.0-alpha.7**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.8**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -1928,9 +1934,9 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 1.0 gate | Evidence today | Missing evidence or work |
 |---|---|---|
 | Complete coherent collection | 355 catalog rooms are built and listed | A coherent cold start, pacing, keep-or-cut review, and several planned signature rooms |
-| Every room earns its place | Every catalog room has a verb, variation, image, and motif | Stranger discovery, room-specific depth, held input where useful, and per-room human scorecards |
+| Every room earns its place | Every catalog room has a verb, variation, image, and motif; no doorway states a value its own reveal states, and no unplayed status recites one | Stranger discovery, room-specific depth, held input where useful, and per-room human scorecards; six rooms carry a standing dull or mute verdict from packaged play and 246 doorways are still under seventy characters of caption |
 | Full sensory identity | Four Eras, deterministic synthesis, chiptune, and two GPU fractal paths are built | HDR post-stack, congruency review, accessibility controls, audio separation, and human sensory review |
-| Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
+| Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally, and the MCP face can hand a player sound as sound rather than as notation about it | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization with title, author, era, and lineage, links, plotting, animation, singing, exact paused App reopen, the one-key share trio, the local Gallery wall, and fork with recorded descent exist | Editable prose credit in the capsule, safe share preview for incoming links, and clean-install round trip |
 | Rigor and care are provable | 3,593 passing all-target test cases plus three expensive ignored diagnostics, 95.28% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a separately attested SPDX Rust plus packaged-native SBOM | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
@@ -1950,7 +1956,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.4.0-alpha.7** because Understanding Alpha is the active
+Package label is **0.4.0-alpha.8** because Understanding Alpha is the active
 milestone. The alpha suffix says its exit remains open. External registration,
 calibration, fresh independent review, allocation freeze, and the qualifying
 cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
