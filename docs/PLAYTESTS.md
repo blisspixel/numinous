@@ -433,6 +433,16 @@ all. From one turn a player can lift all day and never reach flat. From two, one
 lift clears it. That difference between one turn and two is the double cover, and
 it is now a thing to do rather than a fact to be told.
 
+**A second room called dull is answered the same way.** Berry Phase drew a
+sphere, a loop, and one chord whose screen angle happened to be the phase, and
+the tester's reading was exact: "the picture is still a circle and a number." A
+Berry phase is a mismatch that can be pointed at. Carry a vector around a closed
+loop and it comes back pointing somewhere else, missing by half the area the
+loop enclosed. The cap is shaded now, and the vector is drawn twice, as it set
+out and as it came back, so turning the dial opens the area and fans the two
+apart together. The status carries both measurements and never the sentence that
+ties them, because that sentence is the discovery.
+
 **One observation resolves as a boundary rather than a fix.** The tester held
 Phantom Jam's brake, released it, and got back the ring they had never touched:
 "a HOLD gesture at the same t still reported zero cells, which is a different
@@ -454,9 +464,9 @@ quiet Smith Chart goal, the Arecibo action, the Coffee Cup doorway, the Watch
 refusal, and PLAY.md leading with the packaged binary were all re-confirmed and
 need no change.
 
-What stayed open is stated as open. Two rooms are still called dull (Attention,
-Berry Phase) and one mute (Strange Loop), and the tester declined to re-file
-them, which is not the same as their being answered. 246 of the catalog's
+What stayed open is stated as open. One room is still called dull (Attention)
+and one mute (Strange Loop), and the tester declined to re-file them, which is
+not the same as their being answered. 246 of the catalog's
 doorways remain
 under seventy characters of textbook caption, which is the same finding at
 catalog scale and belongs to the keep-or-cut scorecard rather than to a release.
