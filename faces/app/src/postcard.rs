@@ -625,7 +625,11 @@ mod tests {
     fn write_room_postcard_creates_a_valid_png() {
         let rooms = numinous_core::all_rooms();
         let room = rooms.first().expect("at least one room").as_ref();
-        let dir = std::env::temp_dir().join("numinous_postcard_test");
+        // Scoped to this process like the other scratch dirs here. A fixed
+        // name is wiped on entry, so a second run of the same suite alongside
+        // this one deletes the directory being written into.
+        let dir =
+            std::env::temp_dir().join(format!("numinous_postcard_test_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create postcard dir");
 
@@ -796,7 +800,8 @@ mod tests {
         let before_gen = session.generation();
         let before_launches = session.launches();
 
-        let dir = std::env::temp_dir().join("numinous_life_loop_test");
+        let dir =
+            std::env::temp_dir().join(format!("numinous_life_loop_test_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create life loop dir");
         let path = write_life_loop("game-of-life", [40, 210, 90], &session, Era::Modern, &dir)

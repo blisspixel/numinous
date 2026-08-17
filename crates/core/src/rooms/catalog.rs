@@ -181,7 +181,8 @@ macro_rules! catalog_rooms {
                 title: "The First Rain",
                 wing: "Emergence",
                 blurb: "Sites open with probability p; clusters merge until one spans top to bottom. \
-                        That cliff sits near p=0.5927. t rains harder.",
+                        Rain a little harder each time and find where nothing becomes everything. \
+                        t rains harder.",
                 accent: [80, 140, 220],
             }
         ),
@@ -218,9 +219,9 @@ macro_rules! catalog_rooms {
                 id: "phantom-jam",
                 title: "Phantom Jam",
                 wing: "Emergence",
-                blurb: "One brake on a ring of cars births a dense jam that rolls backward against \
-                        traffic. No accident, no bottleneck: just follow-the-leader (Sugiyama 2008). \
-                        t runs the ring.",
+                blurb: "A ring of cars, nobody crashing, nothing in the way, and one driver who \
+                        touches the brake. Everyone else just follows the car ahead (Sugiyama 2008). \
+                        t runs the ring; HOLD picks who brakes.",
                 accent: [230, 120, 40],
             }
         ),
@@ -231,8 +232,9 @@ macro_rules! catalog_rooms {
                 id: "fastest-fall",
                 title: "The Fastest Fall",
                 wing: "Change",
-                blurb: "The fastest path down under gravity is a cycloid, not a straight line. Draw \
-                        any other track and lose the race. t runs the beads.",
+                blurb: "The shortest way down is not the quickest way down. Draw a track, race a \
+                        bead on it against the curve that wins, and see what the straight line \
+                        costs you. t runs the beads.",
                 accent: [100, 180, 220],
             }
         ),
@@ -243,8 +245,9 @@ macro_rules! catalog_rooms {
                 id: "audioactive",
                 title: "Audioactive Decay",
                 wing: "Number & Pattern",
-                blurb: "Speak a digit string by runs and it mutates: look-and-say. Length grows by \
-                        Conway's constant; the sequence shatters into 92 atoms. t advances generations; \
+                blurb: "Read a digit string out loud by its runs, write down what you said, read \
+                        that: look-and-say. Every line is longer than the last by the same factor, \
+                        and the pieces it is built from run out. t advances generations; \
                         a click speaks the next line.",
                 accent: [180, 100, 200],
             }
@@ -256,8 +259,9 @@ macro_rules! catalog_rooms {
                 id: "busy-beaver",
                 title: "The Busy Beaver",
                 wing: "Number & Pattern",
-                blurb: "A tiny Turing machine races to write ones then halt. BB(5)=47,176,870 is proven; \
-                        here a toy champion stops on purpose. t extends the step budget.",
+                blurb: "A tiny Turing machine races to write as many ones as it can and still stop. \
+                        Give the machine one more state and ask how much longer the champion runs. \
+                        t extends the step budget.",
                 accent: [120, 80, 200],
             }
         ),
@@ -268,9 +272,9 @@ macro_rules! catalog_rooms {
                 id: "degree-720",
                 title: "The 720 Degree Room",
                 wing: "Shape & Space",
-                blurb: "A tethered stone needs two full turns to untwist the belt: 360 is not enough, \
-                        720 is. Dirac's belt trick; the quaternion double cover of rotations. t spins; \
-                        DRAG rotates the stone.",
+                blurb: "A stone on a belt, turned all the way around, comes back facing the same way \
+                        with the belt still twisted. Dirac's belt trick: keep turning and count what \
+                        it takes to undo. t spins; DRAG rotates the stone.",
                 accent: [160, 120, 220],
             }
         ),
@@ -281,8 +285,9 @@ macro_rules! catalog_rooms {
                 id: "upside-ruler",
                 title: "The Upside-Down Ruler",
                 wing: "Number & Pattern",
-                blurb: "In the 10-adics, ...999999 + 1 = 0, so ...999999 = -1. A tower of nines waits \
-                        for the carry that only resolves at infinity. t grows the tower.",
+                blurb: "Add one to a tower of nines that never ends on the left. The carry walks and \
+                        walks and never finds a column to stop in; ask what the tower was worth. \
+                        t grows the tower.",
                 accent: [200, 160, 80],
             }
         ),
@@ -449,8 +454,9 @@ macro_rules! catalog_rooms {
                 id: "recaman",
                 title: "The Jumper",
                 wing: "Number & Pattern",
-                blurb: "Recaman's sequence: jump back by n if free, else forward. Nested arcs hide an \
-                        open seat (852655). t grows terms.",
+                blurb: "Recaman's sequence: jump back by n if that seat is free, else jump forward. \
+                        Nested arcs, and somewhere out along the line a seat nobody has ever taken. \
+                        t grows terms.",
                 accent: [200, 170, 90],
             }
         ),
@@ -509,7 +515,8 @@ macro_rules! catalog_rooms {
                 id: "morley",
                 title: "The Triangle That Cheats",
                 wing: "Shape & Space",
-                blurb: "Trisect any triangle's angles: the inner crossings form a perfect equilateral \
+                blurb: "Cut every angle of any triangle you like into three, and mark where the near \
+                        trisectors cross. Drag a vertex and watch what refuses to change \
                         (Morley 1899). t wobbles vertices; DRAG A VERTEX.",
                 accent: [200, 140, 80],
             }
@@ -569,8 +576,9 @@ macro_rules! catalog_rooms {
                 id: "kaprekar",
                 title: "The Number That Eats Numbers",
                 wing: "Number & Pattern",
-                blurb: "Kaprekar's routine: rearrange digits large minus small. Every mixed 4-digit \
-                        number falls to 6174 in at most seven steps. t picks a start.",
+                blurb: "Kaprekar's routine: rearrange the digits large, rearrange them small, subtract, \
+                        repeat. Feed it any four-digit number you like and watch where the cascade \
+                        stops. t picks a start.",
                 accent: [220, 160, 60],
             }
         ),
@@ -834,8 +842,8 @@ macro_rules! catalog_rooms {
                 id: "soap-film",
                 title: "Soap Film",
                 wing: "Shape & Space",
-                blurb: "A film finds least length; Steiner junctions meet at 120 degrees. t wobbles \
-                        pins.",
+                blurb: "A film pulled between pins finds the least length it can. Wobble the pins and \
+                        watch the angle its junctions keep choosing. t wobbles pins.",
                 accent: [180, 220, 255],
             }
         ),
@@ -846,8 +854,8 @@ macro_rules! catalog_rooms {
                 id: "landauer",
                 title: "Landauer's Price",
                 wing: "Number & Pattern",
-                blurb: "Erase a bit, pay heat: kT ln 2 per irreversible forget. t grows the register; \
-                        a click forgets one bit.",
+                blurb: "Forgetting is not free. Erase one bit and the register pays for it in heat; \
+                        the click sends the bill. t grows the register; a click forgets one bit.",
                 accent: [255, 120, 60],
             }
         ),
@@ -3069,7 +3077,9 @@ macro_rules! catalog_rooms {
                 id: "berry",
                 title: "Berry Phase",
                 wing: "Waves & Sound",
-                blurb: "Holonomy after a closed parameter loop.",
+                blurb: "Steer a quantum state slowly all the way around a loop and bring it back to \
+                        exactly where it started. Something about it has changed anyway. \
+                        t walks the loop.",
                 accent: [160, 80, 180],
             }
         ),
@@ -3509,7 +3519,8 @@ macro_rules! catalog_rooms {
                 id: "basel",
                 title: "Basel Problem",
                 wing: "Number & Pattern",
-                blurb: "sum 1/n^2 climbs to pi^2/6.",
+                blurb: "Add up one over every square number, forever. The climb settles; the whole \
+                        question is on what.",
                 accent: [120, 40, 100],
             }
         ),
@@ -4172,7 +4183,7 @@ pub(crate) fn construct_hidden_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::*;
 
-    const ALPHA5_ORDERED_METADATA_CHECKSUM: u64 = 0x2206_aba8_9f25_035d;
+    const ALPHA5_ORDERED_METADATA_CHECKSUM: u64 = 0x8d8b_5345_b440_6342;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {
@@ -4277,14 +4288,25 @@ mod tests {
 
         // A staged room must not print the call it grades. The Only Move is
         // not a staged wager, but its whole point is a value a player is meant
-        // to reach by playing, so its doorway is held to the same rule.
-        const OWN_ANSWER: [(&str, &str); 6] = [
+        // to reach by playing, so its doorway is held to the same rule. The
+        // rest are ordinary rooms whose doorway named the thing the room was
+        // built to let a player find; a packaged playtest read three of them
+        // and reported that the discovery was gone before the picture drew.
+        const OWN_ANSWER: [(&str, &str); 14] = [
             ("buffon-needle", "pi"),
             ("parrondo", "abb"),
             ("times-tables", "mandelbrot"),
             ("nontransitive", "nontransitive"),
             ("the-only-move", "draw"),
             ("the-only-move", "tie"),
+            ("fastest-fall", "cycloid"),
+            ("fastest-fall", "brachistochrone"),
+            ("morley", "equilateral"),
+            ("soap-film", "steiner"),
+            ("audioactive", "atoms"),
+            ("degree-720", "quaternion"),
+            ("busy-beaver", "bb"),
+            ("landauer", "kt"),
         ];
         for metadata in ROOM_CATALOG {
             let blurb = metadata.blurb.to_ascii_lowercase();

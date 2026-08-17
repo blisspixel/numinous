@@ -705,6 +705,110 @@ mod tests {
     }
 
     #[test]
+    fn no_doorway_prints_a_number_its_own_reveal_repeats() {
+        // A packaged playtest read three ordinary doorways and found the
+        // answer already sitting in them: Kaprekar named 6174, the First Rain
+        // named the percolation threshold, the Busy Beaver named BB(5). The
+        // door promises the explanation comes later and only if you ask, so a
+        // doorway that states a value its own reveal states has spent the
+        // room before the picture draws.
+        //
+        // Numbers are the mechanical half of that rule: a multi-digit value in
+        // both places is an answer handed over, not a description. Single
+        // digits are ordinary prose ("two primes", "three arcs") and are not
+        // read as answers. The named-answer half needs judgment and lives in
+        // the catalog's own `no_doorway_sells_a_staged_rooms_answer`.
+
+        /// Numbers a doorway and a reveal may legitimately share, with why.
+        const SHARED_BY_RIGHT: &[(&str, &str, &str)] = &[
+            (
+                "starbow",
+                "1979",
+                "the citation year of the transform it draws",
+            ),
+            ("phantom-jam", "2008", "the citation year of the experiment"),
+            (
+                "wet-oracle",
+                "2010",
+                "the citation year of the slime-mold result",
+            ),
+            ("morley", "1899", "the citation year of the theorem"),
+            (
+                "galton-board",
+                "16",
+                "the peg rows the player drops balls through",
+            ),
+            (
+                "cellular-automata",
+                "30",
+                "a rule number on the tour, not its punchline",
+            ),
+            ("rule-30", "30", "the room's own name"),
+            ("truchet", "10", "part of the program name 10 PRINT"),
+            (
+                "upside-ruler",
+                "10",
+                "the base of the number system the room lives in",
+            ),
+            (
+                "legendre",
+                "11",
+                "the interval [-1,1] the polynomials are defined on",
+            ),
+        ];
+
+        fn multi_digit_values(text: &str) -> Vec<String> {
+            let mut found = Vec::new();
+            let mut current = String::new();
+            for character in text.chars() {
+                if character.is_ascii_digit()
+                    || (!current.is_empty() && matches!(character, '.' | ','))
+                {
+                    current.push(character);
+                } else {
+                    push_value(&mut found, &current);
+                    current.clear();
+                }
+            }
+            push_value(&mut found, &current);
+            found
+        }
+
+        fn push_value(found: &mut Vec<String>, raw: &str) {
+            let cleaned: String = raw
+                .trim_end_matches(['.', ','])
+                .chars()
+                .filter(char::is_ascii_digit)
+                .collect();
+            if cleaned.len() >= 2 && !found.contains(&cleaned) {
+                found.push(cleaned);
+            }
+        }
+
+        let mut leaks = Vec::new();
+        for room in all_rooms() {
+            let id = room.meta().id;
+            let in_reveal = multi_digit_values(room.reveal());
+            for value in multi_digit_values(room.meta().blurb) {
+                let allowed = SHARED_BY_RIGHT
+                    .iter()
+                    .any(|&(room_id, number, _)| room_id == id && number == value);
+                if !allowed && in_reveal.contains(&value) {
+                    leaks.push(format!(
+                        "{id} names {value} at the door and again in its reveal"
+                    ));
+                }
+            }
+        }
+        leaks.sort();
+        assert!(
+            leaks.is_empty(),
+            "doorways that spend their own room before it draws: {}",
+            leaks.join("; ")
+        );
+    }
+
+    #[test]
     fn every_catalog_room_has_first_contact_status() {
         // The kid-principle invariant: first contact always names something
         // readable before the player acts. Empty status is not an invitation.
