@@ -5892,13 +5892,19 @@ fn sing_expression_tool(args: &Value) -> Value {
             steps.push(interval_value(&step));
         }
     }
+    // One note shape across this face: `listen_room` already publishes notes
+    // under these names, and a second spelling would make a client parse the
+    // same idea twice.
     let structured = json!({
         "expr": source,
-        "duration": spec.duration,
-        "notes": spec.notes.iter().map(|note| json!({
-            "hz": note.freq,
+        "duration_seconds": spec.duration,
+        "notes": spec.notes.iter().enumerate().map(|(index, note)| json!({
+            "index": index + 1,
+            "frequency_hz": note.freq,
             "name": note_name(note.freq),
-            "start": note.start,
+            "start_seconds": note.start,
+            "duration_seconds": note.dur,
+            "amplitude": note.amp,
         })).collect::<Vec<_>>(),
         "steps": steps,
     });
@@ -8345,6 +8351,52 @@ mod tests {
             .unwrap_or_default();
         assert!(text.contains("8 notes"), "got: {text}");
         assert!(text.contains("Hz"));
+
+        // A melody a mind without ears can hear the shape of: every note after
+        // the first carries the step taken to reach it.
+        let structured = &resp["result"]["structuredContent"];
+        let notes = structured["notes"].as_array().expect("notes");
+        let steps = structured["steps"].as_array().expect("steps");
+        assert_eq!(notes.len(), 8);
+        assert_eq!(steps.len(), notes.len() - 1);
+
+        // One note shape across this face. `listen_room` publishes notes under
+        // these names, and the tactile cohort reads them from both tools; a
+        // second spelling makes the same idea parse twice and silently reads
+        // as a melody with no notes at all.
+        for note in notes {
+            for field in [
+                "index",
+                "frequency_hz",
+                "start_seconds",
+                "duration_seconds",
+                "amplitude",
+            ] {
+                assert!(
+                    !note[field].is_null(),
+                    "a sung note is missing the shared field {field}: {note}"
+                );
+            }
+        }
+        for step in steps {
+            assert!(step["cents"].as_f64().expect("a measured size") >= 0.0);
+            assert!(
+                ["up", "down", "level"].contains(&step["direction"].as_str().expect("direction")),
+                "{step}"
+            );
+        }
+
+        // y = x rises steadily, so every step is up, and the ratio is offered
+        // only where a simple one explains the step rather than everywhere.
+        assert!(
+            steps.iter().all(|step| step["direction"] == "up"),
+            "{steps:?}"
+        );
+        assert!(
+            steps.iter().any(|step| step["ratio"].is_null()),
+            "every step found a ratio, which means the search is answering \
+             rather than the music: {steps:?}"
+        );
     }
 
     #[test]
