@@ -852,6 +852,116 @@ mod tests {
     }
 
     #[test]
+    fn no_unplayed_status_states_a_constant_its_reveal_repeats() {
+        // The sixth packaged playtest closed the doorway leak and then found
+        // the same leak one room deeper: "Play status can still print a number
+        // the doorway withheld." The Busy Beaver was the clear case. Its
+        // doorway had stopped naming BB(5), and its status printed
+        // BB5=47176870 on every frame, including the first, before the player
+        // had touched anything.
+        //
+        // The line between honest and dishonest here is not whether a number
+        // appears. It is whether the number is a reading or a recital. A status
+        // may say what the picture in front of it shows: Kaprekar's cascade
+        // really does land where the status says it landed, and the Arecibo
+        // bitstream really is the length it claims. A status may not recite a
+        // constant the picture never draws, because that is the reveal
+        // arriving early, wearing a scoreboard.
+        //
+        // Mechanically: a value that survives every phase of the dial is a
+        // recital, because nothing the player did or could do changed it. A
+        // value that moves with the dial is a reading. Constants that are
+        // genuinely readings of an unchanging picture are named below, in
+        // writing, one at a time.
+
+        /// Constants a status may hold still on, with why each is a reading.
+        const CONSTANT_BY_RIGHT: &[(&str, &str, &str)] = &[
+            (
+                "kaprekar",
+                "6174",
+                "the last row of the cascade actually drawn; every cascade lands \
+                 there, which is the picture's own result and not a recital",
+            ),
+            (
+                "arecibo",
+                "143",
+                "the length of the bitstream on screen; the message never changes \
+                 length, and its length is the puzzle's given rather than its answer",
+            ),
+            (
+                "rule-110",
+                "110",
+                "the room's own name, and the rule the picture is running",
+            ),
+            (
+                "perfect-num",
+                "496",
+                "the perfect number the picture is currently decomposing",
+            ),
+        ];
+
+        fn multi_digit_values(text: &str) -> std::collections::BTreeSet<String> {
+            let mut found = std::collections::BTreeSet::new();
+            let mut current = String::new();
+            for character in text.chars().chain(std::iter::once(' ')) {
+                if character.is_ascii_digit()
+                    || (!current.is_empty() && matches!(character, '.' | ','))
+                {
+                    current.push(character);
+                } else {
+                    let cleaned: String = current
+                        .trim_end_matches(['.', ','])
+                        .chars()
+                        .filter(char::is_ascii_digit)
+                        .collect();
+                    // Three digits, not two: a two-digit number in a status is
+                    // usually a count or a percent, and the reveal's stray
+                    // years and small integers would drown the signal.
+                    if cleaned.len() >= 3 {
+                        found.insert(cleaned);
+                    }
+                    current.clear();
+                }
+            }
+            found
+        }
+
+        const PHASES: [f64; 5] = [0.0, 0.25, 0.5, 0.75, 0.99];
+        let mut leaks = Vec::new();
+        for room in all_rooms() {
+            let id = room.meta().id;
+            let in_reveal = multi_digit_values(room.reveal());
+            let mut held: Option<std::collections::BTreeSet<String>> = None;
+            for phase in PHASES {
+                let seen = room
+                    .status(phase)
+                    .map(|status| multi_digit_values(&status))
+                    .unwrap_or_default();
+                held = Some(match held {
+                    None => seen,
+                    Some(previous) => previous.intersection(&seen).cloned().collect(),
+                });
+            }
+            for value in held.unwrap_or_default() {
+                let allowed = CONSTANT_BY_RIGHT
+                    .iter()
+                    .any(|&(room_id, constant, _)| room_id == id && constant == value);
+                if !allowed && in_reveal.contains(&value) {
+                    leaks.push(format!(
+                        "{id} holds {value} on every frame and repeats it in its reveal"
+                    ));
+                }
+            }
+        }
+        leaks.sort();
+        assert!(
+            leaks.is_empty(),
+            "statuses reciting their own reveal before the picture earns it: {}",
+            leaks.join("; ")
+        );
+    }
+
+    #[test]
     fn every_catalog_room_has_first_contact_status() {
         // The kid-principle invariant: first contact always names something
         // readable before the player acts. Empty status is not an invitation.

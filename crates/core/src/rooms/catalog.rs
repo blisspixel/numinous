@@ -796,7 +796,9 @@ macro_rules! catalog_rooms {
                 // here, and neither is the shape of the answer.
                 blurb: "A machine keeps a grid and takes a cell whenever you \
                         take one. Eight lines can be counted or ignored, and \
-                        the rulebook you arrive under decides which.",
+                        which ones count is the whole difference between a \
+                        game you cannot win and one you can. t turns the \
+                        rulebook.",
                 accent: [90, 220, 130],
             }
         ),
@@ -4183,7 +4185,7 @@ pub(crate) fn construct_hidden_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::*;
 
-    const ALPHA5_ORDERED_METADATA_CHECKSUM: u64 = 0x8d8b_5345_b440_6342;
+    const ALPHA5_ORDERED_METADATA_CHECKSUM: u64 = 0xb517_f5ce_a445_6924;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {

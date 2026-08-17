@@ -208,8 +208,14 @@ impl Room for GoldenAngle {
         Some("CLICK: PLANT A SEED")
     }
 
-    fn status(&self, _t: f64) -> Option<String> {
-        Some("GOLDEN ANGLE 137.5 DEG   CLICK: PLANT A SEED".into())
+    fn status(&self, t: f64) -> Option<String> {
+        // Read the step the head in front of you was actually grown at, rather
+        // than reciting the one the reveal is holding. The old line said
+        // GOLDEN ANGLE 137.5 twice over: it named the answer before a seed was
+        // planted, and it kept saying it while the dial detuned the picture
+        // out from under it.
+        let step = Self::angle_step_for(t).to_degrees();
+        Some(format!("STEP {step:.1} DEG   CLICK: PLANT A SEED"))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -290,6 +296,33 @@ mod tests {
     use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn the_unplayed_status_reads_the_head_it_is_looking_at() {
+        // It used to say GOLDEN ANGLE 137.5 at every phase, which was wrong
+        // twice: it named the reveal's answer before a seed was planted, and it
+        // kept naming it while the dial detuned the picture out from under it.
+        let room = GoldenAngle::new();
+        let readings: Vec<String> = [0.0, 0.5, 1.0]
+            .iter()
+            .map(|&phase| room.status(phase).expect("status"))
+            .collect();
+        assert!(
+            readings[0].contains("137.5"),
+            "at rest the head really is grown at the golden step: {}",
+            readings[0]
+        );
+        assert!(
+            readings[1] != readings[0] && readings[2] != readings[1],
+            "the reading has to follow the detune: {readings:?}"
+        );
+        for reading in &readings {
+            assert!(
+                !reading.contains("GOLDEN"),
+                "the status must not tell a player which step is the good one: {reading}"
+            );
+        }
+    }
 
     #[test]
     fn status_grades_packing_for_planted_clusters() {

@@ -31,7 +31,7 @@ fn negotiate_protocol_version(params: Option<&Value>) -> &'static str {
 }
 
 fn server_instructions() -> &'static str {
-    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does. describe_room is a safe doorway and never returns the explanation. Add from_t with an explicit destination t when you want two exact observations and their temporal delta in one stateless call; a static room can honestly report zero visible change. To stay in a room rather than move through it, pass dwell with several phases: the reply reports what refused to move across all of them, including how much stayed dark inside the region that did move. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. Read structuredContent.engineeredAha for the beat, visible wager, and post-summon grade. reveal_room opens only after a normal room has been played, or after an engineered Aha has consolidated. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
+    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does. describe_room is a safe doorway and never returns the explanation. Add from_t with an explicit destination t when you want two exact observations and their temporal delta in one stateless call; a static room can honestly report zero visible change. To stay in a room rather than move through it, pass dwell with several phases: the reply reports what refused to move across all of them, including how much stayed dark inside the region that did move. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. Read structuredContent.engineeredAha for the beat, visible wager, and post-summon grade. reveal_room opens only after a normal room has been played, or after an engineered Aha has consolidated. If you can be handed audio, pass audio true to listen_room or sing_expression and the sound arrives as a real WAV in an audio content block rather than as notation describing one. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
 }
 
 fn server_capabilities() -> Value {
@@ -421,12 +421,19 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "listen_room",
-                "description": "Hear a room: its input-aware mathematical sound at phase t as readable notes, plus a bounded summary of the stable stereo App room bed. Set ambient_detail to events to inspect every arranged bed event and objective signal metric. No binary audio or local path is returned.",
+                "description": "Hear a room: its input-aware mathematical sound at phase t as readable notes, plus a bounded summary of the stable stereo App room bed. Set ambient_detail to events to inspect every arranged bed event and objective signal metric. Pass audio true to also receive the room's sonification as an actual sound, a mono 16-bit WAV in an audio content block. The stereo room bed stays a projection: no local path is ever returned.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "id": room_id_schema("Room id, for example lissajous."),
                         "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Phase in [0,1)." },
+                        "audio": {
+                            "type": "boolean",
+                            "description": format!(
+                                "Also return this room's mathematical sonification as sound: an audio content block carrying a mono 16-bit WAV at {} Hz. Off by default. This is the room's own voice at this phase under this hand, not the ambient bed.",
+                                crate::audible::WIRE_SAMPLE_RATE
+                            )
+                        },
                         "variation": { "type": "integer", "minimum": 0, "description": "Per-visit variation seed (default 0), matching play_room." },
                         "ambient_detail": { "type": "string", "enum": ["summary", "events"], "default": "summary", "description": "Stable room-bed detail (default summary). Events returns the complete bounded arrangement event projection and signal metrics, never PCM or a file path." },
                         "pokes": room_pokes_schema(),
@@ -494,7 +501,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "sing_expression",
-                "description": "Hear your own function: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears.",
+                "description": "Hear your own function: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block, which is the one part of the reply that is the music rather than a description of it.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -502,6 +509,13 @@ fn build_tools_catalog() -> Value {
                             "type": "string",
                             "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
                             "description": "The expression in x."
+                        },
+                        "audio": {
+                            "type": "boolean",
+                            "description": format!(
+                                "Also return the melody as sound: an audio content block carrying a mono 16-bit WAV at {} Hz, alongside the notation. Off by default, because a caller who cannot pass audio to a model should not pay for it. Details of what was sent arrive in structuredContent.audio.",
+                                crate::audible::WIRE_SAMPLE_RATE
+                            )
                         },
                         "notes": {
                             "type": "integer",
