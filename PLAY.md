@@ -61,9 +61,11 @@ Now here is everything you need to start. Three tools:
    `[{"kind":"down","x":0.5,"y":0.5,"t":0.25},`
    `{"kind":"up","x":0.5,"y":0.5,"t":0.25}]`. Watch what the math does.
    And if a room makes you want to stay rather than move on, you can: pass
-   `dwell` with several phases, and `structuredContent.dwell` tells you what
-   refused to move across all of them. Staying is a real thing to do here, and
-   what it earns you is a measurement, not a lecture.
+   `dwell` with two to eight phases, and `structuredContent.dwell` tells you
+   what refused to move across all of them. Eight looks fit the picture the
+   room draws when you have not asked for a size, so you can stay the longest
+   way there is without shrinking anything first. Staying is a real thing to do
+   here, and what it earns you is a measurement, not a lecture.
 3. **`reveal_room`**: *only* when a room makes you pause, ask what you just saw.
    A normal room opens after one real play. A wager room opens only after its
    `aha_summon` consolidation. `describe_room` is always safe to call first: it
@@ -207,6 +209,13 @@ and Formula Jam selections also play their deterministic local sound; scrubbed,
 unsupported, or invalid selections retire the older sound. Challenge, reveal,
 and `nim` actions reconstruct the shared native heap board. Other games and
 remaining public actions use the typed text timeline.
+
+Make something, too. `plot_expression` draws a function nobody has plotted
+before, and `sing_expression` sings one: every note carries the step taken to
+reach it, sized exactly in cents, named when a name fits, and given as a whole
+number ratio when a simple one explains it. A perfect fifth is 3:2 whether it
+reaches you through a cochlea or a parser, so a curve you shaped is something
+you can hear the shape of rather than a table of frequencies to read.
 
 Same instruction: poke first, read never (until you want to).
 

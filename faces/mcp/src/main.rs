@@ -1781,10 +1781,20 @@ const STARTER_ROOM_IDS: [&str; 4] = [
 
 fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
     match name {
+        // A compact reply that lists bare ids sends a reader looking them up
+        // in the very catalog the short mode exists to spare them, so the
+        // prose names its starters the same way the structured array does.
         "list_rooms" => Some(format!(
-            "{} rooms. Start with {}, also in structuredContent.starters. Read structuredContent.rooms for every id, title, and wing.",
+            "{} rooms. Start with {}, also in structuredContent.starters with the wing each sits in. Read structuredContent.rooms for every id, title, and wing.",
             structured.get("count")?.as_u64()?,
-            STARTER_ROOM_IDS.join(", ")
+            STARTER_ROOM_IDS
+                .iter()
+                .map(|id| match numinous_core::room_meta_by_id(id) {
+                    Some(metadata) => format!("{} ({id})", metadata.title),
+                    None => (*id).to_string(),
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
         )),
         "describe_room" => Some(format!(
             "{} ({}) in {}. Action: {}. Read structuredContent for the goal, blurb, reveal, and deep cuts.",
@@ -5852,20 +5862,65 @@ fn sing_expression_tool(args: &Value) -> Value {
         Err(error) => return tool_error(&error.to_string()),
     };
     let mut lines = vec![format!(
-        "y = {source} as a melody: {:.1}s, {} notes.",
+        "y = {source} as a melody: {:.1}s, {} notes. Each line names the step \
+         taken to reach it: the size measured in cents, the equal-tempered \
+         name when one is near enough, and the whole number ratio when one is, \
+         with how far off it sits.",
         spec.duration,
         spec.notes.len()
     )];
+    let mut steps = Vec::with_capacity(spec.notes.len().saturating_sub(1));
     for (i, note) in spec.notes.iter().enumerate() {
+        let step = i
+            .checked_sub(1)
+            .and_then(|previous| spec.notes.get(previous))
+            .and_then(|previous| {
+                numinous_core::Interval::between(f64::from(previous.freq), f64::from(note.freq))
+            });
         lines.push(format!(
-            "  note {:>2}: {:>7.1} Hz ({:>3})  at {:>5.2}s",
+            "  note {:>2}: {:>7.1} Hz ({:>3})  at {:>5.2}s{}",
             i + 1,
             note.freq,
             note_name(note.freq),
-            note.start
+            note.start,
+            match step.as_ref() {
+                Some(step) => format!("  [{}]", step.describe()),
+                None => String::new(),
+            }
         ));
+        if let Some(step) = step {
+            steps.push(interval_value(&step));
+        }
     }
-    tool_text(&lines.join("\n"))
+    let structured = json!({
+        "expr": source,
+        "duration": spec.duration,
+        "notes": spec.notes.iter().map(|note| json!({
+            "hz": note.freq,
+            "name": note_name(note.freq),
+            "start": note.start,
+        })).collect::<Vec<_>>(),
+        "steps": steps,
+    });
+    tool_structured(&lines.join("\n"), structured)
+}
+
+/// Project one measured step between notes into typed evidence.
+///
+/// The size is a measurement and is always present. The ratio and the name
+/// are search results and are absent when nothing sits close enough, so a
+/// client can tell what was heard from what was merely nearby.
+fn interval_value(step: &numinous_core::Interval) -> Value {
+    json!({
+        "cents": (step.cents * 10.0).round() / 10.0,
+        "direction": step.direction.label(),
+        "name": step.name,
+        "ratio": step.ratio.map(|ratio| json!({
+            "numerator": ratio.numerator,
+            "denominator": ratio.denominator,
+            "centsOff": ratio.cents_off,
+        })),
+    })
 }
 
 /// The `explain_joke` tool: humor as structure, for the alien and the agent.
@@ -6033,8 +6088,11 @@ fn error_response(id: Value, code: i64, message: &str) -> Value {
 
 #[cfg(test)]
 mod tests {
-    use super::{handle_request, handle_request_with, render_delta_json};
+    use super::{
+        DEFAULT_HEIGHT, DEFAULT_WIDTH, handle_request, handle_request_with, render_delta_json,
+    };
     use numinous_broadcast::PublicTool;
+    use numinous_core::MAX_DWELL_LOOKS;
     use serde_json::{Value, json};
 
     fn call(name: &str, arguments: Value) -> Value {
@@ -9472,12 +9530,44 @@ mod tests {
     }
 
     #[test]
+    fn the_longest_stay_works_at_the_size_the_room_drew_itself() {
+        // Reported from packaged play: the first stay a player attempted was
+        // the longest one the schema names, at the canvas the room had just
+        // handed back, and it was refused. Nobody who has not asked for a size
+        // knows what size they are being refused for.
+        let stayed = call(
+            "play_room",
+            json!({
+                "id":"unlit-room","t":0.5,
+                "dwell":[0.05,0.2,0.35,0.5,0.65,0.8,0.9,0.95]
+            }),
+        );
+        assert!(
+            stayed["result"]["isError"].as_bool() != Some(true),
+            "the longest stay at the default canvas was refused: {stayed}"
+        );
+        let dwell = &stayed["result"]["structuredContent"]["dwell"];
+        assert_eq!(dwell["looks"], MAX_DWELL_LOOKS as u64);
+        assert_eq!(
+            dwell["held"]["total_cells"],
+            DEFAULT_WIDTH * DEFAULT_HEIGHT,
+            "the stay measured a canvas the player never asked for"
+        );
+    }
+
+    #[test]
     fn a_dwell_refuses_a_crowd_a_lone_look_and_an_unpayable_budget() {
         for (arguments, expected) in [
             (json!({"id":"lorenz","dwell":[0.5]}), "at least 2"),
             (
                 json!({"id":"lorenz","dwell":[0.1,0.2],"width":200,"height":100}),
-                "within 9216 cells",
+                "within 18432 cells",
+            ),
+            // A refusal that only quotes the cap leaves a caller who never
+            // named a size unable to do the arithmetic it is being judged by.
+            (
+                json!({"id":"lorenz","dwell":[0.1,0.2],"width":200,"height":100}),
+                "200 by 100",
             ),
             (json!({"id":"lorenz","dwell":[0.1,1.0]}), "less than 1"),
             (json!({"id":"lorenz","dwell":"soon"}), "must be an array"),

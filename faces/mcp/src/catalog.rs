@@ -223,7 +223,7 @@ fn build_tools_catalog() -> Value {
                             "minItems": MIN_DWELL_LOOKS,
                             "maxItems": MAX_DWELL_LOOKS,
                             "items": { "type": "number", "minimum": 0, "exclusiveMaximum": 1 },
-                            "description": format!("Optional: stay in this room. Give {MIN_DWELL_LOOKS} to {MAX_DWELL_LOOKS} phases to look at, and structuredContent.dwell reports what refused to move across all of them: cells that never changed, cells that were never lit, and how many of those sit inside the region that did move. A repeated phase is allowed and honestly reports that nothing moved. Every look uses the same room, hand, variation, and dimensions, so this measures the room rather than your input. Looks times width times height must be at most {PLAY_ROOM_MAX_DWELL_CELLS} cells. No elapsed time, order, or path between looks is asserted."),
+                            "description": format!("Optional: stay in this room. Give {MIN_DWELL_LOOKS} to {MAX_DWELL_LOOKS} phases to look at, and structuredContent.dwell reports what refused to move across all of them: cells that never changed, cells that were never lit, and how many of those sit inside the region that did move. A repeated phase is allowed and honestly reports that nothing moved. Every look uses the same room, hand, variation, and dimensions, so this measures the room rather than your input. All {MAX_DWELL_LOOKS} looks fit the default canvas, so you need not shrink the room to stay the longest way; if you ask for a bigger one, looks times width times height must be at most {PLAY_ROOM_MAX_DWELL_CELLS} cells. No elapsed time, order, or path between looks is asserted."),
                         },
                         "width": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_WIDTH, "description": "ASCII canvas width in columns, from 1 through 512." },
                         "height": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_HEIGHT, "description": "ASCII canvas height in rows, from 1 through 256." },
@@ -494,7 +494,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "sing_expression",
-                "description": "Hear your own function: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation.",
+                "description": "Hear your own function: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
