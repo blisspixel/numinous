@@ -705,6 +705,49 @@ mod tests {
     }
 
     #[test]
+    fn a_doorway_that_names_a_phase_dial_has_one() {
+        // Phantom Jam drew one frozen ring at every phase and a packaged
+        // playtest called it dead. Sweeping the catalog for the same shape
+        // found The Busy Beaver telling players "t extends the step budget"
+        // while its budget opened past the halt, so the dial moved nothing.
+        //
+        // Rooms answering only the hand are not the subject: the Galton Board
+        // and The Only Move are honestly phase-static and say nothing about a
+        // phase at the door. This asks a narrower question, which is the one
+        // that can be dishonest: if the doorway sends a player to the dial,
+        // the dial has to do something.
+        const PHASES: [f64; 5] = [0.0, 0.25, 0.5, 0.75, 0.99];
+        let mut silent = Vec::new();
+        for room in all_rooms() {
+            // The house lever note is a bare "t" as the subject of a clause:
+            // "t picks a start", "t runs the ring", "t grows the tower".
+            let names_the_dial = room
+                .meta()
+                .blurb
+                .split(|c: char| !c.is_ascii_alphanumeric())
+                .any(|word| word == "t");
+            if !names_the_dial {
+                continue;
+            }
+            let mut frames = std::collections::HashSet::new();
+            for phase in PHASES {
+                let mut canvas = Canvas::new(48, 24);
+                room.render(&mut canvas, phase);
+                frames.insert(canvas.to_text());
+            }
+            if frames.len() < 2 {
+                silent.push(room.meta().id);
+            }
+        }
+        silent.sort_unstable();
+        assert!(
+            silent.is_empty(),
+            "doorways sending a player to a dial that does nothing: {}",
+            silent.join(", ")
+        );
+    }
+
+    #[test]
     fn no_doorway_prints_a_number_its_own_reveal_repeats() {
         // A packaged playtest read three ordinary doorways and found the
         // answer already sitting in them: Kaprekar named 6174, the First Rain
