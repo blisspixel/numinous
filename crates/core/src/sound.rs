@@ -246,20 +246,23 @@ pub fn wav_bytes(samples: &[f32], sample_rate: u32) -> Vec<u8> {
     let max_samples = ((u32::MAX as usize - HEADER) / 2).min(samples.len());
     let samples = &samples[..max_samples];
     let data_len = samples.len() * 2;
+    let block_align = CHANNELS * BITS / 8;
     let mut bytes = Vec::with_capacity(HEADER + data_len);
-    let mut chunk = |tag: &[u8; 4], size: u32| {
-        bytes.extend_from_slice(tag);
-        bytes.extend_from_slice(&size.to_le_bytes());
-    };
-    chunk(b"RIFF", (36 + data_len) as u32);
+    // The header, field by field in the order a decoder reads them. Every size
+    // is computed from the samples actually written above, because a decoder
+    // trusts these numbers over the file they describe.
+    bytes.extend_from_slice(b"RIFF");
+    bytes.extend_from_slice(&((36 + data_len) as u32).to_le_bytes());
     bytes.extend_from_slice(b"WAVE");
     bytes.extend_from_slice(b"fmt ");
-    bytes.extend_from_slice(&16u32.to_le_bytes());
+    bytes.extend_from_slice(&16u32.to_le_bytes()); // a PCM format chunk is 16 bytes
     bytes.extend_from_slice(&1u16.to_le_bytes()); // PCM, uncompressed
     bytes.extend_from_slice(&CHANNELS.to_le_bytes());
     bytes.extend_from_slice(&rate.to_le_bytes());
-    bytes.extend_from_slice(&(rate * u32::from(CHANNELS) * u32::from(BITS / 8)).to_le_bytes());
-    bytes.extend_from_slice(&(CHANNELS * BITS / 8).to_le_bytes());
+    // Saturating, because this is a public function and a caller is free to
+    // hand it a rate no sound card ever had.
+    bytes.extend_from_slice(&rate.saturating_mul(u32::from(block_align)).to_le_bytes());
+    bytes.extend_from_slice(&block_align.to_le_bytes());
     bytes.extend_from_slice(&BITS.to_le_bytes());
     bytes.extend_from_slice(b"data");
     bytes.extend_from_slice(&(data_len as u32).to_le_bytes());
@@ -337,6 +340,27 @@ mod tests {
         // same way `render` treats it: infinity is a bug upstream, and a bug
         // should not arrive as a full-scale click in someone's ears.
         assert_eq!(words, vec![0, 0, -32_767, 32_767, -32_767]);
+    }
+
+    #[test]
+    fn a_rate_no_sound_card_ever_had_does_not_overflow_the_header() {
+        // Public function, so a caller is free to hand it anything. A byte rate
+        // that wraps would describe a file nobody can play, and a debug build
+        // would panic before it got the chance.
+        let bytes = wav_bytes(&[0.0, 0.5], u32::MAX);
+        let field = |at: usize| u32::from_le_bytes(bytes[at..at + 4].try_into().expect("field"));
+        assert_eq!(field(24), u32::MAX, "the rate is written as given");
+        assert_eq!(
+            field(28),
+            u32::MAX,
+            "the byte rate saturates instead of wrapping"
+        );
+        assert_eq!(field(40) as usize, bytes.len() - 44);
+        // Zero is not a sample rate; it becomes the smallest one that is.
+        assert_eq!(
+            u32::from_le_bytes(wav_bytes(&[0.0], 0)[24..28].try_into().expect("field")),
+            1
+        );
     }
 
     #[test]
