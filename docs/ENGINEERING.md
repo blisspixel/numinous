@@ -263,6 +263,20 @@ regeneration stay in
 Emergency bypass is `git commit --no-verify`, after which you must run
 `scripts/verify.sh` before pushing.
 
+`scripts/hooks/commit-msg` holds the commit message to the same three rules.
+They cover commit messages and PR descriptions as much as files, and until this
+existed only the files were enforced while the rest was an instruction someone
+had to remember. The message is the half that matters more, not less: a stray
+line in a source file is fixed with an ordinary edit, while a trailer in a
+commit message is fixed only by rewriting published history, which changes every
+downstream hash and breaks the provenance a released archive pins. Catching it
+one second before it is written costs nothing. `scripts/check-commit-messages.sh`
+is the same check over a range, and CI runs it over the commits a pull request
+adds, so the rule does not depend on a contributor having enabled the hooks
+path. A commit authored by a dependency bot is skipped: signing its own work
+with its own name is honest authorship, and rewriting it would misattribute the
+change to a person.
+
 A note on why the hook matters beyond convenience: the house-style guard uses
 `grep -P` with Unicode escapes, which silently aborts in a bare C/POSIX locale.
 Before this was fixed (`scripts/check-style.sh` now forces a UTF-8 locale and

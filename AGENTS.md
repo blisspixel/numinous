@@ -50,9 +50,15 @@ git config core.hooksPath scripts/hooks
 
 The pre-commit hook then blocks any commit that would fail the fast gate:
 house-style on every commit, and the cargo gate (`fmt`, `clippy -D warnings`,
-tests) when Rust, `Cargo.*`, or a shader changes. The full release gate,
-including coverage and the locked build, is `scripts/verify.sh` (Windows:
-`scripts/verify.ps1`). Run it before you push.
+tests) when Rust, `Cargo.*`, or a shader changes. A commit-msg hook holds the
+message itself to the same three rules, because the rules cover commit messages
+as much as files and a message is the half an ordinary edit cannot reach later:
+fixing one means rewriting published history, which changes every downstream
+hash and breaks the provenance a released archive pins. CI runs the same check
+over the commits a pull request adds, so the rule does not depend on anyone
+remembering this setup. The full release gate, including coverage and the locked
+build, is `scripts/verify.sh` (Windows: `scripts/verify.ps1`). Run it before you
+push.
 
 ## Where things live
 
