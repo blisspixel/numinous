@@ -1,4 +1,5 @@
 use crate::{Compatibility, CompatibilityError};
+use numinous_core::MAX_DWELL_LOOKS;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::error::Error;
@@ -28,8 +29,11 @@ pub const PLAY_ROOM_MAX_TEMPORAL_CELLS: u64 = 2_304;
 ///
 /// A dwell renders the room once per look but returns counts rather than a
 /// stack of frames, so the wire cost is small and the real cost is drawing.
-/// Four looks at the 72 by 32 default canvas sit exactly on this bound.
-pub const PLAY_ROOM_MAX_DWELL_CELLS: u64 = 9_216;
+/// The bound is derived rather than chosen: the longest stay the schema
+/// advertises must fit the canvas a room draws when nobody asked for a size,
+/// or the first stay a player attempts is an error.
+pub const PLAY_ROOM_MAX_DWELL_CELLS: u64 =
+    MAX_DWELL_LOOKS as u64 * PLAY_ROOM_DEFAULT_WIDTH * PLAY_ROOM_DEFAULT_HEIGHT;
 
 /// Stable game identities whose replays may cross the local broadcast seam.
 pub const NUMINOUS_GAME_IDS: [&str; 11] = [
@@ -236,9 +240,9 @@ impl Error for ProjectionError {}
 #[cfg(test)]
 mod tests {
     use super::{
-        ALL_PUBLIC_TOOLS, Compatibility, NUMINOUS_GAME_IDS, PLAY_ROOM_DEFAULT_HEIGHT,
-        PLAY_ROOM_DEFAULT_WIDTH, PLAY_ROOM_MAX_TEMPORAL_CELLS, PublicTool, PublicToolEvent,
-        numinous_compatibility,
+        ALL_PUBLIC_TOOLS, Compatibility, MAX_DWELL_LOOKS, NUMINOUS_GAME_IDS,
+        PLAY_ROOM_DEFAULT_HEIGHT, PLAY_ROOM_DEFAULT_WIDTH, PLAY_ROOM_MAX_DWELL_CELLS,
+        PLAY_ROOM_MAX_TEMPORAL_CELLS, PublicTool, PublicToolEvent, numinous_compatibility,
     };
     use serde_json::json;
     use std::collections::HashSet;
@@ -259,6 +263,20 @@ mod tests {
         assert_eq!(
             PLAY_ROOM_DEFAULT_WIDTH * PLAY_ROOM_DEFAULT_HEIGHT,
             PLAY_ROOM_MAX_TEMPORAL_CELLS
+        );
+    }
+
+    #[test]
+    fn the_longest_advertised_stay_fits_the_canvas_a_room_draws_itself() {
+        // A packaged playtest asked for the longest stay the schema names, at
+        // the size the room had just handed it, and was refused. Advertising a
+        // stay the default picture cannot hold makes the new verb's first use
+        // an error, so the budget is derived from the advertisement.
+        let default_frame = PLAY_ROOM_DEFAULT_WIDTH * PLAY_ROOM_DEFAULT_HEIGHT;
+        assert_eq!(
+            PLAY_ROOM_MAX_DWELL_CELLS / default_frame,
+            MAX_DWELL_LOOKS as u64,
+            "the default canvas holds fewer looks than the schema offers"
         );
     }
 

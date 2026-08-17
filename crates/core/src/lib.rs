@@ -62,6 +62,8 @@ pub mod hackenbush;
 pub mod humor;
 pub mod insights;
 pub use insights::{INSIGHTS, insight};
+pub mod interval;
+pub use interval::{Direction, Interval, WholeRatio};
 pub mod journal;
 pub mod journal_okf;
 pub mod journey;
