@@ -37,9 +37,9 @@ pub(super) fn dwell_request(
     let cells = width
         .checked_mul(height)
         .and_then(|frame| frame.checked_mul(looks))
-        .ok_or_else(dwell_budget_error)?;
+        .ok_or_else(|| dwell_budget_error(width, height, looks))?;
     if cells > PLAY_ROOM_MAX_DWELL_CELLS as usize {
-        return Err(dwell_budget_error());
+        return Err(dwell_budget_error(width, height, looks));
     }
     Ok(Some(window))
 }
@@ -50,9 +50,24 @@ fn dwell_shape_error() -> String {
     )
 }
 
-fn dwell_budget_error() -> String {
+/// Name the canvas the caller actually asked for and the two ways out of it.
+///
+/// A budget refusal that only quotes the cap leaves a caller who never named a
+/// size guessing at what it was, so this arithmetic is stated rather than left
+/// as an exercise.
+fn dwell_budget_error(width: usize, height: usize, looks: usize) -> String {
+    let frame = width.saturating_mul(height);
+    let affordable = (PLAY_ROOM_MAX_DWELL_CELLS as usize)
+        .checked_div(frame)
+        .unwrap_or(MAX_DWELL_LOOKS)
+        .min(MAX_DWELL_LOOKS);
+    let retreat = if affordable >= MIN_DWELL_LOOKS {
+        format!("{affordable} looks fit that canvas")
+    } else {
+        "no stay fits that canvas".to_string()
+    };
     format!(
-        "A dwell renders the room once per look, so looks times width times height must stay within {PLAY_ROOM_MAX_DWELL_CELLS} cells. Reduce the number of looks, the width, or the height."
+        "A dwell renders the room once per look, so looks times width times height must stay within {PLAY_ROOM_MAX_DWELL_CELLS} cells. You asked for {looks} looks at {width} by {height}, which is {frame} cells a look: {retreat}. Ask for fewer looks, or pass a smaller width and height."
     )
 }
 
