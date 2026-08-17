@@ -64,6 +64,35 @@ fn bloch_loop_point(radius: f64, tilt: f64, azimuth: f64) -> (f64, f64, f64) {
     )
 }
 
+/// How far round the loop the picture is sampled.
+const LOOP_SAMPLES: usize = 64;
+
+/// The tilt of the loop's own pole away from the sphere's.
+fn loop_tilt(seed: u64) -> f64 {
+    0.4 + if seed == 0 {
+        0.0
+    } else {
+        (seed % 4) as f64 * 0.08
+    }
+}
+
+/// Draw the sphere, the area the loop encloses, and the turn that area costs.
+///
+/// A packaged playtest read the old picture exactly right: "the picture is
+/// still a circle and a number." It drew the sphere, the loop, and one chord
+/// whose screen angle happened to be the phase, which is a number wearing a
+/// line. Nothing in it showed the thing the room is named for.
+///
+/// A Berry phase is a mismatch you can point at. Carry a vector round a closed
+/// loop, keeping it as parallel as the sphere allows, and it comes back
+/// pointing somewhere else. The angle it missed by is the phase, and it is half
+/// the area the loop enclosed. So the picture now draws both halves of that
+/// sentence: the cap is shaded, and the vector is drawn twice, as it set out
+/// and as it came back. Turning the dial opens the cap and fans the two apart
+/// together, which is the theorem happening rather than the theorem quoted.
+///
+/// The two arms are drawn in the picture plane rather than tangent to the
+/// sphere. What is exact is the angle between them.
 fn draw(canvas: &mut dyn Surface, rho: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
@@ -73,6 +102,13 @@ fn draw(canvas: &mut dyn Surface, rho: f64, seed: u64) {
     let cy = (height.saturating_sub(1) / 2) as f64;
     let rho = rho.clamp(0.2, 1.0);
     let r_sphere = (width.min(height) as f64) * 0.4;
+    let project = |x: f64, y: f64, z: f64| {
+        (
+            (cx + r_sphere * x).round() as i32,
+            (cy - r_sphere * (y * 0.55 + 0.15 * z)).round() as i32,
+        )
+    };
+
     // Bloch sphere outline.
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=48 {
@@ -84,29 +120,55 @@ fn draw(canvas: &mut dyn Surface, rho: f64, seed: u64) {
         }
         prev = Some((px, py));
     }
-    // Parameter loop as a circle of radius rho about a pole tilt.
-    let tilt = 0.4
-        + if seed == 0 {
-            0.0
-        } else {
-            (seed % 4) as f64 * 0.08
-        };
-    prev = None;
-    for i in 0..=64 {
-        let th = 2.0 * std::f64::consts::PI * (i as f64 / 64.0);
-        let (x, y, z) = bloch_loop_point(rho, tilt, th);
-        let px = (cx + r_sphere * x).round() as i32;
-        let py = (cy - r_sphere * (y * 0.55 + 0.15 * z)).round() as i32;
-        if let Some((ox, oy)) = prev {
-            canvas.line(ox, oy, px, py, '#');
-        }
-        prev = Some((px, py));
+
+    // The parameter loop, a circle of radius rho about its own tilted pole.
+    let tilt = loop_tilt(seed);
+    let ring: Vec<(i32, i32)> = (0..=LOOP_SAMPLES)
+        .map(|i| {
+            let th = 2.0 * std::f64::consts::PI * (i as f64 / LOOP_SAMPLES as f64);
+            let (x, y, z) = bloch_loop_point(rho, tilt, th);
+            project(x, y, z)
+        })
+        .collect();
+    let (pole_x, pole_y, pole_z) = bloch_loop_point(0.0, tilt, 0.0);
+    let pole = project(pole_x, pole_y, pole_z);
+
+    // The enclosed cap, fanned from the loop's pole out to the loop, so the
+    // area is a thing on screen and not only a term in a formula.
+    for &(x, y) in &ring {
+        canvas.line(pole.0, pole.1, x, y, ':');
     }
-    // Solid angle ~ 2pi (1 - cos alpha) toy; mark as chord of state vector.
+    for pair in ring.windows(2) {
+        canvas.line(pair[0].0, pair[0].1, pair[1].0, pair[1].1, '#');
+    }
+
+    // The vector as it set out and as it came back, from the point on the loop
+    // where the journey began. They start together at a tiny loop and swing
+    // apart as the cap opens.
     let (_, phase) = berry_phase_magnitude(rho);
-    let tip_x = (cx + r_sphere * 0.7 * phase.cos()).round() as i32;
-    let tip_y = (cy - r_sphere * 0.4 * phase.sin()).round() as i32;
-    canvas.line(cx as i32, cy as i32, tip_x, tip_y, '+');
+    let base = ring[0];
+    let arm = r_sphere * 0.62;
+    let away = (
+        f64::from(base.0 - pole.0),
+        f64::from(base.1 - pole.1),
+    );
+    let reach = away.0.hypot(away.1).max(1.0);
+    let heading = (away.0 / reach, away.1 / reach);
+    let turned = (
+        heading.0 * phase.cos() - heading.1 * phase.sin(),
+        heading.0 * phase.sin() + heading.1 * phase.cos(),
+    );
+    let tip = |direction: (f64, f64)| {
+        (
+            base.0 + (direction.0 * arm).round() as i32,
+            base.1 + (direction.1 * arm * 0.55).round() as i32,
+        )
+    };
+    let (set_out_x, set_out_y) = tip(heading);
+    let (came_back_x, came_back_y) = tip(turned);
+    canvas.line(base.0, base.1, set_out_x, set_out_y, '=');
+    canvas.line(base.0, base.1, came_back_x, came_back_y, '*');
+    canvas.plot(base.0, base.1, 'O');
 }
 
 /// Berry phase room.
@@ -154,8 +216,17 @@ impl Room for Berry {
 
     fn status(&self, t: f64) -> Option<String> {
         let r = loop_r(t, None, self.seed);
-        let (_, ph) = berry_phase_magnitude(r);
-        Some(format!("r={r:.2}  |g|={ph:.2}  DRAG:LOOP"))
+        let (solid, ph) = berry_phase_magnitude(r);
+        // The area enclosed and the angle it cost, each once. Bars rather than
+        // a sign, because the room measures a magnitude and the direction
+        // belongs to the state and the orientation of the loop. Steradians
+        // beside degrees, so the reading does not spell out the factor between
+        // them: watching the cap open while the two arms fan is the way to meet
+        // that, and the reveal is where it gets said.
+        Some(format!(
+            "AREA {solid:.2}sr  |g| {:.0}deg  DRAG:LOOP",
+            ph.to_degrees()
+        ))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -172,7 +243,9 @@ impl Room for Berry {
         }
         let r = loop_r(t, hands.last().copied(), self.seed);
         let (solid, phase) = berry_phase_magnitude(r);
-        Some(format!("LOOP Om={solid:.2}  |gamma|={phase:.2}rad"))
+        Some(format!(
+            "LOOP {r:.2}  AREA Om={solid:.2}  |gamma|={phase:.2}rad"
+        ))
     }
 
     fn reveal(&self) -> &'static str {
@@ -185,7 +258,7 @@ impl Room for Berry {
 
 #[cfg(test)]
 mod tests {
-    use super::{Berry, berry_phase_magnitude, bloch_loop_point};
+    use super::{Berry, berry_phase_magnitude, bloch_loop_point, loop_r};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
@@ -262,9 +335,59 @@ mod tests {
     }
 
     #[test]
+    fn the_loop_shows_the_turn_it_costs() {
+        // A packaged playtest read the old picture exactly right: "the picture
+        // is still a circle and a number." The area a loop encloses and the
+        // angle the carried vector misses by are the two halves of the room,
+        // and both have to be on screen, moving together as the dial turns.
+        let room = Berry::new();
+        let mut frames = std::collections::HashSet::new();
+        for step in 0..=12 {
+            let mut canvas = Canvas::new(66, 26);
+            room.render(&mut canvas, f64::from(step) / 12.0);
+            frames.insert(canvas.to_text());
+        }
+        assert!(
+            frames.len() >= 10,
+            "thirteen turns of the dial drew only {} pictures",
+            frames.len()
+        );
+        // A small loop earns almost no turn, a large one earns a lot, and the
+        // second is drawn with more of the cap shaded than the first.
+        let ink = |phase: f64| {
+            let mut canvas = Canvas::new(66, 26);
+            room.render(&mut canvas, phase);
+            canvas.ink_count()
+        };
+        assert!(
+            ink(1.0) > ink(0.0),
+            "opening the loop has to shade more of the sphere"
+        );
+        let (small_area, small_turn) = berry_phase_magnitude(loop_r(0.0, None, 0));
+        let (large_area, large_turn) = berry_phase_magnitude(loop_r(1.0, None, 0));
+        assert!(large_area > small_area && large_turn > small_turn);
+        // The status reports both measurements and never the relation between
+        // them, which is the discovery the room exists to let a player make.
+        let reading = room.status(1.0).expect("status");
+        assert!(reading.contains("AREA") && reading.contains("|g|"), "{reading}");
+        assert!(
+            !reading.to_ascii_lowercase().contains("half"),
+            "the status must not hand over the theorem: {reading}"
+        );
+        // Each quantity once, in its own unit. Printing the turn in radians
+        // beside an area in steradians would spell out the factor between them,
+        // which is the sentence the reveal is holding.
+        assert!(
+            !reading.contains("rad"),
+            "the reading says the same thing twice: {reading}"
+        );
+    }
+
+    #[test]
     fn postcard_has_ink() {
         let mut c = Canvas::new(48, 24);
         Berry::new().render(&mut c, 0.55);
         assert!(c.ink_count() > 0);
     }
 }
+
