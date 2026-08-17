@@ -135,6 +135,18 @@ fn run(table: &[[Trans; 2]; MAX_STATES], max_steps: usize) -> (Vec<u8>, usize, u
     (tape, steps, ones, halted)
 }
 
+/// How many steps of its own run the dial has walked this machine.
+///
+/// The budget used to open above the halt, so every phase drew the same
+/// finished tape and the dial the doorway names did nothing at all. Scaling to
+/// the run this machine actually performs makes the phase what it claims to
+/// be: the machine working, and the stop as a moment you arrive at rather than
+/// a block that was already there.
+fn budget_at(table: &[[Trans; 2]; MAX_STATES], t: f64) -> usize {
+    let (_, run_length, _, _) = run(table, MAX_STEPS);
+    1 + (phase_unit(t) * run_length.max(1) as f64) as usize
+}
+
 fn draw_tape(canvas: &mut dyn Surface, tape: &[u8], head_frac: f64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
@@ -178,7 +190,7 @@ impl Room for BusyBeaver {
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let table = default_table(self.seed);
-        let budget = 200 + (phase_unit(t) * MAX_STEPS as f64) as usize;
+        let budget = budget_at(&table, t);
         let (tape, _, _, _) = run(&table, budget);
         draw_tape(canvas, &tape, 0.5);
     }
@@ -203,7 +215,7 @@ impl Room for BusyBeaver {
 
     fn status(&self, t: f64) -> Option<String> {
         let table = default_table(self.seed);
-        let budget = 200 + (phase_unit(t) * MAX_STEPS as f64) as usize;
+        let budget = budget_at(&table, t);
         let (_, steps, ones, halted) = run(&table, budget);
         let tag = if halted { "HALT" } else { "RUN" };
         Some(format!("S{steps}  1s={ones}  BB5={BB5}  {tag}  CLICK:FLIP"))
@@ -215,7 +227,7 @@ impl Room for BusyBeaver {
         for &(x, y) in &hands {
             flip_rule(&mut table, x, y);
         }
-        let budget = 200 + (phase_unit(t) * MAX_STEPS as f64) as usize;
+        let budget = budget_at(&table, t);
         let (tape, _, _, _) = run(&table, budget);
         draw_tape(canvas, &tape, hands.last().map(|(x, _)| *x).unwrap_or(0.5));
     }
@@ -230,7 +242,7 @@ impl Room for BusyBeaver {
         for &(x, y) in &hands {
             flip_rule(&mut table, x, y);
         }
-        let budget = 200 + (phase_unit(t) * MAX_STEPS as f64) as usize;
+        let budget = budget_at(&table, t);
         let (_, steps, ones, halted) = run(&table, budget);
         let tag = if halted { "HALT" } else { "RUN" };
         Some(format!("FLIP n{}  S{steps}  1s={ones}  {tag}", hands.len()))
@@ -256,6 +268,36 @@ mod tests {
         let (_, steps, ones, _) = run(&t, 5000);
         assert!(steps > 0);
         assert!(ones > 0);
+    }
+
+    #[test]
+    fn the_dial_walks_the_machine_through_its_own_run() {
+        // A catalog sweep found this room drawing one identical frame at every
+        // phase while its doorway said t extends the step budget. The budget
+        // opened at 200 steps and the machine halts long before that, so the
+        // dial the door named moved nothing. A door that names a lever must
+        // have one.
+        let room = BusyBeaver::new();
+        let mut frames = std::collections::HashSet::new();
+        for phase in [0.0, 0.25, 0.5, 0.75, 1.0] {
+            let mut canvas = Canvas::new(60, 24);
+            room.render(&mut canvas, phase);
+            frames.insert(canvas.to_text());
+        }
+        assert!(
+            frames.len() >= 4,
+            "the phase dial drew only {} distinct frames",
+            frames.len()
+        );
+        // The stop is a moment the dial arrives at, not the only thing there is.
+        assert!(
+            room.status(0.0).expect("open").contains("RUN"),
+            "the machine has already finished at the bottom of the dial"
+        );
+        assert!(
+            room.status(1.0).expect("end").contains("HALT"),
+            "the machine never reaches its halt at the top of the dial"
+        );
     }
 
     #[test]
@@ -293,11 +335,14 @@ mod tests {
 
     #[test]
     fn flipped_rule_changes_a_visible_tape_band() {
+        // Compared at the top of the dial, where both machines have finished:
+        // the phase now walks the run, so at the bottom neither has written
+        // anything yet and two different machines look alike for good reason.
         let room = BusyBeaver::new();
         let mut base = Canvas::new(80, 40);
         let mut flipped = Canvas::new(80, 40);
-        room.render(&mut base, 0.0);
-        room.render_poked(&mut flipped, 0.0, &[(0.82, 0.8)]);
+        room.render(&mut base, 1.0);
+        room.render_poked(&mut flipped, 1.0, &[(0.82, 0.8)]);
         let changed = (0..40)
             .flat_map(|y| (0..80).map(move |x| (x, y)))
             .filter(|&(x, y)| base.cell(x, y) != flipped.cell(x, y))
