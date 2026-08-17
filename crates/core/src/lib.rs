@@ -199,7 +199,7 @@ pub use share::{
 };
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};
-pub use sound::{Note, ParametricSound, SoundSpec};
+pub use sound::{Note, ParametricSound, SoundSpec, wav_bytes};
 pub use spectrum::{
     BAND_COUNT, BAND_NAMES, ONSET_HIT, SpectrumBarLayout, SpectrumLevers, arrangement_spectrum,
     band_energies, bass_mid_treble, draw_spectrum_bars, levers_from_bands, low_band_onset,

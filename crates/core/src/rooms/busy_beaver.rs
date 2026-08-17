@@ -11,8 +11,6 @@ use crate::surface::Surface;
 const MAX_STATES: usize = 4;
 const TAPE: usize = 96;
 const MAX_STEPS: usize = 8_000;
-/// Documented BB(5) value (not simulated here in full).
-const BB5: u64 = 47_176_870;
 
 #[derive(Clone, Copy, Debug)]
 struct Trans {
@@ -218,7 +216,10 @@ impl Room for BusyBeaver {
         let budget = budget_at(&table, t);
         let (_, steps, ones, halted) = run(&table, budget);
         let tag = if halted { "HALT" } else { "RUN" };
-        Some(format!("S{steps}  1s={ones}  BB5={BB5}  {tag}  CLICK:FLIP"))
+        // The champion's own step count belongs to the reveal. Printing it on
+        // every frame handed a player the room's one fact before the tape had
+        // written a single mark, and the tape never draws that number anyway.
+        Some(format!("S{steps}  1s={ones}  {tag}  CLICK:FLIP"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -298,6 +299,26 @@ mod tests {
             room.status(1.0).expect("end").contains("HALT"),
             "the machine never reaches its halt at the top of the dial"
         );
+    }
+
+    #[test]
+    fn the_champions_count_waits_in_the_reveal_instead_of_every_frame() {
+        // A packaged playtest found BB(5) printed on the scoreboard at t=0,
+        // before the tape had written a mark. The number is the room's whole
+        // payload, so it moved to the one place a player has to ask for, and
+        // it must still be there when they do.
+        let room = BusyBeaver::new();
+        assert!(
+            room.reveal().contains("47,176,870"),
+            "the reveal has to keep the number the status gave up"
+        );
+        for phase in [0.0, 0.25, 0.5, 0.75, 0.99, 1.0] {
+            let status = room.status(phase).expect("status");
+            assert!(
+                !status.contains("47176870") && !status.contains("47,176,870"),
+                "the champion's count is back on the scoreboard at t={phase}: {status}"
+            );
+        }
     }
 
     #[test]

@@ -10,6 +10,7 @@
 //! while 2026-07-28 clients declare version, identity, and capabilities on each
 //! request. Both paths reach the same deterministic tool catalog and core.
 
+mod audible;
 mod broadcast;
 mod catalog;
 mod local_state;
@@ -2198,13 +2199,32 @@ fn listen_room_tool(args: &Value) -> Value {
     if note_count > 64 {
         lines.push(format!("  ... and {} more notes.", note_count - 64));
     }
-    tool_structured(
+    // The room's own sonification, as sound rather than as a table of it. This
+    // is the mathematical voice, not the ambient bed: what the room is doing
+    // right now at this phase, under this hand.
+    let audible = match audible::requested(args) {
+        Ok(true) => match audible::block(&spec) {
+            Ok(rendered) => Some(rendered),
+            Err(message) => return tool_error(&message),
+        },
+        Ok(false) => None,
+        Err(message) => return tool_error(&message),
+    };
+    if audible.is_some() {
+        lines.push(
+            "The sonification itself follows as an audio attachment: this room, \
+             at this phase, as something to hear rather than read."
+                .to_string(),
+        );
+    }
+    let result = tool_structured(
         &lines.join("\n"),
         json!({
             "room": room.meta().id,
             "title": room.meta().title,
             "t": t,
             "variation": variation,
+            "audio": audible.as_ref().map(|(_, described)| described.clone()),
             "pokes": inputs.pokes,
             "gesture": if inputs.gesture.is_empty() { Value::Null } else { gesture_json(&inputs.gesture) },
             "duration_seconds": spec.duration,
@@ -2220,7 +2240,11 @@ fn listen_room_tool(args: &Value) -> Value {
                 "mathematical_sonification": { "field": "notes" },
             },
         }),
-    )
+    );
+    match audible {
+        Some((block, _)) => audible::attach(result, block),
+        None => result,
+    }
 }
 
 /// The `reveal_room` tool: optional concept + revelation (the learn surface).
@@ -5892,6 +5916,24 @@ fn sing_expression_tool(args: &Value) -> Value {
             steps.push(interval_value(&step));
         }
     }
+    // Reading the melody is what this tool has always done. Hearing it is the
+    // thing six rounds of playtest kept asking for, so the sound can come too,
+    // as a file rather than as a promise.
+    let audible = match audible::requested(args) {
+        Ok(true) => match audible::block(&spec) {
+            Ok(rendered) => Some(rendered),
+            Err(message) => return tool_error(&message),
+        },
+        Ok(false) => None,
+        Err(message) => return tool_error(&message),
+    };
+    if audible.is_some() {
+        lines.push(
+            "The melody itself follows as an audio attachment, which is the only \
+             part of this reply that is not a description of it."
+                .to_string(),
+        );
+    }
     // One note shape across this face: `listen_room` already publishes notes
     // under these names, and a second spelling would make a client parse the
     // same idea twice.
@@ -5907,8 +5949,13 @@ fn sing_expression_tool(args: &Value) -> Value {
             "amplitude": note.amp,
         })).collect::<Vec<_>>(),
         "steps": steps,
+        "audio": audible.as_ref().map(|(_, described)| described.clone()),
     });
-    tool_structured(&lines.join("\n"), structured)
+    let result = tool_structured(&lines.join("\n"), structured);
+    match audible {
+        Some((block, _)) => audible::attach(result, block),
+        None => result,
+    }
 }
 
 /// Project one measured step between notes into typed evidence.
@@ -8397,6 +8444,97 @@ mod tests {
             "every step found a ratio, which means the search is answering \
              rather than the music: {steps:?}"
         );
+    }
+
+    #[test]
+    fn a_melody_can_arrive_as_sound_and_not_only_as_notation() {
+        // Six packaged playtests ended on "I still cannot hear the two hills."
+        // The notation kept getting better and the sentence kept coming back,
+        // because the answer was never another column. A mind down a pipe can
+        // be handed audio, so it is handed audio.
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":44,"method":"tools/call",
+            "params":{"name":"sing_expression","arguments":{
+                "expr":"sin(x)+0.4*sin(3*x)","notes":16,"audio":true
+            }}
+        }))
+        .expect("tools/call must respond");
+        let content = resp["result"]["content"].as_array().expect("content");
+        // The sound arrives beside the reading, never instead of it, so a
+        // client that cannot play audio loses nothing it had before.
+        assert_eq!(content[0]["type"], "text");
+        let audio = content
+            .iter()
+            .find(|block| block["type"] == "audio")
+            .expect("an audio block");
+        assert_eq!(audio["mimeType"], "audio/wav");
+        let payload = audio["data"].as_str().expect("payload");
+        assert!(
+            payload.starts_with("UklGRg") || payload.starts_with("UklGR"),
+            "the payload does not begin where a RIFF file begins"
+        );
+        // What was sent is described, so a caller knows what it holds without
+        // decoding a megabyte to find out.
+        let described = &resp["result"]["structuredContent"]["audio"];
+        assert_eq!(described["mimeType"], "audio/wav");
+        assert_eq!(described["channels"], 1);
+        assert_eq!(described["bitsPerSample"], 16);
+        assert_eq!(
+            described["sampleRate"],
+            crate::audible::WIRE_SAMPLE_RATE,
+            "the described rate has to be the rate in the file"
+        );
+        assert_eq!(
+            described["encodedBytes"].as_u64(),
+            Some(payload.len() as u64)
+        );
+        // The seconds claimed are the seconds sent: sixteen bits, one channel,
+        // one sample rate, so the arithmetic is checkable from here.
+        let bytes = payload.len() as f64 * 3.0 / 4.0;
+        let seconds = (bytes - 44.0) / f64::from(crate::audible::WIRE_SAMPLE_RATE) / 2.0;
+        let claimed = described["durationSeconds"].as_f64().expect("seconds");
+        assert!(
+            (seconds - claimed).abs() < 0.1,
+            "the file is {seconds:.2}s but the reply claims {claimed:.2}s"
+        );
+    }
+
+    #[test]
+    fn a_room_can_be_heard_and_asking_to_hear_stays_opt_in() {
+        // The same verb on the other sound tool, and the default stays quiet:
+        // a caller who never asks for audio never pays for it.
+        let heard = handle_request(&json!({
+            "jsonrpc":"2.0","id":45,"method":"tools/call",
+            "params":{"name":"listen_room","arguments":{"id":"times-tables","t":0.375,"audio":true}}
+        }))
+        .expect("tools/call must respond");
+        assert!(
+            heard["result"]["content"]
+                .as_array()
+                .expect("content")
+                .iter()
+                .any(|block| block["type"] == "audio"),
+            "a room asked to be heard returned no sound"
+        );
+        for arguments in [
+            json!({"id":"times-tables","t":0.375}),
+            json!({"id":"times-tables","t":0.375,"audio":false}),
+        ] {
+            let quiet = handle_request(&json!({
+                "jsonrpc":"2.0","id":46,"method":"tools/call",
+                "params":{"name":"listen_room","arguments":arguments}
+            }))
+            .expect("tools/call must respond");
+            assert!(
+                quiet["result"]["content"]
+                    .as_array()
+                    .expect("content")
+                    .iter()
+                    .all(|block| block["type"] == "text"),
+                "sound arrived unasked for"
+            );
+            assert!(quiet["result"]["structuredContent"]["audio"].is_null());
+        }
     }
 
     #[test]
