@@ -216,6 +216,63 @@ impl SoundSpec {
         }
         buffer
     }
+
+    /// Render straight to the bytes of a mono 16-bit PCM WAV file.
+    ///
+    /// Six packaged playtests have ended on the same sentence: an agent can
+    /// read the notes, name the intervals, and still not hear the thing. A
+    /// player who reaches this house over a protocol cannot open an audio
+    /// device, so the sound has to become something that can be sent. These are
+    /// those bytes.
+    #[must_use]
+    pub fn wav(&self, sample_rate: u32) -> Vec<u8> {
+        wav_bytes(&self.render(sample_rate), sample_rate)
+    }
+}
+
+/// Wrap mono samples in a 16-bit PCM WAV container.
+///
+/// Pure bytes, written by hand rather than by a library, because the whole
+/// point is that this path needs no audio device and no dependency: a face that
+/// can only send text can still send a sound.
+#[must_use]
+pub fn wav_bytes(samples: &[f32], sample_rate: u32) -> Vec<u8> {
+    const HEADER: usize = 44;
+    const BITS: u16 = 16;
+    const CHANNELS: u16 = 1;
+    let rate = sample_rate.max(1);
+    // A WAV size field is 32 bits, so the container itself sets the ceiling.
+    // Truncating loudly here is better than writing a header that lies.
+    let max_samples = ((u32::MAX as usize - HEADER) / 2).min(samples.len());
+    let samples = &samples[..max_samples];
+    let data_len = samples.len() * 2;
+    let mut bytes = Vec::with_capacity(HEADER + data_len);
+    let mut chunk = |tag: &[u8; 4], size: u32| {
+        bytes.extend_from_slice(tag);
+        bytes.extend_from_slice(&size.to_le_bytes());
+    };
+    chunk(b"RIFF", (36 + data_len) as u32);
+    bytes.extend_from_slice(b"WAVE");
+    bytes.extend_from_slice(b"fmt ");
+    bytes.extend_from_slice(&16u32.to_le_bytes());
+    bytes.extend_from_slice(&1u16.to_le_bytes()); // PCM, uncompressed
+    bytes.extend_from_slice(&CHANNELS.to_le_bytes());
+    bytes.extend_from_slice(&rate.to_le_bytes());
+    bytes.extend_from_slice(&(rate * u32::from(CHANNELS) * u32::from(BITS / 8)).to_le_bytes());
+    bytes.extend_from_slice(&(CHANNELS * BITS / 8).to_le_bytes());
+    bytes.extend_from_slice(&BITS.to_le_bytes());
+    bytes.extend_from_slice(b"data");
+    bytes.extend_from_slice(&(data_len as u32).to_le_bytes());
+    for &sample in samples {
+        let clamped = if sample.is_finite() {
+            sample.clamp(-1.0, 1.0)
+        } else {
+            0.0
+        };
+        // Scale by 32767 rather than 32768 so full scale cannot wrap to silence.
+        bytes.extend_from_slice(&((clamped * 32_767.0) as i16).to_le_bytes());
+    }
+    bytes
 }
 
 /// A short attack/release envelope so notes do not click.
@@ -231,8 +288,56 @@ fn envelope(t: f32, dur: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{Note, ParametricSound, SoundSpec, envelope};
+    use super::{Note, ParametricSound, SoundSpec, envelope, wav_bytes};
     use crate::Motif;
+
+    #[test]
+    fn a_wav_is_a_real_wav_and_not_a_hopeful_one() {
+        // These bytes leave the house and get decoded by something that is not
+        // us, so the header has to be right by inspection rather than by luck.
+        let spec = SoundSpec::tone(440.0, 0.5, 0.5);
+        let rate = 16_000;
+        let bytes = spec.wav(rate);
+        let field = |at: usize| u32::from_le_bytes(bytes[at..at + 4].try_into().expect("field"));
+        let short = |at: usize| u16::from_le_bytes(bytes[at..at + 2].try_into().expect("field"));
+        assert_eq!(&bytes[0..4], b"RIFF");
+        assert_eq!(&bytes[8..12], b"WAVE");
+        assert_eq!(&bytes[12..16], b"fmt ");
+        assert_eq!(field(16), 16, "PCM format chunks are sixteen bytes");
+        assert_eq!(short(20), 1, "uncompressed PCM");
+        assert_eq!(short(22), 1, "mono");
+        assert_eq!(field(24), rate);
+        assert_eq!(field(28), rate * 2, "byte rate is rate times block align");
+        assert_eq!(short(32), 2, "block align");
+        assert_eq!(short(34), 16, "bits per sample");
+        assert_eq!(&bytes[36..40], b"data");
+        // Every size field has to describe the bytes that are actually here,
+        // because a decoder trusts them over the file.
+        let data_len = field(40) as usize;
+        assert_eq!(data_len, bytes.len() - 44);
+        assert_eq!(field(4) as usize, bytes.len() - 8);
+        assert_eq!(data_len, spec.render(rate).len() * 2);
+        // And it has to carry the sound, not silence.
+        assert!(
+            bytes[44..]
+                .chunks_exact(2)
+                .any(|pair| { i16::from_le_bytes([pair[0], pair[1]]).unsigned_abs() > 1_000 }),
+            "the file is silent"
+        );
+    }
+
+    #[test]
+    fn a_hostile_sample_cannot_poison_the_file() {
+        let bytes = wav_bytes(&[f32::NAN, f32::INFINITY, -12.0, 1.0, -1.0], 8_000);
+        let words: Vec<i16> = bytes[44..]
+            .chunks_exact(2)
+            .map(|pair| i16::from_le_bytes([pair[0], pair[1]]))
+            .collect();
+        // A value that is not a number is silenced rather than clamped, the
+        // same way `render` treats it: infinity is a bug upstream, and a bug
+        // should not arrive as a full-scale click in someone's ears.
+        assert_eq!(words, vec![0, 0, -32_767, 32_767, -32_767]);
+    }
 
     #[test]
     fn tone_has_one_note_and_the_right_length() {

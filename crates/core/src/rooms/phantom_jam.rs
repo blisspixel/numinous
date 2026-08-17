@@ -281,6 +281,7 @@ impl PhantomJam {
     fn brake_seat(&self) -> f64 {
         0.15 + (self.seed % 5) as f64 * 0.05
     }
+
 }
 
 impl Room for PhantomJam {

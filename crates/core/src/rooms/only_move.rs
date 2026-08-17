@@ -331,6 +331,111 @@ pub fn rules_for_variation(variation: u64) -> u8 {
     }
 }
 
+/// Every rulebook worth turning a dial through, in the order the dial walks.
+///
+/// A packaged playtest found this room by title, played it, and reported that
+/// the dial every other room turns did nothing here: `t` moved and the board
+/// stayed at eight lines. The rulebook was reachable only through `variation`,
+/// which a stranger has no reason to try. So the walk lives on `t` now, and
+/// `variation` stays as the way to name one rulebook exactly once you have
+/// found it.
+///
+/// The order is not the bitmask counting up, because that would be a walk
+/// through noise. It descends by how many lines a rulebook counts, so the dial
+/// starts at the game everyone knows and takes lines away as it turns; and
+/// inside one line count it descends by how much of the square's own symmetry
+/// the rulebook keeps. That second key is what makes the walk worth taking: the
+/// one rulebook a first player can win is the most symmetric rulebook of its
+/// size, so a player turning the dial slowly meets it near the front of its
+/// band rather than by luck at position 214.
+///
+/// The empty rulebook is left out. Nothing can be won when no line counts, so it
+/// is not a game, and leaving it out means every index the dial can reach round
+/// trips through `variation`, where zero already means the full game.
+#[must_use]
+pub fn dial_order() -> &'static [u8] {
+    static ORDER: std::sync::LazyLock<Vec<u8>> = std::sync::LazyLock::new(|| {
+        let mut order: Vec<u8> = (1..=u8::MAX).collect();
+        order.sort_by_key(|&rules| {
+            (
+                std::cmp::Reverse(line_count(rules)),
+                std::cmp::Reverse(symmetries_kept(rules)),
+                rules,
+            )
+        });
+        order
+    });
+    &ORDER
+}
+
+/// Where on the dial a phase sits, as a stop and a total.
+///
+/// The status shows this so a player can tell how fine the dial is. A stranger
+/// who does not know there are 255 stops will step by a tenth, see eight boards,
+/// and conclude the dial is coarse.
+#[must_use]
+pub fn dial_position(t: f64) -> (usize, usize) {
+    let order = dial_order();
+    let phase = if t.is_finite() { t.clamp(0.0, 1.0) } else { 0.0 };
+    let index = ((phase * order.len() as f64) as usize).min(order.len() - 1);
+    (index + 1, order.len())
+}
+
+/// The eight symmetries of the square, as permutations of the nine cells.
+///
+/// Written down rather than derived, because the room's claim is about a shape
+/// and a reader should be able to check the shape.
+const SQUARE_SYMMETRIES: [[usize; CELLS]; 8] = [
+    [0, 1, 2, 3, 4, 5, 6, 7, 8], // identity
+    [6, 3, 0, 7, 4, 1, 8, 5, 2], // quarter turn
+    [8, 7, 6, 5, 4, 3, 2, 1, 0], // half turn
+    [2, 5, 8, 1, 4, 7, 0, 3, 6], // three quarter turn
+    [2, 1, 0, 5, 4, 3, 8, 7, 6], // mirror across the vertical
+    [6, 7, 8, 3, 4, 5, 0, 1, 2], // mirror across the horizontal
+    [0, 3, 6, 1, 4, 7, 2, 5, 8], // mirror across the main diagonal
+    [8, 5, 2, 7, 4, 1, 6, 3, 0], // mirror across the anti diagonal
+];
+
+/// How many of the square's eight symmetries leave a rulebook unchanged.
+///
+/// A rulebook that keeps all eight treats every direction alike, which is the
+/// property the winnable one has and the reason the dial can be walked by feel.
+#[must_use]
+pub fn symmetries_kept(rules: u8) -> u32 {
+    SQUARE_SYMMETRIES
+        .iter()
+        .filter(|permutation| {
+            let mut mapped = 0u8;
+            for (index, line) in LINES.iter().enumerate() {
+                if rules & (1 << index) == 0 {
+                    continue;
+                }
+                let mut moved = [permutation[line[0]], permutation[line[1]], permutation[line[2]]];
+                moved.sort_unstable();
+                let Some(position) = LINES.iter().position(|candidate| {
+                    let mut sorted = *candidate;
+                    sorted.sort_unstable();
+                    sorted == moved
+                }) else {
+                    return false;
+                };
+                mapped |= 1 << position;
+            }
+            mapped == rules
+        })
+        .count() as u32
+}
+
+/// The rulebook the phase dial has turned to.
+///
+/// `t` walks [`dial_order`]. Phase zero is the game everyone knows, so a player
+/// who never touches the dial finds the board they expect.
+#[must_use]
+pub fn rules_at_phase(t: f64) -> u8 {
+    let (stop, _) = dial_position(t);
+    dial_order()[stop - 1]
+}
+
 /// How many lines a rulebook counts.
 #[must_use]
 pub fn line_count(rules: u8) -> u32 {
@@ -365,19 +470,43 @@ pub fn render_board(canvas: &mut dyn Surface, board: Board, rules: u8) {
     }
     let left = width.saturating_sub(board_w) / 2;
     let top = height.saturating_sub(board_h) / 2;
-    // The grid itself, drawn only where a counted line runs, so the rulebook is
-    // visible in the picture rather than only in the status.
-    for row in 1..3 {
-        let y = top + row * cell_h;
-        for x in left..left + board_w {
-            canvas.plot(x as i32, y as i32, '-');
+    // Three layers, each with one job. The frame says where the board is.
+    let (x0, y0) = (left as i32, top as i32);
+    let (x1, y1) = ((left + board_w - 1) as i32, (top + board_h - 1) as i32);
+    canvas.line(x0, y0, x1, y0, '-');
+    canvas.line(x0, y1, x1, y1, '-');
+    canvas.line(x0, y0, x0, y1, '|');
+    canvas.line(x1, y0, x1, y1, '|');
+    let centre = |cell: usize| {
+        let (row, column) = (cell / 3, cell % 3);
+        (
+            (left + column * cell_w + cell_w / 2) as i32,
+            (top + row * cell_h + cell_h / 2) as i32,
+        )
+    };
+    // A dot marks any cell no counted line runs through, so a dead cell is
+    // visibly dead rather than merely unmarked, and all nine centres are always
+    // findable: a live one carries a stroke, a dead one carries this.
+    for cell in 0..CELLS {
+        if !is_live_cell(cell, rules) {
+            let (cx, cy) = centre(cell);
+            canvas.plot(cx, cy, '.');
         }
     }
-    for column in 1..3 {
-        let x = left + column * cell_w;
-        for y in top..top + board_h {
-            canvas.plot(x as i32, y as i32, '|');
+    // Then the rulebook, drawn as itself. Every line this rulebook counts is
+    // stroked through the three cells it joins, so turning the dial changes the
+    // figure on the board and not merely a number beside it. Eight lines is a
+    // star, the six rows and columns are a lattice, and the one rulebook a
+    // first player can win is a square with an X through it. A player walking
+    // the dial is walking through shapes, and the two shapes that look most
+    // alike are the two that are not worth the same.
+    for (index, line) in LINES.iter().enumerate() {
+        if rules & (1 << index) == 0 {
+            continue;
         }
+        let (ax, ay) = centre(line[0]);
+        let (bx, by) = centre(line[2]);
+        canvas.line(ax, ay, bx, by, '*');
     }
     for cell in 0..CELLS {
         let (row, column) = (cell / 3, cell % 3);
@@ -405,11 +534,9 @@ pub fn render_board(canvas: &mut dyn Surface, board: Board, rules: u8) {
                     canvas.plot(px as i32, py as i32, mark);
                 }
             }
-            None => {
-                if is_live_cell(cell, rules) {
-                    canvas.plot(cx, cy, '.');
-                }
-            }
+            // Free cells were already marked, live or dead, before the
+            // rulebook was drawn.
+            None => {}
         }
     }
 }
@@ -517,20 +644,44 @@ impl OnlyMove {
         Self { variation }
     }
 
-    /// The rulebook this visit plays under.
+    /// The rulebook this visit plays under at a phase.
+    ///
+    /// A named variation wins, because naming a rulebook is how a player
+    /// returns to one they found. With no variation named, the phase dial walks
+    /// the rulebooks, so the dial every other room turns turns this one too.
     #[must_use]
-    pub fn rules(&self) -> u8 {
-        rules_for_variation(self.variation)
+    pub fn rules_at(&self, t: f64) -> u8 {
+        if self.variation == 0 {
+            rules_at_phase(t)
+        } else {
+            rules_for_variation(self.variation)
+        }
     }
 
-    fn readout(&self, visit: &Visit) -> String {
-        let rules = self.rules();
-        let lines = line_count(rules);
+    /// The rulebook this visit plays under with the dial at rest.
+    #[must_use]
+    pub fn rules(&self) -> u8 {
+        self.rules_at(0.0)
+    }
+
+    fn readout(&self, t: f64, visit: &Visit) -> String {
+        let rules = self.rules_at(t);
+        // The mask is printed because it is the way back. A player who turns the
+        // dial onto a board worth keeping can pass that number as `variation`
+        // and stand on it. Rulebook zero is never on the dial, so the number
+        // always means what passing it means.
         if visit.finished == 0 && visit.board.played() == 0 {
-            return format!("{lines} LINES COUNT  CLICK A CELL");
+            let lines = line_count(rules);
+            let opening = if self.variation == 0 {
+                let (stop, stops) = dial_position(t);
+                format!("BOARD {stop}/{stops}  ")
+            } else {
+                String::new()
+            };
+            return format!("{opening}RULES {rules}  {lines} LINES  CLICK A CELL");
         }
         let mut readout = format!(
-            "{lines} LINES  PLAYED {}  WON {}  TIED {}",
+            "RULES {rules}  PLAYED {}  WON {}  TIED {}",
             visit.finished, visit.won, visit.tied
         );
         if visit.wasted > 0 {
@@ -541,22 +692,23 @@ impl OnlyMove {
 }
 
 impl crate::room::Room for OnlyMove {
-    fn render(&self, canvas: &mut dyn Surface, _t: f64) {
-        render_board(canvas, Board::new(), self.rules());
+    fn render(&self, canvas: &mut dyn Surface, t: f64) {
+        render_board(canvas, Board::new(), self.rules_at(t));
     }
 
-    fn render_poked(&self, canvas: &mut dyn Surface, _t: f64, pokes: &[(f64, f64)]) {
-        let visit = replay(pokes, self.rules());
-        render_board(canvas, visit.board, self.rules());
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        let rules = self.rules_at(t);
+        let visit = replay(pokes, rules);
+        render_board(canvas, visit.board, rules);
     }
 
-    fn status(&self, _t: f64) -> Option<String> {
-        Some(self.readout(&replay(&[], self.rules())))
+    fn status(&self, t: f64) -> Option<String> {
+        Some(self.readout(t, &replay(&[], self.rules_at(t))))
     }
 
-    fn status_input(&self, _t: f64, inputs: &[crate::room::RoomInput]) -> Option<String> {
+    fn status_input(&self, t: f64, inputs: &[crate::room::RoomInput]) -> Option<String> {
         let pokes = crate::room::pokes_from_inputs(inputs);
-        Some(self.readout(&replay(&pokes, self.rules())))
+        Some(self.readout(t, &replay(&pokes, self.rules_at(t))))
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -579,9 +731,9 @@ impl crate::room::Room for OnlyMove {
         Some("WIN ONE GAME")
     }
 
-    fn goal_met(&self, _t: f64, inputs: &[crate::room::RoomInput]) -> bool {
+    fn goal_met(&self, t: f64, inputs: &[crate::room::RoomInput]) -> bool {
         let pokes = crate::room::pokes_from_inputs(inputs);
-        replay(&pokes, self.rules()).won > 0
+        replay(&pokes, self.rules_at(t)).won > 0
     }
 
     fn reveal(&self) -> &'static str {
@@ -759,6 +911,136 @@ mod tests {
     }
 
     #[test]
+    fn the_phase_dial_turns_the_rulebook() {
+        // A packaged playtest found this room by title, played it, swept t
+        // across sixteen phases, and reported that the board stayed at eight
+        // lines the whole way: "a stranger who only turns t will think the dial
+        // is dead." The rulebook was reachable only through `variation`, which
+        // a stranger has no reason to try. So t walks it now.
+        let room = OnlyMove::new();
+        let mut seen = std::collections::BTreeSet::new();
+        for step in 0..=40 {
+            seen.insert(room.rules_at(f64::from(step) / 40.0));
+        }
+        assert!(
+            seen.len() >= 30,
+            "forty turns of the dial found only {} rulebooks",
+            seen.len()
+        );
+        // At rest the board is the one everyone already knows, so a player who
+        // never touches the dial is not handed a puzzle they did not ask for.
+        assert_eq!(room.rules_at(0.0), ALL_RULES);
+        // A named variation still wins, because naming a rulebook is how a
+        // player returns to one the dial showed them.
+        let named = OnlyMove::new_with(u64::from(WINNABLE_RULES));
+        for phase in [0.0, 0.3, 0.7, 1.0] {
+            assert_eq!(named.rules_at(phase), WINNABLE_RULES);
+        }
+    }
+
+    #[test]
+    fn the_dial_reaches_the_one_rulebook_that_can_be_won() {
+        // A dial that walks 255 boards and never passes the one board the
+        // room is about would be a longer way of doing nothing.
+        let order = dial_order();
+        let found = order
+            .iter()
+            .position(|&rules| rules == WINNABLE_RULES)
+            .expect("the dial has to pass the winnable rulebook");
+        assert!(
+            found < order.len() / 8,
+            "the winnable rulebook sits at stop {found} of {}, too deep to meet by turning",
+            order.len()
+        );
+        assert_eq!(rules_at_phase(found as f64 / order.len() as f64), WINNABLE_RULES);
+        // Rulebook zero is never on the dial, so the mask the status prints is
+        // always a mask `variation` accepts to mean the same board.
+        assert!(!order.contains(&0));
+        for &rules in order {
+            assert_eq!(rules_for_variation(u64::from(rules)), rules);
+        }
+    }
+
+    #[test]
+    fn the_walk_is_ordered_by_size_then_by_symmetry() {
+        // The order is the room's own argument. Lines come off as the dial
+        // turns, and inside one size the most symmetric boards come first, so
+        // the board a first player can win, which is the board that treats
+        // every direction alike, is met near the front of its band rather than
+        // stumbled on at stop 214.
+        let order = dial_order();
+        for pair in order.windows(2) {
+            let (before, after) = (pair[0], pair[1]);
+            let key = |rules: u8| (line_count(rules), symmetries_kept(rules));
+            assert!(
+                key(before) >= key(after),
+                "the walk goes uphill from {before} to {after}"
+            );
+        }
+        assert_eq!(symmetries_kept(ALL_RULES), 8);
+        assert_eq!(
+            symmetries_kept(WINNABLE_RULES),
+            8,
+            "the winnable rulebook is the one that treats every direction alike"
+        );
+        // Dropping one line from a rulebook that keeps the whole square breaks
+        // the square, which is why the walk has texture at all.
+        assert!(symmetries_kept(ALL_RULES & !1) < 8);
+    }
+
+    #[test]
+    fn the_rulebook_is_drawn_and_not_merely_counted() {
+        // The dial has to change the picture, or a player reading the room
+        // instead of the status still sees a dead dial. Each counted line is
+        // stroked through the three cells it joins, so a rulebook is a shape.
+        use crate::canvas::Canvas;
+        use crate::room::Room;
+        let room = OnlyMove::new();
+        let mut frames = std::collections::HashSet::new();
+        for step in 0..=20 {
+            let mut canvas = Canvas::new(48, 24);
+            room.render(&mut canvas, f64::from(step) / 20.0);
+            frames.insert(canvas.to_text());
+        }
+        assert!(
+            frames.len() >= 15,
+            "twenty-one turns of the dial drew only {} pictures",
+            frames.len()
+        );
+        // The full game and the winnable game differ by exactly the middle row
+        // and the middle column, and that difference has to be visible: it is
+        // the whole reveal, drawn.
+        let mut full = Canvas::new(48, 24);
+        let mut winnable = Canvas::new(48, 24);
+        render_board(&mut full, Board::new(), ALL_RULES);
+        render_board(&mut winnable, Board::new(), WINNABLE_RULES);
+        assert_ne!(full.to_text(), winnable.to_text());
+    }
+
+    #[test]
+    fn the_status_names_the_way_back_and_the_size_of_the_dial() {
+        use crate::room::Room;
+        let room = OnlyMove::new();
+        let opening = room.status(0.0).expect("status");
+        assert!(opening.contains("BOARD 1/255"), "{opening}");
+        assert!(opening.contains(&format!("RULES {ALL_RULES}")), "{opening}");
+        // The mask the status prints is the number `variation` takes, so a
+        // player who finds a board on the dial can stand on it.
+        let phase = 0.32;
+        let found = room.rules_at(phase);
+        let reading = room.status(phase).expect("status");
+        assert!(reading.contains(&format!("RULES {found}")), "{reading}");
+        let pinned = OnlyMove::new_with(u64::from(found));
+        assert_eq!(pinned.rules_at(0.0), found);
+        // A pinned board has no dial position to report, and says so by not
+        // claiming one.
+        assert!(
+            !pinned.status(0.0).expect("status").contains("BOARD"),
+            "a named rulebook has no stop on the dial"
+        );
+    }
+
+    #[test]
     fn variation_zero_is_the_game_everyone_knows() {
         assert_eq!(rules_for_variation(0), ALL_RULES);
         assert_eq!(rules_for_variation(u64::from(ALL_RULES)), ALL_RULES);
@@ -778,3 +1060,4 @@ mod tests {
         assert_eq!(board.to_move(), Side::Second);
     }
 }
+

@@ -719,17 +719,13 @@ mod tests {
 
         assert_eq!(keyboard.action, "CLICK: PLANT A SEED");
         // First-contact status names the room state; inspect only appears when
-        // a room has no status at all.
-        assert_eq!(
-            keyboard.status,
-            "GOLDEN ANGLE 137.5 DEG   CLICK: PLANT A SEED"
-        );
+        // a room has no status at all. The seed head really is grown at the
+        // golden step here, so the reading says 137.5 without the room telling
+        // a player that this is the step worth finding.
+        assert_eq!(keyboard.status, "STEP 137.5 DEG   CLICK: PLANT A SEED");
         assert_eq!(keyboard.controls, "R RESET ROOM   ESC MENU");
         assert_eq!(controller.action, "SOUTH: PLANT A SEED");
-        assert_eq!(
-            controller.status,
-            "GOLDEN ANGLE 137.5 DEG   CLICK: PLANT A SEED"
-        );
+        assert_eq!(controller.status, "STEP 137.5 DEG   CLICK: PLANT A SEED");
         assert_eq!(controller.controls, "L3 RESET ROOM   START MENU");
         assert!(controller.controls.chars().count() * 6 <= 360 - 20);
 
