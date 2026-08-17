@@ -20,20 +20,38 @@ for candidate in "${LC_ALL:-}" "${LANG:-}" C.UTF-8 C.utf8 en_US.UTF-8 en_US.utf8
   esac
 done
 
-# NUL-delimited and quotePath-off so a filename with non-ASCII characters or a
-# space is read literally, not as a git-quoted, octal-escaped string that then
-# fails to open and would either be skipped or misreported.
-mapfile -d '' -t files < <(git -c core.quotePath=false ls-files -z \
-  '*.rs' '*.md' '*.toml' '*.wgsl' '*.sh' '*.ps1' '*.yml' '*.yaml' '*.py' '*.txt' '*.json')
-existing_files=()
-for file in "${files[@]}"; do
-  if [ -f "$file" ]; then
-    existing_files+=("$file")
+# With `--text FILE`, check exactly those files instead of the tracked tree.
+#
+# The house rules say in as many words that they apply to everything produced,
+# "including commit messages and PR descriptions, not only files". Until this
+# existed, only the files were enforced and the rest was an instruction people
+# had to remember, which is the same gap the pre-commit hook was written to
+# close for the cargo gate. A commit message is written once and read forever,
+# and a trailer in it cannot be fixed by an ordinary edit, so it is the place
+# the rule most needs a machine behind it.
+if [ "${1:-}" = "--text" ]; then
+  shift
+  files=("$@")
+  if [ ${#files[@]} -eq 0 ]; then
+    echo "check-style.sh --text needs at least one file to check." >&2
+    exit 2
   fi
-done
-files=("${existing_files[@]}")
-if [ ${#files[@]} -eq 0 ]; then
-  exit 0
+else
+  # NUL-delimited and quotePath-off so a filename with non-ASCII characters or a
+  # space is read literally, not as a git-quoted, octal-escaped string that then
+  # fails to open and would either be skipped or misreported.
+  mapfile -d '' -t files < <(git -c core.quotePath=false ls-files -z \
+    '*.rs' '*.md' '*.toml' '*.wgsl' '*.sh' '*.ps1' '*.yml' '*.yaml' '*.py' '*.txt' '*.json')
+  existing_files=()
+  for file in "${files[@]}"; do
+    if [ -f "$file" ]; then
+      existing_files+=("$file")
+    fi
+  done
+  files=("${existing_files[@]}")
+  if [ ${#files[@]} -eq 0 ]; then
+    exit 0
+  fi
 fi
 
 fail=0
@@ -79,3 +97,4 @@ if [ "$fail" -ne 0 ]; then
   echo "Fix the above before merging. House style: no emojis, no em-dashes, no AI/tool attribution."
 fi
 exit "$fail"
+
