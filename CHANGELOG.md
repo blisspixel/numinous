@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.7] - 2026-08-17
+
 - No ordinary doorway prints the fact its own reveal repeats. A packaged
   playtest wandered into Kaprekar, The Fastest Fall, and The First Rain and
   read 6174, the cycloid, and the percolation threshold at the door, each of

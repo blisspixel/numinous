@@ -36,7 +36,7 @@ know it is done), and the **risk it retires**.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.4.0-alpha.6, Understanding Alpha active with its exit
+**Current release state: 0.4.0-alpha.7, Understanding Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are complete. Human stranger sessions sit with 0.8
 Closed Beta and 1.0 First Light.
@@ -1309,7 +1309,7 @@ without relying on the founder's machine or undocumented context?"
 ### 0.2 Flagship Proof ("does it slap?")
 
 **Status:** exit met on the agent-and-machine bar (2026-07-24). The current
-`0.4.0-alpha.6` line preserves that evidence. Human stranger hallway is **not**
+`0.4.0-alpha.7` line preserves that evidence. Human stranger hallway is **not**
 part of this exit; it is deferred to 0.8 / 1.0.
 
 **Goal:** Build **one** flagship room (and a second on the same pattern) to
@@ -1903,16 +1903,16 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-08-15)
+## Where we stand (reviewed 2026-08-17)
 
-The package is **0.4.0-alpha.6**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.7**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
 Alpha is exit-met** on the same bar, and agent tactile is also a required CI
 gate. Human stranger hallway, musician panels, and accessibility player
 sessions are an **optional parallel track**, not am-track blockers for 1.0
-Agent-and-Machine First Light. Current breadth is 354 catalog rooms, 11+ games,
+Agent-and-Machine First Light. Current breadth is 355 catalog rooms, 11+ games,
 six sims, three faces, 35 MCP tools, deterministic creation and persistence.
 Required public CI passes locked tests, builds, installer self-tests,
 supply-chain checks, and live agent cohorts across three operating systems.
@@ -1927,7 +1927,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 
 | 1.0 gate | Evidence today | Missing evidence or work |
 |---|---|---|
-| Complete coherent collection | 354 catalog rooms are built and listed | A coherent cold start, pacing, keep-or-cut review, and several planned signature rooms |
+| Complete coherent collection | 355 catalog rooms are built and listed | A coherent cold start, pacing, keep-or-cut review, and several planned signature rooms |
 | Every room earns its place | Every catalog room has a verb, variation, image, and motif | Stranger discovery, room-specific depth, held input where useful, and per-room human scorecards |
 | Full sensory identity | Four Eras, deterministic synthesis, chiptune, and two GPU fractal paths are built | HDR post-stack, congruency review, accessibility controls, audio separation, and human sensory review |
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
@@ -1950,7 +1950,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.4.0-alpha.6** because Understanding Alpha is the active
+Package label is **0.4.0-alpha.7** because Understanding Alpha is the active
 milestone. The alpha suffix says its exit remains open. External registration,
 calibration, fresh independent review, allocation freeze, and the qualifying
 cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
