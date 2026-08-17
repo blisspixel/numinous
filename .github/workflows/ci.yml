@@ -101,8 +101,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The commit-message check below reads this branch's own commits, so
+          # it needs their messages rather than a single squashed tip.
+          fetch-depth: 0
       - name: No emoji / dash / attribution
         run: bash scripts/check-style.sh
+      - name: No emoji / dash / attribution in commit messages
+        # The three hard rules cover commit messages as much as files, and a
+        # message is the half that cannot be fixed by an ordinary edit later.
+        # The commit-msg hook catches it before it is written; this catches it
+        # for anyone who has not enabled the shared hooks path.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: bash scripts/check-commit-messages.sh "${BASE_SHA:-}"
 
   supply-chain:
     name: cargo-deny

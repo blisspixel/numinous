@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# House style for the commit message itself.
+#
+# The three hard rules say in as many words that they apply to everything
+# produced, "including commit messages and PR descriptions, not only files".
+# Every file in the tree has been guarded since the style check was written.
+# The message had nothing behind it but an instruction to remember, which is
+# exactly the gap the pre-commit hook exists to close for the cargo gate.
+#
+# A message matters more than a file here, not less. A stray line in a source
+# file is fixed with an ordinary edit. A trailer in a commit message is fixed
+# only by rewriting published history, which changes every downstream hash and
+# breaks the provenance a released archive pins. Catching it one second before
+# it is written costs nothing; catching it later costs a force push.
+#
+# Enabled by the same one-line setup as the pre-commit hook:
+#     git config core.hooksPath scripts/hooks
+#
+# Bypass, in a real emergency only, with `git commit --no-verify`.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+# Git passes the path to the prepared message. Comment lines are stripped by
+# git after this hook runs, so drop them first: the commented diff a verbose
+# commit includes is the file content, which the tree-wide check already owns,
+# and reading it here would report the same line twice.
+message_file="$1"
+stripped=$(mktemp)
+trap 'rm -f "$stripped"' EXIT
+grep -v '^#' "$message_file" > "$stripped" || true
+
+if ! bash scripts/check-style.sh --text "$stripped"; then
+  echo ""
+  echo "That violation is in the commit message, not in a file."
+  echo "Reword it with 'git commit' again; nothing has been committed."
+  exit 1
+fi
