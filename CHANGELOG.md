@@ -59,6 +59,17 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   turning the stone not at all. From one turn you can lift all day and never reach
   flat; from two, one lift clears it. That difference is the double cover, and it
   is now something a player does rather than something the room asserts.
+- Berry Phase shows the turn a loop costs. A packaged playtest read the old
+  picture exactly right: "the picture is still a circle and a number." It drew a
+  sphere, a loop, and one chord whose screen angle happened to be the phase,
+  which is a number wearing a line. A Berry phase is a mismatch you can point
+  at: carry a vector round a closed loop and it comes back pointing somewhere
+  else, missing by half the area the loop enclosed. Both halves of that sentence
+  are now on screen. The cap the loop encloses is shaded, and the vector is
+  drawn twice, as it set out and as it came back. Turning the dial opens the cap
+  and fans the two apart together. The status reports the area and the miss and
+  never the relation between them, because noticing that one is half the other
+  is the discovery the room exists for.
 - A released hold still shows the ambient room, and that is deliberate. A
   packaged playtest held Phantom Jam's brake, let go, and read the untouched
   ring, which looks like a dropped hand. A verb beginning with HOLD makes a room
