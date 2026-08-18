@@ -11,7 +11,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
 **Implementation boundary, 2026-07-18:** all three faces are shipped from the
-same headless core in 0.4.0-alpha.8. Descriptions below mix current behavior
+same headless core in 0.4.0-alpha.9. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 

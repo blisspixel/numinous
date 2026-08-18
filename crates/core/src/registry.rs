@@ -900,25 +900,26 @@ mod tests {
             ),
         ];
 
-        fn multi_digit_values(text: &str) -> std::collections::BTreeSet<String> {
-            let mut found = std::collections::BTreeSet::new();
+        /// Every number in a piece of text, as the text that spelled it and
+        /// the value it means.
+        ///
+        /// The value matters as much as the spelling. The first version of this
+        /// guard compared digit strings, so a status printing pc=0.593 never
+        /// matched a reveal saying 0.592746 and a packaged playtest found the
+        /// recital by playing the room. A rounded constant is still the
+        /// constant.
+        fn numbers(text: &str) -> Vec<(String, f64)> {
+            let mut found = Vec::new();
             let mut current = String::new();
             for character in text.chars().chain(std::iter::once(' ')) {
-                if character.is_ascii_digit()
-                    || (!current.is_empty() && matches!(character, '.' | ','))
-                {
+                if character.is_ascii_digit() || (!current.is_empty() && character == '.') {
                     current.push(character);
                 } else {
-                    let cleaned: String = current
-                        .trim_end_matches(['.', ','])
-                        .chars()
-                        .filter(char::is_ascii_digit)
-                        .collect();
-                    // Three digits, not two: a two-digit number in a status is
-                    // usually a count or a percent, and the reveal's stray
-                    // years and small integers would drown the signal.
-                    if cleaned.len() >= 3 {
-                        found.insert(cleaned);
+                    let cleaned = current.trim_end_matches('.');
+                    if let Ok(value) = cleaned.parse::<f64>()
+                        && cleaned.chars().filter(char::is_ascii_digit).count() >= 3
+                    {
+                        found.push((cleaned.to_string(), value));
                     }
                     current.clear();
                 }
@@ -926,30 +927,74 @@ mod tests {
             found
         }
 
+        /// Whether a status value is the reveal's value seen at fewer places.
+        fn same_to_the_precision_shown(shown: &str, shown_value: f64, told: f64) -> bool {
+            let places = shown
+                .split_once('.')
+                .map_or(0, |(_, fraction)| fraction.len());
+            let scale = 10f64.powi(places as i32);
+            (told * scale).round() / scale == shown_value
+        }
+
         const PHASES: [f64; 5] = [0.0, 0.25, 0.5, 0.75, 0.99];
+        /// The shortest run of letters that may stand in for a named answer.
+        ///
+        /// Three, because CYC is cycloid with four letters taken off and a
+        /// shorter fragment would match by accident.
+        const SHORTEST_ABBREVIATION: usize = 3;
         let mut leaks = Vec::new();
         for room in all_rooms() {
             let id = room.meta().id;
-            let in_reveal = multi_digit_values(room.reveal());
-            let mut held: Option<std::collections::BTreeSet<String>> = None;
+            let told: Vec<f64> = numbers(room.reveal())
+                .into_iter()
+                .map(|(_, value)| value)
+                .collect();
+            let mut held: Option<std::collections::BTreeMap<String, f64>> = None;
+            let mut words: Option<std::collections::BTreeSet<String>> = None;
             for phase in PHASES {
-                let seen = room
-                    .status(phase)
-                    .map(|status| multi_digit_values(&status))
-                    .unwrap_or_default();
+                let status = room.status(phase).unwrap_or_default();
+                let seen: std::collections::BTreeMap<String, f64> =
+                    numbers(&status).into_iter().collect();
                 held = Some(match held {
                     None => seen,
-                    Some(previous) => previous.intersection(&seen).cloned().collect(),
+                    Some(previous) => previous
+                        .into_iter()
+                        .filter(|(shown, _)| seen.contains_key(shown))
+                        .collect(),
+                });
+                let spoken: std::collections::BTreeSet<String> = status
+                    .split(|c: char| !c.is_ascii_alphabetic())
+                    .filter(|word| word.len() >= SHORTEST_ABBREVIATION)
+                    .map(str::to_ascii_lowercase)
+                    .collect();
+                words = Some(match words {
+                    None => spoken,
+                    Some(previous) => previous.intersection(&spoken).cloned().collect(),
                 });
             }
-            for value in held.unwrap_or_default() {
+            for (shown, value) in held.unwrap_or_default() {
                 let allowed = CONSTANT_BY_RIGHT
                     .iter()
-                    .any(|&(room_id, constant, _)| room_id == id && constant == value);
-                if !allowed && in_reveal.contains(&value) {
+                    .any(|&(room_id, constant, _)| room_id == id && constant == shown);
+                if !allowed
+                    && told.iter().any(|&reveal_value| {
+                        same_to_the_precision_shown(&shown, value, reveal_value)
+                    })
+                {
                     leaks.push(format!(
-                        "{id} holds {value} on every frame and repeats it in its reveal"
+                        "{id} holds {shown} on every frame and its reveal states that value"
                     ));
+                }
+            }
+            // The same judgment call the doorway guard makes, applied one room
+            // deeper. An answer abbreviated is an answer.
+            for word in words.unwrap_or_default() {
+                for (room_id, answer) in crate::rooms::ROOM_OWN_ANSWER {
+                    if room_id == id && answer.starts_with(word.as_str()) {
+                        leaks.push(format!(
+                            "{id} says {word:?} on every frame, which is {answer:?} abbreviated"
+                        ));
+                    }
                 }
             }
         }

@@ -12,6 +12,13 @@ use crate::surface::Surface;
 /// Lattice side (fixed simulation grid).
 const N: usize = 48;
 /// Classic site-percolation threshold on the square lattice (approx).
+/// The measured site-percolation threshold on a square lattice.
+///
+/// Nothing in the room's logic reads this: whether a rain spans is decided by
+/// looking at the field, not by comparing against a number. It is kept because
+/// the dial has to sweep across the cliff for the room to be a room, and that
+/// is a property worth holding a test to.
+#[cfg(test)]
 const P_CRIT: f64 = 0.592746;
 /// Base seed for the rain field.
 const FIELD_SEED: u64 = 0xFA14_5EED_0000_0001;
@@ -205,7 +212,13 @@ impl Room for FirstRain {
         let open = open_field(p, self.seed);
         let (spanning, _open_n, _cluster) = spans(&open);
         let state = if spanning { "SPAN" } else { "DRY" };
-        Some(format!("p={p:.3}  pc={P_CRIT:.3}  {state}  DRAG:RAIN"))
+        // The threshold used to be printed here at every phase, which handed a
+        // player the cliff the doorway had just refused to name. Rounded to
+        // three places it never matched the reveal's own digits, so the guard
+        // that catches recitals walked straight past it. What is on screen is
+        // how wet it is and whether a path got through; finding where one
+        // becomes the other is the room.
+        Some(format!("p={p:.3}  {state}  DRAG:RAIN"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -230,10 +243,12 @@ impl Room for FirstRain {
         let open = open_field(p, self.seed);
         let (spanning, _open_n, cluster) = spans(&open);
         let state = if spanning { "SPAN" } else { "DRY" };
-        let delta = p - P_CRIT;
-        Some(format!(
-            "RAIN p={p:.3}  dpc={delta:+.3}  C{cluster}  {state}"
-        ))
+        // Distance from the threshold is the threshold with a minus sign in
+        // front of it: p and dpc together solve for it in one subtraction. The
+        // largest cluster is the honest measurement, and it is the better one,
+        // because watching it climb by orders of magnitude as the rain crosses
+        // the cliff is how a player finds the cliff themselves.
+        Some(format!("RAIN p={p:.3}  C{cluster}  {state}"))
     }
 
     fn reveal(&self) -> &'static str {

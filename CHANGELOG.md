@@ -5,6 +5,57 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.9] - 2026-08-18
+
+- A sound sent is not a sound heard, and the copy says so now. The seventh
+  packaged playtest asked the question alpha.8 was built to answer and returned
+  the negative: the WAV arrived, decoded as a real mono sixteen-bit RIFF with
+  62,167 nonzero samples, and the host would not surface it, so there was no
+  hearing to compare against reading cents. The channel is not wrong; a client
+  that surfaces an audio content block will surface this one. The claim was
+  wrong. `PLAY.md`, the `initialize` instructions, and both tool replies now say
+  that whether a WAV arrives as sound is the client's answer to give and not
+  ours, and that when it cannot, the notation is the whole of what arrived. The
+  reply says it where a player is standing when it matters, at the moment the
+  attachment is offered.
+- No unplayed status recites a rounded constant, and an abbreviated answer is
+  still an answer. The guard written last round compared digit strings, so The
+  First Rain printing `pc=0.593` never matched a reveal saying `0.592746`, and
+  it was numeric only, so The Fastest Fall printing `CYC` on an untouched board
+  was invisible even though `cycloid` was already on the enumerated list of
+  named answers. The guard now compares values at the precision a status chose
+  to show, and applies that named-answer list to unplayed statuses with
+  abbreviation matching. The list moved out of a test into one shared constant,
+  because a rule kept in two places is two things that can drift. Sweeping with
+  the repaired guard found a third room the playtest never reached, The Magnet
+  printing `Tc=2.27` against a reveal that says 2.269, and both threshold rooms
+  carried the same leak one step deeper: `dpc` and `dTc` are the withheld
+  constant with a minus sign in front of it, recoverable in one subtraction. All
+  four are gone, and what is left is the better reading anyway, since watching
+  the largest cluster climb or the magnetization collapse as the dial crosses
+  the cliff is how a player finds the cliff.
+- The 720 Degree Room's trick can be done. It came back alive rather than mute,
+  and then the playtest could not finish it: "From one I could not flatten. From
+  two, the lift changed the room. I did not hang the belt flat." Both the spin
+  and the lift were read from the newest point of the gesture, so lifting
+  straight up overwrote the spin with its own horizontal position and a player
+  could spin, or lift, and never both. The room advertised a trick it made
+  impossible. The spin is now read from the last point where the hand was on the
+  stone and the lift from the highest the hand ever reached, which is also the
+  physical claim the room makes: carrying a belt over a stone does not turn the
+  stone, and a pass is something the hand did rather than somewhere the hand is.
+  A regression walks the exact gesture the playtest tried. The second pass is
+  gone with it, since the stone turns at most twice and a second pass can only
+  add twist back.
+- Asking to hear names its price. The playtest went looking for the refusal the
+  alpha.8 notes promised for a sound too long to send and could not reach it:
+  `notes` is capped at 64 by the schema and a ten second sonification was
+  accepted at 323 KB. The refusal is real and correct, but no call the published
+  face allows can reach it, so describing it as something a player would meet
+  overstated a safety net as a door. The useful half is that a caller could not
+  know what `audio: true` would cost before paying it, so both schemas now name
+  it: about 42 KB of encoded audio per second of sound.
+
 ## [0.4.0-alpha.8] - 2026-08-17
 
 - A melody can be heard rather than only read. Six packaged playtests have now

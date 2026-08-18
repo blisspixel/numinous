@@ -74,7 +74,7 @@ with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 
 ## Status
 
-**0.4.0-alpha.8** is playable today: 355 catalog rooms, games, Journey,
+**0.4.0-alpha.9** is playable today: 355 catalog rooms, games, Journey,
 Studio, controllers, and Watch Agent (consented local MCP session viewing).
 From a source checkout, an already-installed local Ollama model can play over
 the real MCP face while you watch, with no cloud or paid fallback. See
@@ -93,7 +93,8 @@ beats B, B beats C, and C beats A. The **Mind's Seat** is now underway: one MCP
 call can carry two exact room observations and a typed temporal delta without
 creating session state or a journal record, and a mind that plays over the
 protocol can now be handed a room's sound, or its own sung function, as a real
-audio file rather than as notation describing one. Successful play still records
+audio file beside the notation, with the honest caveat that whether it arrives
+as sound belongs to the client and not to us. Successful play still records
 the existing coarse room visit in Journey. Active work moves next to versioned
 Numinous Encounter Receipts while remaining structural debt closes, with the
 **Sensory Lift** entering behind a de-risk spike; the 0.4
@@ -105,16 +106,16 @@ Nightly am-QA re-runs the full agent suite.
 
 Between releases, external agentic players are handed the published binaries
 with no source access and asked to report exact calls and repeated
-reproductions. Six such rounds have run, and every finding they raised is
+reproductions. Seven such rounds have run, and every finding they raised is
 either fixed with a regression that replays the reported call or recorded as a
-stated open boundary. The latest round confirmed the previous release's two
-headline fixes under direct reproduction and then named the thing six rounds had
-circled: a player who can read a melody in cents and ratios still cannot hear
-it. Sound now leaves the MCP face as sound. The same round found a scoreboard
-reciting the answer its own doorway had stopped giving, and a rulebook that
-lived on the one dial a stranger has no reason to turn. Both are fixed and
-guarded, and one observation resolved as a deliberate boundary rather than a
-defect and is written down as one.
+stated open boundary. The latest round was built around a single question and
+answered it in the negative: the WAV arrived and decoded, the tester's host
+would not surface it, and so hearing could not be compared against reading
+cents at all. That is the most useful answer it could have given. The channel
+stayed; the claim that a mind down a pipe can hear did not. The same round found
+two scoreboards reciting a rounded constant the guard could not see and a room
+advertising a trick its own input handling made impossible, and sweeping for
+the first class found a third room nobody had played.
 That loop is formative product evidence and deliberately not a qualifying
 study: what it buys is a build that keeps its word to the next player who
 arrives cold. Rounds and boundaries:

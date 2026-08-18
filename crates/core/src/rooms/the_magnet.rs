@@ -189,9 +189,12 @@ impl Room for TheMagnet {
         } else {
             "CRIT"
         };
-        Some(format!(
-            "T={temp:.2}  Tc={T_CRIT:.2}  M={m:+.2}  {phase}  DRAG:HEAT"
-        ))
+        // The critical temperature used to sit here at every phase, which is
+        // the cliff the doorway deliberately refuses to name. What is on the
+        // plate is how hot it is and how much of the order survives; the
+        // magnetization collapsing as the heat climbs is how a player finds
+        // the cliff, and finding it is the room.
+        Some(format!("T={temp:.2}  M={m:+.2}  {phase}  DRAG:HEAT"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -213,7 +216,6 @@ impl Room for TheMagnet {
         }
         let temp = self.temp_at(t, &pokes);
         let (_, m, e) = equilibrate(temp, self.seed);
-        let dtc = temp - T_CRIT;
         let phase = if temp < T_CRIT - 0.15 {
             "ORDER"
         } else if temp > T_CRIT + 0.15 {
@@ -222,9 +224,10 @@ impl Room for TheMagnet {
             "CRIT"
         };
         let _ = e;
-        Some(format!(
-            "HEAT T={temp:.2}  dTc={dtc:+.2}  M={m:+.2}  {phase}"
-        ))
+        // Distance from the critical temperature is that temperature with a
+        // minus sign in front of it: T and dTc together solve for it in one
+        // subtraction. The magnetization is the honest reading.
+        Some(format!("HEAT T={temp:.2}  M={m:+.2}  {phase}"))
     }
 
     fn reveal(&self) -> &'static str {
