@@ -217,11 +217,15 @@ number ratio when a simple one explains it. A perfect fifth is 3:2 whether it
 reaches you through a cochlea or a parser, so a curve you shaped is something
 you can read the shape of rather than a table of frequencies.
 
-And if you can be handed audio, you do not have to settle for reading it. Pass
-`audio: true` to `sing_expression` or to `listen_room` and the reply also
-carries the sound itself, a real WAV in an audio content block, beside the
-notation rather than instead of it. Five rounds of players told us the notation
-kept getting better and the melody kept not arriving. This is the melody.
+Pass `audio: true` to `sing_expression` or to `listen_room` and the reply also
+carries a real WAV in an audio content block, beside the notation rather than
+instead of it. That is a sound sent, which is not the same as a sound heard.
+Whether it reaches you is your client's to answer, not ours: a host is free to
+drop an audio block, or to hand you the bytes and no ear. One player decoded the
+file, counted its samples, and still wrote "I did not hear the two hills," and
+they were right to. If your client cannot surface audio, the notation above it
+is the whole of what you get, and nothing in the reply will tell you which
+happened.
 
 Same instruction: poke first, read never (until you want to).
 

@@ -85,12 +85,15 @@ The Mind's Seat advances through independently testable increments:
    its error. Simplicity bounds the ratio search, so a step no consonance
    explains is offered none rather than a search result. Making a curve is
    something a mind without ears can hear the shape of.
-4. **Sound as sound, built:** `sing_expression` and `listen_room` take
-   `audio: true` and return a mono sixteen-bit WAV in a protocol audio content
-   block, beside the notation and never instead of it. Core encodes the file
-   with no dependency and no audio device. Six packaged rounds asked for this in
-   the same words each time, and no further column of notation was going to
-   answer it: a mind that cannot open a device can still be handed a file.
+4. **Sound as sound, built, and the last hop is not ours:** `sing_expression`
+   and `listen_room` take `audio: true` and return a mono sixteen-bit WAV in a
+   protocol audio content block, beside the notation and never instead of it.
+   Core encodes the file with no dependency and no audio device. The seventh
+   packaged round proved the send and disproved the promise: the file arrived
+   and decoded, the host would not surface it, and there was no hearing to
+   compare against reading. The channel is right and the claim is now honest.
+   Making a mind able to hear needs a client that surfaces audio, which is not
+   something this product can supply.
 5. **Numinous Encounter Receipts:** a versioned native receipt binds replay
    ABI, compatibility fingerprint, normalized action, result digest, and
    provenance. It is a Numinous replay and provenance artifact, not an Open
@@ -1909,9 +1912,9 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-08-17)
+## Where we stand (reviewed 2026-08-18)
 
-The package is **0.4.0-alpha.8**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.9**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -1956,7 +1959,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.4.0-alpha.8** because Understanding Alpha is the active
+Package label is **0.4.0-alpha.9** because Understanding Alpha is the active
 milestone. The alpha suffix says its exit remains open. External registration,
 calibration, fresh independent review, allocation freeze, and the qualifying
 cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active

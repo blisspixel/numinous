@@ -261,7 +261,11 @@ impl Room for FastestFall {
         let tc = descent_time(&cyc);
         let ts = descent_time(&str);
         let _ = t;
-        Some(format!("CYC={tc:.2}s  LINE={ts:.2}s  DRAG:DRAW"))
+        // Both curves are drawn, so both times are readings. The winner's name
+        // is not: the doorway says "the curve that wins" on purpose, and
+        // printing CYC on an empty board undid that one line later. The name
+        // arrives with the race, where a player has earned it.
+        Some(format!("BEST={tc:.2}s  LINE={ts:.2}s  DRAG:DRAW"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {

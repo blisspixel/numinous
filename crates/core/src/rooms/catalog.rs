@@ -4077,6 +4077,33 @@ macro_rules! metadata_array {
     };
 }
 
+/// The answer each of these rooms exists to let a player reach, by name.
+///
+/// Judgment picks the entries, because no arithmetic catches "cycloid". Once
+/// picked, the same list is enforced everywhere a room can speak before it has
+/// been earned: the doorway a player reads first, and the status a player sees
+/// on an untouched board. A packaged playtest found Fastest Fall printing CYC
+/// on an empty board after its doorway had carefully said only "the curve that
+/// wins", which is the same leak the doorway guard was written for, wearing an
+/// abbreviation.
+#[cfg(test)]
+pub(crate) const ROOM_OWN_ANSWER: [(&str, &str); 14] = [
+    ("buffon-needle", "pi"),
+    ("parrondo", "abb"),
+    ("times-tables", "mandelbrot"),
+    ("nontransitive", "nontransitive"),
+    ("the-only-move", "draw"),
+    ("the-only-move", "tie"),
+    ("fastest-fall", "cycloid"),
+    ("fastest-fall", "brachistochrone"),
+    ("morley", "equilateral"),
+    ("soap-film", "steiner"),
+    ("audioactive", "atoms"),
+    ("degree-720", "quaternion"),
+    ("busy-beaver", "bb"),
+    ("landauer", "kt"),
+];
+
 /// Static metadata for every listed room, in catalog order.
 pub const ROOM_CATALOG: &[RoomMeta] = &catalog_rooms!(metadata_array);
 
@@ -4294,22 +4321,7 @@ mod tests {
         // rest are ordinary rooms whose doorway named the thing the room was
         // built to let a player find; a packaged playtest read three of them
         // and reported that the discovery was gone before the picture drew.
-        const OWN_ANSWER: [(&str, &str); 14] = [
-            ("buffon-needle", "pi"),
-            ("parrondo", "abb"),
-            ("times-tables", "mandelbrot"),
-            ("nontransitive", "nontransitive"),
-            ("the-only-move", "draw"),
-            ("the-only-move", "tie"),
-            ("fastest-fall", "cycloid"),
-            ("fastest-fall", "brachistochrone"),
-            ("morley", "equilateral"),
-            ("soap-film", "steiner"),
-            ("audioactive", "atoms"),
-            ("degree-720", "quaternion"),
-            ("busy-beaver", "bb"),
-            ("landauer", "kt"),
-        ];
+        use super::ROOM_OWN_ANSWER as OWN_ANSWER;
         for metadata in ROOM_CATALOG {
             let blurb = metadata.blurb.to_ascii_lowercase();
             for (room, answer) in OWN_ANSWER {

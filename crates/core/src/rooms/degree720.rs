@@ -33,7 +33,11 @@ const MAX_TURNS: f64 = 2.0;
 const HAND_STEP: f64 = 0.125;
 
 /// How many times one hand can carry the belt over the stone.
-const MAX_LOOPS: u32 = 2;
+///
+/// One. The stone turns at most twice, so a second pass can never help: it can
+/// only add twist back. Offering two made the winning corner of the room a
+/// narrow band a player had to find by accident, and bought nothing.
+const MAX_LOOPS: u32 = 1;
 
 /// Turns one pass of the belt over the stone removes.
 ///
@@ -88,7 +92,7 @@ impl Belt {
 /// spin, and lifting toward the top of the room carries the belt over the stone.
 fn belt_from(t: f64, pokes: &[(f64, f64)], seed: u64) -> Belt {
     let hands = finite_pokes(pokes);
-    let Some(&(x, y)) = hands.last() else {
+    let Some(&(opening_x, _)) = hands.first() else {
         let drift = if seed == 0 {
             0.0
         } else {
@@ -99,11 +103,29 @@ fn belt_from(t: f64, pokes: &[(f64, f64)], seed: u64) -> Belt {
             loops: 0,
         };
     };
-    let turns = ((x * MAX_TURNS / HAND_STEP).round() * HAND_STEP).clamp(0.0, MAX_TURNS);
-    // The bottom half of the room is the belt left alone. Lifting above the
-    // middle carries it over the stone, once and then twice.
-    let lift = ((0.5 - y).max(0.0)) / 0.5;
-    let loops = (lift * f64::from(MAX_LOOPS)).ceil() as u32;
+    // The stone is turned by the hand that is on it, which is the hand in the
+    // lower half of the room. Once the belt has been lifted, the spin it was
+    // already given stays given, because carrying a belt over a stone does not
+    // turn the stone. That is the fact the whole room is about, and reading
+    // both the spin and the lift off the newest point quietly denied it: a
+    // lift straight up overwrote the spin with its own x, so a player could
+    // spin, or lift, and never both. A packaged playtest tried the trick and
+    // reported "I did not flatten."
+    let on_the_stone = hands
+        .iter()
+        .filter(|&&(_, y)| y >= 0.5)
+        .map(|&(x, _)| x)
+        .next_back()
+        .unwrap_or(opening_x);
+    let turns =
+        ((on_the_stone * MAX_TURNS / HAND_STEP).round() * HAND_STEP).clamp(0.0, MAX_TURNS);
+    // A pass is something the hand did, not somewhere the hand is, so the
+    // highest lift reached counts even after the hand comes back down.
+    let loops = hands
+        .iter()
+        .map(|&(_, y)| u32::from(y < 0.5))
+        .max()
+        .unwrap_or(0);
     Belt {
         turns,
         loops: loops.min(MAX_LOOPS),
@@ -367,6 +389,33 @@ mod tests {
     }
 
     #[test]
+    fn the_trick_survives_being_done_as_one_gesture() {
+        // A packaged playtest spun the stone, lifted the belt, and could not
+        // flatten it. Both the spin and the lift were read off the newest
+        // point, so lifting straight up overwrote the spin with its own x and
+        // the two halves of the trick could never be held at once. The room
+        // advertised a thing a player could not do.
+        let flatten = [(0.10, 0.80), (0.98, 0.80), (0.98, 0.30)];
+        let belt = belt_from(0.0, &flatten, 0);
+        assert_eq!(belt.turns, MAX_TURNS, "the spin has to survive the lift");
+        assert_eq!(belt.loops, 1);
+        assert!(belt.is_flat(), "spin then lift has to hang the belt flat");
+
+        // The same gesture from one turn cannot flatten, however it is drawn.
+        // This is the fact the room exists for, so it has to hold on the path a
+        // hand actually takes and not only on a single tap.
+        let odd = [(0.10, 0.80), (0.50, 0.80), (0.50, 0.30)];
+        let belt = belt_from(0.0, &odd, 0);
+        assert_eq!(belt.turns, 1.0);
+        assert!(!belt.is_flat());
+
+        // Carrying the belt over is something the hand did, not somewhere the
+        // hand is, so bringing it back down afterwards does not undo the pass.
+        let returned = [(0.10, 0.80), (0.98, 0.80), (0.98, 0.20), (0.98, 0.80)];
+        assert!(belt_from(0.0, &returned, 0).is_flat());
+    }
+
+    #[test]
     fn a_pass_of_the_belt_changes_the_picture_without_turning_the_stone() {
         let room = Degree720::new();
         let mut twisted = Canvas::new(96, 40);
@@ -403,4 +452,5 @@ mod tests {
         Degree720::new().render_poked(&mut big, f64::INFINITY, &[(f64::NAN, f64::NAN)]);
     }
 }
+
 
