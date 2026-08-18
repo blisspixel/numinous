@@ -70,6 +70,20 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   and fans the two apart together. The status reports the area and the miss and
   never the relation between them, because noticing that one is half the other
   is the discovery the room exists for.
+- A commit message is held to the same three house rules as every file. The
+  rules say in as many words that they cover commit messages and pull request
+  descriptions, not only files, and until now only the files were enforced while
+  the rest was an instruction someone had to remember. The message is the half
+  that matters more: a stray line in a source file is fixed with an ordinary
+  edit, while a trailer in a commit message is fixed only by rewriting published
+  history, which changes every downstream hash and breaks the provenance a
+  released archive pins. `scripts/check-style.sh` grows a `--text` mode rather
+  than a second copy of the patterns, a `commit-msg` hook runs it on the
+  prepared message, and CI runs the same check over the commits a pull request
+  adds so the rule does not depend on a contributor having enabled the shared
+  hooks path. A commit authored by a dependency bot is skipped, because signing
+  its own work with its own name is honest authorship and rewriting it would
+  misattribute the change to a person.
 - A released hold still shows the ambient room, and that is deliberate. A
   packaged playtest held Phantom Jam's brake, let go, and read the untouched
   ring, which looks like a dropped hand. A verb beginning with HOLD makes a room
