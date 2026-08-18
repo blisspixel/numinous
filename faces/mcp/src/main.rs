@@ -2212,8 +2212,10 @@ fn listen_room_tool(args: &Value) -> Value {
     };
     if audible.is_some() {
         lines.push(
-            "The sonification itself follows as an audio attachment: this room, \
-             at this phase, as something to hear rather than read."
+            "A WAV of this room at this phase follows as an audio \
+             attachment. Whether your client can surface it as sound is \
+             its answer to give, not ours; if it cannot, the notation \
+             above is the whole of what arrived."
                 .to_string(),
         );
     }
@@ -5929,8 +5931,10 @@ fn sing_expression_tool(args: &Value) -> Value {
     };
     if audible.is_some() {
         lines.push(
-            "The melody itself follows as an audio attachment, which is the only \
-             part of this reply that is not a description of it."
+            "A WAV of this melody follows as an audio attachment. It is \
+             the only part of this reply that is not a description of the \
+             melody, and it is a sound sent rather than a sound heard: \
+             whether your client can surface it is its answer to give."
                 .to_string(),
         );
     }

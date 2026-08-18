@@ -477,6 +477,125 @@ every other room turns" is now built, but "Hear the two hills" was answered by
 sending sound rather than by an ear, and whether a sent sound is a heard one is
 the next round's question, not this one's answer.
 
+## August 18 packaged agentic playtest, seventh round
+
+This section summarizes a seventh source-blind playtest, run against the
+published Linux `0.4.0-alpha.8` binaries by an external agentic player who read
+no Rust source, opened no room catalog document, and used the archive's own
+`bin/numinous-mcp`. The tester supplied release pins, archive and per-payload
+digests, isolated file-path profiles, exact calls, repeated reproductions,
+wander verdicts, and a claims audit. It is formative external product evidence,
+not a qualifying 0.4 cohort, a consciousness claim, or proof of lasting learning
+value. The raw dump set remains with the tester.
+
+The round was aimed at one question, and it answered it in the negative.
+
+**The sound arrived. There was no hearing.** The round's whole purpose was to
+find out whether `audio: true` closed the request six rounds had made. Three
+answers were asked for separately, and all three came back. The block arrived:
+a real RIFF/WAVE, mono, sixteen bit, 16 kHz, 4.14 seconds, 62,167 nonzero
+samples, in `content[1]` beside the notation, with `structuredContent.audio`
+describing exactly what was sent. The host did not pass it through: that runtime
+will not surface a `.wav`, so the player wrote the bytes, parsed the header,
+estimated a pitch contour from zero crossings, and got another table. And so the
+third answer could not be given at all. In their words: "Hearing does not beat
+reading cents, because there was no hearing."
+
+That is the most useful result the round could have produced, and it was asked
+for in exactly that shape. It does not say the channel was wrong. The protocol's
+audio content block is where sound belongs, and a client that surfaces it will
+surface this. It says the claim was wrong. The release notes had a section
+called "A mind down a pipe can hear" and `PLAY.md` ended its audio paragraph
+with "This is the melody." Neither is something this product can promise,
+because the last hop belongs to the client and always did. The tester's own
+first change was the right one: get the sound through a pipe that reaches the
+player, or stop claiming a mind down a pipe can hear.
+
+So the claim changed rather than the channel. `PLAY.md`, the `initialize`
+instructions, and both tool replies now say that a WAV is a sound sent rather
+than a sound heard, that whether it arrives as sound is the client's answer to
+give and not ours, and that if the client cannot surface it the notation is the
+whole of what arrived. The reply says so at the moment the attachment is
+offered, which is where a player is standing when it matters. Nothing about the
+sending changed, because nothing about the sending was wrong.
+
+**Two recitals survived, and the guard that should have caught them had two
+holes.** The tester found both by playing. The First Rain printed `pc=0.593` on
+every frame including DRY, after a doorway that had deliberately declined to
+name the cliff. The Fastest Fall printed `CYC=0.50s` on an untouched board,
+after a doorway that says only "the curve that wins."
+
+Neither was an oversight in the rooms so much as a failure of the guard written
+last round. It compared digit strings, so a status showing `0.593` never matched
+a reveal saying `0.592746`: a rounded constant is still the constant, and the
+guard could not see it. And it was numeric only, so `CYC` was invisible, even
+though `("fastest-fall", "cycloid")` was already on the enumerated list of named
+answers the doorway guard uses. The guard now parses values rather than digits
+and compares them at the precision the status chose to show, and it applies the
+named-answer list to unplayed statuses with abbreviation matching, since CYC is
+cycloid with four letters taken off. That list moved out of a test and into one
+shared constant, because a rule kept in two places is two things that can drift.
+
+Sweeping the catalog with the repaired guard found a third room the tester never
+reached. The Magnet printed `Tc=2.27` at every phase against a reveal that says
+2.269, which is First Rain's defect in a different room's words. Both rooms also
+carried the same leak one step deeper, in the status a player sees after acting:
+First Rain's `dpc` and The Magnet's `dTc` are each the withheld constant with a
+minus sign in front of it, recoverable in one subtraction. All four are gone.
+What is left in both rooms is the honest measurement, and it is the better one:
+how wet, or how hot, and how much of the order survives. Watching the largest
+cluster climb by orders of magnitude, or the magnetization collapse, as the dial
+crosses the cliff is how a player finds the cliff, and finding it is the room.
+
+**The trick the room advertised could not be done.** The 720 Degree Room came
+back alive rather than mute, which was the point of the rebuild, but the tester
+could not finish it: "From one I could not flatten. From two, the lift changed
+the room. I did not hang the belt flat." That was not their hand. Both the spin
+and the lift were read from the newest point of the gesture, so lifting straight
+up overwrote the spin with its own horizontal position. A player could spin, or
+lift, and never both, which means the room advertised a trick it made
+impossible. The spin is now read from the last point where the hand was on the
+stone, in the lower half of the room, and the lift from the highest the hand
+ever reached, because carrying a belt over a stone does not turn the stone and a
+pass is something the hand did rather than somewhere the hand is. That is also
+the physical claim the room makes, so the code now says what the room says. A
+regression walks the exact gesture the tester tried. A second pass was removed
+along with this: the stone turns at most twice, so a second pass can only add
+twist back, and offering it made the winning band something a player had to find
+by accident.
+
+**One claim was not reproducible.** The release notes said a sound too long for
+one message is refused with the budget, its own seconds, and what to ask for
+instead. The tester went looking and could not reach it: `notes` is capped at 64
+by the schema, which is eight seconds, and a ten second `listen_room`
+sonification of Collatz was accepted at 323 KB. The refusal is real code and it
+is correct, but no call the published face allows can reach it, so describing it
+as something a player would meet overstated a safety net as a door. The useful
+half of that finding was that a caller had no way to know what `audio: true`
+would cost before paying it. Both schemas now name the price, about 42 KB of
+encoded audio per second of sound, so the size of a reply is predictable before
+it arrives rather than only afterwards in `structuredContent.audio`.
+
+Everything else the round checked held. The Only Move's rulebook is on `t`, and
+the tester turned the dial, watched a lattice sit next to a square with an X, and
+won on the square at stop 11 of 255. Berry Phase and the belt are alive. The
+Busy Beaver and Golden Angle recitals stayed gone. Phantom Jam's released hold
+was re-tested and accepted as the written boundary rather than filed as a bug.
+The seven-room supersede holds at three of three on Buffon. The thirteen
+rewritten doorways, the eight-look dwell at the canvas a room draws itself, the
+quiet Smith Chart goal, the Arecibo action, and the Watch refusal all held.
+
+What stayed open is stated as open. Attention still carries a dull verdict and
+Strange Loop a mute one, and the round did not answer either. The Analysis
+plotter wing and the attractor drawer have still not been walked since the third
+round, and 246 doorways remain under seventy characters of caption. And one
+thing the tester could not have found: a human who played the melody described
+it as a fast computer beep, which is fair. The sung WAV is plain sine tones at
+about an eighth of a second each. It is recorded here and deliberately not
+chased in this release, because the sensible time to spend on how a melody
+sounds is when there is an ear on the other end of the pipe, and this round
+established that on at least one real host there is not.
+
 ## July 2026 six-round technical cohort
 
 Six rounds of five fresh simulated reviewers examined mathematical truth,
