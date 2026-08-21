@@ -13,14 +13,25 @@
 mod audible;
 mod broadcast;
 mod catalog;
+mod encounter;
 mod local_state;
 mod temporal;
+mod workspace;
 
 use std::io::{self, BufRead, Write};
 use std::sync::{Mutex, MutexGuard};
 
 use broadcast::{SessionBroadcast, SessionSnapshot};
 use catalog::{discover_result, initialize_result, server_info, tools_catalog, tools_list_result};
+use encounter::{
+    action_json as encounter_action_json, delta_counts as encounter_delta_counts,
+    dwell_counts as encounter_dwell_counts, issue as issue_encounter, issue_receipt,
+    listen_action as encounter_listen_action, listen_action_json,
+    listen_result as encounter_listen_result, parse_submitted_receipt,
+    play_action as encounter_play_action, play_result as encounter_play_result, receipt_json,
+    request as encounter_request, sing_action as encounter_sing_action, sing_action_json,
+    sing_result as encounter_sing_result,
+};
 use local_state::forget_tool;
 use numinous_broadcast::{
     PLAY_ROOM_DEFAULT_HEIGHT as DEFAULT_HEIGHT, PLAY_ROOM_DEFAULT_WIDTH as DEFAULT_WIDTH,
@@ -29,6 +40,7 @@ use numinous_broadcast::{
 use numinous_core::{Canvas, room_by_id};
 use serde_json::{Map, Value, json};
 use temporal::{dwell_evidence_json, evidence_json as temporal_evidence_json, render_delta_json};
+use workspace::{ProcessWorkspace, compact_workspace_summary, workspace_tool};
 
 /// Stateless MCP revision implemented by the per-request metadata path.
 const MODERN_PROTOCOL_VERSION: &str = "2026-07-28";
@@ -71,6 +83,7 @@ fn main() -> io::Result<()> {
     let mut reader = stdin.lock();
     let mut line = Vec::new();
     let broadcast = ConnectionBroadcast::new();
+    let workspace = ProcessWorkspace::new();
 
     while read_bounded_line(&mut reader, &mut line)? {
         let Ok(text) = std::str::from_utf8(&line) else {
@@ -86,7 +99,7 @@ fn main() -> io::Result<()> {
         match serde_json::from_str::<Value>(text) {
             Ok(request) => {
                 if let Some(response) =
-                    handle_request_with_session(&request, &journey_path(), &broadcast)
+                    handle_request_with_visit(&request, &journey_path(), &broadcast, &workspace)
                 {
                     write_message(&mut out, &response)?;
                 }
@@ -739,10 +752,20 @@ fn handle_request_with(request: &Value, journey_file: &std::path::Path) -> Optio
     handle_request_with_session(request, journey_file, &ConnectionBroadcast::new())
 }
 
+#[cfg(test)]
 fn handle_request_with_session(
     request: &Value,
     journey_file: &std::path::Path,
     broadcast: &ConnectionBroadcast,
+) -> Option<Value> {
+    handle_request_with_visit(request, journey_file, broadcast, &ProcessWorkspace::new())
+}
+
+fn handle_request_with_visit(
+    request: &Value,
+    journey_file: &std::path::Path,
+    broadcast: &ConnectionBroadcast,
+    workspace: &ProcessWorkspace,
 ) -> Option<Value> {
     let id = request.get("id").cloned();
     if let Err(error) = validate_jsonrpc_envelope(request) {
@@ -821,7 +844,7 @@ fn handle_request_with_session(
                 .map_err(|message| (-32602_i64, message)),
             "tools/call" => match argument_error {
                 Some(message) => Ok(tool_error(&message)),
-                None => call_tool(request.get("params"), journey_file, broadcast),
+                None => call_tool(request.get("params"), journey_file, broadcast, workspace),
             },
             "notifications/cancelled" if era == RequestEra::Modern => Ok(json!({})),
             "ping" if era == RequestEra::Legacy => Ok(json!({})),
@@ -1204,9 +1227,8 @@ fn viewer_policy(name: &str) -> Option<ViewerPolicy> {
     }
     match name {
         "cairn" | "forget" | "scores" | "journey" | "choose" | "trophies" | "read_journal"
-        | "record_journal" | "correct_journal" | "export_journal" | "erase_journal" => {
-            Some(ViewerPolicy::Private)
-        }
+        | "record_journal" | "correct_journal" | "export_journal" | "erase_journal"
+        | "workspace" => Some(ViewerPolicy::Private),
         "broadcast_session" => Some(ViewerPolicy::Control),
         _ => None,
     }
@@ -1598,6 +1620,7 @@ fn call_tool(
     params: Option<&Value>,
     journey_file: &std::path::Path,
     broadcast: &ConnectionBroadcast,
+    workspace: &ProcessWorkspace,
 ) -> Result<Value, (i64, String)> {
     let params = params.ok_or_else(|| (-32602_i64, "Missing params".to_string()))?;
     let name = params
@@ -1639,10 +1662,11 @@ fn call_tool(
         "predict" => predict_tool(&domain_args),
         "cairn" => cairn_tool(&domain_args, journey_file, &cairn_path()),
         "read_journal" => read_journal_tool(&domain_args, &journal_path()),
-        "record_journal" => record_journal_tool(&domain_args, &journal_path()),
+        "record_journal" => record_journal_tool(&domain_args, &journal_path(), journey_file),
         "correct_journal" => correct_journal_tool(&domain_args, &journal_path()),
         "export_journal" => export_journal_tool(&domain_args, &journal_path()),
         "erase_journal" => erase_journal_tool(&domain_args, &journal_path()),
+        "workspace" => workspace_tool(&domain_args, workspace),
         "listen_room" => listen_room_tool(&domain_args),
         "list_sims" => tool_text(&list_sims_text()),
         "run_sim" => run_sim_tool(&domain_args),
@@ -1840,6 +1864,9 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
                     dwell.get("held")?.get("total_cells")?.as_u64()?
                 ));
             }
+            if structured.get("encounter").is_some() {
+                summary.push_str(" Encounter receipt attached.");
+            }
             if let Some(beat) = structured
                 .get("engineeredAha")
                 .and_then(|aha| aha.get("beat"))
@@ -1850,26 +1877,38 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
             let optional_fields = match (
                 structured.get("temporal").is_some(),
                 structured.get("dwell").is_some(),
+                structured.get("encounter").is_some(),
             ) {
-                (true, true) => "render, temporal, dwell, ",
-                (true, false) => "render, temporal, ",
-                (false, true) => "render, dwell, ",
-                (false, false) => "render, ",
+                (true, true, true) => "render, temporal, dwell, encounter, ",
+                (true, true, false) => "render, temporal, dwell, ",
+                (true, false, true) => "render, temporal, encounter, ",
+                (true, false, false) => "render, temporal, ",
+                (false, true, true) => "render, dwell, encounter, ",
+                (false, true, false) => "render, dwell, ",
+                (false, false, true) => "render, encounter, ",
+                (false, false, false) => "render, ",
             };
             summary.push_str(&format!(
                 " Read structuredContent.{optional_fields}pokes, gesture, status, delta, goal, goalMet, and engineeredAha for the complete result; ask reveal_room for the explanation."
             ));
             Some(summary)
         }
-        "listen_room" => Some(format!(
-            "{} ({}) at t={:.3}: {} of {} mathematical notes returned over {:.2}s. Read structuredContent.pokes, gesture, motif, ambient_bed, notes, and sound_roles for the complete typed layers.",
-            structured.get("title")?.as_str()?,
-            structured.get("room")?.as_str()?,
-            structured.get("t")?.as_f64()?,
-            structured.get("returned_note_count")?.as_u64()?,
-            structured.get("note_count")?.as_u64()?,
-            structured.get("duration_seconds")?.as_f64()?
-        )),
+        "listen_room" => {
+            let mut summary = format!(
+                "{} ({}) at t={:.3}: {} of {} mathematical notes returned over {:.2}s.",
+                structured.get("title")?.as_str()?,
+                structured.get("room")?.as_str()?,
+                structured.get("t")?.as_f64()?,
+                structured.get("returned_note_count")?.as_u64()?,
+                structured.get("note_count")?.as_u64()?,
+                structured.get("duration_seconds")?.as_f64()?
+            );
+            if structured.get("encounter").is_some() {
+                summary.push_str(" Encounter receipt attached.");
+            }
+            summary.push_str(" Read structuredContent.pokes, gesture, motif, ambient_bed, notes, and sound_roles for the complete typed layers.");
+            Some(summary)
+        }
         "run_sim" => Some(format!(
             "{} ({}): {} Read structuredContent.params, readout, and render for the complete result.",
             structured.get("title")?.as_str()?,
@@ -1913,6 +1952,7 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
             structured.get("earned")?.as_u64()?,
             structured.get("total")?.as_u64()?
         )),
+        "workspace" => compact_workspace_summary(structured),
         _ => None,
     }
 }
@@ -2101,6 +2141,10 @@ fn ambient_bed_value(motif: numinous_core::Motif, include_events: bool) -> Resul
 
 /// The `listen_room` tool: the room's sound as notation a mind can read.
 fn listen_room_tool(args: &Value) -> Value {
+    let want_receipt = match encounter_request(args) {
+        Ok(want) => want,
+        Err(message) => return tool_error(&message),
+    };
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
     };
@@ -2219,30 +2263,81 @@ fn listen_room_tool(args: &Value) -> Value {
                 .to_string(),
         );
     }
-    let result = tool_structured(
-        &lines.join("\n"),
-        json!({
-            "room": room.meta().id,
-            "title": room.meta().title,
-            "t": t,
-            "variation": variation,
-            "audio": audible.as_ref().map(|(_, described)| described.clone()),
-            "pokes": inputs.pokes,
-            "gesture": if inputs.gesture.is_empty() { Value::Null } else { gesture_json(&inputs.gesture) },
-            "duration_seconds": spec.duration,
-            "note_count": note_count,
-            "returned_note_count": structured_notes.len(),
-            "truncated": note_count > 64,
-            "motif": ambient_motif,
-            "ambient_bed": ambient_bed,
-            "notes": structured_notes,
-            "sound_roles": {
-                "ambient_motif": { "field": "motif" },
-                "ambient_arrangement": { "field": "ambient_bed" },
-                "mathematical_sonification": { "field": "notes" },
-            },
-        }),
-    );
+    let mut structured = json!({
+        "room": room.meta().id,
+        "title": room.meta().title,
+        "t": t,
+        "variation": variation,
+        "audio": audible.as_ref().map(|(_, described)| described.clone()),
+        "pokes": inputs.pokes,
+        "gesture": if inputs.gesture.is_empty() { Value::Null } else { gesture_json(&inputs.gesture) },
+        "duration_seconds": spec.duration,
+        "note_count": note_count,
+        "returned_note_count": structured_notes.len(),
+        "truncated": note_count > 64,
+        "motif": ambient_motif,
+        "ambient_bed": ambient_bed,
+        "notes": structured_notes,
+        "sound_roles": {
+            "ambient_motif": { "field": "motif" },
+            "ambient_arrangement": { "field": "ambient_bed" },
+            "mathematical_sonification": { "field": "notes" },
+        },
+    });
+    if want_receipt {
+        let audio_asked = args.get("audio").and_then(Value::as_bool).unwrap_or(false);
+        let action = encounter_listen_action(
+            room.meta().id,
+            t,
+            variation,
+            include_ambient_events,
+            audio_asked,
+            &inputs.pokes,
+            &inputs.gesture,
+        );
+        let motif = structured.get("motif");
+        let bed = structured.get("ambient_bed");
+        let result = encounter_listen_result(
+            room.meta().id,
+            t,
+            variation,
+            spec.duration.into(),
+            note_count as u64,
+            structured_notes.len() as u64,
+            note_count > 64,
+            motif
+                .and_then(|value| value.get("key"))
+                .and_then(Value::as_str)
+                .map(str::to_owned),
+            motif
+                .and_then(|value| value.get("tempo_bpm"))
+                .and_then(Value::as_u64),
+            motif
+                .and_then(|value| value.get("encodes"))
+                .and_then(Value::as_str)
+                .map(str::to_owned),
+            bed.and_then(|value| value.get("duration_seconds"))
+                .and_then(Value::as_f64),
+            bed.and_then(|value| value.get("event_count"))
+                .and_then(Value::as_u64),
+            structured
+                .get("audio")
+                .and_then(|value| value.get("encodedBytes"))
+                .and_then(Value::as_u64),
+        );
+        match issue_receipt(
+            numinous_core::EncounterTool::ListenRoom,
+            &action.canonical_bytes(),
+            &result.canonical_bytes(),
+        ) {
+            Ok(receipt) => {
+                structured["encounter"] = receipt_json(&receipt, listen_action_json(&action))
+            }
+            Err(message) => return tool_error(&message),
+        }
+        lines.push("Encounter receipt attached.".to_string());
+    }
+    let result = tool_structured(&lines.join("\n"), structured);
     match audible {
         Some((block, _)) => audible::attach(result, block),
         None => result,
@@ -2574,6 +2669,10 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
         Ok(window) => window,
         Err(message) => return tool_error(&message),
     };
+    let want_receipt = match encounter_request(args) {
+        Ok(want) => want,
+        Err(message) => return tool_error(&message),
+    };
     let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
     let inputs = match parse_room_inputs(args) {
         Ok(inputs) => inputs,
@@ -2815,6 +2914,89 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
             };
             if let Some((window, held, statuses)) = dwell_evidence {
                 structured["dwell"] = dwell_evidence_json(window, &held, statuses);
+            }
+            if want_receipt {
+                let aha_beat = engineered_aha
+                    .as_ref()
+                    .and_then(|value| value.get("beat"))
+                    .and_then(Value::as_str)
+                    .map(str::to_owned);
+                let aha_grade = engineered_aha
+                    .as_ref()
+                    .and_then(|value| value.get("graded"))
+                    .and_then(Value::as_str)
+                    .map(str::to_owned);
+                let aha_allow_reveal = engineered_aha
+                    .as_ref()
+                    .and_then(|value| value.get("allowReveal"))
+                    .and_then(Value::as_bool);
+                let touch = structured.get("delta").and_then(|counts| {
+                    Some(encounter_delta_counts(
+                        counts.get("cells_changed")?.as_u64()?,
+                        counts.get("ink_added")?.as_u64()?,
+                        counts.get("ink_removed")?.as_u64()?,
+                        counts.get("ink_reshaped")?.as_u64()?,
+                        counts.get("total_cells")?.as_u64()?,
+                    ))
+                });
+                let temporal_counts = structured.get("temporal").and_then(|temporal| {
+                    let counts = temporal.get("delta")?;
+                    Some(encounter_delta_counts(
+                        counts.get("cells_changed")?.as_u64()?,
+                        counts.get("ink_added")?.as_u64()?,
+                        counts.get("ink_removed")?.as_u64()?,
+                        counts.get("ink_reshaped")?.as_u64()?,
+                        counts.get("total_cells")?.as_u64()?,
+                    ))
+                });
+                let dwell_counts = structured.get("dwell").and_then(|dwell| {
+                    let held = dwell.get("held")?;
+                    Some(encounter_dwell_counts(
+                        dwell.get("looks")?.as_u64()?,
+                        held.get("unchanged_cells")?.as_u64()?,
+                        held.get("never_ink")?.as_u64()?,
+                        held.get("always_ink")?.as_u64()?,
+                        held.get("never_ink_in_changed_region")?.as_u64()?,
+                        held.get("never_ink_enclosed")?.as_u64()?,
+                        held.get("total_cells")?.as_u64()?,
+                    ))
+                });
+                let receipt_action = encounter_play_action(
+                    m.id,
+                    t,
+                    width as u64,
+                    height as u64,
+                    variation,
+                    temporal_pair.map(|pair| pair.from_t()),
+                    dwell_window.as_ref().map(|window| window.phases().to_vec()),
+                    &inputs.pokes,
+                    &inputs.gesture,
+                    args,
+                    aha_request.summon,
+                );
+                let receipt_result = encounter_play_result(
+                    m.id,
+                    t,
+                    width as u64,
+                    height as u64,
+                    variation,
+                    status.clone(),
+                    goal.map(str::to_owned),
+                    goal_met,
+                    touch,
+                    aha_beat,
+                    aha_grade,
+                    aha_allow_reveal,
+                    temporal_counts,
+                    dwell_counts,
+                );
+                match issue_encounter(&receipt_action, &receipt_result) {
+                    Ok(receipt) => {
+                        structured["encounter"] =
+                            receipt_json(&receipt, encounter_action_json(&receipt_action))
+                    }
+                    Err(message) => return tool_error(&message),
+                }
             }
             tool_structured(&text, structured)
         }
@@ -4267,15 +4449,56 @@ fn read_journal_tool(args: &Value, path: &std::path::Path) -> Value {
     tool_structured(&lines.join("\n"), structured)
 }
 
-fn record_journal_tool(args: &Value, path: &std::path::Path) -> Value {
+fn promote_receipt(receipt: &Value, journey_file: &std::path::Path) -> Result<String, String> {
+    let submitted = parse_submitted_receipt(receipt)?;
+    let replay = match submitted.tool {
+        numinous_core::EncounterTool::PlayRoom => {
+            play_room_tool(&submitted.replay_args, journey_file)
+        }
+        numinous_core::EncounterTool::ListenRoom => listen_room_tool(&submitted.replay_args),
+        numinous_core::EncounterTool::SingExpression => {
+            sing_expression_tool(&submitted.replay_args)
+        }
+    };
+    if replay.get("isError").and_then(Value::as_bool) == Some(true) {
+        let message = replay
+            .get("content")
+            .and_then(Value::as_array)
+            .and_then(|content| content.first())
+            .and_then(|block| block.get("text"))
+            .and_then(Value::as_str)
+            .unwrap_or("the room could not be replayed");
+        return Err(format!("This receipt cannot be replayed: {message}"));
+    }
+    let live = replay
+        .get("structuredContent")
+        .and_then(|content| content.get("encounter"))
+        .ok_or_else(|| "Replaying this receipt did not produce an encounter.".to_string())?;
+    let live_action = live
+        .get("actionDigest")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Replaying this receipt did not produce an actionDigest.".to_string())?;
+    let live_result = live
+        .get("resultDigest")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "Replaying this receipt did not produce a resultDigest.".to_string())?;
+    if live_action != submitted.action_digest || live_result != submitted.result_digest {
+        return Err(
+            "This receipt does not match a live replay of its action. A keep is refused when the proof and the room disagree."
+                .to_string(),
+        );
+    }
+    Ok(submitted.result_digest)
+}
+
+fn record_journal_tool(
+    args: &Value,
+    path: &std::path::Path,
+    journey_file: &std::path::Path,
+) -> Value {
     let kind = args.get("kind").and_then(Value::as_str).unwrap_or("");
-    let subject = args.get("subject").and_then(Value::as_str).unwrap_or("");
     let text = args.get("text").and_then(Value::as_str).unwrap_or("");
     let affect = args.get("affect").and_then(Value::as_str);
-    let source = args
-        .get("source")
-        .and_then(Value::as_str)
-        .unwrap_or(numinous_core::JOURNAL_SOURCE_SELF_AUTHORED);
     let recorded_at_utc = journal_now();
     let event_at_utc = args
         .get("event_time_utc")
@@ -4285,6 +4508,45 @@ fn record_journal_tool(args: &Value, path: &std::path::Path) -> Value {
         return tool_error("event_time_utc cannot be later than the server record time.");
     }
 
+    let (source, subject) = if let Some(receipt) = args.get("receipt") {
+        match promote_receipt(receipt, journey_file) {
+            Ok(digest) => {
+                let expected = format!("{}{digest}", numinous_core::JOURNAL_SUBJECT_RECEIPT_PREFIX);
+                if let Some(subject) = args.get("subject").and_then(Value::as_str)
+                    && subject != expected
+                    && subject != digest
+                {
+                    return tool_error(&format!(
+                        "A promoted receipt is stored as subject '{expected}'. Pass that, the bare digest, or omit subject."
+                    ));
+                }
+                if let Some(source) = args.get("source").and_then(Value::as_str)
+                    && source != numinous_core::JOURNAL_SOURCE_NUMINOUS_RESULT
+                {
+                    return tool_error(
+                        "A promoted receipt is recorded as source numinous-result. Omit source, or pass that token.",
+                    );
+                }
+                (numinous_core::JOURNAL_SOURCE_NUMINOUS_RESULT, expected)
+            }
+            Err(message) => return tool_error(&message),
+        }
+    } else {
+        let source = args
+            .get("source")
+            .and_then(Value::as_str)
+            .unwrap_or(numinous_core::JOURNAL_SOURCE_SELF_AUTHORED);
+        if source == numinous_core::JOURNAL_SOURCE_NUMINOUS_RESULT {
+            return tool_error(
+                "Source numinous-result requires the structuredContent.encounter object as receipt. Asking does not keep a play.",
+            );
+        }
+        let Some(subject) = args.get("subject").and_then(Value::as_str) else {
+            return tool_error("Missing required string argument 'subject'.");
+        };
+        (source, subject.to_string())
+    };
+
     match numinous_core::record_journal_file(
         path,
         numinous_core::JournalRecord {
@@ -4292,7 +4554,7 @@ fn record_journal_tool(args: &Value, path: &std::path::Path) -> Value {
             event_at_utc,
             source,
             kind,
-            subject,
+            subject: &subject,
             text,
             affect,
         },
@@ -4305,6 +4567,8 @@ fn record_journal_tool(args: &Value, path: &std::path::Path) -> Value {
                 "recordedAtUtc": entry.recorded_at_utc,
                 "eventAtUtc": entry.event_at_utc,
                 "source": entry.source,
+                "kind": entry.kind,
+                "subject": entry.subject,
             }),
         ),
         Err(e) => tool_error(&format!("Failed to record: {}", e)),
@@ -5862,6 +6126,10 @@ fn plot_expression_tool(args: &Value) -> Value {
 
 /// The `sing_expression` tool: an agent's function becomes readable music.
 fn sing_expression_tool(args: &Value) -> Value {
+    let want_receipt = match encounter_request(args) {
+        Ok(want) => want,
+        Err(message) => return tool_error(&message),
+    };
     let Some(source) = args.get("expr").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'expr'.");
     };
@@ -5941,7 +6209,7 @@ fn sing_expression_tool(args: &Value) -> Value {
     // One note shape across this face: `listen_room` already publishes notes
     // under these names, and a second spelling would make a client parse the
     // same idea twice.
-    let structured = json!({
+    let mut structured = json!({
         "expr": source,
         "duration_seconds": spec.duration,
         "notes": spec.notes.iter().enumerate().map(|(index, note)| json!({
@@ -5955,6 +6223,43 @@ fn sing_expression_tool(args: &Value) -> Value {
         "steps": steps,
         "audio": audible.as_ref().map(|(_, described)| described.clone()),
     });
+    if want_receipt {
+        let audio_asked = args.get("audio").and_then(Value::as_bool).unwrap_or(false);
+        let action = encounter_sing_action(
+            source,
+            args.get("xmin")
+                .and_then(Value::as_f64)
+                .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN),
+            args.get("xmax")
+                .and_then(Value::as_f64)
+                .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX),
+            args.get("a")
+                .and_then(Value::as_f64)
+                .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER),
+            notes.unwrap_or(numinous_core::DEFAULT_MELODY_NOTES) as u64,
+            audio_asked,
+        );
+        let result = encounter_sing_result(
+            source,
+            spec.duration.into(),
+            spec.notes.len() as u64,
+            structured
+                .get("audio")
+                .and_then(|value| value.get("encodedBytes"))
+                .and_then(Value::as_u64),
+        );
+        match issue_receipt(
+            numinous_core::EncounterTool::SingExpression,
+            &action.canonical_bytes(),
+            &result.canonical_bytes(),
+        ) {
+            Ok(receipt) => {
+                structured["encounter"] = receipt_json(&receipt, sing_action_json(&action))
+            }
+            Err(message) => return tool_error(&message),
+        }
+        lines.push("Encounter receipt attached.".to_string());
+    }
     let result = tool_structured(&lines.join("\n"), structured);
     match audible {
         Some((block, _)) => audible::attach(result, block),
@@ -6329,6 +6634,12 @@ mod tests {
                 && instructions.contains("reveal_room opens only after"),
             "instructions state the discovery and reveal gates: {instructions}"
         );
+        assert!(
+            instructions.contains("receipt true")
+                && instructions.contains("does not keep the play")
+                && instructions.contains("record_journal"),
+            "instructions say a receipt is a replay proof, not a memory: {instructions}"
+        );
         let preferred = handle_request(&json!({
             "jsonrpc":"2.0","id":2,"method":"initialize",
             "params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"t","version":"1"}}
@@ -6491,7 +6802,7 @@ mod tests {
         assert_eq!(result["ttlMs"], super::TOOLS_CACHE_TTL_MS);
         assert_eq!(result["cacheScope"], "public");
         let tools = result["tools"].as_array().expect("tool array");
-        assert_eq!(tools.len(), 35);
+        assert_eq!(tools.len(), 36);
         assert!(
             tools
                 .iter()
@@ -6835,7 +7146,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 35);
+        assert_eq!(tools.len(), 36);
         assert!(
             tools
                 .iter()
@@ -6864,6 +7175,7 @@ mod tests {
         assert!(names.contains(&"correct_journal"));
         assert!(names.contains(&"export_journal"));
         assert!(names.contains(&"erase_journal"));
+        assert!(names.contains(&"workspace"));
         let forget = tools
             .iter()
             .find(|tool| tool["name"] == "forget")
@@ -6900,6 +7212,19 @@ mod tests {
             play_room["inputSchema"]["dependentRequired"]["from_t"],
             json!(["t"])
         );
+        assert_eq!(play_properties["receipt"]["type"], "boolean");
+        let record_journal = tools
+            .iter()
+            .find(|tool| tool["name"] == "record_journal")
+            .expect("record_journal tool");
+        assert_eq!(
+            record_journal["inputSchema"]["properties"]["receipt"]["type"],
+            "object"
+        );
+        assert_eq!(
+            record_journal["inputSchema"]["required"],
+            json!(["kind", "text"])
+        );
         assert_eq!(play_properties["width"]["minimum"], 1);
         assert_eq!(play_properties["width"]["maximum"], super::MAX_TOOL_WIDTH);
         assert_eq!(play_properties["height"]["minimum"], 1);
@@ -6932,6 +7257,15 @@ mod tests {
             json!(["summary", "events"])
         );
         assert_eq!(listen_properties["ambient_detail"]["default"], "summary");
+        assert_eq!(listen_properties["receipt"]["type"], "boolean");
+        let sing = tools
+            .iter()
+            .find(|tool| tool["name"] == "sing_expression")
+            .expect("sing_expression tool");
+        assert_eq!(
+            sing["inputSchema"]["properties"]["receipt"]["type"],
+            "boolean"
+        );
         let gesture_variants = play_properties["gesture"]["items"]["oneOf"]
             .as_array()
             .expect("gesture event variants");
@@ -7054,10 +7388,93 @@ mod tests {
             }
         }
         assert_eq!(public, numinous_broadcast::ALL_PUBLIC_TOOLS.len());
-        assert_eq!(private, 11);
+        assert_eq!(private, 12);
         assert_eq!(control, 1);
         assert_eq!(public + private + control, tools.len());
         assert!(super::viewer_policy("future_unreviewed_tool").is_none());
+    }
+
+    #[test]
+    fn workspace_is_process_local_and_play_does_not_write_it() {
+        let journey = super::test_state_path("workspace-visit");
+        let broadcast = super::ConnectionBroadcast::new();
+        let workspace = super::ProcessWorkspace::new();
+        let call = |id: u64, name: &str, arguments: Value| {
+            super::handle_request_with_visit(
+                &json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "method": "tools/call",
+                    "params": {"name": name, "arguments": arguments}
+                }),
+                &journey,
+                &broadcast,
+                &workspace,
+            )
+            .expect("tools/call must respond")
+        };
+
+        let empty = call(1, "workspace", json!({}));
+        assert_eq!(empty["result"]["isError"], false);
+        assert_eq!(empty["result"]["structuredContent"]["empty"], true);
+        assert_eq!(
+            empty["result"]["structuredContent"]["schema"],
+            "numinous.session-workspace"
+        );
+        assert_eq!(empty["result"]["structuredContent"]["scope"], "process");
+
+        let edited = call(
+            2,
+            "workspace",
+            json!({
+                "op": "edit",
+                "place": {"room": "times-tables", "t": 0.25},
+                "intention": "why four lobes"
+            }),
+        );
+        assert_eq!(edited["result"]["isError"], false);
+        assert_eq!(
+            edited["result"]["structuredContent"]["place"]["room"],
+            "times-tables"
+        );
+        assert_eq!(
+            edited["result"]["structuredContent"]["intention"],
+            "why four lobes"
+        );
+
+        let _ = call(
+            3,
+            "play_room",
+            json!({"id": "lorenz", "t": 0.4, "width": 40, "height": 20}),
+        );
+        let after_play = call(4, "workspace", json!({"op": "inspect"}));
+        assert_eq!(
+            after_play["result"]["structuredContent"]["place"]["room"],
+            "times-tables"
+        );
+        assert!(after_play["result"]["structuredContent"]["place"]["room"] != "lorenz");
+
+        let deferred = call(5, "workspace", json!({"op": "defer", "field": "intention"}));
+        assert!(deferred["result"]["structuredContent"]["intention"].is_null());
+        assert_eq!(
+            deferred["result"]["structuredContent"]["deferred"]["intention"],
+            "why four lobes"
+        );
+
+        let cleared = call(6, "workspace", json!({"op": "clear", "field": "all"}));
+        assert_eq!(cleared["result"]["structuredContent"]["empty"], true);
+
+        let other = super::handle_request_with(
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 7,
+                "method": "tools/call",
+                "params": {"name": "workspace", "arguments": {}}
+            }),
+            &journey,
+        )
+        .expect("fresh process inspects empty");
+        assert_eq!(other["result"]["structuredContent"]["empty"], true);
     }
 
     #[test]
@@ -7066,6 +7483,7 @@ mod tests {
         let empty = super::read_journal_tool(&json!({}), &path);
         assert_eq!(empty["structuredContent"]["totalEntries"], 0);
 
+        let journey = super::test_state_path("journal-sovereignty-journey");
         let future = super::record_journal_tool(
             &json!({
                 "kind": "encounter",
@@ -7074,6 +7492,7 @@ mod tests {
                 "event_time_utc": u64::MAX
             }),
             &path,
+            &journey,
         );
         assert_eq!(future["isError"], true);
         assert_eq!(
@@ -7087,9 +7506,10 @@ mod tests {
                 "subject": "times-tables",
                 "text": "The multiplier closed nine loops.",
                 "event_time_utc": 10,
-                "source": "numinous-result"
+                "source": "self-authored"
             }),
             &path,
+            &journey,
         );
         assert_eq!(encounter["isError"], false);
         assert_eq!(encounter["structuredContent"]["entryId"], 1);
@@ -7108,6 +7528,7 @@ mod tests {
                 "event_time_utc": 11
             }),
             &path,
+            &journey,
         );
         assert_eq!(connection["structuredContent"]["entryId"], 2);
 
@@ -7810,6 +8231,11 @@ mod tests {
             ),
             ("munch", json!({"bites":["first"]}), "bites[0]"),
             ("forget", json!({"confirm":"yes"}), "must be a boolean"),
+            (
+                "play_room",
+                json!({"id":"lorenz","receipt":"yes"}),
+                "must be a boolean",
+            ),
             (
                 "gauntlet",
                 json!({"answers":{"surprise":42}}),
@@ -11473,6 +11899,254 @@ mod tests {
                 .get("temporal")
                 .is_none(),
             "legacy calls omit the additive field instead of returning null"
+        );
+    }
+
+    #[test]
+    fn omitted_receipt_leaves_structured_content_without_an_encounter() {
+        let omitted = call("play_room", json!({"id":"times-tables"}));
+        let explicit_false = call("play_room", json!({"id":"times-tables","receipt":false}));
+        assert!(
+            omitted["result"]["structuredContent"]
+                .get("encounter")
+                .is_none()
+        );
+        assert_eq!(
+            omitted["result"]["structuredContent"],
+            explicit_false["result"]["structuredContent"]
+        );
+    }
+
+    #[test]
+    fn play_room_receipt_is_digest_stable_and_binds_the_play() {
+        let omitted_defaults = json!({"id":"times-tables","receipt":true});
+        let explicit_defaults = json!({
+            "id":"times-tables","t":0.0,"width":72,"height":32,"variation":0,
+            "receipt":true
+        });
+        let first = call("play_room", omitted_defaults);
+        let second = call("play_room", json!({"id":"times-tables","receipt":true}));
+        let explicit = call("play_room", explicit_defaults);
+        let first_receipt = &first["result"]["structuredContent"]["encounter"];
+        let second_receipt = &second["result"]["structuredContent"]["encounter"];
+        let explicit_receipt = &explicit["result"]["structuredContent"]["encounter"];
+
+        assert_eq!(first_receipt["schema"], "numinous.encounter-receipt");
+        assert_eq!(first_receipt["schemaVersion"], 1);
+        assert_eq!(first_receipt["tool"], "play_room");
+        assert_eq!(first_receipt["replayAbiVersion"], 1);
+        assert_eq!(first_receipt["action"]["room"], "times-tables");
+        assert_eq!(first_receipt["action"]["width"], 72);
+        assert_eq!(first_receipt["action"]["height"], 32);
+        assert!(first_receipt.get("issuedAt").is_none());
+        for field in ["fingerprint", "actionDigest", "resultDigest"] {
+            let hex = first_receipt[field].as_str().unwrap_or_default();
+            assert_eq!(hex.len(), 64, "{field}");
+            assert!(
+                hex.bytes()
+                    .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f')),
+                "{field}: {hex}"
+            );
+        }
+        let isolated = super::play_room_tool_for_journey(
+            &json!({"id":"times-tables","receipt":true}),
+            &numinous_core::Journey::default(),
+        );
+        assert_eq!(
+            first_receipt, &isolated["structuredContent"]["encounter"],
+            "a second process-shaped call must issue the same receipt"
+        );
+        assert_eq!(first_receipt, second_receipt);
+        assert_eq!(
+            first_receipt["actionDigest"],
+            explicit_receipt["actionDigest"]
+        );
+        assert_eq!(
+            first_receipt["resultDigest"],
+            explicit_receipt["resultDigest"]
+        );
+
+        let phase = call(
+            "play_room",
+            json!({"id":"times-tables","t":0.35,"receipt":true}),
+        );
+        let poked = call(
+            "play_room",
+            json!({"id":"times-tables","pokes":[[0.2,0.8]],"receipt":true}),
+        );
+        let wagered = call(
+            "play_room",
+            json!({"id":"times-tables","place_wager":"mandelbrot","receipt":true}),
+        );
+        assert_ne!(
+            first_receipt["actionDigest"],
+            phase["result"]["structuredContent"]["encounter"]["actionDigest"]
+        );
+        assert_ne!(
+            first_receipt["actionDigest"],
+            poked["result"]["structuredContent"]["encounter"]["actionDigest"]
+        );
+        assert_ne!(
+            first_receipt["actionDigest"],
+            wagered["result"]["structuredContent"]["encounter"]["actionDigest"]
+        );
+        assert_ne!(
+            first_receipt["resultDigest"],
+            phase["result"]["structuredContent"]["encounter"]["resultDigest"]
+        );
+
+        let compact = call(
+            "play_room",
+            with_response_mode(json!({"id":"times-tables","receipt":true}), "compact"),
+        );
+        assert_eq!(
+            first_receipt, &compact["result"]["structuredContent"]["encounter"],
+            "compact and full share the same encounter object"
+        );
+        let compact_text = compact["result"]["content"][0]["text"]
+            .as_str()
+            .expect("compact text");
+        assert!(
+            compact_text.contains("Encounter receipt attached"),
+            "{compact_text}"
+        );
+    }
+
+    #[test]
+    fn a_receipt_is_kept_only_after_a_live_replay_match() {
+        let journal = super::journal_path();
+        let _ = numinous_core::erase_journal_file(&journal);
+        let impersonated = call(
+            "record_journal",
+            json!({
+                "kind":"encounter",
+                "subject":"times-tables",
+                "text":"This is not a Numinous result.",
+                "source":"numinous-result"
+            }),
+        );
+        assert_eq!(impersonated["result"]["isError"], true);
+
+        let play = call("play_room", json!({"id":"times-tables","receipt":true}));
+        let receipt = play["result"]["structuredContent"]["encounter"].clone();
+        let digest = receipt["resultDigest"]
+            .as_str()
+            .expect("digest")
+            .to_string();
+        let kept = call(
+            "record_journal",
+            json!({
+                "kind":"encounter",
+                "text":"I want to keep this look.",
+                "receipt": receipt
+            }),
+        );
+        assert_eq!(kept["result"]["isError"], false);
+        assert_eq!(
+            kept["result"]["structuredContent"]["source"],
+            "numinous-result"
+        );
+        assert_eq!(
+            kept["result"]["structuredContent"]["subject"],
+            format!("receipt:{digest}")
+        );
+        assert!(
+            kept["result"]["structuredContent"].get("receipt").is_none(),
+            "the keep reply must not store the receipt body"
+        );
+
+        let mut forged = receipt.clone();
+        forged["resultDigest"] =
+            json!("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        let refused = call(
+            "record_journal",
+            json!({
+                "kind":"encounter",
+                "text":"A forged digest is not a keep.",
+                "receipt": forged
+            }),
+        );
+        assert_eq!(refused["result"]["isError"], true);
+
+        let mut unknown_abi = receipt;
+        unknown_abi["replayAbiVersion"] = json!(99);
+        let stale = call(
+            "record_journal",
+            json!({
+                "kind":"encounter",
+                "text":"An unknown ABI is not a keep.",
+                "receipt": unknown_abi
+            }),
+        );
+        assert_eq!(stale["result"]["isError"], true);
+        assert!(
+            stale["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("replay ABI")
+        );
+
+        let page = call("read_journal", json!({}));
+        assert_eq!(page["result"]["structuredContent"]["totalEntries"], 1);
+        assert_eq!(
+            page["result"]["structuredContent"]["entries"][0]["subject"],
+            format!("receipt:{digest}")
+        );
+
+        let erased = call("erase_journal", json!({"confirm":true}));
+        assert_eq!(
+            erased["result"]["structuredContent"]["recoverableManagedResidue"],
+            0
+        );
+        assert_eq!(
+            call("read_journal", json!({}))["result"]["structuredContent"]["totalEntries"],
+            0
+        );
+        let _ = numinous_core::erase_journal_file(&journal);
+    }
+
+    #[test]
+    fn listen_and_sing_receipts_are_digest_stable_and_exclude_wav_bytes() {
+        let listen = call("listen_room", json!({"id":"times-tables","receipt":true}));
+        let listen_again = call("listen_room", json!({"id":"times-tables","receipt":true}));
+        let listen_receipt = &listen["result"]["structuredContent"]["encounter"];
+        assert_eq!(listen_receipt["schema"], "numinous.encounter-receipt");
+        assert_eq!(listen_receipt["tool"], "listen_room");
+        assert_eq!(listen_receipt["action"]["room"], "times-tables");
+        assert_eq!(
+            listen_receipt["actionDigest"],
+            listen_again["result"]["structuredContent"]["encounter"]["actionDigest"]
+        );
+        assert!(listen_receipt.get("issuedAt").is_none());
+        assert!(
+            serde_json::to_string(listen_receipt)
+                .expect("serialize listen receipt")
+                .contains("listen_room")
+        );
+
+        let sing = call("sing_expression", json!({"expr":"sin(x)","receipt":true}));
+        let sing_explicit = call(
+            "sing_expression",
+            json!({
+                "expr":"sin(x)",
+                "notes":32,
+                "xmin": -std::f64::consts::TAU,
+                "xmax": std::f64::consts::TAU,
+                "a": 1.0,
+                "receipt":true
+            }),
+        );
+        let sing_receipt = &sing["result"]["structuredContent"]["encounter"];
+        assert_eq!(sing_receipt["tool"], "sing_expression");
+        assert_eq!(sing_receipt["action"]["expr"], "sin(x)");
+        assert_eq!(
+            sing_receipt["actionDigest"],
+            sing_explicit["result"]["structuredContent"]["encounter"]["actionDigest"]
+        );
+        assert!(
+            !serde_json::to_string(sing_receipt)
+                .expect("serialize sing receipt")
+                .contains("UklGR")
         );
     }
 

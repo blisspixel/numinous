@@ -5,6 +5,30 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- `play_room` can emit a Numinous Encounter Receipt. Pass `receipt: true` and
+  `structuredContent.encounter` is a versioned replay proof: replay ABI,
+  compatibility fingerprint, the normalized action, action and result digests,
+  and provenance, with no issued time so two identical plays produce the same
+  artifact. Omitting the flag leaves the existing structured result
+  byte-identical. Asking for a receipt does not write the journal; Journey
+  still records the coarse visit. Compact and full share the same `encounter`
+  object. Asking for a receipt did not add a tool.
+- `record_journal` can keep that proof. Pass the encounter object as `receipt`
+  and the server replays the action against this binary. Only a live digest
+  match is stored, as source `numinous-result` under subject
+  `receipt:<resultDigest>`. A forged digest, a stale fingerprint, or
+  `numinous-result` without a receipt is refused. The player's text remains
+  their interpretation. The journal schema stays v2.
+- `listen_room` and `sing_expression` accept the same `receipt: true` switch.
+  Their result digests bind notation counts, motif identity, bed counts, and
+  encoded-audio size, never WAV bytes. Promotion replays the named tool.
+- A visit can keep a compact workspace without turning play into memory.
+  `workspace` is the 36th MCP tool. It lives in this process only: inspect,
+  edit, defer, or clear place, intention, pending prediction, unfinished
+  work, recent notes, and a few journal handles. Play does not write it.
+  Asking does not record a journal entry. A new process starts empty. The
+  Watch Agent never sees it. Retrieved handles are stored, not explained.
+
 ## [0.4.0-alpha.9] - 2026-08-18
 
 - A sound sent is not a sound heard, and the copy says so now. The seventh

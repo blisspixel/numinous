@@ -1431,6 +1431,7 @@ dependencies = [
  "numinous-broadcast",
  "numinous-core",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

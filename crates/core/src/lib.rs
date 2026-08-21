@@ -54,6 +54,7 @@ pub mod citations;
 pub mod codebreaker;
 pub mod concepts;
 pub mod dichromacy;
+pub mod encounter;
 pub mod era;
 pub mod fifteen;
 pub mod font;
@@ -88,6 +89,7 @@ pub mod room;
 pub mod rooms;
 pub mod scores;
 pub mod secret;
+pub mod session;
 pub mod seti;
 pub mod share;
 pub mod sim;
@@ -120,6 +122,14 @@ pub use codebreaker::{
     Feedback, MAX_CODE_DIGITS, MIN_CODE_DIGITS, grade, hint, secret_code, supports_code_length,
 };
 pub use concepts::{concept, explain_text};
+pub use encounter::{
+    CanonicalGesture, ENCOUNTER_RECEIPT_SCHEMA, ENCOUNTER_RECEIPT_SCHEMA_VERSION,
+    ENCOUNTER_TOOL_LISTEN_ROOM, ENCOUNTER_TOOL_PLAY_ROOM, ENCOUNTER_TOOL_SING_EXPRESSION,
+    EncounterDeltaCounts, EncounterDwellCounts, EncounterReceipt, EncounterTool, ListenRoomAction,
+    ListenRoomResult, PLAY_ROOM_DEFAULT_HEIGHT, PLAY_ROOM_DEFAULT_T, PLAY_ROOM_DEFAULT_VARIATION,
+    PLAY_ROOM_DEFAULT_WIDTH, PlayRoomAction, PlayRoomResult, SingExpressionAction,
+    SingExpressionResult,
+};
 pub use era::Era;
 pub use font::{draw_text, text_width, wrap_text};
 pub use gauntlet::{
@@ -131,9 +141,9 @@ pub use gauntlet::{
 pub use humor::{Joke, explain_joke, jokes};
 pub use journal::{
     JOURNAL_SCHEMA_VERSION, JOURNAL_SOURCE_LEGACY_IMPORT, JOURNAL_SOURCE_NUMINOUS_RESULT,
-    JOURNAL_SOURCE_PLAYER_PROVIDED, JOURNAL_SOURCE_SELF_AUTHORED, Journal, JournalEntry,
-    JournalError, JournalRecord, MAX_JOURNAL_AFFECT_CHARS, MAX_JOURNAL_ENTRIES,
-    MAX_JOURNAL_KIND_CHARS, MAX_JOURNAL_SUBJECT_CHARS, MAX_JOURNAL_TEXT_CHARS,
+    JOURNAL_SOURCE_PLAYER_PROVIDED, JOURNAL_SOURCE_SELF_AUTHORED, JOURNAL_SUBJECT_RECEIPT_PREFIX,
+    Journal, JournalEntry, JournalError, JournalRecord, MAX_JOURNAL_AFFECT_CHARS,
+    MAX_JOURNAL_ENTRIES, MAX_JOURNAL_KIND_CHARS, MAX_JOURNAL_SUBJECT_CHARS, MAX_JOURNAL_TEXT_CHARS,
 };
 pub use journal_okf::{
     MAX_OKF_EXPORT_ENTRIES, OKF_BUNDLE_SCHEMA, OKF_VERSION, OkfBundlePage, OkfFile,
@@ -192,6 +202,14 @@ pub use room::{
 pub use rooms::{ROOM_CATALOG, canonical_room_id, room_meta_by_id};
 pub use scores::Scoreboard;
 pub use secret::{akousma, behind_the_veil, deep_akousma};
+pub use session::{
+    DeferredWorkspace, MAX_WORKSPACE_REASON_CHARS, MAX_WORKSPACE_RECENT, MAX_WORKSPACE_RETRIEVED,
+    MAX_WORKSPACE_TEXT_CHARS, MAX_WORKSPACE_TITLE_CHARS, SESSION_WORKSPACE_SCHEMA,
+    SESSION_WORKSPACE_SCHEMA_VERSION, SessionWorkspace, WorkspaceClear, WorkspaceError,
+    WorkspaceField, WorkspaceObservation, WorkspaceObservationDraft, WorkspacePlace,
+    WorkspacePlaceDraft, WorkspaceRetrieval, WorkspaceRetrievalDraft, WorkspaceUnfinished,
+    WorkspaceUnfinishedDraft, WorkspaceUpdate,
+};
 pub use seti::{SetiChannel, SetiScan, build_scan};
 pub use share::{
     ShareBundleMeta, ShareKind, ShareMeta, StudioShareMeta, create_share_bundle_dir, sidecar_path,

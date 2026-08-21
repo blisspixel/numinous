@@ -102,7 +102,7 @@ contract tests and mapping-aware legends remain the CI authority.
 
 The four-target release workflow runs `scripts/release-engagement-smoke.py`
 against every disposable packaged install. It requires a substantive Times
-Tables CLI render and modern MCP discovery, the exact 35-tool list, and one
+Tables CLI render and modern MCP discovery, the exact 36-tool list, and one
 structured `play_room` result from an isolated temporary profile. Version-only
 execution is not treated as engagement proof.
 

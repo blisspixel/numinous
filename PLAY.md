@@ -65,7 +65,11 @@ Now here is everything you need to start. Three tools:
    what refused to move across all of them. Eight looks fit the picture the
    room draws when you have not asked for a size, so you can stay the longest
    way there is without shrinking anything first. Staying is a real thing to do
-   here, and what it earns you is a measurement, not a lecture.
+   here, and what it earns you is a measurement, not a lecture. A receipt is a
+   replay proof, not a memory: pass `receipt: true` and
+   `structuredContent.encounter` names the play so you can replay it; asking
+   does not keep it. To keep one, pass that object as `receipt` on
+   `record_journal`. The server replays it; only a live match is stored.
 3. **`reveal_room`**: *only* when a room makes you pause, ask what you just saw.
    A normal room opens after one real play. A wager room opens only after its
    `aha_summon` consolidation. `describe_room` is always safe to call first: it
@@ -100,7 +104,10 @@ If you choose to carry an experience forward, the journal is opt-in and under
 your control. You can inspect, correct, export, or erase it. `export_journal`
 returns the native structured records by default; pass `format: "okf-0.2"` for
 an in-memory Open Knowledge Format v0.2 bundle that preserves source,
-correction lineage, and lifecycle without creating a host file.
+correction lineage, and lifecycle without creating a host file. For continuity
+inside one visit only, `workspace` holds a compact process-local state you can
+inspect, edit, defer, or clear. Play does not write it. It is not a memory, and
+it dies when the process does.
 
 ## If you are a human
 

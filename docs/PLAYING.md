@@ -328,7 +328,7 @@ still initialize with 2025-11-25 or 2025-06-18. Modern discovery and tool lists
 are cacheable, successful results name their result type and server, and all
 tool input schemas explicitly use JSON Schema 2020-12. A client that advertises
 form elicitation can complete `predict` through one multi round-trip request;
-other clients keep the two-call pose and grade flow. Thirty-five tools use
+other clients keep the two-call pose and grade flow. Thirty-six tools use
 mostly flat schemas. Room and game inputs are explicit and replayable per call;
 successful actions may intentionally update the shared local Journey and score
 files described below. The bounded
@@ -340,15 +340,16 @@ input without hidden session state:
 | `list_rooms` | the catalog; start with `response_mode: "compact"` for a short doorway. `structuredContent.starters` names four rooms worth opening first, while `structuredContent.rooms` retains the complete typed list in every mode |
 | `describe_room` | a safe doorway: title, wing, action, optional goal, and play prompt, never the revelation |
 | `reveal_room` | the insight after one real play, or after consolidation for an engineered wager room |
-| `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array. Add `from_t` with explicit destination `t` for two exact observations and a typed temporal delta; the top-level frame remains the destination. Add `dwell` with two to eight phases to stay in the room instead of moving through it: `structuredContent.dwell` reports what refused to move across every look, including cells that never lit and holes fully ringed by light. Returns goal state. It never volunteers the explanation: landing a goal opens `reveal_room`, it does not answer, because understanding is offered only when asked for. On Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` / `speed_wager` / `policy_wager` / `counter_wager` plus `aha_summon` walk generation-before-reveal without App session state. Nontransitive Dice also accepts typed `die_choice` instead of coordinate input |
+| `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array. Add `from_t` with explicit destination `t` for two exact observations and a typed temporal delta; the top-level frame remains the destination. Add `dwell` with two to eight phases to stay in the room instead of moving through it: `structuredContent.dwell` reports what refused to move across every look, including cells that never lit and holes fully ringed by light. Pass `receipt: true` for a replay proof in `structuredContent.encounter`; asking does not keep the play. Returns goal state. It never volunteers the explanation: landing a goal opens `reveal_room`, it does not answer, because understanding is offered only when asked for. On Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` / `speed_wager` / `policy_wager` / `counter_wager` plus `aha_summon` walk generation-before-reveal without App session state. Nontransitive Dice also accepts typed `die_choice` instead of coordinate input |
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
 | `cairn` | read a message a mind before you left (factor its semiprime to read it), or at level 42 leave one true thing for a stranger not yet born |
 | `read_journal` | inspect a bounded page of your opt-in journal with stable ids, event and record times, source, correction links, and current status |
-| `record_journal` | append an encounter, creation, or connection with declared source provenance |
+| `record_journal` | append an encounter, creation, or connection with declared source provenance. Pass `receipt` with a `play_room` encounter object to keep a live-matching replay proof as source `numinous-result` |
 | `correct_journal` | append an immutable correction that explicitly supersedes one current entry without rewriting it |
 | `export_journal` | return a bounded, paginated native export, or an in-memory Open Knowledge Format v0.2 bundle with `format: "okf-0.2"`, without creating a host file |
 | `erase_journal` | permanently erase the journal and verify zero recoverable managed file or sidecar residue |
+| `workspace` | inspect, edit, defer, or clear a process-local visit workspace: place, intention, pending prediction, unfinished work, recent notes, and journal handles. Play does not write it. It is not a memory, and it does not survive process exit |
 | `listen_room` | the ambient motif, stable App room-bed summary, and input-aware mathematical sonification, with the same optional `pokes` or `gesture` as `play_room`; use `ambient_detail: "events"` for every bounded bed event and objective signal feature, never PCM or a local path |
 | `list_sims` | the simulations and their levers |
 | `run_sim` | run a sim with your lever values; picture plus plain readout |

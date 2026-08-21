@@ -140,6 +140,13 @@ fn run_session_with_state_barrier(
         .collect()
 }
 
+fn reply_by_id(replies: &[Value], id: u64) -> &Value {
+    replies
+        .iter()
+        .find(|response| response["id"] == id)
+        .unwrap_or_else(|| panic!("no reply with id {id}"))
+}
+
 #[test]
 fn compact_mode_is_discoverable_and_compatible_over_real_stdio() {
     let call = |id: u64, mode: Option<&str>| {
@@ -354,7 +361,15 @@ fn temporal_play_records_the_coarse_journey_visit_without_touching_the_journal()
                 }
             }),
             json!({
-                "jsonrpc":"2.0", "id":3, "method":"tools/call",
+                "jsonrpc":"2.0", "id":3, "method":"tools/call", "params":{
+                    "name":"play_room", "arguments":{
+                        "id":"times-tables", "receipt":true,
+                        "width":40, "height":20
+                    }
+                }
+            }),
+            json!({
+                "jsonrpc":"2.0", "id":4, "method":"tools/call",
                 "params":{"name":"read_journal","arguments":{}}
             }),
         ],
@@ -368,19 +383,211 @@ fn temporal_play_records_the_coarse_journey_visit_without_touching_the_journal()
             .unwrap_or_else(|| panic!("no reply with id {id}"))
     };
     assert_eq!(by_id(2)["result"]["isError"], false);
-    assert_eq!(by_id(3)["result"]["structuredContent"]["totalEntries"], 1);
+    assert_eq!(by_id(3)["result"]["isError"], false);
+    assert_eq!(
+        by_id(3)["result"]["structuredContent"]["encounter"]["schema"],
+        "numinous.encounter-receipt"
+    );
+    assert_eq!(by_id(4)["result"]["structuredContent"]["totalEntries"], 1);
 
     let persisted_journey = numinous_core::load_journey_file(&journey);
     assert!(persisted_journey.visited.contains("times-tables"));
     assert_eq!(
         std::fs::read(&journal).expect("read journal after temporal play"),
         journal_before,
-        "temporal play must not promote any action or result into the journal"
+        "temporal play and a receipt must not promote any action or result into the journal"
     );
 
     numinous_core::erase_journal_file(&journal).expect("erase test journal");
     numinous_core::remove_persisted_file(&journey).expect("erase test journey");
     std::fs::remove_dir(&root).expect("empty temporal persistence root");
+}
+
+#[test]
+fn a_receipt_is_kept_only_when_the_player_promotes_a_live_match() {
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous_mcp_receipt_promotion_{}_{}",
+        std::process::id(),
+        session
+    ));
+    std::fs::create_dir(&root).expect("fresh receipt promotion root");
+    let journey = root.join("journey.txt");
+    let journal = root.join("journal.txt");
+
+    let replies = run_session_with_state(
+        &[
+            json!({
+                "jsonrpc":"2.0", "id":1, "method":"initialize", "params":{
+                    "protocolVersion":"2025-11-25", "capabilities":{},
+                    "clientInfo":{"name":"receipt-promotion","version":"1.0"}
+                }
+            }),
+            json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            json!({
+                "jsonrpc":"2.0", "id":2, "method":"tools/call", "params":{
+                    "name":"play_room", "arguments":{
+                        "id":"times-tables", "receipt":true,
+                        "width":40, "height":20
+                    }
+                }
+            }),
+            json!({
+                "jsonrpc":"2.0", "id":3, "method":"tools/call",
+                "params":{"name":"read_journal","arguments":{}}
+            }),
+        ],
+        &journey,
+        &journal,
+    );
+    assert_eq!(reply_by_id(&replies, 2)["result"]["isError"], false);
+    let receipt = reply_by_id(&replies, 2)["result"]["structuredContent"]["encounter"].clone();
+    let digest = receipt["resultDigest"].as_str().expect("result digest");
+    assert_eq!(
+        reply_by_id(&replies, 3)["result"]["structuredContent"]["totalEntries"],
+        0
+    );
+
+    let forged = {
+        let mut bad = receipt.clone();
+        if let Some(digest) = bad.get_mut("resultDigest") {
+            *digest = json!("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        }
+        bad
+    };
+    let kept = run_session_with_state(
+        &[
+            json!({
+                "jsonrpc":"2.0", "id":1, "method":"initialize", "params":{
+                    "protocolVersion":"2025-11-25", "capabilities":{},
+                    "clientInfo":{"name":"receipt-promotion","version":"1.0"}
+                }
+            }),
+            json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            json!({
+                "jsonrpc":"2.0", "id":2, "method":"tools/call", "params":{
+                    "name":"record_journal", "arguments":{
+                        "kind":"encounter",
+                        "text":"I want to keep this look.",
+                        "source":"numinous-result",
+                        "receipt": receipt
+                    }
+                }
+            }),
+            json!({
+                "jsonrpc":"2.0", "id":3, "method":"tools/call", "params":{
+                    "name":"record_journal", "arguments":{
+                        "kind":"encounter",
+                        "subject":"times-tables",
+                        "text":"A forged digest is not a keep.",
+                        "receipt": forged
+                    }
+                }
+            }),
+            json!({
+                "jsonrpc":"2.0", "id":4, "method":"tools/call", "params":{
+                    "name":"record_journal", "arguments":{
+                        "kind":"encounter",
+                        "subject":"times-tables",
+                        "text":"Impersonation without a receipt.",
+                        "source":"numinous-result"
+                    }
+                }
+            }),
+            json!({
+                "jsonrpc":"2.0", "id":5, "method":"tools/call",
+                "params":{"name":"read_journal","arguments":{}}
+            }),
+            json!({
+                "jsonrpc":"2.0", "id":6, "method":"tools/call",
+                "params":{"name":"erase_journal","arguments":{"confirm":true}}
+            }),
+            json!({
+                "jsonrpc":"2.0", "id":7, "method":"tools/call",
+                "params":{"name":"read_journal","arguments":{}}
+            }),
+        ],
+        &journey,
+        &journal,
+    );
+    assert_eq!(reply_by_id(&kept, 2)["result"]["isError"], false);
+    assert_eq!(
+        reply_by_id(&kept, 2)["result"]["structuredContent"]["source"],
+        "numinous-result"
+    );
+    assert_eq!(
+        reply_by_id(&kept, 2)["result"]["structuredContent"]["subject"],
+        format!("receipt:{digest}")
+    );
+    assert!(
+        reply_by_id(&kept, 2)["result"]["structuredContent"]
+            .get("receipt")
+            .is_none()
+    );
+    assert_eq!(reply_by_id(&kept, 3)["result"]["isError"], true);
+    assert_eq!(reply_by_id(&kept, 4)["result"]["isError"], true);
+    let page = &reply_by_id(&kept, 5)["result"]["structuredContent"];
+    assert_eq!(page["totalEntries"], 1);
+    let expected_subject = format!("receipt:{digest}");
+    assert_eq!(page["entries"][0]["subject"], expected_subject);
+    assert_eq!(page["entries"][0]["source"], "numinous-result");
+    assert_eq!(page["entries"][0]["text"], "I want to keep this look.");
+    let erased = &reply_by_id(&kept, 6)["result"]["structuredContent"];
+    assert_eq!(erased["recoverableManagedResidue"], 0);
+    assert_eq!(erased["managedSidecarFiles"], 0);
+    assert_eq!(
+        reply_by_id(&kept, 7)["result"]["structuredContent"]["totalEntries"],
+        0
+    );
+
+    let inventory = numinous_core::inspect_journal_file(&journal).expect("erased inventory");
+    assert!(!inventory.exists);
+    assert_eq!(inventory.sidecar_files, 0);
+    numinous_core::remove_persisted_file(&journey).expect("erase test journey");
+    std::fs::remove_dir(&root).expect("empty receipt promotion root");
+}
+
+#[test]
+fn receipt_digests_match_across_two_mcp_processes() {
+    let play = json!({
+        "jsonrpc":"2.0", "id":1, "method":"tools/call", "params":{
+            "name":"play_room", "arguments":{
+                "id":"times-tables", "receipt":true,
+                "width":40, "height":20
+            }
+        }
+    });
+    let encounter_of = |root_label: &str| -> Value {
+        let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "numinous_mcp_receipt_process_{root_label}_{}_{}",
+            std::process::id(),
+            session
+        ));
+        std::fs::create_dir(&root).expect("fresh receipt process root");
+        let journey = root.join("journey.txt");
+        let journal = root.join("journal.txt");
+        let replies = run_session_with_state(std::slice::from_ref(&play), &journey, &journal);
+        let encounter = replies[0]["result"]["structuredContent"]["encounter"].clone();
+        numinous_core::erase_journal_file(&journal).ok();
+        numinous_core::remove_persisted_file(&journey).ok();
+        let _ = std::fs::remove_dir(&root);
+        encounter
+    };
+    let first = encounter_of("a");
+    let second = encounter_of("b");
+    assert_eq!(first["schema"], "numinous.encounter-receipt");
+    assert_eq!(first, second, "two processes must issue the same receipt");
+    for field in ["fingerprint", "actionDigest", "resultDigest"] {
+        let hex = first[field].as_str().unwrap_or_default();
+        assert_eq!(hex.len(), 64, "{field} must be 32 bytes as lowercase hex");
+        assert!(
+            hex.bytes()
+                .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f')),
+            "{field} must be lowercase hex: {hex}"
+        );
+    }
+    assert!(first.get("issuedAt").is_none());
 }
 
 #[test]
@@ -523,7 +730,7 @@ fn modern_stateless_discovery_tools_and_prediction_work_over_real_stdio() {
     assert_eq!(by_id(2)["result"]["resultType"], "complete");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(35)
+        Some(36)
     );
     assert_eq!(by_id(3)["result"]["resultType"], "input_required");
     assert_eq!(
@@ -574,7 +781,7 @@ fn returning_journal_survives_two_processes_then_leaves_zero_managed_residue() {
                     "subject":"times-tables",
                     "text":"The rendered multiplier closed nine loops.",
                     "event_time_utc":100,
-                    "source":"numinous-result"
+                    "source":"self-authored"
                 }),
             ),
             call(
@@ -670,7 +877,7 @@ fn returning_journal_survives_two_processes_then_leaves_zero_managed_residue() {
     assert_eq!(exported["schema"], "numinous.experience-journal");
     assert_eq!(exported["schemaVersion"], 2);
     assert_eq!(exported["entries"].as_array().map(Vec::len), Some(4));
-    assert_eq!(exported["entries"][0]["source"], "numinous-result");
+    assert_eq!(exported["entries"][0]["source"], "self-authored");
     assert_eq!(exported["entries"][0]["eventAtUtc"], 100);
     assert!(
         exported["entries"][0]["recordedAtUtc"]
@@ -1678,11 +1885,12 @@ fn a_full_agent_session_walks_every_tool() {
             json!({"id":"voronoi","seed":7,"pokes":[[0.5,0.5]]}),
         ),
         call(25, "broadcast_session", json!({"action":"status"})),
+        call(26, "workspace", json!({})),
     ];
     let replies = run_session(&requests);
 
-    // 25 id-carrying requests, one notification with no reply.
-    assert_eq!(replies.len(), 25, "one reply per id-carrying request");
+    // 26 id-carrying requests, one notification with no reply.
+    assert_eq!(replies.len(), 26, "one reply per id-carrying request");
     let by_id = |id: u64| -> &Value {
         replies
             .iter()
@@ -1693,7 +1901,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(35)
+        Some(36)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));
@@ -1733,6 +1941,71 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(
         by_id(25)["result"]["structuredContent"]["state"],
         "disabled"
+    );
+    assert_eq!(by_id(26)["result"]["structuredContent"]["empty"], true);
+    assert_eq!(by_id(26)["result"]["structuredContent"]["scope"], "process");
+}
+
+#[test]
+fn workspace_survives_calls_in_one_process_and_dies_with_it() {
+    let call = |id: u64, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{"name":"workspace","arguments":arguments}
+        })
+    };
+    let initialize = json!({
+        "jsonrpc":"2.0","id":1,"method":"initialize","params":{
+            "protocolVersion":"2025-06-18",
+            "capabilities":{},
+            "clientInfo":{"name":"workspace-visit","version":"1.0"}
+        }
+    });
+    let first = run_session(&[
+        initialize.clone(),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(2, json!({})),
+        call(
+            3,
+            json!({
+                "op":"edit",
+                "place":{"room":"lorenz","t":0.5},
+                "intention":"watch the storm"
+            }),
+        ),
+        call(4, json!({"op":"inspect"})),
+        json!({
+            "jsonrpc":"2.0","id":5,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"mandelbrot","t":0.1,"width":40,"height":20}}
+        }),
+        call(6, json!({"op":"inspect"})),
+    ]);
+    assert_eq!(
+        reply_by_id(&first, 2)["result"]["structuredContent"]["empty"],
+        true
+    );
+    assert_eq!(
+        reply_by_id(&first, 4)["result"]["structuredContent"]["place"]["room"],
+        "lorenz"
+    );
+    assert_eq!(
+        reply_by_id(&first, 6)["result"]["structuredContent"]["place"]["room"],
+        "lorenz"
+    );
+    assert_eq!(
+        reply_by_id(&first, 6)["result"]["structuredContent"]["intention"],
+        "watch the storm"
+    );
+
+    let second = run_session(&[
+        initialize,
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(2, json!({})),
+    ]);
+    assert_eq!(
+        reply_by_id(&second, 2)["result"]["structuredContent"]["empty"],
+        true,
+        "a new process must not inherit the previous visit workspace"
     );
 }
 

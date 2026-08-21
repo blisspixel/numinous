@@ -61,10 +61,15 @@ That changes the product in five ways:
 experience journal across MCP processes, with inspection, immutable correction,
 bounded native or Open Knowledge Format v0.2 export, and confirmed erase. One
 stateless MCP call can now carry two exact room observations and a typed visual
-delta, evidence of change without pretending to be lived duration. It does not
-authenticate a distinct mind, provide active presence between visits, create
-Numinous Encounter Receipts, or automatically surface remembered entries. A
-player sharing a local profile shares that journal. Per-mind identity,
+delta, evidence of change without pretending to be lived duration. Opt-in
+`play_room` receipts are a replay proof, not a memory: asking does not keep
+the play. Keeping one is an explicit `record_journal` promotion that the
+server will replay and refuse if the live room disagrees. It does not
+authenticate a distinct mind, provide active presence between visits, or
+automatically surface remembered entries. A process-local `workspace` can hold
+the place, intention, pending prediction, unfinished work, and selected notes
+of one visit; play does not write it, and the process's exit drops it.
+A player sharing a local profile shares that journal. Per-mind identity,
 reflective retrieval, and the remaining Mind's Seat increments remain roadmap
 work. Their architecture and 2026 research basis live in
 `DIGITAL_DEVELOPMENT.md`.

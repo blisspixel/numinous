@@ -31,7 +31,7 @@ fn negotiate_protocol_version(params: Option<&Value>) -> &'static str {
 }
 
 fn server_instructions() -> &'static str {
-    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does. describe_room is a safe doorway and never returns the explanation. Add from_t with an explicit destination t when you want two exact observations and their temporal delta in one stateless call; a static room can honestly report zero visible change. To stay in a room rather than move through it, pass dwell with several phases: the reply reports what refused to move across all of them, including how much stayed dark inside the region that did move. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. Read structuredContent.engineeredAha for the beat, visible wager, and post-summon grade. reveal_room opens only after a normal room has been played, or after an engineered Aha has consolidated. Pass audio true to listen_room or sing_expression and a real WAV arrives in an audio content block beside the notation. That is a sound sent, not a sound heard: whether your client surfaces it is its answer to give, and if it cannot, the notation is the whole of what you get. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
+    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does. describe_room is a safe doorway and never returns the explanation. Add from_t with an explicit destination t when you want two exact observations and their temporal delta in one stateless call; a static room can honestly report zero visible change. To stay in a room rather than move through it, pass dwell with several phases: the reply reports what refused to move across all of them, including how much stayed dark inside the region that did move. Pass receipt true on play_room for a replay proof in structuredContent.encounter; a receipt is not a memory, and asking does not keep the play. To keep one, pass that object as receipt on record_journal; the server replays it and stores only a live match. workspace holds a resettable visit state in this process only: inspect, edit, defer, or clear place, intention, pending_prediction, unfinished work, recent notes, and retrieved journal handles. Play does not write it. It is not a memory, and exiting or clearing drops it. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. Read structuredContent.engineeredAha for the beat, visible wager, and post-summon grade. reveal_room opens only after a normal room has been played, or after an engineered Aha has consolidated. Pass audio true to listen_room or sing_expression and a real WAV arrives in an audio content block beside the notation. That is a sound sent, not a sound heard: whether your client surfaces it is its answer to give, and if it cannot, the notation is the whole of what you get. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
 }
 
 fn server_capabilities() -> Value {
@@ -211,7 +211,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "play_room",
-                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. Add from_t with an explicit destination t for two exact observations and a typed temporal delta; no elapsed duration or path between them is inferred. When you supply pokes or a gesture, the top-level delta separately measures exactly how the math answered your hand at t. This call is stateless: replay the same inputs for the same result. Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice accept a room-owned wager plus aha_summon to walk an engineered aha without App session state; structuredContent.engineeredAha reports the beat.",
+                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. Add from_t with an explicit destination t for two exact observations and a typed temporal delta; no elapsed duration or path between them is inferred. When you supply pokes or a gesture, the top-level delta separately measures exactly how the math answered your hand at t. This call is stateless: replay the same inputs for the same result. Pass receipt true for a replay proof in structuredContent.encounter; a receipt is not a memory, and asking does not keep the play. Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice accept a room-owned wager plus aha_summon to walk an engineered aha without App session state; structuredContent.engineeredAha reports the beat.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -278,6 +278,10 @@ fn build_tools_catalog() -> Value {
                         "aha_summon": {
                             "type": "boolean",
                             "description": "After a generation act on Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, or Nontransitive Dice, advance the engineered aha through morph to consolidated and unlock punchline reveal text. Stateless one-shot."
+                        },
+                        "receipt": {
+                            "type": "boolean",
+                            "description": "Optional. Pass true to receive a Numinous Encounter Receipt in structuredContent.encounter: a versioned replay proof of this exact play. Two identical plays produce the same artifact. Asking does not write the journal or keep the play. Omit the flag, or pass false, to leave the structured result unchanged."
                         }
                     },
                     "required": ["id"],
@@ -363,18 +367,19 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "record_journal",
-                "description": "Append an original entry to your MCP experience journal. The server assigns a stable identifier and record time. Declare the account source and optional event time; affect is accepted only as explicit self-report. Do not record private host data.",
+                "description": "Append an original entry to your MCP experience journal. The server assigns a stable identifier and record time. Declare the account source and optional event time; affect is accepted only as explicit self-report. Pass the structuredContent.encounter object as receipt to keep a replay proof: the server replays it, and only a live match is stored as source numinous-result under subject receipt:<resultDigest>. Do not record private host data.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "kind": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_KIND_CHARS, "description": "The entry kind, for example encounter, creation, connection, or thought. The reserved correction kind is available only through correct_journal." },
-                        "subject": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_SUBJECT_CHARS, "description": "The specific room id or subject." },
-                        "text": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_TEXT_CHARS, "description": "The main content to remember." },
+                        "subject": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_SUBJECT_CHARS, "description": "The specific room id or subject. When receipt is present this is overwritten to receipt:<resultDigest>." },
+                        "text": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_TEXT_CHARS, "description": "The main content to remember. For a promoted receipt this is your interpretation, not the receipt body." },
                         "affect": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_AFFECT_CHARS, "description": "Optional explicitly self-reported affect or state. Never infer this value." },
                         "event_time_utc": { "type": "integer", "minimum": 0, "description": "Optional Unix time in seconds for the described event. Defaults to the server-owned record time." },
-                        "source": { "type": "string", "enum": ["self-authored", "player-provided", "numinous-result"], "default": "self-authored", "description": "Immutable provenance for this account." }
+                        "source": { "type": "string", "enum": ["self-authored", "player-provided", "numinous-result"], "default": "self-authored", "description": "Immutable provenance for this account. numinous-result is assigned only when receipt is present and the live replay matches." },
+                        "receipt": { "type": "object", "description": "Optional structuredContent.encounter object from play_room. The server replays the action and keeps the receipt only when the live digests match. Asking play_room for a receipt does not keep it." }
                     },
-                    "required": ["kind", "subject", "text"],
+                    "required": ["kind", "text"],
                     "additionalProperties": false
                 }
             },
@@ -420,8 +425,105 @@ fn build_tools_catalog() -> Value {
                 }
             },
             {
+                "name": "workspace",
+                "description": "Inspect, edit, defer, or clear a compact visit workspace in this MCP process. It holds only what you put there: current place, a self-chosen intention, a pending prediction, unfinished action or creation, recent notes, and a few journal handles. Play does not write it. It is not a memory, not the journal, and it does not survive process exit. Default op is inspect.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "op": {
+                            "type": "string",
+                            "enum": ["inspect", "edit", "defer", "clear"],
+                            "default": "inspect",
+                            "description": "inspect (default) returns the current workspace. edit replaces named fields. defer parks one filled active field. clear drops one field, the deferred lot, or all."
+                        },
+                        "field": {
+                            "type": "string",
+                            "enum": ["place", "intention", "pending_prediction", "unfinished", "recent", "retrieved", "deferred", "all"],
+                            "description": "Required for defer and clear. all is valid only for clear."
+                        },
+                        "place": {
+                            "type": "object",
+                            "description": "Edit only: listed room to stand in. Optional t in [0,1) and variation.",
+                            "properties": {
+                                "room": room_id_schema("Listed room id, for example times-tables."),
+                                "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Optional finite phase in [0,1)." },
+                                "variation": { "type": "integer", "minimum": 0, "description": "Optional variation seed." }
+                            },
+                            "required": ["room"],
+                            "additionalProperties": false
+                        },
+                        "intention": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_WORKSPACE_TEXT_CHARS,
+                            "description": "Edit only: a self-chosen question or intention for this visit."
+                        },
+                        "pending_prediction": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_WORKSPACE_TEXT_CHARS,
+                            "description": "Edit only: a prediction you have not yet submitted."
+                        },
+                        "unfinished": {
+                            "type": "object",
+                            "description": "Edit only: an action or creation still in progress.",
+                            "properties": {
+                                "kind": { "type": "string", "enum": ["action", "creation"] },
+                                "room": room_id_schema("Listed room id for an unfinished action."),
+                                "title": {
+                                    "type": "string",
+                                    "maxLength": numinous_core::MAX_WORKSPACE_TITLE_CHARS,
+                                    "description": "Optional working title for an unfinished creation."
+                                },
+                                "note": {
+                                    "type": "string",
+                                    "maxLength": numinous_core::MAX_WORKSPACE_TEXT_CHARS,
+                                    "description": "What remains to do."
+                                }
+                            },
+                            "required": ["kind", "note"],
+                            "additionalProperties": false
+                        },
+                        "recent": {
+                            "type": "array",
+                            "maxItems": numinous_core::MAX_WORKSPACE_RECENT,
+                            "description": "Edit only: replace the recent observation list. Newest last.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "room": room_id_schema("Listed room this note is about."),
+                                    "note": {
+                                        "type": "string",
+                                        "maxLength": numinous_core::MAX_WORKSPACE_TEXT_CHARS
+                                    }
+                                },
+                                "required": ["room", "note"],
+                                "additionalProperties": false
+                            }
+                        },
+                        "retrieved": {
+                            "type": "array",
+                            "maxItems": numinous_core::MAX_WORKSPACE_RETRIEVED,
+                            "description": "Edit only: replace journal handles kept at hand. This does not retrieve or explain the entries.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "entry_id": { "type": "integer", "minimum": 1, "description": "Journal entry identifier." },
+                                    "reason": {
+                                        "type": "string",
+                                        "maxLength": numinous_core::MAX_WORKSPACE_REASON_CHARS,
+                                        "description": "Optional reason for keeping this handle."
+                                    }
+                                },
+                                "required": ["entry_id"],
+                                "additionalProperties": false
+                            }
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "listen_room",
-                "description": "Hear a room: its input-aware mathematical sound at phase t as readable notes, plus a bounded summary of the stable stereo App room bed. Set ambient_detail to events to inspect every arranged bed event and objective signal metric. Pass audio true to also receive the room's sonification as an actual sound, a mono 16-bit WAV in an audio content block. The stereo room bed stays a projection: no local path is ever returned.",
+                "description": "Hear a room: its input-aware mathematical sound at phase t as readable notes, plus a bounded summary of the stable stereo App room bed. Set ambient_detail to events to inspect every arranged bed event and objective signal metric. Pass audio true to also receive the room's sonification as an actual sound, a mono 16-bit WAV in an audio content block. The stereo room bed stays a projection: no local path is ever returned. Pass receipt true for a replay proof in structuredContent.encounter; asking does not keep the listen.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -437,7 +539,11 @@ fn build_tools_catalog() -> Value {
                         "variation": { "type": "integer", "minimum": 0, "description": "Per-visit variation seed (default 0), matching play_room." },
                         "ambient_detail": { "type": "string", "enum": ["summary", "events"], "default": "summary", "description": "Stable room-bed detail (default summary). Events returns the complete bounded arrangement event projection and signal metrics, never PCM or a file path." },
                         "pokes": room_pokes_schema(),
-                        "gesture": room_gesture_schema()
+                        "gesture": room_gesture_schema(),
+                        "receipt": {
+                            "type": "boolean",
+                            "description": "Optional. Pass true to receive a Numinous Encounter Receipt in structuredContent.encounter. Asking does not write the journal."
+                        }
                     },
                     "required": ["id"],
                     "additionalProperties": false
@@ -537,6 +643,10 @@ fn build_tools_catalog() -> Value {
                         "xmax": {
                             "type": "number",
                             "description": "Right edge of x (default tau), as plot_expression uses it."
+                        },
+                        "receipt": {
+                            "type": "boolean",
+                            "description": "Optional. Pass true to receive a Numinous Encounter Receipt in structuredContent.encounter. Asking does not write the journal. Audio bytes are never part of the digest."
                         }
                     },
                     "required": ["expr"],

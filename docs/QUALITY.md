@@ -16,7 +16,7 @@ built, so an aspiration is never mistaken for a result.
   regions and 95.28% lines under the documented exclusions. Each of the four
   packaged release targets installs into a disposable root, renders Times
   Tables through the installed CLI, and completes modern MCP discovery, the
-  exact 35-tool inventory, and a real `play_room` call from an isolated profile.
+  exact 36-tool inventory, and a real `play_room` call from an isolated profile.
   Sixteen SBOM regressions require a deterministic SPDX 2.3 inventory of the
   exact locked all-feature Rust graph, including dependency edges, declared
   licenses, package URLs, and registry checksums. Fifteen release-package

@@ -200,12 +200,12 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Current protocol surface:** modern clients use `server/discover`,
   `tools/list`, and `tools/call` over stdio with version and client capability
   metadata on every request. Legacy 2025-11-25 and 2025-06-18 clients retain
-  `initialize`, `tools/list`, `tools/call`, and `ping`. The 35 tools include
+  `initialize`, `tools/list`, `tools/call`, and `ping`. The 36 tools include
   `list_rooms`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
   `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
   `sing_expression`, Journey operations, experience journal operations
   (`read_journal`, `record_journal`, `correct_journal`, `export_journal`,
-  `erase_journal`), and the shared games. Journal entries have stable local
+  `erase_journal`), the process-local `workspace` visit state, and the shared games. Journal entries have stable local
   identifiers, separate event and record times, declared provenance, immutable
   corrections, and bounded versioned export pages. `export_journal` returns the
   native journal schema by default or, when asked for `format: "okf-0.2"`, an
@@ -345,8 +345,34 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   Two-observation calls are limited to 2,304 cells per render so a complete
   consented public event retains wire margin. Omitting `from_t` omits
   `temporal` and preserves the existing result. This evidence is stateless and
-  creates no receipt or journal entry. Successful play still follows the
+  creates no journal entry. Successful play still follows the
   existing coarse Journey visit policy.
+- **Numinous Encounter Receipts (built, emit-only plus explicit keep):**
+  `play_room` accepts optional `receipt: true`. The additive
+  `structuredContent.encounter` is a versioned replay proof: schema
+  `numinous.encounter-receipt`, schema version 1, the live replay ABI and
+  compatibility fingerprint, the tool name, the normalized action, action and
+  result digests, and provenance (package version plus build-semantic identity).
+  There is no issued time, so two identical plays produce the same artifact.
+  Digests hash a closed ordered tuple after dropping `receipt` and
+  `response_mode` and filling the public defaults. The result digest binds
+  domain fields only, never prose, never the ASCII render, never audio. Asking
+  for a receipt does not write the journal. Omitting the flag leaves
+  `structuredContent` byte-identical to the previous result. To keep a proof,
+  pass that object as `receipt` on `record_journal`. The server replays the
+  action on this binary and stores only a live digest match as source
+  `numinous-result` under subject `receipt:<resultDigest>`. A forged digest, a
+  stale fingerprint, or `numinous-result` without a receipt is refused. The
+  player-facing receipt path added no tool. `listen_room` and `sing_expression` accept
+  the same `receipt` switch. Their digests bind notation, motif, bed counts,
+  and encoded-audio size, never the WAV bytes.
+- **Resettable session workspace (built):** `workspace` holds compact visit
+  state in the current MCP process only: current place, a self-chosen
+  intention, a pending prediction, unfinished action or creation, recent
+  notes, and a few journal handles. The player inspects, edits, defers, or
+  clears every field. Play does not write it. It is not a memory, not the
+  journal, and not Watch Agent state. A new process starts empty. Remembered-room
+  retrieval remains unbuilt; retrieved handles are stored, not explained.
 - **Canonical persistent progress (built):** compatibility aliases are resolved
   before Journey mutation. Playing `kepler-areas` and then `kepler-laws` lights
   one canonical star. The Journey also persists the bounded canonical set of
@@ -398,10 +424,10 @@ meaning in place.
 The shared `numinous-broadcast` foundation implements the pairing,
 compatibility, framing, consent, sequence, control-marker, typed public-event,
 and bounded-queue contracts below. The MCP face now connects that foundation
-through `broadcast_session`, a complete fail-closed policy for all 35 declared
+through `broadcast_session`, a complete fail-closed policy for all 36 declared
 tools, replay-safe daily seed normalization, and separate nonblocking writer
-and disconnect-monitor workers. Twenty-three tools are explicitly public, nine
-progression or local-state tools are private, and the consent control broadcasts
+and disconnect-monitor workers. Twenty-three tools are explicitly public, twelve
+progression, journal, or visit-workspace tools are private, and the consent control broadcasts
 neither itself nor progress. The native App now ships the human Watch Agent
 surface. X or the identity-neutral Shared Play item in the Cabinet opens the ephemeral
 listener. The surface shows pairing, consent state, typed public actions,
