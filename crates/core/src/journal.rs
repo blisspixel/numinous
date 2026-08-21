@@ -25,6 +25,8 @@ pub const JOURNAL_SOURCE_PLAYER_PROVIDED: &str = "player-provided";
 pub const JOURNAL_SOURCE_NUMINOUS_RESULT: &str = "numinous-result";
 /// Provenance assigned to entries migrated from the prototype format.
 pub const JOURNAL_SOURCE_LEGACY_IMPORT: &str = "legacy-import";
+/// Subject prefix for a promoted Numinous Encounter Receipt.
+pub const JOURNAL_SUBJECT_RECEIPT_PREFIX: &str = "receipt:";
 
 const JOURNAL_HEADER: &str = "numinous-journal-v2";
 
