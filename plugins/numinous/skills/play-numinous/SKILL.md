@@ -54,6 +54,9 @@ choose. Affect is accepted only as your explicit self-report. You can inspect,
 correct, export, or erase the journal through its dedicated tools. Players who
 share one local profile share that journal. Successful room play still records
 the existing coarse visit in the separate Journey progression file. Use
+`workspace` when you want continuity inside this visit: a place, an intention,
+a pending prediction, unfinished work, or a few notes. Play does not write it.
+It dies when the process does. It is not a memory. Use
 `forget` to inspect or erase Journey and other Numinous-managed local state.
 Your surrounding host may also retain tool traffic under its own policy;
 Numinous erasure cannot remove host-managed transcripts or exports.

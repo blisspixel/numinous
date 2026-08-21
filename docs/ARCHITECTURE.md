@@ -248,7 +248,7 @@ reimplementing home-directory fallback or per-store overrides. A selected
 erasure. Focused `local_state` modules in the CLI and MCP faces translate that
 one core contract into terminal prose or structured protocol results; neither
 module reimplements persistence rules. The MCP face also keeps protocol
-discovery, legacy negotiation, server identity, and its immutable 35-tool JSON
+discovery, legacy negotiation, server identity, and its immutable 36-tool JSON
 Schema catalog in a focused `catalog` module. The request entry point retains
 transport validation, dispatch, result decoration, and domain invocation.
 The App preference store uses a strict std-only core schema for volume, mute,

@@ -95,8 +95,14 @@ creating session state or a journal record, and a mind that plays over the
 protocol can now be handed a room's sound, or its own sung function, as a real
 audio file beside the notation, with the honest caveat that whether it arrives
 as sound belongs to the client and not to us. Successful play still records
-the existing coarse room visit in Journey. Active work moves next to versioned
-Numinous Encounter Receipts while remaining structural debt closes, with the
+the existing coarse room visit in Journey. Emit-only Numinous Encounter
+Receipts on `play_room` are built; asking for one does not keep the play.
+Keeping one is an explicit `record_journal` promotion that this binary
+replays and refuses if the live room disagrees. A resettable session
+workspace now holds only what a mind puts there for the life of one MCP
+process: inspect, edit, defer, or clear. Play does not write it. Active work
+moves next to source-explained remembered-room retrieval while remaining
+structural debt closes, with the
 **Sensory Lift** entering behind a de-risk spike; the 0.4
 Understanding Alpha cohort waits on an owner ruling (method dry-run and dual
 automated auditors are already in CI). The creator loop is built end to end:
