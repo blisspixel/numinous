@@ -40,6 +40,8 @@ RELEASE_FILES = (
     "PLAY.md",
     "README.md",
     "VERIFY.md",
+    "assets/logo.icns",
+    "assets/logo.png",
     "plugins/numinous/plugin.json",
     "plugins/numinous/mcp.json",
     "plugins/numinous/skills/play-numinous/SKILL.md",

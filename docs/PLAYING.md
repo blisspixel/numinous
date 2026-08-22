@@ -23,15 +23,17 @@ Windows, in PowerShell:
 irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 ```
 
-Run `numinous update` any time to install the latest GitHub release. Re-running
-the installer does the same. `--uninstall` (Windows: `-Uninstall`) removes
-everything it installed and leaves your play history alone. The large built-in
-soundtrack is retained when its verified audio content is unchanged, even when
-binary release metadata changes. Pass
+The installer adds `Numinous` to the Windows desktop and Start menu, your user
+Applications folder on macOS, or the Linux application menu. Run
+`numinous update` any time to install the latest GitHub release. Re-running the
+installer does the same. `numinous uninstall` removes the managed program and
+launchers while leaving Journey, scores, Cairn, journal, and settings alone.
+The large built-in soundtrack is retained when its verified audio content is
+unchanged, even when binary release metadata changes. Pass
 `--source` (Windows: `-Source`) only to build the current `main` branch locally.
 
-**Start the app:** open a new terminal and type `numinous-app`, or from a
-clone:
+**Start the app:** open the installed `Numinous` launcher, type `numinous-app`
+in a new terminal, or run this from a clone:
 
 ```
 cargo run --release --bin numinous-app

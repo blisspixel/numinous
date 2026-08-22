@@ -133,6 +133,7 @@ PROBES: tuple[Probe, ...] = (
 # surface stops being checked without anyone deciding that it should.
 SKIPPED: dict[str, str] = {
     "update": "downloads and installs a GitHub release",
+    "uninstall": "removes the managed installation and its launchers",
     "tune2": "needs ELEVENLABS_API_KEY and the network",
     "gallery": "renders all 354 rooms to disk; covered by the goldens gate",
     "contact-sheet": "renders all 354 rooms into one sheet; same cost, same cover",
