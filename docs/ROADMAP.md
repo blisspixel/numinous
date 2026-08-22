@@ -1702,7 +1702,10 @@ peak energy.
   and a space-safe icon path, invalid relative XDG data roots fall back to the
   standard Linux location, and contradictory install and uninstall flags fail
   closed. macOS bundle validation runs in an isolated scope so staging cannot
-  overwrite the final application path. The uninstall roundtrip hashes all five
+  overwrite the final application path. Detached maintenance helpers release
+  redirected output handles before waiting for the CLI, so piped and automated
+  uninstalls cannot deadlock; the packaged roundtrip enforces a focused
+  ten-second handoff bound. The uninstall roundtrip hashes all five
   player-owned state files
   before removal and requires byte-for-byte preservation afterward, with XDG
   and Windows AppData launcher roots confined to its disposable profile.

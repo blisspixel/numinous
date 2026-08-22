@@ -14,6 +14,7 @@ import platform
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 SPEC = importlib.util.spec_from_file_location(
@@ -139,6 +140,27 @@ class NativeToolEnvTests(unittest.TestCase):
         original = {"PATH": "/usr/bin"}
         MODULE.native_tool_env(original)
         self.assertEqual(original, {"PATH": "/usr/bin"})
+
+
+class ProcessRunnerTests(unittest.TestCase):
+    @mock.patch.object(MODULE.subprocess, "run")
+    def test_each_step_can_choose_a_shorter_timeout(self, runner: mock.Mock) -> None:
+        runner.return_value = subprocess_result = MODULE.subprocess.CompletedProcess(
+            args=["bounded"], returncode=0, stdout="finished\n", stderr=""
+        )
+        output = MODULE.run(
+            ["bounded"], {"PATH": ""}, "bounded step", timeout_seconds=7.0
+        )
+        self.assertEqual(output, subprocess_result.stdout)
+        self.assertEqual(runner.call_args.kwargs["timeout"], 7.0)
+
+    @mock.patch.object(MODULE.subprocess, "run")
+    def test_timeout_is_reported_as_a_roundtrip_failure(self, runner: mock.Mock) -> None:
+        runner.side_effect = MODULE.subprocess.TimeoutExpired(["stuck"], 3.0)
+        with self.assertRaisesRegex(
+            MODULE.RoundtripError, "stuck step exceeded 3 seconds"
+        ):
+            MODULE.run(["stuck"], {"PATH": ""}, "stuck step", timeout_seconds=3.0)
 
 
 class IsolatedProfileEnvTests(unittest.TestCase):
