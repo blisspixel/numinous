@@ -119,7 +119,11 @@ def isolated_profile_env(
 
 
 def run(
-    command: list[str], env: dict[str, str], step: str, stdin: str | None = None
+    command: list[str],
+    env: dict[str, str],
+    step: str,
+    stdin: str | None = None,
+    timeout_seconds: float = 900.0,
 ) -> str:
     """Run one step, giving it keystrokes only when it is meant to read any.
 
@@ -130,15 +134,20 @@ def run(
     the stdin it would have had.
     """
     extra: dict[str, Any] = {} if stdin is None else {"input": stdin}
-    result = subprocess.run(
-        command,
-        env=native_tool_env(env),
-        capture_output=True,
-        text=True,
-        cwd=ROOT,
-        timeout=900,
-        **extra,
-    )
+    try:
+        result = subprocess.run(
+            command,
+            env=native_tool_env(env),
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+            timeout=timeout_seconds,
+            **extra,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise RoundtripError(
+            f"{step} exceeded {timeout_seconds:g} seconds"
+        ) from error
     if result.returncode != 0:
         raise RoundtripError(
             f"{step} failed with exit {result.returncode}\n"
@@ -383,7 +392,12 @@ def roundtrip(archive: Path, checksum: Path, tag: str) -> list[dict[str, Any]]:
             ),
         })
 
-        run([str(cli), "uninstall"], env, "uninstall through the installed CLI")
+        run(
+            [str(cli), "uninstall"],
+            env,
+            "uninstall through the installed CLI",
+            timeout_seconds=10.0,
+        )
         wait_until_removed((install_root, *launchers))
 
         checks.append({

@@ -829,11 +829,20 @@ fn maintain_installation(action: MaintenanceAction) -> ExitCode {
         let installer = write_update_installer()?;
         let pid = std::process::id().to_string();
         let mut process = maintenance_process(&installer, &pid, action);
-        process
-            .env("NUMINOUS_HOME", &root)
-            .stdin(Stdio::null())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit());
+        process.env("NUMINOUS_HOME", &root).stdin(Stdio::null());
+        // A helper inherits anonymous pipes too. It waits for this process, so
+        // keeping a redirected handle open would make a capturing parent wait
+        // for the helper in turn.
+        if std::io::stdout().is_terminal() {
+            process.stdout(Stdio::inherit());
+        } else {
+            process.stdout(Stdio::null());
+        }
+        if std::io::stderr().is_terminal() {
+            process.stderr(Stdio::inherit());
+        } else {
+            process.stderr(Stdio::null());
+        }
         if let Err(error) = process.spawn() {
             let _ = std::fs::remove_file(&installer);
             return Err(format!("Could not start the maintenance helper: {error}"));
