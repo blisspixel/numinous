@@ -1684,6 +1684,26 @@ peak energy.
   A local Windows full-payload install and repeat update verified all three
   binaries and all 42 tracks. GitHub artifacts are not cryptographically signed,
   and same-runner smoke is not clean-machine evidence.
+- **Done (August 22, 2026):** the verified installers now leave a native human
+  doorway instead of ending at a terminal command. Windows receives
+  icon-bearing desktop and Start menu Shell links. macOS receives a per-user
+  application bundle and a desktop link when that folder exists. Linux receives
+  a freedesktop application-menu entry and an executable desktop copy when its
+  desktop folder exists. Updates refresh installer-owned launchers, uninstall
+  removes only an exact owned launcher, and collisions with user-owned files
+  are preserved.
+  Installer self-tests cover creation, refresh, collision, and cleanup. The
+  three-platform install roundtrip requires the launchers to appear and
+  disappear, and the packaged payload carries PNG and native macOS ICNS forms
+  of the shared icon. The installed CLI exposes the same removal path as
+  `numinous uninstall`, and Windows registers it in Installed Apps. The
+  maintenance helper starts outside the install root and owns temporary-script
+  cleanup before it waits. Windows registration has an exact ownership marker
+  and a space-safe icon path, invalid relative XDG data roots fall back to the
+  standard Linux location, and contradictory install and uninstall flags fail
+  closed. The uninstall roundtrip hashes all five player-owned state files
+  before removal and requires byte-for-byte preservation afterward, with XDG
+  and Windows AppData launcher roots confined to its disposable profile.
 - **Done (August 12, 2026):** every binary archive includes the portable Agent
   Plugins v1 package beside the three installed faces. A strict local validator
   and release-package regressions pin its manifests, play skill, version,

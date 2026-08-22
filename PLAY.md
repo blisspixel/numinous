@@ -125,7 +125,15 @@ Windows, in PowerShell:
 irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 ```
 
-Then open a new terminal:
+The installer leaves a direct way back into the game:
+
+- **Windows:** `Numinous` on the desktop and in the Start menu.
+- **macOS:** `Numinous` in your user Applications folder and on the desktop
+  when that folder exists.
+- **Linux:** `Numinous` in the application menu and on the desktop when the
+  desktop environment exposes that folder.
+
+Open it and play. The same entry points remain available from a new terminal:
 
 ```
 numinous-app     a window; A/D switch rooms, touch or use a controller hand
@@ -133,7 +141,10 @@ numinous         or live in the terminal, in full color
 ```
 
 Later, `numinous update` installs the newest published release without touching
-your Journey, scores, Cairn, or journal.
+your Journey, scores, Cairn, or journal. It refreshes the launcher too. Use
+`numinous uninstall` to remove the managed program and its launchers while
+keeping that player-owned state and App settings. On Windows, the same action
+is available from Installed Apps.
 
 (From a clone, `cargo run --release --bin numinous-app` works directly.)
 

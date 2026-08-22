@@ -12,8 +12,9 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh -s -- --uninstall
 #
-# Uninstalling never touches play history: ~/.numinous-journey,
-# ~/.numinous-scores, and ~/.numinous-cairn stay yours.
+# Uninstalling never touches play history or settings: ~/.numinous-journey,
+# ~/.numinous-scores, ~/.numinous-cairn, ~/.numinous-journal, and
+# ~/.numinous-preferences stay yours.
 #
 # Options: --uninstall, --no-modify-path, --adopt-legacy, --source,
 # --self-test, --help.
@@ -30,6 +31,8 @@ NUMINOUS_HOME="${NUMINOUS_HOME:-$HOME/.numinous}"
 INSTALL_MARKER_TEXT='Numinous install root v2'
 LEGACY_INSTALL_MARKER_TEXT='Numinous install root'
 INSTALLER_NOTE='added by the Numinous installer'
+DESKTOP_ENTRY_MARKER='X-Numinous-Managed=true'
+MAC_APP_MARKER='Numinous app bundle v1'
 
 say() { printf '%s\n' "$1"; }
 fail() {
@@ -698,6 +701,409 @@ zsh_profile_is_relevant() {
         || { [ -n "${SHELL:-}" ] && [ "${SHELL##*/}" = "zsh" ]; }
 }
 
+desktop_exec_quote() {
+    printf '"'
+    printf '%s' "$1" \
+        | sed 's/\\/\\\\/g; s/"/\\"/g; s/`/\\`/g; s/\$/\\$/g; s/%/%%/g'
+    printf '"'
+}
+
+desktop_value_escape() {
+    printf '%s' "$1" | sed 's/\\/\\\\/g; s/ /\\s/g'
+}
+
+desktop_entry_is_managed() {
+    entry="$1"
+    target="$2"
+    target_value="$(desktop_value_escape "$target")"
+    [ -f "$entry" ] && [ ! -L "$entry" ] \
+        && grep -Fqx "$DESKTOP_ENTRY_MARKER" "$entry" \
+        && grep -Fqx "X-Numinous-Target=$target_value" "$entry"
+}
+
+write_desktop_entry() (
+    destination="$1"
+    target="$2"
+    icon="$3"
+    mode="$4"
+    parent="$(dirname "$destination")"
+    mkdir -p "$parent" || fail "could not create the launcher directory"
+    if [ -e "$destination" ] || [ -L "$destination" ]; then
+        if [ -L "$destination" ] || [ ! -f "$destination" ] \
+            || ! grep -Fqx "$DESKTOP_ENTRY_MARKER" "$destination"; then
+            return 2
+        fi
+    fi
+    exec_value="$(desktop_exec_quote "$target")"
+    icon_value="$(desktop_value_escape "$icon")"
+    target_value="$(desktop_value_escape "$target")"
+    stage="$(mktemp "$parent/.numinous.desktop.XXXXXX")" \
+        || fail "could not stage the Numinous launcher"
+    trap 'rm -f -- "$stage"' EXIT HUP INT TERM
+    {
+        printf '%s\n' '[Desktop Entry]'
+        printf '%s\n' 'Type=Application'
+        printf '%s\n' 'Version=1.0'
+        printf '%s\n' 'Name=Numinous'
+        printf '%s\n' 'Comment=Mathematics as a shared language, made playable'
+        printf 'Exec=%s\n' "$exec_value"
+        printf 'Icon=%s\n' "$icon_value"
+        printf '%s\n' 'Terminal=false'
+        printf '%s\n' 'Categories=Game;Education;'
+        printf '%s\n' 'Keywords=math;science;puzzle;simulation;'
+        printf '%s\n' 'StartupNotify=true'
+        printf '%s\n' "$DESKTOP_ENTRY_MARKER"
+        printf 'X-Numinous-Target=%s\n' "$target_value"
+    } >"$stage"
+    chmod "$mode" "$stage" || fail "could not protect the Numinous launcher"
+    mv -f -- "$stage" "$destination"
+    stage=''
+    desktop_entry_is_managed "$destination" "$target" \
+        || fail "the Numinous launcher did not preserve its launch contract"
+    trap - EXIT HUP INT TERM
+)
+
+linux_data_home() {
+    case "${XDG_DATA_HOME:-}" in
+        /*) printf '%s' "$XDG_DATA_HOME" ;;
+        *) printf '%s' "$HOME/.local/share" ;;
+    esac
+}
+
+linux_desktop_dir() {
+    desktop=''
+    if have xdg-user-dir; then
+        desktop="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
+    fi
+    [ -n "$desktop" ] || desktop="$HOME/Desktop"
+    case "$desktop" in /*) ;; *) return 1 ;; esac
+    [ -d "$desktop" ] || return 1
+    desktop_physical="$(CDPATH= cd -P "$desktop" 2>/dev/null && pwd)" || return 1
+    home_physical="$(CDPATH= cd -P "$HOME" 2>/dev/null && pwd)" || return 1
+    [ "$desktop_physical" != "$home_physical" ] || return 1
+    printf '%s' "$desktop"
+}
+
+install_linux_launchers() {
+    target="$1"
+    icon="$2"
+    data_home="$(linux_data_home)"
+    menu_entry="$data_home/applications/numinous.desktop"
+    if write_desktop_entry "$menu_entry" "$target" "$icon" 644; then
+        say "Application launcher: $menu_entry"
+    else
+        status="$?"
+        [ "$status" -eq 2 ] \
+            || fail "could not create the Linux application launcher"
+        say "Application launcher was skipped because $menu_entry belongs to something else."
+    fi
+
+    desktop="$(linux_desktop_dir 2>/dev/null || true)"
+    [ -n "$desktop" ] || return 0
+    desktop_entry="$desktop/Numinous.desktop"
+    if write_desktop_entry "$desktop_entry" "$target" "$icon" 755; then
+        if have gio; then
+            gio set "$desktop_entry" metadata::trusted true >/dev/null 2>&1 || true
+        fi
+        say "Desktop shortcut: $desktop_entry"
+    else
+        status="$?"
+        [ "$status" -eq 2 ] \
+            || fail "could not create the Linux desktop shortcut"
+        say "Desktop shortcut was skipped because $desktop_entry belongs to something else."
+    fi
+}
+
+remove_desktop_entry() {
+    destination="$1"
+    target="$2"
+    [ -e "$destination" ] || [ -L "$destination" ] || return 0
+    if desktop_entry_is_managed "$destination" "$target"; then
+        rm -f -- "$destination"
+    else
+        say "Keeping $destination because it is no longer the installer-owned launcher."
+    fi
+}
+
+remove_linux_launchers() {
+    target="$1"
+    data_home="$(linux_data_home)"
+    remove_desktop_entry "$data_home/applications/numinous.desktop" "$target"
+    desktop="$(linux_desktop_dir 2>/dev/null || true)"
+    [ -z "$desktop" ] \
+        || remove_desktop_entry "$desktop/Numinous.desktop" "$target"
+}
+
+mac_bundle_is_managed() {
+    bundle="$1"
+    target="$2"
+    marker="$bundle/Contents/Resources/.numinous-managed"
+    executable="$bundle/Contents/MacOS/Numinous"
+    [ -d "$bundle" ] && [ ! -L "$bundle" ] \
+        && [ -f "$marker" ] && [ ! -L "$marker" ] \
+        && [ "$(sed -n '1p' "$marker")" = "$MAC_APP_MARKER" ] \
+        && [ "$(sed -n '2p' "$marker")" = "$target" ] \
+        && [ -L "$executable" ] \
+        && [ "$(readlink "$executable")" = "$target" ]
+}
+
+install_macos_launcher() (
+    target="$1"
+    icon="$2"
+    applications="$HOME/Applications"
+    bundle="$applications/Numinous.app"
+    mkdir -p "$applications" || fail "could not create the user Applications directory"
+    if [ -e "$bundle" ] || [ -L "$bundle" ]; then
+        if ! mac_bundle_is_managed "$bundle" "$target"; then
+            say "Application bundle was skipped because $bundle belongs to something else."
+            exit 0
+        fi
+        rm -rf -- "$bundle"
+    fi
+    stage="$(mktemp -d "$applications/.Numinous.app.XXXXXX")" \
+        || fail "could not stage the Numinous application bundle"
+    trap 'rm -rf -- "$stage"' EXIT HUP INT TERM
+    mkdir -p "$stage/Contents/MacOS" "$stage/Contents/Resources"
+    ln -s "$target" "$stage/Contents/MacOS/Numinous"
+    cp "$icon" "$stage/Contents/Resources/Numinous.icns"
+    cat >"$stage/Contents/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>Numinous</string>
+    <key>CFBundleExecutable</key>
+    <string>Numinous</string>
+    <key>CFBundleIconFile</key>
+    <string>Numinous.icns</string>
+    <key>CFBundleIdentifier</key>
+    <string>org.blisspixel.numinous</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Numinous</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.education</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+</dict>
+</plist>
+PLIST
+    printf 'APPL????' >"$stage/Contents/PkgInfo"
+    printf '%s\n%s\n' "$MAC_APP_MARKER" "$target" \
+        >"$stage/Contents/Resources/.numinous-managed"
+    mac_bundle_is_managed "$stage" "$target" \
+        || fail "the staged Numinous application bundle is incomplete"
+    mv "$stage" "$bundle"
+    stage=''
+    trap - EXIT HUP INT TERM
+    say "Application bundle: $bundle"
+
+    desktop="$HOME/Desktop"
+    [ -d "$desktop" ] || exit 0
+    desktop_bundle="$desktop/Numinous.app"
+    if [ -e "$desktop_bundle" ] || [ -L "$desktop_bundle" ]; then
+        if [ -L "$desktop_bundle" ] \
+            && [ "$(readlink "$desktop_bundle")" = "$bundle" ]; then
+            rm -f -- "$desktop_bundle"
+        else
+            say "Desktop shortcut was skipped because $desktop_bundle belongs to something else."
+            exit 0
+        fi
+    fi
+    ln -s "$bundle" "$desktop_bundle"
+    say "Desktop shortcut: $desktop_bundle"
+)
+
+remove_macos_launcher() {
+    target="$1"
+    bundle="$HOME/Applications/Numinous.app"
+    desktop_bundle="$HOME/Desktop/Numinous.app"
+    if [ -L "$desktop_bundle" ] && [ "$(readlink "$desktop_bundle")" = "$bundle" ]; then
+        rm -f -- "$desktop_bundle"
+    elif [ -e "$desktop_bundle" ] || [ -L "$desktop_bundle" ]; then
+        say "Keeping $desktop_bundle because it is no longer the installer-owned shortcut."
+    fi
+    if mac_bundle_is_managed "$bundle" "$target"; then
+        rm -rf -- "$bundle"
+    elif [ -e "$bundle" ] || [ -L "$bundle" ]; then
+        say "Keeping $bundle because it is no longer the installer-owned application bundle."
+    fi
+}
+
+install_platform_launchers() {
+    target="$BINARY_PATH/numinous-app"
+    png_icon="$SOURCE_PATH/assets/logo.png"
+    icns_icon="$SOURCE_PATH/assets/logo.icns"
+    case "$1" in
+        macos)
+            [ -f "$icns_icon" ] && [ ! -L "$icns_icon" ] \
+                || fail "the installed release is missing its macOS launcher icon"
+            install_macos_launcher "$target" "$icns_icon"
+            ;;
+        linux)
+            [ -f "$png_icon" ] && [ ! -L "$png_icon" ] \
+                || fail "the installed release is missing its Linux launcher icon"
+            install_linux_launchers "$target" "$png_icon"
+            ;;
+    esac
+}
+
+remove_platform_launchers() {
+    target="$BINARY_PATH/numinous-app"
+    case "$1" in
+        macos) remove_macos_launcher "$target" ;;
+        linux) remove_linux_launchers "$target" ;;
+    esac
+}
+
+test_platform_launchers() {
+    root="$1/launchers"
+    home="$root/home"
+    target="$root/install/bin/numinous-app"
+    second_target="$root/second install/bin/numinous-app"
+    icon="$root/install/src/assets/logo.png"
+    mkdir -p "$home/Desktop" "$(dirname "$target")" \
+        "$(dirname "$second_target")" "$(dirname "$icon")"
+    printf '%s\n' app >"$target"
+    printf '%s\n' second >"$second_target"
+    printf '%s\n' icon >"$icon"
+    chmod 755 "$target" "$second_target"
+
+    (
+        HOME="$home"
+        XDG_DATA_HOME="$home/data"
+        export HOME XDG_DATA_HOME
+        install_linux_launchers "$target" "$icon"
+        desktop_entry_is_managed "$home/data/applications/numinous.desktop" "$target" \
+            || fail "launcher self-test: the Linux application launcher is incomplete"
+        desktop_entry_is_managed "$home/Desktop/Numinous.desktop" "$target" \
+            || fail "launcher self-test: the Linux desktop shortcut is incomplete"
+        install_linux_launchers "$second_target" "$icon"
+        desktop_entry_is_managed "$home/data/applications/numinous.desktop" \
+            "$second_target" \
+            || fail "launcher self-test: the Linux application launcher did not update"
+        remove_linux_launchers "$second_target"
+        [ ! -e "$home/data/applications/numinous.desktop" ] \
+            && [ ! -e "$home/Desktop/Numinous.desktop" ] \
+            || fail "launcher self-test: Linux uninstall retained a managed launcher"
+
+        printf '%s\n' personal >"$home/data/applications/numinous.desktop"
+        printf '%s\n' personal >"$home/Desktop/Numinous.desktop"
+        install_linux_launchers "$target" "$icon"
+        [ "$(cat "$home/data/applications/numinous.desktop")" = personal ] \
+            && [ "$(cat "$home/Desktop/Numinous.desktop")" = personal ] \
+            || fail "launcher self-test: Linux replaced a user-owned launcher"
+        remove_linux_launchers "$target"
+        [ -f "$home/data/applications/numinous.desktop" ] \
+            && [ -f "$home/Desktop/Numinous.desktop" ] \
+            || fail "launcher self-test: Linux removed a user-owned launcher"
+        rm -f -- "$home/data/applications/numinous.desktop" \
+            "$home/Desktop/Numinous.desktop"
+
+        mkdir -p "$home/working"
+        (
+            cd "$home/working"
+            XDG_DATA_HOME=relative-data
+            export XDG_DATA_HOME
+            install_linux_launchers "$target" "$icon"
+            desktop_entry_is_managed \
+                "$home/.local/share/applications/numinous.desktop" "$target" \
+                || fail "launcher self-test: relative XDG_DATA_HOME did not use the default"
+            [ ! -e "$home/working/relative-data" ] \
+                || fail "launcher self-test: relative XDG_DATA_HOME escaped into the working tree"
+            remove_linux_launchers "$target"
+        )
+        [ ! -e "$home/.local/share/applications/numinous.desktop" ] \
+            && [ ! -e "$home/Desktop/Numinous.desktop" ] \
+            || fail "launcher self-test: fallback Linux launcher cleanup was incomplete"
+    )
+    case "$(uname -s)" in
+        MINGW* | MSYS* | CYGWIN*) ;;
+        *)
+            (
+                HOME="$home"
+                export HOME
+                install_macos_launcher "$target" "$icon"
+                mac_bundle_is_managed "$home/Applications/Numinous.app" "$target" \
+                    || fail "launcher self-test: the macOS application bundle is incomplete"
+                [ -L "$home/Desktop/Numinous.app" ] \
+                    || fail "launcher self-test: the macOS desktop shortcut is missing"
+                install_macos_launcher "$target" "$icon"
+                mac_bundle_is_managed "$home/Applications/Numinous.app" "$target" \
+                    || fail "launcher self-test: the macOS application bundle did not update"
+                remove_macos_launcher "$target"
+                [ ! -e "$home/Applications/Numinous.app" ] \
+                    && [ ! -L "$home/Desktop/Numinous.app" ] \
+                    || fail "launcher self-test: macOS uninstall retained a managed launcher"
+
+                mkdir -p "$home/Applications/Numinous.app"
+                printf '%s\n' personal >"$home/Applications/Numinous.app/personal"
+                printf '%s\n' personal >"$home/Desktop/Numinous.app"
+                install_macos_launcher "$target" "$icon"
+                [ -f "$home/Applications/Numinous.app/personal" ] \
+                    && [ "$(cat "$home/Desktop/Numinous.app")" = personal ] \
+                    || fail "launcher self-test: macOS replaced a user-owned launcher"
+                remove_macos_launcher "$target"
+                [ -f "$home/Applications/Numinous.app/personal" ] \
+                    && [ -f "$home/Desktop/Numinous.app" ] \
+                    || fail "launcher self-test: macOS removed a user-owned launcher"
+            )
+            ;;
+    esac
+    say "POSIX application launcher creation and cleanup: pass."
+}
+
+uninstall_options_are_clear() {
+    [ "$SOURCE_MODE" -eq 0 ] \
+        && [ -z "$RELEASE_ARCHIVE" ] \
+        && [ -z "$RELEASE_CHECKSUM" ] \
+        && [ -z "$SOUNDTRACK_ARCHIVE" ] \
+        && [ -z "$SOUNDTRACK_CHECKSUM" ] \
+        && [ -z "$SOUNDTRACK_CONTENT_CHECKSUM" ] \
+        && [ -z "$RELEASE_TAG" ]
+}
+
+test_update_helper_signal_cleanup() (
+    [ -f "$0" ] || return 0
+    nonce="$(printf '%032x' "$$")"
+    helper="${TMPDIR:-/tmp}/numinous-update-$nonce.sh"
+    output="$1/helper-signal-output"
+    [ ! -e "$helper" ] && [ ! -L "$helper" ] \
+        || fail "helper self-test: private helper path already exists"
+    sleeper=''
+    helper_pid=''
+    trap '
+        [ -z "$helper_pid" ] || kill "$helper_pid" 2>/dev/null || true
+        [ -z "$sleeper" ] || kill "$sleeper" 2>/dev/null || true
+        rm -f -- "$helper" "$output"
+    ' EXIT HUP INT TERM
+    cp "$0" "$helper"
+    sleep 30 &
+    sleeper="$!"
+    HOME="$1/home" NUMINOUS_HOME="$1/helper-install" \
+        sh "$helper" --no-modify-path --uninstall \
+            --wait-for-pid "$sleeper" --delete-installer "$helper" \
+            >"$output" 2>&1 &
+    helper_pid="$!"
+    sleep 1
+    grep -Fq 'before uninstalling.' "$output" \
+        || fail "helper self-test: the uninstall helper did not enter its wait"
+    kill -TERM "$helper_pid"
+    wait "$helper_pid" 2>/dev/null || true
+    helper_pid=''
+    [ ! -e "$helper" ] && [ ! -L "$helper" ] \
+        || fail "helper self-test: a terminated updater retained its private script"
+    kill "$sleeper" 2>/dev/null || true
+    wait "$sleeper" 2>/dev/null || true
+    sleeper=''
+    trap - EXIT HUP INT TERM
+    rm -f -- "$output"
+)
+
 run_self_test() {
     have tar || fail "installer self-test requires tar"
     test_base="$(mktemp -d "${TMPDIR:-/tmp}/numinous-installer-test.XXXXXX")" \
@@ -883,6 +1289,15 @@ run_self_test() {
     verify_installed_cli "$test_base/installed-bin" "$test_base/stale-bin:$PATH" \
         || fail "PATH self-test: a stale earlier command defeated verified precedence"
 
+    test_platform_launchers "$test_base"
+    if (UNINSTALL=1; SOURCE_MODE=1; uninstall_options_are_clear); then
+        fail "option self-test: uninstall accepted source-install options"
+    fi
+    if (UNINSTALL=1; RELEASE_TAG=v1.2.3; uninstall_options_are_clear); then
+        fail "option self-test: uninstall accepted release-install options"
+    fi
+    test_update_helper_signal_cleanup "$test_base"
+
     rm -rf -- "$test_base"
     trap - EXIT HUP INT TERM
     say "POSIX installer root, uninstall, and provenance checks: pass."
@@ -960,13 +1375,8 @@ if [ "$SOURCE_MODE" -eq 1 ] \
         || [ -n "$RELEASE_TAG" ]; }; then
     fail "--source cannot be combined with release fixture options"
 fi
-case "$WAIT_FOR_PID" in
-    '' | *[!0-9]*) fail "--wait-for-pid needs a non-negative process id" ;;
-esac
-[ "$WAIT_FOR_PID" != "$$" ] || fail "the update helper cannot wait for itself"
-if [ "$WAIT_FOR_PID" -gt 0 ]; then
-    say "Waiting for the running Numinous command to close before updating."
-    while kill -0 "$WAIT_FOR_PID" 2>/dev/null; do sleep 1; done
+if [ "$UNINSTALL" -eq 1 ] && ! uninstall_options_are_clear; then
+    fail "--uninstall cannot be combined with install or release options"
 fi
 
 cleanup_update_installer() {
@@ -982,7 +1392,24 @@ cleanup_update_installer() {
         | grep -Eq '^numinous-update-[0-9a-f]{32}\.sh$' || return 0
     rm -f -- "$DELETE_INSTALLER"
 }
-trap cleanup_update_installer EXIT HUP INT TERM
+trap cleanup_update_installer EXIT
+trap 'cleanup_update_installer; exit 129' HUP
+trap 'cleanup_update_installer; exit 130' INT
+trap 'cleanup_update_installer; exit 143' TERM
+
+case "$WAIT_FOR_PID" in
+    '' | *[!0-9]*) fail "--wait-for-pid needs a non-negative process id" ;;
+esac
+[ "$WAIT_FOR_PID" != "$$" ] || fail "the update helper cannot wait for itself"
+if [ "$WAIT_FOR_PID" -gt 0 ]; then
+    if [ "$UNINSTALL" -eq 1 ]; then
+        wait_action=uninstalling
+    else
+        wait_action=updating
+    fi
+    say "Waiting for the running Numinous command to close before $wait_action."
+    while kill -0 "$WAIT_FOR_PID" 2>/dev/null; do sleep 1; done
+fi
 
 validate_install_root
 
@@ -1008,6 +1435,7 @@ else
 fi
 
 if [ "$UNINSTALL" -eq 1 ]; then
+    remove_platform_launchers "$os"
     remove_install_root "$NUMINOUS_HOME"
     for profile in "$HOME/.profile" "$HOME/.bash_profile" "$HOME/.bashrc" \
         "$HOME/.zprofile" "$HOME/.zshrc"; do
@@ -1015,7 +1443,7 @@ if [ "$UNINSTALL" -eq 1 ]; then
     done
     rm -f "$HOME/.config/fish/conf.d/numinous.fish"
     say "Numinous is uninstalled: $NUMINOUS_HOME is gone and the PATH lines are removed."
-    say "Your play history stays: ~/.numinous-journey, ~/.numinous-scores, ~/.numinous-cairn."
+    say "Your play history and settings stay: ~/.numinous-journey, ~/.numinous-scores, ~/.numinous-cairn, ~/.numinous-journal, ~/.numinous-preferences."
     exit 0
 fi
 
@@ -1148,6 +1576,8 @@ done
 # The app finds the built-in radio next to its executable.
 ln -sfn "$RADIO_SOURCE" "$BIN_DIR/radio"
 
+install_platform_launchers "$os"
+
 if [ "$MODIFY_PATH" -eq 1 ]; then
     add_path_line "$HOME/.profile" "$path_line"
     # A login bash reads .bash_profile instead of .profile when it exists.
@@ -1199,7 +1629,7 @@ else
     say "Installed release: $installed_release"
     say "Update any time with: numinous update"
 fi
-say "Uninstall with --uninstall."
+say "Uninstall any time with: numinous uninstall"
 
 cleanup_update_installer
 trap - EXIT HUP INT TERM
