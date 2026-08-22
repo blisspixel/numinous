@@ -1701,7 +1701,9 @@ peak energy.
   cleanup before it waits. Windows registration has an exact ownership marker
   and a space-safe icon path, invalid relative XDG data roots fall back to the
   standard Linux location, and contradictory install and uninstall flags fail
-  closed. The uninstall roundtrip hashes all five player-owned state files
+  closed. macOS bundle validation runs in an isolated scope so staging cannot
+  overwrite the final application path. The uninstall roundtrip hashes all five
+  player-owned state files
   before removal and requires byte-for-byte preservation afterward, with XDG
   and Windows AppData launcher roots confined to its disposable profile.
 - **Done (August 12, 2026):** every binary archive includes the portable Agent
