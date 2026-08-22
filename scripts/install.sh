@@ -834,18 +834,18 @@ remove_linux_launchers() {
         || remove_desktop_entry "$desktop/Numinous.desktop" "$target"
 }
 
-mac_bundle_is_managed() {
-    bundle="$1"
-    target="$2"
-    marker="$bundle/Contents/Resources/.numinous-managed"
-    executable="$bundle/Contents/MacOS/Numinous"
-    [ -d "$bundle" ] && [ ! -L "$bundle" ] \
-        && [ -f "$marker" ] && [ ! -L "$marker" ] \
-        && [ "$(sed -n '1p' "$marker")" = "$MAC_APP_MARKER" ] \
-        && [ "$(sed -n '2p' "$marker")" = "$target" ] \
-        && [ -L "$executable" ] \
-        && [ "$(readlink "$executable")" = "$target" ]
-}
+mac_bundle_is_managed() (
+    managed_bundle="$1"
+    managed_target="$2"
+    managed_marker="$managed_bundle/Contents/Resources/.numinous-managed"
+    managed_executable="$managed_bundle/Contents/MacOS/Numinous"
+    [ -d "$managed_bundle" ] && [ ! -L "$managed_bundle" ] \
+        && [ -f "$managed_marker" ] && [ ! -L "$managed_marker" ] \
+        && [ "$(sed -n '1p' "$managed_marker")" = "$MAC_APP_MARKER" ] \
+        && [ "$(sed -n '2p' "$managed_marker")" = "$managed_target" ] \
+        && [ -L "$managed_executable" ] \
+        && [ "$(readlink "$managed_executable")" = "$managed_target" ]
+)
 
 install_macos_launcher() (
     target="$1"

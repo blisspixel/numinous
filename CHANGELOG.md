@@ -24,7 +24,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   the command was launched from inside it, and it owns temporary-script cleanup
   before waiting so interruption cannot strand the helper. Windows also
   registers that command in Installed Apps with an exact ownership marker and
-  a quoted icon path.
+  a quoted icon path. macOS bundle validation is isolated from its caller, so a
+  staged application publishes to `Numinous.app` instead of losing its final
+  destination to shell variable reuse.
   Linux ignores invalid relative XDG data roots instead of writing into the
   caller's working directory, and both installers reject contradictory install
   and uninstall options. The roundtrip pins XDG and Windows AppData roots to
