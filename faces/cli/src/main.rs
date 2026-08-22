@@ -54,6 +54,8 @@ enum Command {
     Access,
     /// Install the latest verified GitHub release without touching play history.
     Update,
+    /// Remove the managed installation without touching play history.
+    Uninstall,
     /// List all rooms in the catalog.
     Rooms {
         /// Emit machine-readable JSON.
@@ -764,9 +766,21 @@ fn write_update_installer() -> Result<PathBuf, String> {
     Ok(path)
 }
 
-fn update_process(installer: &Path, pid: &str) -> ProcessCommand {
-    if cfg!(windows) {
-        let mut command = ProcessCommand::new("powershell.exe");
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MaintenanceAction {
+    Update,
+    Uninstall,
+}
+
+fn maintenance_process(installer: &Path, pid: &str, action: MaintenanceAction) -> ProcessCommand {
+    #[cfg(windows)]
+    let mut command = {
+        let windows = std::env::var_os("SystemRoot")
+            .map(PathBuf::from)
+            .filter(|path| path.is_absolute())
+            .unwrap_or_else(|| PathBuf::from(r"C:\Windows"));
+        let mut command =
+            ProcessCommand::new(windows.join(r"System32\WindowsPowerShell\v1.0\powershell.exe"));
         command
             .arg("-NoProfile")
             .arg("-ExecutionPolicy")
@@ -778,9 +792,14 @@ fn update_process(installer: &Path, pid: &str) -> ProcessCommand {
             .arg(pid)
             .arg("-DeleteInstaller")
             .arg(installer);
+        if action == MaintenanceAction::Uninstall {
+            command.arg("-Uninstall");
+        }
         command
-    } else {
-        let mut command = ProcessCommand::new("sh");
+    };
+    #[cfg(not(windows))]
+    let mut command = {
+        let mut command = ProcessCommand::new("/bin/sh");
         command
             .arg(installer)
             .arg("--no-modify-path")
@@ -788,18 +807,28 @@ fn update_process(installer: &Path, pid: &str) -> ProcessCommand {
             .arg(pid)
             .arg("--delete-installer")
             .arg(installer);
+        if action == MaintenanceAction::Uninstall {
+            command.arg("--uninstall");
+        }
         command
+    };
+    if let Some(parent) = installer
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        command.current_dir(parent);
     }
+    command
 }
 
-fn update_installation() -> ExitCode {
+fn maintain_installation(action: MaintenanceAction) -> ExitCode {
     let result = (|| {
         let executable = std::env::current_exe()
             .map_err(|error| format!("Could not locate the running command: {error}"))?;
         let root = managed_install_root(&executable)?;
         let installer = write_update_installer()?;
         let pid = std::process::id().to_string();
-        let mut process = update_process(&installer, &pid);
+        let mut process = maintenance_process(&installer, &pid, action);
         process
             .env("NUMINOUS_HOME", &root)
             .stdin(Stdio::null())
@@ -807,15 +836,19 @@ fn update_installation() -> ExitCode {
             .stderr(Stdio::inherit());
         if let Err(error) = process.spawn() {
             let _ = std::fs::remove_file(&installer);
-            return Err(format!("Could not start the update helper: {error}"));
+            return Err(format!("Could not start the maintenance helper: {error}"));
         }
         Ok(root)
     })();
     match result {
         Ok(root) => {
+            let verb = match action {
+                MaintenanceAction::Update => "Updating",
+                MaintenanceAction::Uninstall => "Uninstalling",
+            };
             println!(
-                "Updating the managed installation at {}. The helper will continue after this command closes.",
-                terminal_safe_path(&root)
+                "{verb} the managed installation at {}. The helper will continue after this command closes.",
+                terminal_safe_path(&root),
             );
             ExitCode::SUCCESS
         }
@@ -1462,7 +1495,8 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             );
             ExitCode::SUCCESS
         }
-        Command::Update => update_installation(),
+        Command::Update => maintain_installation(MaintenanceAction::Update),
+        Command::Uninstall => maintain_installation(MaintenanceAction::Uninstall),
         Command::Rooms { json } => {
             print!("{}", rooms_report(json));
             ExitCode::SUCCESS
@@ -5801,8 +5835,9 @@ mod tests {
 
     #[test]
     fn updater_preserves_the_existing_path_choice() {
-        let installer = std::path::Path::new("staged-installer");
-        let command = super::update_process(installer, "123");
+        let installer = std::path::Path::new("maintenance/staged-installer");
+        let command =
+            super::maintenance_process(installer, "123", super::MaintenanceAction::Update);
         let args = command
             .get_args()
             .map(|arg| arg.to_string_lossy().into_owned())
@@ -5813,6 +5848,49 @@ mod tests {
             "--no-modify-path"
         };
         assert!(args.iter().any(|arg| arg == preserve_flag));
+        let uninstall_flag = if cfg!(windows) {
+            "-Uninstall"
+        } else {
+            "--uninstall"
+        };
+        assert!(!args.iter().any(|arg| arg == uninstall_flag));
+        assert_eq!(
+            command.get_current_dir(),
+            Some(std::path::Path::new("maintenance"))
+        );
+        assert!(std::path::Path::new(command.get_program()).is_absolute());
+    }
+
+    #[test]
+    fn uninstaller_waits_for_the_cli_and_requests_only_removal() {
+        let installer = std::path::Path::new("maintenance/staged-installer");
+        let command =
+            super::maintenance_process(installer, "456", super::MaintenanceAction::Uninstall);
+        let args = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        let uninstall_flag = if cfg!(windows) {
+            "-Uninstall"
+        } else {
+            "--uninstall"
+        };
+        let wait_flag = if cfg!(windows) {
+            "-WaitForProcessId"
+        } else {
+            "--wait-for-pid"
+        };
+        assert!(args.iter().any(|arg| arg == uninstall_flag));
+        assert!(args.windows(2).any(|pair| pair == [wait_flag, "456"]));
+        assert!(!args.iter().any(|arg| arg == "--release-archive"));
+        assert!(!args.iter().any(|arg| arg == "-ReleaseArchive"));
+    }
+
+    #[test]
+    fn uninstall_is_a_first_class_cli_command() {
+        use clap::Parser;
+        let cli = super::Cli::try_parse_from(["numinous", "uninstall"]).expect("parse");
+        assert!(matches!(cli.command, Some(super::Command::Uninstall)));
     }
 
     #[test]

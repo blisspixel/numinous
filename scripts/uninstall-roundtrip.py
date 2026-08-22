@@ -4,20 +4,20 @@
 The 0.6 exit asks that a machine installs, plays, saves state, and uninstalls
 cleanly. The release workflow already covers install and play. This covers the
 end of that sentence, which nothing tested: that uninstalling removes the
-program and keeps the player.
+program, removes its human launcher, and keeps the player.
 
 The uninstaller prints "Your play history stays" as it finishes. That is a
 promise made to someone deciding whether it is safe to remove this, and until
 now it was only a sentence. Here it is checked: every player-owned file is
 hashed before the uninstall and must still be present and byte-identical after,
-while the install root must be gone.
+while the install root and installer-owned platform launchers must be gone.
 
-All three of the files the promise names must be there before the uninstall
+All five of the files the promise names must be there before the uninstall
 runs, not merely one of them. Playing a room writes the journey and nothing
 else, so for a long time this proved a third of the promise and reported it as
 the whole thing. A scored game now writes the scoreboard too, and the Cairn
-drafts are seeded directly, since the tool that writes them opens at journey
-level 42 and a roundtrip cannot play that far.
+drafts, journal, and settings are seeded directly, since a short roundtrip
+cannot earn or exercise each of those paths.
 
 Run from a clone with a packaged archive:
 
@@ -48,6 +48,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -60,6 +61,8 @@ PLAYER_STATE = (
     ".numinous-journey",
     ".numinous-scores",
     ".numinous-cairn",
+    ".numinous-journal",
+    ".numinous-preferences",
 )
 
 # A room to play so there is state worth keeping. Times Tables is a flagship
@@ -83,9 +86,36 @@ def native_tool_env(env: dict[str, str]) -> dict[str, str]:
     if platform.system() != "Windows":
         return env
     system32 = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32"
+    windows_modules = system32 / "WindowsPowerShell" / "v1.0" / "Modules"
     patched = dict(env)
     patched["PATH"] = str(system32) + os.pathsep + patched.get("PATH", "")
+    patched["PSModulePath"] = (
+        str(windows_modules) + os.pathsep + patched.get("PSModulePath", "")
+    )
     return patched
+
+
+def isolated_profile_env(
+    base: dict[str, str], profile: Path, install_root: Path
+) -> dict[str, str]:
+    """Return an install and player environment confined to one test profile."""
+    env = dict(base)
+    env["NUMINOUS_HOME"] = str(install_root)
+    env["HOME"] = str(profile)
+    env["USERPROFILE"] = str(profile)
+    env["XDG_DATA_HOME"] = str(profile / ".local" / "share")
+    if platform.system() == "Windows":
+        env["APPDATA"] = str(profile / "AppData" / "Roaming")
+        env["LOCALAPPDATA"] = str(profile / "AppData" / "Local")
+    for variable in (
+        "NUMINOUS_JOURNEY",
+        "NUMINOUS_SCORES",
+        "NUMINOUS_CAIRN",
+        "NUMINOUS_JOURNAL",
+        "NUMINOUS_PREFERENCES",
+    ):
+        env.pop(variable, None)
+    return env
 
 
 def run(
@@ -201,23 +231,34 @@ def player_state(profile: Path) -> dict[str, str]:
     }
 
 
-def seed_unearnable_state(profile: Path) -> None:
-    """Write the one player file no amount of play can produce here.
+def seed_state_not_reached_by_roundtrip(profile: Path) -> None:
+    """Write player files a short noninteractive run cannot produce here.
 
-    The uninstaller promises to keep three files. Two are earned above by
-    playing. The third, the Cairn drafts, is written only by the MCP `cairn`
-    tool with `leave` set, and that opens at journey level 42, which is the cap.
-    A roundtrip cannot play 42 levels.
+    The Journey and scoreboard are earned above by playing. Cairn drafts open
+    only at journey level 42, while journal entries and App settings need
+    separate interactive paths that are not part of this install lifecycle.
 
-    Writing it directly is the right substitute rather than a shortcut, because
+    Writing them directly is the right substitute rather than a shortcut, because
     what is under test is the uninstaller, not how the file came to exist. The
     uninstaller looks at a path and decides whether to delete it; it neither
-    knows nor cares which face wrote it. The line matches the tab-separated
-    author and message shape the Cairn uses.
+    knows nor cares which face wrote it. The fixtures use their real formats so
+    a later lifecycle step can safely read them if the roundtrip grows.
     """
-    draft = profile / ".numinous-cairn"
-    if not draft.exists():
-        draft.write_text("a visitor\tthe proof was the program\n", encoding="utf-8")
+    fixtures = {
+        ".numinous-cairn": "a visitor\tthe proof was the program\n",
+        ".numinous-journal": "numinous-journal-v2\n",
+        ".numinous-preferences": (
+            "NUMINOUS_PREFERENCES 1\n"
+            "volume_percent 45\n"
+            "muted false\n"
+            "era modern\n"
+            "window_mode windowed\n"
+        ),
+    }
+    for name, content in fixtures.items():
+        path = profile / name
+        if not path.exists():
+            path.write_text(content, encoding="utf-8")
 
 
 def installed_cli(install_root: Path) -> Path:
@@ -228,22 +269,71 @@ def installed_cli(install_root: Path) -> Path:
     raise RoundtripError(f"no installed CLI under {install_root / 'bin'}")
 
 
+def launcher_artifacts(profile: Path) -> tuple[Path, ...]:
+    """Platform launchers created for one isolated player profile."""
+    system = platform.system()
+    if system == "Windows":
+        return (
+            profile / "Desktop" / "Numinous.lnk",
+            profile
+            / "AppData"
+            / "Roaming"
+            / "Microsoft"
+            / "Windows"
+            / "Start Menu"
+            / "Programs"
+            / "Numinous.lnk",
+        )
+    if system == "Darwin":
+        return (
+            profile / "Applications" / "Numinous.app",
+            profile / "Desktop" / "Numinous.app",
+        )
+    return (
+        profile / ".local" / "share" / "applications" / "numinous.desktop",
+        profile / "Desktop" / "Numinous.desktop",
+    )
+
+
+def path_or_link_exists(path: Path) -> bool:
+    """Return true for an existing path or a dangling symbolic link."""
+    return os.path.lexists(path)
+
+
+def wait_until_removed(paths: tuple[Path, ...], timeout_seconds: float = 30.0) -> None:
+    """Wait for the detached maintenance helper to remove every path."""
+    deadline = time.monotonic() + timeout_seconds
+    while any(path_or_link_exists(path) for path in paths):
+        if time.monotonic() >= deadline:
+            retained = [str(path) for path in paths if path_or_link_exists(path)]
+            raise RoundtripError(
+                f"uninstall helper did not remove: {', '.join(retained)}"
+            )
+        time.sleep(0.1)
+
+
 def roundtrip(archive: Path, checksum: Path, tag: str) -> list[dict[str, Any]]:
     checks: list[dict[str, Any]] = []
     workspace = Path(tempfile.mkdtemp(prefix="numinous-uninstall-roundtrip-"))
     install_root = workspace / "install"
     profile = workspace / "profile"
     profile.mkdir(parents=True)
+    (profile / "Desktop").mkdir()
+    if platform.system() == "Windows":
+        (
+            profile
+            / "AppData"
+            / "Roaming"
+            / "Microsoft"
+            / "Windows"
+            / "Start Menu"
+            / "Programs"
+        ).mkdir(parents=True)
     soundtrack = build_local_soundtrack(workspace / "soundtrack-src")
 
-    env = dict(os.environ)
-    env["NUMINOUS_HOME"] = str(install_root)
-    # Isolate the player profile so the roundtrip cannot read or write the
-    # history of whoever is running it.
-    env["HOME"] = str(profile)
-    env["USERPROFILE"] = str(profile)
-    env.pop("NUMINOUS_JOURNEY", None)
-    env.pop("NUMINOUS_SCORES", None)
+    # Isolate shell launchers, Windows profile caches, and every player-owned
+    # file so the roundtrip cannot touch whoever is running it.
+    env = isolated_profile_env(dict(os.environ), profile, install_root)
 
     try:
         run(
@@ -256,6 +346,19 @@ def roundtrip(archive: Path, checksum: Path, tag: str) -> list[dict[str, Any]]:
             "passed": install_root.is_dir(),
             "detail": f"install root present at {install_root}",
         })
+        launchers = launcher_artifacts(profile)
+        missing_launchers = [
+            str(path) for path in launchers if not path_or_link_exists(path)
+        ]
+        checks.append({
+            "name": "install creates a human launcher",
+            "passed": not missing_launchers,
+            "detail": (
+                f"missing launcher artifacts: {', '.join(missing_launchers)}"
+                if missing_launchers
+                else f"all {len(launchers)} platform launcher artifact(s) are present"
+            ),
+        })
 
         cli = installed_cli(install_root)
         run([str(cli), "render", PLAY_ROOM, "--width", "40", "--height", "20"], env, "play")
@@ -264,7 +367,7 @@ def roundtrip(archive: Path, checksum: Path, tag: str) -> list[dict[str, Any]]:
         # the three files the uninstaller promises to keep. It reads a line at a
         # time and leaves on end of input, so a closed stdin plays and stops.
         run([str(cli), "munch"], env, "play a scored game", stdin="\n\n\n")
-        seed_unearnable_state(profile)
+        seed_state_not_reached_by_roundtrip(profile)
 
         before = player_state(profile)
         expected = set(PLAYER_STATE)
@@ -280,16 +383,25 @@ def roundtrip(archive: Path, checksum: Path, tag: str) -> list[dict[str, Any]]:
             ),
         })
 
-        run(
-            installer_command(archive, checksum, tag, soundtrack, uninstall=True),
-            env,
-            "uninstall",
-        )
+        run([str(cli), "uninstall"], env, "uninstall through the installed CLI")
+        wait_until_removed((install_root, *launchers))
 
         checks.append({
             "name": "uninstall removes the program",
             "passed": not install_root.exists(),
             "detail": f"install root {'gone' if not install_root.exists() else 'still present'}",
+        })
+        retained_launchers = [
+            str(path) for path in launchers if path_or_link_exists(path)
+        ]
+        checks.append({
+            "name": "uninstall removes the human launcher",
+            "passed": not retained_launchers,
+            "detail": (
+                f"retained launcher artifacts: {', '.join(retained_launchers)}"
+                if retained_launchers
+                else "all platform launcher artifacts are gone"
+            ),
         })
 
         after = player_state(profile)

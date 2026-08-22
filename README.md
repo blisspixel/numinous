@@ -29,8 +29,14 @@ Windows (PowerShell):
 irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 ```
 
-Then open a new terminal and run `numinous-app`. Use `numinous update` for later
-releases. From a clone: `cargo run --release --bin numinous-app`.
+The installer adds Numinous to the Windows desktop and Start menu. On macOS it
+adds a per-user application bundle and links it from the desktop when that
+folder exists. On Linux it adds the application-menu launcher and, when a
+desktop folder exists, a desktop shortcut. Open that launcher, or run
+`numinous-app` from a new terminal. Use `numinous update` for later releases.
+Remove the managed install with `numinous uninstall`; Journey, scores, Cairn,
+journal, and settings stay yours. From a clone:
+`cargo run --release --bin numinous-app`.
 
 Digital minds enter through the MCP path in [`PLAY.md`](PLAY.md). The full
 manual is [`docs/PLAYING.md`](docs/PLAYING.md) if you want it later.

@@ -120,6 +120,15 @@ def pe_fixture() -> bytes:
 
 
 class ReleasePackageTests(unittest.TestCase):
+    def test_mac_launcher_icon_is_a_bounded_native_icns_container(self) -> None:
+        data = (ROOT / "assets" / "logo.icns").read_bytes()
+        self.assertLess(len(data), 1024 * 1024)
+        self.assertEqual(data[:4], b"icns")
+        self.assertEqual(int.from_bytes(data[4:8], "big"), len(data))
+        self.assertEqual(data[8:12], b"ic08")
+        self.assertEqual(int.from_bytes(data[12:16], "big"), len(data) - 8)
+        self.assertEqual(data[16:24], b"\x89PNG\r\n\x1a\n")
+
     def test_binary_archives_are_deterministic_and_verified(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             temp = Path(temporary)
@@ -155,6 +164,8 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertTrue(
                 {
                     "VERIFY.md",
+                    "assets/logo.icns",
+                    "assets/logo.png",
                     "plugins/numinous/plugin.json",
                     "plugins/numinous/mcp.json",
                     "plugins/numinous/skills/play-numinous/SKILL.md",

@@ -5,6 +5,31 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The verified installers now finish at the game instead of at a command-line
+  instruction. Windows installs icon-bearing `Numinous` shortcuts on the
+  desktop and in the Start menu.
+  macOS installs a per-user `Numinous.app` bundle and links it from the desktop
+  when that folder exists. Linux installs a freedesktop application-menu entry
+  and an executable desktop shortcut when its desktop folder exists. Updates
+  refresh installer-owned launchers. Uninstall removes a launcher only when its
+  ownership marker and exact app target still match, so a user-repurposed or
+  colliding file is preserved. The release archive now carries PNG and native
+  macOS ICNS forms of the shared icon, and installer self-tests exercise
+  creation, refresh, collision, and cleanup. The three-platform install and
+  uninstall roundtrip now requires the launchers to appear and disappear too.
+  `numinous uninstall` stages the same bounded installer used by updates, waits
+  for the running CLI to close, removes the managed program and launchers, and
+  keeps Journey, scores, Cairn, journal, and settings byte-for-byte. The helper
+  starts outside the install tree so Windows can remove an install even when
+  the command was launched from inside it, and it owns temporary-script cleanup
+  before waiting so interruption cannot strand the helper. Windows also
+  registers that command in Installed Apps with an exact ownership marker and
+  a quoted icon path.
+  Linux ignores invalid relative XDG data roots instead of writing into the
+  caller's working directory, and both installers reject contradictory install
+  and uninstall options. The roundtrip pins XDG and Windows AppData roots to
+  its disposable profile, so launcher tests cannot touch the developer's real
+  shell integration.
 - `play_room` can emit a Numinous Encounter Receipt. Pass `receipt: true` and
   `structuredContent.encounter` is a versioned replay proof: replay ABI,
   compatibility fingerprint, the normalized action, action and result digests,

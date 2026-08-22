@@ -13,8 +13,9 @@
 #
 # or, from a checkout: powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -Uninstall
 #
-# Uninstalling never touches play history: ~\.numinous-journey,
-# ~\.numinous-scores, and ~\.numinous-cairn stay yours.
+# Uninstalling never touches play history or settings: ~\.numinous-journey,
+# ~\.numinous-scores, ~\.numinous-cairn, ~\.numinous-journal, and
+# ~\.numinous-preferences stay yours.
 #
 # Options: -Uninstall, -NoModifyPath, -AdoptLegacy, -Source, -SelfTest.
 # Set NUMINOUS_HOME to install somewhere other than ~\.numinous.
@@ -55,6 +56,10 @@ $Binaries = @('numinous.exe', 'numinous-app.exe', 'numinous-mcp.exe')
 $InstallMarkerName = '.numinous-install-root'
 $InstallMarkerText = 'Numinous install root v2'
 $LegacyInstallMarkerText = 'Numinous install root'
+$ShellShortcutName = 'Numinous.lnk'
+$ShellShortcutDescription = 'Numinous game launcher managed by the Numinous installer'
+$UninstallRegistryPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Numinous'
+$UninstallRegistryOwnerName = 'NuminousInstallerManaged'
 
 function Say([string]$Message) { Write-Host $Message }
 function Fail([string]$Message) { throw $Message }
@@ -803,6 +808,314 @@ function Add-UserPath([string]$Dir) {
     }
 }
 
+function Get-ShellFolder([Environment+SpecialFolder]$Folder) {
+    $directory = [Environment]::GetFolderPath($Folder)
+    if ([string]::IsNullOrWhiteSpace($directory) -or
+        -not (Test-Path -LiteralPath $directory -PathType Container)) {
+        return ''
+    }
+    return [IO.Path]::GetFullPath($directory)
+}
+
+function Get-DesktopDirectory {
+    return Get-ShellFolder ([Environment+SpecialFolder]::DesktopDirectory)
+}
+
+function Get-StartMenuDirectory {
+    return Get-ShellFolder ([Environment+SpecialFolder]::Programs)
+}
+
+function Read-ShellShortcut([string]$Path) {
+    $shell = New-Object -ComObject WScript.Shell
+    return $shell.CreateShortcut($Path)
+}
+
+function Test-SameFilesystemPath([string]$Left, [string]$Right) {
+    try {
+        $leftPath = (Get-Item -LiteralPath $Left -Force -ErrorAction Stop).FullName
+        $rightPath = (Get-Item -LiteralPath $Right -Force -ErrorAction Stop).FullName
+        return $leftPath -ieq $rightPath
+    } catch {
+        if (-not [IO.Path]::IsPathRooted($Left) -or
+            -not [IO.Path]::IsPathRooted($Right)) {
+            return $false
+        }
+        try {
+            return [IO.Path]::GetFullPath($Left) -ieq [IO.Path]::GetFullPath($Right)
+        } catch {
+            return $false
+        }
+    }
+}
+
+function Install-ShellShortcut(
+    [string]$ShortcutDirectory,
+    [string]$LocationName,
+    [string]$TargetPath,
+    [string]$WorkingDirectory
+) {
+    if ([string]::IsNullOrWhiteSpace($ShortcutDirectory)) {
+        Say "$LocationName was skipped because Windows did not report its folder."
+        return $false
+    }
+    if (-not (Test-Path -LiteralPath $TargetPath -PathType Leaf)) {
+        Fail "the $LocationName target is not an installed app."
+    }
+    $shortcutPath = Join-Path $ShortcutDirectory $ShellShortcutName
+    if (Test-Path -LiteralPath $shortcutPath) {
+        $item = Get-Item -LiteralPath $shortcutPath -Force
+        if ($item.PSIsContainer -or
+            ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            Say "$LocationName was skipped because $shortcutPath is not an ordinary file."
+            return $false
+        }
+        try {
+            $existing = Read-ShellShortcut $shortcutPath
+            $managed = $existing.Description -ceq $ShellShortcutDescription
+            $sameTarget = Test-SameFilesystemPath $existing.TargetPath $TargetPath
+        } catch {
+            Say "$LocationName was skipped because the existing $shortcutPath could not be read."
+            return $false
+        }
+        if (-not $managed -and -not $sameTarget) {
+            Say "$LocationName was skipped because $shortcutPath belongs to something else."
+            return $false
+        }
+    }
+
+    $stage = Join-Path $ShortcutDirectory (
+        '.Numinous-' + [Guid]::NewGuid().ToString('N') + '.lnk')
+    try {
+        $shortcut = Read-ShellShortcut $stage
+        $shortcut.TargetPath = $TargetPath
+        $shortcut.WorkingDirectory = $WorkingDirectory
+        $shortcut.IconLocation = "$TargetPath,0"
+        $shortcut.Description = $ShellShortcutDescription
+        $shortcut.Save()
+        $published = Read-ShellShortcut $stage
+        if (-not (Test-SameFilesystemPath $published.TargetPath $TargetPath) -or
+            -not (Test-SameFilesystemPath `
+                $published.WorkingDirectory $WorkingDirectory) -or
+            $published.Description -cne $ShellShortcutDescription) {
+            Fail "the staged $LocationName did not preserve its launch contract."
+        }
+        Move-Item -LiteralPath $stage -Destination $shortcutPath -Force
+    } finally {
+        Remove-Item -LiteralPath $stage -Force -ErrorAction SilentlyContinue
+    }
+    Say "${LocationName}: $shortcutPath"
+    return $true
+}
+
+function Remove-ShellShortcut(
+    [string]$ShortcutDirectory,
+    [string]$LocationName,
+    [string]$TargetPath
+) {
+    if ([string]::IsNullOrWhiteSpace($ShortcutDirectory)) { return }
+    $shortcutPath = Join-Path $ShortcutDirectory $ShellShortcutName
+    if (-not (Test-Path -LiteralPath $shortcutPath)) { return }
+    $item = Get-Item -LiteralPath $shortcutPath -Force
+    if ($item.PSIsContainer -or
+        ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        Say "Keeping ${LocationName}: $shortcutPath is not an ordinary installer shortcut."
+        return
+    }
+    try {
+        $shortcut = Read-ShellShortcut $shortcutPath
+        $owned = $shortcut.Description -ceq $ShellShortcutDescription -and
+            (Test-SameFilesystemPath $shortcut.TargetPath $TargetPath)
+    } catch {
+        $owned = $false
+    }
+    if ($owned) {
+        Remove-Item -LiteralPath $shortcutPath -Force
+    } else {
+        Say "Keeping ${LocationName}: $shortcutPath is no longer installer-owned."
+    }
+}
+
+function Install-WindowsLaunchers([string]$TargetPath, [string]$WorkingDirectory) {
+    [void](Install-ShellShortcut (Get-DesktopDirectory) 'Desktop shortcut' `
+        $TargetPath $WorkingDirectory)
+    [void](Install-ShellShortcut (Get-StartMenuDirectory) 'Start menu shortcut' `
+        $TargetPath $WorkingDirectory)
+}
+
+function Remove-WindowsLaunchers([string]$TargetPath) {
+    Remove-ShellShortcut (Get-DesktopDirectory) 'Desktop shortcut' $TargetPath
+    Remove-ShellShortcut (Get-StartMenuDirectory) 'Start menu shortcut' $TargetPath
+}
+
+function Install-UninstallRegistration(
+    [string]$CliPath,
+    [string]$RegistryPath = $UninstallRegistryPath,
+    [string]$DisplayVersion = ''
+) {
+    if (-not (Test-Path -LiteralPath $CliPath -PathType Leaf)) {
+        Fail 'the Windows uninstall registration target is not an installed CLI.'
+    }
+    if (Test-Path -LiteralPath $RegistryPath) {
+        $existing = Get-ItemProperty -LiteralPath $RegistryPath
+        $sameInstall = $existing.$UninstallRegistryOwnerName -eq 1 -and
+            $existing.DisplayName -ceq 'Numinous' -and
+            (Test-SameFilesystemPath $existing.InstallLocation $NuminousHome)
+        if (-not $sameInstall) {
+            Say 'Windows Installed Apps registration belongs to something else and was preserved.'
+            return $false
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($DisplayVersion)) {
+        $versionOutput = (& $CliPath --version | Out-String).Trim()
+        $DisplayVersion = $versionOutput -replace '^numinous\s+', ''
+    }
+    if ($DisplayVersion -notmatch `
+            '^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$') {
+        Fail 'the installed CLI returned an invalid version for Windows registration.'
+    }
+    $uninstallCommand = '"' + $CliPath + '" uninstall'
+    $displayIcon = '"' + (Join-Path $BinDir 'numinous-app.exe') + '",0'
+    [void](New-Item -Path $RegistryPath -Force)
+    Set-ItemProperty -LiteralPath $RegistryPath -Name DisplayName -Value 'Numinous'
+    Set-ItemProperty -LiteralPath $RegistryPath -Name DisplayVersion -Value $DisplayVersion
+    Set-ItemProperty -LiteralPath $RegistryPath -Name DisplayIcon -Value $displayIcon
+    Set-ItemProperty -LiteralPath $RegistryPath -Name InstallLocation -Value $NuminousHome
+    Set-ItemProperty -LiteralPath $RegistryPath -Name Publisher -Value 'blisspixel'
+    Set-ItemProperty -LiteralPath $RegistryPath -Name URLInfoAbout -Value $RepoUrl
+    Set-ItemProperty -LiteralPath $RegistryPath -Name UninstallString -Value $uninstallCommand
+    Set-ItemProperty -LiteralPath $RegistryPath -Name QuietUninstallString -Value $uninstallCommand
+    [void](New-ItemProperty -LiteralPath $RegistryPath -Name NoModify `
+        -Value 1 -PropertyType DWord -Force)
+    [void](New-ItemProperty -LiteralPath $RegistryPath -Name NoRepair `
+        -Value 1 -PropertyType DWord -Force)
+    [void](New-ItemProperty -LiteralPath $RegistryPath -Name $UninstallRegistryOwnerName `
+        -Value 1 -PropertyType DWord -Force)
+    return $true
+}
+
+function Remove-UninstallRegistration(
+    [string]$CliPath,
+    [string]$RegistryPath = $UninstallRegistryPath
+) {
+    if (-not (Test-Path -LiteralPath $RegistryPath)) { return }
+    $entry = Get-ItemProperty -LiteralPath $RegistryPath
+    $expectedCommand = '"' + $CliPath + '" uninstall'
+    $owned = $entry.$UninstallRegistryOwnerName -eq 1 -and
+        $entry.DisplayName -ceq 'Numinous' -and
+        $entry.UninstallString -ceq $expectedCommand -and
+        (Test-SameFilesystemPath $entry.InstallLocation $NuminousHome)
+    if ($owned) {
+        Remove-Item -LiteralPath $RegistryPath -Force
+    } else {
+        Say 'Keeping the Windows Installed Apps entry because it is no longer installer-owned.'
+    }
+}
+
+function Test-WindowsLaunchers {
+    param([string]$Root)
+    $desktop = Join-Path $Root 'desktop'
+    $startMenu = Join-Path $Root 'start-menu'
+    $firstBin = Join-Path $Root 'first-bin'
+    $secondBin = Join-Path $Root 'second-bin'
+    New-Item -ItemType Directory `
+        -Path $desktop, $startMenu, $firstBin, $secondBin | Out-Null
+    $firstTarget = Join-Path $firstBin 'numinous-app.exe'
+    $secondTarget = Join-Path $secondBin 'numinous-app.exe'
+    [IO.File]::WriteAllText($firstTarget, 'first')
+    [IO.File]::WriteAllText($secondTarget, 'second')
+
+    [void](Install-ShellShortcut $desktop 'Desktop shortcut' $firstTarget $firstBin)
+    [void](Install-ShellShortcut $startMenu 'Start menu shortcut' $firstTarget $firstBin)
+    $path = Join-Path $desktop $ShellShortcutName
+    $startPath = Join-Path $startMenu $ShellShortcutName
+    $created = Read-ShellShortcut $path
+    if (-not (Test-SameFilesystemPath $created.TargetPath $firstTarget) -or
+        -not (Test-SameFilesystemPath $created.WorkingDirectory $firstBin) -or
+        $created.Description -cne $ShellShortcutDescription) {
+        Fail 'Windows launcher self-test: the shortcut launch contract is incomplete.'
+    }
+    $startCreated = Read-ShellShortcut $startPath
+    if (-not (Test-SameFilesystemPath $startCreated.TargetPath $firstTarget)) {
+        Fail 'Windows launcher self-test: the Start menu shortcut is incomplete.'
+    }
+    [void](Install-ShellShortcut $desktop 'Desktop shortcut' $secondTarget $secondBin)
+    [void](Install-ShellShortcut $startMenu 'Start menu shortcut' $secondTarget $secondBin)
+    $updated = Read-ShellShortcut $path
+    if (-not (Test-SameFilesystemPath $updated.TargetPath $secondTarget)) {
+        Fail 'Windows launcher self-test: an installer-owned shortcut did not update.'
+    }
+    Remove-Item -LiteralPath $secondTarget -Force
+    Remove-ShellShortcut $desktop 'Desktop shortcut' $secondTarget
+    Remove-ShellShortcut $startMenu 'Start menu shortcut' $secondTarget
+    if ((Test-Path -LiteralPath $path) -or (Test-Path -LiteralPath $startPath)) {
+        Fail 'Windows launcher self-test: uninstall kept an installer-owned shortcut.'
+    }
+
+    $personal = Read-ShellShortcut $path
+    $personal.TargetPath = $firstTarget
+    $personal.Description = 'personal shortcut'
+    $personal.Save()
+    [IO.File]::WriteAllText($secondTarget, 'second')
+    if (Install-ShellShortcut $desktop 'Desktop shortcut' $secondTarget $secondBin) {
+        Fail 'Windows launcher self-test: an unrelated shortcut was replaced.'
+    }
+    Remove-ShellShortcut $desktop 'Desktop shortcut' $secondTarget
+    $preserved = Read-ShellShortcut $path
+    if (-not (Test-SameFilesystemPath $preserved.TargetPath $firstTarget) -or
+        $preserved.Description -cne 'personal shortcut') {
+        Fail 'Windows launcher self-test: an unrelated shortcut changed.'
+    }
+    Say 'Windows desktop and Start menu launcher lifecycle: pass.'
+}
+
+function Test-UninstallRegistration {
+    param([string]$Root)
+    $registryPath = 'HKCU:\Software\NuminousInstallerTest-' + `
+        [Guid]::NewGuid().ToString('N')
+    $cli = Join-Path $Root 'registration-bin\numinous.exe'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $cli) | Out-Null
+    [IO.File]::WriteAllText($cli, 'binary')
+    $oldHome = $script:NuminousHome
+    $oldBin = $script:BinDir
+    $script:NuminousHome = $Root
+    $script:BinDir = Split-Path -Parent $cli
+    try {
+        [void](Install-UninstallRegistration $cli $registryPath '1.2.3-alpha.4+win.1')
+        $command = '"' + $cli + '" uninstall'
+        $displayIcon = '"' + (Join-Path $script:BinDir 'numinous-app.exe') + '",0'
+        $entry = Get-ItemProperty -LiteralPath $registryPath
+        if ($entry.DisplayName -cne 'Numinous' -or
+            $entry.DisplayVersion -cne '1.2.3-alpha.4+win.1' -or
+            $entry.DisplayIcon -cne $displayIcon -or
+            $entry.UninstallString -cne $command -or
+            $entry.$UninstallRegistryOwnerName -ne 1 -or
+            -not (Test-SameFilesystemPath $entry.InstallLocation $Root)) {
+            Fail 'uninstall registration self-test: the Installed Apps contract is incomplete.'
+        }
+        Remove-UninstallRegistration $cli $registryPath
+        if (Test-Path -LiteralPath $registryPath) {
+            Fail 'uninstall registration self-test: an owned entry was retained.'
+        }
+        [void](New-Item -Path $registryPath -Force)
+        Set-ItemProperty -LiteralPath $registryPath -Name DisplayName -Value 'Numinous'
+        Set-ItemProperty -LiteralPath $registryPath -Name InstallLocation -Value $Root
+        Set-ItemProperty -LiteralPath $registryPath -Name UninstallString -Value 'personal'
+        if (Install-UninstallRegistration $cli $registryPath '1.2.3') {
+            Fail 'uninstall registration self-test: an unmarked collision was replaced.'
+        }
+        Remove-UninstallRegistration $cli $registryPath
+        $collision = Get-ItemProperty -LiteralPath $registryPath
+        if ($collision.UninstallString -cne 'personal') {
+            Fail 'uninstall registration self-test: an unmarked collision changed.'
+        }
+        Say 'Windows Installed Apps registration and cleanup: pass.'
+    } finally {
+        $script:NuminousHome = $oldHome
+        $script:BinDir = $oldBin
+        Remove-Item -LiteralPath $registryPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Test-PathPromotion {
     $target = 'C:\Users\Player\.numinous\bin'
     $stale = 'C:\Users\Player\.cargo\bin'
@@ -1064,6 +1377,8 @@ function Test-InstallerSafety {
             -not (Test-Path -LiteralPath (Join-Path $sourceOutside 'radio\keep.txt'))) {
             Fail 'provenance self-test: pre-existing source or build cache influenced the update.'
         }
+        Test-WindowsLaunchers $testBase
+        Test-UninstallRegistration $testBase
         Say 'Windows installer root, uninstall, and provenance checks: pass.'
     } finally {
         Remove-DirectoryOrJunction $testBase
@@ -1107,11 +1422,14 @@ public static extern System.IntPtr SendMessageTimeout(
 }
 
 function Uninstall-Numinous {
+    $installedCli = Join-Path $BinDir 'numinous.exe'
+    Remove-UninstallRegistration $installedCli
+    Remove-WindowsLaunchers (Join-Path $BinDir 'numinous-app.exe')
     Remove-ValidatedInstallRoot $NuminousHome
     Remove-UserPath $BinDir
     Send-EnvironmentChange
     Say "Numinous is uninstalled: $NuminousHome is gone and the PATH entry is removed."
-    Say 'Your play history stays: ~\.numinous-journey, ~\.numinous-scores, ~\.numinous-cairn.'
+    Say 'Your play history and settings stay: ~\.numinous-journey, ~\.numinous-scores, ~\.numinous-cairn, ~\.numinous-journal, ~\.numinous-preferences.'
 }
 
 function Install-Rust {
@@ -1392,6 +1710,7 @@ function Install-Numinous {
         Install-LatestRelease
         Install-Binaries (Join-Path $SrcDir 'bin') (Join-Path $SoundtrackDir 'radio')
     }
+    Install-WindowsLaunchers (Join-Path $BinDir 'numinous-app.exe') $BinDir
     $pathChanged = $false
     if (-not $NoModifyPath) {
         $pathChanged = Add-UserPath $BinDir
@@ -1432,6 +1751,7 @@ function Install-Numinous {
         Fail "PATH still resolves numinous to $resolvedCli instead of the new install."
     }
     Invoke-Checked 'installed CLI version check' { & $resolvedCli --version }
+    [void](Install-UninstallRegistration $installedCli)
     Say ''
     Say "Read PLAY.md first if you read anything: $SrcDir\PLAY.md"
     if ($Source) {
@@ -1440,7 +1760,7 @@ function Install-Numinous {
         Say "Installed release: $script:InstalledReleaseTag"
         Say 'Update any time with: numinous update'
     }
-    Say 'Uninstall with -Uninstall.'
+    Say 'Uninstall any time with: numinous uninstall'
 }
 
 try {
@@ -1449,9 +1769,12 @@ try {
     } elseif ($SelfTest) {
         Test-PathPromotion
         Test-InstallerSafety
-    } elseif ($Uninstall) {
-        Uninstall-Numinous
     } else {
+        if ($Uninstall -and ($Source -or $ReleaseArchive -or $ReleaseChecksum -or
+                $SoundtrackArchive -or $SoundtrackChecksum -or
+                $SoundtrackContentChecksum -or $ReleaseTag)) {
+            Fail '-Uninstall cannot be combined with install or release options.'
+        }
         if ($Source -and ($ReleaseArchive -or $ReleaseChecksum -or
                 $SoundtrackArchive -or $SoundtrackChecksum -or
                 $SoundtrackContentChecksum -or $ReleaseTag)) {
@@ -1461,10 +1784,15 @@ try {
             Fail 'the update helper received an invalid parent process id.'
         }
         if ($WaitForProcessId -gt 0) {
-            Say 'Waiting for the running Numinous command to close before updating.'
+            $action = if ($Uninstall) { 'uninstalling' } else { 'updating' }
+            Say "Waiting for the running Numinous command to close before $action."
             Wait-Process -Id $WaitForProcessId -ErrorAction SilentlyContinue
         }
-        Install-Numinous
+        if ($Uninstall) {
+            Uninstall-Numinous
+        } else {
+            Install-Numinous
+        }
     }
 } catch {
     Write-Host "numinous install: $($_.Exception.Message)" -ForegroundColor Red

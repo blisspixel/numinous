@@ -49,6 +49,19 @@ class PlayerStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             self.assertEqual(MODULE.player_state(Path(raw)), {})
 
+    def test_seeded_state_completes_the_full_preservation_inventory(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            profile = Path(raw)
+            journey = profile / ".numinous-journey"
+            scores = profile / ".numinous-scores"
+            journey.write_text("visited lorenz\n", encoding="utf-8")
+            scores.write_text("munch\t7\n", encoding="utf-8")
+            MODULE.seed_state_not_reached_by_roundtrip(profile)
+            state = MODULE.player_state(profile)
+            self.assertEqual(set(state), set(MODULE.PLAYER_STATE))
+            self.assertEqual(journey.read_text(encoding="utf-8"), "visited lorenz\n")
+            self.assertEqual(scores.read_text(encoding="utf-8"), "munch\t7\n")
+
     def test_the_state_list_matches_what_the_uninstaller_promises(self) -> None:
         # The uninstaller tells the player which files it keeps. If that list
         # and this one drift apart, the gate stops covering the promise.
@@ -111,6 +124,13 @@ class NativeToolEnvTests(unittest.TestCase):
                 first.lower().endswith(os.sep + "system32"),
                 f"first PATH entry was {first}",
             )
+            first_module = patched["PSModulePath"].split(os.pathsep)[0]
+            self.assertTrue(
+                first_module.lower().endswith(
+                    os.path.join("windowspowershell", "v1.0", "modules")
+                ),
+                f"first PowerShell module directory was {first_module}",
+            )
             self.assertIn("/usr/bin", patched["PATH"])
         else:
             self.assertEqual(patched, {"PATH": "/usr/bin"})
@@ -119,6 +139,54 @@ class NativeToolEnvTests(unittest.TestCase):
         original = {"PATH": "/usr/bin"}
         MODULE.native_tool_env(original)
         self.assertEqual(original, {"PATH": "/usr/bin"})
+
+
+class IsolatedProfileEnvTests(unittest.TestCase):
+    def test_player_overrides_and_launcher_roots_are_confined(self) -> None:
+        original = {
+            "PATH": "/usr/bin",
+            "XDG_DATA_HOME": "/real/data",
+            "APPDATA": "/real/roaming",
+            "LOCALAPPDATA": "/real/local",
+            "NUMINOUS_JOURNAL": "/real/journal",
+        }
+        profile = Path("isolated-profile")
+        install = Path("isolated-install")
+        patched = MODULE.isolated_profile_env(original, profile, install)
+        self.assertEqual(patched["NUMINOUS_HOME"], str(install))
+        self.assertEqual(patched["HOME"], str(profile))
+        self.assertEqual(
+            patched["XDG_DATA_HOME"], str(profile / ".local" / "share")
+        )
+        self.assertNotIn("NUMINOUS_JOURNAL", patched)
+        if platform.system() == "Windows":
+            self.assertEqual(
+                patched["APPDATA"], str(profile / "AppData" / "Roaming")
+            )
+            self.assertEqual(
+                patched["LOCALAPPDATA"], str(profile / "AppData" / "Local")
+            )
+        else:
+            self.assertEqual(patched["APPDATA"], "/real/roaming")
+            self.assertEqual(patched["LOCALAPPDATA"], "/real/local")
+        self.assertEqual(original["XDG_DATA_HOME"], "/real/data")
+
+
+class LauncherArtifactTests(unittest.TestCase):
+    def test_launchers_stay_inside_the_isolated_profile(self) -> None:
+        profile = Path("profile")
+        launchers = MODULE.launcher_artifacts(profile)
+        self.assertTrue(launchers)
+        for launcher in launchers:
+            self.assertEqual(launcher.parts[0], profile.name)
+
+    def test_a_dangling_shortcut_still_counts_as_an_artifact(self) -> None:
+        if platform.system() == "Windows":
+            self.skipTest("creating symbolic links is not a stable Windows test contract")
+        with tempfile.TemporaryDirectory() as raw:
+            link = Path(raw) / "Numinous"
+            link.symlink_to(Path(raw) / "missing")
+            self.assertTrue(MODULE.path_or_link_exists(link))
 
 
 if __name__ == "__main__":
