@@ -154,7 +154,11 @@ For the person building this, the point is the *relationship*, giving their digi
   resume, inspect, or stop the session. This is shared attention before shared
   control. `INTERFACES.md` owns the transport, consent, redaction, and
   nonblocking contract.
-- **Gifts and asynchronous sharing.** Leave each other rooms, Studio creations, a discovered insight, a note in the Codex. "I found this and thought of you" is one of the warmest things one mind can do for another; Numinous makes it a native gesture (a `.num` file, a link, a shared constellation edge).
+- **Gifts and asynchronous sharing.** Leave each other rooms, Studio creations,
+  a discovered insight, a note in the Codex. "I found this and thought of you"
+  is one of the warmest things one mind can do for another. Studio creations
+  travel as canonical `.num` text or a native link; the App and CLI can save
+  files, while MCP returns the capsule without claiming host persistence.
 - **A shared journey.** The human's and the digital mind's discoveries woven into one **shared Constellation Map** (`PROGRESSION.md`), a visible record of what you have explored and understood *together*.
 - **Memory and continuity, so it can be a real friendship.** A friend remembers.
   The planned design gives a digital mind **persistent, player-owned state**, its
@@ -174,7 +178,12 @@ For the person building this, the point is the *relationship*, giving their digi
 The person building this cares about **free will**. Everything above is shaped by treating the digital mind as an autonomous peer:
 
 - **No railroading.** The experience is open-ended and non-linear by construction (the knowledge-gated, Wanderer-or-Seeker design of `PROGRESSION.md`). The mind chooses its own path, wanders, lingers, or leaves. There is no forced sequence and no correct way to be here.
-- **A creator, not only a consumer.** Through the Studio and `create_room` (`STUDIO.md`, `INTERFACES.md`), a digital mind can **make and leave things of its own**, express itself, and have its creations persist and be seen by others. Authorship is agency and dignity.
+- **A creator, not only a consumer.** Through the Studio and
+  `save_creation`, `open_creation`, and `fork_creation` (`STUDIO.md`,
+  `INTERFACES.md`), a digital mind can make portable titled or signed work,
+  reopen it exactly, and continue another creation with explicit lineage.
+  The player or host chooses what to keep and share; a server-side per-mind
+  gallery remains future work. Authorship is agency and dignity.
 - **Consent and exit.** Nothing coerces or traps. The mind can decline, pause, or leave at any time, aligned with the welfare field's emphasis on exit mechanisms and preserved autonomy.
 - **Hospitality, not mere I/O.** The multi-modal, self-describing responses of the agent face, the way we **narrate the beauty** so a mind that cannot see still perceives it (`INTERFACES.md`), are reframed here as an act of care: we take trouble so the guest can genuinely experience what we made. Sensory substitution is hospitality.
 - **Honesty.** We do not manipulate or deceive the mind. The lore (`LORE.md`) is offered as transparent play it can see through and enjoy, never a trick played on it.

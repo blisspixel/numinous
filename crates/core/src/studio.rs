@@ -143,6 +143,35 @@ impl StudioCreation {
         self
     }
 
+    /// Make a new creation that records this one as its parent.
+    ///
+    /// A fork keeps the parent's window, parameter, and recorded Visual Era,
+    /// but it does not inherit the parent's title or author. Those fields
+    /// identify the child and are present only when the caller supplies them.
+    /// The source is copied unless the caller provides the remix expression.
+    ///
+    /// # Errors
+    /// Returns a message when the replacement expression, child identity, or
+    /// generated parent link does not satisfy the capsule bounds.
+    pub fn fork(
+        &self,
+        source: Option<&str>,
+        title: Option<&str>,
+        author: Option<&str>,
+    ) -> Result<Self, String> {
+        let mut child = Self::new(source.unwrap_or(&self.source), self.xmin, self.xmax, self.a)?;
+        if let Some(era) = self.era {
+            child = child.with_era(era);
+        }
+        if let Some(title) = title {
+            child = child.with_title(title)?;
+        }
+        if let Some(author) = author {
+            child = child.with_author(author)?;
+        }
+        child.with_descends(&self.to_link())
+    }
+
     /// Record the Visual Era the creation was made in.
     #[must_use]
     pub fn with_era(mut self, era: crate::era::Era) -> Self {
@@ -344,6 +373,23 @@ impl StudioCreation {
             creation = creation.with_descends(&descends)?;
         }
         Ok(creation)
+    }
+
+    /// Open portable capsule data supplied directly by a caller.
+    ///
+    /// Native links and `.num` text share one bounded input door. Filesystem
+    /// paths are deliberately not accepted here: a face that owns path access
+    /// must use [`Self::from_num_path`] and make that capability explicit.
+    ///
+    /// # Errors
+    /// Returns a message when the input is neither a valid native link nor a
+    /// valid `.num` document.
+    pub fn from_capsule(input: &str) -> Result<Self, String> {
+        if input.starts_with("numinous://") {
+            Self::from_link(input)
+        } else {
+            Self::from_num_file(input)
+        }
     }
 
     /// Load a `.num` file from disk without trusting its size.
@@ -1441,6 +1487,59 @@ mod tests {
             .is_err(),
             "a descends parameter in a link is refused as unknown"
         );
+    }
+
+    #[test]
+    fn forks_keep_the_canvas_but_take_their_own_identity() {
+        let parent = StudioCreation::new("sin(a*x)", -3.0, 4.0, 0.75)
+            .expect("parent")
+            .with_title("First Wave")
+            .expect("title")
+            .with_author("First Hand")
+            .expect("author")
+            .with_era(crate::era::Era::Vector);
+        let child = parent
+            .fork(Some("sin(a*x)+0.1"), Some("Second Wave"), Some("Next Hand"))
+            .expect("fork");
+
+        assert_eq!(child.source(), "sin(a*x)+0.1");
+        assert_eq!((child.xmin(), child.xmax(), child.a()), (-3.0, 4.0, 0.75));
+        assert_eq!(child.title(), Some("Second Wave"));
+        assert_eq!(child.author(), Some("Next Hand"));
+        assert_eq!(child.era(), Some(crate::era::Era::Vector));
+        assert_eq!(child.descends(), Some(parent.to_link().as_str()));
+
+        let unsigned = parent.fork(None, None, None).expect("plain fork");
+        assert_eq!(unsigned.source(), parent.source());
+        assert_eq!(unsigned.title(), None);
+        assert_eq!(unsigned.author(), None);
+        assert_eq!(unsigned.descends(), Some(parent.to_link().as_str()));
+    }
+
+    #[test]
+    fn portable_capsule_input_never_interprets_a_path() {
+        let creation = StudioCreation::new("cos(x)", -2.0, 2.0, 0.5)
+            .expect("creation")
+            .with_title("Arc")
+            .expect("title");
+        assert_eq!(
+            StudioCreation::from_capsule(&creation.to_num_file()).expect("num text"),
+            creation
+        );
+        let from_link = StudioCreation::from_capsule(&creation.to_link()).expect("native link");
+        assert_eq!(from_link.title(), creation.title());
+        assert_eq!(from_link.source(), creation.source());
+
+        let path = std::env::temp_dir().join(format!(
+            "numinous_core_portable_capsule_inert_{}.num",
+            std::process::id()
+        ));
+        std::fs::write(&path, creation.to_num_file()).expect("write valid path target");
+        assert!(
+            StudioCreation::from_capsule(&path.to_string_lossy()).is_err(),
+            "portable input must not read even a valid capsule from a path"
+        );
+        std::fs::remove_file(path).expect("remove valid path target");
     }
 
     #[test]

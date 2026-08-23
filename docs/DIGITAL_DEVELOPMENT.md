@@ -7,8 +7,8 @@ document owns the technical plan and product-evidence standard. Every validation
 below evaluates Numinous, never whether a player is conscious or worthy.
 
 Status: **Journal, temporal evidence, Encounter Receipts, explicit promotion,
-resettable session workspace, and exact remembered-room retrieval built;
-experiential continuity designed.** Research reviewed
+resettable session workspace, exact remembered-room retrieval, and portable MCP
+creation lineage built; experiential continuity designed.** Research reviewed
 2026-07-11; implementation boundary reviewed 2026-08-22. Numinous
 0.4.0-alpha.9 speaks MCP, ships an opt-in local experience journal, can
 return two exact room observations with a typed delta in one stateless call,
@@ -21,7 +21,10 @@ entries with provenance, correction status, and abstention. It does not
 automatically remember a room, perform semantic retrieval, search entry text
 or opaque receipt digests, or infer a participant's experience. Its existing
 Journey, scores, Cairn drafts, journal, radio cache, and crash diagnostic are
-inspectable and explicitly erasable.
+inspectable and explicitly erasable. A mind can also save, reopen, and fork a
+titled or signed Studio capsule with exact lineage. The server returns `.num`
+text and a native link, never reads or creates a host file, and offers the exact
+link as a player-chosen journal subject rather than recording it automatically.
 
 The implementation boundary is precise:
 
@@ -32,6 +35,7 @@ The implementation boundary is precise:
 | Player-chosen journal promotion of a live-matching receipt | Implicit promotion or storage of the receipt body |
 | Resettable cross-call session workspace in the MCP process | Episodic graph and semantic retrieval |
 | Deliberate exact-subject remembered-room retrieval with provenance and abstention | Learned similarity search or retrieval over player text |
+| Portable Studio save, open, and fork with identity, lineage, and exact preview | Server-side gallery or automatic persistence of returned capsules |
 | Opt-in local append-only journal with stable identifiers | Visible reflection proposals |
 | Separate event and record times | OKF import and encrypted portable capsules |
 | Closed source-provenance vocabulary | Per-player profile portability across hosts |
@@ -368,11 +372,11 @@ optional, consented, and safe to decline without changing the product.
   viewer landed as foundations. Observation is not memory, and the viewer
   persists no stream by default.
 - **0.4:** bounded temporal samples, their typed delta, versioned Encounter
-  Receipts, explicit journal promotion of a live-matching receipt, and a
-  resettable process-local session workspace, and bounded source-explained
-  remembered-room retrieval are built ahead of the cohort. Next add MCP
-  creation and lineage parity. Reflection proposals wait until
-  retrieval, correction, and deletion invariants are proven.
+  Receipts, explicit journal promotion of a live-matching receipt, a resettable
+  process-local session workspace, bounded source-explained remembered-room
+  retrieval, and MCP creation and lineage parity are built ahead of the cohort.
+  Reflection proposals wait until retrieval, correction, and deletion
+  invariants are proven.
 - **0.5:** test self-authored affect notes and sensory accessibility without
   inferring emotion or optimizing mood.
 - **0.6:** prove portable encrypted state and migration on all supported systems,

@@ -200,10 +200,11 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Current protocol surface:** modern clients use `server/discover`,
   `tools/list`, and `tools/call` over stdio with version and client capability
   metadata on every request. Legacy 2025-11-25 and 2025-06-18 clients retain
-  `initialize`, `tools/list`, `tools/call`, and `ping`. The 36 tools include
+  `initialize`, `tools/list`, `tools/call`, and `ping`. The 39 tools include
   `list_rooms`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
   `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
-  `sing_expression`, Journey operations, experience journal operations
+  `sing_expression`, `save_creation`, `open_creation`, `fork_creation`,
+  Journey operations, experience journal operations
   (`read_journal`, `record_journal`, `correct_journal`, `export_journal`,
   `erase_journal`), the process-local `workspace` visit state, and the shared games. Journal entries have stable local
   identifiers, separate event and record times, declared provenance, immutable
@@ -213,6 +214,22 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   bundle page with named UTF-8 files, explicit provenance, correction lineage,
   and lifecycle state. Neither export mode creates a file or exposes a host
   path. `PLAYING.md` carries the complete user-facing list.
+- **Portable creation and lineage parity (built):** `save_creation` produces a
+  canonical Studio capsule from an expression, optional title and author,
+  visual era, canvas, and parameter. `open_creation` accepts only canonical
+  `.num` text or a native capsule link. `fork_creation` accepts either capsule
+  form and creates a child whose `descends` field is the exact canonical parent
+  link. CLI and MCP use the same core fork operation: children retain the
+  parent's canvas and function unless replaced, but never inherit title or
+  author. Every successful result uses schema
+  `numinous.studio-creation` version 1 and includes canonical `.num` text, native
+  link, the same link as `journalSubject`, normalized fields, and an exact
+  bounded core-rendered preview. The tools neither read a host path nor create
+  a host file, and an undefined preview is refused before Journey progress is
+  recorded. Their optional identity and player-owned capsule make all three
+  private under Watch Agent policy. Journal v3 admits every valid capsule link
+  as an exact subject while retaining strict reads and migration for the
+  original journal v2 limit.
 - **Current room input shape:** `play_room` and `listen_room` accept `variation`
   plus optional normalized `pokes: [[x, y], ...]`, newest last and bounded to 24
   points. Both also accept a `gesture` array of phase-stamped pointer events,
@@ -432,10 +449,11 @@ meaning in place.
 The shared `numinous-broadcast` foundation implements the pairing,
 compatibility, framing, consent, sequence, control-marker, typed public-event,
 and bounded-queue contracts below. The MCP face now connects that foundation
-through `broadcast_session`, a complete fail-closed policy for all 36 declared
+through `broadcast_session`, a complete fail-closed policy for all 39 declared
 tools, replay-safe daily seed normalization, and separate nonblocking writer
-and disconnect-monitor workers. Twenty-three tools are explicitly public, twelve
-progression, journal, or visit-workspace tools are private, and the consent control broadcasts
+and disconnect-monitor workers. Twenty-three tools are explicitly public,
+fifteen progression, journal, creation, or visit-workspace tools are private,
+and the consent control broadcasts
 neither itself nor progress. The native App now ships the human Watch Agent
 surface. X or the identity-neutral Shared Play item in the Cabinet opens the ephemeral
 listener. The surface shows pairing, consent state, typed public actions,
@@ -720,9 +738,10 @@ and drives the modern stateless path over stdio for exactly this (see
 legacy initialization.
 
 ### Safety
-MCP Studio input currently reaches a bounded expression language with no
-filesystem, network, or raw GPU capability. The protocol and imported artifact
-paths enforce size and shape limits. A community-room runtime is not shipped;
+MCP Studio input reaches a bounded expression language and bounded capsule
+data with no filesystem, network, or raw GPU capability. A path-shaped string
+is inert data, never a request to read a host file. The protocol and imported
+capsules enforce size and shape limits. A community-room runtime is not shipped;
 its future capability boundary is specified in `EXTENSIBILITY.md`.
 
 ### The payoff

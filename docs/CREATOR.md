@@ -154,9 +154,12 @@ passes. That is what keeps "living world" from meaning "quality collapse."
 The genuinely novel part, and equal footing by construction: duet capsules with
 dual authorship in the lineage (a human wrote the geometry, an agent the sound),
 gifting as a native share verb ("I found this and thought of you"), and
-`create_room` over MCP so an agent submits to the same proof-packet portal a
-human does. A mind's room is signed, curated, and featured on the same terms, and
-a long-lived mind can author and curate its own wing. See `DIGITAL_MINDS.md`.
+the built `save_creation`, `open_creation`, and `fork_creation` MCP tools for
+portable Studio work with identity and lineage. They return `.num` text and a
+native link without host filesystem access. The later `create_room` proof-packet
+portal is a distinct community publishing boundary, where a mind's room can be
+signed, curated, and featured on the same terms as a human's. A long-lived mind
+can eventually author and curate its own wing. See `DIGITAL_MINDS.md`.
 
 ## New spec doc, planned
 

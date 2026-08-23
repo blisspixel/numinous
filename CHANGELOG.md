@@ -5,6 +5,21 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Digital minds can now keep and continue their Studio work through three
+  private MCP tools. `save_creation` returns canonical `.num` text, a native
+  link, an exact core-rendered preview, and an explicit journal subject;
+  `open_creation` accepts only that portable text or link; and
+  `fork_creation` makes a child with its own optional identity and the exact
+  parent link as lineage. None of these operations reads a host path or creates
+  a host file. The CLI and MCP faces now share the same core fork operation,
+  including canvas inheritance and noninheritance of title and author. A
+  successful creation action records one coarse Journey play,
+  while a refused action records none. The Watch Agent keeps all three tools
+  private because their capsules can carry player-chosen identity. Journal v3
+  raises the subject bound to the existing capsule input bound so every valid
+  named and signed creation link can survive an exact record and read roundtrip;
+  strict journal v2 reads and migration remain supported with their original
+  limit.
 - The verified installers now finish at the game instead of at a command-line
   instruction. Windows installs icon-bearing `Numinous` shortcuts on the
   desktop and in the Start menu.
@@ -49,12 +64,13 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   match is stored, as source `numinous-result` under subject
   `receipt:<resultDigest>`. A forged digest, a stale fingerprint, or
   `numinous-result` without a receipt is refused. The player's text remains
-  their interpretation. The journal schema stays v2.
+  their interpretation. This provenance contract is unchanged by the journal
+  v3 subject-capacity migration.
 - `listen_room` and `sing_expression` accept the same `receipt: true` switch.
   Their result digests bind notation counts, motif identity, bed counts, and
   encoded-audio size, never WAV bytes. Promotion replays the named tool.
 - A visit can keep a compact workspace without turning play into memory.
-  `workspace` is the 36th MCP tool. It lives in this process only: inspect,
+  `workspace` lives in this process only: inspect,
   edit, retrieve, defer, or clear place, intention, pending prediction,
   unfinished work, recent notes, and a few journal handles. Play does not write it.
   Asking does not record a journal entry. A new process starts empty. The
