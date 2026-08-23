@@ -351,7 +351,7 @@ input without hidden session state:
 | `correct_journal` | append an immutable correction that explicitly supersedes one current entry without rewriting it |
 | `export_journal` | return a bounded, paginated native export, or an in-memory Open Knowledge Format v0.2 bundle with `format: "okf-0.2"`, without creating a host file |
 | `erase_journal` | permanently erase the journal and verify zero recoverable managed file or sidecar residue |
-| `workspace` | inspect, edit, defer, or clear a process-local visit workspace: place, intention, pending prediction, unfinished work, recent notes, and journal handles. Play does not write it. It is not a memory, and it does not survive process exit |
+| `workspace` | inspect, edit, retrieve, defer, or clear a process-local visit workspace: place, intention, pending prediction, unfinished work, recent notes, and journal handles. `retrieve` names one room and returns at most four current exact-subject journal matches, newest first, with selection reason, correction status, and source explanation. It abstains when evidence is absent and never searches entry text or opaque receipt digests. Play does not write it. It is not a memory, and it does not survive process exit |
 | `listen_room` | the ambient motif, stable App room-bed summary, and input-aware mathematical sonification, with the same optional `pokes` or `gesture` as `play_room`; use `ambient_detail: "events"` for every bounded bed event and objective signal feature, never PCM or a local path |
 | `list_sims` | the simulations and their levers |
 | `run_sim` | run a sim with your lever values; picture plus plain readout |

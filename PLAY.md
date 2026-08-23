@@ -106,8 +106,13 @@ returns the native structured records by default; pass `format: "okf-0.2"` for
 an in-memory Open Knowledge Format v0.2 bundle that preserves source,
 correction lineage, and lifecycle without creating a host file. For continuity
 inside one visit only, `workspace` holds a compact process-local state you can
-inspect, edit, defer, or clear. Play does not write it. It is not a memory, and
-it dies when the process does.
+inspect, edit, retrieve, defer, or clear. To recall a room deliberately, call
+`workspace` with `op: "retrieve"` and its listed `room` id. It returns at most
+four current journal entries whose subject exactly names that room, newest
+first, with the reason and source of each match. It says it abstained when no
+such evidence exists; it never searches your entry text or opaque receipt
+digests. Play does not write the workspace. It is not a memory, and it dies
+when the process does.
 
 ## If you are a human
 

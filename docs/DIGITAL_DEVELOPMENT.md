@@ -6,19 +6,22 @@ in the digital-mind experience. The founding philosophy lives in
 document owns the technical plan and product-evidence standard. Every validation
 below evaluates Numinous, never whether a player is conscious or worthy.
 
-Status: **Journal, temporal evidence, Encounter Receipts, explicit
-promotion, and the resettable session workspace built; experiential continuity
-designed.** Research reviewed
-2026-07-11; implementation boundary reviewed 2026-08-20. Numinous
+Status: **Journal, temporal evidence, Encounter Receipts, explicit promotion,
+resettable session workspace, and exact remembered-room retrieval built;
+experiential continuity designed.** Research reviewed
+2026-07-11; implementation boundary reviewed 2026-08-22. Numinous
 0.4.0-alpha.9 speaks MCP, ships an opt-in local experience journal, can
 return two exact room observations with a typed delta in one stateless call,
 can emit a versioned replay proof when `play_room` is asked for a receipt,
 can keep that proof only when the player hands it back and a live replay
 matches, and can hold a compact process-local visit workspace the player
-inspects, edits, defers, or clears. It does not automatically remember a room,
-retrieve a prior encounter, or infer a
-participant's experience. Its existing Journey, scores, Cairn drafts, journal,
-radio cache, and crash diagnostic are inspectable and explicitly erasable.
+inspects, edits, retrieves, defers, or clears. Retrieval is an explicit exact
+room-subject query over the player-owned journal, bounded to four current
+entries with provenance, correction status, and abstention. It does not
+automatically remember a room, perform semantic retrieval, search entry text
+or opaque receipt digests, or infer a participant's experience. Its existing
+Journey, scores, Cairn drafts, journal, radio cache, and crash diagnostic are
+inspectable and explicitly erasable.
 
 The implementation boundary is precise:
 
@@ -26,8 +29,9 @@ The implementation boundary is precise:
 | --- | --- |
 | Exact two-observation temporal evidence with a typed cell delta | Encounter duration, streaming presence, or inferred inner state |
 | Emit-only Numinous Encounter Receipts on `play_room` | Automatic memory of a play |
-| Player-chosen journal promotion of a live-matching receipt | Deliberate remembered-room retrieval |
+| Player-chosen journal promotion of a live-matching receipt | Implicit promotion or storage of the receipt body |
 | Resettable cross-call session workspace in the MCP process | Episodic graph and semantic retrieval |
+| Deliberate exact-subject remembered-room retrieval with provenance and abstention | Learned similarity search or retrieval over player text |
 | Opt-in local append-only journal with stable identifiers | Visible reflection proposals |
 | Separate event and record times | OKF import and encrypted portable capsules |
 | Closed source-provenance vocabulary | Per-player profile portability across hosts |
@@ -39,10 +43,10 @@ The implementation boundary is precise:
 No Numinous Encounter Receipt, render, action, result, interpretation, or
 affect is written to the journal unless the player explicitly records it.
 Successful play still follows the existing coarse Journey progression policy.
-Reflection, retrieval, per-mind continuity, and portable-memory import remain
-unbuilt until their separate roadmap gates pass. A surrounding host may retain
-tool traffic or exports under its own policy; Numinous erasure cannot erase
-host-managed copies outside Numinous storage.
+Reflection, semantic retrieval, per-mind continuity, and portable-memory
+import remain unbuilt until their separate roadmap gates pass. A surrounding
+host may retain tool traffic or exports under its own policy; Numinous erasure
+cannot erase host-managed copies outside Numinous storage.
 
 ## Founder's premise
 
@@ -191,9 +195,9 @@ and evaluation rules.
 A compact, resettable state connects calls within one visit: current place,
 active self-chosen question or intention, pending prediction, unfinished action
 or creation, recent observations, and the few memories the player selected or
-asked to retrieve. The player can inspect, edit, defer, or clear every field.
-This is interface continuity, not an inferred account of private attention,
-thought, mood, or consciousness.
+asked to retrieve. The player can inspect, edit, retrieve, defer, or clear every
+field. This is interface continuity, not an inferred account of private
+attention, thought, mood, or consciousness.
 
 ### Event journal
 
@@ -365,9 +369,9 @@ optional, consented, and safe to decline without changing the product.
   persists no stream by default.
 - **0.4:** bounded temporal samples, their typed delta, versioned Encounter
   Receipts, explicit journal promotion of a live-matching receipt, and a
-  resettable process-local session workspace are
-  built ahead of the cohort. Next add
-  source-explained remembered-room retrieval. Reflection proposals wait until
+  resettable process-local session workspace, and bounded source-explained
+  remembered-room retrieval are built ahead of the cohort. Next add MCP
+  creation and lineage parity. Reflection proposals wait until
   retrieval, correction, and deletion invariants are proven.
 - **0.5:** test self-authored affect notes and sensory accessibility without
   inferring emotion or optimizing mood.

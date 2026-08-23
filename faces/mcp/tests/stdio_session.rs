@@ -2010,6 +2010,130 @@ fn workspace_survives_calls_in_one_process_and_dies_with_it() {
 }
 
 #[test]
+fn remembered_room_retrieval_is_bounded_explained_and_honestly_empty() {
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous_mcp_remembered_room_{}_{}",
+        std::process::id(),
+        session
+    ));
+    std::fs::create_dir(&root).expect("fresh remembered room root");
+    let journal = root.join("journal.txt");
+    let original = numinous_core::record_journal_file(
+        &journal,
+        numinous_core::JournalRecord {
+            recorded_at_utc: 10,
+            event_at_utc: 5,
+            source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+            kind: "encounter",
+            subject: "kepler-areas",
+            text: "The swept areas looked equal.",
+            affect: None,
+        },
+    )
+    .expect("record remembered room");
+    let correction = numinous_core::correct_journal_file(
+        &journal,
+        20,
+        None,
+        numinous_core::JOURNAL_SOURCE_PLAYER_PROVIDED,
+        original.entry_id,
+        "The swept areas stayed equal while the speed changed.",
+        None,
+    )
+    .expect("correct remembered room");
+    numinous_core::record_journal_file(
+        &journal,
+        numinous_core::JournalRecord {
+            recorded_at_utc: 30,
+            event_at_utc: 30,
+            source: numinous_core::JOURNAL_SOURCE_NUMINOUS_RESULT,
+            kind: "encounter",
+            subject: "receipt:opaque-proof",
+            text: "Mentions kepler-laws, but its subject does not.",
+            affect: None,
+        },
+    )
+    .expect("record opaque receipt subject");
+
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{"name":name,"arguments":arguments}
+        })
+    };
+    let replies = run_session_with_journal(
+        &[
+            json!({
+                "jsonrpc":"2.0","id":1,"method":"initialize","params":{
+                    "protocolVersion":"2025-06-18",
+                    "capabilities":{},
+                    "clientInfo":{"name":"remembered-room","version":"1.0"}
+                }
+            }),
+            json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            call(
+                2,
+                "workspace",
+                json!({"op":"retrieve","room":"kepler-laws","limit":1}),
+            ),
+            call(3, "workspace", json!({"op":"inspect"})),
+            call(4, "workspace", json!({"op":"retrieve","room":"mandelbrot"})),
+            call(
+                5,
+                "workspace",
+                json!({"op":"edit","retrieved":[{"entry_id":original.entry_id}]}),
+            ),
+            call(6, "erase_journal", json!({"confirm":true})),
+            call(7, "workspace", json!({"op":"inspect"})),
+        ],
+        &journal,
+    );
+
+    let found = &reply_by_id(&replies, 2)["result"]["structuredContent"];
+    assert_eq!(found["schemaVersion"], 2);
+    assert_eq!(found["retrieval"]["room"], "kepler-laws");
+    assert_eq!(found["retrieval"]["returned"], 1);
+    assert_eq!(found["retrieval"]["abstained"], false);
+    assert_eq!(found["retrieved"][0]["entry_id"], correction.entry_id);
+    assert_eq!(found["retrieved"][0]["status"], "current");
+    assert_eq!(
+        found["retrieved"][0]["entry"]["source"],
+        numinous_core::JOURNAL_SOURCE_PLAYER_PROVIDED
+    );
+    assert!(
+        found["retrieved"][0]["source_explanation"]
+            .as_str()
+            .is_some_and(|text| text.contains("player supplied"))
+    );
+    assert_eq!(
+        reply_by_id(&replies, 3)["result"]["structuredContent"]["retrieved"][0]["entry_id"],
+        correction.entry_id,
+        "the resolved handle remains available in this process"
+    );
+
+    let absent = &reply_by_id(&replies, 4)["result"]["structuredContent"];
+    assert_eq!(absent["retrieval"]["abstained"], true);
+    assert_eq!(absent["retrieved"], json!([]));
+    assert!(
+        absent["retrieval"]["abstentionReason"]
+            .as_str()
+            .is_some_and(|text| text.contains("receipt digests were not searched"))
+    );
+
+    let superseded = &reply_by_id(&replies, 5)["result"]["structuredContent"]["retrieved"][0];
+    assert_eq!(superseded["status"], "superseded");
+    assert_eq!(superseded["superseded_by"], correction.entry_id);
+    let erased = &reply_by_id(&replies, 7)["result"]["structuredContent"]["retrieved"][0];
+    assert_eq!(erased["status"], "missing");
+    assert!(erased["entry"].is_null());
+
+    let inventory = numinous_core::inspect_journal_file(&journal).expect("inspect erased journal");
+    assert!(!inventory.exists);
+    std::fs::remove_dir(root).expect("remove remembered room root");
+}
+
+#[test]
 fn malformed_input_gets_a_parse_error_and_the_server_keeps_going() {
     let journey = std::env::temp_dir().join("numinous_mcp_e2e_parse_journey.txt");
     let _ = std::fs::remove_file(&journey);
