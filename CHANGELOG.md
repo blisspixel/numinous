@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.9] - 2026-08-23
+
 - Digital minds can now keep and continue their Studio work through three
   private MCP tools. `save_creation` returns canonical `.num` text, a native
   link, an exact core-rendered preview, and an explicit journal subject;
@@ -89,8 +91,6 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   that operation has no replay receipt to verify. A rejected impersonation
   leaves the journal unchanged; verified result provenance remains available
   only through receipt promotion on `record_journal`.
-
-## [0.4.0-alpha.9] - 2026-08-18
 
 - A sound sent is not a sound heard, and the copy says so now. The seventh
   packaged playtest asked the question alpha.8 was built to answer and returned
