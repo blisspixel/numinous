@@ -730,7 +730,7 @@ fn modern_stateless_discovery_tools_and_prediction_work_over_real_stdio() {
     assert_eq!(by_id(2)["result"]["resultType"], "complete");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(36)
+        Some(39)
     );
     assert_eq!(by_id(3)["result"]["resultType"], "input_required");
     assert_eq!(
@@ -875,7 +875,7 @@ fn returning_journal_survives_two_processes_then_leaves_zero_managed_residue() {
     assert_eq!(second_by_id(5)["result"]["structuredContent"]["entryId"], 4);
     let exported = &second_by_id(6)["result"]["structuredContent"];
     assert_eq!(exported["schema"], "numinous.experience-journal");
-    assert_eq!(exported["schemaVersion"], 2);
+    assert_eq!(exported["schemaVersion"], 3);
     assert_eq!(exported["entries"].as_array().map(Vec::len), Some(4));
     assert_eq!(exported["entries"][0]["source"], "self-authored");
     assert_eq!(exported["entries"][0]["eventAtUtc"], 100);
@@ -1901,7 +1901,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(36)
+        Some(39)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));
@@ -2131,6 +2131,130 @@ fn remembered_room_retrieval_is_bounded_explained_and_honestly_empty() {
     let inventory = numinous_core::inspect_journal_file(&journal).expect("inspect erased journal");
     assert!(!inventory.exists);
     std::fs::remove_dir(root).expect("remove remembered room root");
+}
+
+#[test]
+fn creation_capsules_cross_real_stdio_with_lineage_and_v2_journal_migration() {
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous_mcp_creation_lineage_{}_{}",
+        std::process::id(),
+        session
+    ));
+    std::fs::create_dir(&root).expect("fresh creation root");
+    let journey = root.join("journey.txt");
+    let journal = root.join("journal.txt");
+    std::fs::write(&journal, "numinous-journal-v2\n").expect("seed v2 journal");
+
+    let parent = numinous_core::StudioCreation::new("sin(a*x)", -2.0, 3.0, 0.75)
+        .expect("parent")
+        .with_title("First Wave")
+        .expect("title")
+        .with_author("First Hand")
+        .expect("author")
+        .with_era(numinous_core::Era::Vector);
+    let parent_num = parent.to_num_file();
+    let parent_link = parent.to_link();
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{"name":name,"arguments":arguments}
+        })
+    };
+    let replies = run_session_with_state(
+        &[
+            json!({
+                "jsonrpc":"2.0","id":1,"method":"initialize","params":{
+                    "protocolVersion":"2025-06-18",
+                    "capabilities":{},
+                    "clientInfo":{"name":"creation-lineage","version":"1.0"}
+                }
+            }),
+            json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            json!({"jsonrpc":"2.0","id":2,"method":"tools/list"}),
+            call(
+                3,
+                "save_creation",
+                json!({
+                    "expr":"sin(a*x)","xmin":-2.0,"xmax":3.0,"a":0.75,
+                    "title":"First Wave","author":"First Hand","era":"vector"
+                }),
+            ),
+            call(4, "open_creation", json!({"capsule":parent_link})),
+            call(
+                5,
+                "fork_creation",
+                json!({
+                    "parent":parent_num,"expr":"sin(a*x)+0.1",
+                    "title":"Second Wave","author":"Next Hand"
+                }),
+            ),
+            call(
+                6,
+                "record_journal",
+                json!({
+                    "kind":"creation","subject":parent_link,
+                    "text":"Named and signed over the portable creation surface."
+                }),
+            ),
+            call(7, "read_journal", json!({"limit":10})),
+        ],
+        &journey,
+        &journal,
+    );
+
+    assert_eq!(
+        reply_by_id(&replies, 2)["result"]["tools"]
+            .as_array()
+            .map(Vec::len),
+        Some(39)
+    );
+    let saved = &reply_by_id(&replies, 3)["result"]["structuredContent"];
+    assert_eq!(saved["numFile"], parent.to_num_file());
+    assert_eq!(saved["link"], parent.to_link());
+    assert_eq!(saved["journalSubject"], parent.to_link());
+    assert_eq!(saved["createdFile"], false);
+    assert_eq!(saved["containsHostPath"], false);
+    assert_eq!(
+        reply_by_id(&replies, 4)["result"]["structuredContent"]["link"],
+        parent.to_link()
+    );
+
+    let forked = &reply_by_id(&replies, 5)["result"]["structuredContent"];
+    assert_eq!(forked["parentLink"], parent.to_link());
+    let child = numinous_core::StudioCreation::from_num_file(
+        forked["numFile"].as_str().expect("child .num"),
+    )
+    .expect("reopen child");
+    assert_eq!(child.title(), Some("Second Wave"));
+    assert_eq!(child.author(), Some("Next Hand"));
+    assert_eq!(child.era(), Some(numinous_core::Era::Vector));
+    assert_eq!(child.descends(), Some(parent.to_link().as_str()));
+
+    let read = &reply_by_id(&replies, 7)["result"]["structuredContent"];
+    assert_eq!(read["entries"][0]["kind"], "creation");
+    assert_eq!(read["entries"][0]["subject"], parent.to_link());
+    assert!(
+        std::fs::read_to_string(&journal)
+            .expect("journal")
+            .starts_with("numinous-journal-v3\n"),
+        "the first mutation migrates the v2 journal"
+    );
+    assert_eq!(numinous_core::load_journey_file(&journey).plays, 3);
+    assert!(
+        std::fs::read_dir(&root)
+            .expect("root listing")
+            .flatten()
+            .all(|entry| entry
+                .path()
+                .extension()
+                .is_none_or(|extension| extension != "num")),
+        "portable creation tools must not write a hidden .num file"
+    );
+
+    numinous_core::remove_persisted_file(&journal).expect("remove journal");
+    numinous_core::remove_persisted_file(&journey).expect("remove journey");
+    std::fs::remove_dir(root).expect("remove creation root");
 }
 
 #[test]

@@ -12,7 +12,7 @@ headless core, CLI, MCP server, windowed App, GPU and audio adapters, 355 catalo
 rooms plus hidden content, 6 sims, 11+ games, Journey, standard-controller
 input, Studio, and a built-in 42-track radio are built.
 
-The MCP face exposes 36 bounded tools over the current and two retained legacy
+The MCP face exposes 39 bounded tools over the current and two retained legacy
 protocol revisions. The consented Watch Agent viewer reconstructs allowlisted
 room, Studio, and game actions in the App with a bounded in-memory timeline and
 no persisted transcript. A portable Agent Plugins v1 package supplies host
@@ -21,6 +21,8 @@ clean MCP processes and supports inspection, immutable correction, native or
 Open Knowledge Format v0.2 export, and confirmed erase. The process-local
 workspace can deliberately retrieve up to four current exact-subject entries
 for one named room, explain their sources, and abstain when evidence is absent.
+Three private creation tools return portable titled, signed, and forkable
+Studio capsules with exact previews and lineage, without host filesystem access.
 
 **Critical path now:** preserve the completed seven-room Universal Wager, close
 the remaining structural Polish Wave debts, then continue the Mind's Seat.
@@ -29,8 +31,8 @@ Studio requests, the typed room catalog, the typed Gauntlet, and local-state
 path resolution now have one core owner. CLI and MCP local-state adapters are
 focused modules extracted from their god-files, and MCP discovery plus its
 immutable tool schema now have a dedicated face-local catalog module. The
-remaining seams are next.
-MCP creation and lineage parity come next, then the measured Sensory Lift spike.
+remaining seams are next. Journal surfacing at a remembered room's door and the
+three-door threshold come next, alongside the measured Sensory Lift spike.
 The 0.4 Understanding Alpha cohort waits on an owner ruling; its method dry-run
 and dual automated auditors are already in CI. Soft-thin densify, bulk new
 rooms, and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and

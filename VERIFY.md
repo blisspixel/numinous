@@ -86,13 +86,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 3,593 passing all-target Rust test cases,
+Expected right now: **format and clippy clean, 3,692 passing all-target Rust test cases,
 agent hallway, tactile, and first-contact live MCP cohorts PASS as CI gates,
 flagship visual and room-bed audio goldens PASS, agent cohort contract unit
 tests pass, 105 study runner and collector regressions, and 15
 physical input contract regressions plus fifteen release-package, sixteen SBOM,
 and eleven release workflow regressions pass, three expensive diagnostics are
-ignored by the ordinary all-target run, 95.29% region coverage, and 95.28% line
+ignored by the ordinary all-target run, 94.91% region coverage, and 94.95% line
 coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
@@ -102,7 +102,7 @@ contract tests and mapping-aware legends remain the CI authority.
 
 The four-target release workflow runs `scripts/release-engagement-smoke.py`
 against every disposable packaged install. It requires a substantive Times
-Tables CLI render and modern MCP discovery, the exact 36-tool list, and one
+Tables CLI render and modern MCP discovery, the exact 39-tool list, and one
 structured `play_room` result from an isolated temporary profile. Version-only
 execution is not treated as engagement proof.
 
@@ -497,8 +497,9 @@ boons, daily streaks, resonances), the Studio (plot, animate, sing, in the
 terminal and the window), Visual Eras (including PNG output), Music Engine A
 (the seeded chiptune, `numinous tune`), GPU real-time fractals, live sound in
 the app and CLI plus structured notation over MCP, the `forget` right for
-players who are minds, and 35 MCP tools: 23 public play tools, eleven private
-progression or local-state tools, and one local broadcast consent control.
+players who are minds, and 39 MCP tools: 23 public play tools, fifteen private
+progression, creation, or local-state tools, and one local broadcast consent
+control.
 Products 0.2 Flagship Proof and 0.3 Tactile Alpha are exit-met on the
 agent-and-machine bar. Their evidence includes the engineered flagship ahas,
 MCP wager path, hallway and five-flagship tactile cohorts, scoped reference
@@ -514,7 +515,7 @@ the qualifying cohort. Provenance-preserving journal correction,
 export, erasure, and two-process machine evidence are complete. Representative
 physical-controller sessions, musician-led long-listening, accessibility
 review, physical clean-machine cross-platform proof, full Studio save/share
-beyond the first CLI `.num` slice,
+depth beyond the current App, CLI, and portable MCP capsule loop,
 native end-to-end input latency, the music visualizer, and more GPU room paths
 remain later work. Soft-thin densify and Phase B glow are not the default next
 move.

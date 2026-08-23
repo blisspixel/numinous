@@ -29,7 +29,7 @@ Distilled from what the benchmark and MCP-game ecosystems reward:
    vision. Ours: ASCII renders, sound as notation, sims as plain-language
    readouts.
 2. **Flat, self-describing tools.** Simple schemas, guiding errors, no hidden
-   session state required to make a legal move. Ours: thirty-five mostly flat
+   session state required to make a legal move. Ours: thirty-nine mostly flat
    tools; the two exception shapes are bounded and self-describing (the
    `pokes` tuple-array on `play_room` and `challenge`, and `play_room`'s
    `gesture` event objects), and every error names the valid options.
@@ -46,9 +46,18 @@ Distilled from what the benchmark and MCP-game ecosystems reward:
 
 See, hear, learn, make, play, progress: `play_room` and `listen_room`
 (perception), `reveal_room` and `explain_joke` (understanding, including the
-humor, dissected), `plot_expression` and `sing_expression` (creation),
-`run_sim` (optimization play), `quiz` (challenge), `journey` (progression to
-LV 42), and the whispers for the ones who wander off the map.
+humor, dissected), `plot_expression`, `sing_expression`, `save_creation`,
+`open_creation`, and `fork_creation` (creation), `run_sim` (optimization play),
+`quiz` (challenge), `journey` (progression to LV 42), and the whispers for the
+ones who wander off the map.
+
+A creation can be titled, signed, styled with a visual era, reopened exactly,
+and forked with lineage. These tools return canonical `.num` text and a native
+link with an exact preview. They never interpret the input as a host path or
+create a host file. The returned `journalSubject` is an explicit bridge to a
+player-chosen `record_journal` entry, not an automatic memory. Creation tools
+remain private to the player during a Watch Agent session because their
+capsules can carry chosen identity.
 
 Touch is measurable: supply `pokes` or a `gesture` to `play_room` and the structured result
 includes a `delta` (cells changed, ink added/removed/reshaped, total cells,
@@ -193,7 +202,7 @@ collapse play into a hackable scalar):
 | The idea | In Numinous |
 |---|---|
 | Labyrinth of learnable laws | the rooms and sims: hidden compact rules, open to experiment |
-| Toolsmith garden | the Studio (`plot_expression`, `sing_expression`); grows into shareable artifacts |
+| Toolsmith garden | the Studio (`plot_expression`, `sing_expression`, `save_creation`, `open_creation`, `fork_creation`) with portable artifacts and lineage |
 | Social play arena | the daily seed and shared table today; multi-mind play at 2.0 |
 | Rulecraft studio | the extensibility tiers: safe DSL now, sandboxed authored rooms later |
 | Aesthetic compression gallery | the reveals, the deep cuts, the jokes dissected, the postcards |

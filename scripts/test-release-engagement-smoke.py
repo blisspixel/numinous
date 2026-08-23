@@ -165,7 +165,7 @@ class ReleaseEngagementSmokeTests(unittest.TestCase):
     def test_inventory_requires_exact_unique_tool_set(self) -> None:
         too_short = valid_responses()
         too_short[1]["result"]["tools"].pop()
-        with self.assertRaisesRegex(SMOKE.SmokeError, "36 tools"):
+        with self.assertRaisesRegex(SMOKE.SmokeError, "39 tools"):
             SMOKE.validate_mcp_responses(too_short)
 
         duplicate = valid_responses()

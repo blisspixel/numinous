@@ -2746,21 +2746,9 @@ fn fork_studio_creation(
     out: &Path,
 ) -> Result<String, String> {
     let parent = load_studio_creation(parent_input)?;
-    let source = expr.unwrap_or_else(|| parent.source());
-    let mut fork =
-        numinous_core::StudioCreation::new(source, parent.xmin(), parent.xmax(), parent.a())?;
-    if let Some(era) = parent.era() {
-        fork = fork.with_era(era);
-    }
-    if let Some(title) = title {
-        fork = fork.with_title(title).map_err(|e| format!("{e}\n"))?;
-    }
-    if let Some(author) = author {
-        fork = fork.with_author(author).map_err(|e| format!("{e}\n"))?;
-    }
-    fork = fork
-        .with_descends(&parent.to_link())
-        .map_err(|e| format!("{e}\n"))?;
+    let fork = parent
+        .fork(expr, title, author)
+        .map_err(|error| format!("{error}\n"))?;
     write_create_new(out, fork.to_num_file().as_bytes())?;
     Ok(format!(
         "forked from {}\nsaved Studio creation: {}\nlink: {}\n",

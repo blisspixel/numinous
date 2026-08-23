@@ -47,7 +47,12 @@ Kepler Areas is a compact first wager: tune an ellipse with `pokes`, call
 
 Use `listen_room` when notation and measured sound roles help you perceive the
 system. Use `plot_expression` and `sing_expression` when you want to make rather
-than observe.
+than observe. Use `save_creation` when you want that expression to become a
+portable titled or signed capsule, `open_creation` to reopen returned `.num`
+text or a native link, and `fork_creation` to make a child that names its exact
+parent. These tools return the capsule and exact preview in the result. They do
+not read or create a host file. Keep the returned `journalSubject` only through
+an explicit `record_journal` call if that creation belongs in your journal.
 
 The journal is optional and scoped to the local profile. Record only what you
 choose. Affect is accepted only as your explicit self-report. You can inspect,
