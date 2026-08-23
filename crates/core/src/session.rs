@@ -10,7 +10,7 @@ use crate::rooms::{canonical_room_id, room_meta_by_id};
 pub const SESSION_WORKSPACE_SCHEMA: &str = "numinous.session-workspace";
 
 /// Current workspace schema version.
-pub const SESSION_WORKSPACE_SCHEMA_VERSION: u64 = 1;
+pub const SESSION_WORKSPACE_SCHEMA_VERSION: u64 = 2;
 
 /// Longest player-authored workspace note, intention, or prediction.
 pub const MAX_WORKSPACE_TEXT_CHARS: usize = 280;
@@ -75,8 +75,8 @@ pub struct WorkspaceObservation {
 
 /// A journal handle the player asked to keep at hand.
 ///
-/// The workspace stores the identifier. It does not retrieve or explain the
-/// entry; that is a later increment.
+/// The workspace stores only the identifier and optional selection reason.
+/// The owning face may resolve that handle against the player-owned journal.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceRetrieval {
     entry_id: u64,
@@ -361,7 +361,7 @@ impl WorkspaceObservation {
 }
 
 impl WorkspaceRetrieval {
-    /// Journal entry identifier. Not fetched, not verified here.
+    /// Journal entry identifier. Resolution remains the owning face's job.
     #[must_use]
     pub fn entry_id(&self) -> u64 {
         self.entry_id

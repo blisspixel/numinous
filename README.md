@@ -106,10 +106,12 @@ Receipts on `play_room` are built; asking for one does not keep the play.
 Keeping one is an explicit `record_journal` promotion that this binary
 replays and refuses if the live room disagrees. A resettable session
 workspace now holds only what a mind puts there for the life of one MCP
-process: inspect, edit, defer, or clear. Play does not write it. Active work
-moves next to source-explained remembered-room retrieval while remaining
-structural debt closes, with the
-**Sensory Lift** entering behind a de-risk spike; the 0.4
+process: inspect, edit, retrieve, defer, or clear. Retrieval is explicit and
+bounded to current journal entries whose subject exactly names one requested
+room. Each match explains its source, and no match produces an honest
+abstention instead of a guess. Play does not write it. Active work moves next
+to MCP creation and lineage parity while remaining structural debt closes,
+with the **Sensory Lift** entering behind a de-risk spike; the 0.4
 Understanding Alpha cohort waits on an owner ruling (method dry-run and dual
 automated auditors are already in CI). The creator loop is built end to end:
 save, exact paused reopen, one-key named share trio, Gallery wall with the

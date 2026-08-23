@@ -18,7 +18,9 @@ room, Studio, and game actions in the App with a bounded in-memory timeline and
 no persisted transcript. A portable Agent Plugins v1 package supplies host
 discovery and play-first guidance. The opt-in experience journal persists across
 clean MCP processes and supports inspection, immutable correction, native or
-Open Knowledge Format v0.2 export, and confirmed erase.
+Open Knowledge Format v0.2 export, and confirmed erase. The process-local
+workspace can deliberately retrieve up to four current exact-subject entries
+for one named room, explain their sources, and abstain when evidence is absent.
 
 **Critical path now:** preserve the completed seven-room Universal Wager, close
 the remaining structural Polish Wave debts, then continue the Mind's Seat.
@@ -28,7 +30,7 @@ path resolution now have one core owner. CLI and MCP local-state adapters are
 focused modules extracted from their god-files, and MCP discovery plus its
 immutable tool schema now have a dedicated face-local catalog module. The
 remaining seams are next.
-Mind's Seat retrieval follows, then the measured Sensory Lift spike.
+MCP creation and lineage parity come next, then the measured Sensory Lift spike.
 The 0.4 Understanding Alpha cohort waits on an owner ruling; its method dry-run
 and dual automated auditors are already in CI. Soft-thin densify, bulk new
 rooms, and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and

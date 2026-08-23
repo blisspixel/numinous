@@ -55,10 +55,24 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   encoded-audio size, never WAV bytes. Promotion replays the named tool.
 - A visit can keep a compact workspace without turning play into memory.
   `workspace` is the 36th MCP tool. It lives in this process only: inspect,
-  edit, defer, or clear place, intention, pending prediction, unfinished
-  work, recent notes, and a few journal handles. Play does not write it.
+  edit, retrieve, defer, or clear place, intention, pending prediction,
+  unfinished work, recent notes, and a few journal handles. Play does not write it.
   Asking does not record a journal entry. A new process starts empty. The
-  Watch Agent never sees it. Retrieved handles are stored, not explained.
+  Watch Agent never sees it. Deliberate retrieval names one listed room and
+  selects at most four current entries whose subject exactly resolves to that
+  canonical room, newest first. Every returned handle includes the full
+  journal entry, current or superseded status, the selection reason, and a
+  plain explanation of its declared source. Exact matching never searches
+  player text or opaque receipt digests. When no current evidence exists, the
+  operation says it abstained and clears stale active results. Manually kept
+  handles resolve through the same projection, and report missing after
+  erasure instead of preserving a hidden copy. The workspace wire schema is
+  now version 2. Core, handler, and real stdio regressions cover aliases,
+  bounds, corrections, process-local carry, abstention, and erasure.
+  `correct_journal` no longer advertises or accepts `numinous-result`, because
+  that operation has no replay receipt to verify. A rejected impersonation
+  leaves the journal unchanged; verified result provenance remains available
+  only through receipt promotion on `record_journal`.
 
 ## [0.4.0-alpha.9] - 2026-08-18
 

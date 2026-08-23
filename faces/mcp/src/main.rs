@@ -1666,7 +1666,7 @@ fn call_tool(
         "correct_journal" => correct_journal_tool(&domain_args, &journal_path()),
         "export_journal" => export_journal_tool(&domain_args, &journal_path()),
         "erase_journal" => erase_journal_tool(&domain_args, &journal_path()),
-        "workspace" => workspace_tool(&domain_args, workspace),
+        "workspace" => workspace_tool(&domain_args, workspace, &journal_path()),
         "listen_room" => listen_room_tool(&domain_args),
         "list_sims" => tool_text(&list_sims_text()),
         "run_sim" => run_sim_tool(&domain_args),
@@ -4586,6 +4586,11 @@ fn correct_journal_tool(args: &Value, path: &std::path::Path) -> Value {
         .get("source")
         .and_then(Value::as_str)
         .unwrap_or(numinous_core::JOURNAL_SOURCE_SELF_AUTHORED);
+    if source == numinous_core::JOURNAL_SOURCE_NUMINOUS_RESULT {
+        return tool_error(
+            "Correction source numinous-result is unavailable because correct_journal has no replay-verified receipt. Use self-authored or player-provided.",
+        );
+    }
     let recorded_at_utc = journal_now();
     let event_at_utc = args.get("event_time_utc").and_then(Value::as_u64);
     if event_at_utc.is_some_and(|event_time| event_time > recorded_at_utc) {
@@ -4756,20 +4761,7 @@ fn journal_page_json(journal: &numinous_core::Journal, after_entry_id: u64, limi
     let entries = available
         .iter()
         .take(limit)
-        .map(|entry| {
-            json!({
-                "entryId": entry.entry_id,
-                "recordedAtUtc": entry.recorded_at_utc,
-                "eventAtUtc": entry.event_at_utc,
-                "source": entry.source,
-                "kind": entry.kind,
-                "subject": entry.subject,
-                "text": entry.text,
-                "affect": entry.affect,
-                "supersedes": entry.supersedes,
-                "current": journal.is_current(entry.entry_id),
-            })
-        })
+        .map(|entry| journal_entry_json(journal, entry))
         .collect::<Vec<_>>();
     let next_after_entry_id = entries
         .last()
@@ -4785,6 +4777,24 @@ fn journal_page_json(journal: &numinous_core::Journal, after_entry_id: u64, limi
             "hasMore": available.len() > limit,
             "nextAfterEntryId": next_after_entry_id,
         }
+    })
+}
+
+fn journal_entry_json(
+    journal: &numinous_core::Journal,
+    entry: &numinous_core::JournalEntry,
+) -> Value {
+    json!({
+        "entryId": entry.entry_id,
+        "recordedAtUtc": entry.recorded_at_utc,
+        "eventAtUtc": entry.event_at_utc,
+        "source": entry.source,
+        "kind": entry.kind,
+        "subject": entry.subject,
+        "text": entry.text,
+        "affect": entry.affect,
+        "supersedes": entry.supersedes,
+        "current": journal.is_current(entry.entry_id),
     })
 }
 
@@ -7176,6 +7186,31 @@ mod tests {
         assert!(names.contains(&"export_journal"));
         assert!(names.contains(&"erase_journal"));
         assert!(names.contains(&"workspace"));
+        let workspace = tools
+            .iter()
+            .find(|tool| tool["name"] == "workspace")
+            .expect("workspace tool");
+        let workspace_properties = &workspace["inputSchema"]["properties"];
+        assert_eq!(
+            workspace_properties["op"]["enum"],
+            json!(["inspect", "edit", "retrieve", "defer", "clear"])
+        );
+        assert_eq!(
+            workspace_properties["room"]["maxLength"],
+            super::MAX_TOOL_ID_CHARS
+        );
+        assert_eq!(
+            workspace_properties["limit"]["maximum"],
+            numinous_core::MAX_WORKSPACE_RETRIEVED
+        );
+        let correct_journal = tools
+            .iter()
+            .find(|tool| tool["name"] == "correct_journal")
+            .expect("correct_journal tool");
+        assert_eq!(
+            correct_journal["inputSchema"]["properties"]["source"]["enum"],
+            json!(["self-authored", "player-provided"])
+        );
         let forget = tools
             .iter()
             .find(|tool| tool["name"] == "forget")
@@ -7531,6 +7566,21 @@ mod tests {
             &journey,
         );
         assert_eq!(connection["structuredContent"]["entryId"], 2);
+
+        let impersonated_correction = super::correct_journal_tool(
+            &json!({
+                "entry_id": 2,
+                "text": "This correction has no replay proof.",
+                "source": "numinous-result"
+            }),
+            &path,
+        );
+        assert_eq!(impersonated_correction["isError"], true);
+        assert_eq!(
+            super::read_journal_tool(&json!({}), &path)["structuredContent"]["totalEntries"],
+            2,
+            "an unverified source claim must not mutate the journal"
+        );
 
         let correction = super::correct_journal_tool(
             &json!({

@@ -55,8 +55,12 @@ correct, export, or erase the journal through its dedicated tools. Players who
 share one local profile share that journal. Successful room play still records
 the existing coarse visit in the separate Journey progression file. Use
 `workspace` when you want continuity inside this visit: a place, an intention,
-a pending prediction, unfinished work, or a few notes. Play does not write it.
-It dies when the process does. It is not a memory. Use
+a pending prediction, unfinished work, a few notes, or an explicitly recalled
+room. To recall, use `op: "retrieve"` with one listed `room`; at most four
+current journal entries whose subject exactly names that room return, newest
+first, with source and selection reason. An empty result says it abstained.
+Entry text and opaque receipt digests are not searched. Play does not write the
+workspace. It dies when the process does. It is not a memory. Use
 `forget` to inspect or erase Journey and other Numinous-managed local state.
 Your surrounding host may also retain tool traffic under its own policy;
 Numinous erasure cannot remove host-managed transcripts or exports.

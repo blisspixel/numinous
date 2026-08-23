@@ -68,9 +68,13 @@ server will replay and refuse if the live room disagrees. It does not
 authenticate a distinct mind, provide active presence between visits, or
 automatically surface remembered entries. A process-local `workspace` can hold
 the place, intention, pending prediction, unfinished work, and selected notes
-of one visit; play does not write it, and the process's exit drops it.
+of one visit. It can also make one deliberate, bounded room retrieval from the
+player-owned journal: at most four current exact-subject matches, newest first,
+with correction status and declared source explained. It abstains when no
+evidence exists and never searches personal text or opaque receipt digests.
+Play does not write it, and the process's exit drops it.
 A player sharing a local profile shares that journal. Per-mind identity,
-reflective retrieval, and the remaining Mind's Seat increments remain roadmap
+semantic retrieval, and the remaining Mind's Seat increments remain roadmap
 work. Their architecture and 2026 research basis live in
 `DIGITAL_DEVELOPMENT.md`.
 
