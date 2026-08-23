@@ -188,6 +188,50 @@ impl Journal {
             .all(|entry| entry.supersedes != Some(entry_id))
     }
 
+    /// Find an entry by its stable journal-local identifier.
+    #[must_use]
+    pub fn entry(&self, entry_id: u64) -> Option<&JournalEntry> {
+        self.entries.iter().find(|entry| entry.entry_id == entry_id)
+    }
+
+    /// Find the direct correction that supersedes an entry, when one exists.
+    #[must_use]
+    pub fn superseding_entry(&self, entry_id: u64) -> Option<&JournalEntry> {
+        self.entries
+            .iter()
+            .find(|entry| entry.supersedes == Some(entry_id))
+    }
+
+    /// Return current entries whose subject exactly names a listed room.
+    ///
+    /// The room and stored subjects both pass through the compatibility-alias
+    /// resolver. Arbitrary text, receipt digests, and partial names never
+    /// match. Results are newest first and stop at `limit`.
+    #[must_use]
+    pub fn current_room_entries(&self, room: &str, limit: usize) -> Vec<&JournalEntry> {
+        use std::collections::HashSet;
+
+        let canonical_room = crate::canonical_room_id(room);
+        if crate::room_meta_by_id(canonical_room).is_none() || limit == 0 {
+            return Vec::new();
+        }
+        let superseded = self
+            .entries
+            .iter()
+            .filter_map(|entry| entry.supersedes)
+            .collect::<HashSet<_>>();
+        self.entries
+            .iter()
+            .rev()
+            .filter(|entry| !superseded.contains(&entry.entry_id))
+            .filter(|entry| {
+                crate::room_meta_by_id(&entry.subject)
+                    .is_some_and(|metadata| metadata.id == canonical_room)
+            })
+            .take(limit)
+            .collect()
+    }
+
     /// Erase every entry in memory.
     pub fn erase(&mut self) {
         self.entries.clear();
@@ -650,5 +694,68 @@ mod tests {
         );
         assert_eq!(journal.entries.len(), MAX_JOURNAL_ENTRIES);
         assert_eq!(journal.entries[0].text, "original");
+    }
+
+    #[test]
+    fn room_retrieval_is_exact_current_bounded_and_newest_first() {
+        let mut journal = Journal::new();
+        let original = journal
+            .record(JournalRecord {
+                recorded_at_utc: 10,
+                event_at_utc: 10,
+                source: JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "encounter",
+                subject: "kepler-areas",
+                text: "The equal areas were visible.",
+                affect: None,
+            })
+            .expect("record alias");
+        let correction = journal
+            .correct(
+                20,
+                None,
+                JOURNAL_SOURCE_SELF_AUTHORED,
+                original,
+                "The speed change made the equal areas visible.",
+                None,
+            )
+            .expect("correct alias");
+        let newest = journal
+            .record(JournalRecord {
+                recorded_at_utc: 30,
+                event_at_utc: 30,
+                source: JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "encounter",
+                subject: "kepler-laws",
+                text: "A second current account.",
+                affect: None,
+            })
+            .expect("record canonical room");
+        journal
+            .record(JournalRecord {
+                recorded_at_utc: 40,
+                event_at_utc: 40,
+                source: JOURNAL_SOURCE_NUMINOUS_RESULT,
+                kind: "encounter",
+                subject: "receipt:opaque-digest",
+                text: "Mentions kepler-laws but is not a room subject.",
+                affect: None,
+            })
+            .expect("record unrelated receipt subject");
+
+        let matches = journal.current_room_entries("kepler-areas", 2);
+        assert_eq!(
+            matches
+                .iter()
+                .map(|entry| entry.entry_id)
+                .collect::<Vec<_>>(),
+            vec![newest, correction]
+        );
+        assert_eq!(
+            journal.current_room_entries("kepler-laws", 1)[0].entry_id,
+            newest
+        );
+        assert!(journal.current_room_entries("kepler-laws", 0).is_empty());
+        assert!(journal.current_room_entries("not-a-room", 4).is_empty());
     }
 }

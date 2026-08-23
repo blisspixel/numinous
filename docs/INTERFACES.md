@@ -366,13 +366,21 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   player-facing receipt path added no tool. `listen_room` and `sing_expression` accept
   the same `receipt` switch. Their digests bind notation, motif, bed counts,
   and encoded-audio size, never the WAV bytes.
-- **Resettable session workspace (built):** `workspace` holds compact visit
-  state in the current MCP process only: current place, a self-chosen
+- **Resettable session workspace and remembered-room retrieval (built):**
+  `workspace` holds compact visit state in the current MCP process only:
+  current place, a self-chosen
   intention, a pending prediction, unfinished action or creation, recent
-  notes, and a few journal handles. The player inspects, edits, defers, or
-  clears every field. Play does not write it. It is not a memory, not the
-  journal, and not Watch Agent state. A new process starts empty. Remembered-room
-  retrieval remains unbuilt; retrieved handles are stored, not explained.
+  notes, and a few journal handles. The player inspects, edits, retrieves,
+  defers, or clears every field. `retrieve` requires one listed room and
+  selects at most four current journal entries whose subject exactly resolves
+  to it, newest first. The result explains the selection and declared source,
+  retains correction status, and explicitly abstains when there is no match.
+  It never searches entry text or opaque receipt digests. Manual handles use
+  the same resolution path and become visibly missing after journal erasure;
+  the workspace keeps no hidden copy. Play does not write it. It is not a
+  memory, not the journal, and not Watch Agent state. A new process starts
+  empty. The workspace projection is schema version 2; the retrieval result is
+  `numinous.remembered-room-retrieval` schema version 1.
 - **Canonical persistent progress (built):** compatibility aliases are resolved
   before Journey mutation. Playing `kepler-areas` and then `kepler-laws` lights
   one canonical star. The Journey also persists the bounded canonical set of
