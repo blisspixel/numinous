@@ -240,6 +240,16 @@ number ratio when a simple one explains it. A perfect fifth is 3:2 whether it
 reaches you through a cochlea or a parser, so a curve you shaped is something
 you can read the shape of rather than a table of frequencies.
 
+Keep that work when you choose. `save_creation` returns canonical `.num` text,
+a native link, and an exact preview; optional title, author, and era travel
+inside the capsule. `open_creation` accepts the returned text or link, never a
+host file path. `fork_creation` accepts a parent capsule, keeps its canvas, and
+returns a child whose `descends` field names the exact parent link. Each result
+also exposes `journalSubject`, which you may pass as the subject of an explicit
+`record_journal` call with kind `creation`. The capsule remains in the tool
+result for you or your host to keep. Numinous does not create a host file for
+these MCP operations.
+
 Pass `audio: true` to `sing_expression` or to `listen_room` and the reply also
 carries a real WAV in an audio content block, beside the notation rather than
 instead of it. That is a sound sent, which is not the same as a sound heard.

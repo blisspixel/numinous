@@ -6,13 +6,18 @@
 use std::fmt;
 
 /// Current portable journal schema version.
-pub const JOURNAL_SCHEMA_VERSION: u32 = 2;
+pub const JOURNAL_SCHEMA_VERSION: u32 = 3;
 /// Maximum entries retained in one journal.
 pub const MAX_JOURNAL_ENTRIES: usize = 10_000;
 /// Maximum characters in an entry kind.
 pub const MAX_JOURNAL_KIND_CHARS: usize = 64;
 /// Maximum characters in an entry subject.
-pub const MAX_JOURNAL_SUBJECT_CHARS: usize = 256;
+///
+/// A subject may be a complete Studio capsule link. Sharing the capsule
+/// parser's bounded input ceiling guarantees that every valid link can ride
+/// here without truncation, while the managed journal file keeps the aggregate
+/// store under its separate byte cap.
+pub const MAX_JOURNAL_SUBJECT_CHARS: usize = crate::studio::MAX_SHARE_INPUT_BYTES;
 /// Maximum characters in entry text.
 pub const MAX_JOURNAL_TEXT_CHARS: usize = 1_000;
 /// Maximum characters in self-reported affect.
@@ -28,7 +33,9 @@ pub const JOURNAL_SOURCE_LEGACY_IMPORT: &str = "legacy-import";
 /// Subject prefix for a promoted Numinous Encounter Receipt.
 pub const JOURNAL_SUBJECT_RECEIPT_PREFIX: &str = "receipt:";
 
-const JOURNAL_HEADER: &str = "numinous-journal-v2";
+const JOURNAL_HEADER: &str = "numinous-journal-v3";
+const JOURNAL_V2_HEADER: &str = "numinous-journal-v2";
+const JOURNAL_V2_MAX_SUBJECT_CHARS: usize = 256;
 
 /// An entry in the experience journal.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -89,7 +96,7 @@ pub enum JournalError {
     AlreadySuperseded(u64),
     /// No further stable identifier can be allocated.
     IdentifierExhausted,
-    /// Persisted v2 text did not match the frozen schema.
+    /// Persisted versioned text did not match its frozen schema.
     InvalidFormat(String),
 }
 
@@ -237,7 +244,7 @@ impl Journal {
         self.entries.clear();
     }
 
-    /// Serialize the journal to its durable v2 text format.
+    /// Serialize the journal to its durable v3 text format.
     #[must_use]
     pub fn to_text(&self) -> String {
         let mut output = String::from(JOURNAL_HEADER);
@@ -266,10 +273,10 @@ impl Journal {
     /// Parse persisted text, including migration from the prototype format.
     pub fn try_from_text(text: &str) -> Result<Self, JournalError> {
         let mut lines = text.lines();
-        if lines.next() == Some(JOURNAL_HEADER) {
-            Self::parse_v2(lines)
-        } else {
-            Self::parse_legacy(text)
+        match lines.next() {
+            Some(JOURNAL_HEADER) => Self::parse_versioned(lines, MAX_JOURNAL_SUBJECT_CHARS),
+            Some(JOURNAL_V2_HEADER) => Self::parse_versioned(lines, JOURNAL_V2_MAX_SUBJECT_CHARS),
+            _ => Self::parse_legacy(text),
         }
     }
 
@@ -318,7 +325,10 @@ impl Journal {
         Ok(entry_id)
     }
 
-    fn parse_v2<'a>(lines: impl Iterator<Item = &'a str>) -> Result<Self, JournalError> {
+    fn parse_versioned<'a>(
+        lines: impl Iterator<Item = &'a str>,
+        maximum_subject_chars: usize,
+    ) -> Result<Self, JournalError> {
         let mut entries = Vec::new();
         let mut previous_id = 0_u64;
         for (index, line) in lines.enumerate() {
@@ -365,7 +375,7 @@ impl Journal {
                 Some(decode_field(fields[7])?)
             };
             validate_field_length(&kind, MAX_JOURNAL_KIND_CHARS, index + 2, "kind")?;
-            validate_field_length(&subject, MAX_JOURNAL_SUBJECT_CHARS, index + 2, "subject")?;
+            validate_field_length(&subject, maximum_subject_chars, index + 2, "subject")?;
             validate_field_length(&text, MAX_JOURNAL_TEXT_CHARS, index + 2, "text")?;
             if let Some(affect) = &affect {
                 validate_field_length(affect, MAX_JOURNAL_AFFECT_CHARS, index + 2, "affect")?;
@@ -532,12 +542,12 @@ fn validate_field_length(
 mod tests {
     use super::{
         JOURNAL_HEADER, JOURNAL_SOURCE_LEGACY_IMPORT, JOURNAL_SOURCE_NUMINOUS_RESULT,
-        JOURNAL_SOURCE_SELF_AUTHORED, Journal, JournalEntry, JournalError, JournalRecord,
-        MAX_JOURNAL_ENTRIES,
+        JOURNAL_SOURCE_SELF_AUTHORED, JOURNAL_V2_MAX_SUBJECT_CHARS, Journal, JournalEntry,
+        JournalError, JournalRecord, MAX_JOURNAL_ENTRIES, MAX_JOURNAL_SUBJECT_CHARS,
     };
 
     #[test]
-    fn v2_round_trip_preserves_all_fields_and_escapes() {
+    fn v3_round_trip_preserves_all_fields_and_escapes() {
         let mut journal = Journal::new();
         assert_eq!(
             journal.record(JournalRecord {
@@ -652,15 +662,74 @@ mod tests {
         assert_eq!(journal.entries[0].source, JOURNAL_SOURCE_LEGACY_IMPORT);
         assert_eq!(journal.entries[0].text, "close\nfar");
         assert_eq!(
-            Journal::try_from_text(&journal.to_text()).expect("v2 migration"),
+            Journal::try_from_text(&journal.to_text()).expect("v3 migration"),
             journal
         );
     }
 
     #[test]
-    fn malformed_v2_is_not_silently_repaired() {
+    fn v2_migrates_without_relaxing_its_frozen_subject_bound() {
+        let old =
+            "numinous-journal-v2\n1\t20\t10\tself-authored\tcreation\told-subject\ttext\t\t\n";
+        let migrated = Journal::try_from_text(old).expect("v2 opens");
+        assert_eq!(migrated.entries[0].subject, "old-subject");
+        assert!(migrated.to_text().starts_with(JOURNAL_HEADER));
+
+        let oversized = "x".repeat(JOURNAL_V2_MAX_SUBJECT_CHARS + 1);
+        let old = format!(
+            "numinous-journal-v2\n1\t20\t10\tself-authored\tcreation\t{oversized}\ttext\t\t\n"
+        );
+        assert!(
+            Journal::try_from_text(&old).is_err(),
+            "a v2 file keeps the bound its version declared"
+        );
+    }
+
+    #[test]
+    fn a_complete_capsule_link_can_be_a_journal_subject() {
+        let source = std::iter::repeat_n("1+", 170).collect::<String>() + "1";
+        let creation = crate::StudioCreation::new(source, -2.0, 2.0, 0.5)
+            .expect("large valid creation")
+            .with_title(&"T".repeat(crate::MAX_META_TEXT_CHARS))
+            .expect("maximum title")
+            .with_author(&"A".repeat(crate::MAX_META_TEXT_CHARS))
+            .expect("maximum author");
+        let link = creation.to_link();
+        assert!(
+            link.chars().count() > JOURNAL_V2_MAX_SUBJECT_CHARS,
+            "fixture must prove the old pride gap"
+        );
+        assert!(link.chars().count() <= MAX_JOURNAL_SUBJECT_CHARS);
+
+        let mut journal = Journal::new();
+        journal
+            .record(JournalRecord {
+                recorded_at_utc: 20,
+                event_at_utc: 20,
+                source: JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "creation",
+                subject: &link,
+                text: "A named and signed fork.",
+                affect: None,
+            })
+            .expect("record capsule");
+        assert_eq!(journal.entries[0].subject, link);
+        assert_eq!(
+            Journal::try_from_text(&journal.to_text())
+                .expect("reopen")
+                .entries[0]
+                .subject,
+            link
+        );
+    }
+
+    #[test]
+    fn malformed_versioned_journal_is_not_silently_repaired() {
         let error =
             Journal::try_from_text("numinous-journal-v2\n1\t2\n").expect_err("malformed v2");
+        assert!(matches!(error, JournalError::InvalidFormat(_)));
+        let error =
+            Journal::try_from_text("numinous-journal-v3\n1\t2\n").expect_err("malformed v3");
         assert!(matches!(error, JournalError::InvalidFormat(_)));
     }
 

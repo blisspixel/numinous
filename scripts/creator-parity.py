@@ -31,11 +31,10 @@ neither could sing with one. Note that a duration and a note count would not
 have caught it: those are identical either way, so a gate built on what the CLI
 prints would have watched it go past.
 
-Known gap this gate cannot close, recorded rather than worked around: MCP has no
-way to open a saved `.num` document at all. A human can save a creation and an
-MCP peer cannot read it, so the "remix the same musical document" half of the
-0.7 exit is not merely untested, it is unbuilt. Adding a tool for it changes the
-pinned tool inventory and is a product decision.
+Portable creation parity is held by the MCP unit and real stdio suites instead
+of this expression gate. They prove that `save_creation`, `open_creation`, and
+`fork_creation` roundtrip canonical `.num` text and native links without host
+file access, return an exact preview, and record the child's lineage.
 """
 
 from __future__ import annotations

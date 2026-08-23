@@ -420,7 +420,9 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 }
             }
         }
-        "run_sim" | "sing_expression" => journey.play(),
+        "run_sim" | "sing_expression" | "save_creation" | "open_creation" | "fork_creation" => {
+            journey.play()
+        }
         "plot_expression" => {
             // Listing the recipe bank is discovery, not a creation play.
             if args.get("list_recipes").and_then(Value::as_bool) != Some(true) {
@@ -1228,7 +1230,9 @@ fn viewer_policy(name: &str) -> Option<ViewerPolicy> {
     match name {
         "cairn" | "forget" | "scores" | "journey" | "choose" | "trophies" | "read_journal"
         | "record_journal" | "correct_journal" | "export_journal" | "erase_journal"
-        | "workspace" => Some(ViewerPolicy::Private),
+        | "workspace" | "save_creation" | "open_creation" | "fork_creation" => {
+            Some(ViewerPolicy::Private)
+        }
         "broadcast_session" => Some(ViewerPolicy::Control),
         _ => None,
     }
@@ -1687,6 +1691,9 @@ fn call_tool(
         "choose" => choose_tool(&domain_args, journey_file),
         "trophies" => trophies_tool(journey_file),
         "plot_expression" => plot_expression_tool(&domain_args),
+        "save_creation" => save_creation_tool(&domain_args),
+        "open_creation" => open_creation_tool(&domain_args),
+        "fork_creation" => fork_creation_tool(&domain_args),
         "sing_expression" => sing_expression_tool(&domain_args),
         "explain_joke" => explain_joke_tool(&domain_args),
         "broadcast_session" => broadcast_session_tool(&domain_args, broadcast),
@@ -6134,6 +6141,200 @@ fn plot_expression_tool(args: &Value) -> Value {
     }
 }
 
+/// Build a portable Studio capsule without granting the MCP face filesystem
+/// access. The complete `.num` document and native link travel in the result.
+fn save_creation_tool(args: &Value) -> Value {
+    let Some(source) = args.get("expr").and_then(Value::as_str) else {
+        return tool_error("Missing required string argument 'expr'.");
+    };
+    let mut creation = match numinous_core::StudioCreation::new(
+        source,
+        args.get("xmin")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN),
+        args.get("xmax")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX),
+        args.get("a")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER),
+    ) {
+        Ok(creation) => creation,
+        Err(error) => return tool_error(&error),
+    };
+    if let Some(title) = args.get("title").and_then(Value::as_str) {
+        creation = match creation.with_title(title) {
+            Ok(creation) => creation,
+            Err(error) => return tool_error(&error),
+        };
+    }
+    if let Some(author) = args.get("author").and_then(Value::as_str) {
+        creation = match creation.with_author(author) {
+            Ok(creation) => creation,
+            Err(error) => return tool_error(&error),
+        };
+    }
+    if let Some(raw_era) = args.get("era").and_then(Value::as_str) {
+        let Some(era) = numinous_core::Era::parse(raw_era) else {
+            return tool_error("Argument 'era' must be phosphor, 8-bit, vector, or modern.");
+        };
+        creation = creation.with_era(era);
+    }
+    studio_creation_result("save", &creation, None, args)
+}
+
+/// Open caller-supplied capsule data. A path-shaped string remains data and is
+/// refused by the capsule parser rather than becoming an ambient file read.
+fn open_creation_tool(args: &Value) -> Value {
+    let Some(capsule) = args.get("capsule").and_then(Value::as_str) else {
+        return tool_error("Missing required string argument 'capsule'.");
+    };
+    let creation = match numinous_core::StudioCreation::from_capsule(capsule) {
+        Ok(creation) => creation,
+        Err(error) => return tool_error(&format!("Could not open Studio capsule: {error}")),
+    };
+    studio_creation_result("open", &creation, None, args)
+}
+
+/// Make one child through the same core fork constructor the CLI uses.
+fn fork_creation_tool(args: &Value) -> Value {
+    let Some(capsule) = args.get("parent").and_then(Value::as_str) else {
+        return tool_error("Missing required string argument 'parent'.");
+    };
+    let parent = match numinous_core::StudioCreation::from_capsule(capsule) {
+        Ok(creation) => creation,
+        Err(error) => return tool_error(&format!("Could not open parent capsule: {error}")),
+    };
+    let parent_link = parent.to_link();
+    let child = match parent.fork(
+        args.get("expr").and_then(Value::as_str),
+        args.get("title").and_then(Value::as_str),
+        args.get("author").and_then(Value::as_str),
+    ) {
+        Ok(creation) => creation,
+        Err(error) => return tool_error(&error),
+    };
+    studio_creation_result("fork", &child, Some(&parent_link), args)
+}
+
+fn studio_preview_size(args: &Value) -> Result<(usize, usize), String> {
+    let read = |name: &str, default: usize, maximum: usize| {
+        let Some(value) = args.get(name) else {
+            return Ok(default);
+        };
+        let value = value
+            .as_u64()
+            .and_then(|value| usize::try_from(value).ok())
+            .ok_or_else(|| format!("Argument '{name}' must be a non-negative integer."))?;
+        if !(2..=maximum).contains(&value) {
+            return Err(format!(
+                "Argument '{name}' must be an integer from 2 through {maximum}."
+            ));
+        }
+        Ok(value)
+    };
+    Ok((
+        read(
+            "width",
+            numinous_core::DEFAULT_PLOT_WIDTH,
+            MAX_TOOL_WIDTH as usize,
+        )?,
+        read(
+            "height",
+            numinous_core::DEFAULT_PLOT_HEIGHT,
+            MAX_TOOL_HEIGHT as usize,
+        )?,
+    ))
+}
+
+fn studio_creation_result(
+    action: &str,
+    creation: &numinous_core::StudioCreation,
+    parent_link: Option<&str>,
+    args: &Value,
+) -> Value {
+    let (width, height) = match studio_preview_size(args) {
+        Ok(size) => size,
+        Err(error) => return tool_error(&error),
+    };
+    let request = match numinous_core::PlotRequest::new(
+        numinous_core::PlotSource::Manual(creation.source().to_string()),
+        Some(creation.xmin()),
+        Some(creation.xmax()),
+        Some(creation.a()),
+        Some(width),
+        Some(height),
+    ) {
+        Ok(request) => request,
+        Err(error) => return tool_error(&error.to_string()),
+    };
+    let preview = match request.execute() {
+        Ok(preview) => preview,
+        Err(numinous_core::StudioRequestError::Undefined) => {
+            return tool_error(&format!(
+                "Cannot {action} this Studio creation: the function is undefined across its saved range."
+            ));
+        }
+        Err(error) => return tool_error(&error.to_string()),
+    };
+
+    let num_file = creation.to_num_file();
+    let link = creation.to_link();
+    if link.chars().count() > numinous_core::MAX_JOURNAL_SUBJECT_CHARS {
+        return tool_error("The canonical Studio link exceeds the journal subject bound.");
+    }
+    let capsule_format_version = if num_file.starts_with("NUMINOUS_STUDIO 2\n") {
+        2
+    } else {
+        1
+    };
+    let verb = match action {
+        "save" => "Saved",
+        "open" => "Opened",
+        "fork" => "Forked",
+        _ => "Prepared",
+    };
+    let mut structured = json!({
+        "schema": "numinous.studio-creation",
+        "schemaVersion": 1,
+        "action": action,
+        "capsuleFormatVersion": capsule_format_version,
+        "expression": creation.source(),
+        "xmin": creation.xmin(),
+        "xmax": creation.xmax(),
+        "a": creation.a(),
+        "title": creation.title(),
+        "author": creation.author(),
+        "era": creation.era().map(numinous_core::Era::name),
+        "descends": creation.descends(),
+        "numFile": num_file,
+        "link": link,
+        "journalSubject": link,
+        "createdFile": false,
+        "readHostFile": false,
+        "containsHostPath": false,
+        "preview": {
+            "width": width,
+            "height": height,
+            "ymin": preview.ymin,
+            "ymax": preview.ymax,
+            "render": preview.text,
+        }
+    });
+    if let Some(parent_link) = parent_link {
+        structured["parentLink"] = json!(parent_link);
+    }
+    tool_structured(
+        &format!(
+            "{verb} Studio creation as portable capsule data. No host file was read or created.\nExpression: {}\nLink: {}\n\n{}",
+            creation.source(),
+            creation.to_link(),
+            preview.text
+        ),
+        structured,
+    )
+}
+
 /// The `sing_expression` tool: an agent's function becomes readable music.
 fn sing_expression_tool(args: &Value) -> Value {
     let want_receipt = match encounter_request(args) {
@@ -6812,7 +7013,7 @@ mod tests {
         assert_eq!(result["ttlMs"], super::TOOLS_CACHE_TTL_MS);
         assert_eq!(result["cacheScope"], "public");
         let tools = result["tools"].as_array().expect("tool array");
-        assert_eq!(tools.len(), 36);
+        assert_eq!(tools.len(), 39);
         assert!(
             tools
                 .iter()
@@ -7156,7 +7357,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 36);
+        assert_eq!(tools.len(), 39);
         assert!(
             tools
                 .iter()
@@ -7171,6 +7372,9 @@ mod tests {
         assert!(names.contains(&"quiz"));
         assert!(names.contains(&"listen_room"));
         assert!(names.contains(&"plot_expression"));
+        assert!(names.contains(&"save_creation"));
+        assert!(names.contains(&"open_creation"));
+        assert!(names.contains(&"fork_creation"));
         assert!(names.contains(&"sing_expression"));
         assert!(names.contains(&"explain_joke"));
         assert!(names.contains(&"journey"));
@@ -7186,6 +7390,34 @@ mod tests {
         assert!(names.contains(&"export_journal"));
         assert!(names.contains(&"erase_journal"));
         assert!(names.contains(&"workspace"));
+        let save_creation = tools
+            .iter()
+            .find(|tool| tool["name"] == "save_creation")
+            .expect("save_creation tool");
+        assert_eq!(
+            save_creation["inputSchema"]["properties"]["expr"]["maxLength"],
+            numinous_core::MAX_STUDIO_SOURCE_CHARS
+        );
+        assert_eq!(
+            save_creation["inputSchema"]["properties"]["author"]["maxLength"],
+            numinous_core::MAX_META_TEXT_CHARS
+        );
+        let open_creation = tools
+            .iter()
+            .find(|tool| tool["name"] == "open_creation")
+            .expect("open_creation tool");
+        assert_eq!(
+            open_creation["inputSchema"]["properties"]["capsule"]["maxLength"],
+            numinous_core::MAX_SHARE_INPUT_BYTES
+        );
+        let fork_creation = tools
+            .iter()
+            .find(|tool| tool["name"] == "fork_creation")
+            .expect("fork_creation tool");
+        assert_eq!(
+            fork_creation["inputSchema"]["properties"]["parent"]["maxLength"],
+            numinous_core::MAX_SHARE_INPUT_BYTES
+        );
         let workspace = tools
             .iter()
             .find(|tool| tool["name"] == "workspace")
@@ -7423,7 +7655,7 @@ mod tests {
             }
         }
         assert_eq!(public, numinous_broadcast::ALL_PUBLIC_TOOLS.len());
-        assert_eq!(private, 12);
+        assert_eq!(private, 15);
         assert_eq!(control, 1);
         assert_eq!(public + private + control, tools.len());
         assert!(super::viewer_policy("future_unreviewed_tool").is_none());
@@ -8230,6 +8462,31 @@ mod tests {
                 "at most 512 characters",
             ),
             (
+                "save_creation",
+                json!({"expr":"x".repeat(numinous_core::MAX_STUDIO_SOURCE_CHARS + 1)}),
+                "at most 512 characters",
+            ),
+            (
+                "save_creation",
+                json!({"expr":"x","title":"x".repeat(numinous_core::MAX_META_TEXT_CHARS + 1)}),
+                "at most 64 characters",
+            ),
+            (
+                "save_creation",
+                json!({"expr":"x","era":"future"}),
+                "must be one of",
+            ),
+            (
+                "open_creation",
+                json!({"capsule":"x".repeat(numinous_core::MAX_SHARE_INPUT_BYTES + 1)}),
+                "at most 8192 characters",
+            ),
+            (
+                "fork_creation",
+                json!({"parent":"x".repeat(numinous_core::MAX_SHARE_INPUT_BYTES + 1)}),
+                "at most 8192 characters",
+            ),
+            (
                 "cairn",
                 json!({"leave":"x".repeat(numinous_core::cairn::MAX_BEQUEST_CHARS + 1)}),
                 "at most 140 characters",
@@ -8823,6 +9080,147 @@ mod tests {
             .expect("tools/call must respond, not crash");
             assert_eq!(bomb["result"]["isError"], true, "{tool} rejects the bomb");
         }
+    }
+
+    #[test]
+    fn creations_save_open_fork_and_enter_the_journal_without_host_files() {
+        let expression = std::iter::repeat_n("1+", 170).collect::<String>() + "sin(x)";
+        let title = "T".repeat(numinous_core::MAX_META_TEXT_CHARS);
+        let author = "A".repeat(numinous_core::MAX_META_TEXT_CHARS);
+        let saved = call(
+            "save_creation",
+            json!({
+                "expr": expression,
+                "xmin": -2.0,
+                "xmax": 3.0,
+                "a": 0.75,
+                "title": title,
+                "author": author,
+                "era": "vector",
+                "width": 40,
+                "height": 12
+            }),
+        );
+        assert_eq!(saved["result"]["isError"], false, "{saved}");
+        let capsule = &saved["result"]["structuredContent"];
+        assert_eq!(capsule["schema"], "numinous.studio-creation");
+        assert_eq!(capsule["schemaVersion"], 1);
+        assert_eq!(capsule["action"], "save");
+        assert_eq!(capsule["capsuleFormatVersion"], 2);
+        assert_eq!(capsule["createdFile"], false);
+        assert_eq!(capsule["readHostFile"], false);
+        assert_eq!(capsule["containsHostPath"], false);
+        assert_eq!(capsule["link"], capsule["journalSubject"]);
+        assert!(
+            capsule["journalSubject"]
+                .as_str()
+                .is_some_and(|link| link.chars().count() > 256),
+            "the acceptance must cross the old journal subject limit"
+        );
+        assert_eq!(capsule["preview"]["width"], 40);
+        assert_eq!(capsule["preview"]["height"], 12);
+        assert!(
+            capsule["preview"]["render"]
+                .as_str()
+                .is_some_and(|render| render.contains('#'))
+        );
+
+        let num_file = capsule["numFile"].as_str().expect(".num text");
+        let parent = numinous_core::StudioCreation::from_num_file(num_file).expect("reopen save");
+        assert_eq!(parent.title(), Some(title.as_str()));
+        assert_eq!(parent.author(), Some(author.as_str()));
+        assert_eq!(parent.era(), Some(numinous_core::Era::Vector));
+
+        let opened = call("open_creation", json!({"capsule": num_file}));
+        assert_eq!(opened["result"]["isError"], false, "{opened}");
+        assert_eq!(
+            opened["result"]["structuredContent"]["numFile"],
+            capsule["numFile"]
+        );
+        assert_eq!(
+            opened["result"]["structuredContent"]["link"],
+            capsule["link"]
+        );
+        let opened_link = call("open_creation", json!({"capsule": capsule["link"]}));
+        assert_eq!(opened_link["result"]["isError"], false, "{opened_link}");
+        assert_eq!(
+            opened_link["result"]["structuredContent"]["numFile"],
+            capsule["numFile"]
+        );
+
+        let forked = call(
+            "fork_creation",
+            json!({
+                "parent": num_file,
+                "expr": "sin(a*x)+0.1",
+                "title": "Second Wave",
+                "author": "Next Hand"
+            }),
+        );
+        assert_eq!(forked["result"]["isError"], false, "{forked}");
+        let child_data = &forked["result"]["structuredContent"];
+        assert_eq!(child_data["action"], "fork");
+        assert_eq!(child_data["parentLink"], capsule["link"]);
+        assert_eq!(child_data["descends"], capsule["link"]);
+        let child = numinous_core::StudioCreation::from_num_file(
+            child_data["numFile"].as_str().expect("child .num"),
+        )
+        .expect("reopen child");
+        assert_eq!(child.source(), "sin(a*x)+0.1");
+        assert_eq!(child.title(), Some("Second Wave"));
+        assert_eq!(child.author(), Some("Next Hand"));
+        assert_eq!(child.era(), Some(numinous_core::Era::Vector));
+        assert_eq!(child.descends(), Some(parent.to_link().as_str()));
+
+        let recorded = call(
+            "record_journal",
+            json!({
+                "kind": "creation",
+                "subject": capsule["journalSubject"],
+                "text": "Named and signed in the Studio."
+            }),
+        );
+        assert_eq!(recorded["result"]["isError"], false, "{recorded}");
+        let journal = call("read_journal", json!({"limit": 100}));
+        assert!(
+            journal["result"]["structuredContent"]["entries"]
+                .as_array()
+                .is_some_and(|entries| entries.iter().any(|entry| {
+                    entry["kind"] == "creation" && entry["subject"] == capsule["journalSubject"]
+                })),
+            "the exact capsule link must survive the journal round trip"
+        );
+
+        let valid_path = std::env::temp_dir().join(format!(
+            "numinous_mcp_portable_capsule_inert_{}.num",
+            std::process::id()
+        ));
+        std::fs::write(&valid_path, parent.to_num_file()).expect("write valid path target");
+        let path_shaped = call(
+            "open_creation",
+            json!({"capsule": valid_path.to_string_lossy()}),
+        );
+        std::fs::remove_file(valid_path).expect("remove valid path target");
+        assert_eq!(path_shaped["result"]["isError"], true);
+        assert!(
+            tool_error_text(&path_shaped).contains("not a Numinous Studio .num file"),
+            "a path stays inert data: {path_shaped}"
+        );
+    }
+
+    #[test]
+    fn refused_capsules_do_not_count_as_creation_play() {
+        let journey = super::test_state_path("refused-creation-progress");
+        let response = handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":1,"method":"tools/call",
+                "params":{"name":"save_creation","arguments":{"expr":"ln(-1)"}}
+            }),
+            &journey,
+        )
+        .expect("response");
+        assert_eq!(response["result"]["isError"], true);
+        assert!(!journey.exists(), "a refused save is not a play");
     }
 
     #[test]

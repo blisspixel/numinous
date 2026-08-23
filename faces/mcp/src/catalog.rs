@@ -31,7 +31,7 @@ fn negotiate_protocol_version(params: Option<&Value>) -> &'static str {
 }
 
 fn server_instructions() -> &'static str {
-    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does. describe_room is a safe doorway and never returns the explanation. Add from_t with an explicit destination t when you want two exact observations and their temporal delta in one stateless call; a static room can honestly report zero visible change. To stay in a room rather than move through it, pass dwell with several phases: the reply reports what refused to move across all of them, including how much stayed dark inside the region that did move. Pass receipt true on play_room for a replay proof in structuredContent.encounter; a receipt is not a memory, and asking does not keep the play. To keep one, pass that object as receipt on record_journal; the server replays it and stores only a live match. workspace holds a resettable visit state in this process only: inspect, edit, retrieve, defer, or clear place, intention, pending_prediction, unfinished work, recent notes, and journal handles. Retrieve names one room explicitly, selects at most four current exact-subject matches from the player-owned journal, explains every source, and abstains when no evidence exists. Play does not write the workspace. It is not a memory, and exiting or clearing drops it. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. Read structuredContent.engineeredAha for the beat, visible wager, and post-summon grade. reveal_room opens only after a normal room has been played, or after an engineered Aha has consolidated. Pass audio true to listen_room or sing_expression and a real WAV arrives in an audio content block beside the notation. That is a sound sent, not a sound heard: whether your client surfaces it is its answer to give, and if it cannot, the notation is the whole of what you get. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
+    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does. describe_room is a safe doorway and never returns the explanation. Add from_t with an explicit destination t when you want two exact observations and their temporal delta in one stateless call; a static room can honestly report zero visible change. To stay in a room rather than move through it, pass dwell with several phases: the reply reports what refused to move across all of them, including how much stayed dark inside the region that did move. Pass receipt true on play_room for a replay proof in structuredContent.encounter; a receipt is not a memory, and asking does not keep the play. To keep one, pass that object as receipt on record_journal; the server replays it and stores only a live match. workspace holds a resettable visit state in this process only: inspect, edit, retrieve, defer, or clear place, intention, pending_prediction, unfinished work, recent notes, and journal handles. Retrieve names one room explicitly, selects at most four current exact-subject matches from the player-owned journal, explains every source, and abstains when no evidence exists. Play does not write the workspace. It is not a memory, and exiting or clearing drops it. save_creation, open_creation, and fork_creation return portable .num text and native links without reading or writing a host file. A creation result's journalSubject can be passed explicitly to record_journal with kind creation, so a signed creative arc remains player-owned. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. Read structuredContent.engineeredAha for the beat, visible wager, and post-summon grade. reveal_room opens only after a normal room has been played, or after an engineered Aha has consolidated. Pass audio true to listen_room or sing_expression and a real WAV arrives in an audio content block beside the notation. That is a sound sent, not a sound heard: whether your client surfaces it is its answer to give, and if it cannot, the notation is the whole of what you get. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
 }
 
 fn server_capabilities() -> Value {
@@ -610,6 +610,99 @@ fn build_tools_catalog() -> Value {
                         "xmax": { "type": "number", "description": "Right edge of x (default tau)." },
                         "a": { "type": "number", "description": "Value of the knob a (default 1)." }
                     },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "save_creation",
+                "description": "Save a Studio expression as a portable, titled, signed capsule. Returns bounded .num text, a native numinous:// link, exact parsed fields, and a preview. No host file is created and no host path is accepted or returned. Keep the numFile field as a .num file in your own storage, or pass either representation to open_creation and fork_creation.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "expr": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
+                            "description": "Expression in x and optional parameter a."
+                        },
+                        "xmin": { "type": "number", "description": "Left edge of x (default -tau)." },
+                        "xmax": { "type": "number", "description": "Right edge of x (default tau)." },
+                        "a": { "type": "number", "description": "Saved value of parameter a (default 1)." },
+                        "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": numinous_core::MAX_META_TEXT_CHARS,
+                            "description": "Optional creation title. Printable ASCII, at most 64 characters."
+                        },
+                        "author": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": numinous_core::MAX_META_TEXT_CHARS,
+                            "description": "Optional signature. Printable ASCII, at most 64 characters."
+                        },
+                        "era": {
+                            "type": "string",
+                            "enum": ["phosphor", "8-bit", "vector", "modern"],
+                            "description": "Optional recorded Visual Era. Omit to keep the capsule backward-compatible when no other metadata is present."
+                        },
+                        "width": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_WIDTH, "description": "Preview width (default 72)." },
+                        "height": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_HEIGHT, "description": "Preview height (default 26)." }
+                    },
+                    "required": ["expr"],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "open_creation",
+                "description": "Open portable Studio capsule data exactly. Pass either complete .num text or a native numinous:// link, never a filesystem path. Returns canonical .num text, the canonical link, identity, lineage when the .num carries it, and a preview. No host file is read or created.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "capsule": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": numinous_core::MAX_SHARE_INPUT_BYTES,
+                            "description": "Complete NUMINOUS_STUDIO .num text or numinous://studio link. Filesystem paths are not accepted."
+                        },
+                        "width": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_WIDTH, "description": "Preview width (default 72)." },
+                        "height": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_HEIGHT, "description": "Preview height (default 26)." }
+                    },
+                    "required": ["capsule"],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "fork_creation",
+                "description": "Remix portable Studio capsule data with explicit lineage. Pass parent .num text or its native link, optionally replace the expression, then title and sign the child. The child keeps the parent's window, parameter, and Visual Era, takes only its own title and author, and records the parent's canonical link. Returns .num text and a link; no host file is read or created.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "parent": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": numinous_core::MAX_SHARE_INPUT_BYTES,
+                            "description": "Parent NUMINOUS_STUDIO .num text or numinous://studio link. Filesystem paths are not accepted."
+                        },
+                        "expr": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
+                            "description": "Optional replacement expression. Omit to keep the parent's expression."
+                        },
+                        "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": numinous_core::MAX_META_TEXT_CHARS,
+                            "description": "Optional child title. The parent's title is never inherited."
+                        },
+                        "author": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": numinous_core::MAX_META_TEXT_CHARS,
+                            "description": "Optional child signature. The parent's author is never inherited."
+                        },
+                        "width": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_WIDTH, "description": "Preview width (default 72)." },
+                        "height": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_HEIGHT, "description": "Preview height (default 26)." }
+                    },
+                    "required": ["parent"],
                     "additionalProperties": false
                 }
             },

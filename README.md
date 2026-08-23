@@ -69,7 +69,9 @@ MCP face supports direct play, prediction, creation, player-owned journal
 continuity, exact two-observation temporal evidence, sound returned as sound
 rather than as notation describing it, and a consented Watch Agent session a
 human can witness without seeing prompts, private reasoning, client traffic, or
-local state. A portable Agent Plugins v1 package in
+local state. Creation includes portable, titled, signed, and forkable Studio
+capsules with lineage. The MCP face returns their `.num` text and native link
+without reading or creating host files. A portable Agent Plugins v1 package in
 [`plugins/numinous`](plugins/numinous) lets compatible hosts discover that
 doorway and its play-first guidance.
 
@@ -110,12 +112,14 @@ process: inspect, edit, retrieve, defer, or clear. Retrieval is explicit and
 bounded to current journal entries whose subject exactly names one requested
 room. Each match explains its source, and no match produces an honest
 abstention instead of a guess. Play does not write it. Active work moves next
-to MCP creation and lineage parity while remaining structural debt closes,
-with the **Sensory Lift** entering behind a de-risk spike; the 0.4
+to journal surfacing at the door of a remembered room and the three-door
+threshold while remaining structural debt closes, with the **Sensory Lift**
+entering behind a de-risk spike; the 0.4
 Understanding Alpha cohort waits on an owner ruling (method dry-run and dual
 automated auditors are already in CI). The creator loop is built end to end:
 save, exact paused reopen, one-key named share trio, Gallery wall with the
-remix tree, and fork with recorded lineage on both the App and the terminal.
+remix tree, and fork with recorded lineage on the App and terminal, plus
+portable save, open, and fork parity over MCP.
 Nightly am-QA re-runs the full agent suite.
 
 Between releases, external agentic players are handed the published binaries

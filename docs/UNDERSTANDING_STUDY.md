@@ -395,14 +395,16 @@ fresh temporary `NUMINOUS_JOURNAL` path from a clean clone.
    identifier before tracking evidence. Do not claim forensic erasure from
    storage media or backups outside project control.
 
-This acceptance is implemented. Journal v2 exposes stable entry identifiers,
+This acceptance is implemented. Journal v3 exposes stable entry identifiers,
 separate event and record times, a closed provenance vocabulary, append-only
-`supersedes` corrections, current-status derivation, and bounded pages of at
-most 100 entries. `export_journal` returns the versioned native structured page
-by default or an in-memory Open Knowledge Format v0.2 bundle when requested; in
-either form the export remains inside the tool result and creates no file, so
-there is no project-controlled export path
-to clean or disclose. `erase_journal` removes the managed journal plus owned
+`supersedes` corrections, current-status derivation, exact Studio capsule-link
+subjects, and bounded pages of at most 100 entries. The v3 migration changes
+only subject capacity; strict v2 journals retain their original subject limit
+and migrate on the next write. `export_journal` returns the versioned native
+structured page by default or an in-memory Open Knowledge Format v0.2 bundle
+when requested; in either form the export remains inside the tool result and
+creates no file, so there is no project-controlled export path to clean or
+disclose. `erase_journal` removes the managed journal plus owned
 lock, recovery, and orphan temporary files, then reports its bounded residue
 inventory. It explicitly does not claim erasure from storage media, external
 backups, or a user-created copy outside project control.
@@ -417,9 +419,10 @@ The test launches the built stdio server twice against one fresh explicit
 `NUMINOUS_JOURNAL` path. It asserts empty, record, connection, reconnect,
 inspect, append-only correction, corrected flagship reuse, structured export,
 confirmed erase, empty reread, and zero managed file or sidecar residue. Core
-and handler regressions separately cover prototype migration, strict v2
+and handler regressions separately cover prototype and strict v2 migration, v3
 parsing, field escaping, missing or repeated correction targets, pagination,
-and the confirmation boundary. CI reruns all of them on a clean checkout. This
+exact creation-link roundtrip, and the confirmation boundary. CI reruns all of
+them on a clean checkout. This
 is machine acceptance, not evidence of durable human memory or consciousness.
 
 ## Data governance
