@@ -39,8 +39,12 @@ journal, and settings stay yours. From a clone:
 `cargo run --release --bin numinous-app`.
 
 The measured direct Sensory Lift presentation candidate remains disabled by
-default while three-platform proof is open. From a source checkout, try the
-real App raster integration with
+default while physical three-platform pacing proof is open. The one CI workflow
+now drives a deterministic, fully composed App room through the production
+presenter on Windows, macOS, and Linux and retains a typed runtime receipt from
+each platform. Those hosted or unclassified timings are diagnostic, not
+promotion evidence. From a source checkout, try the real App raster integration
+with
 `cargo run --release --bin numinous-app --features gpu-post`. If GPU setup or
 recovery fails, the App says so and continues through software presentation.
 
@@ -135,9 +139,12 @@ adapter, while the equivalent measured single-threaded CPU reference misses
 both budgets. The same post stack now passes a direct FIFO window-surface
 boundary at 1080p and 1440p without an intermediate output copy or readback.
 Real App room rasters now feed that disabled path with visible software
-fallback. Active work moves to proving its correctness and pacing across
-Windows, macOS, and Linux before changing the shipped App, alongside remaining
-structural debt. The room
+fallback. A typed probe now exercises the exact App composition and presenter
+on all three CI operating systems, retains adapter, driver, surface, source,
+binary, outcome, and timing facts, and refuses to treat CI timing as physical
+pacing evidence. Active work moves to collecting the release-profile physical
+Windows, macOS, and Linux pacing set before changing the shipped App, alongside
+remaining structural debt. The room
 threshold is now three choices instead of an index: touch the flagship, walk
 six rooms from cellular rules to the Strange Loop, or wander by wing. Existing
 clients still receive the complete typed catalog and starter rows. The 0.4

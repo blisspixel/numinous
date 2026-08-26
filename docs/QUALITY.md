@@ -28,6 +28,13 @@ built, so an aspiration is never mistaken for a result.
   set, both retained signed bundles, and publication ordered after audit and
   attestation. Pull-request runs do not mint attestations, and no historic
   release is represented as retroactively attested.
+  The disabled Sensory Lift App path has a typed platform probe in the existing
+  three-OS build matrix. It repeats and hashes one fully composed App frame,
+  requires the production presenter to negotiate an sRGB FIFO surface, and
+  retains adapter, driver, executable, outcomes, and raw boundary samples. CI
+  timing is labeled informational. A separate physical mode refuses debug
+  builds, GitHub Actions, software adapters, incomplete machine facts, battery
+  power, undersampling, transient frames, and missed budgets.
   The consented MCP
   broadcast path has 65 focused shared-crate tests, 121 MCP unit tests, and
   12 real stdio tests. Real loopback cases cover pairing, compatibility,

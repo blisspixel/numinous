@@ -5,15 +5,43 @@ use std::sync::Arc;
 use winit::window::Window;
 
 #[cfg(feature = "gpu-post")]
-use numinous_gpu::{RenderError, SensorySurfaceRenderer};
+use numinous_gpu::{GpuAdapterInfo, RenderError, SensorySurfaceFrame, SensorySurfaceRenderer};
 
 const BACKGROUND_RGBA: [u8; 4] = [10, 11, 15, 255];
 
 pub(crate) enum PresentOutcome {
-    Presented,
+    Presented {
+        #[cfg(feature = "gpu-post")]
+        gpu_frame: Option<SensorySurfaceFrame>,
+    },
     Skipped,
     #[cfg(feature = "gpu-post")]
     FellBack(String),
+}
+
+#[cfg(feature = "gpu-post")]
+pub(crate) struct GpuPresentationInfo<'a> {
+    pub(crate) adapter: &'a GpuAdapterInfo,
+    pub(crate) surface_format: String,
+    pub(crate) present_mode: String,
+}
+
+#[cfg(feature = "gpu-post")]
+impl GpuPresentationInfo<'_> {
+    fn failure_context(&self, error: &RenderError) -> String {
+        format!(
+            "{} {} adapter {} (vendor {:#06x}, device {:#06x}, driver {} {}, surface {}, present mode {}): {error}",
+            self.adapter.backend(),
+            self.adapter.device_type(),
+            self.adapter.name(),
+            self.adapter.vendor(),
+            self.adapter.device(),
+            self.adapter.driver(),
+            self.adapter.driver_info(),
+            self.surface_format,
+            self.present_mode,
+        )
+    }
 }
 
 pub(crate) struct WindowPresenter {
@@ -104,7 +132,22 @@ impl WindowPresenter {
         if let Some(reason) = self.pending_fallback.take() {
             return Ok(PresentOutcome::FellBack(reason));
         }
-        Ok(PresentOutcome::Presented)
+        Ok(PresentOutcome::Presented {
+            #[cfg(feature = "gpu-post")]
+            gpu_frame: None,
+        })
+    }
+
+    #[cfg(feature = "gpu-post")]
+    pub(crate) fn gpu_info(&self) -> Option<GpuPresentationInfo<'_>> {
+        match &self.backend {
+            Backend::Gpu(renderer) => Some(GpuPresentationInfo {
+                adapter: renderer.adapter_info(),
+                surface_format: format!("{:?}", renderer.surface_format()),
+                present_mode: format!("{:?}", renderer.present_mode()),
+            }),
+            Backend::Software(_) => None,
+        }
     }
 
     #[cfg(feature = "gpu-post")]
@@ -130,12 +173,17 @@ impl WindowPresenter {
             }
         };
         match result {
-            Ok(_) => Ok(PresentOutcome::Presented),
+            Ok(frame) => Ok(PresentOutcome::Presented {
+                gpu_frame: Some(frame),
+            }),
             Err(error) => match recovery_action(&error) {
                 RecoveryAction::Skip => Ok(PresentOutcome::Skipped),
                 RecoveryAction::Recreate => self.recreate_gpu_or_fallback(frame, width, height),
                 RecoveryAction::FallBack => {
-                    self.fallback_and_present(frame, width, height, error.to_string())
+                    let reason = self
+                        .gpu_info()
+                        .map_or_else(|| error.to_string(), |info| info.failure_context(&error));
+                    self.fallback_and_present(frame, width, height, reason)
                 }
             },
         }
@@ -150,9 +198,11 @@ impl WindowPresenter {
     ) -> Result<PresentOutcome, String> {
         match SensorySurfaceRenderer::new(self.window.clone(), width, height) {
             Ok(mut renderer) => match renderer.present_rgba(frame) {
-                Ok(_) => {
+                Ok(surface_frame) => {
                     self.backend = Backend::Gpu(Box::new(renderer));
-                    Ok(PresentOutcome::Presented)
+                    Ok(PresentOutcome::Presented {
+                        gpu_frame: Some(surface_frame),
+                    })
                 }
                 Err(error) => self.fallback_and_present(frame, width, height, error.to_string()),
             },

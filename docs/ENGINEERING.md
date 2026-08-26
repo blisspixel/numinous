@@ -123,10 +123,13 @@ and the published crate records for
 `.github/workflows/ci.yml` is the only pull request and `main` entry point. It
 fans out the quality, MSRV, house-style, supply-chain, audit, coverage, and
 three-platform build jobs, and calls the release workflow to build and audit all
-four native packages. The final `main CI` job uses `always()` and succeeds only
-when every one of those dependencies succeeds. Branch protection requires that
-single result, so the public gate has one stable name without reducing the work
-behind it.
+four native packages. Each build runner also drives a deterministic, fully
+composed App frame through the feature-gated production direct surface and
+retains a typed runtime receipt. Those timings are explicitly informational and
+do not replace physical pacing evidence. The final `main CI` job uses `always()`
+and succeeds only when every one of those dependencies succeeds. Branch
+protection requires that single result, so the public gate has one stable name
+without reducing the work behind it.
 
 `.github/workflows/release-packages.yml` is the read-only reusable package and
 closed-set audit boundary. CI calls it without release authority. The tag and
@@ -248,6 +251,12 @@ Nothing merges red. On every PR, blocking:
 18. The portable Agent Plugins package passes strict schema, identity, command,
     skill-boundary, inventory, and release-version regressions. Release-package
     tests require the complete package in every binary archive.
+19. The disabled App direct-surface candidate compiles and runs through the
+    production presenter on Windows, macOS, and Linux. Each run binds a repeated
+    deterministic App frame, executable, adapter, driver, sRGB surface, FIFO
+    mode, outcomes, and raw timing in a retained receipt. The portable class
+    never grants CI timing pacing authority; the physical class has a separate
+    release-build, machine, power, sample, adapter, and p95 contract.
 
 Hardening targets not yet enforced in CI: embedded per-binary Rust reachability,
 cryptographic release signing, the visual and audio regression loops, and

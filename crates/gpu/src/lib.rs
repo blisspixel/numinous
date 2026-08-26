@@ -22,6 +22,78 @@ pub const MAX_FRAME_DIMENSION: u32 = 4096;
 const MAX_FRAME_BYTES: u64 = 64 * 1024 * 1024;
 const WORKGROUP_SIZE: u32 = 8;
 
+/// Stable diagnostic facts for the adapter selected by a renderer.
+///
+/// These values come from the graphics backend. They identify whether a
+/// measurement used hardware, a software adapter, or a compatibility layer,
+/// but they do not by themselves establish performance quality.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GpuAdapterInfo {
+    name: String,
+    vendor: u32,
+    device: u32,
+    device_type: String,
+    driver: String,
+    driver_info: String,
+    backend: String,
+}
+
+impl GpuAdapterInfo {
+    fn from_wgpu(info: wgpu::AdapterInfo) -> Self {
+        Self {
+            name: info.name,
+            vendor: info.vendor,
+            device: info.device,
+            device_type: format!("{:?}", info.device_type),
+            driver: info.driver,
+            driver_info: info.driver_info,
+            backend: format!("{:?}", info.backend),
+        }
+    }
+
+    /// Human-readable adapter name reported by the backend.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Backend-specific vendor identifier.
+    #[must_use]
+    pub const fn vendor(&self) -> u32 {
+        self.vendor
+    }
+
+    /// Backend-specific device identifier.
+    #[must_use]
+    pub const fn device(&self) -> u32 {
+        self.device
+    }
+
+    /// Reported device class, such as `IntegratedGpu`, `DiscreteGpu`, or `Cpu`.
+    #[must_use]
+    pub fn device_type(&self) -> &str {
+        &self.device_type
+    }
+
+    /// Driver name reported by the backend.
+    #[must_use]
+    pub fn driver(&self) -> &str {
+        &self.driver
+    }
+
+    /// Driver details reported by the backend.
+    #[must_use]
+    pub fn driver_info(&self) -> &str {
+        &self.driver_info
+    }
+
+    /// Graphics backend in use, such as `Vulkan`, `Metal`, or `Dx12`.
+    #[must_use]
+    pub fn backend(&self) -> &str {
+        &self.backend
+    }
+}
+
 /// A recoverable failure while preparing, executing, or reading a GPU frame.
 #[derive(Debug)]
 pub enum RenderError {
@@ -214,8 +286,7 @@ fn capture_device_errors<T>(
 pub struct GpuContext {
     device: wgpu::Device,
     queue: wgpu::Queue,
-    adapter_name: String,
-    backend: String,
+    adapter_info: GpuAdapterInfo,
     #[cfg(feature = "gpu-post")]
     timestamp_queries: bool,
     #[cfg(feature = "gpu-post")]
@@ -313,8 +384,7 @@ impl GpuContext {
         Ok(Self {
             device,
             queue,
-            adapter_name: info.name,
-            backend: format!("{:?}", info.backend),
+            adapter_info: GpuAdapterInfo::from_wgpu(info),
             #[cfg(feature = "gpu-post")]
             timestamp_queries,
             #[cfg(feature = "gpu-post")]
@@ -325,13 +395,19 @@ impl GpuContext {
     /// The human-readable name of the chosen adapter (for example the GPU model).
     #[must_use]
     pub fn adapter_name(&self) -> &str {
-        &self.adapter_name
+        self.adapter_info.name()
     }
 
     /// The graphics backend in use (for example `Vulkan`, `Metal`, or `Dx12`).
     #[must_use]
     pub fn backend(&self) -> &str {
-        &self.backend
+        self.adapter_info.backend()
+    }
+
+    /// Diagnostic identity of the selected adapter and driver.
+    #[must_use]
+    pub const fn adapter_info(&self) -> &GpuAdapterInfo {
+        &self.adapter_info
     }
 
     /// Render the Mandelbrot set to an RGBA byte buffer (`width * height * 4`).

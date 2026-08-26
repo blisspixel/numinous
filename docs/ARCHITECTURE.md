@@ -11,7 +11,11 @@ How Numinous is built. Non-negotiables: it is a **real native application** (not
 `softbuffer` CPU presentation, `gilrs` standard-controller input, and targeted
 `wgpu` paths for Mandelbrot and Julia. A disabled Sensory Lift spike now owns a
 linear HDR and bloom post stack plus direct `wgpu` surface presentation, but it
-does not yet replace the App's shipped presentation path. The headless core
+does not yet replace the App's shipped presentation path. Its production
+presenter exposes typed read-only adapter and frame diagnostics to one bounded
+platform probe. The Windows, macOS, and Linux CI matrix drives the exact App
+composition and recovery boundary, while physical release-profile pacing stays
+a separate promotion gate. The headless core
 renders every room through `Surface`; the CLI and MCP faces consume the same core. Audio uses
 `cpal`, custom deterministic stereo synthesis with crossfaded loop sources,
 `hound`, and a bounded `symphonia` MP3 decoder. Bevy, `fundsp`, `kira`, CUDA,
