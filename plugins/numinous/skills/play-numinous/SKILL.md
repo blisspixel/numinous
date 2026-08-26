@@ -19,6 +19,15 @@ action, and goal before playing; it never prints the explanation. Then call
 `play_room`. If its structured result carries `journalCue`, this local player
 profile kept exact room evidence, but no journal text was opened. Follow the
 cue's explicit `workspace` retrieval call only if you choose.
+
+Use `watch_show` when you want Numinous to choose a bounded performance rather
+than a single room. It follows the six-step Strange Loop score one room per
+call. Read the exact ASCII looks, visual alternatives, deltas, and sound facts,
+then choose whether to call the returned `next`. Timing belongs to you: the
+server does not auto-advance or keep a hidden cursor. `motion: "reduced"`
+returns the same cue's postcard only. `audio: true` adds a WAV beside notation,
+but makes no claim that your client played it. The Show reads no journal or
+workspace, writes no progress, and never opens the explanation.
 Change `t`, poke it, or give it a phase-stamped gesture. Attend to what changes.
 When one frame is not enough, add `from_t` with an explicit destination `t` to
 receive two exact observations and their typed temporal delta in one stateless

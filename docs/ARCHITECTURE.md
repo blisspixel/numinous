@@ -137,6 +137,14 @@ dependency.
 
 Everything playable is a **Room**, a self-contained module implementing one interface. The engine knows nothing about math; rooms know nothing about packaging. This seam is also the future public SDK.
 
+Core also owns the first directed score above individual rooms. `show.rs`
+binds the six canonical `room_walk` steps to nonspoiling questions, exact look
+roles and phases, reduced-motion projection, and deterministic seeded
+variation. It does not own clocks, sessions, audio transport, or persistence.
+The MCP `show` module renders one cue, validates its closed protocol shape, and
+returns explicit continuation. Native all-room Show direction remains separate
+and later Arc work.
+
 ```rust
 trait RoomMetadata {
     fn meta(&self) -> RoomMeta;
@@ -259,7 +267,7 @@ reimplementing home-directory fallback or per-store overrides. A selected
 erasure. Focused `local_state` modules in the CLI and MCP faces translate that
 one core contract into terminal prose or structured protocol results; neither
 module reimplements persistence rules. The MCP face also keeps protocol
-discovery, legacy negotiation, server identity, and its immutable 39-tool JSON
+discovery, legacy negotiation, server identity, and its immutable 40-tool JSON
 Schema catalog in a focused `catalog` module. The request entry point retains
 transport validation, dispatch, result decoration, and domain invocation.
 The App preference store uses a strict std-only core schema for volume, mute,

@@ -237,6 +237,7 @@ def validate_skill(path: Path) -> None:
         raise PluginValidationError("SKILL.md instructions exceed 500 lines")
     for required in (
         "list_rooms",
+        "watch_show",
         "play_room",
         "reveal_room",
         "broadcast_session",

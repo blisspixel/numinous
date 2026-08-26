@@ -18,7 +18,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 DRIVER = ROOT / "scripts" / "mcp-play.py"
 OUT = ROOT / ".agent" / "tester-cohort" / "first-contact"
-EXPECTED_TOOL_COUNT = 39
+EXPECTED_TOOL_COUNT = 40
 
 # Stratified sample: five flagships plus one room from additional wings.
 CONTACT_ROOMS: tuple[tuple[str, tuple[str, ...]], ...] = (

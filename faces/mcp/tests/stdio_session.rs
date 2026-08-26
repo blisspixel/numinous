@@ -240,6 +240,59 @@ fn compact_mode_is_discoverable_and_compatible_over_real_stdio() {
     );
 }
 
+#[test]
+fn show_is_sessionless_across_every_supported_protocol_revision() {
+    let legacy = |version: &str| {
+        run_session(&[
+            json!({
+                "jsonrpc":"2.0","id":1,"method":"initialize","params":{
+                    "protocolVersion":version,
+                    "capabilities":{},
+                    "clientInfo":{"name":"show-replay-test","version":"1.0"}
+                }
+            }),
+            json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            json!({
+                "jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+                    "name":"watch_show",
+                    "arguments":{"position":3,"seed":41,"motion":"reduced"}
+                }
+            }),
+        ])
+    };
+    let mut projections = Vec::new();
+    for version in ["2025-06-18", "2025-11-25"] {
+        let first = legacy(version);
+        let second = legacy(version);
+        let first_show = &reply_by_id(&first, 2)["result"]["structuredContent"];
+        let second_show = &reply_by_id(&second, 2)["result"]["structuredContent"];
+        assert_eq!(first_show, second_show, "{version} replay drifted");
+        projections.push(first_show.clone());
+    }
+
+    let modern_request = json!({
+        "jsonrpc":"2.0","id":1,"method":"tools/call","params":{
+            "_meta":{
+                "io.modelcontextprotocol/protocolVersion":"2026-07-28",
+                "io.modelcontextprotocol/clientInfo":{"name":"show-replay-test","version":"1.0"},
+                "io.modelcontextprotocol/clientCapabilities":{}
+            },
+            "name":"watch_show",
+            "arguments":{"position":3,"seed":41,"motion":"reduced"}
+        }
+    });
+    let first = run_session(std::slice::from_ref(&modern_request));
+    let second = run_session(&[modern_request]);
+    let first_show = &reply_by_id(&first, 1)["result"]["structuredContent"];
+    let second_show = &reply_by_id(&second, 1)["result"]["structuredContent"];
+    assert_eq!(first_show, second_show, "modern replay drifted");
+    projections.push(first_show.clone());
+    assert!(projections.windows(2).all(|pair| pair[0] == pair[1]));
+    assert_eq!(first_show["segment"]["room"], "busy-beaver");
+    assert_eq!(first_show["next"]["arguments"]["position"], 4);
+    assert_eq!(first_show["effects"]["continuationStored"], false);
+}
+
 /// The text content of a tool-call response.
 fn text_of(response: &Value) -> &str {
     response["result"]["content"][0]["text"]
@@ -780,7 +833,7 @@ fn modern_stateless_discovery_tools_and_prediction_work_over_real_stdio() {
     assert_eq!(by_id(2)["result"]["resultType"], "complete");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(39)
+        Some(40)
     );
     assert_eq!(by_id(3)["result"]["resultType"], "input_required");
     assert_eq!(
@@ -1936,11 +1989,12 @@ fn a_full_agent_session_walks_every_tool() {
         ),
         call(25, "broadcast_session", json!({"action":"status"})),
         call(26, "workspace", json!({})),
+        call(27, "watch_show", json!({"motion":"reduced"})),
     ];
     let replies = run_session(&requests);
 
-    // 26 id-carrying requests, one notification with no reply.
-    assert_eq!(replies.len(), 26, "one reply per id-carrying request");
+    // 27 id-carrying requests, one notification with no reply.
+    assert_eq!(replies.len(), 27, "one reply per id-carrying request");
     let by_id = |id: u64| -> &Value {
         replies
             .iter()
@@ -1951,7 +2005,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(39)
+        Some(40)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));
@@ -1987,6 +2041,10 @@ fn a_full_agent_session_walks_every_tool() {
     assert!(
         graded["score"].as_u64().is_some(),
         "the attempt is graded with metrics: {graded}"
+    );
+    assert_eq!(
+        by_id(27)["result"]["structuredContent"]["segment"]["room"],
+        "cellular-automata"
     );
     assert_eq!(
         by_id(25)["result"]["structuredContent"]["state"],
@@ -2288,7 +2346,7 @@ fn creation_capsules_cross_real_stdio_with_lineage_and_v2_journal_migration() {
         reply_by_id(&replies, 2)["result"]["tools"]
             .as_array()
             .map(Vec::len),
-        Some(39)
+        Some(40)
     );
     let saved = &reply_by_id(&replies, 3)["result"]["structuredContent"];
     assert_eq!(saved["numFile"], parent.to_num_file());

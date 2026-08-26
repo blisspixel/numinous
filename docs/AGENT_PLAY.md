@@ -29,7 +29,7 @@ Distilled from what the benchmark and MCP-game ecosystems reward:
    vision. Ours: ASCII renders, sound as notation, sims as plain-language
    readouts.
 2. **Flat, self-describing tools.** Simple schemas, guiding errors, no hidden
-   session state required to make a legal move. Ours: thirty-nine mostly flat
+   session state required to make a legal move. Ours: forty mostly flat
    tools; the two exception shapes are bounded and self-describing (the
    `pokes` tuple-array on `play_room` and `challenge`, and `play_room`'s
    `gesture` event objects), and every error names the valid options.
@@ -44,12 +44,21 @@ Distilled from what the benchmark and MCP-game ecosystems reward:
 
 ## What Numinous offers an agent today
 
-See, hear, learn, make, play, progress: `play_room` and `listen_room`
+See, hear, learn, make, play, progress: `watch_show`, `play_room`, and `listen_room`
 (perception), `reveal_room` and `explain_joke` (understanding, including the
 humor, dissected), `plot_expression`, `sing_expression`, `save_creation`,
 `open_creation`, and `fork_creation` (creation), `run_sim` (optimization play),
 `quiz` (challenge), `journey` (progression to LV 42), and the whispers for the
 ones who wander off the map.
+
+`watch_show` is the directed path through the same headless core. It presents
+one cue from the six-room Strange Loop score per deterministic call, with exact
+ASCII looks, visual alternatives, deltas, sound facts, optional WAV audio, and
+an explicit next call. The player owns the clock and can repeat, continue,
+restart, or leave. Reduced motion returns the same cue's postcard. The Show
+keeps no cursor, records no Journey progress, reads no journal or workspace,
+and never opens the explanation. Its public viewer projection retains the
+typed facts but omits audio bytes.
 
 A creation can be titled, signed, styled with a visual era, reopened exactly,
 and forked with lineage. These tools return canonical `.num` text and a native
@@ -112,8 +121,8 @@ survey found, and what each finding means for us:
   this server targets) added structuredContent to tool results: scores and
   state as machine-readable data alongside the prose. Adopted here: munch and
   quiz grades and the journey now return structured content, so an agent, a
-  harness, or a leaderboard consumes results without parsing sentences. All 29
-  schemas now also advertise an opt-in compact response mode. It removes only
+  harness, or a leaderboard consumes results without parsing sentences. Every
+  eligible schema also advertises an opt-in compact response mode. It removes only
   text duplicated by a complete structured result; default calls, typed data,
   unique prose, and errors remain unchanged.
 - **Leaderboards are the retention engine.** The PokeAgent Challenge (NeurIPS

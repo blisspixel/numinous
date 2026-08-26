@@ -5,6 +5,19 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- `watch_show` now presents a caller-paced Show for minds over MCP. Core owns
+  the six-room Strange Loop score, nonspoiling questions, exact arrival,
+  postcard, and curtain phases, reduced-motion projection, and deterministic
+  seeded variation. Each call returns one complete cue with exact ASCII looks,
+  visual alternatives, typed deltas and held evidence, bounded sound facts,
+  optional WAV audio, and explicit replay, next, restart, and leave calls. The
+  tool keeps no cursor, writes no progress, reads no journal or workspace, and
+  never opens reveal, concept, deep-cut, or citation doors. Its recursive closed
+  output schema is validated at runtime. Compact mode preserves audio blocks,
+  while Watch Agent strips their bytes, marks the omission, stays more than 1
+  KiB inside the public event bound, and fails closed on contract drift. Core,
+  MCP, public projection, no-progress, and fresh-process stdio regressions cover
+  every supported protocol revision.
 - `export_journal` now accepts `format: "portable-1"` for an explicit typed
   evidence handoff. Its closed, sorted manifest binds every payload path, media
   type, byte length, and SHA-256 digest. The response carries the native bounded
