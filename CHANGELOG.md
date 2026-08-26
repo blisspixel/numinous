@@ -5,6 +5,14 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Shared CLI game input now lives in one focused face-local adapter. It owns
+  the 4 KiB terminal record bound, overflow draining, UTF-8 validation,
+  neutral EOF and read-error departures, and the games' `?` explanation door.
+  Game rules, progression, scoring, and concepts remain with the core and
+  command handlers. Low-level record tests cover LF, CRLF, exact EOF,
+  overflow resynchronization, and invalid UTF-8 resynchronization, while the
+  command regressions continue to prove that a neutral departure cannot spend
+  progress or post a score.
 - CLI Studio source selection, terminal error projection, bounded capsule
   loading, save and fork writes, sing-input resolution, and open-report
   formatting now live in one focused face-local adapter. The command entry

@@ -104,8 +104,9 @@ milestone's exit remains open. **0.2** and **0.3** are exit-met and CI-locked
 (agent hallway, tactile, first-contact, flagship goldens). **0.4 Understanding
 Alpha is active, not complete.** The
 player-facing **Polish Wave** work landed across all seven workstreams, while
-scheduled structural cleanup continues through focused CLI accessibility and
-Studio adapters plus CLI and MCP render-input adapters. The **Universal Wager**
+scheduled structural cleanup continues through focused CLI accessibility,
+Studio, and game-input adapters plus CLI and MCP render-input adapters. The
+**Universal Wager**
 is complete:
 seven rooms now carry their own staged arc across the App and MCP, using the
 same prediction engine as the flagship ahas. Nontransitive Dice asks a player
