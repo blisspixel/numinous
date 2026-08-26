@@ -13,7 +13,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   timestamps from the final validation readback boundary. The reference AMD
   Radeon 780M run retains twenty raw samples at 1080p and 1440p, exact output
   identities, implementation and binary identity, budgets, and scope limits in
-  `docs/evidence/sensory-post-spike-2026-08-25.json`.
+  `docs/evidence/sensory-post-spike-2026-08-25.json`. The same harness now
+  measures an equivalent reusable single-threaded CPU reference and can write
+  source, GPU, and CPU previews for visual inspection; a focused test proves
+  that an emissive mark actually lights neighboring pixels.
 - The GPU stack moves from `wgpu` 30.0.0 to 30.0.1 before the measured Sensory
   Lift spike. The upstream patch removes a Vulkan validation failure that fired
   every frame on affected non-Windows paths and resolves Metal color-space
