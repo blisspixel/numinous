@@ -1832,13 +1832,29 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
                 .collect::<Vec<_>>()
                 .join(", ")
         )),
-        "describe_room" => Some(format!(
-            "{} ({}) in {}. Action: {}. Read structuredContent for the goal, blurb, reveal, and deep cuts.",
-            structured.get("title")?.as_str()?,
-            structured.get("room")?.as_str()?,
-            structured.get("wing")?.as_str()?,
-            structured.get("action")?.as_str()?
-        )),
+        "describe_room" => {
+            let mut summary = format!(
+                "{} ({}) in {}. Action: {}.",
+                structured.get("title")?.as_str()?,
+                structured.get("room")?.as_str()?,
+                structured.get("wing")?.as_str()?,
+                structured.get("action")?.as_str()?
+            );
+            match structured
+                .get("journalCue")
+                .and_then(|cue| cue.get("status"))
+                .and_then(Value::as_str)
+            {
+                Some("remembered") => summary.push_str(
+                    " This local player profile kept something here; no journal text was opened.",
+                ),
+                Some("unavailable") => summary
+                    .push_str(" The local journal could not be read; no contents were returned."),
+                _ => {}
+            }
+            summary.push_str(" Read structuredContent for the goal, blurb, next play call, and optional journal cue.");
+            Some(summary)
+        }
         "play_room" => {
             let mut summary = format!(
                 "{} ({}) at t={:.3}, {}x{}. Action: {}.",
@@ -1969,7 +1985,29 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
 }
 
 fn describe_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
-    describe_room_tool_for_journey(args, &load_journey(journey_file))
+    let mut result = describe_room_tool_for_journey(args, &load_journey(journey_file));
+    let Some(room) = result
+        .get("structuredContent")
+        .and_then(|structured| structured.get("room"))
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+    else {
+        return result;
+    };
+    let Some((cue, cue_text)) = journal::room_cue(&journal_path(), &room) else {
+        return result;
+    };
+    result["structuredContent"]["journalCue"] = cue;
+    if let Some(text) = result
+        .get_mut("content")
+        .and_then(Value::as_array_mut)
+        .and_then(|content| content.first_mut())
+        .and_then(|block| block.get_mut("text"))
+        && let Some(existing) = text.as_str()
+    {
+        *text = Value::String(format!("{existing}\n\n{cue_text}"));
+    }
+    result
 }
 
 /// Find a room the way the terminal does: the catalog always, and the
@@ -7354,6 +7392,26 @@ mod tests {
         assert_eq!(
             baseline_description, boon_description,
             "safe descriptions never expose private progression"
+        );
+        let mut private_description = baseline_description.clone();
+        private_description["structuredContent"]["journalCue"] = json!({
+            "schema": "numinous.remembered-room-cue",
+            "schemaVersion": 1,
+            "status": "remembered",
+            "contentsReturned": false,
+        });
+        private_description["content"][0]["text"] =
+            json!("private local journal cue should not reach the viewer");
+        let public_description = super::viewer_result(
+            PublicTool::DescribeRoom,
+            &describe_args,
+            &private_description,
+        );
+        assert_eq!(public_description, baseline_description);
+        assert!(
+            public_description["structuredContent"]
+                .get("journalCue")
+                .is_none()
         );
 
         let crack_args = json!({"seed": 11, "digits": 5});
@@ -13252,6 +13310,79 @@ mod tests {
                 "{field} leaked: {structured}"
             );
         }
+    }
+
+    #[test]
+    fn a_remembered_room_cues_a_choice_without_opening_private_text() {
+        let journal = super::journal_path();
+        numinous_core::remove_persisted_file(&journal).ok();
+        numinous_core::record_journal_file(
+            &journal,
+            numinous_core::JournalRecord {
+                recorded_at_utc: 10,
+                event_at_utc: 5,
+                source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "encounter",
+                subject: "kepler-areas",
+                text: "A private note about equal areas",
+                affect: Some("quiet wonder"),
+            },
+        )
+        .expect("record remembered room");
+        let request = |mode: Option<&str>| {
+            let mut arguments = json!({"id":"kepler-laws"});
+            if let Some(mode) = mode {
+                arguments["response_mode"] = json!(mode);
+            }
+            handle_request(&json!({
+                "jsonrpc":"2.0","id":11,"method":"tools/call",
+                "params":{"name":"describe_room","arguments":arguments}
+            }))
+            .expect("tools/call must respond")
+        };
+        let full = request(None);
+        let compact = request(Some("compact"));
+        assert_eq!(
+            full["result"]["structuredContent"],
+            compact["result"]["structuredContent"]
+        );
+        let structured = &full["result"]["structuredContent"];
+        assert_eq!(structured["room"], "kepler-laws");
+        assert_eq!(structured["journalCue"]["status"], "remembered");
+        assert_eq!(structured["journalCue"]["contentsReturned"], false);
+        assert_eq!(structured["journalCue"]["next"]["tool"], "workspace");
+        assert_eq!(
+            structured["journalCue"]["next"]["arguments"],
+            json!({"op":"retrieve","room":"kepler-laws"})
+        );
+        let wire = serde_json::to_string(&full).expect("serialize response");
+        for private in [
+            "A private note about equal areas",
+            "quiet wonder",
+            "self-authored",
+        ] {
+            assert!(
+                !wire.contains(private),
+                "private journal field leaked: {private}"
+            );
+        }
+        assert!(
+            full["result"]["content"][0]["text"]
+                .as_str()
+                .is_some_and(|text| text.contains("local player profile"))
+        );
+        assert!(
+            compact["result"]["content"][0]["text"]
+                .as_str()
+                .is_some_and(|text| text.contains("no journal text was opened"))
+        );
+        numinous_core::erase_journal_file(&journal).expect("erase journal");
+        let forgotten = request(None);
+        assert!(
+            forgotten["result"]["structuredContent"]
+                .get("journalCue")
+                .is_none()
+        );
     }
 
     #[test]

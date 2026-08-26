@@ -21,6 +21,8 @@ clean MCP processes and supports inspection, immutable correction, native or
 Open Knowledge Format v0.2 export, and confirmed erase. The process-local
 workspace can deliberately retrieve up to four current exact-subject entries
 for one named room, explain their sources, and abstain when evidence is absent.
+The safe room doorway can signal that exact local evidence exists without
+opening its text or changing the workspace.
 Three private creation tools return portable titled, signed, and forkable
 Studio capsules with exact previews and lineage, without host filesystem access.
 
@@ -31,8 +33,8 @@ Studio requests, the typed room catalog, the typed Gauntlet, and local-state
 path resolution now have one core owner. CLI and MCP local-state adapters are
 focused modules extracted from their god-files, and MCP discovery plus its
 immutable tool schema and player-owned journal projections now have dedicated
-face-local modules. The remaining seams are next. Journal surfacing at a remembered room's door and the
-three-door threshold come next, alongside the measured Sensory Lift spike.
+face-local modules. The remaining seams are next. The three-door threshold
+comes next, alongside the measured Sensory Lift spike.
 The 0.4 Understanding Alpha cohort waits on an owner ruling; its method dry-run
 and dual automated auditors are already in CI. Soft-thin densify, bulk new
 rooms, and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and

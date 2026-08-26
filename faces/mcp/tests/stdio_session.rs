@@ -2072,25 +2072,51 @@ fn remembered_room_retrieval_is_bounded_explained_and_honestly_empty() {
                 }
             }),
             json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            call(2, "describe_room", json!({"id":"kepler-laws"})),
+            call(3, "workspace", json!({"op":"inspect"})),
             call(
-                2,
+                4,
                 "workspace",
                 json!({"op":"retrieve","room":"kepler-laws","limit":1}),
             ),
-            call(3, "workspace", json!({"op":"inspect"})),
-            call(4, "workspace", json!({"op":"retrieve","room":"mandelbrot"})),
+            call(5, "workspace", json!({"op":"inspect"})),
+            call(6, "workspace", json!({"op":"retrieve","room":"mandelbrot"})),
             call(
-                5,
+                7,
                 "workspace",
                 json!({"op":"edit","retrieved":[{"entry_id":original.entry_id}]}),
             ),
-            call(6, "erase_journal", json!({"confirm":true})),
-            call(7, "workspace", json!({"op":"inspect"})),
+            call(8, "erase_journal", json!({"confirm":true})),
+            call(9, "describe_room", json!({"id":"kepler-laws"})),
+            call(10, "workspace", json!({"op":"inspect"})),
         ],
         &journal,
     );
 
-    let found = &reply_by_id(&replies, 2)["result"]["structuredContent"];
+    let doorway = &reply_by_id(&replies, 2)["result"];
+    assert_eq!(
+        doorway["structuredContent"]["journalCue"]["status"],
+        "remembered"
+    );
+    assert_eq!(
+        doorway["structuredContent"]["journalCue"]["next"]["arguments"],
+        json!({"op":"retrieve","room":"kepler-laws"})
+    );
+    let doorway_wire = serde_json::to_string(doorway).expect("serialize doorway");
+    for private in [
+        "The swept areas stayed equal while the speed changed.",
+        "player-provided",
+        "opaque-proof",
+    ] {
+        assert!(!doorway_wire.contains(private));
+    }
+    assert_eq!(
+        reply_by_id(&replies, 3)["result"]["structuredContent"]["empty"],
+        true,
+        "surfacing a cue must not mutate the visit workspace"
+    );
+
+    let found = &reply_by_id(&replies, 4)["result"]["structuredContent"];
     assert_eq!(found["schemaVersion"], 2);
     assert_eq!(found["retrieval"]["room"], "kepler-laws");
     assert_eq!(found["retrieval"]["returned"], 1);
@@ -2107,12 +2133,12 @@ fn remembered_room_retrieval_is_bounded_explained_and_honestly_empty() {
             .is_some_and(|text| text.contains("player supplied"))
     );
     assert_eq!(
-        reply_by_id(&replies, 3)["result"]["structuredContent"]["retrieved"][0]["entry_id"],
+        reply_by_id(&replies, 5)["result"]["structuredContent"]["retrieved"][0]["entry_id"],
         correction.entry_id,
         "the resolved handle remains available in this process"
     );
 
-    let absent = &reply_by_id(&replies, 4)["result"]["structuredContent"];
+    let absent = &reply_by_id(&replies, 6)["result"]["structuredContent"];
     assert_eq!(absent["retrieval"]["abstained"], true);
     assert_eq!(absent["retrieved"], json!([]));
     assert!(
@@ -2121,10 +2147,15 @@ fn remembered_room_retrieval_is_bounded_explained_and_honestly_empty() {
             .is_some_and(|text| text.contains("receipt digests were not searched"))
     );
 
-    let superseded = &reply_by_id(&replies, 5)["result"]["structuredContent"]["retrieved"][0];
+    let superseded = &reply_by_id(&replies, 7)["result"]["structuredContent"]["retrieved"][0];
     assert_eq!(superseded["status"], "superseded");
     assert_eq!(superseded["superseded_by"], correction.entry_id);
-    let erased = &reply_by_id(&replies, 7)["result"]["structuredContent"]["retrieved"][0];
+    assert!(
+        reply_by_id(&replies, 9)["result"]["structuredContent"]
+            .get("journalCue")
+            .is_none()
+    );
+    let erased = &reply_by_id(&replies, 10)["result"]["structuredContent"]["retrieved"][0];
     assert_eq!(erased["status"], "missing");
     assert!(erased["entry"].is_null());
 
