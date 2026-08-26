@@ -21,9 +21,10 @@ mod room_door;
 mod room_input;
 mod show;
 mod temporal;
+mod transport;
 mod workspace;
 
-use std::io::{self, BufRead, Write};
+use std::io;
 use std::sync::{Mutex, MutexGuard};
 
 use broadcast::{SessionBroadcast, SessionSnapshot};
@@ -47,6 +48,7 @@ use room_input::{
 };
 use serde_json::{Map, Value, json};
 use temporal::{dwell_evidence_json, evidence_json as temporal_evidence_json, render_delta_json};
+use transport::{read_bounded_line, write_message};
 use workspace::{ProcessWorkspace, compact_workspace_summary, workspace_tool};
 
 /// Stateless MCP revision implemented by the per-request metadata path.
@@ -73,11 +75,6 @@ const MAX_TOOL_ID_CHARS: usize = 64;
 /// Longest author credit accepted with a Cairn bequest. Matches the sanitize
 /// bound in `numinous_core::Bequest::new`.
 const MAX_AUTHOR_CHARS: usize = 48;
-
-/// The most bytes one JSON-RPC request line may hold. Every legitimate call
-/// is a few KiB; without a cap a client streaming an endless newline-free
-/// request would grow the line buffer without bound.
-const MAX_REQUEST_BYTES: usize = 1_048_576;
 
 fn main() -> io::Result<()> {
     let stdin = io::stdin();
@@ -117,40 +114,6 @@ fn main() -> io::Result<()> {
         }
     }
     Ok(())
-}
-
-/// Read one newline-terminated request into `line`, holding at most
-/// [`MAX_REQUEST_BYTES`]. An oversized line is drained to its newline in
-/// bounded chunks and returned as empty (the parse-error path answers it as
-/// garbage rather than buffering it). Returns false at end of input.
-fn read_bounded_line(reader: &mut impl io::BufRead, line: &mut Vec<u8>) -> io::Result<bool> {
-    use std::io::Read as _;
-    line.clear();
-    let read = reader
-        .take(MAX_REQUEST_BYTES as u64 + 1)
-        .read_until(b'\n', line)?;
-    if read == 0 {
-        return Ok(false);
-    }
-    if line.len() > MAX_REQUEST_BYTES {
-        let newline_was_consumed = line.last() == Some(&b'\n');
-        // Drain the rest of the oversized line without holding it.
-        line.clear();
-        line.push(b'{'); // guaranteed-invalid JSON, so the caller answers with a parse error
-        if !newline_was_consumed {
-            let mut chunk = Vec::new();
-            loop {
-                chunk.clear();
-                let n = reader
-                    .take(MAX_REQUEST_BYTES as u64)
-                    .read_until(b'\n', &mut chunk)?;
-                if n == 0 || chunk.last() == Some(&b'\n') {
-                    break;
-                }
-            }
-        }
-    }
-    Ok(true)
 }
 
 /// Where the journey file lives (shared with the CLI face, so a mind's play
@@ -736,12 +699,6 @@ fn record_progress(request: &Value, path: &std::path::Path) {
         // returned flag themselves.
         let _ = persist_progress(path, &before, &journey);
     }
-}
-
-/// Write a single JSON-RPC message as one newline-terminated line.
-fn write_message(out: &mut impl Write, message: &Value) -> io::Result<()> {
-    writeln!(out, "{message}")?;
-    out.flush()
 }
 
 /// Handle one JSON-RPC request. Returns `None` for notifications (no `id`),
@@ -12720,50 +12677,6 @@ mod tests {
     }
 
     #[test]
-    fn oversized_request_lines_are_drained_not_buffered() {
-        let mut input = Vec::new();
-        input.extend(std::iter::repeat_n(b'x', super::MAX_REQUEST_BYTES + 100));
-        input.push(b'\n');
-        input.extend_from_slice(br#"{"jsonrpc":"2.0","id":1,"method":"ping"}"#);
-        input.push(b'\n');
-        let mut reader = std::io::BufReader::new(&input[..]);
-        let mut line = Vec::new();
-        assert!(super::read_bounded_line(&mut reader, &mut line).expect("read"));
-        assert!(
-            line.len() < 8,
-            "an oversized line is replaced by a tiny invalid marker, not held"
-        );
-        assert!(serde_json::from_slice::<serde_json::Value>(&line).is_err());
-        assert!(super::read_bounded_line(&mut reader, &mut line).expect("read"));
-        assert!(
-            serde_json::from_slice::<serde_json::Value>(&line).is_ok(),
-            "the request after the flood still parses"
-        );
-        assert!(!super::read_bounded_line(&mut reader, &mut line).expect("read"));
-    }
-
-    #[test]
-    fn exact_limit_oversized_request_does_not_consume_the_next_record() {
-        let mut input = vec![b'x'; super::MAX_REQUEST_BYTES];
-        input.push(b'\n');
-        input.extend_from_slice(br#"{"jsonrpc":"2.0","id":1,"method":"ping"}"#);
-        input.push(b'\n');
-        input.extend_from_slice(br#"{"jsonrpc":"2.0","id":2,"method":"ping"}"#);
-        input.push(b'\n');
-        let mut reader = std::io::BufReader::new(&input[..]);
-        let mut line = Vec::new();
-
-        assert!(super::read_bounded_line(&mut reader, &mut line).expect("oversized"));
-        assert!(serde_json::from_slice::<serde_json::Value>(&line).is_err());
-        for expected_id in [1, 2] {
-            assert!(super::read_bounded_line(&mut reader, &mut line).expect("request"));
-            let request: serde_json::Value = serde_json::from_slice(&line).expect("valid request");
-            assert_eq!(request["id"], expected_id);
-        }
-        assert!(!super::read_bounded_line(&mut reader, &mut line).expect("eof"));
-    }
-
-    #[test]
     fn play_room_rejects_dimensions_above_the_declared_limit() {
         let resp = handle_request(&json!({
             "jsonrpc":"2.0","id":60,"method":"tools/call",
@@ -13442,16 +13355,5 @@ mod tests {
         let resp = handle_request(&json!({"jsonrpc":"2.0","id":14,"method":"tools/call"}))
             .expect("tools/call must respond");
         assert_eq!(resp["error"]["code"], -32602);
-    }
-
-    #[test]
-    fn parse_and_write_helpers_round_trip() {
-        // write_message emits one newline-terminated JSON line.
-        let mut buf: Vec<u8> = Vec::new();
-        super::write_message(&mut buf, &json!({"ok": true})).expect("write");
-        let line = String::from_utf8(buf).expect("utf8");
-        assert!(line.ends_with('\n'));
-        let parsed: serde_json::Value = serde_json::from_str(line.trim()).expect("valid json");
-        assert_eq!(parsed["ok"], true);
     }
 }

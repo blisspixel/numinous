@@ -41,7 +41,9 @@ face-local modules. CLI accessibility switch interpretation and terminal
 reporting now have the same focused ownership. Bounded CLI render dimensions,
 static hand points, pointer gestures, and interaction-aware status now share a
 focused render-input adapter. MCP JSON hand points, gestures, canonical echo,
-and interaction projection now have the corresponding focused adapter. CLI
+and interaction projection now have the corresponding focused adapter. Bounded
+newline framing, overflow resynchronization, and one-line response writes now
+share a focused MCP transport adapter. CLI
 Studio source selection, capsule loading and never-clobber writes, terminal
 errors, and open reports now have their own focused adapter too. The shared
 4 KiB CLI game record boundary, overflow resynchronization, neutral departures,
