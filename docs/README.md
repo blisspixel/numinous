@@ -41,7 +41,9 @@ face-local modules. CLI accessibility switch interpretation and terminal
 reporting now have the same focused ownership. Bounded CLI render dimensions,
 static hand points, pointer gestures, and interaction-aware status now share a
 focused render-input adapter. MCP JSON hand points, gestures, canonical echo,
-and interaction projection now have the corresponding focused adapter. The
+and interaction projection now have the corresponding focused adapter. CLI
+Studio source selection, capsule loading and never-clobber writes, terminal
+errors, and open reports now have their own focused adapter too. The
 room threshold now offers the flagship, an ordered six-room Strange Loop walk,
 or compact wing wandering while retaining the full typed catalog. The Show now
 carries that walk as six explicit stateless cues

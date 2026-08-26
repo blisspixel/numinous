@@ -8,7 +8,6 @@
 //! text to emit, so they can be unit-tested without capturing stdout; `main`
 //! stays a thin shell that prints and sets the exit code.
 
-use std::ffi::OsStr;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufWriter, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
@@ -17,24 +16,28 @@ use std::time::Duration;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use numinous_core::{
-    CUT_LEVELS, Canvas, Journey, PlotRequest, PlotSource, Raster, Room, RoomMeta, SingRequest,
-    Surface, all_rooms, draw_text, hidden_room_by_id, room_by_id,
+    CUT_LEVELS, Canvas, Journey, PlotRequest, Raster, Room, RoomMeta, SingRequest, Surface,
+    all_rooms, draw_text, hidden_room_by_id, room_by_id,
 };
 
 mod access;
 mod local_state;
 mod render_input;
+mod studio;
 
 #[cfg(test)]
 use access::color_allowed_for;
 use access::{access_report, access_settings, color_allowed};
 use local_state::forget_local_state;
-use render_input::{
-    RoomRenderInput, parse_room_inputs, validate_render_dimensions, validate_render_request,
-    visible_status,
-};
+use render_input::{RoomRenderInput, parse_room_inputs, validate_render_request, visible_status};
 #[cfg(test)]
 use render_input::{parse_gesture_arg, parse_gestures, parse_poke_arg, parse_pokes};
+#[cfg(test)]
+use studio::load_studio_creation;
+use studio::{
+    fork_studio_creation, open_studio_report, plot_report, plot_request_error, resolve_plot_source,
+    resolve_sing_input, save_studio_creation, sing_request_error,
+};
 
 const MAX_ENV_FILE_BYTES: u64 = 16 * 1024;
 const MAX_CLI_INPUT_BYTES: usize = 4 * 1024;
@@ -2273,306 +2276,6 @@ fn sing_wav(
         spec.notes.len(),
         terminal_safe(source)
     ))
-}
-
-/// Translate mutually exclusive CLI discovery flags into one core source.
-fn resolve_plot_source(
-    expr: Option<&str>,
-    recipe: Option<u64>,
-    seed: Option<u64>,
-    auto_step: u64,
-) -> Result<PlotSource, String> {
-    let modes =
-        usize::from(expr.is_some()) + usize::from(recipe.is_some()) + usize::from(seed.is_some());
-    if modes != 1 {
-        return Err(
-            "plot needs exactly one of: expression, --recipe N, or --seed N (use --list-recipes)\n"
-                .to_string(),
-        );
-    }
-    if let Some(source) = expr {
-        return Ok(PlotSource::Manual(source.to_string()));
-    }
-    if let Some(index) = recipe {
-        if auto_step != 0 {
-            return Err("--auto-step is only valid with --seed\n".to_string());
-        }
-        return Ok(PlotSource::Recipe(index));
-    }
-    let seed = seed.expect("seed present when exclusive");
-    Ok(PlotSource::Seeded {
-        seed,
-        auto_step: (auto_step != 0).then_some(auto_step),
-    })
-}
-
-/// Plot `source` as y = f(x, a) over `[xmin, xmax]`, auto-scaling y.
-fn plot_report(
-    source: &str,
-    xmin: f64,
-    xmax: f64,
-    a: f64,
-    width: usize,
-    height: usize,
-) -> Result<String, String> {
-    let request = PlotRequest::new(
-        PlotSource::Manual(source.to_string()),
-        Some(xmin),
-        Some(xmax),
-        Some(a),
-        Some(width),
-        Some(height),
-    )
-    .map_err(plot_request_error)?;
-    let result = request.execute().map_err(plot_request_error)?;
-    Ok(format!(
-        "y = {}    x in [{xmin:.3}, {xmax:.3}]    y in [{:.3}, {:.3}]\n\n{}",
-        terminal_safe(source),
-        result.ymin,
-        result.ymax,
-        result.text
-    ))
-}
-
-fn plot_request_error(error: numinous_core::StudioRequestError) -> String {
-    match error {
-        numinous_core::StudioRequestError::Undefined => {
-            "nothing to plot: the function is undefined across this range\n".to_string()
-        }
-        numinous_core::StudioRequestError::InvalidPlotSize { .. } => {
-            "need width >= 2, height >= 2, and xmax > xmin\n".to_string()
-        }
-        numinous_core::StudioRequestError::PlotTooLarge { width, height } => {
-            match validate_render_dimensions(width, height) {
-                Err(message) => message,
-                Ok(()) => format!("plot size {width}x{height} exceeds the core limit\n"),
-            }
-        }
-        other => format!("{}\n", terminal_safe(&other.to_string())),
-    }
-}
-
-fn sing_request_error(error: numinous_core::StudioRequestError) -> String {
-    match error {
-        numinous_core::StudioRequestError::Undefined => {
-            "nothing to sing: the function is undefined across this range\n".to_string()
-        }
-        other => format!("{}\n", terminal_safe(&other.to_string())),
-    }
-}
-
-/// Save a Studio creation as a `.num` file and return the share link. The
-/// file stays version 1 unless a title or author asks for version 2.
-fn save_studio_creation(
-    source: &str,
-    xmin: f64,
-    xmax: f64,
-    a: f64,
-    title: Option<&str>,
-    author: Option<&str>,
-    path: &Path,
-) -> Result<String, String> {
-    let mut creation = numinous_core::StudioCreation::new(source, xmin, xmax, a)?;
-    if let Some(title) = title {
-        creation = creation.with_title(title).map_err(|e| format!("{e}\n"))?;
-    }
-    if let Some(author) = author {
-        creation = creation.with_author(author).map_err(|e| format!("{e}\n"))?;
-    }
-    write_create_new(path, creation.to_num_file().as_bytes())?;
-    Ok(format!(
-        "saved Studio creation: {}\nlink: {}\n",
-        terminal_safe_path(path),
-        creation.to_link()
-    ))
-}
-
-/// Whether a sing input names a Studio creation rather than raw math.
-fn names_a_studio_creation(input: &str) -> bool {
-    input.starts_with("numinous://")
-        || Path::new(input)
-            .extension()
-            .is_some_and(|extension| extension.eq_ignore_ascii_case("num"))
-}
-
-/// A creation's voice travels through the terminal: sing accepts the same
-/// .num files and links the rest of the Studio surface speaks, and the
-/// capsule supplies its own window and knob unless flags override them.
-fn resolve_sing_input(
-    input: &str,
-    xmin: Option<f64>,
-    xmax: Option<f64>,
-    a: Option<f64>,
-) -> Result<(String, f64, f64, f64), String> {
-    if names_a_studio_creation(input) {
-        let creation = load_studio_creation(input)?;
-        return Ok((
-            creation.source().to_string(),
-            xmin.unwrap_or_else(|| creation.xmin()),
-            xmax.unwrap_or_else(|| creation.xmax()),
-            a.unwrap_or_else(|| creation.a()),
-        ));
-    }
-    Ok((
-        input.to_string(),
-        xmin.unwrap_or(-std::f64::consts::TAU),
-        xmax.unwrap_or(std::f64::consts::TAU),
-        a.unwrap_or(1.0),
-    ))
-}
-
-/// The terminal maker's remix verb. The fork copies the parent's expression,
-/// window, knob, and era, records the parent link as lineage, and takes its
-/// own title and author: the remix tree the Gallery wall renders is now
-/// reachable without the App.
-fn fork_studio_creation(
-    parent_input: &str,
-    expr: Option<&str>,
-    title: Option<&str>,
-    author: Option<&str>,
-    out: &Path,
-) -> Result<String, String> {
-    let parent = load_studio_creation(parent_input)?;
-    let fork = parent
-        .fork(expr, title, author)
-        .map_err(|error| format!("{error}\n"))?;
-    write_create_new(out, fork.to_num_file().as_bytes())?;
-    Ok(format!(
-        "forked from {}\nsaved Studio creation: {}\nlink: {}\n",
-        parent.to_link(),
-        terminal_safe_path(out),
-        fork.to_link()
-    ))
-}
-
-fn load_studio_creation(input: &str) -> Result<numinous_core::StudioCreation, String> {
-    if input.starts_with("numinous://") {
-        return numinous_core::StudioCreation::from_link(input)
-            .map_err(|_| "invalid Numinous Studio link\n".to_string());
-    }
-    let path = Path::new(input);
-    // The bounded read lives in the core loader every face shares; this face
-    // only owns how each refusal is spoken to a terminal.
-    numinous_core::StudioCreation::from_num_path(path).map_err(|error| match error {
-        numinous_core::NumFileError::Io(e) => format!(
-            "could not read Studio .num file '{}': {e}\n",
-            terminal_safe_path(path)
-        ),
-        numinous_core::NumFileError::TooLarge => format!(
-            "Studio .num file is too large; limit is {} bytes\n",
-            numinous_core::MAX_SHARE_INPUT_BYTES
-        ),
-        numinous_core::NumFileError::Invalid(_) => {
-            "invalid Numinous Studio .num file\n".to_string()
-        }
-    })
-}
-
-fn open_studio_report(input: &str, width: usize, height: usize) -> Result<String, String> {
-    let creation = load_studio_creation(input)?;
-    let report = plot_report(
-        creation.source(),
-        creation.xmin(),
-        creation.xmax(),
-        creation.a(),
-        width,
-        height,
-    )?;
-    let mut lines = vec!["Studio creation".to_string()];
-    if let Some(title) = creation.title() {
-        lines.push(format!("title={}", terminal_safe(title)));
-    }
-    if let Some(author) = creation.author() {
-        lines.push(format!("author={}", terminal_safe(author)));
-    }
-    lines.push(format!("expr={}", terminal_safe(creation.source())));
-    lines.push(format!("xmin={}", creation.xmin()));
-    lines.push(format!("xmax={}", creation.xmax()));
-    lines.push(format!("a={}", creation.a()));
-    if let Some(era) = creation.era() {
-        lines.push(format!("era={}", era.name()));
-    }
-    if let Some(descends) = creation.descends() {
-        lines.push(format!("descends={}", terminal_safe(descends)));
-    }
-    lines.push(format!("link={}", creation.to_link()));
-    // Quoted: the link's own & separators would otherwise split the
-    // command in bash, PowerShell, and cmd alike, so an unquoted copy of
-    // this line fails everywhere it is meant to be pasted.
-    lines.push(format!(
-        "remix it: numinous fork \"{}\" --out my-remix.num",
-        creation.to_link()
-    ));
-    Ok(format!("{}\n\n{}", lines.join("\n"), report))
-}
-
-/// The first sibling name (stem-2.num, stem-3.num, ...) not already taken,
-/// bounded so a hostile directory cannot spin this forever.
-fn next_free_sibling(path: &Path) -> Option<PathBuf> {
-    let stem = path.file_stem()?.to_str()?;
-    let extension = path.extension()?.to_str()?;
-    let parent = path.parent().unwrap_or_else(|| Path::new("."));
-    (2..=99)
-        .map(|n| parent.join(format!("{stem}-{n}.{extension}")))
-        .find(|candidate| !candidate.exists())
-}
-
-fn write_create_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
-    let parent = path.parent().unwrap_or_else(|| Path::new("."));
-    let base = path.file_name().unwrap_or_else(|| OsStr::new("studio.num"));
-    let mut last_error = None;
-    for attempt in 0..8 {
-        let mut temp_name = base.to_os_string();
-        temp_name.push(format!(".tmp.{}.{}", std::process::id(), attempt));
-        let temp = parent.join(temp_name);
-        let mut created_temp = false;
-        let write_result = (|| -> Result<(), String> {
-            let mut file = OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&temp)
-                .map_err(|err| {
-                    format!("could not create {}: {err}\n", terminal_safe_path(&temp))
-                })?;
-            created_temp = true;
-            file.write_all(bytes)
-                .map_err(|err| format!("could not write {}: {err}\n", terminal_safe_path(&temp)))?;
-            file.flush()
-                .map_err(|err| format!("could not flush {}: {err}\n", terminal_safe_path(&temp)))
-        })();
-        if let Err(message) = write_result {
-            if created_temp {
-                let _ = std::fs::remove_file(&temp);
-            }
-            last_error = Some(message);
-            continue;
-        }
-        match std::fs::hard_link(&temp, path) {
-            Ok(()) => {
-                let _ = std::fs::remove_file(&temp);
-                return Ok(());
-            }
-            Err(err) => {
-                let _ = std::fs::remove_file(&temp);
-                if path.exists() {
-                    // Never-clobber holds, but the refusal helps: name the
-                    // next free sibling instead of leaving a dead end.
-                    let hint = next_free_sibling(path)
-                        .map(|free| format!(" {} is free.", terminal_safe_path(&free)))
-                        .unwrap_or_default();
-                    return Err(format!(
-                        "could not create {}: already exists.{hint}\n",
-                        terminal_safe_path(path)
-                    ));
-                }
-                last_error = Some(format!(
-                    "could not create {}: {err}\n",
-                    terminal_safe_path(path)
-                ));
-            }
-        }
-    }
-    Err(last_error.unwrap_or_else(|| format!("could not create {}\n", terminal_safe_path(path))))
 }
 
 /// The list of sims and their levers.

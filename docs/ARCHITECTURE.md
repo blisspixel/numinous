@@ -279,7 +279,12 @@ their mutual exclusion, and the typed input projection shared by render,
 share, sonify, and Studio paths. Room behavior remains in core. The MCP face
 has the corresponding `room_input` adapter for bounded JSON hand points and
 gestures, mutual exclusion, canonical echo, and interaction-aware render and
-status projection. It also keeps protocol discovery, legacy negotiation,
+status projection. A focused CLI `studio` adapter owns raw source-mode
+selection, terminal error projection, bounded capsule loading, never-clobber
+save and fork writes, sing-input resolution, and open-report formatting. Core
+continues to own Studio parsing, evaluation, request bounds, rendering, capsule
+validity, and lineage semantics. The MCP face also keeps protocol discovery,
+legacy negotiation,
 server identity, and its immutable 40-tool JSON Schema catalog in a focused
 `catalog` module. The request entry point retains transport validation,
 dispatch, result decoration, and domain invocation.
