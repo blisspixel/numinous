@@ -115,8 +115,9 @@ abstention instead of a guess. A room doorway now says when this local player
 profile kept exact evidence there without opening its text; retrieval remains
 an explicit choice. Play does not write it. The measured **Sensory Lift**
 spike now has a passing feature-gated GPU post path on the reference integrated
-adapter; active work moves to the CPU bloom and direct-presentation comparison
-before changing the shipped App, alongside remaining structural debt. The room
+adapter, while the equivalent measured single-threaded CPU reference misses
+both budgets. Active work moves to direct presentation before changing the
+shipped App, alongside remaining structural debt. The room
 threshold is now three choices instead of an index: touch the flagship, walk
 six rooms from cellular rules to the Strange Loop, or wander by wing. Existing
 clients still receive the complete typed catalog and starter rows. The 0.4
