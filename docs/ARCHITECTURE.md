@@ -279,7 +279,10 @@ their mutual exclusion, and the typed input projection shared by render,
 share, sonify, and Studio paths. Room behavior remains in core. The MCP face
 has the corresponding `room_input` adapter for bounded JSON hand points and
 gestures, mutual exclusion, canonical echo, and interaction-aware render and
-status projection. A focused CLI `studio` adapter owns raw source-mode
+status projection. A focused MCP `transport` adapter owns bounded newline
+framing, overflow resynchronization without a second request-sized allocation,
+and flushed one-line response writes. JSON-RPC semantics and dispatch remain
+in the request entry point. A focused CLI `studio` adapter owns raw source-mode
 selection, terminal error projection, bounded capsule loading, never-clobber
 save and fork writes, sing-input resolution, and open-report formatting. Core
 continues to own Studio parsing, evaluation, request bounds, rendering, capsule
