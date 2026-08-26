@@ -14,6 +14,7 @@ const RADIO_FRAMES: u64 = 180;
 const FULLSCREEN_FRAMES: u64 = 120;
 const VOLUME_FRAMES: u64 = 90;
 const SOUND_DEVICE_FRAMES: u64 = 600;
+const PRESENTATION_FRAMES: u64 = 600;
 const ROOM_GOAL_FRAMES: u64 = 240;
 const SESSION_VIEWER_FRAMES: u64 = 240;
 
@@ -162,6 +163,28 @@ pub(crate) fn sound_device_unavailable(error: &str) -> Banner {
     )
 }
 
+#[cfg(feature = "gpu-post")]
+pub(crate) fn gpu_post_unavailable(error: &str) -> Banner {
+    Banner::new(
+        vec![
+            "GPU EFFECTS UNAVAILABLE".to_string(),
+            "CONTINUING WITH SOFTWARE PRESENTATION".to_string(),
+            error.to_uppercase(),
+        ],
+        PRESENTATION_FRAMES,
+    )
+}
+
+pub(crate) fn presentation_unavailable(error: &str) -> Banner {
+    Banner::new(
+        vec![
+            "WINDOW PRESENTATION UNAVAILABLE".to_string(),
+            error.to_uppercase(),
+        ],
+        PRESENTATION_FRAMES,
+    )
+}
+
 pub(crate) fn session_viewer_unavailable() -> Banner {
     Banner::new(
         vec![
@@ -229,6 +252,9 @@ mod tests {
         let empty = super::radio("Axiom FM", "axiom", 0);
         let ready = super::radio("Axiom FM", "axiom", 3);
         let sound = super::sound_device_unavailable("no device");
+        #[cfg(feature = "gpu-post")]
+        let gpu = super::gpu_post_unavailable("no adapter");
+        let presentation = super::presentation_unavailable("no surface");
         let off = super::radio_off();
         let needs_station = super::radio_skip_needs_station();
         let skipped = super::radio_skip("Axiom FM", 2, 3);
@@ -239,6 +265,16 @@ mod tests {
         assert_eq!(empty.frames_left(), 180);
         assert_eq!(ready.lines()[0], "RADIO: Axiom FM  (3 ON ROTATION)");
         assert_eq!(sound.lines()[0], "SOUND DEVICE UNAVAILABLE");
+        #[cfg(feature = "gpu-post")]
+        {
+            assert_eq!(gpu.lines()[0], "GPU EFFECTS UNAVAILABLE");
+            assert_eq!(gpu.lines()[1], "CONTINUING WITH SOFTWARE PRESENTATION");
+            assert_eq!(gpu.lines()[2], "NO ADAPTER");
+            assert_eq!(gpu.frames_left(), 600);
+        }
+        assert_eq!(presentation.lines()[0], "WINDOW PRESENTATION UNAVAILABLE");
+        assert_eq!(presentation.lines()[1], "NO SURFACE");
+        assert_eq!(presentation.frames_left(), 600);
         assert_eq!(sound.lines()[1], "NO DEVICE");
         assert_eq!(sound.frames_left(), 600);
         assert_eq!(off.lines(), ["RADIO OFF", "ROOM MUSIC"]);

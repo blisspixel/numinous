@@ -87,12 +87,13 @@ cargo run --release --locked -p numinous-gpu --features gpu-post --example surfa
 ```
 
 This selects direct `wgpu` surface output as the production candidate for the
-full Sensory Lift. It does not promote that path into the App. The next gate is
-real room-raster integration plus Windows, macOS, and Linux correctness and
-pacing. The receipt stops when the queue presentation request returns and does
-not include compositor work, display scanout, input latency, human perception,
-or room aesthetics. The 1440p client area was exact but extended beyond the
-reference machine's 2256 x 1504 desktop.
+full Sensory Lift. The disabled App `gpu-post` feature now feeds its real room
+rasters through that renderer, while explicit recovery retains the default
+software path on failure. The next gate is Windows, macOS, and Linux correctness
+and pacing evidence before promotion. The receipt stops when the queue
+presentation request returns and does not include compositor work, display
+scanout, input latency, human perception, or room aesthetics. The 1440p client
+area was exact but extended beyond the reference machine's 2256 x 1504 desktop.
 
 ## July 2026 dependency migration
 

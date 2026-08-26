@@ -97,11 +97,15 @@ dependency.
   `Surface`, with a time-budgeted app downscale for expensive live frames.
 - **Shipped GPU path:** WGSL through `wgpu` for Mandelbrot and Julia, with CPU
   fallback and deterministic headless exports.
-- **Measured presentation candidate:** the disabled `gpu-post` feature shares
-  one five-pass linear HDR and bloom implementation between deterministic
-  offscreen validation and a direct sRGB window surface. The window path keeps
-  one frame in flight and writes its final tone-map pass into the acquired
-  surface texture without an intermediate output copy or readback.
+- **Measured presentation candidate:** the disabled App `gpu-post` feature
+  sends the fully composed room raster through one five-pass linear HDR and
+  bloom implementation shared with deterministic offscreen validation. The
+  window path keeps one frame in flight and writes its final tone-map pass into
+  the acquired sRGB surface texture without an intermediate output copy or
+  readback. Its presenter owns exactly one backend, skips transient surface
+  unavailability, recreates a lost GPU surface once, and changes permanently to
+  the ordinary `softbuffer` path with visible and logged notice if recovery
+  fails. The feature remains a candidate until three-platform proof closes.
 - **Optional future fast path:** CUDA or Triton only if measurement proves that
   a specific extreme room cannot meet its budget through portable WGSL.
 - **Experimental sandbox (later, easter-egg): Bend/HVM** as a literal "alternate compute universe" a curious user can switch a room into, which is both a real technical experiment and perfectly on-theme with the Lore. Never on the critical path.

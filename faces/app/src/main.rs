@@ -4,12 +4,12 @@
 //! Opens a real window and shows a room animating in full color, rendered on the
 //! CPU into a pixel buffer (the same `Raster` the CLI writes to PNG). Left/right
 //! switch rooms, space pauses, escape quits. This is the start of the GUI
-//! Cabinet (see `docs/DESIGN.md`); it uses `winit` for the window and
-//! `softbuffer` for a windowing-toolkit-free pixel blit, so it runs on macOS,
-//! Linux, and Windows.
+//! Cabinet (see `docs/DESIGN.md`). Its default `winit` and `softbuffer` path runs
+//! on macOS, Linux, and Windows. The disabled `gpu-post` feature presents the
+//! same room raster through the measured Sensory Lift candidate and falls back
+//! visibly to software when that path is unavailable.
 
 use std::num::NonZeroU32;
-use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
@@ -34,6 +34,7 @@ mod mouse_input;
 mod overlays;
 mod playtest;
 mod postcard;
+mod presentation;
 mod radio_cache;
 mod room_input;
 mod save_gate;
@@ -47,8 +48,6 @@ use numinous_app::{controls, game_draw, input_legend, menu, play, room_phase};
 use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay};
 use room_phase::{effective_room_phase, has_finite_parameter_input};
 
-/// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
-const BACKGROUND: u32 = 0x000A_0B0F;
 /// Frames of The Show crossfade when the gallery advances rooms.
 const SHOW_CROSSFADE_FRAMES: u8 = 14;
 /// Wall time for the Times Tables cardioid-to-Mandelbrot morph beat.
@@ -394,8 +393,9 @@ struct App {
     /// How much the world may move on its own. Read once at construction, so
     /// every tick answers the same way and a test can pin it.
     motion: numinous_core::Motion,
-    window: Option<Rc<Window>>,
-    surface: Option<softbuffer::Surface<Rc<Window>, Rc<Window>>>,
+    window: Option<Arc<Window>>,
+    presenter: Option<presentation::WindowPresenter>,
+    presentation_warned: bool,
     player: Option<numinous_audio::LoopPlayer>,
     #[cfg(test)]
     transient_audio_clears: std::cell::Cell<usize>,
@@ -607,7 +607,8 @@ impl App {
         }
         Self {
             window: None,
-            surface: None,
+            presenter: None,
+            presentation_warned: false,
             player: None,
             #[cfg(test)]
             transient_audio_clears: std::cell::Cell::new(0),
@@ -5445,33 +5446,36 @@ impl App {
         }
     }
 
-    /// Copy an RGBA frame (`rw` x `rh`) onto the window surface (`width` x `height`).
+    /// Present an RGBA frame (`rw` x `rh`) in the window (`width` x `height`).
     fn blit(&mut self, rgba: &[u8], rw: usize, rh: usize, width: usize, height: usize) {
-        let (Some(w), Some(h)) = (
-            NonZeroU32::new(width as u32),
-            NonZeroU32::new(height as u32),
-        ) else {
+        let Some(presenter) = self.presenter.as_mut() else {
             return;
         };
-        let Some(surface) = self.surface.as_mut() else {
-            return;
-        };
-        if surface.resize(w, h).is_err() {
-            return;
+        match presenter.present(rgba, rw, rh, width, height) {
+            Ok(presentation::PresentOutcome::Presented) => self.presentation_warned = false,
+            Ok(presentation::PresentOutcome::Skipped) => {}
+            #[cfg(feature = "gpu-post")]
+            Ok(presentation::PresentOutcome::FellBack(reason)) => {
+                if !self.presentation_warned {
+                    self.banner = Some(feedback::gpu_post_unavailable(&reason));
+                    let _ = append_crash_log_at(
+                        &self.crash_log,
+                        &format!("GPU presentation fell back to software: {reason}\n"),
+                    );
+                }
+                self.presentation_warned = true;
+            }
+            Err(error) => {
+                if !self.presentation_warned {
+                    self.banner = Some(feedback::presentation_unavailable(&error));
+                    let _ = append_crash_log_at(
+                        &self.crash_log,
+                        &format!("window presentation failed: {error}\n"),
+                    );
+                }
+                self.presentation_warned = true;
+            }
         }
-        let Ok(mut buffer) = surface.buffer_mut() else {
-            return;
-        };
-        for (i, pixel) in buffer.iter_mut().enumerate() {
-            let (x, y) = (i % width, i / width);
-            *pixel = if x < rw && y < rh {
-                let o = (y * rw + x) * 4;
-                (u32::from(rgba[o]) << 16) | (u32::from(rgba[o + 1]) << 8) | u32::from(rgba[o + 2])
-            } else {
-                BACKGROUND
-            };
-        }
-        let _ = buffer.present();
     }
 
     fn exit_app(&mut self, event_loop: &ActiveEventLoop) {
@@ -5516,15 +5520,23 @@ impl ApplicationHandler for App {
         let Ok(window) = event_loop.create_window(attributes) else {
             return;
         };
-        let window = Rc::new(window);
-        let Ok(context) = softbuffer::Context::new(window.clone()) else {
-            return;
-        };
-        let Ok(surface) = softbuffer::Surface::new(&context, window.clone()) else {
-            return;
-        };
+        let window = Arc::new(window);
+        let initial_size = window.inner_size();
+        match presentation::WindowPresenter::new(
+            window.clone(),
+            initial_size.width,
+            initial_size.height,
+        ) {
+            Ok(presenter) => self.presenter = Some(presenter),
+            Err(error) => {
+                self.banner = Some(feedback::presentation_unavailable(&error));
+                let _ = append_crash_log_at(
+                    &self.crash_log,
+                    &format!("window presentation initialization failed: {error}\n"),
+                );
+            }
+        }
         self.window = Some(window);
-        self.surface = Some(surface);
         if let Some(window) = &self.window {
             let mode = if self.start_fullscreen {
                 Some(winit::window::Fullscreen::Borderless(None))

@@ -5,6 +5,15 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The real App can now present its actual room rasters through the direct
+  Sensory Lift surface behind the disabled `gpu-post` feature. One presenter
+  owns either the GPU or software surface, resizes it with the window, and
+  pads or clips mismatched frames with the canonical stage background. Surface
+  timeouts, occlusion, and outdated frames skip safely; a lost surface is
+  recreated once; initialization, validation, device, or repeated loss failures
+  switch permanently to `softbuffer` and name the fallback on screen and in the
+  local crash log. Default and feature builds are linted, and the feature build
+  is tested by the local and CI gates.
 - The disabled `gpu-post` feature now has a reusable direct presentation path.
   It creates a surface safely from an owned window handle, selects a compatible
   adapter and sRGB format, requests FIFO pacing with one frame in flight, and

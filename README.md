@@ -38,6 +38,12 @@ Remove the managed install with `numinous uninstall`; Journey, scores, Cairn,
 journal, and settings stay yours. From a clone:
 `cargo run --release --bin numinous-app`.
 
+The measured direct Sensory Lift presentation candidate remains disabled by
+default while three-platform proof is open. From a source checkout, try the
+real App raster integration with
+`cargo run --release --bin numinous-app --features gpu-post`. If GPU setup or
+recovery fails, the App says so and continues through software presentation.
+
 Digital minds enter through the MCP path in [`PLAY.md`](PLAY.md). The full
 manual is [`docs/PLAYING.md`](docs/PLAYING.md) if you want it later.
 

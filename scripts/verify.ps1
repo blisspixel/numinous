@@ -27,10 +27,14 @@ function Step($name, $block) {
 try {
 Step "format" { cargo fmt --all --check }
 Step "clippy" { cargo clippy --workspace --all-targets -- -D warnings }
-Step "GPU post spike" {
+Step "GPU post and App presentation" {
     cargo clippy -p numinous-gpu --all-features --all-targets -- -D warnings
     if ($LASTEXITCODE -ne 0) { throw "GPU post clippy failed" }
     cargo test -p numinous-gpu --all-features --all-targets --locked
+    if ($LASTEXITCODE -ne 0) { throw "GPU post tests failed" }
+    cargo clippy -p numinous-app --all-features --all-targets -- -D warnings
+    if ($LASTEXITCODE -ne 0) { throw "GPU App clippy failed" }
+    cargo test -p numinous-app --all-features --all-targets --locked
 }
 Step "documentation" {
     $savedRustdocFlags = Get-Item Env:RUSTDOCFLAGS -ErrorAction SilentlyContinue

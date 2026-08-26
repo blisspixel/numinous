@@ -27,10 +27,12 @@ jobs:
         run: cargo fmt --all --check
       - name: Clippy (deny warnings)
         run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: Feature-gated GPU post spike
+      - name: Feature-gated GPU post and App presentation
         run: |
           cargo clippy -p numinous-gpu --all-features --all-targets -- -D warnings
           cargo test -p numinous-gpu --all-features --all-targets --locked
+          cargo clippy -p numinous-app --all-features --all-targets -- -D warnings
+          cargo test -p numinous-app --all-features --all-targets --locked
       - name: Documentation (deny warnings)
         env:
           RUSTDOCFLAGS: -D warnings
@@ -175,6 +177,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
       - name: Workspace tests
         run: cargo test --workspace --all-targets --locked
+      - name: Feature App platform compile
+        run: cargo check -p numinous-app --all-features --all-targets --locked
       - name: Windows Python contract tests
         if: runner.os == 'Windows'
         run: |
