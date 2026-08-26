@@ -305,9 +305,11 @@ server identity, and its immutable 40-tool JSON Schema catalog in a focused
 `catalog` module. The request entry point retains transport validation,
 dispatch, result decoration, and domain invocation. Its 214 request-dispatch
 and cross-boundary unit regressions live in the sibling `tests` module, which
-retains private module access without enlarging the production entry point. A
-focused `schema` adapter validates the bounded JSON Schema subset declared by
-that catalog, including guiding argument-name suggestions and the temporal and
+retains private module access without enlarging the production entry point. The
+`response` adapter owns compact prose projection for complete typed results,
+while preserving errors, text-only tools, and structured content. A focused
+`schema` adapter validates the bounded JSON Schema subset declared by that
+catalog, including guiding argument-name suggestions and the temporal and
 Arcade cross-field checks. It does not own the immutable tool contract.
 The App preference store uses a strict std-only core schema for volume, mute,
 Visual Era, and window mode. Core owns bounded reads, lock coordination, atomic

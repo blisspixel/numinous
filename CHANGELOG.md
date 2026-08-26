@@ -5,6 +5,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP compact response projection now lives in a focused face-local adapter.
+  It preserves complete structured results and typed content while shortening
+  only redundant prose, leaving errors and text-only tools untouched.
 - MCP runtime validation for the declared JSON Schema subset now lives in a
   focused face-local adapter. It owns bounded recursive validation, guiding
   argument-name suggestions, temporal request checks, and Arcade action checks
