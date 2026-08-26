@@ -5,6 +5,7 @@ use super::{
     validate_map_completion,
 };
 use bytemuck::{Pod, Zeroable};
+use std::time::Instant;
 use wgpu::util::DeviceExt;
 
 const BYTES_PER_PIXEL: u32 = 4;
@@ -142,7 +143,7 @@ struct Pipelines {
 }
 
 impl Pipelines {
-    fn new(device: &wgpu::Device) -> Self {
+    fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self {
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("sensory-post"),
             source: wgpu::ShaderSource::Wgsl(include_str!("post.wgsl").into()),
@@ -181,7 +182,7 @@ impl Pipelines {
                 &module,
                 "sensory-composite",
                 "composite",
-                wgpu::TextureFormat::Rgba8UnormSrgb,
+                output_format,
             ),
         }
     }
@@ -194,7 +195,6 @@ struct PostResources {
     _bright_texture: wgpu::Texture,
     _blur_texture: wgpu::Texture,
     _bloom_texture: wgpu::Texture,
-    output_texture: wgpu::Texture,
     linearize_bind: wgpu::BindGroup,
     bright_bind: wgpu::BindGroup,
     horizontal_bind: wgpu::BindGroup,
@@ -204,9 +204,14 @@ struct PostResources {
     bright_view: wgpu::TextureView,
     blur_view: wgpu::TextureView,
     bloom_view: wgpu::TextureView,
+    timestamps: Option<TimestampResources>,
+}
+
+struct OffscreenResources {
+    post: PostResources,
+    output_texture: wgpu::Texture,
     output_view: wgpu::TextureView,
     readback: wgpu::Buffer,
-    timestamps: Option<TimestampResources>,
 }
 
 struct TimestampResources {
@@ -259,21 +264,11 @@ impl PostResources {
             layout.half_height,
             wgpu::TextureUsages::empty(),
         );
-        let output_texture = create_texture(
-            device,
-            "sensory-output-srgb",
-            layout.width,
-            layout.height,
-            wgpu::TextureFormat::Rgba8UnormSrgb,
-            wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-        );
-
         let input_view = input_texture.create_view(&wgpu::TextureViewDescriptor::default());
         let hdr_view = hdr_texture.create_view(&wgpu::TextureViewDescriptor::default());
         let bright_view = bright_texture.create_view(&wgpu::TextureViewDescriptor::default());
         let blur_view = blur_texture.create_view(&wgpu::TextureViewDescriptor::default());
         let bloom_view = bloom_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let output_view = output_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         let full_params = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("sensory-full-params"),
@@ -340,12 +335,6 @@ impl PostResources {
                 },
             ],
         });
-        let readback = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("sensory-output-readback"),
-            size: layout.padded_byte_len,
-            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-            mapped_at_creation: false,
-        });
         let timestamps = timestamp_queries.then(|| TimestampResources::new(device));
 
         Self {
@@ -355,7 +344,6 @@ impl PostResources {
             _bright_texture: bright_texture,
             _blur_texture: blur_texture,
             _bloom_texture: bloom_texture,
-            output_texture,
             linearize_bind,
             bright_bind,
             horizontal_bind,
@@ -365,9 +353,40 @@ impl PostResources {
             bright_view,
             blur_view,
             bloom_view,
+            timestamps,
+        }
+    }
+}
+
+impl OffscreenResources {
+    fn new(
+        device: &wgpu::Device,
+        pipelines: &Pipelines,
+        sampler: &wgpu::Sampler,
+        layout: PostLayout,
+        timestamp_queries: bool,
+    ) -> Self {
+        let post = PostResources::new(device, pipelines, sampler, layout, timestamp_queries);
+        let output_texture = create_texture(
+            device,
+            "sensory-output-srgb",
+            layout.width,
+            layout.height,
+            wgpu::TextureFormat::Rgba8UnormSrgb,
+            wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        );
+        let output_view = output_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let readback = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("sensory-output-readback"),
+            size: layout.padded_byte_len,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+        Self {
+            post,
+            output_texture,
             output_view,
             readback,
-            timestamps,
         }
     }
 }
@@ -408,7 +427,7 @@ pub struct SensoryPostRenderer {
     capabilities: PostCapabilities,
     pipelines: Pipelines,
     sampler: wgpu::Sampler,
-    resources: Option<PostResources>,
+    resources: Option<OffscreenResources>,
 }
 
 impl SensoryPostRenderer {
@@ -421,17 +440,8 @@ impl SensoryPostRenderer {
         let context = GpuContext::new()?;
         let capabilities = PostCapabilities::from_context(&context);
         capabilities.validate().map_err(|error| error.to_string())?;
-        let pipelines = Pipelines::new(&context.device);
-        let sampler = context.device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("sensory-linear-sampler"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
-            ..wgpu::SamplerDescriptor::default()
-        });
+        let pipelines = Pipelines::new(&context.device, wgpu::TextureFormat::Rgba8UnormSrgb);
+        let sampler = create_linear_sampler(&context.device);
         Ok(Self {
             context,
             capabilities,
@@ -484,10 +494,10 @@ impl SensoryPostRenderer {
         let recreate = !matches!(
             &self.resources,
             Some(resources)
-                if resources.layout.width == width && resources.layout.height == height
+                if resources.post.layout.width == width && resources.post.layout.height == height
         );
         if recreate {
-            self.resources = Some(PostResources::new(
+            self.resources = Some(OffscreenResources::new(
                 &device,
                 &self.pipelines,
                 &self.sampler,
@@ -504,87 +514,18 @@ impl SensoryPostRenderer {
         rgba: &[u8],
     ) -> Result<PostFrame, RenderError> {
         let resources = self.resources.as_ref().ok_or(RenderError::HostAllocation)?;
-        let layout = resources.layout;
-        self.context.queue.write_texture(
-            wgpu::TexelCopyTextureInfo {
-                texture: &resources.input_texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            rgba,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(layout.tight_row_bytes),
-                rows_per_image: Some(layout.height),
-            },
-            wgpu::Extent3d {
-                width: layout.width,
-                height: layout.height,
-                depth_or_array_layers: 1,
-            },
-        );
+        let layout = resources.post.layout;
+        write_input(&self.context.queue, &resources.post, rgba);
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("sensory-post-frame"),
         });
-        let first_timestamp =
-            resources
-                .timestamps
-                .as_ref()
-                .map(|timestamps| wgpu::RenderPassTimestampWrites {
-                    query_set: &timestamps.query_set,
-                    beginning_of_pass_write_index: Some(0),
-                    end_of_pass_write_index: None,
-                });
-        draw_pass(
+        encode_post_passes(
             &mut encoder,
-            "sensory-linearize-pass",
-            &self.pipelines.linearize,
-            &resources.linearize_bind,
-            &resources.hdr_view,
-            first_timestamp,
-        );
-        draw_pass(
-            &mut encoder,
-            "sensory-bright-pass",
-            &self.pipelines.bright_pass,
-            &resources.bright_bind,
-            &resources.bright_view,
-            None,
-        );
-        draw_pass(
-            &mut encoder,
-            "sensory-horizontal-pass",
-            &self.pipelines.blur_horizontal,
-            &resources.horizontal_bind,
-            &resources.blur_view,
-            None,
-        );
-        draw_pass(
-            &mut encoder,
-            "sensory-vertical-pass",
-            &self.pipelines.blur_vertical,
-            &resources.vertical_bind,
-            &resources.bloom_view,
-            None,
-        );
-        let final_timestamp =
-            resources
-                .timestamps
-                .as_ref()
-                .map(|timestamps| wgpu::RenderPassTimestampWrites {
-                    query_set: &timestamps.query_set,
-                    beginning_of_pass_write_index: None,
-                    end_of_pass_write_index: Some(1),
-                });
-        draw_pass(
-            &mut encoder,
-            "sensory-composite-pass",
-            &self.pipelines.composite,
-            &resources.composite_bind,
+            &self.pipelines,
+            &resources.post,
             &resources.output_view,
-            final_timestamp,
+            true,
         );
         encoder.copy_texture_to_buffer(
             wgpu::TexelCopyTextureInfo {
@@ -607,7 +548,7 @@ impl SensoryPostRenderer {
                 depth_or_array_layers: 1,
             },
         );
-        if let Some(timestamps) = &resources.timestamps {
+        if let Some(timestamps) = &resources.post.timestamps {
             encoder.resolve_query_set(
                 &timestamps.query_set,
                 0..TIMESTAMP_COUNT,
@@ -626,7 +567,7 @@ impl SensoryPostRenderer {
 
         let padded = read_mapped_buffer(device, &resources.readback)?;
         let rgba = unpack_rows(&padded, layout)?;
-        let gpu_time_ms = match &resources.timestamps {
+        let gpu_time_ms = match &resources.post.timestamps {
             Some(timestamps) => {
                 let bytes = read_mapped_buffer(device, &timestamps.readback)?;
                 Some(timestamp_duration_ms(
@@ -638,6 +579,340 @@ impl SensoryPostRenderer {
         };
         Ok(PostFrame { rgba, gpu_time_ms })
     }
+}
+
+/// Timing for one frame rendered directly into a presentation surface.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SensorySurfaceFrame {
+    /// Time spent acquiring the next swapchain texture.
+    pub acquire_ms: f64,
+    /// Time from successful acquisition through the queue presentation request.
+    pub render_and_present_ms: f64,
+    /// Total host time from acquire request through the presentation request.
+    pub boundary_ms: f64,
+    /// Whether the acquired texture was usable but no longer optimal.
+    pub suboptimal: bool,
+}
+
+/// A reusable Sensory Lift pipeline that tone maps directly into a swapchain.
+///
+/// This renderer keeps the shipped app path unchanged while measuring the real
+/// window surface boundary. Its timing ends when [`wgpu::Queue::present`] returns;
+/// it does not claim compositor or display scanout latency.
+pub struct SensorySurfaceRenderer<'window> {
+    surface: wgpu::Surface<'window>,
+    config: wgpu::SurfaceConfiguration,
+    context: GpuContext,
+    capabilities: PostCapabilities,
+    pipelines: Pipelines,
+    sampler: wgpu::Sampler,
+    resources: Option<PostResources>,
+}
+
+impl<'window> SensorySurfaceRenderer<'window> {
+    /// Create and configure a renderer for a window or another surface target.
+    ///
+    /// # Errors
+    /// Returns an error when surface creation, adapter selection, the requested
+    /// dimensions, or the HDR and sRGB format requirements cannot be satisfied.
+    pub fn new(
+        target: impl Into<wgpu::SurfaceTarget<'window>>,
+        width: u32,
+        height: u32,
+    ) -> Result<Self, String> {
+        let instance = wgpu::Instance::default();
+        let surface = instance
+            .create_surface(target)
+            .map_err(|error| format!("failed to create GPU surface: {error}"))?;
+        let adapter = GpuContext::request_adapter(&instance, Some(&surface))?;
+        let surface_capabilities = surface.get_capabilities(&adapter);
+        let format = select_surface_format(&surface_capabilities.formats)
+            .ok_or("GPU surface offers no sRGB render format")?;
+        let present_mode = select_present_mode(&surface_capabilities.present_modes)
+            .ok_or("GPU surface offers no presentation mode")?;
+        let alpha_mode = surface_capabilities
+            .alpha_modes
+            .first()
+            .copied()
+            .ok_or("GPU surface offers no alpha mode")?;
+        let context = GpuContext::from_adapter(adapter)?;
+        PostLayout::validate(width, height, &context.device.limits())
+            .map_err(|error| error.to_string())?;
+        let capabilities = PostCapabilities::from_context(&context);
+        capabilities.validate().map_err(|error| error.to_string())?;
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format,
+            color_space: wgpu::SurfaceColorSpace::Auto,
+            width,
+            height,
+            desired_maximum_frame_latency: 1,
+            present_mode,
+            alpha_mode,
+            view_formats: Vec::new(),
+        };
+        surface.configure(&context.device, &config);
+        let pipelines = Pipelines::new(&context.device, format);
+        let sampler = create_linear_sampler(&context.device);
+        Ok(Self {
+            surface,
+            config,
+            context,
+            capabilities,
+            pipelines,
+            sampler,
+            resources: None,
+        })
+    }
+
+    /// The human-readable adapter name.
+    #[must_use]
+    pub fn adapter_name(&self) -> &str {
+        self.context.adapter_name()
+    }
+
+    /// The graphics backend in use.
+    #[must_use]
+    pub fn backend(&self) -> &str {
+        self.context.backend()
+    }
+
+    /// Relevant adapter capabilities checked before pipeline creation.
+    #[must_use]
+    pub const fn capabilities(&self) -> PostCapabilities {
+        self.capabilities
+    }
+
+    /// The negotiated sRGB swapchain format.
+    #[must_use]
+    pub const fn surface_format(&self) -> wgpu::TextureFormat {
+        self.config.format
+    }
+
+    /// The negotiated presentation mode.
+    #[must_use]
+    pub const fn present_mode(&self) -> wgpu::PresentMode {
+        self.config.present_mode
+    }
+
+    /// The configured surface dimensions.
+    #[must_use]
+    pub const fn dimensions(&self) -> (u32, u32) {
+        (self.config.width, self.config.height)
+    }
+
+    /// Reconfigure the surface and discard size-specific post resources.
+    ///
+    /// # Errors
+    /// Returns an error when the dimensions exceed the product or device limit.
+    pub fn resize(&mut self, width: u32, height: u32) -> Result<(), RenderError> {
+        PostLayout::validate(width, height, &self.context.device.limits())?;
+        self.config.width = width;
+        self.config.height = height;
+        self.surface.configure(&self.context.device, &self.config);
+        self.resources = None;
+        Ok(())
+    }
+
+    /// Render a host sRGB RGBA frame directly into the next swapchain texture.
+    ///
+    /// # Errors
+    /// Returns a typed error for invalid input, unsupported dimensions, or a
+    /// surface that is temporarily or permanently unavailable.
+    pub fn present_rgba(&mut self, rgba: &[u8]) -> Result<SensorySurfaceFrame, RenderError> {
+        let layout = PostLayout::validate(
+            self.config.width,
+            self.config.height,
+            &self.context.device.limits(),
+        )?;
+        if rgba.len() != layout.tight_byte_len {
+            return Err(RenderError::InvalidInputLength {
+                expected: layout.tight_byte_len,
+                actual: rgba.len(),
+            });
+        }
+        let recreate = !matches!(
+            &self.resources,
+            Some(resources)
+                if resources.layout.width == layout.width
+                    && resources.layout.height == layout.height
+        );
+        if recreate {
+            self.resources = Some(PostResources::new(
+                &self.context.device,
+                &self.pipelines,
+                &self.sampler,
+                layout,
+                false,
+            ));
+        }
+        self.present_frame(rgba)
+    }
+
+    fn present_frame(&mut self, rgba: &[u8]) -> Result<SensorySurfaceFrame, RenderError> {
+        let started = Instant::now();
+        let (surface_texture, suboptimal) = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(texture) => (texture, false),
+            wgpu::CurrentSurfaceTexture::Suboptimal(texture) => (texture, true),
+            wgpu::CurrentSurfaceTexture::Timeout => return Err(RenderError::SurfaceTimeout),
+            wgpu::CurrentSurfaceTexture::Occluded => return Err(RenderError::SurfaceOccluded),
+            wgpu::CurrentSurfaceTexture::Outdated => {
+                self.surface.configure(&self.context.device, &self.config);
+                return Err(RenderError::SurfaceOutdated);
+            }
+            wgpu::CurrentSurfaceTexture::Lost => return Err(RenderError::SurfaceLost),
+            wgpu::CurrentSurfaceTexture::Validation => {
+                return Err(RenderError::SurfaceValidation);
+            }
+        };
+        let acquired = Instant::now();
+        let resources = self.resources.as_ref().ok_or(RenderError::HostAllocation)?;
+        write_input(&self.context.queue, resources, rgba);
+        let output_view = surface_texture
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder =
+            self.context
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("sensory-surface-frame"),
+                });
+        encode_post_passes(
+            &mut encoder,
+            &self.pipelines,
+            resources,
+            &output_view,
+            false,
+        );
+        self.context.queue.submit(Some(encoder.finish()));
+        self.context.queue.present(surface_texture);
+        let presented = Instant::now();
+        if suboptimal {
+            self.surface.configure(&self.context.device, &self.config);
+        }
+        Ok(SensorySurfaceFrame {
+            acquire_ms: duration_ms(acquired.duration_since(started)),
+            render_and_present_ms: duration_ms(presented.duration_since(acquired)),
+            boundary_ms: duration_ms(presented.duration_since(started)),
+            suboptimal,
+        })
+    }
+}
+
+fn select_surface_format(formats: &[wgpu::TextureFormat]) -> Option<wgpu::TextureFormat> {
+    formats.iter().copied().find(wgpu::TextureFormat::is_srgb)
+}
+
+fn select_present_mode(present_modes: &[wgpu::PresentMode]) -> Option<wgpu::PresentMode> {
+    present_modes
+        .contains(&wgpu::PresentMode::Fifo)
+        .then_some(wgpu::PresentMode::Fifo)
+        .or_else(|| present_modes.first().copied())
+}
+
+fn duration_ms(duration: std::time::Duration) -> f64 {
+    duration.as_secs_f64() * 1_000.0
+}
+
+fn create_linear_sampler(device: &wgpu::Device) -> wgpu::Sampler {
+    device.create_sampler(&wgpu::SamplerDescriptor {
+        label: Some("sensory-linear-sampler"),
+        address_mode_u: wgpu::AddressMode::ClampToEdge,
+        address_mode_v: wgpu::AddressMode::ClampToEdge,
+        address_mode_w: wgpu::AddressMode::ClampToEdge,
+        mag_filter: wgpu::FilterMode::Linear,
+        min_filter: wgpu::FilterMode::Linear,
+        mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+        ..wgpu::SamplerDescriptor::default()
+    })
+}
+
+fn write_input(queue: &wgpu::Queue, resources: &PostResources, rgba: &[u8]) {
+    let layout = resources.layout;
+    queue.write_texture(
+        wgpu::TexelCopyTextureInfo {
+            texture: &resources.input_texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
+        },
+        rgba,
+        wgpu::TexelCopyBufferLayout {
+            offset: 0,
+            bytes_per_row: Some(layout.tight_row_bytes),
+            rows_per_image: Some(layout.height),
+        },
+        wgpu::Extent3d {
+            width: layout.width,
+            height: layout.height,
+            depth_or_array_layers: 1,
+        },
+    );
+}
+
+fn encode_post_passes(
+    encoder: &mut wgpu::CommandEncoder,
+    pipelines: &Pipelines,
+    resources: &PostResources,
+    output_view: &wgpu::TextureView,
+    write_timestamps: bool,
+) {
+    let first_timestamp = write_timestamps
+        .then_some(resources.timestamps.as_ref())
+        .flatten()
+        .map(|timestamps| wgpu::RenderPassTimestampWrites {
+            query_set: &timestamps.query_set,
+            beginning_of_pass_write_index: Some(0),
+            end_of_pass_write_index: None,
+        });
+    draw_pass(
+        encoder,
+        "sensory-linearize-pass",
+        &pipelines.linearize,
+        &resources.linearize_bind,
+        &resources.hdr_view,
+        first_timestamp,
+    );
+    draw_pass(
+        encoder,
+        "sensory-bright-pass",
+        &pipelines.bright_pass,
+        &resources.bright_bind,
+        &resources.bright_view,
+        None,
+    );
+    draw_pass(
+        encoder,
+        "sensory-horizontal-pass",
+        &pipelines.blur_horizontal,
+        &resources.horizontal_bind,
+        &resources.blur_view,
+        None,
+    );
+    draw_pass(
+        encoder,
+        "sensory-vertical-pass",
+        &pipelines.blur_vertical,
+        &resources.vertical_bind,
+        &resources.bloom_view,
+        None,
+    );
+    let final_timestamp = write_timestamps
+        .then_some(resources.timestamps.as_ref())
+        .flatten()
+        .map(|timestamps| wgpu::RenderPassTimestampWrites {
+            query_set: &timestamps.query_set,
+            beginning_of_pass_write_index: None,
+            end_of_pass_write_index: Some(1),
+        });
+    draw_pass(
+        encoder,
+        "sensory-composite-pass",
+        &pipelines.composite,
+        &resources.composite_bind,
+        output_view,
+        final_timestamp,
+    );
 }
 
 fn create_pipeline(
@@ -831,7 +1106,9 @@ fn timestamp_duration_ms(bytes: &[u8], period_ns: f32) -> Result<f64, RenderErro
 
 #[cfg(test)]
 mod tests {
-    use super::{PostLayout, timestamp_duration_ms, unpack_rows};
+    use super::{
+        PostLayout, select_present_mode, select_surface_format, timestamp_duration_ms, unpack_rows,
+    };
 
     #[test]
     fn row_layout_is_aligned_and_unpacks_without_padding() {
@@ -853,5 +1130,34 @@ mod tests {
         bytes.extend_from_slice(&10_u64.to_le_bytes());
         bytes.extend_from_slice(&510_u64.to_le_bytes());
         assert_eq!(timestamp_duration_ms(&bytes, 2.0).expect("duration"), 0.001);
+    }
+
+    #[test]
+    fn surface_format_requires_srgb_and_preserves_preference_order() {
+        assert_eq!(
+            select_surface_format(&[
+                wgpu::TextureFormat::Rgba16Float,
+                wgpu::TextureFormat::Bgra8UnormSrgb,
+                wgpu::TextureFormat::Rgba8UnormSrgb,
+            ]),
+            Some(wgpu::TextureFormat::Bgra8UnormSrgb)
+        );
+        assert_eq!(
+            select_surface_format(&[wgpu::TextureFormat::Rgba8Unorm]),
+            None
+        );
+    }
+
+    #[test]
+    fn surface_presentation_prefers_fifo() {
+        assert_eq!(
+            select_present_mode(&[wgpu::PresentMode::Immediate, wgpu::PresentMode::Fifo]),
+            Some(wgpu::PresentMode::Fifo)
+        );
+        assert_eq!(
+            select_present_mode(&[wgpu::PresentMode::Immediate]),
+            Some(wgpu::PresentMode::Immediate)
+        );
+        assert_eq!(select_present_mode(&[]), None);
     }
 }
