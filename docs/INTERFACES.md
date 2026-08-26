@@ -257,11 +257,16 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   numbers, rejects names not owned by the selected simulation, and rejects
   values outside that lever's advertised range. Invalid calls return a guiding
   tool error and do not record progress.
-- **Structured discovery (built):** `list_rooms` returns the complete typed
-  catalog in every response mode, plus a `starters` array naming four rooms
-  worth opening first. The starter doorway exists so a client that renders
-  structured output can show four rooms instead of 355 before its player has
-  touched one, without any mode becoming lossy.
+- **Structured discovery (built):** `list_rooms` begins with a
+  `numinous.room-threshold` schema version 1 object containing exactly three
+  doors: touch the Times Tables flagship, walk the Strange Loop, or wander by
+  wing. `chain` is a `numinous.room-walk` schema version 1 projection of six
+  core-owned canonical steps, each carrying a nonspoiling question and exact
+  `describe_room` call. `wings` gives each catalog wing's count and one valid
+  doorway. Full prose renders only this bounded threshold, not the 355-row
+  index. The complete typed catalog remains byte-compatible in `rooms`, and
+  the existing four-row `starters` field remains in every response mode, so
+  clients lose no discovery data.
   `describe_room` is a safe doorway with title, wing, action, optional
   goal, blurb, and the next play call, but no revelation, concept, deep cut, or
   citation. When the player-owned journal has a current entry whose subject

@@ -114,8 +114,10 @@ room. Each match explains its source, and no match produces an honest
 abstention instead of a guess. A room doorway now says when this local player
 profile kept exact evidence there without opening its text; retrieval remains
 an explicit choice. Play does not write it. Active work moves next to the
-three-door threshold while remaining structural debt closes, with the
-**Sensory Lift** entering behind a de-risk spike; the 0.4
+measured **Sensory Lift** spike and remaining structural debt. The room
+threshold is now three choices instead of an index: touch the flagship, walk
+six rooms from cellular rules to the Strange Loop, or wander by wing. Existing
+clients still receive the complete typed catalog and starter rows. The 0.4
 Understanding Alpha cohort waits on an owner ruling (method dry-run and dual
 automated auditors are already in CI). The creator loop is built end to end:
 save, exact paused reopen, one-key named share trio, Gallery wall with the
