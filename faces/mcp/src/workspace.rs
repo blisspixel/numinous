@@ -11,7 +11,7 @@ use numinous_core::{
 };
 use serde_json::{Value, json};
 
-use super::{journal_entry_json, tool_error, tool_structured};
+use super::{journal::entry_json, tool_error, tool_structured};
 
 const DEFAULT_RETRIEVAL_LIMIT: usize = MAX_WORKSPACE_RETRIEVED;
 
@@ -454,7 +454,7 @@ fn retrieval_json(
         "current"
     });
     resolved["superseded_by"] = json!(superseding_entry_id);
-    resolved["entry"] = journal_entry_json(journal, entry);
+    resolved["entry"] = entry_json(journal, entry);
     resolved["source_explanation"] = json!(source_explanation(entry));
     resolved
 }

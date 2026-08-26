@@ -5,6 +5,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP journal reads, writes, corrections, exports, verified erasure, receipt
+  promotion, pagination, and entry projection now live in one private journal
+  module instead of the face's entry point. Receipt promotion takes a narrow
+  raw replay callback, so the extraction preserves the rule that verification
+  cannot re-enter dispatch or double-record progress. The visit workspace now
+  consumes the journal projection through that focused boundary.
 - CI now installs `cargo-audit` and `cargo-llvm-cov` through the current
   immutable `taiki-e/install-action` v2.86.7 pin. The workflow contract and
   engineering baseline move with the pin, so an automated workflow-only bump
