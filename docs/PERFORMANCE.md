@@ -5,25 +5,33 @@ revision, and measurement boundary. A dependency update is not called neutral
 because it compiles. Comparable evidence must exercise the exact revisions on
 one machine and retain the raw samples.
 
-## August 2026 Sensory Lift GPU spike
+## August 2026 Sensory Lift post comparison
 
 The disabled-by-default `gpu-post` feature tests the proposed post stack before
-it changes the App. Revision `3e7a5845dd533f26c9c32144e2291820520059be`
+it changes the App. Revision `5282956ab6b55e5b99f704892b640fb36c9e2dc3`
 uploads a deterministic sRGB frame, samples it into a full-resolution linear
 `Rgba16Float` target, performs a half-resolution bright pass and separable
-Gaussian bloom, then tone maps into an sRGB output. Frame-sized textures, bind
-groups, uniform buffers, timestamp queries, and readback buffers are reused.
+Gaussian bloom, then tone maps into an sRGB output. An equivalent
+single-threaded CPU reference performs the same stages in reusable `f32`
+buffers. The emissive input includes sharp beams, and optional PNG previews
+make the claimed neighboring glow inspectable. Both paths reuse their
+frame-sized resources.
 
 The reference run used the release profile and locked dependencies on an AMD
 Radeon 780M through Vulkan. It retained three warmups and twenty samples at
-both target sizes. The device boundary covers the five render passes. The wall
-boundary additionally covers the prebuilt host frame upload, final texture
-copy, map, and tight RGBA output.
+both target sizes. The device boundary covers the five GPU render passes. The
+GPU wall boundary additionally covers the prebuilt host frame upload, final
+texture copy, map, and tight RGBA output. The CPU boundary covers its complete
+post stack through a tight RGBA output.
 
-| Size | Device p50 / p95 ms | Validation wall p50 / p95 ms | Budgets | Result |
+| Size | GPU device p50 / p95 ms | GPU wall p50 / p95 ms | CPU p50 / p95 ms | Result |
 | --- | ---: | ---: | ---: | --- |
-| 1920 x 1080 | 1.515 / 2.517 | 7.054 / 8.119 | 8 / 33 ms p95 | Pass |
-| 2560 x 1440 | 3.847 / 4.416 | 11.368 / 13.516 | 12 / 50 ms p95 | Pass |
+| 1920 x 1080 | 2.437 / 2.558 | 8.011 / 9.961 | 36.505 / 38.151 | GPU pass, CPU fail |
+| 2560 x 1440 | 3.259 / 4.431 | 12.260 / 13.709 | 74.449 / 83.955 | GPU pass, CPU fail |
+
+The p95 budgets are 8 ms GPU device and 33 ms full boundary at 1080p,
+then 12 ms and 50 ms at 1440p. The CPU reference uses the corresponding full
+boundary budget.
 
 The full receipt is
 [`evidence/sensory-post-spike-2026-08-25.json`](evidence/sensory-post-spike-2026-08-25.json).
@@ -35,11 +43,12 @@ budgets, and scope limits. Reproduce the workload with:
 cargo run --release --locked -p numinous-gpu --all-features --example post_spike -- --warmups 3 --samples 20 --check
 ```
 
-This clears GPU feasibility on the reference integrated adapter. It does not
-select the production architecture by itself. The next decision needs the
-equivalent CPU `Raster` bloom measurement and a direct surface-presentation
-boundary. Display scan-out, cross-platform behavior, catalog-room aesthetics,
-accessibility, and preference remain outside this receipt.
+This clears GPU feasibility on the reference integrated adapter and rejects
+the measured single-threaded CPU implementation for production. It does not
+claim that every possible CPU implementation fails. The next decision needs a
+direct surface-presentation boundary. Display scan-out, cross-platform
+behavior, catalog-room aesthetics, accessibility, and preference remain
+outside this receipt.
 
 ## July 2026 dependency migration
 
