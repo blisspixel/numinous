@@ -1,10 +1,10 @@
 //! Numinous GPU rendering.
 //!
 //! An adaptive `wgpu` context that picks whatever GPU the machine has (AMD,
-//! NVIDIA, Intel, or Apple) across Vulkan, Metal, and DX12, and renders
-//! offscreen with no window. This is how the same app "just works" on the dev
-//! laptop's integrated AMD graphics, an RTX 4090, and a Mac mini, falling back to
-//! a CPU adapter if no GPU is present. See `docs/ARCHITECTURE.md`.
+//! NVIDIA, Intel, or Apple) across Vulkan, Metal, and DX12. The baseline API
+//! renders offscreen without a window; the disabled `gpu-post` feature also
+//! exercises direct window presentation for the Sensory Lift. Both can fall
+//! back to a CPU adapter if no GPU is present. See `docs/ARCHITECTURE.md`.
 
 use bytemuck::{Pod, Zeroable};
 use wgpu::util::DeviceExt;
@@ -12,7 +12,9 @@ use wgpu::util::DeviceExt;
 #[cfg(feature = "gpu-post")]
 mod post;
 #[cfg(feature = "gpu-post")]
-pub use post::{PostCapabilities, PostFrame, SensoryPostRenderer};
+pub use post::{
+    PostCapabilities, PostFrame, SensoryPostRenderer, SensorySurfaceFrame, SensorySurfaceRenderer,
+};
 
 /// Largest frame dimension accepted by the renderer.
 pub const MAX_FRAME_DIMENSION: u32 = 4096;
@@ -51,6 +53,16 @@ pub enum RenderError {
     HostAllocation,
     /// WGPU rejected or could not complete a frame operation.
     Device(wgpu::Error),
+    /// Acquiring the next surface frame timed out.
+    SurfaceTimeout,
+    /// The surface is not currently visible enough to present a frame.
+    SurfaceOccluded,
+    /// The surface configuration no longer matches its window.
+    SurfaceOutdated,
+    /// The presentation surface was lost and must be recreated.
+    SurfaceLost,
+    /// WGPU rejected a surface frame acquisition.
+    SurfaceValidation,
 }
 
 impl std::fmt::Display for RenderError {
@@ -73,6 +85,13 @@ impl std::fmt::Display for RenderError {
             Self::MapRange(error) => write!(formatter, "GPU readback range failed: {error}"),
             Self::HostAllocation => formatter.write_str("GPU frame host allocation failed"),
             Self::Device(error) => write!(formatter, "GPU frame operation failed: {error}"),
+            Self::SurfaceTimeout => formatter.write_str("GPU surface acquisition timed out"),
+            Self::SurfaceOccluded => formatter.write_str("GPU surface is occluded"),
+            Self::SurfaceOutdated => formatter.write_str("GPU surface is outdated"),
+            Self::SurfaceLost => formatter.write_str("GPU surface was lost"),
+            Self::SurfaceValidation => {
+                formatter.write_str("GPU surface acquisition failed validation")
+            }
         }
     }
 }
@@ -244,22 +263,32 @@ impl GpuContext {
     /// Returns an error string if no adapter at all can be acquired.
     pub fn new() -> Result<Self, String> {
         let instance = wgpu::Instance::default();
-        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+        let adapter = Self::request_adapter(&instance, None)?;
+        Self::from_adapter(adapter)
+    }
+
+    fn request_adapter(
+        instance: &wgpu::Instance,
+        compatible_surface: Option<&wgpu::Surface<'_>>,
+    ) -> Result<wgpu::Adapter, String> {
+        pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
-            compatible_surface: None,
+            compatible_surface,
             force_fallback_adapter: false,
             apply_limit_buckets: false,
         }))
         .or_else(|_| {
             pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
-                compatible_surface: None,
+                compatible_surface,
                 force_fallback_adapter: true,
                 apply_limit_buckets: false,
             }))
         })
-        .map_err(|e| format!("no GPU or CPU adapter available: {e:?}"))?;
+        .map_err(|error| format!("no compatible GPU or CPU adapter available: {error:?}"))
+    }
 
+    fn from_adapter(adapter: wgpu::Adapter) -> Result<Self, String> {
         let info = adapter.get_info();
         #[cfg(feature = "gpu-post")]
         let timestamp_queries = adapter.features().contains(wgpu::Features::TIMESTAMP_QUERY);

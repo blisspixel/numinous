@@ -6,7 +6,7 @@ perfection. This document separates gates enforced today from hardening work
 that still has to earn its place. The automated enforcement that exists lives
 in `QUALITY.md` and `.github/workflows/ci.yml`.
 
-## Toolchain and versions (verified 2026-08-01)
+## Toolchain and versions (verified 2026-08-25)
 
 The current baseline is deliberate and green. A newer major release is a review
 candidate, not an automatic upgrade. Compatible patch and minor lockfile
@@ -20,7 +20,7 @@ automatic merges.
 | Rust toolchain | **1.97.1** | Exact developer and CI toolchain (`rust-toolchain.toml`). CI separately checks the verified 1.88 MSRV. |
 | `wgpu` | **30.0.1** | Current GPU stack. The migration preserves unbucketed adapter limits and handles mapped-range failures as typed errors. This patch removes a per-frame Vulkan validation failure and resolves Metal color-space constants dynamically. |
 | `winit`, `softbuffer` | **0.30.x, 0.4.x** | Current native window and software presentation path. |
-| `cpal` | **0.18.1** | Current native audio I/O. Every PCM format is converted from the shared float mix; DSD remains explicitly unsupported. |
+| `cpal` | **0.18.2** | Current native audio I/O. Every PCM format is converted from the shared float mix; DSD remains explicitly unsupported. |
 | `png`, `pollster`, `ureq` | **0.18.1, 1.0.1, 3.3.0** | Current image, blocking-future, and synchronous HTTP baselines. HTTP redirects remain disabled for the credentialed music request and error bodies remain bounded. |
 | `gilrs` | **0.11.2** | Current cross-platform gamepad input. Linux CI installs `libudev-dev`. |
 | Test runner | **cargo test** | Enforced today. `cargo-nextest` is a possible speed improvement, not a current dependency. |
@@ -45,7 +45,7 @@ release.
 
 The release evidence for the major stack lines comes from the official
 [`wgpu` 30.0.1 release](https://github.com/gfx-rs/wgpu/releases/tag/v30.0.1),
-[`cpal` 0.18.1 release](https://github.com/RustAudio/cpal/releases/tag/v0.18.1),
+[`cpal` 0.18.2 release](https://github.com/RustAudio/cpal/releases/tag/v0.18.2),
 and the published crate records for
 [`png` 0.18.1](https://crates.io/crates/png/0.18.1),
 [`pollster` 1.0.1](https://crates.io/crates/pollster/1.0.1), and

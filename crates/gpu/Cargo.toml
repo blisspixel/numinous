@@ -20,9 +20,20 @@ bytemuck = { version = "1", features = ["derive"] }
 png = "0.18"
 serde = { workspace = true }
 serde_json = { workspace = true }
+winit = { version = "0.30", default-features = false, features = [
+    "rwh_06",
+    "wayland",
+    "wayland-csd-adwaita-notitle",
+    "wayland-dlopen",
+    "x11",
+] }
 
 [[example]]
 name = "post_spike"
+required-features = ["gpu-post"]
+
+[[example]]
+name = "surface_spike"
 required-features = ["gpu-post"]
 
 [lints]

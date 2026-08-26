@@ -5,6 +5,15 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The disabled `gpu-post` feature now has a reusable direct presentation path.
+  It creates a surface safely from an owned window handle, selects a compatible
+  adapter and sRGB format, requests FIFO pacing with one frame in flight, and
+  tone maps the shared five-pass post stack directly into the acquired surface
+  texture. The presentation path allocates no offscreen output or readback
+  buffer. A real-window harness records acquisition, render-and-present, and
+  combined host boundaries separately, reports every transient or suboptimal
+  frame, and states that compositor and display scanout remain outside the
+  measurement.
 - A disabled-by-default `gpu-post` spike now measures the Sensory Lift's
   proposed post stack without changing the shipped App path. It uploads sRGB
   frames, renders into linear `Rgba16Float`, performs a half-resolution bright

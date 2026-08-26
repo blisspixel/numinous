@@ -9,12 +9,14 @@ How Numinous is built. Non-negotiables: it is a **real native application** (not
 
 **Shipped stack, 2026-07-18:** the app uses a bespoke `winit` event loop,
 `softbuffer` CPU presentation, `gilrs` standard-controller input, and targeted
-`wgpu` paths for Mandelbrot and Julia. The headless core renders every room
-through `Surface`; the CLI and MCP faces consume the same core. Audio uses
+`wgpu` paths for Mandelbrot and Julia. A disabled Sensory Lift spike now owns a
+linear HDR and bloom post stack plus direct `wgpu` surface presentation, but it
+does not yet replace the App's shipped presentation path. The headless core
+renders every room through `Surface`; the CLI and MCP faces consume the same core. Audio uses
 `cpal`, custom deterministic stereo synthesis with crossfaded loop sources,
 `hound`, and a bounded `symphonia` MP3 decoder. Bevy, `fundsp`, `kira`, CUDA,
-Triton, Wasmtime plugins, the full pattern DSL, bloom, and packaged installers
-are not current dependencies. They remain options or roadmap targets where this
+Triton, Wasmtime plugins, the full pattern DSL, and packaged installers are not
+current dependencies. They remain options or roadmap targets where this
 document names them.
 
 ## First, untangle the question
@@ -95,6 +97,11 @@ dependency.
   `Surface`, with a time-budgeted app downscale for expensive live frames.
 - **Shipped GPU path:** WGSL through `wgpu` for Mandelbrot and Julia, with CPU
   fallback and deterministic headless exports.
+- **Measured presentation candidate:** the disabled `gpu-post` feature shares
+  one five-pass linear HDR and bloom implementation between deterministic
+  offscreen validation and a direct sRGB window surface. The window path keeps
+  one frame in flight and writes its final tone-map pass into the acquired
+  surface texture without an intermediate output copy or readback.
 - **Optional future fast path:** CUDA or Triton only if measurement proves that
   a specific extreme room cannot meet its budget through portable WGSL.
 - **Experimental sandbox (later, easter-egg): Bend/HVM** as a literal "alternate compute universe" a curious user can switch a room into, which is both a real technical experiment and perfectly on-theme with the Lore. Never on the critical path.
