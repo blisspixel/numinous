@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The GPU stack moves from `wgpu` 30.0.0 to 30.0.1 before the measured Sensory
+  Lift spike. The upstream patch removes a Vulkan validation failure that fired
+  every frame on affected non-Windows paths and resolves Metal color-space
+  constants dynamically, so presentation measurements start from the current
+  corrected baseline.
 - `list_rooms` now begins at a three-door threshold instead of printing the
   355-room index: touch the Times Tables flagship, follow a six-room Strange
   Loop walk, or wander through compact wing summaries. Every door carries an
