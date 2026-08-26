@@ -282,7 +282,10 @@ gestures, mutual exclusion, canonical echo, and interaction-aware render and
 status projection. A focused MCP `transport` adapter owns bounded newline
 framing, overflow resynchronization without a second request-sized allocation,
 and flushed one-line response writes. JSON-RPC semantics and dispatch remain
-in the request entry point. A focused CLI `studio` adapter owns raw source-mode
+in the request entry point. A focused MCP `sim_tools` adapter owns simulation
+discovery text, lever argument validation, and structured result projection;
+core retains simulation metadata, bounds, rendering, and readouts. A focused
+CLI `studio` adapter owns raw source-mode
 selection, terminal error projection, bounded capsule loading, never-clobber
 save and fork writes, sing-input resolution, and open-report formatting. Core
 continues to own Studio parsing, evaluation, request bounds, rendering, capsule
