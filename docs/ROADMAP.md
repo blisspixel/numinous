@@ -58,7 +58,7 @@ unclaimed until run.
 | **1. Keep agent first contact CI-green** | Agent hallway and tactile cohorts run on every PR; optional local-model visits exercise genuine choice after meaningful MCP experience changes | Deterministic cohorts guard 0.2 and 0.3 regressions, while real-model visits can expose interaction failures without turning free play into a flaky or expensive gate |
 | **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests, the typed room catalog, typed Gauntlet truth, and local-state path resolution are now in core. CLI and MCP local-state adapters plus the MCP discovery and schema catalog are focused modules extracted from the god-files; workstream 7 still owns the remaining seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
 | **3. The Mind's Seat** | Exact two-observation temporal evidence, multi-look `dwell`, exact ratio annotations on note pairs, sound returned as a real audio file rather than as notation about one, emit-only Numinous Encounter Receipts on `play_room`, explicit journal promotion of a live-matching receipt, a resettable process-local session workspace, source-explained remembered-room retrieval, a non-disclosing remembered-room doorway cue, the three-door room threshold with an ordered Strange Loop walk, and MCP creation parity with identity and lineage are built. Next: the portable typed evidence capsule and a Show for minds. The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
-| **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | The feature-gated linear HDR, half-resolution bloom, and tone-map spike passes its reference integrated-GPU budgets at 1080p and 1440p; an equivalent reusable single-threaded CPU reference fails both. Next: measure direct presentation, then choose the production Surface architecture. The full lift still owns splats, one shared audio bus with reverb and shaped envelopes, global dissolve, and damped-spring input | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
+| **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | The feature-gated linear HDR, half-resolution bloom, and tone-map spike passes its reference integrated-GPU budgets at 1080p and 1440p; an equivalent reusable single-threaded CPU reference fails both. Direct FIFO presentation now passes both full host boundaries too, without an offscreen output copy or readback. The production candidate is one shared post stack with deterministic offscreen validation and direct `wgpu` surface output. Next: feed real App room rasters through the disabled path and prove Windows, macOS, and Linux correctness and pacing before promotion. The full lift still owns splats, one shared audio bus with reverb and shaped envelopes, global dissolve, and damped-spring input | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
 | **6. Creator depth on the built loop** | Next rungs: the parametric pair as the multi-expression capsule ring with scale quantization beside it, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on later community publishing, and each rung ships with its own machine gates |
 | **7. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps into one committed per-room evidence file, after the Sensory Lift | Rooms should be judged at their best, not at the old ceiling; the five commissioned rooms lead the next cohort after the review |
@@ -158,9 +158,22 @@ The Sensory Lift de-risk spike advances through separately honest boundaries:
    1440p against 33 ms and 50 ms budgets. This rejects that implementation,
    not every possible CPU design. Optional PNG previews and a focused
    neighbor-lighting test keep the comparison tied to visible bloom.
-3. **Direct presentation, next:** measure the GPU output through the proposed
-   surface boundary. The GPU result permits that experiment; it does not yet
-   alter App output.
+3. **Direct presentation, built and measured:** one shared pipeline now targets
+   either the deterministic offscreen validator or an acquired sRGB surface.
+   The surface path negotiates a compatible adapter and format, requests FIFO
+   pacing with one frame in flight, and tone maps directly into the acquired
+   texture without an offscreen output copy or readback. On the same Windows
+   AMD Radeon 780M Vulkan reference, combined acquire-through-present-request
+   p95 was 17.447 ms at 1080p and 18.378 ms at 1440p, with zero transient or
+   suboptimal frames across 120 retained samples at each size. The raw receipt,
+   exact revision, binary digest, window contract, and limits live in
+   `docs/evidence/sensory-surface-spike-2026-08-25.json`. This chooses the
+   production candidate, but does not alter App output.
+4. **Real App integration and platform proof, next:** feed actual room rasters
+   through the disabled surface renderer, then establish correctness and pacing
+   on Windows, macOS, and Linux before deciding whether it may replace
+   `softbuffer`. Compositor work, scanout, input latency, and aesthetics remain
+   separate boundaries.
 
 ### The Polish Wave (August 2026): seven critics, one goal
 
@@ -2115,11 +2128,12 @@ cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
    creation and lineage parity exist: build the portable typed evidence capsule
    and then the Show for minds.
    Keep memory opt-in, player-owned, correctable, exportable, and erasable.
-4. Run the Sensory Lift de-risk spike in parallel. Expand it only when the
-   measured GPU post path, CPU bloom comparison, and direct presentation
-   boundary justify the architecture. GPU feasibility passes and the measured
-   single-threaded CPU reference fails; direct presentation remains. Then
-   re-baseline the visual and audio goldens once.
+4. Continue the Sensory Lift in parallel. GPU feasibility and the direct
+   presentation boundary pass, while the measured single-threaded CPU reference
+   fails. The chosen candidate shares one post stack between deterministic
+   offscreen validation and direct `wgpu` surface output. Feed real App room
+   rasters through the disabled path and prove it on Windows, macOS, and Linux
+   before promotion, then re-baseline the visual and audio goldens once.
 5. Author the opening and Show arc, raise the creator ladder, and aggregate the
    keep-or-cut scorecard after the lift, in the order owned by the table above.
 6. Keep the completed seven-room Universal Wager and generic call green while

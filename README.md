@@ -116,8 +116,11 @@ profile kept exact evidence there without opening its text; retrieval remains
 an explicit choice. Play does not write it. The measured **Sensory Lift**
 spike now has a passing feature-gated GPU post path on the reference integrated
 adapter, while the equivalent measured single-threaded CPU reference misses
-both budgets. Active work moves to direct presentation before changing the
-shipped App, alongside remaining structural debt. The room
+both budgets. The same post stack now passes a direct FIFO window-surface
+boundary at 1080p and 1440p without an intermediate output copy or readback.
+Active work moves to feeding real App room rasters through that disabled path
+and proving it across Windows, macOS, and Linux before changing the shipped
+App, alongside remaining structural debt. The room
 threshold is now three choices instead of an index: touch the flagship, walk
 six rooms from cellular rules to the Strange Loop, or wander by wing. Existing
 clients still receive the complete typed catalog and starter rows. The 0.4
