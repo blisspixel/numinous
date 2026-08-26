@@ -9,6 +9,11 @@
 use bytemuck::{Pod, Zeroable};
 use wgpu::util::DeviceExt;
 
+#[cfg(feature = "gpu-post")]
+mod post;
+#[cfg(feature = "gpu-post")]
+pub use post::{PostCapabilities, PostFrame, SensoryPostRenderer};
+
 /// Largest frame dimension accepted by the renderer.
 pub const MAX_FRAME_DIMENSION: u32 = 4096;
 
@@ -24,6 +29,13 @@ pub enum RenderError {
         width: u32,
         /// Requested frame height.
         height: u32,
+    },
+    /// The supplied RGBA frame does not match its declared dimensions.
+    InvalidInputLength {
+        /// Required byte count for the declared dimensions.
+        expected: usize,
+        /// Supplied byte count.
+        actual: usize,
     },
     /// The selected device cannot support this frame resource or dispatch.
     DeviceLimit(&'static str),
@@ -50,6 +62,10 @@ impl std::fmt::Display for RenderError {
                     "unsupported GPU frame dimensions {width}x{height}"
                 )
             }
+            Self::InvalidInputLength { expected, actual } => write!(
+                formatter,
+                "GPU frame requires {expected} RGBA bytes, received {actual}"
+            ),
             Self::DeviceLimit(limit) => write!(formatter, "GPU frame exceeds {limit}"),
             Self::Poll(error) => write!(formatter, "GPU device poll failed: {error}"),
             Self::MapCallbackDropped => formatter.write_str("GPU map callback was dropped"),
@@ -181,6 +197,10 @@ pub struct GpuContext {
     queue: wgpu::Queue,
     adapter_name: String,
     backend: String,
+    #[cfg(feature = "gpu-post")]
+    timestamp_queries: bool,
+    #[cfg(feature = "gpu-post")]
+    rgba16_float_features: wgpu::TextureFormatFeatures,
 }
 
 /// Uniform parameters for the fractal shader. Layout matches `mandelbrot.wgsl`.
@@ -241,15 +261,35 @@ impl GpuContext {
         .map_err(|e| format!("no GPU or CPU adapter available: {e:?}"))?;
 
         let info = adapter.get_info();
-        let (device, queue) =
-            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
-                .map_err(|e| format!("failed to acquire device: {e:?}"))?;
+        #[cfg(feature = "gpu-post")]
+        let timestamp_queries = adapter.features().contains(wgpu::Features::TIMESTAMP_QUERY);
+        #[cfg(feature = "gpu-post")]
+        let required_features = if timestamp_queries {
+            wgpu::Features::TIMESTAMP_QUERY
+        } else {
+            wgpu::Features::empty()
+        };
+        #[cfg(not(feature = "gpu-post"))]
+        let required_features = wgpu::Features::empty();
+        #[cfg(feature = "gpu-post")]
+        let rgba16_float_features =
+            adapter.get_texture_format_features(wgpu::TextureFormat::Rgba16Float);
+        let descriptor = wgpu::DeviceDescriptor {
+            required_features,
+            ..wgpu::DeviceDescriptor::default()
+        };
+        let (device, queue) = pollster::block_on(adapter.request_device(&descriptor))
+            .map_err(|e| format!("failed to acquire device: {e:?}"))?;
 
         Ok(Self {
             device,
             queue,
             adapter_name: info.name,
             backend: format!("{:?}", info.backend),
+            #[cfg(feature = "gpu-post")]
+            timestamp_queries,
+            #[cfg(feature = "gpu-post")]
+            rgba16_float_features,
         })
     }
 
