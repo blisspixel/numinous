@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP Formula Jam discovery, still plots, portable save, open, and fork
+  projections, and melody responses now live in one focused face-local Studio
+  adapter. Core retains parsing, evaluation, rendering, melody construction,
+  capsule identity, and lineage. The 214 MCP unit tests, 21 real stdio sessions,
+  and creator roundtrip and parity cohorts preserve the public behavior.
 - MCP simulation listing, lever validation, rendering, and structured readout
   projection now live in one focused face-local adapter. Simulation metadata,
   bounds, rendering, and readouts remain core-owned, while five integration
