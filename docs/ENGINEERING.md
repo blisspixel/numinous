@@ -18,7 +18,7 @@ automatic merges.
 | --- | --- | --- |
 | Rust edition | **2024** | The current edition; use it from the first commit. |
 | Rust toolchain | **1.97.1** | Exact developer and CI toolchain (`rust-toolchain.toml`). CI separately checks the verified 1.88 MSRV. |
-| `wgpu` | **30.0.0** | Current GPU stack. The migration preserves unbucketed adapter limits and handles mapped-range failures as typed errors. |
+| `wgpu` | **30.0.1** | Current GPU stack. The migration preserves unbucketed adapter limits and handles mapped-range failures as typed errors. This patch removes a per-frame Vulkan validation failure and resolves Metal color-space constants dynamically. |
 | `winit`, `softbuffer` | **0.30.x, 0.4.x** | Current native window and software presentation path. |
 | `cpal` | **0.18.1** | Current native audio I/O. Every PCM format is converted from the shared float mix; DSD remains explicitly unsupported. |
 | `png`, `pollster`, `ureq` | **0.18.1, 1.0.1, 3.3.0** | Current image, blocking-future, and synchronous HTTP baselines. HTTP redirects remain disabled for the credentialed music request and error bodies remain bounded. |
@@ -44,7 +44,7 @@ Bump pins through review when Dependabot or a manual check shows a newer
 release.
 
 The release evidence for the major stack lines comes from the official
-[`wgpu` 30.0.0 release](https://github.com/gfx-rs/wgpu/releases/tag/v30.0.0),
+[`wgpu` 30.0.1 release](https://github.com/gfx-rs/wgpu/releases/tag/v30.0.1),
 [`cpal` 0.18.1 release](https://github.com/RustAudio/cpal/releases/tag/v0.18.1),
 and the published crate records for
 [`png` 0.18.1](https://crates.io/crates/png/0.18.1),
