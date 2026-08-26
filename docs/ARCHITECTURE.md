@@ -273,8 +273,12 @@ one core contract into terminal prose or structured protocol results; neither
 module reimplements persistence rules. The CLI also keeps accessibility switch
 interpretation, `NO_COLOR` policy, known-limit disclosure, and report formatting
 in a focused face-local `access` module. The command entry point only gathers
-raw environment values and prints the result. The MCP face also keeps protocol
-discovery, legacy negotiation, server identity, and its immutable 40-tool JSON
+raw environment values and prints the result. A focused CLI `render_input`
+module owns render size bounds, static hand-point and pointer-gesture parsing,
+their mutual exclusion, and the typed input projection shared by render,
+share, sonify, and Studio paths. Room behavior remains in core. The MCP face
+also keeps protocol discovery, legacy negotiation, server identity, and its
+immutable 40-tool JSON
 Schema catalog in a focused `catalog` module. The request entry point retains
 transport validation, dispatch, result decoration, and domain invocation.
 The App preference store uses a strict std-only core schema for volume, mute,
