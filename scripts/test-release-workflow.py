@@ -20,7 +20,7 @@ PERFORMANCE_RECEIPT_COMMAND = (
 )
 ATTEST_ACTION = "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2"
 INSTALL_ACTION = (
-    "taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13"
+    "taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7"
 )
 RUST_TOOLCHAIN_ACTION = (
     "dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1"
