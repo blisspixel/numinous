@@ -5,6 +5,13 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- `describe_room` now offers a non-disclosing cue when this local player
+  profile has current exact-subject journal evidence for the room. The typed
+  cue returns no journal contents, changes no visit workspace state, and points
+  to the existing explicit retrieval operation. It disappears after erasure,
+  reports unreadable storage without leaking a path, and stays outside the
+  consented Watch Agent projection. Unit, handler, and real stdio regressions
+  lock the privacy and lifecycle boundary.
 - MCP journal reads, writes, corrections, exports, verified erasure, receipt
   promotion, pagination, and entry projection now live in one private journal
   module instead of the face's entry point. Receipt promotion takes a narrow

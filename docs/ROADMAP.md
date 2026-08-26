@@ -57,7 +57,7 @@ unclaimed until run.
 | --- | --- | --- |
 | **1. Keep agent first contact CI-green** | Agent hallway and tactile cohorts run on every PR; optional local-model visits exercise genuine choice after meaningful MCP experience changes | Deterministic cohorts guard 0.2 and 0.3 regressions, while real-model visits can expose interaction failures without turning free play into a flaky or expensive gate |
 | **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests, the typed room catalog, typed Gauntlet truth, and local-state path resolution are now in core. CLI and MCP local-state adapters plus the MCP discovery and schema catalog are focused modules extracted from the god-files; workstream 7 still owns the remaining seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
-| **3. The Mind's Seat** | Exact two-observation temporal evidence, multi-look `dwell`, exact ratio annotations on note pairs, sound returned as a real audio file rather than as notation about one, emit-only Numinous Encounter Receipts on `play_room`, explicit journal promotion of a live-matching receipt, a resettable process-local session workspace, source-explained remembered-room retrieval, and MCP creation parity with identity and lineage are built. Next: journal surfacing at the door of a remembered room; the threshold (three doors instead of an index, the Strange Loop walk exposed). The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
+| **3. The Mind's Seat** | Exact two-observation temporal evidence, multi-look `dwell`, exact ratio annotations on note pairs, sound returned as a real audio file rather than as notation about one, emit-only Numinous Encounter Receipts on `play_room`, explicit journal promotion of a live-matching receipt, a resettable process-local session workspace, source-explained remembered-room retrieval, a non-disclosing remembered-room doorway cue, and MCP creation parity with identity and lineage are built. Next: the threshold, three doors instead of an index with the Strange Loop walk exposed. The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
 | **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | Splats, float accumulation, and bloom inside `Raster`; one shared audio bus with reverb and shaped envelopes; global dissolve and damped-spring input. The spike that precedes it: `crates/gpu` rendering into the existing Surface contract behind a feature flag, and a measured bloom budget on the CPU path | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
 | **6. Creator depth on the built loop** | Next rungs: the parametric pair as the multi-expression capsule ring with scale quantization beside it, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on later community publishing, and each rung ships with its own machine gates |
@@ -126,9 +126,18 @@ The Mind's Seat advances through independently testable increments:
    semantics as the other faces. CLI and MCP share one core fork operation.
    The calls remain private under Watch Agent policy, and journal v3 can retain
    every valid capsule link exactly while migrating strict v2 input.
-10. **Portable capsule:** native typed evidence and creations travel with an OKF
+10. **Remembered-room doorway, built:** `describe_room` reports only that this
+    local player profile has current exact-subject journal evidence for the
+    room. It does not return journal contents or mutate the workspace. The cue
+    names the explicit `workspace` retrieval call, disappears after erasure,
+    reports unreadable storage without exposing a path, and stays outside the
+    consented public viewer projection.
+11. **Three-door threshold:** replace the 355-room first choice with one
+    astonishing room, an ordered Strange Loop walk, or a compact wing wander,
+    while retaining the complete typed catalog for compatible clients.
+12. **Portable capsule:** native typed evidence and creations travel with an OKF
    v0.2 knowledge projection plus explicit privacy and retention metadata.
-11. **Reflection proposals:** only after retrieval, correction, export, and
+13. **Reflection proposals:** only after retrieval, correction, export, and
     deletion invariants hold.
 
 ### The Polish Wave (August 2026): seven critics, one goal
@@ -292,10 +301,10 @@ sequence:
    temporal delta is built, so one stateless call can carry two exact states
    without claiming duration. Emit-only Numinous Encounter Receipts on
    `play_room` and explicit journal promotion of a live match are built. The
-   resettable session workspace and source-explained remembered-room retrieval
-   and MCP creation and lineage parity are built. Next come a Show for minds
-   and journal surfacing at the door of a remembered room. Ratio annotations on
-   note pairs already ship. The README's first-class claim is earned in
+   resettable session workspace, source-explained remembered-room retrieval,
+   the non-disclosing remembered-room doorway cue, and MCP creation and lineage
+   parity are built. Next come the three-door threshold and a Show for minds.
+   Ratio annotations on note pairs already ship. The README's first-class claim is earned in
    time and company, not only in truth.
 2. **The Sensory Lift (Phase B, unparked).** Float accumulation, soft splats,
    and bloom inside `Raster` so every room inherits them untouched; one shared
@@ -825,6 +834,14 @@ Detail below and in the version sections.
   Pure core selection, face handler, schema, and real two-state stdio
   regressions cover canonical aliases, bounds, correction, process-local carry,
   abstention, supersession, and deletion.
+- **Done (Mind's Seat remembered-room doorway, August 25, 2026):**
+  `describe_room` can say that this local player profile kept exact current-room
+  evidence without opening entry text or changing the process-local workspace.
+  Its typed cue points to the explicit retrieval operation, disappears after
+  erasure, and reports unreadable storage without exposing the journal path.
+  The Watch Agent projection omits the private cue. Unit, handler, and real
+  stdio regressions cover canonical aliases, correction, text non-search,
+  non-disclosure, explicit retrieval, and erasure.
 - **Done (Mind's Seat MCP creation parity, August 22, 2026):** three private
   creation tools save, open, and fork the shared core Studio capsule without
   host filesystem access. The response carries canonical `.num` text, native
@@ -2061,9 +2078,9 @@ cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
 1. Keep all am CI gates green (cohorts, goldens, soak, creator, auditors).
 2. Close the remaining structural Polish Wave debts without reopening the
    player-facing workstreams that already passed their exit.
-3. Continue the Mind's Seat now that deliberate remembered-room retrieval and
-   MCP creation and lineage parity exist: surface journal evidence at the room
-   door, then build the Strange Loop threshold.
+3. Continue the Mind's Seat now that deliberate remembered-room retrieval,
+   its non-disclosing room-door cue, and MCP creation and lineage parity exist:
+   build the Strange Loop threshold.
    Keep memory opt-in, player-owned, correctable, exportable, and erasable.
 4. Run the Sensory Lift de-risk spike in parallel. Expand it only when the
    measured `crates/gpu` and CPU bloom budgets justify the architecture; then

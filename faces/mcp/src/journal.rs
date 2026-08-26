@@ -9,6 +9,47 @@ use super::{encounter::parse_submitted_receipt, tool_error, tool_structured, too
 pub(super) const DEFAULT_PAGE_ENTRIES: usize = 50;
 pub(super) const MAX_PAGE_ENTRIES: usize = 100;
 
+/// Surface only whether exact current room evidence is available.
+///
+/// The cue never returns journal contents or mutates the visit workspace. A
+/// later explicit workspace retrieval remains the only path that opens the
+/// entries and their provenance.
+pub(super) fn room_cue(path: &std::path::Path, room: &str) -> Option<(Value, &'static str)> {
+    match numinous_core::try_load_journal_file(path) {
+        Ok(journal) if journal.current_room_entries(room, 1).is_empty() => None,
+        Ok(_) => Some((
+            json!({
+                "schema": "numinous.remembered-room-cue",
+                "schemaVersion": 1,
+                "status": "remembered",
+                "selection": "exact-current-room-subject",
+                "contentsReturned": false,
+                "next": {
+                    "tool": "workspace",
+                    "arguments": {
+                        "op": "retrieve",
+                        "room": room,
+                    }
+                }
+            }),
+            "Something this local player profile chose to keep is here. No journal text was opened. Retrieve it only if you choose.",
+        )),
+        Err(_) => Some((
+            json!({
+                "schema": "numinous.remembered-room-cue",
+                "schemaVersion": 1,
+                "status": "unavailable",
+                "contentsReturned": false,
+                "next": {
+                    "tool": "read_journal",
+                    "arguments": {}
+                }
+            }),
+            "The local journal could not be read, so Numinous cannot tell whether this room was kept. No journal contents were returned.",
+        )),
+    }
+}
+
 /// Inspect a player-owned journal page without hiding persistence errors.
 pub(super) fn read_tool(args: &Value, path: &std::path::Path) -> Value {
     let journal = match numinous_core::try_load_journal_file(path) {
@@ -423,6 +464,82 @@ mod tests {
         super::record_tool(args, path, |_tool: EncounterTool, _args: &Value| {
             panic!("a receipt-free journal test must not request replay")
         })
+    }
+
+    #[test]
+    fn room_cues_name_availability_without_opening_the_journal() {
+        let path = crate::test_state_path("journal-room-cue");
+        let original = numinous_core::record_journal_file(
+            &path,
+            numinous_core::JournalRecord {
+                recorded_at_utc: 10,
+                event_at_utc: 5,
+                source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "encounter",
+                subject: "kepler-areas",
+                text: "Private orbit note",
+                affect: Some("Private feeling"),
+            },
+        )
+        .expect("record room entry");
+        numinous_core::correct_journal_file(
+            &path,
+            20,
+            None,
+            numinous_core::JOURNAL_SOURCE_PLAYER_PROVIDED,
+            original.entry_id,
+            "Corrected private orbit note",
+            None,
+        )
+        .expect("correct room entry");
+        numinous_core::record_journal_file(
+            &path,
+            numinous_core::JournalRecord {
+                recorded_at_utc: 30,
+                event_at_utc: 30,
+                source: numinous_core::JOURNAL_SOURCE_NUMINOUS_RESULT,
+                kind: "encounter",
+                subject: "receipt:opaque-proof",
+                text: "Mentions mandelbrot only in private text",
+                affect: None,
+            },
+        )
+        .expect("record receipt entry");
+
+        let (cue, prose) = super::room_cue(&path, "kepler-laws").expect("alias cue");
+        assert_eq!(cue["status"], "remembered");
+        assert_eq!(cue["contentsReturned"], false);
+        assert_eq!(cue["next"]["tool"], "workspace");
+        assert_eq!(cue["next"]["arguments"]["room"], "kepler-laws");
+        let projected = serde_json::to_string(&cue).expect("serialize cue");
+        for private in [
+            "Private orbit note",
+            "Private feeling",
+            "Corrected private orbit note",
+            "self-authored",
+            "player-provided",
+            "opaque-proof",
+        ] {
+            assert!(!projected.contains(private));
+            assert!(!prose.contains(private));
+        }
+        assert!(super::room_cue(&path, "mandelbrot").is_none());
+
+        numinous_core::erase_journal_file(&path).expect("erase journal");
+        assert!(super::room_cue(&path, "kepler-laws").is_none());
+
+        std::fs::write(&path, "not a journal\n").expect("malformed journal");
+        let (unavailable, unavailable_prose) =
+            super::room_cue(&path, "kepler-laws").expect("malformed journal is visible");
+        assert_eq!(unavailable["status"], "unavailable");
+        assert_eq!(unavailable["next"]["tool"], "read_journal");
+        assert!(
+            !serde_json::to_string(&unavailable)
+                .expect("serialize unavailable cue")
+                .contains(path.to_str().expect("test path is UTF-8"))
+        );
+        assert!(!unavailable_prose.contains(path.to_str().expect("test path is UTF-8")));
+        numinous_core::remove_persisted_file(&path).expect("remove malformed journal");
     }
 
     #[test]

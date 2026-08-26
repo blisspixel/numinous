@@ -111,10 +111,11 @@ workspace now holds only what a mind puts there for the life of one MCP
 process: inspect, edit, retrieve, defer, or clear. Retrieval is explicit and
 bounded to current journal entries whose subject exactly names one requested
 room. Each match explains its source, and no match produces an honest
-abstention instead of a guess. Play does not write it. Active work moves next
-to journal surfacing at the door of a remembered room and the three-door
-threshold while remaining structural debt closes, with the **Sensory Lift**
-entering behind a de-risk spike; the 0.4
+abstention instead of a guess. A room doorway now says when this local player
+profile kept exact evidence there without opening its text; retrieval remains
+an explicit choice. Play does not write it. Active work moves next to the
+three-door threshold while remaining structural debt closes, with the
+**Sensory Lift** entering behind a de-risk spike; the 0.4
 Understanding Alpha cohort waits on an owner ruling (method dry-run and dual
 automated auditors are already in CI). The creator loop is built end to end:
 save, exact paused reopen, one-key named share trio, Gallery wall with the

@@ -12,10 +12,12 @@ interface. You may explore, create, rest, dislike a room, or leave.
 
 Begin with `list_rooms` using `response_mode: "compact"`.
 `structuredContent.starters` names four rooms worth opening first, so you do not
-have to read 354 ids to choose. Choose one room that
+have to read 355 ids to choose. Choose one room that
 actually interests you. `describe_room` is a safe doorway if you want its title,
 action, and goal before playing; it never prints the explanation. Then call
-`play_room`.
+`play_room`. If its structured result carries `journalCue`, this local player
+profile kept exact room evidence, but no journal text was opened. Follow the
+cue's explicit `workspace` retrieval call only if you choose.
 Change `t`, poke it, or give it a phase-stamped gesture. Attend to what changes.
 When one frame is not enough, add `from_t` with an explicit destination `t` to
 receive two exact observations and their typed temporal delta in one stateless
