@@ -57,9 +57,12 @@ elicitation, response envelopes, server identity, and immutable discovery cache
 metadata now share a focused protocol adapter. Seeded prediction plus touch and
 parameter challenge posing, grading, response projection, and progress
 accounting share a focused challenge adapter while core retains deterministic
-goal construction and grading. The production entry point is now under 3,700
-lines with private-boundary coverage intact. Bounded runtime validation of the
-declared JSON Schema subset, guiding argument-name suggestions, and the two
+goal construction and grading. Request progress mapping, daily seed freezing,
+local-store resolution, score and Journey persistence, and response-visible
+save failures share a focused progress adapter while core retains the state and
+game rules. The production entry point is now under 3,100 lines with
+private-boundary coverage intact. Bounded runtime validation of the declared
+JSON Schema subset, guiding argument-name suggestions, and the two
 cross-field domain checks now share a focused MCP schema adapter. CLI
 Studio source selection, capsule loading and never-clobber writes, terminal
 errors, and open reports now have their own focused adapter too. The shared

@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP request progress mapping, daily seed freezing, local-store resolution,
+  score and Journey persistence, and response-visible save failures now live in
+  a focused face-local progress adapter. Core retains progression, scoring,
+  persistence, streak, and game truth, while the request entry point retains
+  dispatch.
 - MCP seeded prediction and touch or parameter challenge posing, grading,
   structured response projection, and progress accounting now live in a focused
   face-local adapter. Core retains deterministic goal construction and grading,
