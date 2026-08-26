@@ -5,6 +5,14 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Pull requests and `main` now use one CI workflow and one protected `main CI`
+  result. The aggregate waits for quality, MSRV, house style, supply-chain,
+  audit, coverage, the three-platform build matrix, and a read-only reusable
+  workflow that builds and audits all four native packages. It runs even after
+  a dependency fails and accepts only success, so one stable public result does
+  not hide skipped or failed work. The tag release entry calls that same
+  package boundary, while attestation and publication permissions remain
+  isolated to tag-only jobs.
 - The real App can now present its actual room rasters through the direct
   Sensory Lift surface behind the disabled `gpu-post` feature. One presenter
   owns either the GPU or software surface, resizes it with the window, and

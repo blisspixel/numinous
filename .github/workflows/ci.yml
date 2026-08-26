@@ -213,3 +213,45 @@ jobs:
         run: bash scripts/install.sh --self-test
       - name: Locked build
         run: cargo build --workspace --locked
+
+  release-artifacts:
+    name: release artifacts
+    uses: ./.github/workflows/release-packages.yml
+
+  main-ci:
+    name: main CI
+    if: always()
+    needs:
+      - quality
+      - msrv
+      - house-style
+      - supply-chain
+      - audit
+      - coverage
+      - build
+      - release-artifacts
+    runs-on: ubuntu-latest
+    env:
+      QUALITY_RESULT: ${{ needs.quality.result }}
+      MSRV_RESULT: ${{ needs.msrv.result }}
+      HOUSE_STYLE_RESULT: ${{ needs.house-style.result }}
+      SUPPLY_CHAIN_RESULT: ${{ needs.supply-chain.result }}
+      AUDIT_RESULT: ${{ needs.audit.result }}
+      COVERAGE_RESULT: ${{ needs.coverage.result }}
+      BUILD_RESULT: ${{ needs.build.result }}
+      RELEASE_ARTIFACTS_RESULT: ${{ needs.release-artifacts.result }}
+    steps:
+      - name: Require every CI job
+        run: |
+          for result in \
+            "$QUALITY_RESULT" \
+            "$MSRV_RESULT" \
+            "$HOUSE_STYLE_RESULT" \
+            "$SUPPLY_CHAIN_RESULT" \
+            "$AUDIT_RESULT" \
+            "$COVERAGE_RESULT" \
+            "$BUILD_RESULT" \
+            "$RELEASE_ARTIFACTS_RESULT"
+          do
+            test "$result" = success
+          done
