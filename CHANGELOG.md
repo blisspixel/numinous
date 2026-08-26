@@ -5,6 +5,15 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Physical Sensory Lift promotion now has an independent closed-set verifier.
+  It rejects ambiguous or oversized JSON, unknown fields, hosted or debug
+  runs, software adapters, incomplete machine facts, transient frames, source
+  drift, stale summaries, broken timing segment arithmetic, missed budgets,
+  missing or duplicate OS and resolution cells, mixed pair identity, mixed
+  revisions, and fewer than two physical adapters. A passing build writes one
+  canonical source-bound manifest that hashes the exact six raw receipts for
+  Windows, macOS, and Linux at 1080p and 1440p. The verifier and its original
+  platform-proof workflow contract now run in local, pre-commit, and CI gates.
 - The disabled Sensory Lift App path now has a claim-safe three-platform proof
   contract. A bounded example composes the deterministic Times Tables room
   through the App's production HUD, audio badge, visualizer, Era transform,

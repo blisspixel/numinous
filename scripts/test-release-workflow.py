@@ -42,7 +42,8 @@ HOOK_TRIGGER = (
     "scripts/(check|verify)\\.(ps1|sh)|scripts/hooks/pre-commit|"
     "scripts/(package-release|test-package-release|release-engagement-smoke|"
     "test-release-engagement-smoke|input-hardware-session|"
-    "test-input-hardware-session|release-sbom|test-release-sbom|"
+    "test-input-hardware-session|sensory-platform-set|"
+    "test-sensory-platform-(proof|set)|release-sbom|test-release-sbom|"
     "test-release-workflow|dependency-migration-performance|"
     "test-dependency-migration-performance)\\.py)$'"
 )
