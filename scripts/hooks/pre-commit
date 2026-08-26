@@ -81,7 +81,7 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
 fi
 
 if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
-    | grep -zqE '^(\.github/workflows/(ci|release)\.yml|docs/evidence/dependency-migration-[0-9-]+\.json|scripts/(check|verify)\.(ps1|sh)|scripts/hooks/pre-commit|scripts/(package-release|test-package-release|release-engagement-smoke|test-release-engagement-smoke|input-hardware-session|test-input-hardware-session|release-sbom|test-release-sbom|test-release-workflow|dependency-migration-performance|test-dependency-migration-performance)\.py)$'; then
+    | grep -zqE '^(\.github/workflows/(ci|release|release-packages)\.yml|docs/evidence/dependency-migration-[0-9-]+\.json|scripts/(check|verify)\.(ps1|sh)|scripts/hooks/pre-commit|scripts/(package-release|test-package-release|release-engagement-smoke|test-release-engagement-smoke|input-hardware-session|test-input-hardware-session|release-sbom|test-release-sbom|test-release-workflow|dependency-migration-performance|test-dependency-migration-performance)\.py)$'; then
   if command -v python3 >/dev/null 2>&1; then
     release_python=python3
   elif command -v python >/dev/null 2>&1; then

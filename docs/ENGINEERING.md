@@ -118,6 +118,23 @@ and the published crate records for
 - **Determinism is mandatory:** seeded RNG only, never ambient randomness or wall-clock time in logic; same seed, same result (so shares and tests reproduce exactly).
 - **Coverage** is tracked with `cargo-llvm-cov` and read as a *smell detector*, not a target. The real metric is meaningful assertions on real behavior, not a percentage. We do not write tests to move a number.
 
+## Continuous integration contract
+
+`.github/workflows/ci.yml` is the only pull request and `main` entry point. It
+fans out the quality, MSRV, house-style, supply-chain, audit, coverage, and
+three-platform build jobs, and calls the release workflow to build and audit all
+four native packages. The final `main CI` job uses `always()` and succeeds only
+when every one of those dependencies succeeds. Branch protection requires that
+single result, so the public gate has one stable name without reducing the work
+behind it.
+
+`.github/workflows/release-packages.yml` is the read-only reusable package and
+closed-set audit boundary. CI calls it without release authority. The tag and
+manual entry point in `.github/workflows/release.yml` calls the same package
+boundary, but only its tag path owns attestation and publication permissions.
+Any change to this topology must update and pass
+`scripts/test-release-workflow.py` before branch protection is changed.
+
 ## Performance discipline
 
 - **Measure before optimizing.** Use focused timings or `criterion` benchmarks

@@ -64,7 +64,7 @@ unclaimed until run.
 | **7. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps into one committed per-room evidence file, after the Sensory Lift | Rooms should be judged at their best, not at the old ceiling; the five commissioned rooms lead the next cohort after the review |
 | **Continuous filler between rocks** | The fifteen verified connection edges land as reveal lines and deep cuts, a few per PR | The highest wonder-per-line work that exists; the fabric grows without blocking anything |
 | **Owner-blocked (stated, not scheduled)** | 0.4-am Understanding cohort: register, calibrate, and run the matched cohort through the sealed collector | Decisions entry 1 records it as optional paid validation awaiting an owner budget and registration ruling; carrying it as a contributor priority was a contradiction |
-| **Standing gate** | Keep 0.2 and 0.3 proof, the seven-room Universal Wager, coverage, supply chain, install/play/uninstall roundtrips, and public CI green | Regressions reopen completed milestones and invalidate new evidence |
+| **Standing gate** | Keep 0.2 and 0.3 proof, the seven-room Universal Wager, coverage, supply chain, install/play/uninstall roundtrips, four-platform packaging, and the one protected `main CI` result green | One stable protected result makes the repository state legible while its required aggregate still fails on any underlying gate or package failure; regressions reopen completed milestones and invalidate new evidence |
 | **Standing interoperability gate** | Pin Agent Plugins 1.0.0 and OKF v0.2 fixtures; add canonical JSON Schema and Agent Skills validation beside Numinous semantic checks; add real YAML conformance checks for generated OKF; prove one zero-cost open host can discover the skill, resolve the installed MCP binary, and complete one play call | Standards are useful only when another conforming implementation can cross the boundary; a new upstream draft starts a focused compatibility review and never freezes ordinary gameplay work |
 | **Optional parallel (not am-blockers)** | Human stranger hallway, a11y player panels, musician long-listening, soft-thin densify, bulk rooms | Human taste and disability usability remain valuable later claims |
 
@@ -2137,9 +2137,10 @@ cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
 4. Continue the Sensory Lift in parallel. GPU feasibility and the direct
    presentation boundary pass, while the measured single-threaded CPU reference
    fails. The chosen candidate shares one post stack between deterministic
-   offscreen validation and direct `wgpu` surface output. Feed real App room
-   rasters through the disabled path and prove it on Windows, macOS, and Linux
-   before promotion, then re-baseline the visual and audio goldens once.
+   offscreen validation and direct `wgpu` surface output. Real App room rasters
+   now use that disabled path with a visible software fallback. Prove it on
+   Windows, macOS, and Linux before promotion, then re-baseline the visual and
+   audio goldens once.
 5. Author the opening and Show arc, raise the creator ladder, and aggregate the
    keep-or-cut scorecard after the lift, in the order owned by the table above.
 6. Keep the completed seven-room Universal Wager and generic call green while

@@ -10,6 +10,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "release.yml"
+PACKAGE_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "release-packages.yml"
 CI_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "ci.yml"
 CONTRACT_COMMAND = "scripts/test-release-workflow.py"
 SBOM_CONTRACT_COMMAND = "scripts/test-release-sbom.py"
@@ -17,6 +18,16 @@ PERFORMANCE_CONTRACT_COMMAND = "scripts/test-dependency-migration-performance.py
 PERFORMANCE_RECEIPT_COMMAND = (
     "scripts/dependency-migration-performance.py --verify-receipt "
     "docs/evidence/dependency-migration-2026-08-02.json"
+)
+REQUIRED_CI_JOBS = (
+    "quality",
+    "msrv",
+    "house-style",
+    "supply-chain",
+    "audit",
+    "coverage",
+    "build",
+    "release-artifacts",
 )
 ATTEST_ACTION = "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2"
 INSTALL_ACTION = (
@@ -26,7 +37,7 @@ RUST_TOOLCHAIN_ACTION = (
     "dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1"
 )
 HOOK_TRIGGER = (
-    "'^(\\.github/workflows/(ci|release)\\.yml|"
+    "'^(\\.github/workflows/(ci|release|release-packages)\\.yml|"
     "docs/evidence/dependency-migration-[0-9-]+\\.json|"
     "scripts/(check|verify)\\.(ps1|sh)|scripts/hooks/pre-commit|"
     "scripts/(package-release|test-package-release|release-engagement-smoke|"
@@ -44,7 +55,7 @@ def job_block(workflow: str, name: str) -> str:
         workflow,
     )
     if match is None:
-        raise AssertionError(f"release workflow has no {name} job")
+        raise AssertionError(f"workflow has no {name} job")
     return match.group("body")
 
 
@@ -54,9 +65,11 @@ class ReleaseWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+        cls.package_workflow = PACKAGE_WORKFLOW_PATH.read_text(encoding="utf-8")
         cls.ci_workflow = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
         cls.header = cls.workflow.split("\njobs:\n", maxsplit=1)[0]
-        cls.audit = job_block(cls.workflow, "audit-artifacts")
+        cls.package_header = cls.package_workflow.split("\njobs:\n", maxsplit=1)[0]
+        cls.audit = job_block(cls.package_workflow, "audit-artifacts")
         cls.attest = job_block(cls.workflow, "attest-artifacts")
         cls.publish = job_block(cls.workflow, "publish")
 
@@ -91,9 +104,46 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("contents: write", self.publish)
         self.assertEqual(self.workflow.count("gh release create"), 1)
         self.assertIn("gh release create", self.publish)
+        for permission in ("attestations: write", "id-token: write", "contents: write"):
+            self.assertNotIn(permission, self.package_workflow)
+
+    def test_pull_requests_reuse_the_read_only_package_workflow(self) -> None:
+        self.assertIn("  workflow_call:\n", self.package_header)
+        self.assertNotIn("  push:\n", self.package_header)
+        self.assertNotIn("  workflow_dispatch:\n", self.package_header)
+        self.assertNotIn("  workflow_call:\n", self.header)
+        self.assertNotIn("  pull_request:\n", self.header)
+        release_artifacts = job_block(self.ci_workflow, "release-artifacts")
+        self.assertIn("    name: release artifacts\n", release_artifacts)
+        self.assertIn(
+            "    uses: ./.github/workflows/release-packages.yml\n",
+            release_artifacts,
+        )
+        self.assertEqual(
+            self.ci_workflow.count("uses: ./.github/workflows/release-packages.yml"),
+            1,
+        )
+        self.assertNotIn("uses: ./.github/workflows/release.yml", self.ci_workflow)
+        release_packages = job_block(self.workflow, "package-artifacts")
+        self.assertIn(
+            "    uses: ./.github/workflows/release-packages.yml\n",
+            release_packages,
+        )
+
+    def test_main_ci_requires_every_job_to_succeed(self) -> None:
+        main_ci = job_block(self.ci_workflow, "main-ci")
+        self.assertIn("    name: main CI\n", main_ci)
+        self.assertIn("    if: always()\n", main_ci)
+        self.assertEqual(
+            set(re.findall(r"^      - ([a-z0-9-]+)$", main_ci, re.MULTILINE)),
+            set(REQUIRED_CI_JOBS),
+        )
+        for job in REQUIRED_CI_JOBS:
+            self.assertEqual(main_ci.count(f"${{{{ needs.{job}.result }}}}"), 1)
+        self.assertEqual(main_ci.count('test "$result" = success'), 1)
 
     def test_attestation_is_tag_only_and_follows_closed_set_audit(self) -> None:
-        self.assertIn("    needs: audit-artifacts\n", self.attest)
+        self.assertIn("    needs: package-artifacts\n", self.attest)
         self.assertIn("    if: startsWith(github.ref, 'refs/tags/')\n", self.attest)
         self.assertNotIn("github.event_name == 'workflow_dispatch'", self.attest)
 
@@ -205,7 +255,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("if-no-files-found: error", self.attest)
 
     def test_publication_cannot_bypass_audit_or_attestation(self) -> None:
-        self.assertIn("needs: [audit-artifacts, attest-artifacts]", self.publish)
+        self.assertIn("needs: [package-artifacts, attest-artifacts]", self.publish)
         self.assertIn("if: startsWith(github.ref, 'refs/tags/')", self.publish)
         self.assertEqual(self.publish.count("name: verified-release-set"), 1)
         self.assertEqual(self.publish.count("name: release-provenance"), 1)
@@ -277,8 +327,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
         # Still on the release path too. Nightly is an addition, not a move: a
         # tag must not be able to publish without the roundtrip having run
         # against the artifact it is actually publishing.
-        release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-        self.assertIn("scripts/uninstall-roundtrip.py", release)
+        self.assertIn("scripts/uninstall-roundtrip.py", self.package_workflow)
 
 
 if __name__ == "__main__":
