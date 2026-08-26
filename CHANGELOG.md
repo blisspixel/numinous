@@ -5,6 +5,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- A disabled-by-default `gpu-post` spike now measures the Sensory Lift's
+  proposed post stack without changing the shipped App path. It uploads sRGB
+  frames, renders into linear `Rgba16Float`, performs a half-resolution bright
+  pass and separable bloom, tone maps back to sRGB, reuses all frame-sized GPU
+  resources, checks adapter format support, and separates optional device
+  timestamps from the final validation readback boundary.
 - The GPU stack moves from `wgpu` 30.0.0 to 30.0.1 before the measured Sensory
   Lift spike. The upstream patch removes a Vulkan validation failure that fired
   every frame on affected non-Windows paths and resolves Metal color-space
