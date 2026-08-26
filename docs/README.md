@@ -30,8 +30,8 @@ Shared
 Studio requests, the typed room catalog, the typed Gauntlet, and local-state
 path resolution now have one core owner. CLI and MCP local-state adapters are
 focused modules extracted from their god-files, and MCP discovery plus its
-immutable tool schema now have a dedicated face-local catalog module. The
-remaining seams are next. Journal surfacing at a remembered room's door and the
+immutable tool schema and player-owned journal projections now have dedicated
+face-local modules. The remaining seams are next. Journal surfacing at a remembered room's door and the
 three-door threshold come next, alongside the measured Sensory Lift spike.
 The 0.4 Understanding Alpha cohort waits on an owner ruling; its method dry-run
 and dual automated auditors are already in CI. Soft-thin densify, bulk new
