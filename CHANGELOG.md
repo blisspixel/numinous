@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- CLI accessibility switch interpretation, `NO_COLOR` policy, known-limit
+  disclosure, and terminal report formatting now live in one focused
+  face-local module. The command entry point retains invocation only, while
+  the existing switch documentation, state, and 80-column regressions preserve
+  the public contract.
 - Physical Sensory Lift promotion now has an independent closed-set verifier.
   It rejects ambiguous or oversized JSON, unknown fields, hosted or debug
   runs, software adapters, incomplete machine facts, transient frames, source

@@ -270,7 +270,10 @@ reimplementing home-directory fallback or per-store overrides. A selected
 `NUMINOUS_RADIO` soundtrack remains user-owned and outside managed cache
 erasure. Focused `local_state` modules in the CLI and MCP faces translate that
 one core contract into terminal prose or structured protocol results; neither
-module reimplements persistence rules. The MCP face also keeps protocol
+module reimplements persistence rules. The CLI also keeps accessibility switch
+interpretation, `NO_COLOR` policy, known-limit disclosure, and report formatting
+in a focused face-local `access` module. The command entry point only gathers
+raw environment values and prints the result. The MCP face also keeps protocol
 discovery, legacy negotiation, server identity, and its immutable 40-tool JSON
 Schema catalog in a focused `catalog` module. The request entry point retains
 transport validation, dispatch, result decoration, and domain invocation.
