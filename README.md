@@ -121,9 +121,13 @@ adapter too. Core retains the underlying progression, scoring, persistence,
 streak, and game rules. Keyless argument parsing, earned-state projection,
 overlays, and bounded consolidation for the seven engineered flagship Aha arcs
 now have a focused adapter, while core retains their state machines,
-mathematical truth, grading, and drawing primitives. These extractions keep the
-production entry point under 2,200 lines without weakening private-boundary
-coverage. Bounded runtime validation of the declared JSON Schema subset now has
+mathematical truth, grading, and drawing primitives. Room discovery,
+description, gated reveal projection, structured sound, bounded play rendering,
+temporal evidence, and encounter receipts now share a focused room adapter too.
+Core retains the room registry, veil rules, rendering, sound generation, goals,
+grading, and mathematical truth. These extractions keep the production entry
+point under 1,300 lines without weakening private-boundary coverage. Bounded
+runtime validation of the declared JSON Schema subset now has
 its own focused adapter too, with the catalog remaining the immutable protocol
 contract. The
 **Universal Wager**

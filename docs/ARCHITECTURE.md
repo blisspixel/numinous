@@ -312,8 +312,12 @@ persistence, and response-visible save failures. Core retains progression,
 scoring, persistence, streak, and game truth. A focused `flagship_aha` adapter
 owns keyless argument parsing, earned-state projection, overlays, and bounded
 consolidation for the seven engineered Aha arcs. Core retains each state
-machine, mathematical truth, grading rule, and drawing primitive. The request
-entry point retains routing and domain invocation. Its 214 request-dispatch and
+machine, mathematical truth, grading rule, and drawing primitive. A focused
+`room_tools` adapter owns cross-catalog room lookup, description, gated reveal
+projection, structured sound, bounded play rendering, temporal evidence, and
+encounter receipts. Core retains the room registry, veil rules, rendering,
+sound generation, goals, grading, and mathematical truth. The request entry
+point retains routing and domain invocation. Its 214 request-dispatch and
 cross-boundary unit regressions live in the sibling `tests` module, which
 retains private module access without enlarging the production entry point. The
 `response` adapter owns compact prose
