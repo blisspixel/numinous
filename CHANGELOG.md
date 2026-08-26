@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- CLI Studio source selection, terminal error projection, bounded capsule
+  loading, save and fork writes, sing-input resolution, and open-report
+  formatting now live in one focused face-local adapter. The command entry
+  point invokes the shared core Studio contract without owning its filesystem
+  or terminal policy.
 - MCP JSON hand-point and pointer-gesture validation, mutual exclusion,
   canonical echo, and interaction-aware render and status projection now live
   in one focused face-local adapter. Listening, play, and challenge callers
