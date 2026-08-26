@@ -5,6 +5,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP seeded prediction and touch or parameter challenge posing, grading,
+  structured response projection, and progress accounting now live in a focused
+  face-local adapter. Core retains deterministic goal construction and grading,
+  while the request entry point retains dispatch.
 - MCP JSON-RPC validation, dual-revision negotiation, prediction form
   elicitation, response envelopes, server identity, and immutable discovery
   cache metadata now live in a focused face-local protocol adapter. Request

@@ -54,11 +54,13 @@ cross-boundary unit regressions now have a dedicated test module. Compact
 response projection also has a focused adapter that preserves complete typed
 results. JSON-RPC validation, dual-revision negotiation, prediction form
 elicitation, response envelopes, server identity, and immutable discovery cache
-metadata now share a focused protocol adapter, leaving the production entry
-point under 4,200 lines while retaining private-boundary coverage. Bounded
-runtime validation of the declared JSON Schema subset, guiding argument-name
-suggestions, and the two cross-field domain checks now share a focused MCP
-schema adapter. CLI
+metadata now share a focused protocol adapter. Seeded prediction plus touch and
+parameter challenge posing, grading, response projection, and progress
+accounting share a focused challenge adapter while core retains deterministic
+goal construction and grading. The production entry point is now under 3,700
+lines with private-boundary coverage intact. Bounded runtime validation of the
+declared JSON Schema subset, guiding argument-name suggestions, and the two
+cross-field domain checks now share a focused MCP schema adapter. CLI
 Studio source selection, capsule loading and never-clobber writes, terminal
 errors, and open reports now have their own focused adapter too. The shared
 4 KiB CLI game record boundary, overflow resynchronization, neutral departures,

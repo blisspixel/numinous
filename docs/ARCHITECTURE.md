@@ -303,7 +303,10 @@ scoring, and concepts stay outside that adapter. The MCP `catalog` module owns
 discovery documents and the immutable 40-tool JSON Schema contract. A focused
 `protocol` adapter owns JSON-RPC envelope validation, dual-revision negotiation,
 prediction form elicitation, response envelopes, server identity, and immutable
-discovery cache metadata. The request entry point retains routing and domain
+discovery cache metadata. A focused `challenge_tools` adapter owns seeded
+prediction and touch or parameter challenge posing, grading, structured result
+projection, and progress accounting. Core retains deterministic goal
+construction and grading. The request entry point retains routing and domain
 invocation. Its 214 request-dispatch and cross-boundary unit regressions live in
 the sibling `tests` module, which retains private module access without
 enlarging the production entry point. The `response` adapter owns compact prose
