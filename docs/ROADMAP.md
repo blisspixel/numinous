@@ -56,7 +56,7 @@ unclaimed until run.
 | Priority | What | Why |
 | --- | --- | --- |
 | **1. Keep agent first contact CI-green** | Agent hallway and tactile cohorts run on every PR; optional local-model visits exercise genuine choice after meaningful MCP experience changes | Deterministic cohorts guard 0.2 and 0.3 regressions, while real-model visits can expose interaction failures without turning free play into a flaky or expensive gate |
-| **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests, the typed room catalog, typed Gauntlet truth, and local-state path resolution are now in core. CLI and MCP local-state adapters, CLI accessibility, Studio, and game-input adapters, CLI and MCP render-input adapters, MCP transport, simulation-tool, Studio-tool, game-tool, runtime-schema, and compact-response adapters, the MCP discovery and schema catalog, and its request regression test module are focused units extracted from the god-files; workstream 7 still owns the remaining seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
+| **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests, the typed room catalog, typed Gauntlet truth, and local-state path resolution are now in core. CLI and MCP local-state adapters, CLI accessibility, Studio, and game-input adapters, CLI and MCP render-input adapters, MCP transport, simulation-tool, Studio-tool, game-tool, runtime-schema, compact-response, and protocol adapters, the MCP discovery and schema catalog, and its request regression test module are focused units extracted from the god-files; workstream 7 still owns the remaining seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
 | **3. The Mind's Seat, current increment complete** | Exact temporal evidence, multi-look `dwell`, sound facts and audio, replay receipts, explicit journal promotion, process-local workspace, remembered-room retrieval and cue, the three-door threshold, portable Studio lineage, the portable typed evidence capsule, and the caller-paced Show for minds are built. Reflection proposals remain deferred to their separate evidence and consent review | The audience the product exists for now has time, company, bounded continuity, authorship, and a directed performance on its native face without hidden state or automatic memory |
 | **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | The feature-gated linear HDR, half-resolution bloom, and tone-map spike passes its reference integrated-GPU budgets at 1080p and 1440p; an equivalent reusable single-threaded CPU reference fails both. Direct FIFO presentation now passes both full host boundaries too, without an offscreen output copy or readback. The disabled App path feeds real room rasters into the same surface renderer with explicit recovery and visible software fallback. A typed probe now runs that exact production boundary in the Windows, macOS, and Linux CI matrix while classifying all such timings as informational. An independent set builder now recomputes and binds the exact six physical candidates. Next: collect passing release-profile receipts at both target sizes on each OS before promotion. The full lift still owns splats, one shared audio bus with reverb and shaped envelopes, global dissolve, and damped-spring input | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
@@ -298,10 +298,12 @@ The workstreams, in landing order:
    and erasure include the opt-in journal and versioned App preferences instead
    of overclaiming `all_local`. The CLI and MCP inventory, consent, and erasure projections,
    together with their focused regressions, now live in dedicated face modules
-   instead of either `main.rs`. MCP discovery, legacy negotiation, server
-   identity, and the immutable tool schema now live in a dedicated
-   face-local catalog module, while request validation and execution stay in
-   the entry point. MCP journal reads, writes, corrections, exports, erasure,
+   instead of either `main.rs`. MCP discovery documents and the immutable tool
+   schema now live in a dedicated face-local catalog module. JSON-RPC
+   validation, dual-revision negotiation, prediction form elicitation, response
+   envelopes, server identity, and discovery cache metadata live in a focused
+   protocol adapter, while routing and domain execution stay in the entry point.
+   MCP journal reads, writes, corrections, exports, erasure,
    receipt promotion, pagination, and entry projection now live in one private
    face-local module. Receipt promotion accepts only a raw replay callback, so
    verification cannot re-enter dispatch or double-record Journey progress;
@@ -317,10 +319,10 @@ The workstreams, in landing order:
    mutual exclusion, canonical echo, and interaction-aware render and status
    projection for listening, play, and challenges. Bounded newline framing,
    allocation-free overflow resynchronization, and one-line response writes now
-   live in a focused MCP transport adapter. JSON-RPC semantics and dispatch
-   remain in the request entry point. Simulation discovery, lever validation,
-   rendering dispatch, and structured readout projection now live in a focused
-   MCP simulation-tool adapter, while core retains simulation rules. CLI Studio
+   live in a focused MCP transport adapter. Simulation discovery, lever
+   validation, rendering dispatch, and structured readout projection now live
+   in a focused MCP simulation-tool adapter, while core retains simulation
+   rules. CLI Studio
    source selection,
    terminal error projection, bounded capsule loading, never-clobber save and
    fork writes, sing-input resolution, and open-report formatting now live in a
@@ -338,13 +340,15 @@ The workstreams, in landing order:
    grading, state transitions, and score persistence. The 214 MCP
    request-dispatch and cross-boundary unit regressions now live in a sibling
    test module with their private access preserved. Compact response projection
-   has its own adapter that preserves complete typed results, leaving the
-   production entry point under 4,500 lines. Bounded runtime validation of the
-   declared JSON Schema subset, guiding argument-name suggestions, and the
-   temporal and Arcade cross-field checks now live in a focused schema adapter
-   while the catalog remains the immutable protocol contract. The remaining
-   god-file seams continue under the drag report's map alongside the Sensory
-   Lift.
+   has its own adapter that preserves complete typed results. JSON-RPC
+   validation, dual-revision negotiation, prediction form elicitation, response
+   envelopes, server identity, and immutable discovery cache metadata now live
+   in a focused protocol adapter, leaving the production entry point under
+   4,200 lines. Bounded runtime validation of the declared JSON Schema subset,
+   guiding argument-name suggestions, and the temporal and Arcade cross-field
+   checks now live in a focused schema adapter while the catalog remains the
+   immutable protocol contract. The remaining god-file seams continue under
+   the drag report's map alongside the Sensory Lift.
 
 ### The Three Ceilings (August 2026): what holds exceptional back
 
