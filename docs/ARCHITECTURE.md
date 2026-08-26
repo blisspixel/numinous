@@ -285,11 +285,14 @@ and flushed one-line response writes. JSON-RPC semantics and dispatch remain
 in the request entry point. A focused MCP `sim_tools` adapter owns simulation
 discovery text, lever argument validation, and structured result projection;
 core retains simulation metadata, bounds, rendering, and readouts. A focused
-CLI `studio` adapter owns raw source-mode
+MCP `studio_tools` adapter owns Formula Jam discovery, portable creation
+projection, optional audio attachment, and encounter receipts. A focused CLI
+`studio` adapter owns raw source-mode
 selection, terminal error projection, bounded capsule loading, never-clobber
 save and fork writes, sing-input resolution, and open-report formatting. Core
-continues to own Studio parsing, evaluation, request bounds, rendering, capsule
-validity, and lineage semantics. A focused CLI `game_input` adapter owns the
+continues to own Studio parsing, evaluation, request bounds, rendering, melody
+construction, capsule validity, and lineage semantics. A focused CLI
+`game_input` adapter owns the
 bounded terminal record reader, overflow resynchronization, neutral departure
 presentation, and the games' `?` explanation door. Game rules, progression,
 scoring, and concepts stay outside that adapter. The MCP face also keeps
