@@ -118,10 +118,14 @@ with deterministic goal construction and grading remaining in core. Request
 progress mapping, daily seed freezing, local-store resolution, score and Journey
 persistence, and response-visible save failures now have a focused progress
 adapter too. Core retains the underlying progression, scoring, persistence,
-streak, and game rules. These extractions keep the production entry point under
-3,100 lines without weakening private-boundary coverage. Bounded runtime
-validation of the declared JSON Schema subset now has its own focused adapter
-too, with the catalog remaining the immutable protocol contract. The
+streak, and game rules. Keyless argument parsing, earned-state projection,
+overlays, and bounded consolidation for the seven engineered flagship Aha arcs
+now have a focused adapter, while core retains their state machines,
+mathematical truth, grading, and drawing primitives. These extractions keep the
+production entry point under 2,200 lines without weakening private-boundary
+coverage. Bounded runtime validation of the declared JSON Schema subset now has
+its own focused adapter too, with the catalog remaining the immutable protocol
+contract. The
 **Universal Wager**
 is complete:
 seven rooms now carry their own staged arc across the App and MCP, using the
