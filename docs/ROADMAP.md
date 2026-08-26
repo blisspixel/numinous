@@ -226,8 +226,13 @@ The workstreams, in landing order:
    instead of either `main.rs`. MCP discovery, legacy negotiation, server
    identity, and the immutable tool schema now live in a dedicated
    face-local catalog module, while request validation and execution stay in
-   the entry point. The remaining god-file seams continue under the drag
-   report's map alongside the Sensory Lift.
+   the entry point. MCP journal reads, writes, corrections, exports, erasure,
+   receipt promotion, pagination, and entry projection now live in one private
+   face-local module. Receipt promotion accepts only a raw replay callback, so
+   verification cannot re-enter dispatch or double-record Journey progress;
+   the visit workspace consumes entry projection through that module instead
+   of importing it backward from the entry point. The remaining god-file seams
+   continue under the drag report's map alongside the Sensory Lift.
 
 ### The Three Ceilings (August 2026): what holds exceptional back
 

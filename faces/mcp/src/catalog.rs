@@ -1,8 +1,9 @@
 //! MCP discovery documents and the immutable public tool schema.
 
 use super::{
-    DEFAULT_JOURNAL_PAGE_ENTRIES, JSON_SCHEMA_2020_12, MAX_AUTHOR_CHARS, MAX_JOURNAL_PAGE_ENTRIES,
-    MAX_TOOL_HEIGHT, MAX_TOOL_ID_CHARS, MAX_TOOL_WIDTH, SUPPORTED_PROTOCOL_VERSIONS,
+    JSON_SCHEMA_2020_12, MAX_AUTHOR_CHARS, MAX_TOOL_HEIGHT, MAX_TOOL_ID_CHARS, MAX_TOOL_WIDTH,
+    SUPPORTED_PROTOCOL_VERSIONS,
+    journal::{DEFAULT_PAGE_ENTRIES, MAX_PAGE_ENTRIES},
 };
 use numinous_broadcast::{PLAY_ROOM_MAX_DWELL_CELLS, PLAY_ROOM_MAX_TEMPORAL_CELLS};
 use numinous_core::{MAX_DWELL_LOOKS, MIN_DWELL_LOOKS};
@@ -360,7 +361,7 @@ fn build_tools_catalog() -> Value {
                     "type": "object",
                     "properties": {
                         "after_entry_id": { "type": "integer", "minimum": 0, "description": "Return entries after this stable identifier (default 0)." },
-                        "limit": { "type": "integer", "minimum": 1, "maximum": MAX_JOURNAL_PAGE_ENTRIES, "default": DEFAULT_JOURNAL_PAGE_ENTRIES, "description": "Maximum entries to return, from 1 through 100." }
+                        "limit": { "type": "integer", "minimum": 1, "maximum": MAX_PAGE_ENTRIES, "default": DEFAULT_PAGE_ENTRIES, "description": "Maximum entries to return, from 1 through 100." }
                     },
                     "additionalProperties": false
                 }
@@ -406,7 +407,7 @@ fn build_tools_catalog() -> Value {
                     "type": "object",
                     "properties": {
                         "after_entry_id": { "type": "integer", "minimum": 0, "description": "Return entries after this stable identifier (default 0)." },
-                        "limit": { "type": "integer", "minimum": 1, "maximum": MAX_JOURNAL_PAGE_ENTRIES, "default": DEFAULT_JOURNAL_PAGE_ENTRIES, "description": "Maximum entries to return, from 1 through 100." },
+                        "limit": { "type": "integer", "minimum": 1, "maximum": MAX_PAGE_ENTRIES, "default": DEFAULT_PAGE_ENTRIES, "description": "Maximum entries to return, from 1 through 100." },
                         "format": { "type": "string", "enum": ["native", "okf-0.2"], "default": "native", "description": "Return the native structured journal page or named UTF-8 files forming an OKF v0.2 bundle page." }
                     },
                     "additionalProperties": false
