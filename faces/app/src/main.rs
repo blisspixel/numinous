@@ -5452,7 +5452,12 @@ impl App {
             return;
         };
         match presenter.present(rgba, rw, rh, width, height) {
-            Ok(presentation::PresentOutcome::Presented) => self.presentation_warned = false,
+            Ok(presentation::PresentOutcome::Presented {
+                #[cfg(feature = "gpu-post")]
+                    gpu_frame: _gpu_frame,
+            }) => {
+                self.presentation_warned = false;
+            }
             Ok(presentation::PresentOutcome::Skipped) => {}
             #[cfg(feature = "gpu-post")]
             Ok(presentation::PresentOutcome::FellBack(reason)) => {

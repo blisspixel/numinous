@@ -28,8 +28,10 @@ Studio capsules with exact previews and lineage, without host filesystem access.
 
 **Critical path now:** preserve the completed seven-room Universal Wager and
 the completed caller-paced Show for minds, close the remaining structural
-Polish Wave debts, then prove the disabled Sensory Lift App path across Windows,
-macOS, and Linux before promotion.
+Polish Wave debts, then finish the disabled Sensory Lift App path's physical
+Windows, macOS, and Linux pacing set before promotion. Its portable runtime
+correctness probe now runs in the existing three-OS CI matrix without treating
+CI timing as physical evidence.
 Shared
 Studio requests, the typed room catalog, the typed Gauntlet, and local-state
 path resolution now have one core owner. CLI and MCP local-state adapters are
@@ -39,7 +41,7 @@ face-local modules. The room threshold now offers the flagship, an ordered
 six-room Strange Loop walk, or compact wing wandering while retaining the full
 typed catalog. The Show now carries that walk as six explicit stateless cues
 with exact looks, alternatives, deltas, sound facts, and optional audio. The
-remaining seams and cross-platform Sensory Lift proof are next.
+remaining seams and physical Sensory Lift pacing set are next.
 The 0.4 Understanding Alpha cohort waits on an owner ruling; its method dry-run
 and dual automated auditors are already in CI. Soft-thin densify, bulk new
 rooms, and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and

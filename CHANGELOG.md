@@ -5,6 +5,20 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The disabled Sensory Lift App path now has a claim-safe three-platform proof
+  contract. A bounded example composes the deterministic Times Tables room
+  through the App's production HUD, audio badge, visualizer, Era transform,
+  frame fitter, recovery state machine, and direct surface presenter. It binds
+  repeated source and executable hashes, revision when available, adapter and
+  driver identity, sRGB FIFO negotiation, every outcome, and raw segmented
+  timings in a typed JSON receipt. The existing Windows, macOS, and Linux CI
+  matrix runs the portable class and retains each receipt, while labeling its
+  timing informational. A separate physical class refuses debug builds,
+  GitHub Actions, software adapters, incomplete machine facts, battery power,
+  fewer than 30 warmups or 120 retained samples, transient or suboptimal
+  frames, a window that does not grant the requested client area, a target other
+  than 1080p or 1440p, and a changed or missed p95 budget. The production
+  fallback reason now includes the same adapter and surface context.
 - `watch_show` now presents a caller-paced Show for minds over MCP. Core owns
   the six-room Strange Loop score, nonspoiling questions, exact arrival,
   postcard, and curtain phases, reduced-motion projection, and deterministic

@@ -83,6 +83,7 @@ jobs:
         run: |
           python3 scripts/test-package-release.py
           python3 scripts/test-agent-plugin.py
+          python3 scripts/test-sensory-platform-proof.py
           python3 scripts/test-release-engagement-smoke.py
           python3 scripts/test-uninstall-roundtrip.py
           python3 scripts/test-input-hardware-session.py
@@ -174,11 +175,27 @@ jobs:
       - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
       - name: Install Linux audio and input development libraries
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev mesa-vulkan-drivers xvfb
       - name: Workspace tests
         run: cargo test --workspace --all-targets --locked
       - name: Feature App platform compile
         run: cargo check -p numinous-app --all-features --all-targets --locked
+      - name: Linux direct App surface proof
+        if: runner.os == 'Linux'
+        env:
+          WGPU_BACKEND: vulkan
+        run: xvfb-run -a cargo run --locked -p numinous-app --features gpu-post --example sensory_platform -- --out sensory-app-platform.json --check
+      - name: Native direct App surface proof
+        if: runner.os != 'Linux'
+        run: cargo run --locked -p numinous-app --features gpu-post --example sensory_platform -- --out sensory-app-platform.json --check
+      - name: Retain App surface proof
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sensory-app-platform-${{ runner.os }}
+          path: sensory-app-platform.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Windows Python contract tests
         if: runner.os == 'Windows'
         run: |

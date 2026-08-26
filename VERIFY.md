@@ -20,8 +20,9 @@ the from-source verification path for contributors and the curious.
 - **Python 3.11 or newer**, for the 0.4 study runner and collector regressions.
   The same dependency runs release engagement and physical input receipt
   contract tests.
-- The Linux build needs the ALSA, xkbcommon, and libudev headers (the packages
-  CI installs): `sudo apt-get install -y libasound2-dev libxkbcommon-dev libudev-dev`.
+- The Linux build needs the ALSA, xkbcommon, and libudev headers. Running the
+  direct-surface proof also needs Mesa Vulkan and Xvfb. CI installs them with:
+  `sudo apt-get install -y libasound2-dev libxkbcommon-dev libudev-dev mesa-vulkan-drivers xvfb`.
 
 ## 1. One command
 
@@ -73,6 +74,8 @@ python scripts/test-package-release.py              # Windows
 python3 scripts/test-package-release.py             # macOS / Linux
 python scripts/test-agent-plugin.py                 # Windows
 python3 scripts/test-agent-plugin.py                # macOS / Linux
+python scripts/test-sensory-platform-proof.py       # Windows
+python3 scripts/test-sensory-platform-proof.py      # macOS / Linux
 python scripts/test-release-engagement-smoke.py     # Windows
 python3 scripts/test-release-engagement-smoke.py    # macOS / Linux
 python scripts/test-input-hardware-session.py       # Windows
@@ -106,6 +109,19 @@ loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Physical
 controller feel remains optional bonus evidence on the agent-and-machine track;
 contract tests and mapping-aware legends remain the CI authority.
+
+The three-platform build matrix also runs the feature-gated production App
+presenter and retains `sensory-app-platform-OS` as a JSON artifact. Run the same
+portable correctness class on a local desktop with:
+
+```
+cargo run --locked -p numinous-app --features gpu-post --example sensory_platform -- --out sensory-app-platform.json --check
+```
+
+Its timing is diagnostic only. The physical release-profile contract and its
+required machine, revision, power, sample, and p95 arguments live in
+`docs/PERFORMANCE.md`. A passing CI receipt is not a substitute for that
+physical evidence.
 
 The four-target release workflow runs `scripts/release-engagement-smoke.py`
 against every disposable packaged install. It requires a substantive Times

@@ -1,8 +1,8 @@
 //! Feature-gated HDR bloom spike for the Sensory Lift.
 
 use super::{
-    GpuContext, RenderError, capture_device_errors, copy_mapped_bytes, frame_size_supported,
-    validate_map_completion,
+    GpuAdapterInfo, GpuContext, RenderError, capture_device_errors, copy_mapped_bytes,
+    frame_size_supported, validate_map_completion,
 };
 use bytemuck::{Pod, Zeroable};
 use std::time::Instant;
@@ -463,6 +463,12 @@ impl SensoryPostRenderer {
         self.context.backend()
     }
 
+    /// Diagnostic identity of the selected adapter and driver.
+    #[must_use]
+    pub const fn adapter_info(&self) -> &GpuAdapterInfo {
+        self.context.adapter_info()
+    }
+
     /// Relevant adapter capabilities checked before pipeline creation.
     #[must_use]
     pub const fn capabilities(&self) -> PostCapabilities {
@@ -675,6 +681,12 @@ impl<'window> SensorySurfaceRenderer<'window> {
     #[must_use]
     pub fn backend(&self) -> &str {
         self.context.backend()
+    }
+
+    /// Diagnostic identity of the selected adapter and driver.
+    #[must_use]
+    pub const fn adapter_info(&self) -> &GpuAdapterInfo {
+        self.context.adapter_info()
     }
 
     /// Relevant adapter capabilities checked before pipeline creation.

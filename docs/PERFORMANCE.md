@@ -95,6 +95,47 @@ presentation request returns and does not include compositor work, display
 scanout, input latency, human perception, or room aesthetics. The 1440p client
 area was exact but extended beyond the reference machine's 2256 x 1504 desktop.
 
+## App platform proof contract
+
+The `sensory_platform` example closes the portable runtime half of that next
+gate without overstating hosted runner timing. It renders the same deterministic
+Times Tables room, input feedback, room chrome, audio badge, spectrum meter, and
+Modern Era transform used by the App, then passes those bytes through the
+production frame fitter, recovery state machine, and direct surface presenter.
+The receipt binds the source frame twice by SHA-256, the running executable,
+revision when available, adapter class and driver, negotiated sRGB format and
+FIFO mode, every presentation outcome, and raw acquire, render-and-present, and
+combined samples.
+
+The existing Windows, macOS, and Linux build matrix runs the portable class and
+retains one JSON artifact per operating system. That class proves only that the
+exact production boundary completed on the recorded runtime. Its timing field
+is always `informational-only`; a hosted software adapter is useful portability
+evidence and is not physical GPU performance evidence.
+
+Run that same correctness boundary locally with:
+
+```
+cargo run --locked -p numinous-app --features gpu-post --example sensory_platform -- --out sensory-app-platform.json --check
+```
+
+The physical class is deliberately harder to invoke. It requires a locked
+release build outside GitHub Actions, an integrated or discrete GPU, a full
+revision, named machine and OS version, AC power, at least 30 warmups and 120
+retained samples, zero skipped and suboptimal frames, and an explicit p95
+budget. Only the declared 1920 by 1080 at 33 ms and 2560 by 1440 at 50 ms
+contracts qualify, and the window manager must grant the exact requested client
+area. A 1080p reference command has this form:
+
+```
+cargo run --release --locked -p numinous-app --features gpu-post --example sensory_platform -- --out sensory-app-windows-1080p.json --width 1920 --height 1080 --warmups 30 --samples 120 --physical --machine "MACHINE" --os-version "OS VERSION" --power-state ac --revision FULL_COMMIT_SHA --budget-ms 33 --check
+```
+
+Each passing physical receipt is still a candidate for one named reference,
+not a universal performance result. Promotion needs a reviewed physical set at
+both target sizes for Windows, macOS, and Linux. Compositor completion, scanout,
+input latency, and perceptual quality remain outside both classes.
+
 ## July 2026 dependency migration
 
 The migration is the adjacent revision pair below. The after revision includes
