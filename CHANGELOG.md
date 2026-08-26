@@ -5,6 +5,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP runtime validation for the declared JSON Schema subset now lives in a
+  focused face-local adapter. It owns bounded recursive validation, guiding
+  argument-name suggestions, temporal request checks, and Arcade action checks
+  while the immutable 40-tool catalog remains the protocol contract.
 - The 214 MCP request-dispatch and cross-boundary unit regressions now live in
   a dedicated test module instead of the production request entry point. Their
   private module access and the 21 real stdio sessions are preserved, while
