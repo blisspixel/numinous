@@ -5,6 +5,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The 214 MCP request-dispatch and cross-boundary unit regressions now live in
+  a dedicated test module instead of the production request entry point. Their
+  private module access and the 21 real stdio sessions are preserved, while
+  `main.rs` is now under 5,000 lines.
 - MCP Hackenbush, Party, Fifteen, Quiz, Munch, Munch Arcade, Nim, and shared
   score projections now live in one focused face-local game adapter. Core
   retains deals, replay, legality, grading, state transitions, and score

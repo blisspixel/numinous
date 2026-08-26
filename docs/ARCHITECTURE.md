@@ -303,7 +303,9 @@ scoring, and concepts stay outside that adapter. The MCP face also keeps
 protocol discovery, legacy negotiation,
 server identity, and its immutable 40-tool JSON Schema catalog in a focused
 `catalog` module. The request entry point retains transport validation,
-dispatch, result decoration, and domain invocation.
+dispatch, result decoration, and domain invocation. Its 214 request-dispatch
+and cross-boundary unit regressions live in the sibling `tests` module, which
+retains private module access without enlarging the production entry point.
 The App preference store uses a strict std-only core schema for volume, mute,
 Visual Era, and window mode. Core owns bounded reads, lock coordination, atomic
 replacement, inventory, and complete erasure. The App owns only applying those
