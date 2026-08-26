@@ -5,6 +5,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP keyless argument parsing, earned-state projection, overlays, and bounded
+  consolidation for the seven engineered flagship Aha arcs now live in a
+  focused face-local adapter. Core retains each state machine, mathematical
+  truth, grading rule, and drawing primitive.
 - MCP request progress mapping, daily seed freezing, local-store resolution,
   score and Journey persistence, and response-visible save failures now live in
   a focused face-local progress adapter. Core retains progression, scoring,

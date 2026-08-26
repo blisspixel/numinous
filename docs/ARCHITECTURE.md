@@ -309,10 +309,14 @@ projection, and progress accounting. Core retains deterministic goal
 construction and grading. A focused `progress` adapter owns request-to-Journey
 mapping, daily seed freezing, local-store resolution, score and Journey
 persistence, and response-visible save failures. Core retains progression,
-scoring, persistence, streak, and game truth. The request entry point retains
-routing and domain invocation. Its 214 request-dispatch and cross-boundary unit
-regressions live in the sibling `tests` module, which retains private module
-access without enlarging the production entry point. The `response` adapter owns compact prose
+scoring, persistence, streak, and game truth. A focused `flagship_aha` adapter
+owns keyless argument parsing, earned-state projection, overlays, and bounded
+consolidation for the seven engineered Aha arcs. Core retains each state
+machine, mathematical truth, grading rule, and drawing primitive. The request
+entry point retains routing and domain invocation. Its 214 request-dispatch and
+cross-boundary unit regressions live in the sibling `tests` module, which
+retains private module access without enlarging the production entry point. The
+`response` adapter owns compact prose
 projection for complete typed results, while preserving errors, text-only
 tools, and structured content. A focused `schema` adapter validates the bounded
 JSON Schema subset declared by that catalog, including guiding argument-name
