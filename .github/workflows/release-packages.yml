@@ -1,0 +1,215 @@
+name: Release packages
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  package-binaries:
+    name: package ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: macos-15
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "13.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install Linux audio and input development libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
+      - name: Validate release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: python scripts/package-release.py --validate-tag "${{ github.ref_name }}"
+      - name: Build release binaries
+        run: cargo build --release --locked --target ${{ matrix.target }} --bin numinous --bin numinous-app --bin numinous-mcp
+      - name: Smoke test CLI
+        if: runner.os != 'Windows'
+        run: target/${{ matrix.target }}/release/numinous --version
+      - name: Smoke test CLI on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./target/${{ matrix.target }}/release/numinous.exe --version
+      - name: Build and verify archive
+        run: python scripts/package-release.py --target ${{ matrix.target }} --binary-dir target/${{ matrix.target }}/release --output-dir dist
+      - name: Smoke install packaged release
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p .agent/release-smoke-radio
+          cp assets/radio/ASSET-LICENSE.txt .agent/release-smoke-radio/
+          first_track="$(find assets/radio -maxdepth 1 -type f -name '*.mp3' -print -quit)"
+          test -n "$first_track"
+          cp "$first_track" .agent/release-smoke-radio/
+          python3 scripts/package-release.py --kind soundtrack --target all --radio-dir .agent/release-smoke-radio --output-dir smoke-dist
+          version="$(python3 scripts/package-release.py --print-version)"
+          payload="dist/numinous-v${version}-${{ matrix.target }}.tar.gz"
+          soundtrack="smoke-dist/numinous-v${version}-soundtrack.tar.gz"
+          soundtrack_content="$soundtrack.content.sha256"
+          export NUMINOUS_HOME="${RUNNER_TEMP}/numinous-release-smoke"
+          bash scripts/install.sh --no-modify-path \
+            --release-archive "$payload" --release-checksum "$payload.sha256" \
+            --soundtrack-archive "$soundtrack" --soundtrack-checksum "$soundtrack.sha256" \
+            --soundtrack-content-checksum "$soundtrack_content" \
+            --release-tag "v${version}"
+          "$NUMINOUS_HOME/bin/numinous" --help | grep -q '^  update'
+          python3 scripts/release-engagement-smoke.py --bin-dir "$NUMINOUS_HOME/bin"
+          python3 scripts/uninstall-roundtrip.py --release-archive "$payload" --release-checksum "$payload.sha256" --release-tag "v${version}"
+          printf '%064d\n' 0 >"$NUMINOUS_HOME/soundtrack/.archive.sha256"
+          bash scripts/install.sh --no-modify-path \
+            --release-archive "$payload" --release-checksum "$payload.sha256" \
+            --soundtrack-archive missing-soundtrack.tar.gz \
+            --soundtrack-checksum "$soundtrack.sha256" \
+            --soundtrack-content-checksum "$soundtrack_content" \
+            --release-tag "v${version}"
+      - name: Smoke install packaged release on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .agent/release-smoke-radio | Out-Null
+          Copy-Item assets/radio/ASSET-LICENSE.txt .agent/release-smoke-radio/
+          Get-ChildItem assets/radio -Filter *.mp3 | Select-Object -First 1 | Copy-Item -Destination .agent/release-smoke-radio/
+          python scripts/package-release.py --kind soundtrack --target all --radio-dir .agent/release-smoke-radio --output-dir smoke-dist
+          $version = python scripts/package-release.py --print-version
+          $payload = "dist/numinous-v$version-${{ matrix.target }}.zip"
+          $soundtrack = "smoke-dist/numinous-v$version-soundtrack.tar.gz"
+          $soundtrackContent = "$soundtrack.content.sha256"
+          $env:NUMINOUS_HOME = Join-Path $env:RUNNER_TEMP 'numinous-release-smoke'
+          ./scripts/install.ps1 -NoModifyPath `
+            -ReleaseArchive $payload -ReleaseChecksum "$payload.sha256" `
+            -SoundtrackArchive $soundtrack -SoundtrackChecksum "$soundtrack.sha256" `
+            -SoundtrackContentChecksum $soundtrackContent `
+            -ReleaseTag "v$version"
+          if (-not (& "$env:NUMINOUS_HOME/bin/numinous.exe" --help | Select-String '^  update')) {
+            throw 'the installed CLI does not expose numinous update'
+          }
+          python scripts/release-engagement-smoke.py --bin-dir "$env:NUMINOUS_HOME/bin"
+          python scripts/uninstall-roundtrip.py --release-archive $payload --release-checksum "$payload.sha256" --release-tag "v$version"
+          [IO.File]::WriteAllText(
+            "$env:NUMINOUS_HOME/soundtrack/.archive.sha256", ('0' * 64) + "`r`n")
+          ./scripts/install.ps1 -NoModifyPath `
+            -ReleaseArchive $payload -ReleaseChecksum "$payload.sha256" `
+            -SoundtrackArchive missing-soundtrack.tar.gz `
+            -SoundtrackChecksum "$soundtrack.sha256" `
+            -SoundtrackContentChecksum $soundtrackContent `
+            -ReleaseTag "v$version"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  package-soundtrack:
+    name: package soundtrack
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: python3 scripts/package-release.py --validate-tag "${{ github.ref_name }}"
+      - name: Build and verify soundtrack archive
+        run: python3 scripts/package-release.py --kind soundtrack --target all --output-dir dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-soundtrack
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  audit-artifacts:
+    name: audit release set
+    needs: [package-binaries, package-soundtrack]
+    if: always() && needs.package-binaries.result == 'success' && (needs.package-soundtrack.result == 'success' || needs.package-soundtrack.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Verify every archive and checksum
+        shell: bash
+        env:
+          SOUNDTRACK_RESULT: ${{ needs.package-soundtrack.result }}
+        run: |
+          version="$(python3 scripts/package-release.py --print-version)"
+          revision="$(git rev-parse "${GITHUB_SHA}^{commit}")"
+          archives=(
+            "dist/numinous-v${version}-aarch64-apple-darwin.tar.gz"
+            "dist/numinous-v${version}-x86_64-apple-darwin.tar.gz"
+            "dist/numinous-v${version}-x86_64-pc-windows-msvc.zip"
+            "dist/numinous-v${version}-x86_64-unknown-linux-gnu.tar.gz"
+          )
+          expected=()
+          for archive in "${archives[@]}"; do
+            expected+=("${archive#dist/}" "${archive#dist/}.sha256")
+          done
+          if test "$SOUNDTRACK_RESULT" = success; then
+            soundtrack="dist/numinous-v${version}-soundtrack.tar.gz"
+            archives+=("$soundtrack")
+            expected+=(
+              "${soundtrack#dist/}"
+              "${soundtrack#dist/}.sha256"
+              "${soundtrack#dist/}.content.sha256"
+            )
+          else
+            test "$SOUNDTRACK_RESULT" = skipped
+          fi
+          mapfile -d '' -t actual < <(
+            find dist -mindepth 1 -maxdepth 1 -printf '%f\0' | LC_ALL=C sort -z
+          )
+          mapfile -t allowed < <(printf '%s\n' "${expected[@]}" | LC_ALL=C sort)
+          test "${#actual[@]}" -eq "${#allowed[@]}"
+          for index in "${!allowed[@]}"; do
+            test "${actual[$index]}" = "${allowed[$index]}"
+          done
+          for archive in "${archives[@]}"; do
+            python3 scripts/package-release.py \
+              --verify-archive "$archive" \
+              --checksum "$archive.sha256" \
+              --expected-version "$version" \
+              --expected-revision "$revision"
+          done
+      - name: Generate and verify release SBOM
+        shell: bash
+        run: |
+          version="$(python3 scripts/package-release.py --print-version)"
+          revision="$(git rev-parse "${GITHUB_SHA}^{commit}")"
+          source_date_epoch="$(git show -s --format=%ct "$revision")"
+          sbom="dist/numinous-v${version}-sbom.spdx.json"
+          python3 scripts/release-sbom.py generate \
+            --sbom "$sbom" \
+            --release-version "$version" \
+            --source-revision "$revision" \
+            --source-date-epoch "$source_date_epoch" \
+            --release-directory dist
+          python3 scripts/release-sbom.py verify \
+            --sbom "$sbom" \
+            --release-version "$version" \
+            --source-revision "$revision" \
+            --source-date-epoch "$source_date_epoch" \
+            --release-directory dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verified-release-set
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7

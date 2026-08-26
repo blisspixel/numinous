@@ -37,6 +37,13 @@ is present), the house-style guard, and the native installer safety self-test,
 then writes images and audio into `renders/`.
 If it prints "All checks passed" and exits 0, everything is green.
 
+GitHub exposes one protected result named `main CI`. It is an aggregate, not a
+shortcut: it waits for format, Clippy, tests, docs, MSRV, house style,
+supply-chain checks, RustSec audit, coverage, Windows, macOS, and Linux builds,
+and the four-package release-set audit. The release packages are artifacts of
+the same CI run. A cancelled, skipped, or failed dependency makes `main CI`
+fail.
+
 ## 2. Or run the gates individually
 
 ```
@@ -91,7 +98,7 @@ agent hallway, tactile, and first-contact live MCP cohorts PASS as CI gates,
 flagship visual and room-bed audio goldens PASS, agent cohort contract unit
 tests pass, 105 study runner and collector regressions, and 15
 physical input contract regressions plus fifteen release-package, sixteen SBOM,
-and eleven release workflow regressions pass, three expensive diagnostics are
+and fourteen release workflow regressions pass, three expensive diagnostics are
 ignored by the ordinary all-target run, 94.91% region coverage, and 94.95% line
 coverage**. The `gpu` and
 `audio` crates plus the app event
