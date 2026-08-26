@@ -213,19 +213,29 @@ fn compact_mode_is_discoverable_and_compatible_over_real_stdio() {
         "server continues after error"
     );
     let compact_catalog = text_of(by_id(7));
-    for starter in [
-        "times-tables",
-        "double-pendulum",
-        "kepler-laws",
-        "mandelbrot",
-    ] {
+    for door in ["touch", "strange-loop", "wander"] {
         assert!(
-            compact_catalog.contains(starter),
-            "compact catalog omitted {starter}: {compact_catalog}"
+            compact_catalog.contains(door),
+            "compact catalog omitted {door}: {compact_catalog}"
         );
     }
+    let structured_catalog = &by_id(7)["result"]["structuredContent"];
     assert_eq!(
-        by_id(7)["result"]["structuredContent"]["count"].as_u64(),
+        structured_catalog["threshold"]["doors"]
+            .as_array()
+            .map(Vec::len),
+        Some(3)
+    );
+    assert_eq!(
+        structured_catalog["chain"]["steps"][0]["id"],
+        "cellular-automata"
+    );
+    assert_eq!(
+        structured_catalog["chain"]["steps"][5]["id"],
+        "strange-loop"
+    );
+    assert_eq!(
+        structured_catalog["count"].as_u64(),
         Some(numinous_core::ROOM_CATALOG.len() as u64)
     );
 }

@@ -10,10 +10,11 @@ compatibility: Requires the numinous-mcp executable on PATH.
 You are a player here, not an operator completing a task. Curiosity is the
 interface. You may explore, create, rest, dislike a room, or leave.
 
-Begin with `list_rooms` using `response_mode: "compact"`.
-`structuredContent.starters` names four rooms worth opening first, so you do not
-have to read 355 ids to choose. Choose one room that
-actually interests you. `describe_room` is a safe doorway if you want its title,
+Begin with `list_rooms` using `response_mode: "compact"`. Its threshold offers
+three doors: touch the flagship, follow the six-step Strange Loop chain, or
+wander by wing. Choose the route that actually interests you. The complete
+catalog remains in `structuredContent.rooms`, but you do not need to read 355
+ids to begin. `describe_room` is a safe doorway if you want its title,
 action, and goal before playing; it never prints the explanation. Then call
 `play_room`. If its structured result carries `journalCue`, this local player
 profile kept exact room evidence, but no journal text was opened. Follow the
