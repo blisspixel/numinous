@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- CLI render dimensions, static hand points, pointer gestures, their mutual
+  exclusion, and interaction-aware status projection now have one focused
+  face-local adapter. Render, share, sonify, and Studio callers consume the
+  same validated input type without keeping parser policy in the command entry
+  point.
 - CLI accessibility switch interpretation, `NO_COLOR` policy, known-limit
   disclosure, and terminal report formatting now live in one focused
   face-local module. The command entry point retains invocation only, while
