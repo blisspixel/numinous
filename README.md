@@ -106,7 +106,7 @@ Alpha is active, not complete.** The
 player-facing **Polish Wave** work landed across all seven workstreams, while
 scheduled structural cleanup continues through focused CLI accessibility,
 Studio, and game-input adapters plus CLI and MCP render-input adapters and an
-MCP transport adapter. The
+MCP transport adapter and simulation-tool adapter. The
 **Universal Wager**
 is complete:
 seven rooms now carry their own staged arc across the App and MCP, using the

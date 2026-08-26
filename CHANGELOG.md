@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP simulation listing, lever validation, rendering, and structured readout
+  projection now live in one focused face-local adapter. Simulation metadata,
+  bounds, rendering, and readouts remain core-owned, while five integration
+  tests preserve discovery, valid execution, conflict, type, range, and unknown
+  simulation behavior through the real request dispatcher.
 - MCP newline request framing and response writes now live in one focused
   face-local transport adapter. It owns the 1 MiB record bound, one-byte
   overflow detection, allocation-free overflow draining, record
