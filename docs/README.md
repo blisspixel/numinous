@@ -52,10 +52,13 @@ shared score table now share a focused MCP game-tool adapter while game rules
 and persistence remain in core. The 214 MCP request-dispatch and
 cross-boundary unit regressions now have a dedicated test module. Compact
 response projection also has a focused adapter that preserves complete typed
-results, leaving the production entry point under 4,500 lines while retaining
-private-boundary coverage. Bounded runtime validation of the declared JSON
-Schema subset, guiding argument-name suggestions, and the two cross-field
-domain checks now share a focused MCP schema adapter. CLI
+results. JSON-RPC validation, dual-revision negotiation, prediction form
+elicitation, response envelopes, server identity, and immutable discovery cache
+metadata now share a focused protocol adapter, leaving the production entry
+point under 4,200 lines while retaining private-boundary coverage. Bounded
+runtime validation of the declared JSON Schema subset, guiding argument-name
+suggestions, and the two cross-field domain checks now share a focused MCP
+schema adapter. CLI
 Studio source selection, capsule loading and never-clobber writes, terminal
 errors, and open reports now have their own focused adapter too. The shared
 4 KiB CLI game record boundary, overflow resynchronization, neutral departures,

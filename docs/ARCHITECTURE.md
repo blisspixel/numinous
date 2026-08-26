@@ -281,14 +281,14 @@ has the corresponding `room_input` adapter for bounded JSON hand points and
 gestures, mutual exclusion, canonical echo, and interaction-aware render and
 status projection. A focused MCP `transport` adapter owns bounded newline
 framing, overflow resynchronization without a second request-sized allocation,
-and flushed one-line response writes. JSON-RPC semantics and dispatch remain
-in the request entry point. A focused MCP `sim_tools` adapter owns simulation
-discovery text, lever argument validation, and structured result projection;
-core retains simulation metadata, bounds, rendering, and readouts. A focused
-MCP `studio_tools` adapter owns Formula Jam discovery, portable creation
-projection, optional audio attachment, and encounter receipts. A focused MCP
-`game_tools` adapter owns stateless game replay and result presentation for
-Hackenbush, Party, Fifteen, Quiz, Munch, Munch Arcade, and Nim, plus the shared
+and flushed one-line response writes. A focused MCP `sim_tools` adapter owns
+simulation discovery text, lever argument validation, and structured result
+projection; core retains simulation metadata, bounds, rendering, and readouts.
+A focused MCP `studio_tools` adapter owns Formula Jam discovery, portable
+creation projection, optional audio attachment, and encounter receipts. A
+focused MCP `game_tools` adapter owns stateless game replay and result
+presentation for Hackenbush, Party, Fifteen, Quiz, Munch, Munch Arcade, and Nim,
+plus the shared
 score table projection. Core retains deals, legality, grading, state
 transitions, and score persistence. A focused CLI
 `studio` adapter owns raw source-mode
@@ -299,18 +299,19 @@ construction, capsule validity, and lineage semantics. A focused CLI
 `game_input` adapter owns the
 bounded terminal record reader, overflow resynchronization, neutral departure
 presentation, and the games' `?` explanation door. Game rules, progression,
-scoring, and concepts stay outside that adapter. The MCP face also keeps
-protocol discovery, legacy negotiation,
-server identity, and its immutable 40-tool JSON Schema catalog in a focused
-`catalog` module. The request entry point retains transport validation,
-dispatch, result decoration, and domain invocation. Its 214 request-dispatch
-and cross-boundary unit regressions live in the sibling `tests` module, which
-retains private module access without enlarging the production entry point. The
-`response` adapter owns compact prose projection for complete typed results,
-while preserving errors, text-only tools, and structured content. A focused
-`schema` adapter validates the bounded JSON Schema subset declared by that
-catalog, including guiding argument-name suggestions and the temporal and
-Arcade cross-field checks. It does not own the immutable tool contract.
+scoring, and concepts stay outside that adapter. The MCP `catalog` module owns
+discovery documents and the immutable 40-tool JSON Schema contract. A focused
+`protocol` adapter owns JSON-RPC envelope validation, dual-revision negotiation,
+prediction form elicitation, response envelopes, server identity, and immutable
+discovery cache metadata. The request entry point retains routing and domain
+invocation. Its 214 request-dispatch and cross-boundary unit regressions live in
+the sibling `tests` module, which retains private module access without
+enlarging the production entry point. The `response` adapter owns compact prose
+projection for complete typed results, while preserving errors, text-only
+tools, and structured content. A focused `schema` adapter validates the bounded
+JSON Schema subset declared by that catalog, including guiding argument-name
+suggestions and the temporal and Arcade cross-field checks. It does not own the
+immutable tool contract.
 The App preference store uses a strict std-only core schema for volume, mute,
 Visual Era, and window mode. Core owns bounded reads, lock coordination, atomic
 replacement, inventory, and complete erasure. The App owns only applying those
