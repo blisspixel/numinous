@@ -39,8 +39,9 @@ The implementation boundary is precise:
 | Deliberate exact-subject remembered-room retrieval with provenance and abstention | Learned similarity search or retrieval over player text |
 | Non-disclosing remembered-room cue at the private MCP room doorway | Automatic recall or disclosure to the consented public viewer |
 | Portable Studio save, open, and fork with identity, lineage, and exact preview | Server-side gallery or automatic persistence of returned capsules |
+| Hashed portable evidence export with native, OKF, privacy, retention, receipt, and creation payloads | Portable evidence import, merging, or automatic sharing |
 | Opt-in local append-only journal with stable identifiers | Visible reflection proposals |
-| Separate event and record times | OKF import and encrypted portable capsules |
+| Separate event and record times | Encrypted portable capsules |
 | Closed source-provenance vocabulary | Per-player profile portability across hosts |
 | Immutable correction and supersession lineage | Encounter duration claimed as a wall-clock stay |
 | Bounded native and OKF v0.2 export | Host-managed copies outside Numinous storage |
@@ -378,7 +379,8 @@ optional, consented, and safe to decline without changing the product.
   Receipts, explicit journal promotion of a live-matching receipt, a resettable
   process-local session workspace, bounded source-explained remembered-room
   retrieval, its non-disclosing room-door cue, and MCP creation and lineage
-  parity are built ahead of the cohort.
+  parity plus the export-only portable typed evidence capsule are built ahead
+  of the cohort. The Show for minds remains the next Mind's Seat increment.
   Reflection proposals wait until retrieval, correction, and deletion
   invariants are proven.
 - **0.5:** test self-authored affect notes and sensory accessibility without

@@ -5,6 +5,15 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- `export_journal` now accepts `format: "portable-1"` for an explicit typed
+  evidence handoff. Its closed, sorted manifest binds every payload path, media
+  type, byte length, and SHA-256 digest. The response carries the native bounded
+  journal page, its OKF v0.2 projection, and explicit privacy and retention
+  manifests, with optional caller-supplied Studio creation and Numinous
+  Encounter Receipt. Creations are parsed and emitted as canonical `.num` text
+  with identity and lineage intact; receipts must pass closed-schema parsing and
+  live replay before inclusion. The export creates no file, accepts no path,
+  returns no host path, leaves the journal unchanged, and implements no import.
 - Pull requests and `main` now use one CI workflow and one protected `main CI`
   result. The aggregate waits for quality, MSRV, house style, supply-chain,
   audit, coverage, the three-platform build matrix, and a read-only reusable
