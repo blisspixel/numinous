@@ -43,8 +43,9 @@ default while physical three-platform pacing proof is open. The one CI workflow
 now drives a deterministic, fully composed App room through the production
 presenter on Windows, macOS, and Linux and retains a typed runtime receipt from
 each platform. Those hosted or unclassified timings are diagnostic, not
-promotion evidence. From a source checkout, try the real App raster integration
-with
+promotion evidence. A separate closed-set verifier independently recomputes the
+six required physical results and binds their exact receipts before promotion.
+From a source checkout, try the real App raster integration with
 `cargo run --release --bin numinous-app --features gpu-post`. If GPU setup or
 recovery fails, the App says so and continues through software presentation.
 
@@ -142,9 +143,12 @@ Real App room rasters now feed that disabled path with visible software
 fallback. A typed probe now exercises the exact App composition and presenter
 on all three CI operating systems, retains adapter, driver, surface, source,
 binary, outcome, and timing facts, and refuses to treat CI timing as physical
-pacing evidence. Active work moves to collecting the release-profile physical
-Windows, macOS, and Linux pacing set before changing the shipped App, alongside
-remaining structural debt. The room
+pacing evidence. The physical set builder now rejects missing target cells,
+mixed build or machine identity, software adapters, source drift, stale timing
+summaries, and missed budgets before hashing all six receipts into one closed
+manifest. Active work moves to collecting that release-profile Windows, macOS,
+and Linux pacing set before changing the shipped App, alongside remaining
+structural debt. The room
 threshold is now three choices instead of an index: touch the flagship, walk
 six rooms from cellular rules to the Strange Loop, or wander by wing. Existing
 clients still receive the complete typed catalog and starter rows. The 0.4

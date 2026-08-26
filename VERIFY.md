@@ -77,6 +77,8 @@ python scripts/test-agent-plugin.py                 # Windows
 python3 scripts/test-agent-plugin.py                # macOS / Linux
 python scripts/test-sensory-platform-proof.py       # Windows
 python3 scripts/test-sensory-platform-proof.py      # macOS / Linux
+python scripts/test-sensory-platform-set.py         # Windows
+python3 scripts/test-sensory-platform-set.py        # macOS / Linux
 python scripts/test-release-engagement-smoke.py     # Windows
 python3 scripts/test-release-engagement-smoke.py    # macOS / Linux
 python scripts/test-input-hardware-session.py       # Windows
@@ -122,7 +124,9 @@ cargo run --locked -p numinous-app --features gpu-post --example sensory_platfor
 Its timing is diagnostic only. The physical release-profile contract and its
 required machine, revision, power, sample, and p95 arguments live in
 `docs/PERFORMANCE.md`. A passing CI receipt is not a substitute for that
-physical evidence.
+physical evidence. Once all six physical receipts exist, build their exact
+closed manifest with `scripts/sensory-platform-set.py build`, then reproduce it
+with the script's `verify` mode and the same receipt paths.
 
 The four-target release workflow runs `scripts/release-engagement-smoke.py`
 against every disposable packaged install. It requires a substantive Times

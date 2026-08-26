@@ -136,6 +136,32 @@ not a universal performance result. Promotion needs a reviewed physical set at
 both target sizes for Windows, macOS, and Linux. Compositor completion, scanout,
 input latency, and perceptual quality remain outside both classes.
 
+After recording both sizes on each operating system, build the closed set with
+the six explicit receipt paths:
+
+```
+python scripts/sensory-platform-set.py build --out .agent/sensory-app-physical-set.json windows-1080p.json windows-1440p.json macos-1080p.json macos-1440p.json linux-1080p.json linux-1440p.json
+```
+
+The independent verifier rechecks the complete receipt schema, physical GPU,
+release profile, full revision, machine and power facts, exact client area,
+source determinism, raw segment arithmetic, nearest-rank summaries, and p95
+budget. It requires exactly one 1080p and one 1440p result per operating system,
+the same machine, adapter, and executable within each pair, identical composed
+source bytes across operating systems at each size, one release identity, and
+at least two distinct physical adapters. The canonical manifest binds the raw
+receipt hashes and the validator source hash. Recheck a retained set with:
+
+```
+python scripts/sensory-platform-set.py verify .agent/sensory-app-physical-set.json windows-1080p.json windows-1440p.json macos-1080p.json macos-1440p.json linux-1080p.json linux-1440p.json
+```
+
+This proves that the six candidate receipts form the declared set. It does not
+broaden any receipt beyond its named machine or add authority for compositor,
+scanout, input latency, perceptual quality, or accessibility claims. Its hashes
+bind content and detect mismatches; they do not authenticate an operator or the
+reported capture conditions.
+
 ## July 2026 dependency migration
 
 The migration is the adjacent revision pair below. The after revision includes

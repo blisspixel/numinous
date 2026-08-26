@@ -34,7 +34,11 @@ built, so an aspiration is never mistaken for a result.
   retains adapter, driver, executable, outcomes, and raw boundary samples. CI
   timing is labeled informational. A separate physical mode refuses debug
   builds, GitHub Actions, software adapters, incomplete machine facts, battery
-  power, undersampling, transient frames, and missed budgets.
+  power, undersampling, transient frames, and missed budgets. An independent
+  physical-set verifier recomputes raw summaries and segment arithmetic, then
+  requires the exact six OS and resolution cells, pair identity, cross-platform
+  source parity, one revision, and at least two physical adapters before writing
+  a source-bound manifest.
   The consented MCP
   broadcast path has 65 focused shared-crate tests, 121 MCP unit tests, and
   12 real stdio tests. Real loopback cases cover pairing, compatibility,
