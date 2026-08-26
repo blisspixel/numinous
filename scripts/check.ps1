@@ -11,10 +11,14 @@ function Invoke-Step($name, $script) {
 
 Invoke-Step "fmt"         { cargo fmt --all --check }
 Invoke-Step "clippy"      { cargo clippy --workspace --all-targets -- -D warnings }
-Invoke-Step "GPU post spike" {
+Invoke-Step "GPU post and App presentation" {
     cargo clippy -p numinous-gpu --all-features --all-targets -- -D warnings
     if ($LASTEXITCODE -ne 0) { throw "GPU post clippy failed" }
     cargo test -p numinous-gpu --all-features --all-targets --locked
+    if ($LASTEXITCODE -ne 0) { throw "GPU post tests failed" }
+    cargo clippy -p numinous-app --all-features --all-targets -- -D warnings
+    if ($LASTEXITCODE -ne 0) { throw "GPU App clippy failed" }
+    cargo test -p numinous-app --all-features --all-targets --locked
 }
 Invoke-Step "docs"        {
     $savedRustdocFlags = Get-Item Env:RUSTDOCFLAGS -ErrorAction SilentlyContinue

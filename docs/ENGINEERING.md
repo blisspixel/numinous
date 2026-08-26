@@ -175,7 +175,9 @@ above 384 kHz before device-scaled rendering or mixer setup.
 Nothing merges red. On every PR, blocking:
 
 1. `cargo fmt --all --check`
-2. `cargo clippy --workspace --all-targets -- -D warnings`
+2. `cargo clippy --workspace --all-targets -- -D warnings`, plus all-feature
+   Clippy and tests for `numinous-gpu` and `numinous-app` so the disabled direct
+   presentation candidate cannot rot
 3. `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked`
 4. `RUSTDOCFLAGS="-D warnings" cargo test --workspace --doc --locked`
 5. `cargo test --workspace --all-targets --locked`

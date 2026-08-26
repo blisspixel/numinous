@@ -7,9 +7,11 @@ echo "== fmt =="
 cargo fmt --all --check
 echo "== clippy =="
 cargo clippy --workspace --all-targets -- -D warnings
-echo "== GPU post spike =="
+echo "== GPU post and App presentation =="
 cargo clippy -p numinous-gpu --all-features --all-targets -- -D warnings
 cargo test -p numinous-gpu --all-features --all-targets --locked
+cargo clippy -p numinous-app --all-features --all-targets -- -D warnings
+cargo test -p numinous-app --all-features --all-targets --locked
 echo "== docs =="
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked
 RUSTDOCFLAGS="-D warnings" cargo test --workspace --doc --locked
