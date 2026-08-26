@@ -41,7 +41,8 @@ face-local modules. The room threshold now offers the flagship, an ordered
 six-room Strange Loop walk, or compact wing wandering while retaining the full
 typed catalog. The Show now carries that walk as six explicit stateless cues
 with exact looks, alternatives, deltas, sound facts, and optional audio. The
-remaining seams and physical Sensory Lift pacing set are next.
+remaining seams and physical Sensory Lift pacing set are next. Its closed-set
+verifier is built; the six qualifying physical receipts are not yet collected.
 The 0.4 Understanding Alpha cohort waits on an owner ruling; its method dry-run
 and dual automated auditors are already in CI. Soft-thin densify, bulk new
 rooms, and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and

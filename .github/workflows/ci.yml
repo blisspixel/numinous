@@ -84,6 +84,7 @@ jobs:
           python3 scripts/test-package-release.py
           python3 scripts/test-agent-plugin.py
           python3 scripts/test-sensory-platform-proof.py
+          python3 scripts/test-sensory-platform-set.py
           python3 scripts/test-release-engagement-smoke.py
           python3 scripts/test-uninstall-roundtrip.py
           python3 scripts/test-input-hardware-session.py

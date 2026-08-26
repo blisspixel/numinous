@@ -147,6 +147,11 @@ Any change to this topology must update and pass
   when run on declared reference hardware; broader CI performance and soak
   budgets are planned in `QUALITY.md`. No optimization lands without evidence
   that it helped.
+- **Close physical pacing evidence as a set.** Sensory Lift promotion requires
+  the exact Windows, macOS, and Linux pair at 1080p and 1440p. Run
+  `scripts/sensory-platform-set.py` over all six receipts so raw samples,
+  identity, source parity, target coverage, and budgets are independently
+  recomputed and bound before any feature default changes.
 - **Documented release profile** (LTO, `codegen-units`, panic strategy, opt-level) with the reasoning; a `bench`/`profiling` profile for flamegraphs.
 - Prefer clear code that the compiler optimizes well over hand-rolled cleverness; reach for `unsafe`/SIMD only with a benchmark that justifies it, behind the unsafe policy above.
 
