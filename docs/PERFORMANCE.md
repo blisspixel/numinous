@@ -45,10 +45,54 @@ cargo run --release --locked -p numinous-gpu --all-features --example post_spike
 
 This clears GPU feasibility on the reference integrated adapter and rejects
 the measured single-threaded CPU implementation for production. It does not
-claim that every possible CPU implementation fails. The next decision needs a
-direct surface-presentation boundary. Display scan-out, cross-platform
+claim that every possible CPU implementation fails. The direct presentation
+decision is measured in the next section. Display scan-out, cross-platform
 behavior, catalog-room aesthetics, accessibility, and preference remain
 outside this receipt.
+
+## August 2026 Sensory Lift direct presentation
+
+Revision `b1dd42e9fa50ecd29362b96a3a2f6d7fd52575dc` adds a second consumer of the
+same five-pass post stack. It safely creates a real window surface, selects a
+compatible adapter and sRGB format, requests FIFO pacing with one frame in
+flight, and writes the final tone-map pass directly into the acquired surface
+texture. The direct path does not allocate the validator's offscreen output
+texture or readback buffer.
+
+The locked release example ran on the same Windows AMD Radeon 780M Vulkan
+reference. Each workload used 30 warmups and 120 retained samples. The acquire
+boundary reports swapchain wait alone. The render-and-present boundary starts
+after acquisition and covers host upload, command encoding, queue submission,
+and the queue presentation request. The combined boundary covers both.
+
+| Size | Acquire p50 / p95 ms | Render and present p50 / p95 ms | Combined p50 / p95 ms | Result |
+| --- | ---: | ---: | ---: | --- |
+| 1920 x 1080 | 13.891 / 15.251 | 2.309 / 2.834 | 16.196 / 17.447 | Pass |
+| 2560 x 1440 | 13.142 / 15.339 | 2.984 / 3.671 | 16.021 / 18.378 | Pass |
+
+The combined p95 budgets remain 33 ms at 1080p and 50 ms at 1440p. Neither run
+encountered a transient acquisition or suboptimal frame. FIFO acquisition
+dominates the combined result, so this is a paced presentation boundary, not an
+unpaced throughput claim.
+
+The full receipt is
+[`evidence/sensory-surface-spike-2026-08-25.json`](evidence/sensory-surface-spike-2026-08-25.json).
+It retains every segment sample, exact implementation and binary identity,
+driver, toolchain, window-size contract, budgets, decision, and scope limits.
+Reproduce each workload with the commands recorded in that receipt. The general
+form is:
+
+```
+cargo run --release --locked -p numinous-gpu --features gpu-post --example surface_spike -- --width 1920 --height 1080 --warmups 30 --samples 120 --budget-ms 33 --check
+```
+
+This selects direct `wgpu` surface output as the production candidate for the
+full Sensory Lift. It does not promote that path into the App. The next gate is
+real room-raster integration plus Windows, macOS, and Linux correctness and
+pacing. The receipt stops when the queue presentation request returns and does
+not include compositor work, display scanout, input latency, human perception,
+or room aesthetics. The 1440p client area was exact but extended beyond the
+reference machine's 2256 x 1504 desktop.
 
 ## July 2026 dependency migration
 

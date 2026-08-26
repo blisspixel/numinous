@@ -13,7 +13,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   buffer. A real-window harness records acquisition, render-and-present, and
   combined host boundaries separately, reports every transient or suboptimal
   frame, and states that compositor and display scanout remain outside the
-  measurement.
+  measurement. The exact Windows AMD Radeon 780M receipt retains 120 samples at
+  each target size. Combined p95 is 17.447 ms at 1080p and 18.378 ms at 1440p,
+  with zero transient or suboptimal frames at either size.
 - A disabled-by-default `gpu-post` spike now measures the Sensory Lift's
   proposed post stack without changing the shipped App path. It uploads sRGB
   frames, renders into linear `Rgba16Float`, performs a half-resolution bright
