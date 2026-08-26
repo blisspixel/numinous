@@ -5,6 +5,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP room discovery, description, gated reveal projection, structured sound,
+  bounded play rendering, temporal evidence, and encounter receipts now live in
+  a focused face-local adapter. Core retains the room registry, veil rules,
+  rendering, sound generation, goals, grading, and mathematical truth.
 - MCP keyless argument parsing, earned-state projection, overlays, and bounded
   consolidation for the seven engineered flagship Aha arcs now live in a
   focused face-local adapter. Core retains each state machine, mathematical

@@ -62,9 +62,13 @@ local-store resolution, score and Journey persistence, and response-visible
 save failures share a focused progress adapter while core retains the state and
 game rules. Keyless argument parsing, earned-state projection, overlays, and
 bounded consolidation for the seven engineered flagship Aha arcs share a
-focused adapter while core retains their state machines and truth. The
-production entry point is now under 2,200 lines with private-boundary coverage
-intact. Bounded runtime validation of the declared JSON Schema subset, guiding
+focused adapter while core retains their state machines and truth. Room
+discovery, description, gated reveal projection, structured sound, bounded play
+rendering, temporal evidence, and encounter receipts share a focused room
+adapter while core retains the registry, veil rules, rendering, sound
+generation, goals, grading, and mathematical truth. The production entry point
+is now under 1,300 lines with private-boundary coverage intact. Bounded runtime
+validation of the declared JSON Schema subset, guiding
 argument-name suggestions, and the two cross-field domain checks now share a
 focused MCP schema adapter. CLI
 Studio source selection, capsule loading and never-clobber writes, terminal
