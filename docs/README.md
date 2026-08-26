@@ -37,9 +37,11 @@ Studio requests, the typed room catalog, the typed Gauntlet, and local-state
 path resolution now have one core owner. CLI and MCP local-state adapters are
 focused modules extracted from their god-files, and MCP discovery plus its
 immutable tool schema and player-owned journal projections now have dedicated
-face-local modules. The room threshold now offers the flagship, an ordered
-six-room Strange Loop walk, or compact wing wandering while retaining the full
-typed catalog. The Show now carries that walk as six explicit stateless cues
+face-local modules. CLI accessibility switch interpretation and terminal
+reporting now have the same focused ownership. The room threshold now offers
+the flagship, an ordered six-room Strange Loop walk, or compact wing wandering
+while retaining the full typed catalog. The Show now carries that walk as six
+explicit stateless cues
 with exact looks, alternatives, deltas, sound facts, and optional audio. The
 remaining seams and physical Sensory Lift pacing set are next. Its closed-set
 verifier is built; the six qualifying physical receipts are not yet collected.
