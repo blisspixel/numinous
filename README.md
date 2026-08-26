@@ -114,11 +114,14 @@ dual-revision negotiation, prediction form elicitation, response envelopes,
 server identity, and discovery cache metadata have a focused protocol adapter
 too. Seeded prediction plus touch and parameter challenge posing, grading,
 response projection, and progress accounting have a focused challenge adapter,
-with deterministic goal construction and grading remaining in core. These
-extractions keep the production entry point under 3,700 lines without weakening
-private-boundary coverage. Bounded runtime validation of the declared JSON
-Schema subset now has its own focused adapter too, with the catalog remaining
-the immutable protocol contract. The
+with deterministic goal construction and grading remaining in core. Request
+progress mapping, daily seed freezing, local-store resolution, score and Journey
+persistence, and response-visible save failures now have a focused progress
+adapter too. Core retains the underlying progression, scoring, persistence,
+streak, and game rules. These extractions keep the production entry point under
+3,100 lines without weakening private-boundary coverage. Bounded runtime
+validation of the declared JSON Schema subset now has its own focused adapter
+too, with the catalog remaining the immutable protocol contract. The
 **Universal Wager**
 is complete:
 seven rooms now carry their own staged arc across the App and MCP, using the
