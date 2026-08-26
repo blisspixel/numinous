@@ -5,6 +5,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP JSON-RPC validation, dual-revision negotiation, prediction form
+  elicitation, response envelopes, server identity, and immutable discovery
+  cache metadata now live in a focused face-local protocol adapter. Request
+  dispatch and domain execution remain in the entry point.
 - MCP compact response projection now lives in a focused face-local adapter.
   It preserves complete structured results and typed content while shortening
   only redundant prose, leaving errors and text-only tools untouched.

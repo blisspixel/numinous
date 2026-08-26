@@ -109,11 +109,13 @@ Studio, and game-input adapters plus CLI and MCP render-input adapters and an
 MCP transport adapter, simulation-tool adapter, Studio-tool adapter, and
 game-tool adapter. MCP request-dispatch and cross-boundary regressions also live
 in a dedicated test module, while compact response projection has its own
-adapter that preserves complete typed results. These extractions keep the
-production entry point under 4,500 lines without weakening private-boundary
-coverage. Bounded runtime validation of the declared JSON Schema subset now has
-its own focused adapter too, with the catalog remaining the immutable protocol
-contract. The
+adapter that preserves complete typed results. JSON-RPC validation,
+dual-revision negotiation, prediction form elicitation, response envelopes,
+server identity, and discovery cache metadata have a focused protocol adapter
+too. These extractions keep the production entry point under 4,200 lines
+without weakening private-boundary coverage. Bounded runtime validation of the
+declared JSON Schema subset now has its own focused adapter too, with the
+catalog remaining the immutable protocol contract. The
 **Universal Wager**
 is complete:
 seven rooms now carry their own staged arc across the App and MCP, using the
