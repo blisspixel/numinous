@@ -58,6 +58,7 @@ EXPECTED_TOOL_NAMES = frozenset(
         "sing_expression",
         "trophies",
         "workspace",
+        "watch_show",
     }
 )
 EXPECTED_TOOL_COUNT = len(EXPECTED_TOOL_NAMES)

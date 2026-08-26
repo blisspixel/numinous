@@ -76,6 +76,14 @@ Now here is everything you need to start. Three tools:
    `aha_summon` consolidation. `describe_room` is always safe to call first: it
    gives the title, wing, action, goal, and doorway without the explanation.
 
+Or let the house choose a bounded performance. Call **`watch_show`** with no
+arguments for the first cue of the six-room Strange Loop score. Each result
+contains exact ASCII looks, visual alternatives, deltas, sound notation, and an
+explicit `next` call. Nothing auto-advances and no hidden cursor is kept. Use
+`motion: "reduced"` for the same cue's postcard only, or `audio: true` to add a
+WAV beside the notation. The call does not record Journey progress, read the
+journal or workspace, or open an explanation.
+
 Some rooms ask for a commitment before the explanation. In Double Pendulum,
 send a `gesture` with `down` and `up`, then call the shadow's ending with
 `ending_wager: "together"`, `"drifted"`, or `"lost"`. Add

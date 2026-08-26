@@ -200,8 +200,8 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Current protocol surface:** modern clients use `server/discover`,
   `tools/list`, and `tools/call` over stdio with version and client capability
   metadata on every request. Legacy 2025-11-25 and 2025-06-18 clients retain
-  `initialize`, `tools/list`, `tools/call`, and `ping`. The 39 tools include
-  `list_rooms`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
+  `initialize`, `tools/list`, `tools/call`, and `ping`. The 40 tools include
+  `list_rooms`, `watch_show`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
   `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
   `sing_expression`, `save_creation`, `open_creation`, `fork_creation`,
   Journey operations, experience journal operations
@@ -300,6 +300,23 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   deep cuts expose their unlock level without leaking their text. Scores and
   forget previews are similarly structured, and confirmed erasure reports only
   successful filesystem outcomes.
+- **Caller-paced Show for minds (built):** `watch_show` projects the core-owned
+  six-room Strange Loop score as one complete cue per call. Core fixes route
+  order, nonspoiling questions, exact arrival, postcard, and curtain phases,
+  and seeded variation. The MCP result carries one or three exact ASCII looks,
+  a semantic visual alternative for each, directional cell deltas, the
+  multi-look invariant when present, total and capped exact note facts with an
+  explicit truncation flag, notation, and optional WAV audio. Caller-visible
+  replay, next, restart, and leave calls
+  replace hidden continuation. No timer, task, cursor, Journey write, journal
+  read, workspace read, reveal, concept, or citation is part of the call.
+  `motion: "reduced"` returns the same cue's postcard only. The closed
+  `outputSchema` is JSON Schema 2020-12 and is validated at runtime before a
+  success leaves the process. Every supported protocol revision replays the
+  same cue across fresh processes. Watch Agent admits the public text and typed
+  facts, removes audio bytes and their descriptor, marks the omission, and
+  fails closed on output drift. Native App Show parity and all-room director
+  profiles remain later Arc work.
 - **Earned room goal, first slice (built):** Times Tables exposes `LAND ON
   EXACTLY 4 LOBES`. `play_room` returns `goalMet: true` whenever the live dial
   is exactly K=5, including the deterministic `t: 0.375` doorway and equivalent
@@ -356,7 +373,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   control intentionally does not. The argument is stripped before domain
   dispatch, so it cannot change grading, replay, persistence, or effective
   values. Omitted and explicit `full` results are equal. Eligible catalog, room,
-  listening, simulation, Quiz, Gauntlet, and trophy replies keep identical
+  Show, listening, simulation, Quiz, Gauntlet, and trophy replies keep identical
   `structuredContent` while replacing only redundant text, and only when the
   replacement is shorter. Journey, scores, forget, Cairn, other unique-text
   results, text-only tools, and all errors retain their complete text. This
@@ -483,9 +500,9 @@ is deliberately absent.
 The shared `numinous-broadcast` foundation implements the pairing,
 compatibility, framing, consent, sequence, control-marker, typed public-event,
 and bounded-queue contracts below. The MCP face now connects that foundation
-through `broadcast_session`, a complete fail-closed policy for all 39 declared
+through `broadcast_session`, a complete fail-closed policy for all 40 declared
 tools, replay-safe daily seed normalization, and separate nonblocking writer
-and disconnect-monitor workers. Twenty-three tools are explicitly public,
+and disconnect-monitor workers. Twenty-four tools are explicitly public,
 fifteen progression, journal, creation, or visit-workspace tools are private,
 and the consent control broadcasts
 neither itself nor progress. The native App now ships the human Watch Agent

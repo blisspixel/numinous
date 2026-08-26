@@ -9,14 +9,14 @@ built, so an aspiration is never mistaken for a result.
 ## Evidence snapshot, 2026-08-22
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 3,692 passing all-target test cases plus three expensive ignored
+  doctests, 3,718 passing all-target test cases plus three expensive ignored
   diagnostics, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 94.91%
-  regions and 94.95% lines under the documented exclusions. Each of the four
+  three-OS test-and-build matrix. The current measured coverage is 94.90%
+  regions and 94.93% lines under the documented exclusions. Each of the four
   packaged release targets installs into a disposable root, renders Times
   Tables through the installed CLI, and completes modern MCP discovery, the
-  exact 39-tool inventory, and a real `play_room` call from an isolated profile.
+  exact 40-tool inventory, and a real `play_room` call from an isolated profile.
   Sixteen SBOM regressions require a deterministic SPDX 2.3 inventory of the
   exact locked all-feature Rust graph, including dependency edges, declared
   licenses, package URLs, and registry checksums. Fifteen release-package
@@ -73,7 +73,7 @@ built, so an aspiration is never mistaken for a result.
   silent rather than manufacturing native state.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
-  three faces, and a release-generated 2,937-screen visual QA matrix. Every room
+  three faces, and a release-generated 2,945-screen visual QA matrix. Every room
   is captured at default and compact sizes in deterministic opening, arrival,
   immediate-interaction, and same-phase delayed-interaction states. Default
   room receipts are 900 by 700 and compact room receipts are 360 by 240. Games,

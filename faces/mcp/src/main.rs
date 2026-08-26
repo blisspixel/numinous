@@ -18,6 +18,7 @@ mod journal;
 mod local_state;
 mod portable;
 mod room_door;
+mod show;
 mod temporal;
 mod workspace;
 
@@ -1301,6 +1302,7 @@ fn level_the_arguments_require(tool: PublicTool, arguments: &Value) -> u32 {
 
 fn viewer_result(tool: PublicTool, arguments: &Value, result: &Value) -> Value {
     match tool {
+        PublicTool::WatchShow => show::viewer_result(result),
         PublicTool::DescribeRoom => {
             describe_room_tool_for_journey(arguments, &numinous_core::Journey::default())
         }
@@ -1455,6 +1457,7 @@ fn validate_schema_value(
             "boolean" => value.is_boolean(),
             "number" => value.as_f64().is_some_and(f64::is_finite),
             "integer" => value.as_i64().is_some() || value.as_u64().is_some(),
+            "null" => value.is_null(),
             _ => true,
         };
         if !valid_type {
@@ -1657,6 +1660,7 @@ fn call_tool(
 
     let result = match name {
         "list_rooms" => room_door::list_tool(),
+        "watch_show" => show::tool(&domain_args),
         "describe_room" => describe_room_tool(&domain_args, journey_file),
         "reveal_room" => reveal_room_tool(&domain_args, journey_file),
         "play_room" => play_room_tool(&domain_args, journey_file),
@@ -1705,7 +1709,34 @@ fn call_tool(
         "broadcast_session" => broadcast_session_tool(&domain_args, broadcast),
         other => return Err((-32602_i64, format!("Unknown tool: {other}"))),
     };
-    Ok(apply_response_mode(name, response_mode, result))
+    let result = apply_response_mode(name, response_mode, result);
+    if let Err(message) = validate_declared_tool_output(name, &result) {
+        return Ok(tool_error(&message));
+    }
+    Ok(result)
+}
+
+fn validate_declared_tool_output(name: &str, result: &Value) -> Result<(), String> {
+    if result.get("isError").and_then(Value::as_bool) == Some(true) {
+        return Ok(());
+    }
+    let Some(schema) = tools_catalog()
+        .get("tools")
+        .and_then(Value::as_array)
+        .and_then(|tools| {
+            tools
+                .iter()
+                .find(|tool| tool.get("name").and_then(Value::as_str) == Some(name))
+        })
+        .and_then(|tool| tool.get("outputSchema"))
+    else {
+        return Ok(());
+    };
+    let Some(structured) = result.get("structuredContent") else {
+        return Err("The tool could not return its declared structured output.".to_string());
+    };
+    validate_schema_value(structured, schema, "structuredContent", 0)
+        .map_err(|_| "The tool could not return its declared structured output.".to_string())
 }
 
 fn replay_encounter(
@@ -1811,10 +1842,16 @@ fn apply_response_mode(name: &str, response_mode: Option<&str>, mut result: Valu
     if summary.len() >= current_text.len() {
         return result;
     }
-    result["content"] = json!([{
-        "type": "text",
-        "text": summary,
-    }]);
+    if let Some(first) = result
+        .get_mut("content")
+        .and_then(Value::as_array_mut)
+        .and_then(|content| content.first_mut())
+    {
+        *first = json!({
+            "type": "text",
+            "text": summary,
+        });
+    }
     result
 }
 
@@ -1824,6 +1861,7 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
         // in the very catalog the short mode exists to spare them, so the
         // prose names its starters the same way the structured array does.
         "list_rooms" => room_door::compact_summary(structured),
+        "watch_show" => show::compact_summary(structured),
         "describe_room" => {
             let mut summary = format!(
                 "{} ({}) in {}. Action: {}.",
@@ -6605,12 +6643,17 @@ mod tests {
         assert_eq!(result["ttlMs"], super::TOOLS_CACHE_TTL_MS);
         assert_eq!(result["cacheScope"], "public");
         let tools = result["tools"].as_array().expect("tool array");
-        assert_eq!(tools.len(), 39);
+        assert_eq!(tools.len(), 40);
         assert!(
             tools
                 .iter()
                 .all(|tool| { tool["inputSchema"]["$schema"] == super::JSON_SCHEMA_2020_12 })
         );
+        let show = tools
+            .iter()
+            .find(|tool| tool["name"] == "watch_show")
+            .expect("show tool");
+        assert_eq!(show["outputSchema"]["$schema"], super::JSON_SCHEMA_2020_12);
 
         let invalid_cursor = handle_request(&json!({
             "jsonrpc": "2.0",
@@ -6949,7 +6992,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 39);
+        assert_eq!(tools.len(), 40);
         assert!(
             tools
                 .iter()
@@ -6957,6 +7000,7 @@ mod tests {
                 .any(|name| name == "challenge")
         );
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
+        assert!(names.contains(&"watch_show"));
         assert!(names.contains(&"predict"));
         assert!(names.contains(&"cairn"));
         assert!(names.contains(&"reveal_room"));

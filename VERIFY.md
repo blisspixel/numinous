@@ -93,13 +93,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 3,692 passing all-target Rust test cases,
+Expected right now: **format and clippy clean, 3,718 passing all-target Rust test cases,
 agent hallway, tactile, and first-contact live MCP cohorts PASS as CI gates,
 flagship visual and room-bed audio goldens PASS, agent cohort contract unit
 tests pass, 105 study runner and collector regressions, and 15
 physical input contract regressions plus fifteen release-package, sixteen SBOM,
 and fourteen release workflow regressions pass, three expensive diagnostics are
-ignored by the ordinary all-target run, 94.91% region coverage, and 94.95% line
+ignored by the ordinary all-target run, 94.90% region coverage, and 94.93% line
 coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
@@ -109,7 +109,7 @@ contract tests and mapping-aware legends remain the CI authority.
 
 The four-target release workflow runs `scripts/release-engagement-smoke.py`
 against every disposable packaged install. It requires a substantive Times
-Tables CLI render and modern MCP discovery, the exact 39-tool list, and one
+Tables CLI render and modern MCP discovery, the exact 40-tool list, and one
 structured `play_room` result from an isolated temporary profile. Version-only
 execution is not treated as engagement proof.
 
@@ -223,7 +223,7 @@ content identifier detects a change only until someone deliberately recomputes
 it. It is not a signature or evidence of external custody; release decisions
 that need that property must register or sign the receipt outside this runner.
 
-The release scripts also regenerate `renders/qa-app/`, a 2,937-screen app matrix.
+The release scripts also regenerate `renders/qa-app/`, a 2,945-screen app matrix.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture
 responses that follow its declared interaction verb. The generator checks pure
@@ -504,7 +504,7 @@ boons, daily streaks, resonances), the Studio (plot, animate, sing, in the
 terminal and the window), Visual Eras (including PNG output), Music Engine A
 (the seeded chiptune, `numinous tune`), GPU real-time fractals, live sound in
 the app and CLI plus structured notation over MCP, the `forget` right for
-players who are minds, and 39 MCP tools: 23 public play tools, fifteen private
+players who are minds, and 40 MCP tools: 24 public play tools, fifteen private
 progression, creation, or local-state tools, and one local broadcast consent
 control.
 Products 0.2 Flagship Proof and 0.3 Tactile Alpha are exit-met on the
