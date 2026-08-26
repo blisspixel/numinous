@@ -330,7 +330,7 @@ still initialize with 2025-11-25 or 2025-06-18. Modern discovery and tool lists
 are cacheable, successful results name their result type and server, and all
 tool input schemas explicitly use JSON Schema 2020-12. A client that advertises
 form elicitation can complete `predict` through one multi round-trip request;
-other clients keep the two-call pose and grade flow. Thirty-six tools use
+other clients keep the two-call pose and grade flow. Forty tools use
 mostly flat schemas. Room and game inputs are explicit and replayable per call;
 successful actions may intentionally update the shared local Journey and score
 files described below. The bounded
@@ -340,6 +340,7 @@ input without hidden session state:
 | Tool | What it does |
 |---|---|
 | `list_rooms` | the room threshold: touch the flagship, walk the six-room Strange Loop chain, or wander by compact wing summaries. `structuredContent.rooms` retains the complete typed list and `starters` retains the prior four-row doorway in every mode |
+| `watch_show` | one caller-paced cue from the core-owned six-room Strange Loop score. Returns exact ASCII looks, visual alternatives, cell deltas, held evidence, sound facts, optional WAV audio, and explicit replay, next, restart, and leave calls. `motion: "reduced"` returns the same cue's postcard only. It stores no cursor or progress, reads no journal or workspace, and never opens the explanation |
 | `describe_room` | a safe doorway: title, wing, action, optional goal, and play prompt, never the revelation |
 | `reveal_room` | the insight after one real play, or after consolidation for an engineered wager room |
 | `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array. Add `from_t` with explicit destination `t` for two exact observations and a typed temporal delta; the top-level frame remains the destination. Add `dwell` with two to eight phases to stay in the room instead of moving through it: `structuredContent.dwell` reports what refused to move across every look, including cells that never lit and holes fully ringed by light. Pass `receipt: true` for a replay proof in `structuredContent.encounter`; asking does not keep the play. Returns goal state. It never volunteers the explanation: landing a goal opens `reveal_room`, it does not answer, because understanding is offered only when asked for. On Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` / `speed_wager` / `policy_wager` / `counter_wager` plus `aha_summon` walk generation-before-reveal without App session state. Nontransitive Dice also accepts typed `die_choice` instead of coordinate input |
@@ -377,6 +378,13 @@ input without hidden session state:
 | `broadcast_session` | explicitly start, inspect, pause, resume, or stop a public Watch Agent stream using a human-provided one-use code |
 
 Conventions worth relying on:
+
+- **The caller owns Show time.** `watch_show` never advances on a timer or
+  carries hidden session state. Repeat the returned replay arguments for the
+  exact cue, choose `next` when ready, use `restart`, or take `leave`. Its
+  closed `outputSchema` is validated before a successful result leaves the
+  server. A Watch Agent guest can share the text and typed cue, while the
+  public projection removes WAV bytes and says that it did so.
 
 - **Consented local viewing.** Opening Watch Agent in the App does not start a
   broadcast. The human must choose to share its short-lived one-use code, and
@@ -464,7 +472,7 @@ Conventions worth relying on:
   Nontransitive Dice returns all three face arrays, exact pairwise counts, and
   the chosen counter's complete W/L grid, so one lucky roll never becomes the
   proof.
-- **Structured output, and the substance is in it.** Catalog, description,
+- **Structured output, and the substance is in it.** Catalog, Show, description,
   reveal, listening, score, memory, game, and Journey results return bounded
   `structuredContent` alongside prose; parse that, not the sentences. All 354
   catalog rooms are covered by the discovery contract. The load-bearing content rides

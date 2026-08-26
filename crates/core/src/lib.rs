@@ -93,6 +93,7 @@ pub mod secret;
 pub mod session;
 pub mod seti;
 pub mod share;
+pub mod show;
 pub mod sim;
 pub mod sims;
 pub mod sound;
@@ -216,6 +217,9 @@ pub use seti::{SetiChannel, SetiScan, build_scan};
 pub use share::{
     ShareBundleMeta, ShareKind, ShareMeta, StudioShareMeta, create_share_bundle_dir, sidecar_path,
     write_share_bundle_readme, write_share_sidecar, write_studio_share_readme,
+};
+pub use show::{
+    DirectedShowCue, DirectedShowLook, MINDS_SHOW, ShowLookRole, ShowMotion, ShowScore,
 };
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};

@@ -8,8 +8,9 @@ below evaluates Numinous, never whether a player is conscious or worthy.
 
 Status: **Journal, temporal evidence, Encounter Receipts, explicit promotion,
 resettable session workspace, exact remembered-room retrieval and doorway cue,
-and portable MCP creation lineage built; experiential continuity designed.**
-Research reviewed 2026-07-11; implementation boundary reviewed 2026-08-25. Numinous
+portable MCP creation lineage, portable evidence export, and the caller-paced
+Show for minds built; experiential continuity designed.** Research reviewed
+2026-07-11; implementation boundary reviewed 2026-08-26. Numinous
 0.4.0-alpha.9 speaks MCP, ships an opt-in local experience journal, can
 return two exact room observations with a typed delta in one stateless call,
 can emit a versioned replay proof when `play_room` is asked for a receipt,
@@ -40,6 +41,7 @@ The implementation boundary is precise:
 | Non-disclosing remembered-room cue at the private MCP room doorway | Automatic recall or disclosure to the consented public viewer |
 | Portable Studio save, open, and fork with identity, lineage, and exact preview | Server-side gallery or automatic persistence of returned capsules |
 | Hashed portable evidence export with native, OKF, privacy, retention, receipt, and creation payloads | Portable evidence import, merging, or automatic sharing |
+| Caller-paced six-room Show with exact looks, alternatives, deltas, sound facts, and explicit continuation | Hidden autoplay, stored continuation, inferred attention, or authored all-room director profiles |
 | Opt-in local append-only journal with stable identifiers | Visible reflection proposals |
 | Separate event and record times | Encrypted portable capsules |
 | Closed source-provenance vocabulary | Per-player profile portability across hosts |
@@ -379,8 +381,9 @@ optional, consented, and safe to decline without changing the product.
   Receipts, explicit journal promotion of a live-matching receipt, a resettable
   process-local session workspace, bounded source-explained remembered-room
   retrieval, its non-disclosing room-door cue, and MCP creation and lineage
-  parity plus the export-only portable typed evidence capsule are built ahead
-  of the cohort. The Show for minds remains the next Mind's Seat increment.
+  parity, the export-only portable typed evidence capsule, and the caller-paced
+  Show for minds are built ahead of the cohort. The Show keeps timing and
+  continuation with the caller and creates no progress or memory.
   Reflection proposals wait until retrieval, correction, and deletion
   invariants are proven.
 - **0.5:** test self-authored affect notes and sensory accessibility without

@@ -51,8 +51,9 @@ pub const NUMINOUS_GAME_IDS: [&str; 11] = [
 ];
 
 /// Every MCP tool whose action and public result may enter a viewer session.
-pub const ALL_PUBLIC_TOOLS: [PublicTool; 23] = [
+pub const ALL_PUBLIC_TOOLS: [PublicTool; 24] = [
     PublicTool::ListRooms,
+    PublicTool::WatchShow,
     PublicTool::DescribeRoom,
     PublicTool::RevealRoom,
     PublicTool::PlayRoom,
@@ -83,6 +84,8 @@ pub const ALL_PUBLIC_TOOLS: [PublicTool; 23] = [
 pub enum PublicTool {
     /// Read the room catalog.
     ListRooms,
+    /// Watch one caller-paced cue from the curated show.
+    WatchShow,
     /// Read one room description.
     DescribeRoom,
     /// Read one room insight.
@@ -144,6 +147,7 @@ impl PublicTool {
     pub const fn name(self) -> &'static str {
         match self {
             Self::ListRooms => "list_rooms",
+            Self::WatchShow => "watch_show",
             Self::DescribeRoom => "describe_room",
             Self::RevealRoom => "reveal_room",
             Self::PlayRoom => "play_room",

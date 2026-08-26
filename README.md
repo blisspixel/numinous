@@ -124,14 +124,20 @@ native evidence forward beside its OKF v0.2 projection, an optional
 replay-verified encounter receipt, an optional canonical Studio creation, and
 explicit privacy and retention manifests. A closed sorted manifest hashes every
 payload. It creates no file, accepts no path, and deliberately does not import.
+The new `watch_show` doorway directs the six-room Strange Loop score one
+bounded cue per call. It returns exact ASCII looks, visual alternatives,
+cell-level deltas, sound notation, and optional WAV audio, then waits for the
+caller to choose the returned `next`. It keeps no cursor, records no Journey
+progress, reads no private visit state, and does not open the explanation.
 Play does not write the workspace. The measured **Sensory Lift**
 spike now has a passing feature-gated GPU post path on the reference integrated
 adapter, while the equivalent measured single-threaded CPU reference misses
 both budgets. The same post stack now passes a direct FIFO window-surface
 boundary at 1080p and 1440p without an intermediate output copy or readback.
-Active work moves to feeding real App room rasters through that disabled path
-and proving it across Windows, macOS, and Linux before changing the shipped
-App, alongside remaining structural debt. The room
+Real App room rasters now feed that disabled path with visible software
+fallback. Active work moves to proving its correctness and pacing across
+Windows, macOS, and Linux before changing the shipped App, alongside remaining
+structural debt. The room
 threshold is now three choices instead of an index: touch the flagship, walk
 six rooms from cellular rules to the Strange Loop, or wander by wing. Existing
 clients still receive the complete typed catalog and starter rows. The 0.4

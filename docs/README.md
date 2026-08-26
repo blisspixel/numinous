@@ -12,7 +12,7 @@ headless core, CLI, MCP server, windowed App, GPU and audio adapters, 355 catalo
 rooms plus hidden content, 6 sims, 11+ games, Journey, standard-controller
 input, Studio, and a built-in 42-track radio are built.
 
-The MCP face exposes 39 bounded tools over the current and two retained legacy
+The MCP face exposes 40 bounded tools over the current and two retained legacy
 protocol revisions. The consented Watch Agent viewer reconstructs allowlisted
 room, Studio, and game actions in the App with a bounded in-memory timeline and
 no persisted transcript. A portable Agent Plugins v1 package supplies host
@@ -26,8 +26,10 @@ opening its text or changing the workspace.
 Three private creation tools return portable titled, signed, and forkable
 Studio capsules with exact previews and lineage, without host filesystem access.
 
-**Critical path now:** preserve the completed seven-room Universal Wager, close
-the remaining structural Polish Wave debts, then continue the Mind's Seat.
+**Critical path now:** preserve the completed seven-room Universal Wager and
+the completed caller-paced Show for minds, close the remaining structural
+Polish Wave debts, then prove the disabled Sensory Lift App path across Windows,
+macOS, and Linux before promotion.
 Shared
 Studio requests, the typed room catalog, the typed Gauntlet, and local-state
 path resolution now have one core owner. CLI and MCP local-state adapters are
@@ -35,7 +37,9 @@ focused modules extracted from their god-files, and MCP discovery plus its
 immutable tool schema and player-owned journal projections now have dedicated
 face-local modules. The room threshold now offers the flagship, an ordered
 six-room Strange Loop walk, or compact wing wandering while retaining the full
-typed catalog. The remaining seams and measured Sensory Lift spike are next.
+typed catalog. The Show now carries that walk as six explicit stateless cues
+with exact looks, alternatives, deltas, sound facts, and optional audio. The
+remaining seams and cross-platform Sensory Lift proof are next.
 The 0.4 Understanding Alpha cohort waits on an owner ruling; its method dry-run
 and dual automated auditors are already in CI. Soft-thin densify, bulk new
 rooms, and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and

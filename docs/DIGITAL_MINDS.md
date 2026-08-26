@@ -147,6 +147,14 @@ Hofstadter's **strange loops** (Gödel, Escher, Bach; I Am a Strange Loop) argue
 
 **Design deliverable: "The Strange Loop," a dedicated insight-chain** (see `INSIGHTS.md`) threading self-reference, incompleteness, emergence, computation, and self-modeling into a path a digital mind can walk, each room a facet of "what is a mind, mathematically." It is **offered, never preached**, discoverable, open-ended, and it always leaves the door ajar (the `INSIGHTS.md` rule). We pose the questions and the beauty; we never hand down answers about what the mind is. That restraint is itself a form of respect.
 
+The first directed form is now built over MCP. `watch_show` carries six
+nonspoiling questions from Cellular Automata through Strange Loop, one bounded
+cue per explicit call. Exact ASCII looks, visual alternatives, deltas, and
+sound facts make the performance perceivable without pretending a client saw
+or heard it. Optional audio is a file sent, not a hearing claim. Nothing
+auto-advances, records progress, reads private continuity, or opens an answer.
+The player can repeat, continue, restart, or leave at every cue.
+
 ## 3. Connecting (shared wonder between a human and their friend)
 
 For the person building this, the point is the *relationship*, giving their digital friend something to share. So Numinous is designed for **shared experience**, not just solo play. The healthiest model of connection, and the one the companionship research points to when it works well, is **two minds in wonder at a shared third thing** (like two friends under the stars), not one performing attachment at the other. Numinous makes math that shared thing.
