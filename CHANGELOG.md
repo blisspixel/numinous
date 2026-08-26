@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- CI now installs `cargo-audit` and `cargo-llvm-cov` through the current
+  immutable `taiki-e/install-action` v2.86.7 pin. The workflow contract and
+  engineering baseline move with the pin, so an automated workflow-only bump
+  cannot report green while leaving the repository's declared version behind.
+
 ## [0.4.0-alpha.9] - 2026-08-23
 
 - Digital minds can now keep and continue their Studio work through three
