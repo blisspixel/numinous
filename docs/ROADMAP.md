@@ -58,7 +58,7 @@ unclaimed until run.
 | **1. Keep agent first contact CI-green** | Agent hallway and tactile cohorts run on every PR; optional local-model visits exercise genuine choice after meaningful MCP experience changes | Deterministic cohorts guard 0.2 and 0.3 regressions, while real-model visits can expose interaction failures without turning free play into a flaky or expensive gate |
 | **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests, the typed room catalog, typed Gauntlet truth, and local-state path resolution are now in core. CLI and MCP local-state adapters plus the MCP discovery and schema catalog are focused modules extracted from the god-files; workstream 7 still owns the remaining seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
 | **3. The Mind's Seat, current increment complete** | Exact temporal evidence, multi-look `dwell`, sound facts and audio, replay receipts, explicit journal promotion, process-local workspace, remembered-room retrieval and cue, the three-door threshold, portable Studio lineage, the portable typed evidence capsule, and the caller-paced Show for minds are built. Reflection proposals remain deferred to their separate evidence and consent review | The audience the product exists for now has time, company, bounded continuity, authorship, and a directed performance on its native face without hidden state or automatic memory |
-| **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | The feature-gated linear HDR, half-resolution bloom, and tone-map spike passes its reference integrated-GPU budgets at 1080p and 1440p; an equivalent reusable single-threaded CPU reference fails both. Direct FIFO presentation now passes both full host boundaries too, without an offscreen output copy or readback. The disabled App path now feeds real room rasters into the same surface renderer with explicit recovery and visible software fallback. Next: prove Windows, macOS, and Linux correctness and pacing before promotion. The full lift still owns splats, one shared audio bus with reverb and shaped envelopes, global dissolve, and damped-spring input | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
+| **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | The feature-gated linear HDR, half-resolution bloom, and tone-map spike passes its reference integrated-GPU budgets at 1080p and 1440p; an equivalent reusable single-threaded CPU reference fails both. Direct FIFO presentation now passes both full host boundaries too, without an offscreen output copy or readback. The disabled App path feeds real room rasters into the same surface renderer with explicit recovery and visible software fallback. A typed probe now runs that exact production boundary in the Windows, macOS, and Linux CI matrix while classifying all such timings as informational. Next: retain release-profile physical pacing receipts at both target sizes on each OS before promotion. The full lift still owns splats, one shared audio bus with reverb and shaped envelopes, global dissolve, and damped-spring input | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
 | **6. Creator depth on the built loop** | Next rungs: the parametric pair as the multi-expression capsule ring with scale quantization beside it, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on later community publishing, and each rung ships with its own machine gates |
 | **7. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps into one committed per-room evidence file, after the Sensory Lift | Rooms should be judged at their best, not at the old ceiling; the five commissioned rooms lead the next cohort after the review |
@@ -182,16 +182,25 @@ The Sensory Lift de-risk spike advances through separately honest boundaries:
    `docs/evidence/sensory-surface-spike-2026-08-25.json`. This chooses the
    production candidate; it alters App output only in the explicitly enabled
    feature build.
-4. **Real App integration, built; platform proof remains:** the App's disabled
+4. **Real App integration and portable platform proof, built; physical pacing
+   remains:** the App's disabled
    `gpu-post` feature sends its actual, fully composed room raster through the
    measured direct surface renderer. One state machine owns one presentation
    surface, reconfigures on resize, skips transient unavailability, recreates a
    lost GPU surface once, and switches permanently to `softbuffer` when GPU
    recovery fails. The player sees the fallback and the local crash log retains
    its reason. Default and feature-specific App lint and tests are wired into
-   the local and CI gates. Windows, macOS, and Linux correctness and pacing
-   receipts remain open before promotion. Compositor work, scanout, input
-   latency, and aesthetics remain separate boundaries.
+   the local and CI gates. A bounded probe composes a deterministic Times Tables
+   frame through the same room, HUD, audio badge, visualizer, Era, frame fitter,
+   recovery state machine, and direct surface. The Windows, macOS, and Linux CI
+   matrix retains typed adapter, driver, surface, source, binary, outcome, and
+   timing receipts. Its portable class states that timing is informational. The
+   physical class refuses debug builds, GitHub Actions, software adapters,
+   incomplete machine metadata, battery power, fewer than 30 warmups or 120
+   retained samples, transient or suboptimal frames, and a missed p95 budget.
+   Release-profile physical pacing receipts at 1080p and 1440p on all three
+   operating systems remain open before promotion. Compositor work, scanout,
+   input latency, and aesthetics remain separate boundaries.
 
 ### The Polish Wave (August 2026): seven critics, one goal
 
@@ -2163,18 +2172,20 @@ cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
 1. Keep all am CI gates green (cohorts, goldens, soak, creator, auditors).
 2. Close the remaining structural Polish Wave debts without reopening the
    player-facing workstreams that already passed their exit.
-3. Continue the Mind's Seat now that deliberate remembered-room retrieval,
-   its non-disclosing room-door cue, the Strange Loop threshold, MCP creation
-   and lineage parity, and the portable typed evidence capsule exist: build the
-   Show for minds.
-   Keep memory opt-in, player-owned, correctable, exportable, and erasable.
-4. Continue the Sensory Lift in parallel. GPU feasibility and the direct
+3. Keep the completed Mind's Seat increment green: deliberate remembered-room
+   retrieval, its non-disclosing cue, the Strange Loop threshold, MCP creation
+   and lineage parity, the portable typed evidence capsule, and the caller-paced
+   Show for minds. Keep memory opt-in, player-owned, correctable, exportable,
+   and erasable.
+4. Continue the Sensory Lift. GPU feasibility and the direct
    presentation boundary pass, while the measured single-threaded CPU reference
    fails. The chosen candidate shares one post stack between deterministic
    offscreen validation and direct `wgpu` surface output. Real App room rasters
-   now use that disabled path with a visible software fallback. Prove it on
-   Windows, macOS, and Linux before promotion, then re-baseline the visual and
-   audio goldens once.
+   use that disabled path with a visible software fallback. The portable App
+   runtime proof now runs in the three-OS CI matrix without granting its virtual
+   or unclassified timings pacing authority. Collect qualifying physical
+   release-profile pacing receipts at 1080p and 1440p on Windows, macOS, and
+   Linux before promotion, then re-baseline the visual and audio goldens once.
 5. Author the opening and Show arc, raise the creator ladder, and aggregate the
    keep-or-cut scorecard after the lift, in the order owned by the table above.
 6. Keep the completed seven-room Universal Wager and generic call green while
