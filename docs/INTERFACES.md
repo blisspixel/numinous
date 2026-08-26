@@ -212,8 +212,15 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   native journal schema by default or, when asked for `format: "okf-0.2"`, an
   in-memory [Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
   bundle page with named UTF-8 files, explicit provenance, correction lineage,
-  and lifecycle state. Neither export mode creates a file or exposes a host
-  path. `PLAYING.md` carries the complete user-facing list.
+  and lifecycle state. `format: "portable-1"` returns a closed, sorted payload
+  set with a SHA-256 digest for every file and for the manifest. It always
+  carries the same native and OKF journal page plus explicit privacy and
+  retention manifests. The caller may add one Numinous Encounter Receipt,
+  which must pass the same closed-schema and live-replay verification as
+  journal promotion, and one Studio `.num` document or native link, which is
+  parsed and emitted as canonical `.num` text with identity and lineage intact.
+  Export creates no file, accepts no filesystem path, returns no host path, and
+  does not implement import. `PLAYING.md` carries the complete user-facing list.
 - **Portable creation and lineage parity (built):** `save_creation` produces a
   canonical Studio capsule from an expression, optional title and author,
   visual era, canvas, and parameter. `open_creation` accepts only canonical
@@ -456,6 +463,20 @@ upstream repository head `374e0bc4c644310ff56cdf9c0fe81eccdec862b0`.
 Numinous's native journal remains the source of truth. A new OKF revision gets a
 new explicit export value and compatibility change; `okf-0.2` never changes
 meaning in place.
+
+The `portable-1` capsule is a Numinous handoff container, not an OKF extension.
+Its manifest names the exact payload paths, media types, byte lengths, and
+lowercase hexadecimal SHA-256 digests. JSON payloads and the manifest use
+compact UTF-8 JSON with object keys in lexicographic order, so the manifest hash
+can be recomputed exactly. `native/journal-page.json` remains authoritative
+evidence; the root `index.md` and `entries/` tree are its conformant OKF
+projection, with their original relative links intact. `privacy.json` names
+included data classes, warns that selected journal fields are preserved without
+secret scanning, and names private or transient classes the export does not
+independently collect.
+`retention.json` states that the export itself stores nothing, creates no file,
+leaves the native journal unchanged, and cannot govern external copies. Import
+is deliberately absent.
 
 ### Local MCP session broadcast, native room, Studio, Nim, and sound replay, and subprocess proof built
 

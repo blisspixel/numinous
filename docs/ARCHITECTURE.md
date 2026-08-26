@@ -319,7 +319,7 @@ private player host or local model
     -> bounded MCP face
     -> deterministic headless core
        -> typed result returned to the player
-       -> explicit journal record -> native journal -> OKF v0.2 export
+       -> explicit journal record -> native journal -> native, OKF, or portable export
        -> consent filter -> typed broadcast -> read-only App viewer
 ```
 
@@ -331,13 +331,18 @@ silently split or migrate continuity. MCP Apps remain a possible runtime
 enhancement with complete text and structured fallbacks; Agent Plugins v1 does
 not define a portable app component.
 
-OKF remains an export projection from native typed evidence. A future portable
-continuity capsule may contain a manifest and hashes, native Numinous Encounter
-Receipts, creations and lineage, an OKF knowledge projection, and an explicit
-privacy and retention manifest. A Numinous Encounter Receipt is a native replay
-and provenance artifact, not an OKF Attested Computation Receipt or OKF
-projection. Raw frames, audio buffers, private prompts, hidden reasoning,
-arbitrary host logs, and mutable session state do not belong in OKF. Import is
+OKF remains an export projection from native typed evidence. The built
+`portable-1` evidence capsule is an explicit, bounded `export_journal` mode. Its
+closed manifest hashes a sorted payload containing the native journal page, an
+OKF v0.2 projection, privacy and retention manifests, and optional caller-supplied
+Studio creation and replay-verified Numinous Encounter Receipt. Creation input
+is capsule data, never a path, and is emitted as canonical `.num` text with
+identity and lineage intact. The export creates no file and returns no host
+path. A Numinous Encounter Receipt is a native replay and provenance artifact,
+not an OKF Attested Computation Receipt or OKF projection. Raw frames, audio
+buffers, host private prompts, host hidden reasoning, arbitrary host logs, and
+mutable session state are not independently collected. Player-authored journal
+fields are preserved exactly and are not scanned for secrets. Import remains
 deferred until path safety, byte and entry bounds, provenance, unknown-field
 preservation, preview, atomic commit, merge rules, and verified erasure are
 specified and tested.

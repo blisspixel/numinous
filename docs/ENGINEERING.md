@@ -231,7 +231,7 @@ Nothing merges red. On every PR, blocking:
     parse bounded 64-bit PE, ELF, and Mach-O headers, require the exact three
     binaries on each of four targets, bind executable hashes and architectures,
     and retain unique direct native imports.
-16. Ten release workflow contract regressions pin both invocations of the
+16. Fourteen release workflow contract regressions pin both invocations of the
     official attestation action, grant OIDC and attestation write authority only
     to the tag-only attestation job, accept subjects only from the audited
     release-set artifact, require an exact allowlist with no additional files,

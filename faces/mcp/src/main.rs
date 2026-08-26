@@ -16,6 +16,7 @@ mod catalog;
 mod encounter;
 mod journal;
 mod local_state;
+mod portable;
 mod room_door;
 mod temporal;
 mod workspace;
@@ -1663,17 +1664,17 @@ fn call_tool(
         "predict" => predict_tool(&domain_args),
         "cairn" => cairn_tool(&domain_args, journey_file, &cairn_path()),
         "read_journal" => journal::read_tool(&domain_args, &journal_path()),
-        "record_journal" => journal::record_tool(
-            &domain_args,
-            &journal_path(),
-            |tool, replay_args| match tool {
-                numinous_core::EncounterTool::PlayRoom => play_room_tool(replay_args, journey_file),
-                numinous_core::EncounterTool::ListenRoom => listen_room_tool(replay_args),
-                numinous_core::EncounterTool::SingExpression => sing_expression_tool(replay_args),
-            },
-        ),
+        "record_journal" => {
+            journal::record_tool(&domain_args, &journal_path(), |tool, replay_args| {
+                replay_encounter(tool, replay_args, journey_file)
+            })
+        }
         "correct_journal" => journal::correct_tool(&domain_args, &journal_path()),
-        "export_journal" => journal::export_tool(&domain_args, &journal_path()),
+        "export_journal" => {
+            journal::export_tool(&domain_args, &journal_path(), |tool, replay_args| {
+                replay_encounter(tool, replay_args, journey_file)
+            })
+        }
         "erase_journal" => journal::erase_tool(&domain_args, &journal_path()),
         "workspace" => workspace_tool(&domain_args, workspace, &journal_path()),
         "listen_room" => listen_room_tool(&domain_args),
@@ -1705,6 +1706,18 @@ fn call_tool(
         other => return Err((-32602_i64, format!("Unknown tool: {other}"))),
     };
     Ok(apply_response_mode(name, response_mode, result))
+}
+
+fn replay_encounter(
+    tool: numinous_core::EncounterTool,
+    replay_args: &Value,
+    journey_file: &std::path::Path,
+) -> Value {
+    match tool {
+        numinous_core::EncounterTool::PlayRoom => play_room_tool(replay_args, journey_file),
+        numinous_core::EncounterTool::ListenRoom => listen_room_tool(replay_args),
+        numinous_core::EncounterTool::SingExpression => sing_expression_tool(replay_args),
+    }
 }
 
 fn broadcast_session_tool(args: &Value, broadcast: &ConnectionBroadcast) -> Value {
@@ -7071,6 +7084,20 @@ mod tests {
             record_journal["inputSchema"]["required"],
             json!(["kind", "text"])
         );
+        let export_journal = tools
+            .iter()
+            .find(|tool| tool["name"] == "export_journal")
+            .expect("export_journal tool");
+        let export_properties = &export_journal["inputSchema"]["properties"];
+        assert_eq!(
+            export_properties["format"]["enum"],
+            json!(["native", "okf-0.2", "portable-1"])
+        );
+        assert_eq!(export_properties["receipt"]["type"], "object");
+        assert_eq!(
+            export_properties["creation"]["maxLength"],
+            numinous_core::MAX_SHARE_INPUT_BYTES
+        );
         assert_eq!(play_properties["width"]["minimum"], 1);
         assert_eq!(play_properties["width"]["maximum"], super::MAX_TOOL_WIDTH);
         assert_eq!(play_properties["height"]["minimum"], 1);
@@ -11915,6 +11942,44 @@ mod tests {
             .as_str()
             .expect("digest")
             .to_string();
+        let creation = numinous_core::StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5)
+            .expect("creation")
+            .with_title("A Kept Wave")
+            .expect("title")
+            .with_author("First Hand")
+            .expect("author")
+            .with_era(numinous_core::Era::Vector);
+        let portable = call(
+            "export_journal",
+            json!({
+                "format":"portable-1",
+                "receipt":receipt.clone(),
+                "creation":creation.to_num_file()
+            }),
+        );
+        let capsule = &portable["result"]["structuredContent"];
+        assert_eq!(capsule["schema"], "numinous.portable-evidence-capsule");
+        assert_eq!(capsule["manifest"]["closedFileSet"], true);
+        assert_eq!(
+            capsule["manifest"]["selection"]["receiptResultDigest"],
+            digest
+        );
+        assert_eq!(capsule["manifest"]["selection"]["creationIncluded"], true);
+        assert_eq!(capsule["createdFile"], false);
+        assert_eq!(capsule["readCallerSuppliedPath"], false);
+        assert_eq!(capsule["containsHostPath"], false);
+        let paths = capsule["files"]
+            .as_array()
+            .expect("capsule files")
+            .iter()
+            .map(|file| file["path"].as_str().expect("capsule path"))
+            .collect::<Vec<_>>();
+        assert!(paths.contains(&"native/encounter-receipt.json"));
+        assert!(paths.contains(&"creations/studio.num"));
+        assert!(paths.contains(&"native/journal-page.json"));
+        assert!(paths.contains(&"index.md"));
+        assert!(paths.contains(&"privacy.json"));
+        assert!(paths.contains(&"retention.json"));
         let kept = call(
             "record_journal",
             json!({
@@ -11940,6 +12005,11 @@ mod tests {
         let mut forged = receipt.clone();
         forged["resultDigest"] =
             json!("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        let refused_export = call(
+            "export_journal",
+            json!({"format":"portable-1","receipt":forged.clone()}),
+        );
+        assert_eq!(refused_export["result"]["isError"], true);
         let refused = call(
             "record_journal",
             json!({
