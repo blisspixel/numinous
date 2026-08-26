@@ -21,6 +21,7 @@ use numinous_core::{
 };
 
 mod access;
+mod game_input;
 mod local_state;
 mod render_input;
 mod studio;
@@ -28,6 +29,9 @@ mod studio;
 #[cfg(test)]
 use access::color_allowed_for;
 use access::{access_report, access_settings, color_allowed};
+#[cfg(test)]
+use game_input::MAX_CLI_INPUT_BYTES;
+use game_input::{BoundedInputLine, asked_why, read_bounded_input_line, read_game_line};
 use local_state::forget_local_state;
 use render_input::{RoomRenderInput, parse_room_inputs, validate_render_request, visible_status};
 #[cfg(test)]
@@ -40,7 +44,6 @@ use studio::{
 };
 
 const MAX_ENV_FILE_BYTES: u64 = 16 * 1024;
-const MAX_CLI_INPUT_BYTES: usize = 4 * 1024;
 const ELEVENLABS_MUSIC_URL: &str = "https://api.elevenlabs.io/v1/music?output_format=pcm_44100";
 #[cfg(windows)]
 const UPDATE_INSTALLER: &str = include_str!("../../../scripts/install.ps1");
@@ -3803,100 +3806,6 @@ fn word_in_lights(word: &str, accent: [u8; 3], frames: usize) {
     }
 }
 
-/// "?" is always an honest question: print the game's concept and return
-/// true (the caller repeats the prompt, spending nothing).
-fn asked_why(line: &str, game: &str) -> bool {
-    if line.trim() != "?" {
-        return false;
-    }
-    if let Some(text) = numinous_core::concept(game) {
-        println!(
-            "
-{text}
-"
-        );
-    }
-    true
-}
-
-/// Read one prompted game input without turning a closed pipe into a move.
-/// EOF and read errors are neutral departures: they never mutate progression
-/// or post a score by themselves.
-fn read_game_line(input: &mut impl BufRead, prompt: &str) -> Option<String> {
-    print!("{prompt}");
-    let _ = std::io::stdout().flush();
-    match read_bounded_input_line(input) {
-        Ok(BoundedInputLine::Eof) => {
-            println!("\nINPUT CLOSED. LEAVING WITHOUT COUNTING A MOVE.");
-            None
-        }
-        Ok(BoundedInputLine::Line(line)) => Some(line),
-        Ok(BoundedInputLine::TooLong) => {
-            println!("\nINPUT TOO LONG. LEAVING WITHOUT COUNTING A MOVE.");
-            None
-        }
-        Err(error) => {
-            eprintln!("\nCould not read game input: {error}. Leaving without counting a move.");
-            None
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-enum BoundedInputLine {
-    Eof,
-    Line(String),
-    TooLong,
-}
-
-/// Read one UTF-8 line while retaining at most the payload limit and its line
-/// ending. Overlong input is drained through LF so a later read starts at the
-/// next record instead of parsing a truncated suffix.
-fn read_bounded_input_line(input: &mut impl BufRead) -> std::io::Result<BoundedInputLine> {
-    let mut bytes = Vec::with_capacity(MAX_CLI_INPUT_BYTES + 2);
-    let read = std::io::Read::by_ref(input)
-        .take((MAX_CLI_INPUT_BYTES + 2) as u64)
-        .read_until(b'\n', &mut bytes)?;
-    if read == 0 {
-        return Ok(BoundedInputLine::Eof);
-    }
-
-    let has_lf = bytes.last() == Some(&b'\n');
-    let ending_len = if has_lf && bytes.get(bytes.len().saturating_sub(2)) == Some(&b'\r') {
-        2
-    } else {
-        usize::from(has_lf)
-    };
-    if bytes.len().saturating_sub(ending_len) > MAX_CLI_INPUT_BYTES {
-        if !has_lf {
-            drain_input_line(input)?;
-        }
-        return Ok(BoundedInputLine::TooLong);
-    }
-
-    String::from_utf8(bytes)
-        .map(BoundedInputLine::Line)
-        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))
-}
-
-fn drain_input_line(input: &mut impl BufRead) -> std::io::Result<()> {
-    loop {
-        let available = input.fill_buf()?;
-        if available.is_empty() {
-            return Ok(());
-        }
-        let consumed = available
-            .iter()
-            .position(|byte| *byte == b'\n')
-            .map_or(available.len(), |position| position + 1);
-        let finished = consumed <= available.len() && available.get(consumed - 1) == Some(&b'\n');
-        input.consume(consumed);
-        if finished {
-            return Ok(());
-        }
-    }
-}
-
 /// Play SETI: scan channels of static and pick the artificial signal.
 fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
@@ -5467,50 +5376,6 @@ mod tests {
         assert_eq!(exact.as_deref(), Some(b"1234".as_slice()));
         let oversized = read_bounded(std::io::Cursor::new(b"12345"), 4).expect("bounded read");
         assert!(oversized.is_none());
-    }
-
-    #[test]
-    fn bounded_cli_input_preserves_boundaries_and_resynchronizes() {
-        let mut exact = vec![b'x'; super::MAX_CLI_INPUT_BYTES];
-        exact.push(b'\n');
-        let mut exact = std::io::Cursor::new(exact);
-        assert!(matches!(
-            super::read_bounded_input_line(&mut exact).expect("exact LF line"),
-            super::BoundedInputLine::Line(line)
-                if line.len() == super::MAX_CLI_INPUT_BYTES + 1
-        ));
-
-        let mut crlf = vec![b'x'; super::MAX_CLI_INPUT_BYTES];
-        crlf.extend_from_slice(b"\r\n");
-        let mut crlf = std::io::Cursor::new(crlf);
-        assert!(matches!(
-            super::read_bounded_input_line(&mut crlf).expect("exact CRLF line"),
-            super::BoundedInputLine::Line(line)
-                if line.len() == super::MAX_CLI_INPUT_BYTES + 2
-        ));
-
-        let mut overflow = vec![b'x'; super::MAX_CLI_INPUT_BYTES + 1];
-        overflow.extend_from_slice(b"\nok\n");
-        let mut overflow = std::io::Cursor::new(overflow);
-        assert_eq!(
-            super::read_bounded_input_line(&mut overflow).expect("overlong line"),
-            super::BoundedInputLine::TooLong
-        );
-        assert_eq!(
-            super::read_bounded_input_line(&mut overflow).expect("following line"),
-            super::BoundedInputLine::Line("ok\n".to_string())
-        );
-
-        let mut eof = std::io::Cursor::new(vec![b'x'; super::MAX_CLI_INPUT_BYTES]);
-        assert!(matches!(
-            super::read_bounded_input_line(&mut eof).expect("exact EOF line"),
-            super::BoundedInputLine::Line(line)
-                if line.len() == super::MAX_CLI_INPUT_BYTES
-        ));
-        assert_eq!(
-            super::read_bounded_input_line(&mut eof).expect("EOF"),
-            super::BoundedInputLine::Eof
-        );
     }
 
     #[test]

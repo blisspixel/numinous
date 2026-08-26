@@ -43,7 +43,9 @@ static hand points, pointer gestures, and interaction-aware status now share a
 focused render-input adapter. MCP JSON hand points, gestures, canonical echo,
 and interaction projection now have the corresponding focused adapter. CLI
 Studio source selection, capsule loading and never-clobber writes, terminal
-errors, and open reports now have their own focused adapter too. The
+errors, and open reports now have their own focused adapter too. The shared
+4 KiB CLI game record boundary, overflow resynchronization, neutral departures,
+and `?` explanation door now have a focused adapter as well. The
 room threshold now offers the flagship, an ordered six-room Strange Loop walk,
 or compact wing wandering while retaining the full typed catalog. The Show now
 carries that walk as six explicit stateless cues

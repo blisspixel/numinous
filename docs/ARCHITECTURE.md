@@ -283,8 +283,11 @@ status projection. A focused CLI `studio` adapter owns raw source-mode
 selection, terminal error projection, bounded capsule loading, never-clobber
 save and fork writes, sing-input resolution, and open-report formatting. Core
 continues to own Studio parsing, evaluation, request bounds, rendering, capsule
-validity, and lineage semantics. The MCP face also keeps protocol discovery,
-legacy negotiation,
+validity, and lineage semantics. A focused CLI `game_input` adapter owns the
+bounded terminal record reader, overflow resynchronization, neutral departure
+presentation, and the games' `?` explanation door. Game rules, progression,
+scoring, and concepts stay outside that adapter. The MCP face also keeps
+protocol discovery, legacy negotiation,
 server identity, and its immutable 40-tool JSON Schema catalog in a focused
 `catalog` module. The request entry point retains transport validation,
 dispatch, result decoration, and domain invocation.
