@@ -52,7 +52,9 @@ shared score table now share a focused MCP game-tool adapter while game rules
 and persistence remain in core. The 214 MCP request-dispatch and
 cross-boundary unit regressions now have a dedicated test module, leaving the
 production entry point under 5,000 lines while retaining private-boundary
-coverage. CLI
+coverage. Bounded runtime validation of the declared JSON Schema subset,
+guiding argument-name suggestions, and the two cross-field domain checks now
+share a focused MCP schema adapter. CLI
 Studio source selection, capsule loading and never-clobber writes, terminal
 errors, and open reports now have their own focused adapter too. The shared
 4 KiB CLI game record boundary, overflow resynchronization, neutral departures,
