@@ -286,7 +286,11 @@ in the request entry point. A focused MCP `sim_tools` adapter owns simulation
 discovery text, lever argument validation, and structured result projection;
 core retains simulation metadata, bounds, rendering, and readouts. A focused
 MCP `studio_tools` adapter owns Formula Jam discovery, portable creation
-projection, optional audio attachment, and encounter receipts. A focused CLI
+projection, optional audio attachment, and encounter receipts. A focused MCP
+`game_tools` adapter owns stateless game replay and result presentation for
+Hackenbush, Party, Fifteen, Quiz, Munch, Munch Arcade, and Nim, plus the shared
+score table projection. Core retains deals, legality, grading, state
+transitions, and score persistence. A focused CLI
 `studio` adapter owns raw source-mode
 selection, terminal error projection, bounded capsule loading, never-clobber
 save and fork writes, sing-input resolution, and open-report formatting. Core

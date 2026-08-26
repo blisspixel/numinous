@@ -47,7 +47,9 @@ share a focused MCP transport adapter. Simulation discovery, lever validation,
 and result projection share a focused MCP simulation-tool adapter while the
 simulation rules remain in core. Formula Jam discovery, portable creation
 projection, optional audio, and encounter receipts now share a focused MCP
-Studio-tool adapter. CLI
+Studio-tool adapter. Stateless game replay, structured game results, and the
+shared score table now share a focused MCP game-tool adapter while game rules
+and persistence remain in core. CLI
 Studio source selection, capsule loading and never-clobber writes, terminal
 errors, and open reports now have their own focused adapter too. The shared
 4 KiB CLI game record boundary, overflow resynchronization, neutral departures,

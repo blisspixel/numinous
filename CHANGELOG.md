@@ -5,6 +5,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP Hackenbush, Party, Fifteen, Quiz, Munch, Munch Arcade, Nim, and shared
+  score projections now live in one focused face-local game adapter. Core
+  retains deals, replay, legality, grading, state transitions, and score
+  persistence. The 214 MCP unit tests and 21 real stdio sessions preserve
+  request validation, structured results, progress recording, score posting,
+  and viewer replay through the public dispatcher.
 - MCP Formula Jam discovery, still plots, portable save, open, and fork
   projections, and melody responses now live in one focused face-local Studio
   adapter. Core retains parsing, evaluation, rendering, melody construction,
