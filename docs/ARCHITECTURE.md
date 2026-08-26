@@ -277,10 +277,12 @@ raw environment values and prints the result. A focused CLI `render_input`
 module owns render size bounds, static hand-point and pointer-gesture parsing,
 their mutual exclusion, and the typed input projection shared by render,
 share, sonify, and Studio paths. Room behavior remains in core. The MCP face
-also keeps protocol discovery, legacy negotiation, server identity, and its
-immutable 40-tool JSON
-Schema catalog in a focused `catalog` module. The request entry point retains
-transport validation, dispatch, result decoration, and domain invocation.
+has the corresponding `room_input` adapter for bounded JSON hand points and
+gestures, mutual exclusion, canonical echo, and interaction-aware render and
+status projection. It also keeps protocol discovery, legacy negotiation,
+server identity, and its immutable 40-tool JSON Schema catalog in a focused
+`catalog` module. The request entry point retains transport validation,
+dispatch, result decoration, and domain invocation.
 The App preference store uses a strict std-only core schema for volume, mute,
 Visual Era, and window mode. Core owns bounded reads, lock coordination, atomic
 replacement, inventory, and complete erasure. The App owns only applying those
