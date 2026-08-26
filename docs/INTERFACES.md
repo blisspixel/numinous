@@ -264,9 +264,17 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   touched one, without any mode becoming lossy.
   `describe_room` is a safe doorway with title, wing, action, optional
   goal, blurb, and the next play call, but no revelation, concept, deep cut, or
-  citation. `reveal_room` returns the explanation and level-gated deep cuts only
-  after one real play, or after persisted consolidation for one of the seven
-  engineered wager rooms. `listen_room` returns ambient motif, stable
+  citation. When the player-owned journal has a current entry whose subject
+  exactly resolves to this room, the private MCP response adds a
+  `numinous.remembered-room-cue` schema version 1 object. The cue says only
+  that evidence is available, sets `contentsReturned` to false, and names the
+  explicit `workspace` retrieval call. It never returns entry text, searches
+  text or receipt digests, mutates the workspace, or enters the Watch Agent
+  projection. Unreadable journal storage produces an `unavailable` cue without
+  exposing its path; no exact match omits the cue. `reveal_room` returns the
+  explanation and level-gated deep cuts only after one real play, or after
+  persisted consolidation for one of the seven engineered wager rooms.
+  `listen_room` returns ambient motif, stable
   ambient-bed summary, and bounded mathematical-sonification note data for all
   355 rooms. `listen_room` names
   all three sound roles
