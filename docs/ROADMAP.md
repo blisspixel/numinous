@@ -57,7 +57,7 @@ unclaimed until run.
 | --- | --- | --- |
 | **1. Keep agent first contact CI-green** | Agent hallway and tactile cohorts run on every PR; optional local-model visits exercise genuine choice after meaningful MCP experience changes | Deterministic cohorts guard 0.2 and 0.3 regressions, while real-model visits can expose interaction failures without turning free play into a flaky or expensive gate |
 | **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests, the typed room catalog, typed Gauntlet truth, and local-state path resolution are now in core. CLI and MCP local-state adapters plus the MCP discovery and schema catalog are focused modules extracted from the god-files; workstream 7 still owns the remaining seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
-| **3. The Mind's Seat** | Exact two-observation temporal evidence, multi-look `dwell`, exact ratio annotations on note pairs, sound returned as a real audio file rather than as notation about one, emit-only Numinous Encounter Receipts on `play_room`, explicit journal promotion of a live-matching receipt, a resettable process-local session workspace, source-explained remembered-room retrieval, a non-disclosing remembered-room doorway cue, the three-door room threshold with an ordered Strange Loop walk, and MCP creation parity with identity and lineage are built. Next: the portable typed evidence capsule and a Show for minds. The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
+| **3. The Mind's Seat** | Exact two-observation temporal evidence, multi-look `dwell`, exact ratio annotations on note pairs, sound returned as a real audio file rather than as notation about one, emit-only Numinous Encounter Receipts on `play_room`, explicit journal promotion of a live-matching receipt, a resettable process-local session workspace, source-explained remembered-room retrieval, a non-disclosing remembered-room doorway cue, the three-door room threshold with an ordered Strange Loop walk, MCP creation parity with identity and lineage, and the portable typed evidence capsule are built. Next: a Show for minds. The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
 | **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | The feature-gated linear HDR, half-resolution bloom, and tone-map spike passes its reference integrated-GPU budgets at 1080p and 1440p; an equivalent reusable single-threaded CPU reference fails both. Direct FIFO presentation now passes both full host boundaries too, without an offscreen output copy or readback. The disabled App path now feeds real room rasters into the same surface renderer with explicit recovery and visible software fallback. Next: prove Windows, macOS, and Linux correctness and pacing before promotion. The full lift still owns splats, one shared audio bus with reverb and shaped envelopes, global dissolve, and damped-spring input | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
 | **6. Creator depth on the built loop** | Next rungs: the parametric pair as the multi-expression capsule ring with scale quantization beside it, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on later community publishing, and each rung ships with its own machine gates |
@@ -137,8 +137,13 @@ The Mind's Seat advances through independently testable increments:
     while retaining the complete typed catalog and starter rows for compatible
     clients. Core owns the six canonical walk steps and their questions; the
     MCP room-door module owns the bounded, nonspoiling projection.
-12. **Portable capsule:** native typed evidence and creations travel with an OKF
-   v0.2 knowledge projection plus explicit privacy and retention metadata.
+12. **Portable capsule, built:** `export_journal` format `portable-1` returns a
+   bounded closed payload entirely in the response. A sorted manifest records
+   path, media type, byte length, and SHA-256 for the native journal page, OKF
+   v0.2 projection, and explicit privacy and retention manifests. The caller
+   may add one live-replay-verified native Encounter Receipt and one canonical
+   Studio creation with identity and lineage intact. It creates no file,
+   accepts no path, returns no host path, and does not import.
 13. **Reflection proposals:** only after retrieval, correction, export, and
     deletion invariants hold.
 
@@ -903,6 +908,15 @@ Detail below and in the version sections.
   visual era, exact reopen, parent lineage, undefined-function refusal,
   progress accounting, v2 migration, exact journal roundtrip, and zero `.num`
   files in the test profile.
+- **Done (Mind's Seat portable typed evidence, August 25, 2026):**
+  `export_journal` format `portable-1` returns a closed, sorted in-memory
+  payload with SHA-256 hashes for every file and its manifest. Native journal
+  evidence travels beside its OKF v0.2 projection, explicit privacy and
+  retention manifests, an optional live-replay-verified Encounter Receipt, and
+  an optional canonical Studio creation preserving identity and lineage. The
+  export creates no file, accepts no path, returns no host path, and implements
+  no import. Unit, handler, catalog, hash, hostile receipt, capsule parser, and
+  real stdio regressions lock the boundary.
 - **Done (Parrondo policy wager, sixth aha room):** one completed rule
   selection primes A, B, or ABB. App keys and its bottom band, plus MCP
   `policy_wager`, reach the same pure five-beat machine. The room's former ABAB
@@ -2130,9 +2144,9 @@ cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
 2. Close the remaining structural Polish Wave debts without reopening the
    player-facing workstreams that already passed their exit.
 3. Continue the Mind's Seat now that deliberate remembered-room retrieval,
-   its non-disclosing room-door cue, the Strange Loop threshold, and MCP
-   creation and lineage parity exist: build the portable typed evidence capsule
-   and then the Show for minds.
+   its non-disclosing room-door cue, the Strange Loop threshold, MCP creation
+   and lineage parity, and the portable typed evidence capsule exist: build the
+   Show for minds.
    Keep memory opt-in, player-owned, correctable, exportable, and erasable.
 4. Continue the Sensory Lift in parallel. GPU feasibility and the direct
    presentation boundary pass, while the measured single-threaded CPU reference

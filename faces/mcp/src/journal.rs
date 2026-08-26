@@ -100,7 +100,7 @@ pub(super) fn read_tool(args: &Value, path: &std::path::Path) -> Value {
     tool_structured(&lines.join("\n"), structured)
 }
 
-fn promote_receipt(
+pub(super) fn verify_receipt(
     receipt: &Value,
     replay: &impl Fn(EncounterTool, &Value) -> Value,
 ) -> Result<String, String> {
@@ -156,7 +156,7 @@ pub(super) fn record_tool(
     }
 
     let (source, subject) = if let Some(receipt) = args.get("receipt") {
-        match promote_receipt(receipt, &replay) {
+        match verify_receipt(receipt, &replay) {
             Ok(digest) => {
                 let expected = format!("{}{digest}", numinous_core::JOURNAL_SUBJECT_RECEIPT_PREFIX);
                 if let Some(subject) = args.get("subject").and_then(Value::as_str)
@@ -273,7 +273,11 @@ pub(super) fn correct_tool(args: &Value, path: &std::path::Path) -> Value {
 }
 
 /// Return a bounded native or OKF journal page without creating a host file.
-pub(super) fn export_tool(args: &Value, path: &std::path::Path) -> Value {
+pub(super) fn export_tool(
+    args: &Value,
+    path: &std::path::Path,
+    replay: impl Fn(EncounterTool, &Value) -> Value,
+) -> Value {
     let journal = match numinous_core::try_load_journal_file(path) {
         Ok(journal) => journal,
         Err(error) => return tool_error(&format!("Failed to export journal: {error}")),
@@ -283,6 +287,25 @@ pub(super) fn export_tool(args: &Value, path: &std::path::Path) -> Value {
         .get("format")
         .and_then(Value::as_str)
         .unwrap_or("native");
+    if format == "portable-1" {
+        return match super::portable::export(args, &journal, after_entry_id, limit, &replay) {
+            Ok(capsule) => {
+                let returned = capsule["manifest"]["selection"]["journal"]["returned"]
+                    .as_u64()
+                    .unwrap_or_default();
+                tool_structured(
+                    &format!(
+                        "Exported {returned} journal entries as a typed portable evidence capsule. No file was created and no host path was returned."
+                    ),
+                    capsule,
+                )
+            }
+            Err(error) => tool_error(&error),
+        };
+    }
+    if args.get("receipt").is_some() || args.get("creation").is_some() {
+        return tool_error("receipt and creation are accepted only with format portable-1.");
+    }
     if format == "okf-0.2" {
         let page = numinous_core::export_journal_okf(&journal, after_entry_id, limit);
         let files = page
@@ -321,7 +344,7 @@ pub(super) fn export_tool(args: &Value, path: &std::path::Path) -> Value {
         );
     }
     if format != "native" {
-        return tool_error("format must be native or okf-0.2.");
+        return tool_error("format must be native, okf-0.2, or portable-1.");
     }
     let mut structured = page_json(&journal, after_entry_id, limit);
     if let Some(object) = structured.as_object_mut() {
@@ -402,7 +425,11 @@ fn page_args(args: &Value) -> (u64, usize) {
     (after_entry_id, limit)
 }
 
-fn page_json(journal: &numinous_core::Journal, after_entry_id: u64, limit: usize) -> Value {
+pub(super) fn page_json(
+    journal: &numinous_core::Journal,
+    after_entry_id: u64,
+    limit: usize,
+) -> Value {
     let available = journal
         .entries
         .iter()
@@ -462,6 +489,12 @@ mod tests {
 
     fn record(args: &Value, path: &std::path::Path, _journey: &std::path::Path) -> Value {
         super::record_tool(args, path, |_tool: EncounterTool, _args: &Value| {
+            panic!("a receipt-free journal test must not request replay")
+        })
+    }
+
+    fn export(args: &Value, path: &std::path::Path) -> Value {
+        super::export_tool(args, path, |_tool: EncounterTool, _args: &Value| {
             panic!("a receipt-free journal test must not request replay")
         })
     }
@@ -642,7 +675,7 @@ mod tests {
             first_page["structuredContent"]["page"]["nextAfterEntryId"],
             2
         );
-        let exported = super::export_tool(&json!({"after_entry_id": 0, "limit": 100}), &path);
+        let exported = export(&json!({"after_entry_id": 0, "limit": 100}), &path);
         let data = &exported["structuredContent"];
         assert_eq!(data["schema"], "numinous.experience-journal");
         assert_eq!(data["schemaVersion"], numinous_core::JOURNAL_SCHEMA_VERSION);
@@ -656,7 +689,7 @@ mod tests {
         assert_eq!(data["entries"][2]["source"], "self-authored");
         assert_eq!(data["entries"][1]["text"], "Nine means nine lobes.");
 
-        let okf = super::export_tool(
+        let okf = export(
             &json!({"after_entry_id": 0, "limit": 2, "format": "okf-0.2"}),
             &path,
         );
@@ -686,8 +719,13 @@ mod tests {
                 .contains(path.to_str().expect("journal path is UTF-8"))
         );
 
-        let invalid = super::export_tool(&json!({"format": "future"}), &path);
+        let invalid = export(&json!({"format": "future"}), &path);
         assert_eq!(invalid["isError"], true);
+        let misplaced = export(
+            &json!({"format": "native", "creation": "NUMINOUS_STUDIO 1\n"}),
+            &path,
+        );
+        assert_eq!(misplaced["isError"], true);
 
         let preview = super::erase_tool(&json!({"confirm": false}), &path);
         assert_eq!(preview["isError"], false);

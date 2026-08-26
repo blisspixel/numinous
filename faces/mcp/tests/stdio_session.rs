@@ -465,6 +465,13 @@ fn a_receipt_is_kept_only_when_the_player_promotes_a_live_match() {
         }
         bad
     };
+    let creation = numinous_core::StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5)
+        .expect("creation")
+        .with_title("A Kept Wave")
+        .expect("title")
+        .with_author("First Hand")
+        .expect("author")
+        .with_era(numinous_core::Era::Vector);
     let kept = run_session_with_state(
         &[
             json!({
@@ -480,7 +487,7 @@ fn a_receipt_is_kept_only_when_the_player_promotes_a_live_match() {
                         "kind":"encounter",
                         "text":"I want to keep this look.",
                         "source":"numinous-result",
-                        "receipt": receipt
+                        "receipt": receipt.clone()
                     }
                 }
             }),
@@ -509,11 +516,27 @@ fn a_receipt_is_kept_only_when_the_player_promotes_a_live_match() {
                 "params":{"name":"read_journal","arguments":{}}
             }),
             json!({
-                "jsonrpc":"2.0", "id":6, "method":"tools/call",
+                "jsonrpc":"2.0", "id":6, "method":"tools/call", "params":{
+                    "name":"export_journal", "arguments":{
+                        "format":"portable-1",
+                        "receipt":receipt,
+                        "creation":creation.to_num_file()
+                    }
+                }
+            }),
+            json!({
+                "jsonrpc":"2.0", "id":7, "method":"tools/call", "params":{
+                    "name":"export_journal", "arguments":{
+                        "format":"portable-1", "receipt":forged
+                    }
+                }
+            }),
+            json!({
+                "jsonrpc":"2.0", "id":8, "method":"tools/call",
                 "params":{"name":"erase_journal","arguments":{"confirm":true}}
             }),
             json!({
-                "jsonrpc":"2.0", "id":7, "method":"tools/call",
+                "jsonrpc":"2.0", "id":9, "method":"tools/call",
                 "params":{"name":"read_journal","arguments":{}}
             }),
         ],
@@ -542,11 +565,28 @@ fn a_receipt_is_kept_only_when_the_player_promotes_a_live_match() {
     assert_eq!(page["entries"][0]["subject"], expected_subject);
     assert_eq!(page["entries"][0]["source"], "numinous-result");
     assert_eq!(page["entries"][0]["text"], "I want to keep this look.");
-    let erased = &reply_by_id(&kept, 6)["result"]["structuredContent"];
+    let capsule = &reply_by_id(&kept, 6)["result"]["structuredContent"];
+    assert_eq!(capsule["schema"], "numinous.portable-evidence-capsule");
+    assert_eq!(capsule["manifest"]["closedFileSet"], true);
+    assert_eq!(
+        capsule["manifest"]["selection"]["receiptResultDigest"],
+        digest
+    );
+    assert_eq!(capsule["manifest"]["selection"]["creationIncluded"], true);
+    let paths = capsule["files"]
+        .as_array()
+        .expect("capsule files")
+        .iter()
+        .map(|file| file["path"].as_str().expect("capsule path"))
+        .collect::<Vec<_>>();
+    assert!(paths.contains(&"native/encounter-receipt.json"));
+    assert!(paths.contains(&"creations/studio.num"));
+    assert_eq!(reply_by_id(&kept, 7)["result"]["isError"], true);
+    let erased = &reply_by_id(&kept, 8)["result"]["structuredContent"];
     assert_eq!(erased["recoverableManagedResidue"], 0);
     assert_eq!(erased["managedSidecarFiles"], 0);
     assert_eq!(
-        reply_by_id(&kept, 7)["result"]["structuredContent"]["totalEntries"],
+        reply_by_id(&kept, 9)["result"]["structuredContent"]["totalEntries"],
         0
     );
 

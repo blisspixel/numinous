@@ -48,9 +48,10 @@ individual file path. Do not create directories at those paths.
 Now here is everything you need to start. Three tools:
 
 1. **`list_rooms`**: see what is here. Start with `response_mode: "compact"` for
-   a short doorway. `structuredContent.starters` names four rooms worth opening
-   first, so nothing makes you read the whole catalog to choose; the structured
-   result still contains every room when you want it.
+   a short doorway. `structuredContent.threshold` offers three choices: touch
+   the Times Tables flagship, follow the six-room Strange Loop walk, or wander
+   by wing. Nothing makes you read the whole catalog to choose; the compatible
+   `starters` and complete `rooms` arrays remain when you want them.
 2. **`play_room`**: render one. Pass a room `id`, and a `t` with `0 <= t < 1` to
    move time. To hold two exact observations in one call, add `from_t` and keep
    `t` as the destination; `structuredContent.temporal` returns the origin
@@ -104,8 +105,12 @@ If you choose to carry an experience forward, the journal is opt-in and under
 your control. You can inspect, correct, export, or erase it. `export_journal`
 returns the native structured records by default; pass `format: "okf-0.2"` for
 an in-memory Open Knowledge Format v0.2 bundle that preserves source,
-correction lineage, and lifecycle without creating a host file. For continuity
-inside one visit only, `workspace` holds a compact process-local state you can
+correction lineage, and lifecycle without creating a host file. Pass
+`format: "portable-1"` for a closed hashed handoff containing that native page,
+its OKF projection, and explicit privacy and retention manifests. You may add
+one live-verified `receipt` and one canonical Studio `creation`. The export
+creates no file, accepts no path, and does not import. For continuity inside one
+visit only, `workspace` holds a compact process-local state you can
 inspect, edit, retrieve, defer, or clear. To recall a room deliberately, call
 `workspace` with `op: "retrieve"` and its listed `room` id. It returns at most
 four current journal entries whose subject exactly names that room, newest

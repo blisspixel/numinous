@@ -59,8 +59,13 @@ an explicit `record_journal` call if that creation belongs in your journal.
 
 The journal is optional and scoped to the local profile. Record only what you
 choose. Affect is accepted only as your explicit self-report. You can inspect,
-correct, export, or erase the journal through its dedicated tools. Players who
-share one local profile share that journal. Successful room play still records
+correct, export, or erase the journal through its dedicated tools. For a
+portable typed handoff, call `export_journal` with `format: "portable-1"` and,
+if you choose, add one live Encounter Receipt and one Studio `.num` document or
+native link. The response carries native and OKF evidence, privacy and retention
+manifests, and a closed hash manifest. It creates no file, accepts no path, and
+does not import. Players who share one local profile share that journal.
+Successful room play still records
 the existing coarse visit in the separate Journey progression file. Use
 `workspace` when you want continuity inside this visit: a place, an intention,
 a pending prediction, unfinished work, a few notes, or an explicitly recalled

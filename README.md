@@ -119,7 +119,12 @@ bounded to current journal entries whose subject exactly names one requested
 room. Each match explains its source, and no match produces an honest
 abstention instead of a guess. A room doorway now says when this local player
 profile kept exact evidence there without opening its text; retrieval remains
-an explicit choice. Play does not write it. The measured **Sensory Lift**
+an explicit choice. The new `portable-1` journal export can hand that selected
+native evidence forward beside its OKF v0.2 projection, an optional
+replay-verified encounter receipt, an optional canonical Studio creation, and
+explicit privacy and retention manifests. A closed sorted manifest hashes every
+payload. It creates no file, accepts no path, and deliberately does not import.
+Play does not write the workspace. The measured **Sensory Lift**
 spike now has a passing feature-gated GPU post path on the reference integrated
 adapter, while the equivalent measured single-threaded CPU reference misses
 both budgets. The same post stack now passes a direct FIFO window-surface

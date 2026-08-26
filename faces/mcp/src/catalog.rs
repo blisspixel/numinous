@@ -402,13 +402,15 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "export_journal",
-                "description": "Export a bounded page of your journal as its native versioned record or an in-memory Open Knowledge Format v0.2 bundle. Paginate with after_entry_id; no file is created and no host path is returned.",
+                "description": "Export a bounded page of your journal as its native versioned record, an in-memory Open Knowledge Format v0.2 bundle, or a typed portable evidence capsule with hashes and explicit privacy and retention manifests. The capsule may include one replay-verified encounter receipt and one canonical Studio creation. Paginate with after_entry_id; no file is created, no caller-supplied path is read, and no host path is returned.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "after_entry_id": { "type": "integer", "minimum": 0, "description": "Return entries after this stable identifier (default 0)." },
                         "limit": { "type": "integer", "minimum": 1, "maximum": MAX_PAGE_ENTRIES, "default": DEFAULT_PAGE_ENTRIES, "description": "Maximum entries to return, from 1 through 100." },
-                        "format": { "type": "string", "enum": ["native", "okf-0.2"], "default": "native", "description": "Return the native structured journal page or named UTF-8 files forming an OKF v0.2 bundle page." }
+                        "format": { "type": "string", "enum": ["native", "okf-0.2", "portable-1"], "default": "native", "description": "Return the native structured journal page, named UTF-8 files forming an OKF v0.2 bundle page, or a hashed portable evidence capsule." },
+                        "receipt": { "type": "object", "description": "Optional structuredContent.encounter object. portable-1 replays the action and includes the receipt only when the live digests match." },
+                        "creation": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_SHARE_INPUT_BYTES, "description": "Optional complete Studio .num text or numinous://studio link for portable-1. Filesystem paths are not accepted." }
                     },
                     "additionalProperties": false
                 }

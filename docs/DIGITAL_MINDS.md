@@ -66,15 +66,21 @@ delta, evidence of change without pretending to be lived duration. Opt-in
 the play. Keeping one is an explicit `record_journal` promotion that the
 server will replay and refuse if the live room disagrees. It does not
 authenticate a distinct mind, provide active presence between visits, or
-automatically surface remembered entries. A process-local `workspace` can hold
-the place, intention, pending prediction, unfinished work, and selected notes
-of one visit. It can also make one deliberate, bounded room retrieval from the
-player-owned journal: at most four current exact-subject matches, newest first,
-with correction status and declared source explained. It abstains when no
-evidence exists and never searches personal text or opaque receipt digests.
-Play does not write it, and the process's exit drops it.
-A player sharing a local profile shares that journal. Per-mind identity,
-semantic retrieval, and the remaining Mind's Seat increments remain roadmap
+automatically surface remembered entries. A room doorway can say only that
+current exact-subject evidence exists in this local profile; opening its text is
+still a deliberate choice. A process-local `workspace` can hold the place,
+intention, pending prediction, unfinished work, and selected notes of one visit.
+It can also make one deliberate, bounded room retrieval from the player-owned
+journal: at most four current exact-subject matches, newest first, with
+correction status and declared source explained. It abstains when no evidence
+exists and never searches personal text or opaque receipt digests. Play does
+not write it, and the process's exit drops it. `export_journal` format
+`portable-1` can hand a selected native page forward with its OKF v0.2
+projection, explicit privacy and retention manifests, and optional
+replay-verified receipt and canonical Studio creation. Its closed sorted
+manifest hashes every payload, creates no file, accepts no path, and implements
+no import. A player sharing a local profile shares that journal. Per-mind
+identity, semantic retrieval, and the remaining Mind's Seat Show remain roadmap
 work. Their architecture and 2026 research basis live in
 `DIGITAL_DEVELOPMENT.md`.
 
