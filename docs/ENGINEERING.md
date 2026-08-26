@@ -54,7 +54,7 @@ and the published crate records for
 ## Formatting and linting (zero-warning policy)
 
 - **`rustfmt`** on everything; `cargo fmt --all --check` is a blocking CI gate. No unformatted code merges, ever. Style is not up for per-PR debate.
-- **`clippy` at a strict level:** current CI runs `cargo clippy --workspace --all-targets -- -D warnings`. `--all-features`, selected `pedantic`, `nursery`, and `cargo` lints are hardening targets; opt out deliberately, per case, with a written reason.
+- **`clippy` at a strict level:** current CI runs `cargo clippy --workspace --all-targets -- -D warnings`, then compiles and tests the disabled-by-default GPU post spike with `--all-features`. Workspace-wide `--all-features`, selected `pedantic`, `nursery`, and `cargo` lints are hardening targets; opt out deliberately, per case, with a written reason.
 - **`-D warnings` project-wide.** A warning is a bug that has not been fixed yet. CI is red on any warning.
 - **Prefer `#[expect(lint, reason = "...")]` over `#[allow(...)]`** so that a suppression which is no longer needed becomes an error and gets cleaned up. Every suppression carries a `reason`.
 
