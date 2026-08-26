@@ -112,10 +112,13 @@ in a dedicated test module, while compact response projection has its own
 adapter that preserves complete typed results. JSON-RPC validation,
 dual-revision negotiation, prediction form elicitation, response envelopes,
 server identity, and discovery cache metadata have a focused protocol adapter
-too. These extractions keep the production entry point under 4,200 lines
-without weakening private-boundary coverage. Bounded runtime validation of the
-declared JSON Schema subset now has its own focused adapter too, with the
-catalog remaining the immutable protocol contract. The
+too. Seeded prediction plus touch and parameter challenge posing, grading,
+response projection, and progress accounting have a focused challenge adapter,
+with deterministic goal construction and grading remaining in core. These
+extractions keep the production entry point under 3,700 lines without weakening
+private-boundary coverage. Bounded runtime validation of the declared JSON
+Schema subset now has its own focused adapter too, with the catalog remaining
+the immutable protocol contract. The
 **Universal Wager**
 is complete:
 seven rooms now carry their own staged arc across the App and MCP, using the
