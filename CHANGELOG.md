@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP JSON hand-point and pointer-gesture validation, mutual exclusion,
+  canonical echo, and interaction-aware render and status projection now live
+  in one focused face-local adapter. Listening, play, and challenge callers
+  consume the same bounded input policy without keeping it in request
+  dispatch.
 - CLI render dimensions, static hand points, pointer gestures, their mutual
   exclusion, and interaction-aware status projection now have one focused
   face-local adapter. Render, share, sonify, and Studio callers consume the
