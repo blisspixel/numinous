@@ -21,8 +21,9 @@ the from-source verification path for contributors and the curious.
   The same dependency runs release engagement and physical input receipt
   contract tests.
 - The Linux build needs the ALSA, xkbcommon, and libudev headers. Running the
-  direct-surface proof also needs Mesa Vulkan and Xvfb. CI installs them with:
-  `sudo apt-get install -y libasound2-dev libxkbcommon-dev libudev-dev mesa-vulkan-drivers xvfb`.
+  direct-surface proof also needs the xkbcommon X11 runtime, Mesa Vulkan, and
+  Xvfb. CI installs them with:
+  `sudo apt-get install -y libasound2-dev libxkbcommon-dev libxkbcommon-x11-0 libudev-dev mesa-vulkan-drivers xvfb`.
 
 ## 1. One command
 

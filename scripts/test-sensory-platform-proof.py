@@ -39,7 +39,7 @@ class SensoryPlatformProofTests(unittest.TestCase):
             )
 
     def test_linux_has_a_window_server_and_vulkan_runtime(self):
-        self.assertIn("mesa-vulkan-drivers xvfb", self.workflow)
+        self.assertIn("libxkbcommon-x11-0 mesa-vulkan-drivers xvfb", self.workflow)
         self.assertIn("WGPU_BACKEND: vulkan", self.workflow)
         self.assertIn("xvfb-run -a cargo run", self.workflow)
 

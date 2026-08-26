@@ -13,7 +13,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   driver identity, sRGB FIFO negotiation, every outcome, and raw segmented
   timings in a typed JSON receipt. The existing Windows, macOS, and Linux CI
   matrix runs the portable class and retains each receipt, while labeling its
-  timing informational. A separate physical class refuses debug builds,
+  timing informational. The Linux lane provisions the X11 keyboard runtime,
+  virtual display, and Mesa Vulkan driver needed to exercise that boundary. A
+  separate physical class refuses debug builds,
   GitHub Actions, software adapters, incomplete machine facts, battery power,
   fewer than 30 warmups or 120 retained samples, transient or suboptimal
   frames, a window that does not grant the requested client area, a target other
