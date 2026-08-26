@@ -86,6 +86,7 @@ pub mod registry;
 pub mod resonance;
 pub mod rng;
 pub mod room;
+pub mod room_walk;
 pub mod rooms;
 pub mod scores;
 pub mod secret;
@@ -199,6 +200,7 @@ pub use room::{
     RoomInput, RoomMeta, RoomMetadata, held_pokes_from_inputs, inputs_from_pokes, latest_gesture,
     pokes_from_inputs, renderable_poke_count, room_action, room_touch_action,
 };
+pub use room_walk::{RoomWalk, RoomWalkStep, STRANGE_LOOP_WALK};
 pub use rooms::{ROOM_CATALOG, canonical_room_id, room_meta_by_id};
 pub use scores::Scoreboard;
 pub use secret::{akousma, behind_the_veil, deep_akousma};

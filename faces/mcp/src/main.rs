@@ -16,6 +16,7 @@ mod catalog;
 mod encounter;
 mod journal;
 mod local_state;
+mod room_door;
 mod temporal;
 mod workspace;
 
@@ -1654,7 +1655,7 @@ fn call_tool(
     }
 
     let result = match name {
-        "list_rooms" => list_rooms_tool(),
+        "list_rooms" => room_door::list_tool(),
         "describe_room" => describe_room_tool(&domain_args, journey_file),
         "reveal_room" => reveal_room_tool(&domain_args, journey_file),
         "play_room" => play_room_tool(&domain_args, journey_file),
@@ -1804,34 +1805,12 @@ fn apply_response_mode(name: &str, response_mode: Option<&str>, mut result: Valu
     result
 }
 
-/// The four rooms first contact is pointed at. `PLAY.md` withholds the map on
-/// purpose, so the catalog needs a small typed doorway beside the full list: a
-/// client that renders `structuredContent` should be able to show four rooms
-/// rather than 354 before its player has touched one.
-const STARTER_ROOM_IDS: [&str; 4] = [
-    "times-tables",
-    "double-pendulum",
-    "kepler-laws",
-    "mandelbrot",
-];
-
 fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
     match name {
         // A compact reply that lists bare ids sends a reader looking them up
         // in the very catalog the short mode exists to spare them, so the
         // prose names its starters the same way the structured array does.
-        "list_rooms" => Some(format!(
-            "{} rooms. Start with {}, also in structuredContent.starters with the wing each sits in. Read structuredContent.rooms for every id, title, and wing.",
-            structured.get("count")?.as_u64()?,
-            STARTER_ROOM_IDS
-                .iter()
-                .map(|id| match numinous_core::room_meta_by_id(id) {
-                    Some(metadata) => format!("{} ({id})", metadata.title),
-                    None => (*id).to_string(),
-                })
-                .collect::<Vec<_>>()
-                .join(", ")
-        )),
+        "list_rooms" => room_door::compact_summary(structured),
         "describe_room" => {
             let mut summary = format!(
                 "{} ({}) in {}. Action: {}.",
@@ -6164,41 +6143,6 @@ fn unknown_sim(id: &str) -> String {
     format!("No sim with id '{id}'. Known sims: {}", known.join(", "))
 }
 
-fn list_rooms_text() -> String {
-    numinous_core::ROOM_CATALOG
-        .iter()
-        .map(|metadata| format!("{}  [{}]  {}", metadata.id, metadata.wing, metadata.title))
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-fn list_rooms_tool() -> Value {
-    let structured_rooms = numinous_core::ROOM_CATALOG
-        .iter()
-        .map(
-            |metadata| json!({ "id": metadata.id, "title": metadata.title, "wing": metadata.wing }),
-        )
-        .collect::<Vec<_>>();
-    // Bare ids make a player look the names up in the 354-room array the
-    // doorway exists to spare them. Carry the same shape as a catalog row so a
-    // starter can be chosen, and named, without reading the map.
-    let starters = STARTER_ROOM_IDS
-        .iter()
-        .filter_map(|id| numinous_core::room_meta_by_id(id))
-        .map(
-            |metadata| json!({ "id": metadata.id, "title": metadata.title, "wing": metadata.wing }),
-        )
-        .collect::<Vec<_>>();
-    tool_structured(
-        &list_rooms_text(),
-        json!({
-            "count": structured_rooms.len(),
-            "starters": starters,
-            "rooms": structured_rooms,
-        }),
-    )
-}
-
 /// Answer an unknown room id with the rooms it was probably meant to be, then
 /// one pointer to the listing tool. Returning the whole catalog spent thousands
 /// of bytes of a player's context on a typo and handed over the map this
@@ -7772,10 +7716,10 @@ mod tests {
             );
             assert!(compact_text.contains("structuredContent"), "{tool}");
             if tool == "list_rooms" {
-                for starter in super::STARTER_ROOM_IDS {
+                for door in ["touch", "strange-loop", "wander"] {
                     assert!(
-                        compact_text.contains(starter),
-                        "compact discovery omitted {starter}: {compact_text}"
+                        compact_text.contains(door),
+                        "compact discovery omitted {door}: {compact_text}"
                     );
                 }
             }
@@ -13257,7 +13201,7 @@ mod tests {
         let starters = structured["starters"]
             .as_array()
             .expect("a typed starter doorway");
-        assert_eq!(starters.len(), super::STARTER_ROOM_IDS.len());
+        assert_eq!(starters.len(), super::room_door::STARTER_ROOM_IDS.len());
         let catalog = structured["rooms"].as_array().expect("room catalog");
         for starter in starters {
             // A starter carries the same shape as a catalog row, so a player

@@ -33,8 +33,9 @@ Studio requests, the typed room catalog, the typed Gauntlet, and local-state
 path resolution now have one core owner. CLI and MCP local-state adapters are
 focused modules extracted from their god-files, and MCP discovery plus its
 immutable tool schema and player-owned journal projections now have dedicated
-face-local modules. The remaining seams are next. The three-door threshold
-comes next, alongside the measured Sensory Lift spike.
+face-local modules. The room threshold now offers the flagship, an ordered
+six-room Strange Loop walk, or compact wing wandering while retaining the full
+typed catalog. The remaining seams and measured Sensory Lift spike are next.
 The 0.4 Understanding Alpha cohort waits on an owner ruling; its method dry-run
 and dual automated auditors are already in CI. Soft-thin densify, bulk new
 rooms, and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and

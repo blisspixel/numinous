@@ -5,6 +5,15 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- `list_rooms` now begins at a three-door threshold instead of printing the
+  355-room index: touch the Times Tables flagship, follow a six-room Strange
+  Loop walk, or wander through compact wing summaries. Every door carries an
+  exact next action. Core owns the canonical ordered walk and its nonspoiling
+  questions; a focused MCP room-door module owns the threshold projection.
+  The complete typed `rooms` array and existing `starters` rows remain
+  compatible in both response modes. Core, projection, compatibility,
+  non-disclosure, and real stdio regressions cover all routes and catalog
+  counts.
 - `describe_room` now offers a non-disclosing cue when this local player
   profile has current exact-subject journal evidence for the room. The typed
   cue returns no journal contents, changes no visit workspace state, and points
