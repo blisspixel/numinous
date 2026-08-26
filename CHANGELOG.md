@@ -5,6 +5,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP newline request framing and response writes now live in one focused
+  face-local transport adapter. It owns the 1 MiB record bound, one-byte
+  overflow detection, allocation-free overflow draining, record
+  resynchronization, and flushed one-line JSON writes. Oversized input still
+  reaches the ordinary parse-error path, while four focused boundary tests and
+  the 21 real stdio sessions preserve the public protocol behavior.
 - Shared CLI game input now lives in one focused face-local adapter. It owns
   the 4 KiB terminal record bound, overflow draining, UTF-8 validation,
   neutral EOF and read-error departures, and the games' `?` explanation door.
