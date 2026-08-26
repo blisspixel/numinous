@@ -5,6 +5,42 @@ revision, and measurement boundary. A dependency update is not called neutral
 because it compiles. Comparable evidence must exercise the exact revisions on
 one machine and retain the raw samples.
 
+## August 2026 Sensory Lift GPU spike
+
+The disabled-by-default `gpu-post` feature tests the proposed post stack before
+it changes the App. Revision `3e7a5845dd533f26c9c32144e2291820520059be`
+uploads a deterministic sRGB frame, samples it into a full-resolution linear
+`Rgba16Float` target, performs a half-resolution bright pass and separable
+Gaussian bloom, then tone maps into an sRGB output. Frame-sized textures, bind
+groups, uniform buffers, timestamp queries, and readback buffers are reused.
+
+The reference run used the release profile and locked dependencies on an AMD
+Radeon 780M through Vulkan. It retained three warmups and twenty samples at
+both target sizes. The device boundary covers the five render passes. The wall
+boundary additionally covers the prebuilt host frame upload, final texture
+copy, map, and tight RGBA output.
+
+| Size | Device p50 / p95 ms | Validation wall p50 / p95 ms | Budgets | Result |
+| --- | ---: | ---: | ---: | --- |
+| 1920 x 1080 | 1.515 / 2.517 | 7.054 / 8.119 | 8 / 33 ms p95 | Pass |
+| 2560 x 1440 | 3.847 / 4.416 | 11.368 / 13.516 | 12 / 50 ms p95 | Pass |
+
+The full receipt is
+[`evidence/sensory-post-spike-2026-08-25.json`](evidence/sensory-post-spike-2026-08-25.json).
+It records every sample, output identities, the exact implementation revision
+and binary digest, format capabilities, driver, toolchain, power scheme,
+budgets, and scope limits. Reproduce the workload with:
+
+```
+cargo run --release --locked -p numinous-gpu --all-features --example post_spike -- --warmups 3 --samples 20 --check
+```
+
+This clears GPU feasibility on the reference integrated adapter. It does not
+select the production architecture by itself. The next decision needs the
+equivalent CPU `Raster` bloom measurement and a direct surface-presentation
+boundary. Display scan-out, cross-platform behavior, catalog-room aesthetics,
+accessibility, and preference remain outside this receipt.
+
 ## July 2026 dependency migration
 
 The migration is the adjacent revision pair below. The after revision includes
