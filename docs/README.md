@@ -54,11 +54,14 @@ posting, and transient feedback audio now share a focused game runtime adapter,
 again leaving rules and persistence primitives in core. App global audio keys,
 pointer gestures, wheel updates, and controller commands now share a focused
 input runtime adapter while device normalization, hit testing, and domain logic
-retain their existing owners. The 124 App lifecycle
-and cross-boundary regressions, the 159 CLI command and cross-boundary
-regressions, and the 214 MCP request-dispatch regressions each have a sibling
-test module. Compact response projection also has a focused adapter that
-preserves complete typed results.
+retain their existing owners. App room exports, Studio naming and sharing,
+Gallery navigation and reopen transitions, and creation opening now share a
+focused creation runtime adapter while rendering, discovery, validation,
+serialization, audio, and domain logic retain their existing owners. The 124
+App lifecycle and cross-boundary regressions, the 159 CLI command and
+cross-boundary regressions, and the 214 MCP request-dispatch regressions each
+have a sibling test module. Compact response projection also has a focused
+adapter that preserves complete typed results.
 JSON-RPC validation, dual-revision
 negotiation, prediction form
 elicitation, response envelopes, server identity, and immutable discovery cache

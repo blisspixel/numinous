@@ -273,6 +273,11 @@ and controller commands lives in a face-local `input_runtime` adapter. It
 coordinates existing menu, game, room, and radio operations while `gamepad`,
 `mouse_input`, `controls`, `game_draw`, `room_input`, and core retain device
 normalization, pure hit testing, gesture mechanics, and domain rules.
+App room export coordination, Studio naming and share flow, Gallery navigation
+and reopen transitions, and `.num` or link opening live in a face-local
+`creation_runtime` adapter. It composes existing postcard, Gallery, Studio,
+audio, and core operations without taking ownership of rendering, discovery,
+formula and capsule validation, serialization, or domain rules.
 Core persistence also resolves the seven managed local-state paths through one
 environment precedence rule. Faces consume those resolved paths rather than
 reimplementing home-directory fallback or per-store overrides. A selected
