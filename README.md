@@ -130,9 +130,13 @@ parsing and structured presentation now share a focused puzzle adapter, with
 their seeded generation, rules, legality, grading, and truth remaining in core.
 The Cairn doorway, boon choice, trophy case, and Journey dashboard now share a
 focused journey adapter, with bequest encoding, factor reading, unlocks,
-progression, scoring, and persistence truth remaining outside it. These
-extractions keep the production entry point under 750 lines without weakening
-private-boundary coverage. Bounded runtime validation of the declared JSON
+progression, scoring, and persistence truth remaining outside it.
+Connection-scoped viewer lifecycle, one-use pairing guidance, consent status
+projection, and private-activity-safe results now share a focused broadcast
+adapter. The broadcast transport and consent state machine retain session,
+queue, framing, and compatibility truth. These extractions keep the production
+entry point under 650 lines without weakening private-boundary coverage.
+Bounded runtime validation of the declared JSON
 Schema subset now has
 its own focused adapter too, with the catalog remaining the immutable protocol
 contract. The

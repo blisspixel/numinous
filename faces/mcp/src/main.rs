@@ -12,6 +12,7 @@
 
 mod audible;
 mod broadcast;
+mod broadcast_tools;
 mod catalog;
 mod challenge_tools;
 mod encounter;
@@ -37,9 +38,8 @@ mod transport;
 mod workspace;
 
 use std::io;
-use std::sync::{Mutex, MutexGuard};
 
-use broadcast::{SessionBroadcast, SessionSnapshot};
+use broadcast_tools::{ConnectionBroadcast, broadcast_session_tool};
 use catalog::{discover_result, initialize_result, server_info, tools_catalog, tools_list_result};
 #[cfg(test)]
 use challenge_tools::record_challenge_attempt;
@@ -286,48 +286,6 @@ fn handle_request_with_visit(
         Ok(value) => success_response(id, note_save_trouble(result_for_era(value, method, era))),
         Err((code, message)) => error_response(id, code, &message),
     })
-}
-
-struct ConnectionBroadcast {
-    session: Mutex<SessionBroadcast>,
-}
-
-impl ConnectionBroadcast {
-    fn new() -> Self {
-        Self {
-            session: Mutex::new(SessionBroadcast::new()),
-        }
-    }
-
-    fn start(&self, pairing_code: &str) -> Result<SessionSnapshot, broadcast::SessionError> {
-        self.lock().start(pairing_code)
-    }
-
-    fn status(&self) -> SessionSnapshot {
-        self.lock().status()
-    }
-
-    fn pause(&self) -> Result<SessionSnapshot, broadcast::SessionError> {
-        self.lock().pause()
-    }
-
-    fn resume(&self) -> Result<SessionSnapshot, broadcast::SessionError> {
-        self.lock().resume()
-    }
-
-    fn stop(&self) -> Result<SessionSnapshot, broadcast::SessionError> {
-        self.lock().stop()
-    }
-
-    fn capture(&self, tool: PublicTool, arguments: &Value) -> Option<broadcast::PublicCall> {
-        self.lock().capture(tool, arguments)
-    }
-
-    fn lock(&self) -> MutexGuard<'_, SessionBroadcast> {
-        self.session
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-    }
 }
 
 fn validate_tools_cursor(params: Option<&Value>) -> Result<(), String> {
@@ -596,71 +554,6 @@ fn replay_encounter(
         numinous_core::EncounterTool::ListenRoom => listen_room_tool(replay_args),
         numinous_core::EncounterTool::SingExpression => sing_expression_tool(replay_args),
     }
-}
-
-fn broadcast_session_tool(args: &Value, broadcast: &ConnectionBroadcast) -> Value {
-    let Some(action) = args.get("action").and_then(Value::as_str) else {
-        return tool_error("Missing required string argument 'action'.");
-    };
-    let pairing_code = args.get("pairing_code").and_then(Value::as_str);
-    let outcome = match action {
-        "start" => {
-            let Some(code) = pairing_code else {
-                return tool_error("Starting a viewer requires 'pairing_code'.");
-            };
-            broadcast.start(code)
-        }
-        "status" if pairing_code.is_none() => Ok(broadcast.status()),
-        "pause" if pairing_code.is_none() => broadcast.pause(),
-        "resume" if pairing_code.is_none() => broadcast.resume(),
-        "stop" if pairing_code.is_none() => broadcast.stop(),
-        "status" | "pause" | "resume" | "stop" => {
-            return tool_error("'pairing_code' is accepted only when action is 'start'.");
-        }
-        _ => return tool_error("Unknown broadcast action."),
-    };
-    match outcome {
-        Ok(status) => tool_structured(
-            &format!(
-                "Local session broadcast is {}. Private activity is never represented; silence reveals nothing about private calls.",
-                status.state
-            ),
-            broadcast_status_json(&status),
-        ),
-        Err(error) => tool_error(&format!(
-            "Broadcast unchanged: {error}.{}",
-            broadcast_failure_hint(action, error)
-        )),
-    }
-}
-
-/// A rejected start is the one broadcast failure a caller cannot reason its
-/// way out of. Every other action fails on state the caller can inspect, but a
-/// pairing code exists only inside a human's App, so an unaided caller can do
-/// nothing but invent codes. Name where the real one comes from instead.
-fn broadcast_failure_hint(action: &str, error: broadcast::SessionError) -> &'static str {
-    match (action, error) {
-        ("start", broadcast::SessionError::PairingRejected) => {
-            " A pairing code cannot be guessed or reused: a human running the App \
-             chooses Shared Play, and the one-use code it shows is the only code \
-             that starts a viewer. Without that invitation there is nothing to join, \
-             and your play continues unwatched."
-        }
-        _ => "",
-    }
-}
-
-fn broadcast_status_json(status: &SessionSnapshot) -> Value {
-    json!({
-        "state": status.state,
-        "sessionId": status.session_id,
-        "consentEpoch": status.consent_epoch,
-        "nextPublicSequence": status.next_public_sequence,
-        "droppedPublicEvents": status.dropped_public_events,
-        "queuedEvents": status.queued_events,
-        "queuedBytes": status.queued_bytes,
-        "privateActivityVisible": false,
-    })
 }
 
 /// The `explain_joke` tool: humor as structure, for the alien and the agent.

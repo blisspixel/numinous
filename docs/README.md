@@ -71,9 +71,12 @@ Gauntlet request parsing and structured presentation share a focused puzzle
 adapter while core retains seeded generation, rules, legality, grading, and
 truth. Cairn reading and leaving, boon choice, the trophy case, and the Journey
 dashboard share a focused journey adapter while core retains bequest encoding,
-factor reading, unlocks, progression, scoring, and persistence truth. The
-production entry point is now under 750 lines with private-boundary coverage
-intact. Bounded runtime validation of the declared
+factor reading, unlocks, progression, scoring, and persistence truth.
+Connection-scoped viewer lifecycle, one-use pairing guidance, consent status
+projection, and private-activity-safe results share a focused broadcast adapter
+while the broadcast transport and consent state machine retain session, queue,
+framing, and compatibility truth. The production entry point is now under 650
+lines with private-boundary coverage intact. Bounded runtime validation of the declared
 JSON Schema subset, guiding
 argument-name suggestions, and the two cross-field domain checks now share a
 focused MCP schema adapter. CLI
