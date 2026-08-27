@@ -5,6 +5,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP viewer allowlist policy, public-call capture, daily replay normalization,
+  journey-blind result projection, and event commit now live in a focused
+  face-local adapter. Broadcast transport and domain adapters retain session
+  and game truth.
 - MCP connection-scoped viewer lifecycle, one-use pairing guidance, consent
   status projection, and private-activity-safe result presentation now live in
   a focused face-local broadcast adapter. The broadcast transport and consent

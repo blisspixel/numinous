@@ -75,9 +75,11 @@ factor reading, unlocks, progression, scoring, and persistence truth.
 Connection-scoped viewer lifecycle, one-use pairing guidance, consent status
 projection, and private-activity-safe results share a focused broadcast adapter
 while the broadcast transport and consent state machine retain session, queue,
-framing, and compatibility truth. The production entry point is now under 650
-lines with private-boundary coverage intact. Bounded runtime validation of the declared
-JSON Schema subset, guiding
+framing, and compatibility truth. Exhaustive viewer policy, public-call capture,
+daily replay normalization, journey-blind result projection, and event commit
+share a focused viewer projection adapter. The production entry point is now
+near 500 lines with private-boundary coverage intact. Bounded runtime
+validation of the declared JSON Schema subset, guiding
 argument-name suggestions, and the two cross-field domain checks now share a
 focused MCP schema adapter. CLI
 Studio source selection, capsule loading and never-clobber writes, terminal

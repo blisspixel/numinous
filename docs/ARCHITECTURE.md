@@ -327,7 +327,10 @@ progression, scoreboard, and persistence truth. A focused `broadcast_tools`
 adapter owns connection-scoped viewer lifecycle, one-use pairing guidance,
 consent status projection, and private-activity-safe result presentation. The
 `broadcast` module and `numinous-broadcast` crate retain session state, bounded
-queues, framing, and compatibility truth. Its 214 request-dispatch and
+queues, framing, and compatibility truth. A focused `viewer_projection` adapter
+owns the exhaustive public, private, and control policy, public-call capture,
+daily replay normalization, journey-blind result projection, and event commit.
+Domain adapters retain game and presentation truth. Its 214 request-dispatch and
 cross-boundary unit regressions live in the sibling `tests` module, which
 retains private module access without enlarging the production entry point. The
 `response` adapter owns compact prose
