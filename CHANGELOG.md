@@ -5,6 +5,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP parsing and structured presentation for Crack, SETI, Aliens, and the
+  Gauntlet now live in a focused face-local puzzle adapter. Core retains seeded
+  generation, rules, legality, grading, and puzzle truth. A stale Quiz label on
+  the Crack adapter was removed.
 - MCP room discovery, description, gated reveal projection, structured sound,
   bounded play rendering, temporal evidence, and encounter receipts now live in
   a focused face-local adapter. Core retains the room registry, veil rules,
