@@ -134,8 +134,11 @@ progression, scoring, and persistence truth remaining outside it.
 Connection-scoped viewer lifecycle, one-use pairing guidance, consent status
 projection, and private-activity-safe results now share a focused broadcast
 adapter. The broadcast transport and consent state machine retain session,
-queue, framing, and compatibility truth. These extractions keep the production
-entry point under 650 lines without weakening private-boundary coverage.
+queue, framing, and compatibility truth. Exhaustive public, private, and control
+policy, public-call capture, daily replay normalization, journey-blind result
+projection, and event commit now share a focused viewer projection adapter.
+These extractions keep the production entry point near 500 lines without
+weakening private-boundary coverage.
 Bounded runtime validation of the declared JSON
 Schema subset now has
 its own focused adapter too, with the catalog remaining the immutable protocol

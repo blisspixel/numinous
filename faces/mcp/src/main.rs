@@ -35,6 +35,7 @@ mod sim_tools;
 mod studio_tools;
 mod temporal;
 mod transport;
+mod viewer_projection;
 mod workspace;
 
 use std::io;
@@ -46,22 +47,25 @@ use challenge_tools::record_challenge_attempt;
 use challenge_tools::{challenge_tool, predict_tool};
 #[cfg(test)]
 use game_tools::post_munch_arcade_score;
+#[cfg(test)]
+use game_tools::quiz_tool_at_level;
 use game_tools::{
     arcade_action, fifteen_tool, hackenbush_tool, munch_arcade_tool, munch_tool, nim_tool,
-    party_tool, quiz_tool, quiz_tool_at_level, scores_tool,
+    party_tool, quiz_tool, scores_tool,
 };
 use journey_tools::{cairn_tool, choose_tool, journey_tool, trophies_tool};
 use local_state::forget_tool;
+#[cfg(test)]
+use numinous_broadcast::PublicTool;
 use numinous_broadcast::{
     PLAY_ROOM_DEFAULT_HEIGHT as DEFAULT_HEIGHT, PLAY_ROOM_DEFAULT_WIDTH as DEFAULT_WIDTH,
-    PLAY_ROOM_MAX_HEIGHT as MAX_TOOL_HEIGHT, PLAY_ROOM_MAX_WIDTH as MAX_TOOL_WIDTH, PublicTool,
+    PLAY_ROOM_MAX_HEIGHT as MAX_TOOL_HEIGHT, PLAY_ROOM_MAX_WIDTH as MAX_TOOL_WIDTH,
 };
 #[cfg(test)]
-use progress::{CAIRN_LEVEL, TestStateRoot, test_state_path};
+use progress::{CAIRN_LEVEL, DAILY_DAY_KEY, TestStateRoot, test_state_path};
 use progress::{
-    DAILY_DAY_KEY, cairn_path, effective_seed, freeze_daily_day, journal_path, journey_path,
-    load_journey, local_state_paths_at, note_save_trouble, post_score, record_progress,
-    scores_path,
+    cairn_path, effective_seed, freeze_daily_day, journal_path, journey_path, load_journey,
+    local_state_paths_at, note_save_trouble, post_score, record_progress, scores_path,
 };
 #[cfg(test)]
 use protocol::{
@@ -73,17 +77,17 @@ use protocol::{
     prepare_prediction_mrtr, protocol_error_response, request_era, result_for_era,
     success_response, valid_request_id, validate_jsonrpc_envelope,
 };
-use puzzle_tools::{
-    aliens_tool, crack_tool, crack_tool_at_level, gauntlet_answers_from_json, gauntlet_tool,
-    seti_tool, seti_tool_at_level,
-};
+use puzzle_tools::{aliens_tool, crack_tool, gauntlet_answers_from_json, gauntlet_tool, seti_tool};
+#[cfg(test)]
+use puzzle_tools::{crack_tool_at_level, seti_tool_at_level};
 use response::apply_response_mode;
 #[cfg(test)]
 use room_tools::play_room_tool_for_journey;
 use room_tools::{
-    describe_room_tool, describe_room_tool_for_journey, listen_room_tool, note_name,
-    play_room_tool, reveal_room_tool, reveal_room_tool_for_journey,
+    describe_room_tool, listen_room_tool, note_name, play_room_tool, reveal_room_tool,
 };
+#[cfg(test)]
+use room_tools::{describe_room_tool_for_journey, reveal_room_tool_for_journey};
 use schema::{validate_declared_tool_arguments, validate_schema_value};
 use serde_json::{Value, json};
 use sim_tools::{list_sims_text, run_sim_tool};
@@ -93,6 +97,11 @@ use studio_tools::{
 };
 use temporal::render_delta_json;
 use transport::{read_bounded_line, write_message};
+use viewer_projection::capture_public_call;
+#[cfg(test)]
+use viewer_projection::{
+    ViewerPolicy, level_the_arguments_require, replay_arguments, viewer_policy, viewer_result,
+};
 use workspace::{ProcessWorkspace, workspace_tool};
 
 /// Longest catalog id a tool argument may carry (room, sim, or similar).
@@ -296,133 +305,6 @@ fn validate_tools_cursor(params: Option<&Value>) -> Result<(), String> {
         );
     }
     Ok(())
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum ViewerPolicy {
-    Public(PublicTool),
-    Private,
-    Control,
-}
-
-fn viewer_policy(name: &str) -> Option<ViewerPolicy> {
-    if let Some(tool) = PublicTool::from_name(name) {
-        return Some(ViewerPolicy::Public(tool));
-    }
-    match name {
-        "cairn" | "forget" | "scores" | "journey" | "choose" | "trophies" | "read_journal"
-        | "record_journal" | "correct_journal" | "export_journal" | "erase_journal"
-        | "workspace" | "save_creation" | "open_creation" | "fork_creation" => {
-            Some(ViewerPolicy::Private)
-        }
-        "broadcast_session" => Some(ViewerPolicy::Control),
-        _ => None,
-    }
-}
-
-fn capture_public_call(request: &Value, broadcast: &ConnectionBroadcast) -> Option<ViewerCall> {
-    let params = request.get("params")?;
-    let name = params.get("name")?.as_str()?;
-    let ViewerPolicy::Public(tool) = viewer_policy(name)? else {
-        return None;
-    };
-    let arguments = replay_arguments(
-        params
-            .get("arguments")
-            .cloned()
-            .unwrap_or_else(|| json!({})),
-    );
-    let call = broadcast.capture(tool, &arguments)?;
-    Some(ViewerCall {
-        call,
-        tool,
-        arguments,
-    })
-}
-
-struct ViewerCall {
-    call: broadcast::PublicCall,
-    tool: PublicTool,
-    arguments: Value,
-}
-
-impl ViewerCall {
-    fn commit(self, result: &Value) {
-        let projected = viewer_result(self.tool, &self.arguments, result);
-        self.call.commit(&projected);
-    }
-}
-
-/// The lowest journey level at which this exact call is allowed. The viewer
-/// replay uses it instead of the player's real level: a successful gated
-/// call already proves at least this much, so replaying here shows the
-/// viewer the play that actually happened without leaking how far past the
-/// gate the player is. Replaying at zero showed a level-lock refusal as the
-/// public result of a call that succeeded.
-fn level_the_arguments_require(tool: PublicTool, arguments: &Value) -> u32 {
-    match tool {
-        PublicTool::Crack => {
-            let digits = arguments.get("digits").and_then(Value::as_u64).unwrap_or(4);
-            if digits > 4 { 5 } else { 0 }
-        }
-        PublicTool::Seti => {
-            let channels = arguments
-                .get("channels")
-                .and_then(Value::as_u64)
-                .unwrap_or(4);
-            if channels > 4 { 7 } else { 0 }
-        }
-        PublicTool::Quiz => {
-            let choices = arguments
-                .get("choices")
-                .and_then(Value::as_u64)
-                .unwrap_or(4);
-            if choices > 4 { 3 } else { 0 }
-        }
-        _ => 0,
-    }
-}
-
-fn viewer_result(tool: PublicTool, arguments: &Value, result: &Value) -> Value {
-    match tool {
-        PublicTool::WatchShow => show::viewer_result(result),
-        PublicTool::DescribeRoom => {
-            describe_room_tool_for_journey(arguments, &numinous_core::Journey::default())
-        }
-        PublicTool::RevealRoom => {
-            reveal_room_tool_for_journey(arguments, &numinous_core::Journey::default())
-        }
-        PublicTool::Crack => {
-            crack_tool_at_level(arguments, level_the_arguments_require(tool, arguments))
-        }
-        PublicTool::Seti => {
-            seti_tool_at_level(arguments, level_the_arguments_require(tool, arguments))
-        }
-        PublicTool::Quiz => {
-            quiz_tool_at_level(arguments, level_the_arguments_require(tool, arguments))
-        }
-        _ => result.clone(),
-    }
-}
-
-fn replay_arguments(mut arguments: Value) -> Value {
-    let Some(object) = arguments.as_object_mut() else {
-        return arguments;
-    };
-    object.remove("response_mode");
-    let daily = object.get("daily").and_then(Value::as_bool) == Some(true);
-    let effective_seed = if daily {
-        object.get(DAILY_DAY_KEY).and_then(Value::as_u64)
-    } else {
-        object.get("seed").and_then(Value::as_u64)
-    };
-    object.remove("daily");
-    object.remove(DAILY_DAY_KEY);
-    object.remove("seed");
-    if let Some(seed) = effective_seed {
-        object.insert("seed".to_string(), json!(seed));
-    }
-    arguments
 }
 
 /// Dispatch a `tools/call`.
