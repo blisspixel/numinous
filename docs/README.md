@@ -69,8 +69,11 @@ adapter while core retains the registry, veil rules, rendering, sound
 generation, goals, grading, and mathematical truth. Crack, SETI, Aliens, and
 Gauntlet request parsing and structured presentation share a focused puzzle
 adapter while core retains seeded generation, rules, legality, grading, and
-truth. The production entry point is now under 1,000 lines with
-private-boundary coverage intact. Bounded runtime validation of the declared
+truth. Cairn reading and leaving, boon choice, the trophy case, and the Journey
+dashboard share a focused journey adapter while core retains bequest encoding,
+factor reading, unlocks, progression, scoring, and persistence truth. The
+production entry point is now under 750 lines with private-boundary coverage
+intact. Bounded runtime validation of the declared
 JSON Schema subset, guiding
 argument-name suggestions, and the two cross-field domain checks now share a
 focused MCP schema adapter. CLI
