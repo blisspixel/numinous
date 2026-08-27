@@ -323,7 +323,11 @@ Aliens, and Gauntlet. Core retains seeded generation, rules, legality, grading,
 and puzzle truth. A focused `journey_tools` adapter owns Cairn request
 projection, boon choice, trophy-case presentation, and the Journey dashboard.
 Core retains bequest encoding, factor reading, unlock, boon, trophy,
-progression, scoreboard, and persistence truth. Its 214 request-dispatch and
+progression, scoreboard, and persistence truth. A focused `broadcast_tools`
+adapter owns connection-scoped viewer lifecycle, one-use pairing guidance,
+consent status projection, and private-activity-safe result presentation. The
+`broadcast` module and `numinous-broadcast` crate retain session state, bounded
+queues, framing, and compatibility truth. Its 214 request-dispatch and
 cross-boundary unit regressions live in the sibling `tests` module, which
 retains private module access without enlarging the production entry point. The
 `response` adapter owns compact prose
