@@ -5,6 +5,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP connection-scoped viewer lifecycle, one-use pairing guidance, consent
+  status projection, and private-activity-safe result presentation now live in
+  a focused face-local broadcast adapter. The broadcast transport and consent
+  state machine retain session, queue, framing, and compatibility truth.
 - MCP Cairn reading and leaving, boon choice, trophy-case projection, and the
   Journey dashboard now live in a focused face-local journey adapter. Core
   retains bequest encoding, factor reading, unlock, boon, trophy, progression,
