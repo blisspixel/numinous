@@ -4003,11 +4003,16 @@ fn quiz_answers_letter_matches_a_choice() {
 
 #[test]
 fn quiz_deal_rules_stay_out_of_the_event_loop_coordinator() {
-    let source = include_str!("main.rs");
+    let entry = include_str!("main.rs");
+    let game_runtime = include_str!("game_runtime.rs");
 
-    assert!(source.contains("play::deal_quiz"));
-    assert!(source.contains("play::answer_quiz"));
-    assert!(!source.contains(concat!("I", "CONIC")));
-    assert!(!source.contains(concat!("build", "_round", "_pool")));
-    assert!(!source.contains(concat!("quiz_recent", ".", "push")));
+    assert!(!entry.contains("play::deal_quiz"));
+    assert!(!entry.contains("play::answer_quiz"));
+    assert!(game_runtime.contains("play::deal_quiz"));
+    assert!(game_runtime.contains("play::answer_quiz"));
+    for source in [entry, game_runtime] {
+        assert!(!source.contains(concat!("I", "CONIC")));
+        assert!(!source.contains(concat!("build", "_round", "_pool")));
+        assert!(!source.contains(concat!("quiz_recent", ".", "push")));
+    }
 }

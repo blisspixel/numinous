@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- App Quiz, Munch, Nim, Arcade, and Gauntlet session coordination now lives in
+  a focused game runtime module. It owns game entry, keyboard handling, score
+  posting, and transient feedback audio while core retains game rules and
+  persistence primitives. The production entry coordinator is reduced from
+  6,521 to 5,948 lines.
 - The 124 App lifecycle, input, audio, presentation, Studio, and game
   regressions now live in a sibling test module. Their private access is
   preserved while the production entry point is reduced to 6,521 lines.
