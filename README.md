@@ -128,9 +128,12 @@ Core retains the room registry, veil rules, rendering, sound generation, goals,
 grading, and mathematical truth. Crack, SETI, Aliens, and Gauntlet request
 parsing and structured presentation now share a focused puzzle adapter, with
 their seeded generation, rules, legality, grading, and truth remaining in core.
-These extractions keep the production entry point under 1,000 lines without
-weakening private-boundary coverage. Bounded runtime validation of the declared
-JSON Schema subset now has
+The Cairn doorway, boon choice, trophy case, and Journey dashboard now share a
+focused journey adapter, with bequest encoding, factor reading, unlocks,
+progression, scoring, and persistence truth remaining outside it. These
+extractions keep the production entry point under 750 lines without weakening
+private-boundary coverage. Bounded runtime validation of the declared JSON
+Schema subset now has
 its own focused adapter too, with the catalog remaining the immutable protocol
 contract. The
 **Universal Wager**
