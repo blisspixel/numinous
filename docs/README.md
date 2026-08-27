@@ -49,10 +49,11 @@ simulation rules remain in core. Formula Jam discovery, portable creation
 projection, optional audio, and encounter receipts now share a focused MCP
 Studio-tool adapter. Stateless game replay, structured game results, and the
 shared score table now share a focused MCP game-tool adapter while game rules
-and persistence remain in core. The 214 MCP request-dispatch and
-cross-boundary unit regressions now have a dedicated test module. Compact
-response projection also has a focused adapter that preserves complete typed
-results. JSON-RPC validation, dual-revision negotiation, prediction form
+and persistence remain in core. The 159 CLI command and cross-boundary
+regressions and the 214 MCP request-dispatch regressions each have a sibling
+test module. Compact response projection also has a focused adapter that
+preserves complete typed results. JSON-RPC validation, dual-revision
+negotiation, prediction form
 elicitation, response envelopes, server identity, and immutable discovery cache
 metadata now share a focused protocol adapter. Seeded prediction plus touch and
 parameter challenge posing, grading, response projection, and progress
