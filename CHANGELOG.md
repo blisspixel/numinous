@@ -5,6 +5,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- MCP Cairn reading and leaving, boon choice, trophy-case projection, and the
+  Journey dashboard now live in a focused face-local journey adapter. Core
+  retains bequest encoding, factor reading, unlock, boon, trophy, progression,
+  scoreboard, and persistence truth.
 - MCP parsing and structured presentation for Crack, SETI, Aliens, and the
   Gauntlet now live in a focused face-local puzzle adapter. Core retains seeded
   generation, rules, legality, grading, and puzzle truth. A stale Quiz label on
