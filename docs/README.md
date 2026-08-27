@@ -49,10 +49,13 @@ simulation rules remain in core. Formula Jam discovery, portable creation
 projection, optional audio, and encounter receipts now share a focused MCP
 Studio-tool adapter. Stateless game replay, structured game results, and the
 shared score table now share a focused MCP game-tool adapter while game rules
-and persistence remain in core. The 124 App lifecycle and cross-boundary
-regressions, the 159 CLI command and cross-boundary regressions, and the 214 MCP
-request-dispatch regressions each have a sibling test module. Compact response
-projection also has a focused adapter that preserves complete typed results.
+and persistence remain in core. App game entry, keyboard handling, score
+posting, and transient feedback audio now share a focused game runtime adapter,
+again leaving rules and persistence primitives in core. The 124 App lifecycle
+and cross-boundary regressions, the 159 CLI command and cross-boundary
+regressions, and the 214 MCP request-dispatch regressions each have a sibling
+test module. Compact response projection also has a focused adapter that
+preserves complete typed results.
 JSON-RPC validation, dual-revision
 negotiation, prediction form
 elicitation, response envelopes, server identity, and immutable discovery cache
