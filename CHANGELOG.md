@@ -5,6 +5,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The 159 CLI command, persistence, rendering, game, and terminal regressions
+  now live in a sibling test module. Their private access is preserved while
+  the production entry point is reduced to 5,055 lines.
 - MCP viewer allowlist policy, public-call capture, daily replay normalization,
   journey-blind result projection, and event commit now live in a focused
   face-local adapter. Broadcast transport and domain adapters retain session

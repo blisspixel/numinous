@@ -107,9 +107,10 @@ player-facing **Polish Wave** work landed across all seven workstreams, while
 scheduled structural cleanup continues through focused CLI accessibility,
 Studio, and game-input adapters plus CLI and MCP render-input adapters and an
 MCP transport adapter, simulation-tool adapter, Studio-tool adapter, and
-game-tool adapter. MCP request-dispatch and cross-boundary regressions also live
-in a dedicated test module, while compact response projection has its own
-adapter that preserves complete typed results. JSON-RPC validation,
+game-tool adapter. The CLI command and cross-boundary regressions and the MCP
+request-dispatch regressions each live in a sibling test module, while compact
+response projection has its own adapter that preserves complete typed results.
+JSON-RPC validation,
 dual-revision negotiation, prediction form elicitation, response envelopes,
 server identity, and discovery cache metadata have a focused protocol adapter
 too. Seeded prediction plus touch and parameter challenge posing, grading,
