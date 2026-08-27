@@ -299,7 +299,10 @@ construction, capsule validity, and lineage semantics. A focused CLI
 `game_input` adapter owns the
 bounded terminal record reader, overflow resynchronization, neutral departure
 presentation, and the games' `?` explanation door. Game rules, progression,
-scoring, and concepts stay outside that adapter. The 159 CLI command,
+scoring, and concepts stay outside that adapter. The 124 App lifecycle, input,
+audio, presentation, Studio, and game regressions live in the sibling `tests`
+module. They retain private module access without enlarging the production
+entry point, which is now 6,521 lines. The 159 CLI command,
 persistence, rendering, game, and terminal regressions live in the sibling
 `tests` module. They retain private module access without enlarging the
 production coordinator, which is now near 5,000 lines. The MCP `catalog` module

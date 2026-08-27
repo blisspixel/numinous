@@ -5,6 +5,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The 124 App lifecycle, input, audio, presentation, Studio, and game
+  regressions now live in a sibling test module. Their private access is
+  preserved while the production entry point is reduced to 6,521 lines.
 - The 159 CLI command, persistence, rendering, game, and terminal regressions
   now live in a sibling test module. Their private access is preserved while
   the production entry point is reduced to 5,055 lines.
