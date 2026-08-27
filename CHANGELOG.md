@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- App mode-aware input coordination now lives in a focused input runtime
+  module. It translates global audio keys, pointer gestures, wheel updates, and
+  controller commands into existing menu, game, room, and radio operations,
+  while focused helpers retain device normalization, hit testing, and domain
+  logic. The production entry coordinator is reduced from 5,948 to 5,048 lines.
 - App Quiz, Munch, Nim, Arcade, and Gauntlet session coordination now lives in
   a focused game runtime module. It owns game entry, keyboard handling, score
   posting, and transient feedback audio while core retains game rules and
