@@ -317,8 +317,11 @@ machine, mathematical truth, grading rule, and drawing primitive. A focused
 projection, structured sound, bounded play rendering, temporal evidence, and
 encounter receipts. Core retains the room registry, veil rules, rendering,
 sound generation, goals, grading, and mathematical truth. The request entry
-point retains routing and domain invocation. Its 214 request-dispatch and
-cross-boundary unit regressions live in the sibling `tests` module, which
+point retains routing and domain invocation. A focused `puzzle_tools` adapter
+owns bounded request parsing and structured presentation for Crack, SETI,
+Aliens, and Gauntlet. Core retains seeded generation, rules, legality, grading,
+and puzzle truth. Its 214 request-dispatch and cross-boundary unit regressions
+live in the sibling `tests` module, which
 retains private module access without enlarging the production entry point. The
 `response` adapter owns compact prose
 projection for complete typed results, while preserving errors, text-only

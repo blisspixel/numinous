@@ -125,9 +125,12 @@ mathematical truth, grading, and drawing primitives. Room discovery,
 description, gated reveal projection, structured sound, bounded play rendering,
 temporal evidence, and encounter receipts now share a focused room adapter too.
 Core retains the room registry, veil rules, rendering, sound generation, goals,
-grading, and mathematical truth. These extractions keep the production entry
-point under 1,300 lines without weakening private-boundary coverage. Bounded
-runtime validation of the declared JSON Schema subset now has
+grading, and mathematical truth. Crack, SETI, Aliens, and Gauntlet request
+parsing and structured presentation now share a focused puzzle adapter, with
+their seeded generation, rules, legality, grading, and truth remaining in core.
+These extractions keep the production entry point under 1,000 lines without
+weakening private-boundary coverage. Bounded runtime validation of the declared
+JSON Schema subset now has
 its own focused adapter too, with the catalog remaining the immutable protocol
 contract. The
 **Universal Wager**

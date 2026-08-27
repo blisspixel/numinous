@@ -66,9 +66,12 @@ focused adapter while core retains their state machines and truth. Room
 discovery, description, gated reveal projection, structured sound, bounded play
 rendering, temporal evidence, and encounter receipts share a focused room
 adapter while core retains the registry, veil rules, rendering, sound
-generation, goals, grading, and mathematical truth. The production entry point
-is now under 1,300 lines with private-boundary coverage intact. Bounded runtime
-validation of the declared JSON Schema subset, guiding
+generation, goals, grading, and mathematical truth. Crack, SETI, Aliens, and
+Gauntlet request parsing and structured presentation share a focused puzzle
+adapter while core retains seeded generation, rules, legality, grading, and
+truth. The production entry point is now under 1,000 lines with
+private-boundary coverage intact. Bounded runtime validation of the declared
+JSON Schema subset, guiding
 argument-name suggestions, and the two cross-field domain checks now share a
 focused MCP schema adapter. CLI
 Studio source selection, capsule loading and never-clobber writes, terminal
