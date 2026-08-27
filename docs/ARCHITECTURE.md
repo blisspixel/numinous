@@ -264,6 +264,10 @@ modules declared through one catalog and constructed through the registry
 facade. The Gauntlet follows the same rule: one typed core puzzle owns seeded
 construction, stage grading, combo math, reveal semantics, and leaderboard
 identity. App, CLI, MCP, and Watch Agent only collect or present its values.
+The App keeps Quiz, Munch, Nim, Arcade, and Gauntlet session entry, keyboard
+routing, score posting, and transient feedback audio in one face-local
+`game_runtime` adapter. It coordinates core game values without duplicating
+deals, legality, grading, state transitions, scoring rules, or persistence.
 Core persistence also resolves the seven managed local-state paths through one
 environment precedence rule. Faces consume those resolved paths rather than
 reimplementing home-directory fallback or per-store overrides. A selected
