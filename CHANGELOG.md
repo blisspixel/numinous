@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- App room exports, Studio naming and sharing, Gallery navigation and reopen
+  transitions, and bounded creation opening now live in a focused creation
+  runtime module. Existing postcard, Gallery, Studio, audio, and core helpers
+  retain rendering, discovery, validation, serialization, and domain logic.
+  The production entry coordinator is reduced from 5,048 to 4,491 lines.
 - App mode-aware input coordination now lives in a focused input runtime
   module. It translates global audio keys, pointer gestures, wheel updates, and
   controller commands into existing menu, game, room, and radio operations,
