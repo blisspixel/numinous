@@ -51,7 +51,10 @@ Studio-tool adapter. Stateless game replay, structured game results, and the
 shared score table now share a focused MCP game-tool adapter while game rules
 and persistence remain in core. App game entry, keyboard handling, score
 posting, and transient feedback audio now share a focused game runtime adapter,
-again leaving rules and persistence primitives in core. The 124 App lifecycle
+again leaving rules and persistence primitives in core. App global audio keys,
+pointer gestures, wheel updates, and controller commands now share a focused
+input runtime adapter while device normalization, hit testing, and domain logic
+retain their existing owners. The 124 App lifecycle
 and cross-boundary regressions, the 159 CLI command and cross-boundary
 regressions, and the 214 MCP request-dispatch regressions each have a sibling
 test module. Compact response projection also has a focused adapter that

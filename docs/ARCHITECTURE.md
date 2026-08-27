@@ -268,6 +268,11 @@ The App keeps Quiz, Munch, Nim, Arcade, and Gauntlet session entry, keyboard
 routing, score posting, and transient feedback audio in one face-local
 `game_runtime` adapter. It coordinates core game values without duplicating
 deals, legality, grading, state transitions, scoring rules, or persistence.
+Mode-aware App routing for global audio keys, pointer gestures, wheel updates,
+and controller commands lives in a face-local `input_runtime` adapter. It
+coordinates existing menu, game, room, and radio operations while `gamepad`,
+`mouse_input`, `controls`, `game_draw`, `room_input`, and core retain device
+normalization, pure hit testing, gesture mechanics, and domain rules.
 Core persistence also resolves the seven managed local-state paths through one
 environment precedence rule. Faces consume those resolved paths rather than
 reimplementing home-directory fallback or per-store overrides. A selected
