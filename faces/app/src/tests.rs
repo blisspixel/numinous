@@ -337,6 +337,16 @@ fn times_tables_aha_gates_reveal_until_generation_and_morph() {
     app.toggle_inspect();
     assert_eq!(app.times_tables_aha.beat(), AhaBeat::Consolidated);
     assert!(app.times_tables_aha.allow_reveal_text());
+    assert!(app.journey.has_consolidated("times-tables"));
+    let persisted_once = std::fs::read(&app.journey_file).expect("persisted consolidation");
+    app.record_current_aha_consolidation();
+    app.record_current_aha_consolidation();
+    assert_eq!(app.journey.consolidated.len(), 1);
+    assert_eq!(
+        std::fs::read(&app.journey_file).expect("reloaded consolidation"),
+        persisted_once,
+        "repeated consolidation is an idempotent no-op"
+    );
     app.toggle_inspect();
     assert!(app.show_info);
 
@@ -650,6 +660,148 @@ fn nontransitive_aha_turns_first_choice_into_an_exact_counter() {
 }
 
 #[test]
+fn engineered_aha_morphs_reject_invalid_time_and_inactive_contexts() {
+    use numinous_core::rooms::kepler_aha::SpeedRelation;
+    use numinous_core::rooms::nontransitive::Die;
+    use numinous_core::rooms::parrondo::Policy;
+    use numinous_core::rooms::pendulum_aha::Ending;
+    use numinous_core::rooms::times_tables_aha::CardioidHome;
+
+    let mut app = headless("numinous_app_test_aha_morph_guards.txt");
+    app.show_help = false;
+    let ordinary = app
+        .rooms
+        .iter()
+        .position(|room| room.meta().id == "lorenz")
+        .expect("ordinary room in catalog");
+
+    macro_rules! check_morph_guards {
+        ($room:literal, $field:ident, $advance:ident, $duration:expr, $stage:block) => {{
+            let selected = app
+                .rooms
+                .iter()
+                .position(|room| room.meta().id == $room)
+                .expect("engineered aha room in catalog");
+            app.current = selected;
+            $stage
+            assert!(app.$field.summon(), "{} enters its morph", $room);
+            let before = format!("{:?}", app.$field.beat());
+
+            for elapsed in [
+                0.0,
+                -1.0,
+                f64::NAN,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+            ] {
+                app.$advance(elapsed);
+                assert_eq!(
+                    format!("{:?}", app.$field.beat()),
+                    before,
+                    "{} rejects elapsed {elapsed:?}",
+                    $room
+                );
+            }
+
+            app.paused = true;
+            app.$advance($duration);
+            assert_eq!(format!("{:?}", app.$field.beat()), before);
+            app.paused = false;
+
+            app.the_show = true;
+            app.$advance($duration);
+            assert_eq!(format!("{:?}", app.$field.beat()), before);
+            app.the_show = false;
+
+            app.current = ordinary;
+            app.$advance($duration);
+            assert_eq!(format!("{:?}", app.$field.beat()), before);
+
+            app.current = selected;
+            app.$advance($duration / 2.0);
+            assert_eq!(app.$field.beat_label(), "morph");
+            assert_ne!(format!("{:?}", app.$field.beat()), before);
+            app.$advance($duration / 2.0);
+            assert_eq!(app.$field.beat_label(), "confirm");
+        }};
+    }
+
+    check_morph_guards!(
+        "times-tables",
+        times_tables_aha,
+        advance_times_tables_morph,
+        super::TIMES_TABLES_MORPH_SECONDS,
+        {
+            app.times_tables_aha.note_hand_multiplier(2.0);
+            assert!(app.times_tables_aha.commit_wager(CardioidHome::Circle));
+        }
+    );
+    check_morph_guards!(
+        "buffon-needle",
+        buffon_aha,
+        advance_buffon_morph,
+        super::BUFFON_MORPH_SECONDS,
+        {
+            app.buffon_aha.note_throws(1);
+            assert!(app.buffon_aha.commit_wager(2.0));
+        }
+    );
+    check_morph_guards!(
+        "galton-board",
+        galton_aha,
+        advance_galton_morph,
+        super::GALTON_MORPH_SECONDS,
+        {
+            app.galton_aha.note_waves(1, 2);
+            assert!(app.galton_aha.commit_wager(8, 2));
+        }
+    );
+    check_morph_guards!(
+        "double-pendulum",
+        pendulum_aha,
+        advance_pendulum_morph,
+        super::PENDULUM_MORPH_SECONDS,
+        {
+            app.pendulum_aha.note_drops(1);
+            assert!(app.pendulum_aha.commit_call(Ending::Lost));
+        }
+    );
+    check_morph_guards!(
+        "kepler-laws",
+        kepler_aha,
+        advance_kepler_morph,
+        super::KEPLER_MORPH_SECONDS,
+        {
+            app.kepler_aha.note_tunings(1);
+            assert!(app.kepler_aha.commit_call(SpeedRelation::Faster));
+        }
+    );
+    check_morph_guards!(
+        "parrondo",
+        parrondo_aha,
+        advance_parrondo_morph,
+        super::PARRONDO_MORPH_SECONDS,
+        {
+            app.parrondo_aha.note_selections(1);
+            assert!(app.parrondo_aha.commit_call(Policy::CycleAbb));
+        }
+    );
+    check_morph_guards!(
+        "nontransitive",
+        nontransitive_aha,
+        advance_nontransitive_morph,
+        super::NONTRANSITIVE_MORPH_SECONDS,
+        {
+            app.nontransitive_aha.note_choices(Some(Die::A), 1);
+            assert!(app.nontransitive_aha.commit_call(Die::C));
+        }
+    );
+
+    let _ = std::fs::remove_file(&app.journey_file);
+    let _ = std::fs::remove_file(&app.scores_file);
+}
+
+#[test]
 fn the_universal_wager_reaches_an_ordinary_room_and_meets_its_truth() {
     // The Wager Wave's engine, on the App's hands: an ordinary catalog
     // room with a readout can be called, aimed with the keyboard alone,
@@ -726,15 +878,7 @@ fn a_flagship_room_keeps_its_own_staged_wager() {
     // The generic call must not shadow the hand-built five-beat arcs.
     let mut app = headless("numinous_app_test_wager_flagship.txt");
     app.show_help = false;
-    for id in [
-        "times-tables",
-        "buffon-needle",
-        "galton-board",
-        "double-pendulum",
-        "kepler-laws",
-        "parrondo",
-        "nontransitive",
-    ] {
+    for id in numinous_core::ENGINEERED_AHA_ROOM_IDS {
         app.current = app
             .rooms
             .iter()
@@ -773,7 +917,7 @@ fn the_curve_is_never_drawn_over_a_pile_it_does_not_explain() {
     app.sync_galton_aha();
     app.begin_pointer_at((0.5, 0.95));
     app.toggle_inspect();
-    app.advance_galton_morph(super::BUFFON_MORPH_SECONDS);
+    app.advance_galton_morph(super::GALTON_MORPH_SECONDS);
     app.toggle_inspect();
     assert_eq!(app.galton_aha.coin(), Some(2));
     assert!(app.galton_aha.answers_pile(2), "its own pile");
@@ -840,7 +984,7 @@ fn galton_aha_gates_reveal_and_grades_the_peak_wager() {
 
     app.toggle_inspect();
     assert!(matches!(app.galton_aha.beat(), AhaBeat::Morph { .. }));
-    app.advance_galton_morph(super::BUFFON_MORPH_SECONDS);
+    app.advance_galton_morph(super::GALTON_MORPH_SECONDS);
     assert_eq!(app.galton_aha.beat(), AhaBeat::Confirm);
 
     app.toggle_inspect();
