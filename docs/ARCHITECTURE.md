@@ -278,6 +278,12 @@ and reopen transitions, and `.num` or link opening live in a face-local
 `creation_runtime` adapter. It composes existing postcard, Gallery, Studio,
 audio, and core operations without taking ownership of rendering, discovery,
 formula and capsule validation, serialization, or domain rules.
+App source selection, master gain and mute feedback, radio timing, Studio and
+Watch Agent playback handoff, room parameter and transient voices, and
+visualizer source fallback live in a face-local `audio_runtime` adapter. It
+coordinates `audio_state`, `session_audio`, `radio_cache`, `numinous-audio`, and
+core sound values without taking ownership of session deduplication, file
+discovery and decoding, device playback, or sound synthesis.
 Core persistence also resolves the seven managed local-state paths through one
 environment precedence rule. Faces consume those resolved paths rather than
 reimplementing home-directory fallback or per-store overrides. A selected

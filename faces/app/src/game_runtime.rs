@@ -513,15 +513,6 @@ impl App {
         player.play_oneshot(samples, 0.45 * self.volume);
     }
 
-    pub(super) fn clear_transient_audio(&self) {
-        #[cfg(test)]
-        self.transient_audio_clears
-            .set(self.transient_audio_clears.get().saturating_add(1));
-        if let Some(player) = &self.player {
-            player.clear_oneshot();
-        }
-    }
-
     /// One key into standalone Nim, including an explicit retry after either
     /// result so a loss can teach without ejecting the player.
     pub(super) fn nim_key(&mut self, key: &Key) {

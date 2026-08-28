@@ -1,6 +1,6 @@
 use super::{
-    App, Key, NamedKey, controls, feedback, game_draw, gamepad, input_legend, menu, mouse_input,
-    room_input, wager,
+    App, Key, NamedKey, controls, game_draw, gamepad, input_legend, menu, mouse_input, room_input,
+    wager,
 };
 
 impl App {
@@ -740,41 +740,6 @@ impl App {
             self.nim_key(&Key::Named(NamedKey::Enter));
         } else {
             self.cycle_radio();
-        }
-    }
-
-    pub(super) fn cycle_radio(&mut self) {
-        let stations = numinous_core::STATIONS.len();
-        self.radio = match self.radio {
-            None => Some(0),
-            Some(i) if i + 1 < stations => Some(i + 1),
-            Some(_) => None,
-        };
-        self.tune_in();
-    }
-
-    pub(super) fn skip_radio_track(&mut self) {
-        self.clear_pointer_state();
-        let Some(station) = self.radio else {
-            self.banner = Some(feedback::radio_skip_needs_station());
-            return;
-        };
-        let station_name = numinous_core::STATIONS[station].name;
-        let track_count = self.radio_paths.len();
-        if track_count == 0 {
-            self.banner = Some(feedback::radio_skip_unavailable(station_name));
-            return;
-        }
-        self.radio_index = (self.radio_index + 1) % track_count;
-        if self.radio_play_or_advance(0.0) {
-            self.banner = Some(feedback::radio_skip(
-                station_name,
-                self.radio_index + 1,
-                track_count,
-            ));
-        } else {
-            self.update_audio();
-            self.banner = Some(feedback::radio_skip_unavailable(station_name));
         }
     }
 
