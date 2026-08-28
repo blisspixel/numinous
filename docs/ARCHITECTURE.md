@@ -325,13 +325,17 @@ construction, capsule validity, and lineage semantics. A focused CLI
 `game_input` adapter owns the
 bounded terminal record reader, overflow resynchronization, neutral departure
 presentation, and the games' `?` explanation door. Game rules, progression,
-scoring, and concepts stay outside that adapter. The 124 App lifecycle, input,
-audio, presentation, Studio, and game regressions live in the sibling `tests`
+scoring, and concepts stay outside that adapter. A focused CLI `game_runtime`
+adapter owns terminal game presentation, input loops, Journey events, and
+score posting for all standalone games and the fixed five-run Bench. Core
+retains seeded rules, deals, legality, and grading, while the root coordinator
+retains command validation and the outer persistence envelope. The 124 App
+lifecycle, input, audio, presentation, Studio, and game regressions live in the sibling `tests`
 module. They retain private module access without enlarging the production
-entry point, which is now 6,521 lines. The 159 CLI command,
+entry point, which is now 6,521 lines. The 163 CLI command,
 persistence, rendering, game, and terminal regressions live in the sibling
 `tests` module. They retain private module access without enlarging the
-production coordinator, which is now near 5,000 lines. The MCP `catalog` module
+production coordinator, which is now 3,848 lines. The MCP `catalog` module
 owns discovery documents and the immutable 40-tool JSON Schema contract. A focused
 `protocol` adapter owns JSON-RPC envelope validation, dual-revision negotiation,
 prediction form elicitation, response envelopes, server identity, and immutable
