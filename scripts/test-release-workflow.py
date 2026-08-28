@@ -12,7 +12,9 @@ ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "release.yml"
 PACKAGE_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "release-packages.yml"
 CI_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "ci.yml"
+NIGHTLY_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "nightly.yml"
 CONTRACT_COMMAND = "scripts/test-release-workflow.py"
+PIN_CONTRACT_COMMAND = "scripts/test-workflow-pins.py"
 SBOM_CONTRACT_COMMAND = "scripts/test-release-sbom.py"
 PERFORMANCE_CONTRACT_COMMAND = "scripts/test-dependency-migration-performance.py"
 PERFORMANCE_RECEIPT_COMMAND = (
@@ -25,11 +27,24 @@ REQUIRED_CI_JOBS = (
     "house-style",
     "supply-chain",
     "audit",
+    "codeql",
     "coverage",
     "build",
     "release-artifacts",
 )
 ATTEST_ACTION = "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2"
+DEPENDENCY_REVIEW_ACTION = (
+    "actions/dependency-review-action@"
+    "a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0"
+)
+CODEQL_INIT_ACTION = (
+    "github/codeql-action/init@"
+    "cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9"
+)
+CODEQL_ANALYZE_ACTION = (
+    "github/codeql-action/analyze@"
+    "cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9"
+)
 INSTALL_ACTION = (
     "taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7"
 )
@@ -37,14 +52,14 @@ RUST_TOOLCHAIN_ACTION = (
     "dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1"
 )
 HOOK_TRIGGER = (
-    "'^(\\.github/workflows/(ci|release|release-packages)\\.yml|"
+    "'^(\\.github/workflows/(ci|nightly|release|release-packages)\\.yml|"
     "docs/evidence/dependency-migration-[0-9-]+\\.json|"
     "scripts/(check|verify)\\.(ps1|sh)|scripts/hooks/pre-commit|"
     "scripts/(package-release|test-package-release|release-engagement-smoke|"
     "test-release-engagement-smoke|input-hardware-session|"
     "test-input-hardware-session|sensory-platform-set|"
     "test-sensory-platform-(proof|set)|release-sbom|test-release-sbom|"
-    "test-release-workflow|dependency-migration-performance|"
+    "test-release-workflow|test-workflow-pins|dependency-migration-performance|"
     "test-dependency-migration-performance)\\.py)$'"
 )
 
@@ -68,11 +83,14 @@ class ReleaseWorkflowTests(unittest.TestCase):
         cls.workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
         cls.package_workflow = PACKAGE_WORKFLOW_PATH.read_text(encoding="utf-8")
         cls.ci_workflow = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
+        cls.nightly_workflow = NIGHTLY_WORKFLOW_PATH.read_text(encoding="utf-8")
         cls.header = cls.workflow.split("\njobs:\n", maxsplit=1)[0]
         cls.package_header = cls.package_workflow.split("\njobs:\n", maxsplit=1)[0]
         cls.audit = job_block(cls.package_workflow, "audit-artifacts")
         cls.attest = job_block(cls.workflow, "attest-artifacts")
         cls.publish = job_block(cls.workflow, "publish")
+        cls.supply_chain = job_block(cls.ci_workflow, "supply-chain")
+        cls.codeql = job_block(cls.ci_workflow, "codeql")
 
     def test_attestation_actions_are_current_immutable_and_exact(self) -> None:
         self.assertEqual(self.workflow.count(ATTEST_ACTION), 2)
@@ -92,6 +110,56 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertNotRegex(
             self.ci_workflow,
             r"taiki-e/install-action@(v|main|master)",
+        )
+
+    def test_dependency_review_is_pr_only_read_only_and_strict(self) -> None:
+        self.assertEqual(self.ci_workflow.count(DEPENDENCY_REVIEW_ACTION), 1)
+        self.assertEqual(
+            self.supply_chain.count(f"uses: {DEPENDENCY_REVIEW_ACTION}"), 1
+        )
+        self.assertIn(
+            "        if: github.event_name == 'pull_request'\n", self.supply_chain
+        )
+        self.assertIn("          fail-on-severity: moderate\n", self.supply_chain)
+        self.assertIn(
+            "          fail-on-scopes: runtime, development, unknown\n",
+            self.supply_chain,
+        )
+        self.assertIn(
+            "          comment-summary-in-pr: never\n", self.supply_chain
+        )
+        self.assertIn("          show-patched-versions: true\n", self.supply_chain)
+        self.assertNotIn("permissions:", self.supply_chain)
+        self.assertIn("permissions:\n  contents: read\n", self.ci_workflow)
+
+    def test_codeql_covers_rust_and_workflows_inside_main_ci(self) -> None:
+        self.assertEqual(self.codeql.count(f"uses: {CODEQL_INIT_ACTION}"), 1)
+        self.assertEqual(self.codeql.count(f"uses: {CODEQL_ANALYZE_ACTION}"), 1)
+        self.assertIn("        language: [rust, actions]\n", self.codeql)
+        self.assertIn("      fail-fast: false\n", self.codeql)
+        self.assertIn("          build-mode: none\n", self.codeql)
+        self.assertIn("          queries: security-extended\n", self.codeql)
+        self.assertIn(
+            "          category: /language:${{ matrix.language }}\n", self.codeql
+        )
+        self.assertIn("      - if: matrix.language == 'rust'\n", self.codeql)
+        permissions = re.search(
+            r"(?ms)^    permissions:\n(?P<body>(?:^      [^\n]+\n)+)",
+            self.codeql,
+        )
+        self.assertIsNotNone(permissions)
+        self.assertEqual(
+            set(permissions.group("body").splitlines()),
+            {
+                "      actions: read",
+                "      contents: read",
+                "      security-events: write",
+            },
+        )
+        self.assertIn(
+            "          upload: ${{ github.event_name != 'push' || "
+            "github.event.head_commit.author.username != 'dependabot[bot]' }}\n",
+            self.codeql,
         )
 
     def test_privileged_authority_and_publication_are_workflow_unique(self) -> None:
@@ -133,6 +201,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
 
     def test_main_ci_requires_every_job_to_succeed(self) -> None:
         main_ci = job_block(self.ci_workflow, "main-ci")
+        self.assertEqual(self.ci_workflow.count("    name: main CI\n"), 1)
         self.assertIn("    name: main CI\n", main_ci)
         self.assertIn("    if: always()\n", main_ci)
         self.assertEqual(
@@ -142,6 +211,48 @@ class ReleaseWorkflowTests(unittest.TestCase):
         for job in REQUIRED_CI_JOBS:
             self.assertEqual(main_ci.count(f"${{{{ needs.{job}.result }}}}"), 1)
         self.assertEqual(main_ci.count('test "$result" = success'), 1)
+
+    def test_every_runner_job_has_a_deliberate_timeout(self) -> None:
+        expected = {
+            CI_WORKFLOW_PATH: {
+                "quality": 30,
+                "msrv": 15,
+                "house-style": 10,
+                "supply-chain": 10,
+                "audit": 10,
+                "codeql": 20,
+                "coverage": 20,
+                "build": 30,
+                "main-ci": 5,
+            },
+            PACKAGE_WORKFLOW_PATH: {
+                "package-binaries": 30,
+                "package-soundtrack": 15,
+                "audit-artifacts": 15,
+            },
+            WORKFLOW_PATH: {
+                "attest-artifacts": 10,
+                "publish": 10,
+            },
+            NIGHTLY_WORKFLOW_PATH: {
+                "am-qa": 30,
+                "roundtrip": 45,
+            },
+        }
+        for path, timeouts in expected.items():
+            workflow = path.read_text(encoding="utf-8")
+            runner_jobs = {
+                name
+                for name in re.findall(r"(?m)^  ([a-z0-9][a-z0-9-]*):$", workflow)
+                if "    runs-on:" in job_block(workflow, name)
+            }
+            with self.subTest(path=path.relative_to(ROOT)):
+                self.assertEqual(runner_jobs, set(timeouts))
+            for name, minutes in timeouts.items():
+                block = job_block(workflow, name)
+                with self.subTest(path=path.relative_to(ROOT), job=name):
+                    self.assertEqual(block.count("    timeout-minutes:"), 1)
+                    self.assertIn(f"    timeout-minutes: {minutes}\n", block)
 
     def test_attestation_is_tag_only_and_follows_closed_set_audit(self) -> None:
         self.assertIn("    needs: package-artifacts\n", self.attest)
@@ -287,6 +398,19 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 self.assertEqual(source.count(SBOM_CONTRACT_COMMAND), expected)
                 self.assertEqual(source.count(PERFORMANCE_CONTRACT_COMMAND), expected)
                 self.assertEqual(source.count(PERFORMANCE_RECEIPT_COMMAND), expected)
+        pin_expected_counts = {
+            ROOT / "scripts" / "check.ps1": 1,
+            ROOT / "scripts" / "check.sh": 1,
+            ROOT / "scripts" / "verify.ps1": 1,
+            ROOT / "scripts" / "verify.sh": 1,
+            ROOT / "scripts" / "hooks" / "pre-commit": 1,
+            ROOT / ".github" / "workflows" / "ci.yml": 1,
+            ROOT / ".github" / "workflows" / "nightly.yml": 1,
+        }
+        for path, expected in pin_expected_counts.items():
+            with self.subTest(path=path.relative_to(ROOT), contract="action policy"):
+                source = path.read_text(encoding="utf-8")
+                self.assertEqual(source.count(PIN_CONTRACT_COMMAND), expected)
         hook = (ROOT / "scripts" / "hooks" / "pre-commit").read_text(encoding="utf-8")
         self.assertIn(HOOK_TRIGGER, hook)
 

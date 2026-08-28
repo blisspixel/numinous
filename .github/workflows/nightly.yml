@@ -17,8 +17,11 @@ jobs:
   am-qa:
     name: agent-and-machine soak
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
       - name: Install Linux audio and input development libraries
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
@@ -101,6 +104,7 @@ jobs:
     # somewhere for the other two to run rather than any code.
     name: install, play, uninstall (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     strategy:
       # One platform failing should not hide the others: this is per-platform
       # evidence, and a green Linux leg says nothing about Windows.
@@ -118,6 +122,8 @@ jobs:
             archive: zip
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
       - name: Install Linux audio and input development libraries
         if: matrix.os == 'ubuntu-latest'

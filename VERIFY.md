@@ -41,10 +41,12 @@ If it prints "All checks passed" and exits 0, everything is green.
 
 GitHub exposes one protected result named `main CI`. It is an aggregate, not a
 shortcut: it waits for format, Clippy, tests, docs, MSRV, house style,
-supply-chain checks, RustSec audit, coverage, Windows, macOS, and Linux builds,
-and the four-package release-set audit. The release packages are artifacts of
-the same CI run. A cancelled, skipped, or failed dependency makes `main CI`
-fail.
+dependency review, supply-chain checks, RustSec audit, Rust and workflow CodeQL,
+coverage, Windows, macOS, and Linux builds, and the four-package release-set
+audit. The release packages are artifacts of the same CI run. A cancelled,
+skipped, timed-out, or failed dependency makes `main CI` fail. CodeQL findings
+are published for review; alert presence does not itself fail the analysis
+action.
 
 ## 2. Or run the gates individually
 
@@ -87,6 +89,8 @@ python scripts/test-release-sbom.py                  # Windows
 python3 scripts/test-release-sbom.py                 # macOS / Linux
 python scripts/test-release-workflow.py             # Windows
 python3 scripts/test-release-workflow.py            # macOS / Linux
+python scripts/test-workflow-pins.py                 # Windows
+python3 scripts/test-workflow-pins.py                # macOS / Linux
 cargo build --workspace --locked
 cargo +1.88.0 check --workspace --all-targets --locked
 cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
@@ -102,10 +106,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 Expected right now: **format and clippy clean, 3,718 passing all-target Rust test cases,
 agent hallway, tactile, and first-contact live MCP cohorts PASS as CI gates,
 flagship visual and room-bed audio goldens PASS, agent cohort contract unit
-tests pass, 105 study runner and collector regressions, and 15
-physical input contract regressions plus fifteen release-package, sixteen SBOM,
-and fourteen release workflow regressions pass, three expensive diagnostics are
-ignored by the ordinary all-target run, 94.90% region coverage, and 94.93% line
+tests pass, 106 study runner and collector regressions, and 15
+physical input contract regressions plus sixteen release-package, sixteen SBOM,
+seventeen release workflow, and nine workflow action-policy regressions pass,
+three expensive diagnostics are
+ignored by the ordinary all-target run, 94.14% region coverage, and 94.12% line
 coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration

@@ -38,8 +38,9 @@ weekly (`.github/dependabot.yml`) without migration-era ignore rules.
 **CI action pins (current):** `actions/checkout` v7.0.1,
 `actions/upload-artifact` v7.0.1, `actions/download-artifact` v8.0.1,
 `actions/attest` v4.2.2, `taiki-e/install-action` v2.86.7,
-`EmbarkStudios/cargo-deny-action` v2.1.1, and `dtolnay/rust-toolchain` pinned to
-the 1.97.1 and 1.88.0 channel commits named in the workflows.
+`actions/dependency-review-action` v5.0.0, `github/codeql-action` v4.37.9,
+`EmbarkStudios/cargo-deny-action` v2.1.1, and `dtolnay/rust-toolchain` pinned
+to the 1.97.1 and 1.88.0 channel commits named in the workflows.
 Bump pins through review when Dependabot or a manual check shows a newer
 release.
 
@@ -121,15 +122,22 @@ and the published crate records for
 ## Continuous integration contract
 
 `.github/workflows/ci.yml` is the only pull request and `main` entry point. It
-fans out the quality, MSRV, house-style, supply-chain, audit, coverage, and
-three-platform build jobs, and calls the release workflow to build and audit all
-four native packages. Each build runner also drives a deterministic, fully
-composed App frame through the feature-gated production direct surface and
-retains a typed runtime receipt. Those timings are explicitly informational and
-do not replace physical pacing evidence. The final `main CI` job uses `always()`
-and succeeds only when every one of those dependencies succeeds. Branch
-protection requires that single result, so the public gate has one stable name
-without reducing the work behind it.
+fans out the quality, MSRV, house-style, dependency-review, supply-chain,
+RustSec audit, CodeQL, coverage, and three-platform build jobs, and calls the
+release workflow to build and audit all four native packages. CodeQL analyzes
+Rust and workflow code with the extended security query suite. Its analysis and
+ordinary-run upload must complete, but the presence of an alert does not itself
+fail the action. A Dependabot-authored squash on `main` does not repeat the
+upload that already succeeded on its pull request because the later token can
+be downgraded to read-only. Each build runner also drives a deterministic,
+fully composed App frame
+through the feature-gated production direct surface and retains a typed runtime
+receipt. Those timings are explicitly informational and do not replace physical
+pacing evidence. Every runner job has an explicit timeout and every checkout
+disables credential persistence. The final `main CI` job uses `always()` and
+succeeds only when every one of those dependencies succeeds. Branch protection
+requires that single result, so the public gate has one stable name without
+reducing the work behind it.
 
 `.github/workflows/release-packages.yml` is the read-only reusable package and
 closed-set audit boundary. CI calls it without release authority. The tag and
@@ -166,6 +174,16 @@ Any change to this topology must update and pass
   reason and a named exit condition, then remove when the dependency catches
   up). **`cargo-auditable`** release binaries remain planned hardening, not a
   current gate.
+- **Dependency review** compares every pull request dependency diff against the
+  dependency graph and rejects newly introduced moderate or higher known
+  vulnerabilities in runtime, development, or unknown scopes. It does not post
+  pull request comments and therefore needs no pull request write permission.
+- **CodeQL** analyzes both Rust and GitHub Actions workflow code. The pinned
+  matrix publishes results under a narrowly scoped security-events permission;
+  alert triage remains a separate review because successful analysis does not
+  mean the alert set is empty. GitHub Actions analysis currently carries
+  GitHub's public-preview support status, so each pin review must recheck its
+  limitations rather than treating that support boundary as settled.
 - **Dependabot** opens weekly PRs for Cargo and GitHub Actions
   (`.github/dependabot.yml`, limit five open PRs per ecosystem). Compatible
   updates merge after the full CI gate. Breaking major bumps stay deliberate
@@ -209,12 +227,17 @@ Nothing merges red. On every PR, blocking:
 6. `bash scripts/check-style.sh`
 7. `cargo deny check`
 8. `cargo audit` (RustSec advisories; ignores in `.cargo/audit.toml`)
-9. `cargo +1.88.0 check --workspace --all-targets --locked`
-10. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
-11. `cargo test --workspace --all-targets --locked` and
+9. Dependency review rejects newly introduced moderate or higher known
+   vulnerabilities on pull requests.
+10. CodeQL analysis for Rust and GitHub Actions completes and uploads its
+    results. Alert presence is reviewed separately and is not an automatic
+    action failure.
+11. `cargo +1.88.0 check --workspace --all-targets --locked`
+12. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
+13. `cargo test --workspace --all-targets --locked` and
    `cargo build --workspace --locked` on macOS, Linux, and Windows
-12. The native installer safety self-test on macOS, Linux, and Windows
-13. Deterministic release-package regressions, plus four-platform release
+14. The native installer safety self-test on macOS, Linux, and Windows
+15. Deterministic release-package regressions, plus four-platform release
     builds and disposable packaged-install smoke tests in the release workflow.
     Every installed package must render Times Tables through the CLI and complete
     modern MCP discovery, tool listing, and `play_room` from an isolated profile.
@@ -225,13 +248,13 @@ Nothing merges red. On every PR, blocking:
     multi-disk forms rejected. Tar verification accepts the deterministic ustar
     directory and regular-file subset and rejects hidden PAX or GNU extension
     records before their bodies are expanded.
-14. The physical input receipt contract is regression-tested on Windows,
+16. The physical input receipt contract is regression-tested on Windows,
     Linux, and macOS. It verifies archive and installed-binary identity,
     installed CLI and MCP engagement, complete ordered App observations, a
     positive XP value compared exactly across restart, content addressing, and
     a single-release four-target plus three-controller-profile matrix over at
     least three distinct models. CI tests the contract, not physical input.
-15. Sixteen deterministic SBOM regressions require exact lock and resolved-graph
+17. Sixteen deterministic SBOM regressions require exact lock and resolved-graph
     agreement, registry checksums, stable package identities and relationships,
     revision, lockfile, and native-inventory binding, bounded ordinary inputs,
     exclusive evidence creation, exact verification, and a complete
@@ -239,24 +262,26 @@ Nothing merges red. On every PR, blocking:
     parse bounded 64-bit PE, ELF, and Mach-O headers, require the exact three
     binaries on each of four targets, bind executable hashes and architectures,
     and retain unique direct native imports.
-16. Fourteen release workflow contract regressions pin both invocations of the
+18. Seventeen workflow contract regressions pin both invocations of the
     official attestation action, grant OIDC and attestation write authority only
     to the tag-only attestation job, accept subjects only from the audited
     release-set artifact, require an exact allowlist with no additional files,
     require the SPDX predicate and both signed bundles, and make publication
-    depend on audit and attestation. Pull requests test the workflow contract
-    without minting an attestation or publishing a release.
-17. Eighteen dependency-migration performance contract regressions plus exact
+    depend on audit and attestation. They also lock dependency review, CodeQL,
+    timeouts, checkout credential isolation, and the one-result aggregate. Pull
+    requests test the workflow contract without minting an attestation or
+    publishing a release.
+19. Eighteen dependency-migration performance contract regressions plus exact
     receipt verification run on every PR and all three build operating systems.
     The retained Windows receipt binds adjacent commits, locked release builds,
     raw alternating CLI, GPU, audio discovery, and App visible-window samples,
     output and binary identities, machine details, guards, and the exact runner
     source. CI verifies the evidence structure and conclusions; it does not
     rerun the physical Windows measurement.
-18. The portable Agent Plugins package passes strict schema, identity, command,
+20. The portable Agent Plugins package passes strict schema, identity, command,
     skill-boundary, inventory, and release-version regressions. Release-package
     tests require the complete package in every binary archive.
-19. The disabled App direct-surface candidate compiles and runs through the
+21. The disabled App direct-surface candidate compiles and runs through the
     production presenter on Windows, macOS, and Linux. Each run binds a repeated
     deterministic App frame, executable, adapter, driver, sRGB surface, FIFO
     mode, outcomes, and raw timing in a retained receipt. The portable class
@@ -286,9 +311,10 @@ Rust, `Cargo.*`, or a shader, so a docs-only commit stays fast. Changes to the
 0.4 study runner, collector, fixture bank, encounter specification, MCP
 mediator, or their test files run the focused Python regressions. The installed
 release packaging, installed engagement, physical input session, tag
-provenance workflow regressions, and dependency-migration performance receipt,
-including SBOM generation and verification, likewise run whenever their
-drivers, tests, evidence, or the release workflow change. Agent Plugins package
+provenance workflow regressions, nightly workflow policy, and
+dependency-migration performance receipt, including SBOM generation and
+verification, likewise run whenever their drivers, tests, evidence, or a
+covered workflow change. Agent Plugins package
 or validator changes run the portable plugin regressions.
 Coverage, the locked build, and artifact
 regeneration stay in

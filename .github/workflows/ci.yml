@@ -16,8 +16,11 @@ jobs:
   quality:
     name: fmt + clippy + test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
         with:
           components: rustfmt, clippy
@@ -96,8 +99,11 @@ jobs:
   msrv:
     name: MSRV 1.88
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@39b0b3842c7e8bbf6904c0bfc3d9006fdd4dc4e0 # 1.88.0
       - name: Install Linux audio and input development libraries
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
@@ -107,9 +113,11 @@ jobs:
   house-style:
     name: house style
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           # The commit-message check below reads this branch's own commits, so
           # it needs their messages rather than a single squashed tip.
           fetch-depth: 0
@@ -125,10 +133,21 @@ jobs:
         run: bash scripts/check-commit-messages.sh "${BASE_SHA:-}"
 
   supply-chain:
-    name: cargo-deny
+    name: dependency review + cargo-deny
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Review dependency changes
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          comment-summary-in-pr: never
+          fail-on-scopes: runtime, development, unknown
+          fail-on-severity: moderate
+          show-patched-versions: true
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
 
   # Dual supply-chain path: deny owns licenses/bans/sources; audit owns the
@@ -136,8 +155,11 @@ jobs:
   audit:
     name: cargo-audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
       - uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
         with:
@@ -145,11 +167,46 @@ jobs:
       - name: RustSec audit
         run: cargo audit
 
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [rust, actions]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: matrix.language == 'rust'
+        uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          build-mode: none
+          languages: ${{ matrix.language }}
+          queries: security-extended
+      - name: Analyze
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          category: /language:${{ matrix.language }}
+          # A Dependabot-authored squash can receive a read-only token on the
+          # subsequent main push. Its pull request analysis already uploaded.
+          upload: ${{ github.event_name != 'push' || github.event.head_commit.author.username != 'dependabot[bot]' }}
+
   coverage:
     name: coverage (>= 80% lines)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
         with:
           components: llvm-tools-preview
@@ -171,8 +228,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
       - name: Install Linux audio and input development libraries
         if: runner.os == 'Linux'
@@ -245,16 +305,19 @@ jobs:
       - house-style
       - supply-chain
       - audit
+      - codeql
       - coverage
       - build
       - release-artifacts
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     env:
       QUALITY_RESULT: ${{ needs.quality.result }}
       MSRV_RESULT: ${{ needs.msrv.result }}
       HOUSE_STYLE_RESULT: ${{ needs.house-style.result }}
       SUPPLY_CHAIN_RESULT: ${{ needs.supply-chain.result }}
       AUDIT_RESULT: ${{ needs.audit.result }}
+      CODEQL_RESULT: ${{ needs.codeql.result }}
       COVERAGE_RESULT: ${{ needs.coverage.result }}
       BUILD_RESULT: ${{ needs.build.result }}
       RELEASE_ARTIFACTS_RESULT: ${{ needs.release-artifacts.result }}
@@ -267,6 +330,7 @@ jobs:
             "$HOUSE_STYLE_RESULT" \
             "$SUPPLY_CHAIN_RESULT" \
             "$AUDIT_RESULT" \
+            "$CODEQL_RESULT" \
             "$COVERAGE_RESULT" \
             "$BUILD_RESULT" \
             "$RELEASE_ARTIFACTS_RESULT"
