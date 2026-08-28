@@ -202,6 +202,15 @@ remix tree, and fork with recorded lineage on the App and terminal, plus
 portable save, open, and fork parity over MCP.
 Nightly am-QA re-runs the full agent suite.
 
+The tagged release path rejects a version, workflow commit, release note, or
+`origin/main` ancestry mismatch before starting its four platform builds. The
+read-only audit verifies archives and the native SPDX SBOM. The tag-only signer
+requires the tag-push context, invokes that audit, then independently rechecks
+the release reference and every signed input before creating both keyless
+attestations and closing one final artifact set. Publication rechecks the live
+remote tag before using that set. Pull requests and manual package previews
+retain read-only authority.
+
 Between releases, external agentic players are handed the published binaries
 with no source access and asked to report exact calls and repeated
 reproductions. Seven such rounds have run, and every finding they raised is

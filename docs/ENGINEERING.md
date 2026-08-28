@@ -139,11 +139,18 @@ succeeds only when every one of those dependencies succeeds. Branch protection
 requires that single result, so the public gate has one stable name without
 reducing the work behind it.
 
-`.github/workflows/release-packages.yml` is the read-only reusable package and
-closed-set audit boundary. CI calls it without release authority. The tag and
-manual entry point in `.github/workflows/release.yml` calls the same package
-boundary, but only its tag path owns attestation and publication permissions.
-Any change to this topology must update and pass
+`.github/workflows/release-packages.yml` is the reusable package and closed-set
+audit boundary. CI and manual previews call it with read-only authority. The
+self-contained `.github/workflows/release-attest.yml` signer refuses any event
+other than a tag push, validates the tag and `origin/main` ancestry itself, and
+then invokes that audited build. It alone receives attestation authority and
+semantically rechecks every archive, checksum, and the native SPDX document
+before creating both attestations. It closes the final filename set before
+uploading it once.
+Publication downloads only that final set, rechecks the live remote tag, and
+declares the `release` environment. Repository environment protection remains
+a separate operator policy and is not implied by the workflow declaration. Any
+change to this topology must update and pass
 `scripts/test-release-workflow.py` before branch protection is changed.
 
 ## Performance discipline
@@ -258,19 +265,22 @@ Nothing merges red. On every PR, blocking:
     agreement, registry checksums, stable package identities and relationships,
     revision, lockfile, and native-inventory binding, bounded ordinary inputs,
     exclusive evidence creation, exact verification, and a complete
-    current-workspace integration. Fifteen release-package regressions also
+    current-workspace integration. Twenty release-package regressions also
     parse bounded 64-bit PE, ELF, and Mach-O headers, require the exact three
     binaries on each of four targets, bind executable hashes and architectures,
     and retain unique direct native imports.
-18. Seventeen workflow contract regressions pin both invocations of the
-    official attestation action, grant OIDC and attestation write authority only
-    to the tag-only attestation job, accept subjects only from the audited
-    release-set artifact, require an exact allowlist with no additional files,
-    require the SPDX predicate and both signed bundles, and make publication
-    depend on audit and attestation. They also lock dependency review, CodeQL,
-    timeouts, checkout credential isolation, and the one-result aggregate. Pull
-    requests test the workflow contract without minting an attestation or
-    publishing a release.
+18. Nineteen workflow contract regressions pin both invocations of the official
+    attestation action, keep the reusable package and audit boundary read-only,
+    grant OIDC, attestation, and artifact-metadata write authority only through
+    the tag-only attestation caller, require its self-contained audited build,
+    complete tag history, and main ancestry before packaging, then repeat
+    semantic archive and SBOM validation before signing. They recheck the live
+    remote tag before release creation and require both signed bundles,
+    close both input and final filename sets exactly, and make publication
+    depend on that one final artifact. Dependency review, CodeQL, timeouts,
+    checkout credential isolation, the named release environment, and the
+    one-result aggregate are locked too. Pull requests and manual previews test
+    the package boundary without minting an attestation or publishing a release.
 19. Eighteen dependency-migration performance contract regressions plus exact
     receipt verification run on every PR and all three build operating systems.
     The retained Windows receipt binds adjacent commits, locked release builds,

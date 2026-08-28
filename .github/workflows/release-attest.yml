@@ -1,0 +1,180 @@
+name: Release attestations
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-release-context:
+    name: validate trusted release context
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a current main tag push
+        shell: bash
+        run: |
+          test "${GITHUB_EVENT_NAME}" = push
+          case "${GITHUB_REF}" in
+            refs/tags/*) ;;
+            *) exit 1 ;;
+          esac
+          python3 scripts/package-release.py \
+            --validate-release-reference "${GITHUB_REF_NAME}" \
+            --tag-ref "${GITHUB_REF}" \
+            --expected-sha "${GITHUB_SHA}" \
+            --main-ref refs/remotes/origin/main
+          python3 scripts/package-release.py \
+            --validate-remote-release-tag "${GITHUB_REF_NAME}" \
+            --expected-sha "${GITHUB_SHA}" \
+            --remote origin
+
+  package-artifacts:
+    name: build and audit release artifacts
+    needs: validate-release-context
+    uses: ./.github/workflows/release-packages.yml
+    permissions:
+      contents: read
+
+  attest-artifacts:
+    name: attest verified release set
+    needs: package-artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: verified-release-input-set
+          path: dist
+      - name: Revalidate release context and audited contents
+        shell: bash
+        run: |
+          test "${GITHUB_EVENT_NAME}" = push
+          case "${GITHUB_REF}" in
+            refs/tags/*) ;;
+            *) exit 1 ;;
+          esac
+          python3 scripts/package-release.py \
+            --validate-release-reference "${GITHUB_REF_NAME}" \
+            --tag-ref "${GITHUB_REF}" \
+            --expected-sha "${GITHUB_SHA}" \
+            --main-ref refs/remotes/origin/main
+          python3 scripts/package-release.py \
+            --validate-remote-release-tag "${GITHUB_REF_NAME}" \
+            --expected-sha "${GITHUB_SHA}" \
+            --remote origin
+          version="$(python3 scripts/package-release.py --print-version)"
+          revision="$(git rev-parse "${GITHUB_SHA}^{commit}")"
+          source_date_epoch="$(git show -s --format=%ct "$revision")"
+          input_manifest="${RUNNER_TEMP}/release-input-files"
+          printf '%s\n' \
+            "numinous-v${version}-aarch64-apple-darwin.tar.gz" \
+            "numinous-v${version}-aarch64-apple-darwin.tar.gz.sha256" \
+            "numinous-v${version}-sbom.spdx.json" \
+            "numinous-v${version}-soundtrack.tar.gz" \
+            "numinous-v${version}-soundtrack.tar.gz.content.sha256" \
+            "numinous-v${version}-soundtrack.tar.gz.sha256" \
+            "numinous-v${version}-x86_64-apple-darwin.tar.gz" \
+            "numinous-v${version}-x86_64-apple-darwin.tar.gz.sha256" \
+            "numinous-v${version}-x86_64-pc-windows-msvc.zip" \
+            "numinous-v${version}-x86_64-pc-windows-msvc.zip.sha256" \
+            "numinous-v${version}-x86_64-unknown-linux-gnu.tar.gz" \
+            "numinous-v${version}-x86_64-unknown-linux-gnu.tar.gz.sha256" \
+            >"$input_manifest"
+          python3 scripts/package-release.py \
+            --verify-file-set dist --file-set-manifest "$input_manifest"
+          archives=(
+            "dist/numinous-v${version}-aarch64-apple-darwin.tar.gz"
+            "dist/numinous-v${version}-soundtrack.tar.gz"
+            "dist/numinous-v${version}-x86_64-apple-darwin.tar.gz"
+            "dist/numinous-v${version}-x86_64-pc-windows-msvc.zip"
+            "dist/numinous-v${version}-x86_64-unknown-linux-gnu.tar.gz"
+          )
+          for archive in "${archives[@]}"; do
+            python3 scripts/package-release.py \
+              --verify-archive "$archive" \
+              --checksum "$archive.sha256" \
+              --expected-version "$version" \
+              --expected-revision "$revision"
+          done
+          python3 scripts/release-sbom.py verify \
+            --sbom "dist/numinous-v${version}-sbom.spdx.json" \
+            --release-version "$version" \
+            --source-revision "$revision" \
+            --source-date-epoch "$source_date_epoch" \
+            --release-directory dist
+      - id: attest-build
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+      - name: Stage provenance bundle
+        shell: bash
+        run: |
+          bundle='${{ steps.attest-build.outputs.bundle-path }}'
+          test -s "$bundle"
+          cp -- "$bundle" "dist/numinous-${GITHUB_REF_NAME}-provenance.jsonl"
+          test -s "dist/numinous-${GITHUB_REF_NAME}-provenance.jsonl"
+      - id: attest-sbom
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist/numinous-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
+            dist/numinous-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
+            dist/numinous-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip
+            dist/numinous-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz
+          sbom-path: dist/numinous-${{ github.ref_name }}-sbom.spdx.json
+      - name: Stage SBOM attestation bundle
+        shell: bash
+        run: |
+          bundle='${{ steps.attest-sbom.outputs.bundle-path }}'
+          test -s "$bundle"
+          cp -- "$bundle" "dist/numinous-${GITHUB_REF_NAME}-sbom-attestation.jsonl"
+          test -s "dist/numinous-${GITHUB_REF_NAME}-sbom-attestation.jsonl"
+      - name: Verify final release evidence set
+        shell: bash
+        run: |
+          version="$(python3 scripts/package-release.py --print-version)"
+          input_manifest="${RUNNER_TEMP}/release-input-files"
+          printf '%s\n' \
+            "numinous-v${version}-aarch64-apple-darwin.tar.gz" \
+            "numinous-v${version}-aarch64-apple-darwin.tar.gz.sha256" \
+            "numinous-${GITHUB_REF_NAME}-provenance.jsonl" \
+            "numinous-${GITHUB_REF_NAME}-sbom-attestation.jsonl" \
+            "numinous-v${version}-sbom.spdx.json" \
+            "numinous-v${version}-soundtrack.tar.gz" \
+            "numinous-v${version}-soundtrack.tar.gz.content.sha256" \
+            "numinous-v${version}-soundtrack.tar.gz.sha256" \
+            "numinous-v${version}-x86_64-apple-darwin.tar.gz" \
+            "numinous-v${version}-x86_64-apple-darwin.tar.gz.sha256" \
+            "numinous-v${version}-x86_64-pc-windows-msvc.zip" \
+            "numinous-v${version}-x86_64-pc-windows-msvc.zip.sha256" \
+            "numinous-v${version}-x86_64-unknown-linux-gnu.tar.gz" \
+            "numinous-v${version}-x86_64-unknown-linux-gnu.tar.gz.sha256" \
+            >"$input_manifest"
+          python3 scripts/package-release.py \
+            --verify-file-set dist --file-set-manifest "$input_manifest"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verified-release-set
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7

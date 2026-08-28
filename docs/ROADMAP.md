@@ -561,7 +561,7 @@ journal
 sovereignty is complete on the clean-process machine acceptance bar.
 Detail below and in the version sections.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **355 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,718 passing all-target test cases plus three expensive ignored diagnostics, locked build, Windows release gate, 94.90% region coverage, and 94.93% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **355 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,718 passing all-target test cases plus three expensive ignored diagnostics, locked build, Windows release gate, 94.14% region coverage, and 94.12% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -715,11 +715,26 @@ Detail below and in the version sections.
   GitHub Actions with the extended security query suite, then feeds the same
   exact-success aggregate as every existing gate. Every runner job definition
   has a finite timeout and every checkout disables credential persistence.
-  Seventeen workflow contract regressions and nine action-policy regressions
+  Nineteen workflow contract regressions and nine action-policy regressions
   lock the pins, languages, permissions, dependency threshold, timeouts,
   checkout boundary, Dependabot upload exception, and single protected
   `main CI` result. CodeQL alert presence remains a separate review decision;
   this evidence proves analysis completion and result publication.
+- **Done (release integrity closure, August 27, 2026):** one early gate now
+  resolves annotated tags, matches the workspace version and workflow commit,
+  requires release notes, and proves that the tagged commit belongs to
+  `origin/main` before four platform builders start. The release verifier is
+  exercised against real contained and divergent temporary Git histories.
+  The reusable audit stays read-only and uploads one exact verified input set.
+  The self-contained tag-only signer alone receives OIDC, attestation, and
+  artifact-metadata authority. It requires the tag-push context, validates tag
+  ancestry, invokes the audit, and semantically rechecks every signed input
+  before creating provenance plus the native SPDX SBOM attestation and closing
+  the final set exactly. Pull requests and manual previews cannot enter that
+  path. Publication consumes only the final set,
+  rechecks the live remote tag, and uses a named `release` environment. External
+  environment protections, tag rules, release immutability, and platform
+  signing remain separate policy gates.
 - **Done (persistence hardening slice):** malformed Journey and score files now parse defensively: counters saturate, constellation dimensions are capped, `visited` plus `chosen` token sets are bounded and token-sane, duplicate Journey tokens do not consume the unique-token cap, score keys are length-bounded, and score tables cap unique entries. The maintenance posture remains that progress and score files are user-editable local text, so loaders must repair or ignore malformed data rather than panic or allocate without bound.
 - **Done (shared persistence writes):** App, CLI, and MCP now route Journey and score writes through shared core persistence helpers. Writes use a token-owned local lock, PID-aware stale-lock recovery, stale recovery-marker cleanup, merge-before-write behavior, bounded read-before-repair semantics, same-directory temp files with error-path cleanup, flush before commit, atomic Windows replacement retries that never move the destination aside, and a pre-opened parent-directory metadata sync after replace or explicit forget on Unix. The rename remains the commit point: a later sync failure cannot report an uncommitted delta and cause counters to be applied twice. This is an operating-system best-effort durability barrier, not a claim of hardware power-loss immunity. Tests cover concurrent Journey deltas, concurrent score records, a real Windows sharing violation with continuous readers, injected postcommit sync failure, temp and lock cleanup, short held-lock waits under instrumentation, stale deltas after explicit forget, oversized and invalid UTF-8 persistence files preserving the original bytes on write attempts, stale, malformed, and dead-process lock recovery, stale recovery-marker cleanup, current-process lock preservation, and lock drop ownership.
 - **Done (the keystone, the Cairn, and the chaos readouts):** the predict-then-reveal verb (MCP `predict`, Phase A of the Exceptional Path): commit a guess of a room's own status readout at a hidden moment, then meet the truth graded as a gap with a learning-progress band, a self-owned mirror that never posts a score. The graded `challenge` tool in two kinds (touch a target box, or land the readout on a number). The Cairn (MCP `cairn` plus the core `cairn` module and the repo-tracked `data/cairn.txt`): at level 42 a mind leaves one true thing, encoded Arecibo-style into a semiprime a future mind must factor to read. And tactile status readouts across the Chaos & Order flagships (Double Pendulum and Lorenz report the divergence of two nearby starts; the Logistic Map reports its Lyapunov exponent crossing from order into chaos), so eight rooms now pose predictions. See `CHANGELOG.md` for the full detail.
@@ -2041,6 +2056,19 @@ peak energy.
   release set. The evidence does not claim runtime-resolved library versions,
   transitive system dependencies, reachable linked code, soundtrack analysis,
   signing, notarization, or physical execution. No tag or release was created.
+- **Done (release reference and attestation closure, August 27, 2026):** tagged
+  packaging now fails before the platform matrix unless the versioned tag,
+  release notes, workflow commit, annotated-tag target, and `origin/main`
+  ancestry agree. The package audit remains read-only. A self-contained
+  tag-only signer repeats those checks, invokes the audit, and semantically
+  revalidates every archive, checksum, and native SBOM before creating either
+  attestation. It closes one final artifact containing every archive, checksum,
+  SBOM, and signed bundle. Verification binds the tag, source commit, signer
+  workflow, and signer commit. Publication rechecks the live remote tag after
+  any environment wait. Twenty release-package and nineteen workflow regressions
+  include real ancestry and moved-tag fixtures and lock privilege, event,
+  subject, closure, and publication boundaries. Pull requests and manual
+  previews stay read-only.
 - **Done (Cycle 19 migration performance, August 2, 2026):** one exact
   adjacent-revision runner builds `b47303d` and `301eac6` with their locked
   release dependencies, then alternates three warmups and twenty retained
@@ -2251,7 +2279,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally, and the MCP face can hand a player sound as sound rather than as notation about it | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization with title, author, era, and lineage, links, plotting, animation, singing, exact paused App reopen, the one-key share trio, the local Gallery wall, and fork with recorded descent exist | Editable prose credit in the capsule, safe share preview for incoming links, and clean-install round trip |
-| Rigor and care are provable | 3,718 passing all-target test cases plus three expensive ignored diagnostics, 94.93% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a separately attested SPDX Rust plus packaged-native SBOM | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
+| Rigor and care are provable | 3,718 passing all-target test cases plus three expensive ignored diagnostics, 94.12% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a native SPDX Rust plus packaged-native SBOM attested from the exact audited release set | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,945-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 

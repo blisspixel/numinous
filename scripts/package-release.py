@@ -53,6 +53,7 @@ RELEASE_FILES = (
 )
 SOUNDTRACK_CONTENT_LABEL = "soundtrack-content-v1"
 MAX_ARCHIVE_ENTRIES = 256
+MAX_RELEASE_SET_MANIFEST_BYTES = 64 * 1024
 MAX_ARCHIVE_MEMBER_BYTES = 256 * 1024 * 1024
 MAX_ARCHIVE_TOTAL_BYTES = 512 * 1024 * 1024
 MAX_ARCHIVE_METADATA_BYTES = 16 * 1024 * 1024
@@ -108,6 +109,122 @@ def validate_version(version: str) -> None:
         raise ValueError(f"invalid release version: {version!r}")
 
 
+def git_environment() -> dict[str, str]:
+    """Return a process environment without another repository's local state."""
+    environment = os.environ.copy()
+    for variable in (
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_DIR",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_PREFIX",
+        "GIT_WORK_TREE",
+    ):
+        environment.pop(variable, None)
+    return environment
+
+
+def resolve_commit(reference: str, root: Path = ROOT) -> str:
+    """Resolve a Git reference, including an annotated tag, to one commit."""
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", f"{reference}^{{commit}}"],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        env=git_environment(),
+        text=True,
+    )
+    value = result.stdout.strip()
+    if result.returncode != 0 or not re.fullmatch(r"[0-9a-f]{40}", value):
+        raise ValueError(f"Git reference {reference!r} does not resolve to a commit")
+    return value
+
+
+def validate_release_reference(
+    tag: str,
+    tag_ref: str,
+    expected_sha: str,
+    main_ref: str,
+    root: Path = ROOT,
+) -> str:
+    """Require a versioned release tag whose commit is contained by main."""
+    version = workspace_version(root)
+    if tag != f"v{version}":
+        raise ValueError(f"release tag {tag!r} does not match workspace v{version}")
+    notes = root / "docs" / "releases" / f"{tag}.md"
+    if not notes.is_file() or notes.stat().st_size == 0:
+        raise ValueError(f"release notes are missing or empty for {tag}")
+    tag_commit = resolve_commit(tag_ref, root)
+    expected_commit = resolve_commit(expected_sha, root)
+    if tag_commit != expected_commit:
+        raise ValueError("release tag and workflow commit do not agree")
+    main_commit = resolve_commit(main_ref, root)
+    ancestry = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", tag_commit, main_commit],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        env=git_environment(),
+        text=True,
+    )
+    if ancestry.returncode == 1:
+        raise ValueError("release tag commit is not contained by origin/main")
+    if ancestry.returncode != 0:
+        detail = ancestry.stderr.strip()
+        raise ValueError(f"Git could not verify release ancestry: {detail}")
+    return tag_commit
+
+
+def validate_remote_release_tag(
+    tag: str,
+    expected_sha: str,
+    remote: str,
+    root: Path = ROOT,
+) -> str:
+    """Require the live remote release tag to still resolve to the build commit."""
+    version = workspace_version(root)
+    if tag != f"v{version}":
+        raise ValueError(f"release tag {tag!r} does not match workspace v{version}")
+    if not re.fullmatch(r"[0-9a-f]{40}", expected_sha):
+        raise ValueError("expected release commit is not a complete commit SHA")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,127}", remote):
+        raise ValueError(f"invalid Git remote name: {remote!r}")
+    tag_ref = f"refs/tags/{tag}"
+    peeled_ref = f"{tag_ref}^{{}}"
+    result = subprocess.run(
+        ["git", "ls-remote", "--exit-code", remote, tag_ref, peeled_ref],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        env=git_environment(),
+        text=True,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip()
+        raise ValueError(f"live remote release tag cannot be resolved: {detail}")
+    records: dict[str, str] = {}
+    allowed = {tag_ref, peeled_ref}
+    for line in result.stdout.splitlines():
+        fields = line.split("\t")
+        if len(fields) != 2:
+            raise ValueError("live remote release tag response is malformed")
+        revision, reference = fields
+        if (
+            reference not in allowed
+            or reference in records
+            or not re.fullmatch(r"[0-9a-f]{40}", revision)
+        ):
+            raise ValueError("live remote release tag response is ambiguous")
+        records[reference] = revision
+    if tag_ref not in records:
+        raise ValueError("live remote release tag is missing")
+    live_commit = records.get(peeled_ref, records[tag_ref])
+    if live_commit != expected_sha:
+        raise ValueError("live remote release tag moved after artifact validation")
+    return live_commit
+
+
 def commit_sha(root: Path = ROOT) -> str:
     from_environment = os.environ.get("GITHUB_SHA", "").strip()
     if re.fullmatch(r"[0-9a-f]{40}", from_environment):
@@ -117,6 +234,7 @@ def commit_sha(root: Path = ROOT) -> str:
         cwd=root,
         check=True,
         capture_output=True,
+        env=git_environment(),
         text=True,
     )
     value = result.stdout.strip()
@@ -369,6 +487,47 @@ def safe_member_name(name: str) -> PurePosixPath:
         ):
             raise ValueError(f"nonportable archive member: {name!r}")
     return path
+
+
+def verify_release_file_set(directory: Path, manifest: Path) -> tuple[str, ...]:
+    """Require one canonical manifest to name every regular file in a directory."""
+    if not directory.is_dir():
+        raise ValueError(f"release set directory does not exist: {directory}")
+    try:
+        manifest_size = manifest.stat().st_size
+    except OSError as error:
+        raise ValueError(f"release set manifest cannot be read: {manifest}") from error
+    if manifest_size > MAX_RELEASE_SET_MANIFEST_BYTES:
+        raise ValueError("release set manifest exceeds its size budget")
+    try:
+        names = manifest.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError) as error:
+        raise ValueError("release set manifest is not bounded UTF-8 text") from error
+    if not names or len(names) > MAX_ARCHIVE_ENTRIES:
+        raise ValueError("release set manifest has an invalid entry count")
+    normalized: list[str] = []
+    for name in names:
+        path = safe_member_name(name)
+        if len(path.parts) != 1 or path.as_posix() != name:
+            raise ValueError(f"release set entry is not one portable filename: {name!r}")
+        normalized.append(name)
+    if normalized != sorted(set(normalized)):
+        raise ValueError("release set manifest must be sorted and duplicate-free")
+    actual: list[str] = []
+    for entry in directory.iterdir():
+        if len(actual) >= MAX_ARCHIVE_ENTRIES:
+            raise ValueError("release set directory exceeds its entry budget")
+        actual.append(entry.name)
+    actual.sort()
+    if actual != normalized:
+        raise ValueError(
+            f"release set differs from manifest: expected {normalized!r}, got {actual!r}"
+        )
+    for name in normalized:
+        mode = (directory / name).lstat().st_mode
+        if not stat.S_ISREG(mode):
+            raise ValueError(f"release set entry is not a regular file: {name}")
+    return tuple(normalized)
 
 
 def admit_archive_entry(entry_count: int) -> int:
@@ -1336,9 +1495,17 @@ def native_archive_inventory(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--print-version", action="store_true")
-    parser.add_argument("--validate-tag")
-    parser.add_argument("--verify-archive", type=Path)
+    operation = parser.add_mutually_exclusive_group()
+    operation.add_argument("--print-version", action="store_true")
+    operation.add_argument("--validate-release-reference")
+    operation.add_argument("--validate-remote-release-tag")
+    operation.add_argument("--verify-file-set", type=Path)
+    operation.add_argument("--verify-archive", type=Path)
+    parser.add_argument("--tag-ref")
+    parser.add_argument("--expected-sha")
+    parser.add_argument("--main-ref")
+    parser.add_argument("--remote")
+    parser.add_argument("--file-set-manifest", type=Path)
     parser.add_argument("--checksum", type=Path)
     parser.add_argument("--expected-version")
     parser.add_argument("--expected-revision")
@@ -1359,12 +1526,53 @@ def main() -> int:
     if args.print_version:
         print(version)
         return 0
-    if args.validate_tag is not None:
-        if args.validate_tag != f"v{version}":
+    if args.validate_release_reference is not None:
+        required = {
+            "--tag-ref": args.tag_ref,
+            "--expected-sha": args.expected_sha,
+            "--main-ref": args.main_ref,
+        }
+        missing = [name for name, value in required.items() if value is None]
+        if missing:
             raise ValueError(
-                f"release tag {args.validate_tag!r} does not match workspace v{version}"
+                "release reference validation requires " + ", ".join(missing)
             )
-        print(f"release tag matches workspace version {version}")
+        revision = validate_release_reference(
+            args.validate_release_reference,
+            args.tag_ref,
+            args.expected_sha,
+            args.main_ref,
+        )
+        print(
+            f"release tag {args.validate_release_reference} resolves to "
+            f"main commit {revision}"
+        )
+        return 0
+    if args.validate_remote_release_tag is not None:
+        required = {
+            "--expected-sha": args.expected_sha,
+            "--remote": args.remote,
+        }
+        missing = [name for name, value in required.items() if value is None]
+        if missing:
+            raise ValueError(
+                "remote release tag validation requires " + ", ".join(missing)
+            )
+        revision = validate_remote_release_tag(
+            args.validate_remote_release_tag,
+            args.expected_sha,
+            args.remote,
+        )
+        print(
+            f"live remote tag {args.validate_remote_release_tag} still resolves to "
+            f"workflow commit {revision}"
+        )
+        return 0
+    if args.verify_file_set is not None:
+        if args.file_set_manifest is None:
+            raise ValueError("--verify-file-set requires --file-set-manifest")
+        names = verify_release_file_set(args.verify_file_set, args.file_set_manifest)
+        print(f"verified closed release set with {len(names)} files")
         return 0
     if args.verify_archive is not None:
         if args.checksum is None:
