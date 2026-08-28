@@ -9,7 +9,7 @@ built, so an aspiration is never mistaken for a result.
 ## Evidence snapshot, 2026-08-27
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 3,718 passing all-target test cases plus three expensive ignored
+  doctests, 3,719 passing all-target test cases plus three expensive ignored
   diagnostics, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
   three-OS test-and-build matrix. The current measured coverage is 94.14%
