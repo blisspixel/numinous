@@ -57,7 +57,11 @@ input runtime adapter while device normalization, hit testing, and domain logic
 retain their existing owners. App room exports, Studio naming and sharing,
 Gallery navigation and reopen transitions, and creation opening now share a
 focused creation runtime adapter while rendering, discovery, validation,
-serialization, audio, and domain logic retain their existing owners. The 124
+serialization, audio, and domain logic retain their existing owners. App source
+selection, gain and mute handling, radio timing, Studio and Watch Agent playback
+handoff, room voices, transient sounds, and visualizer fallback now share a
+focused audio runtime adapter. Audio state, session deduplication, radio loading,
+device playback, and core sound synthesis retain their existing owners. The 124
 App lifecycle and cross-boundary regressions, the 159 CLI command and
 cross-boundary regressions, and the 214 MCP request-dispatch regressions each
 have a sibling test module. Compact response projection also has a focused

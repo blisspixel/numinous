@@ -5,6 +5,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- App source selection, gain and mute handling, radio timing, Studio and Watch
+  Agent playback handoff, room voices, transient sounds, and visualizer fallback
+  now live in a focused audio runtime module. Existing audio state, session
+  deduplication, radio loading, device playback, and core sound synthesis retain
+  their narrower responsibilities. The production entry coordinator is reduced
+  from 4,491 to 3,997 lines.
 - App room exports, Studio naming and sharing, Gallery navigation and reopen
   transitions, and bounded creation opening now live in a focused creation
   runtime module. Existing postcard, Gallery, Studio, audio, and core helpers

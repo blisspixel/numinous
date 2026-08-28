@@ -1,9 +1,11 @@
 use super::{
     App, AudioProgram, TestStateRoot, advance_gallery_phase, app_icon, append_crash_log_at,
     bounded_tick_seconds, effective_room_phase, fullscreen_toggle_target, julia_gpu_c,
-    julia_gpu_vertical_span, life_step_audio_owned, live_mandelbrot_gpu_view, mandelbrot_gpu_view,
-    radio_cache, room_transient_audio_owned, selected_life_step_audio, selected_parameter_sound,
-    selected_room_interaction_audio,
+    julia_gpu_vertical_span, live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
+};
+use crate::audio_runtime::{
+    life_step_audio_owned, room_transient_audio_owned, selected_life_step_audio,
+    selected_parameter_sound, selected_room_interaction_audio,
 };
 use crate::input_legend::{InputMode, MenuChoice};
 use numinous_core::ROOM_BED_SOURCE_RATE;
