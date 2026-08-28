@@ -49,8 +49,10 @@ simulation rules remain in core. Formula Jam discovery, portable creation
 projection, optional audio, and encounter receipts now share a focused MCP
 Studio-tool adapter. Stateless game replay, structured game results, and the
 shared score table now share a focused MCP game-tool adapter while game rules
-and persistence remain in core. App game entry, keyboard handling, score
-posting, and transient feedback audio now share a focused game runtime adapter,
+and persistence remain in core. CLI terminal game presentation, input loops,
+Journey events, and score posting now share a focused game runtime adapter
+while seeded rules, deals, legality, and grading remain in core. App game entry,
+keyboard handling, score posting, and transient feedback audio now share a focused game runtime adapter,
 again leaving rules and persistence primitives in core. App global audio keys,
 pointer gestures, wheel updates, and controller commands now share a focused
 input runtime adapter while device normalization, hit testing, and domain logic
@@ -66,7 +68,7 @@ room identity, resets, live status, universal wagers, staged Aha coordination,
 touches, goal feedback, and Life cadence now share a focused room runtime
 adapter. Core retains engineered-room membership, mathematical state machines,
 grading, and truth. The 124
-App lifecycle and cross-boundary regressions, the 159 CLI command and
+App lifecycle and cross-boundary regressions, the 163 CLI command and
 cross-boundary regressions, and the 214 MCP request-dispatch regressions each
 have a sibling test module. Compact response projection also has a focused
 adapter that preserves complete typed results.
@@ -104,7 +106,10 @@ focused MCP schema adapter. CLI
 Studio source selection, capsule loading and never-clobber writes, terminal
 errors, and open reports now have their own focused adapter too. The shared
 4 KiB CLI game record boundary, overflow resynchronization, neutral departures,
-and `?` explanation door now have a focused adapter as well. The
+and `?` explanation door now have a focused adapter as well. The terminal game
+sessions and fixed five-run Bench now have a focused runtime adapter, reducing
+the CLI command coordinator to 3,848 lines while retaining the outer Journey
+persistence envelope. The
 room threshold now offers the flagship, an ordered six-room Strange Loop walk,
 or compact wing wandering while retaining the full typed catalog. The Show now
 carries that walk as six explicit stateless cues
