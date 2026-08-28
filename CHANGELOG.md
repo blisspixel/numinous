@@ -5,6 +5,16 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- App room identity, visit resets, live status, universal wagers, staged Aha
+  coordination, room touches, goal feedback, and Life cadence now live in a
+  focused room runtime module. Core remains the owner of engineered-room
+  membership, mathematical state machines, grading, and truth. A shared core
+  classifier now guards the staged wager boundary, Galton has an independent
+  presentation duration, and one App guard matrix covers invalid elapsed time,
+  pause, The Show, wrong-room routing, partitioned progress, and completion for
+  all seven engineered morphs. Repeated consolidation is also locked as a
+  persisted idempotent operation. The production entry coordinator is reduced
+  from 3,997 to 3,208 lines.
 - App source selection, gain and mute handling, radio timing, Studio and Watch
   Agent playback handoff, room voices, transient sounds, and visualizer fallback
   now live in a focused audio runtime module. Existing audio state, session

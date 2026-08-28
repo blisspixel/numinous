@@ -61,7 +61,11 @@ serialization, audio, and domain logic retain their existing owners. App source
 selection, gain and mute handling, radio timing, Studio and Watch Agent playback
 handoff, room voices, transient sounds, and visualizer fallback now share a
 focused audio runtime adapter. Audio state, session deduplication, radio loading,
-device playback, and core sound synthesis retain their existing owners. The 124
+device playback, and core sound synthesis retain their existing owners. App
+room identity, resets, live status, universal wagers, staged Aha coordination,
+touches, goal feedback, and Life cadence now share a focused room runtime
+adapter. Core retains engineered-room membership, mathematical state machines,
+grading, and truth. The 124
 App lifecycle and cross-boundary regressions, the 159 CLI command and
 cross-boundary regressions, and the 214 MCP request-dispatch regressions each
 have a sibling test module. Compact response projection also has a focused

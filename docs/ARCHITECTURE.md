@@ -284,6 +284,12 @@ visualizer source fallback live in a face-local `audio_runtime` adapter. It
 coordinates `audio_state`, `session_audio`, `radio_cache`, `numinous-audio`, and
 core sound values without taking ownership of session deduplication, file
 discovery and decoding, device playback, or sound synthesis.
+App room identity, visit resets, live status, universal wagers, staged Aha
+coordination, room touches, goal feedback, and Life cadence live in a
+face-local `room_runtime` adapter. It accepts already bounded elapsed time and
+normalized input from the event and input layers. Core retains engineered-room
+membership, mathematical state machines, grading, rendering primitives, and
+truth.
 Core persistence also resolves the seven managed local-state paths through one
 environment precedence rule. Faces consume those resolved paths rather than
 reimplementing home-directory fallback or per-store overrides. A selected
