@@ -5,6 +5,16 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- CLI terminal game sessions now live in a focused game runtime module. It
+  owns Bench plus Crack, SETI, Aliens, Munch, Arcade, Hackenbush, Party,
+  Fifteen, Nim, Gauntlet, and Quiz presentation, input loops, Journey events,
+  and score posting while core retains seeded rules, deals, legality, and
+  grading. The command coordinator keeps parsing, validation, persistence
+  envelopes, non-game reports, and room playback, and is reduced from 5,055 to
+  3,848 lines. Focused regressions now lock Bench departure, completed-round
+  score keys, abandoned aggregate state, deterministic daily bookkeeping, and
+  the derived command catalog in addition to the existing game truth and
+  color-free terminal contracts.
 - The first Rust CodeQL baseline was traced result by result instead of being
   treated as a vulnerability count. Twelve domain-language and test-fixture
   findings now carry narrow per-alert dispositions, while deterministic room

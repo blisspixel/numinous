@@ -105,8 +105,8 @@ milestone's exit remains open. **0.2** and **0.3** are exit-met and CI-locked
 Alpha is active, not complete.** The
 player-facing **Polish Wave** work landed across all seven workstreams, while
 scheduled structural cleanup continues through focused CLI accessibility,
-Studio, and game-input adapters, App audio, creation, game, input, and room
-runtime adapters, plus CLI and MCP render-input adapters and an MCP transport adapter,
+Studio, game-input, and game runtime adapters, App audio, creation, game,
+input, and room runtime adapters, plus CLI and MCP render-input adapters and an MCP transport adapter,
 simulation-tool adapter, Studio-tool adapter, and game-tool adapter. The App lifecycle, input,
 audio, presentation, Studio, and game regressions, the CLI command and
 cross-boundary regressions, and the MCP

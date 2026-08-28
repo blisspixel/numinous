@@ -198,6 +198,9 @@ fn eof_is_a_neutral_departure_from_every_cli_game() {
     check("crack", |journey, input| {
         super::crack_with_input(1, 4, 1, journey, input)
     });
+    check("bench", |journey, input| {
+        super::bench_with_input(journey, input)
+    });
     check("seti", |journey, input| {
         super::seti_with_input(1, 4, 1, journey, input)
     });
@@ -228,6 +231,106 @@ fn eof_is_a_neutral_departure_from_every_cli_game() {
     check("quiz", |journey, input| {
         super::quiz_with_input(1, 1, 40, 18, 4, journey, input)
     });
+}
+
+#[test]
+fn partial_departures_preserve_completed_round_ledgers() {
+    fn check(
+        name: &str,
+        key: &str,
+        input: Vec<u8>,
+        run: impl FnOnce(
+            &mut numinous_core::Journey,
+            &mut std::io::Cursor<Vec<u8>>,
+        ) -> std::process::ExitCode,
+    ) {
+        let scores = super::scores_path();
+        let _ = std::fs::remove_file(&scores);
+        let mut journey = numinous_core::Journey::default();
+        let mut input = std::io::Cursor::new(input);
+        assert_eq!(
+            run(&mut journey, &mut input),
+            std::process::ExitCode::SUCCESS
+        );
+        assert_eq!(journey.plays, 1, "{name} lost its completed play");
+        assert_eq!(
+            journey.wins, 0,
+            "{name} counted a deliberately wrong answer"
+        );
+        let board = super::load_scores();
+        assert_eq!(board.entries.len(), 1, "{name} posted an extra score");
+        assert_eq!(
+            board.entries.get(key),
+            Some(&0),
+            "{name} changed its partial key"
+        );
+    }
+
+    check(
+        "seti",
+        "seti seed:1 rounds:1",
+        b"Z\n".to_vec(),
+        |journey, input| super::seti_with_input(1, 4, 2, journey, input),
+    );
+    check(
+        "aliens",
+        "aliens seed:1 rounds:1",
+        b"Z\n".to_vec(),
+        |journey, input| super::aliens_with_input(1, 2, journey, input),
+    );
+    let fifteen_truth = numinous_core::fifteen::solvable(&numinous_core::fifteen::deal(1, 0));
+    let wrong_fifteen = if fifteen_truth { b"U\n" } else { b"S\n" };
+    check(
+        "fifteen",
+        "fifteen seed:1 rounds:1",
+        wrong_fifteen.to_vec(),
+        |journey, input| super::fifteen_with_input(1, 2, journey, input),
+    );
+    check(
+        "quiz",
+        "quiz seed:1 rounds:1",
+        b"Z\n".to_vec(),
+        |journey, input| super::quiz_with_input(2, 1, 40, 18, 4, journey, input),
+    );
+}
+
+#[test]
+fn abandoned_aggregate_and_board_sessions_keep_only_earned_state() {
+    let scores = super::scores_path();
+    let _ = std::fs::remove_file(&scores);
+    let mut gauntlet_journey = numinous_core::Journey::default();
+    assert_eq!(
+        super::gauntlet_with_input(
+            1,
+            &mut gauntlet_journey,
+            &mut std::io::Cursor::new(b"\n".to_vec()),
+        ),
+        std::process::ExitCode::SUCCESS
+    );
+    assert_eq!(gauntlet_journey.plays, 1);
+    assert!(
+        super::load_scores().entries.is_empty(),
+        "abandoned gauntlet posted a total"
+    );
+
+    let mut munch_journey = numinous_core::Journey::default();
+    assert_eq!(
+        super::munch_with_input(
+            1,
+            2,
+            &mut munch_journey,
+            &mut std::io::Cursor::new(b"\n".to_vec()),
+        ),
+        std::process::ExitCode::SUCCESS
+    );
+    assert_eq!(munch_journey.plays, 1);
+    let board = super::load_scores();
+    assert_eq!(board.entries.len(), 1);
+    assert!(
+        board
+            .entries
+            .contains_key(&numinous_core::munch_score_key(1, 0))
+    );
 }
 
 #[test]
@@ -306,9 +409,14 @@ fn test_state_root_clears_stale_data_rejects_files_and_cleans_on_drop() {
     assert!(rejected.is_err());
     std::fs::remove_file(file_collision).expect("collision file should be removable");
 }
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use numinous_core::room_by_id;
 use serde_json::Value;
+
+#[test]
+fn derived_command_catalog_is_internally_consistent() {
+    super::Cli::command().debug_assert();
+}
 
 #[test]
 fn bounded_response_reader_distinguishes_exact_and_oversized_bodies() {
@@ -2505,6 +2613,23 @@ fn pick_seed_honors_the_explicit_seed() {
     let daily = super::pick_seed(7, true, &mut j);
     assert!(daily > 20_000 && daily < 40_000, "got {daily}");
     assert_eq!(super::pick_seed(7, true, &mut j), daily);
+}
+
+#[test]
+fn daily_seed_boundary_is_deterministic_and_idempotent() {
+    let mut journey = numinous_core::Journey::default();
+    let before = journey.clone();
+    assert_eq!(super::pick_seed_for_day(7, false, 100, &mut journey), 7);
+    assert_eq!(journey, before);
+
+    assert_eq!(super::pick_seed_for_day(7, true, 100, &mut journey), 100);
+    assert_eq!((journey.last_daily, journey.streak), (100, 1));
+    assert_eq!(super::pick_seed_for_day(9, true, 100, &mut journey), 100);
+    assert_eq!((journey.last_daily, journey.streak), (100, 1));
+    assert_eq!(super::pick_seed_for_day(9, true, 101, &mut journey), 101);
+    assert_eq!((journey.last_daily, journey.streak), (101, 2));
+    assert_eq!(super::pick_seed_for_day(9, true, 103, &mut journey), 103);
+    assert_eq!((journey.last_daily, journey.streak), (103, 1));
 }
 
 #[test]
