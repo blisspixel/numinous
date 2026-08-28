@@ -36,6 +36,18 @@ MULTI_VERSION_ALLOWED = {
 }
 
 
+def action_step(lines: list[str], start: int) -> list[str]:
+    """Return one action step, including its indented configuration."""
+    indent = len(lines[start]) - len(lines[start].lstrip())
+    end = start + 1
+    while end < len(lines):
+        line = lines[end]
+        if line.strip() and len(line) - len(line.lstrip()) <= indent:
+            break
+        end += 1
+    return lines[start:end]
+
+
 def workflow_files() -> list[Path]:
     return sorted(WORKFLOWS.glob("*.yml"))
 
@@ -91,6 +103,24 @@ class PinTests(unittest.TestCase):
                 1,
                 f"{sha[:12]} is labelled {sorted(versions)} in different places",
             )
+
+    def test_checkout_never_persists_workflow_credentials(self):
+        checked = 0
+        for path in workflow_files():
+            lines = path.read_text(encoding="utf-8").splitlines()
+            for number, line in enumerate(lines, 1):
+                if "uses: actions/checkout@" not in line:
+                    continue
+                checked += 1
+                step = action_step(lines, number - 1)
+                self.assertEqual(
+                    [part.strip() for part in step].count(
+                        "persist-credentials: false"
+                    ),
+                    1,
+                    f"{path.name}:{number} must disable checkout credential persistence",
+                )
+        self.assertGreater(checked, 0, "no checkout actions found, so this checks nothing")
 
 
 class RoundtripJobTests(unittest.TestCase):
