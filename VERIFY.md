@@ -20,6 +20,10 @@ the from-source verification path for contributors and the curious.
 - **Python 3.11 or newer**, for the 0.4 study runner and collector regressions.
   The same dependency runs release engagement and physical input receipt
   contract tests.
+- For release-attestation verification, GitHub CLI with `gh attestation verify`
+  support for `--source-ref`, `--source-digest`, `--signer-digest`, and
+  `--deny-self-hosted-runners`. These instructions are checked with GitHub CLI
+  2.97.0.
 - The Linux build needs the ALSA, xkbcommon, and libudev headers. Running the
   direct-surface proof also needs the xkbcommon X11 runtime, Mesa Vulkan, and
   Xvfb. CI installs them with:
@@ -107,8 +111,8 @@ Expected right now: **format and clippy clean, 3,718 passing all-target Rust tes
 agent hallway, tactile, and first-contact live MCP cohorts PASS as CI gates,
 flagship visual and room-bed audio goldens PASS, agent cohort contract unit
 tests pass, 106 study runner and collector regressions, and 15
-physical input contract regressions plus sixteen release-package, sixteen SBOM,
-seventeen release workflow, and nine workflow action-policy regressions pass,
+physical input contract regressions plus twenty release-package, sixteen SBOM,
+nineteen release workflow, and nine workflow action-policy regressions pass,
 three expensive diagnostics are
 ignored by the ordinary all-target run, 94.14% region coverage, and 94.12% line
 coverage**. The `gpu` and
@@ -149,20 +153,39 @@ twelve packaged executables. It records workspace and dependency relationships,
 declared licenses, package URLs, Cargo registry checksums, exact executable
 hashes, PE, ELF, or Mach-O format, target architecture, and direct
 header-declared native imports. A separate keyless SBOM attestation uses that
-document as its predicate for the same archive subject set. The attestation job
-downloads only the closed set admitted by the release audit, and publication
-cannot run unless both attestations succeed.
+document as its predicate for the four binary archives it describes. The
+soundtrack retains build provenance but is deliberately not an SBOM subject.
+Before any platform build starts, the tag gate dereferences annotated tags,
+matches the workspace
+version and workflow commit, requires non-empty release notes, and proves that
+the tagged commit belongs to `origin/main`. The reusable package and audit path
+has read-only authority and uploads one exact archive, checksum, and SBOM input
+set. The tag-only signer requires the tag-push context itself, repeats tag and
+main validation, invokes that audited build, then semantically rechecks every
+archive, checksum, and the SBOM before creating either attestation. It adds both
+signed bundles to a second exact filename closure and uploads one final release
+set. Publication downloads only that set, cannot run unless both
+attestations succeed, and rechecks the live remote tag immediately before
+release creation. The publication job names the `release` environment; that
+name is not evidence of reviewer or deployment policy unless the repository
+environment settings enforce one.
 
-Verify build provenance against the repository and exact signer workflow:
+The commands below apply starting with `v0.4.0-alpha.10`, the first release
+planned for the split attestation boundary and native SPDX input.
+
+Replace `TAG` with the release tag and `TAG_COMMIT_SHA` with its 40-character
+commit digest. Verify build provenance for any binary or soundtrack archive
+against the repository, tag, source commit, exact signer workflow, and signer
+commit:
 
 ```
-gh attestation verify PATH_TO_ARCHIVE --predicate-type https://slsa.dev/provenance/v1 --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
+gh attestation verify PATH_TO_ARCHIVE --predicate-type https://slsa.dev/provenance/v1 --repo blisspixel/numinous --source-ref refs/tags/TAG --source-digest TAG_COMMIT_SHA --signer-workflow blisspixel/numinous/.github/workflows/release-attest.yml --signer-digest TAG_COMMIT_SHA --deny-self-hosted-runners
 ```
 
-Verify the SBOM attestation separately:
+Verify the SBOM attestation separately for one of the four binary archives:
 
 ```
-gh attestation verify PATH_TO_ARCHIVE --predicate-type https://spdx.dev/Document --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
+gh attestation verify PATH_TO_ARCHIVE --predicate-type https://spdx.dev/Document/v2.3 --repo blisspixel/numinous --source-ref refs/tags/TAG --source-digest TAG_COMMIT_SHA --signer-workflow blisspixel/numinous/.github/workflows/release-attest.yml --signer-digest TAG_COMMIT_SHA --deny-self-hosted-runners
 ```
 
 Each such release includes `numinous-TAG-sbom.spdx.json`,
@@ -187,13 +210,23 @@ metadata from GitHub. Use the build-provenance bundle for the first command and
 the SBOM-attestation bundle for the second:
 
 ```
-gh attestation verify PATH_TO_ARCHIVE --bundle PATH_TO_PROVENANCE_JSONL --predicate-type https://slsa.dev/provenance/v1 --custom-trusted-root trusted_root.jsonl --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
-gh attestation verify PATH_TO_ARCHIVE --bundle PATH_TO_SBOM_ATTESTATION_JSONL --predicate-type https://spdx.dev/Document --custom-trusted-root trusted_root.jsonl --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
+gh attestation verify PATH_TO_ARCHIVE --bundle PATH_TO_PROVENANCE_JSONL --predicate-type https://slsa.dev/provenance/v1 --custom-trusted-root trusted_root.jsonl --repo blisspixel/numinous --source-ref refs/tags/TAG --source-digest TAG_COMMIT_SHA --signer-workflow blisspixel/numinous/.github/workflows/release-attest.yml --signer-digest TAG_COMMIT_SHA --deny-self-hosted-runners
+gh attestation verify PATH_TO_ARCHIVE --bundle PATH_TO_SBOM_ATTESTATION_JSONL --predicate-type https://spdx.dev/Document/v2.3 --custom-trusted-root trusted_root.jsonl --repo blisspixel/numinous --source-ref refs/tags/TAG --source-digest TAG_COMMIT_SHA --signer-workflow blisspixel/numinous/.github/workflows/release-attest.yml --signer-digest TAG_COMMIT_SHA --deny-self-hosted-runners
 ```
+
+Existing attestations through `v0.4.0-alpha.9` use signer workflow
+`--signer-workflow blisspixel/numinous/.github/workflows/release.yml` and SBOM
+predicate type `https://spdx.dev/Document`. Substitute those two values in the
+corresponding online or bundle command when verifying one of those releases.
+Those legacy bundles may contain an SBOM attestation for the soundtrack, but the
+document does not describe its contents and that attestation must not be treated
+as soundtrack inventory evidence. An existing artifact can be attested later,
+but that new statement cannot prove contemporaneous release provenance.
 
 The commands must fail for a changed archive, a bundle from another release, a
 predicate of the wrong type, or an attestation signed by another repository or
-workflow. Historic releases do not acquire attestations retroactively. The SBOM
+workflow, tag, or expected commits. Historic releases do not acquire
+contemporaneous attestations retroactively. The SBOM
 inspects the exact emitted executables and reports direct imports declared in
 their PE, ELF, or Mach-O headers. It does not establish the versions or bytes
 resolved on a player's system, transitive runtime dependencies, reachability of

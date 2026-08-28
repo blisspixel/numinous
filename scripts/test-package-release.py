@@ -6,8 +6,11 @@ from __future__ import annotations
 import importlib.util
 import gzip
 import io
+import os
 from pathlib import Path
 import struct
+import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -120,6 +123,135 @@ def pe_fixture() -> bytes:
 
 
 class ReleasePackageTests(unittest.TestCase):
+    def test_command_modes_are_mutually_exclusive(self) -> None:
+        with mock.patch.object(
+            sys,
+            "argv",
+            [
+                "package-release.py",
+                "--validate-release-reference",
+                "v1.2.3",
+                "--verify-archive",
+                "release.tar.gz",
+            ],
+        ), mock.patch.object(sys, "stderr", new=io.StringIO()):
+            with self.assertRaises(SystemExit):
+                PACKAGE.parse_args()
+
+    def test_release_reference_accepts_an_annotated_tag_contained_by_main(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository = self.release_reference_repository(Path(temporary))
+            tagged = self.git(repository, "rev-parse", "v1.2.3^{}")
+            foreign_git_dir = self.git(ROOT, "rev-parse", "--absolute-git-dir")
+            with mock.patch.dict(
+                os.environ,
+                {"GIT_DIR": foreign_git_dir, "GIT_WORK_TREE": str(ROOT)},
+            ):
+                resolved = PACKAGE.validate_release_reference(
+                    "v1.2.3",
+                    "refs/tags/v1.2.3",
+                    tagged,
+                    "refs/heads/main",
+                    repository,
+                )
+            self.assertEqual(resolved, tagged)
+
+    def test_release_reference_rejects_divergence_identity_drift_and_tag_moves(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository = self.release_reference_repository(Path(temporary))
+            self.git(repository, "remote", "add", "origin", ".")
+            tagged = self.git(repository, "rev-parse", "v1.2.3^{}")
+            self.assertEqual(
+                PACKAGE.validate_remote_release_tag(
+                    "v1.2.3", tagged, "origin", repository
+                ),
+                tagged,
+            )
+            main_commit = self.git(repository, "rev-parse", "refs/heads/main")
+            self.git(repository, "checkout", "--quiet", "-b", "divergent", "HEAD~1")
+            (repository / "branch.txt").write_text("divergent\n", encoding="utf-8")
+            self.git(repository, "add", "branch.txt")
+            self.git(repository, "commit", "--quiet", "-m", "Add divergent change")
+            divergent = self.git(repository, "rev-parse", "HEAD")
+            self.git(repository, "tag", "-a", "v1.2.3-rogue", "-m", "rogue")
+            with self.assertRaisesRegex(ValueError, "not contained by origin/main"):
+                PACKAGE.validate_release_reference(
+                    "v1.2.3",
+                    "refs/tags/v1.2.3-rogue",
+                    divergent,
+                    "refs/heads/main",
+                    repository,
+                )
+            with self.assertRaisesRegex(ValueError, "do not agree"):
+                PACKAGE.validate_release_reference(
+                    "v1.2.3",
+                    "refs/tags/v1.2.3",
+                    main_commit,
+                    "refs/heads/main",
+                    repository,
+                )
+            notes = repository / "docs" / "releases" / "v1.2.3.md"
+            notes.write_text("", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "missing or empty"):
+                PACKAGE.validate_release_reference(
+                    "v1.2.3",
+                    "refs/tags/v1.2.3",
+                    tagged,
+                    "refs/heads/main",
+                    repository,
+                )
+            self.git(
+                repository,
+                "tag",
+                "--force",
+                "--annotate",
+                "v1.2.3",
+                "--message",
+                "moved",
+                main_commit,
+            )
+            with self.assertRaisesRegex(ValueError, "moved after artifact validation"):
+                PACKAGE.validate_remote_release_tag(
+                    "v1.2.3", tagged, "origin", repository
+                )
+
+    @staticmethod
+    def git(repository: Path, *arguments: str) -> str:
+        result = subprocess.run(
+            ["git", *arguments],
+            cwd=repository,
+            check=True,
+            capture_output=True,
+            env=PACKAGE.git_environment(),
+            text=True,
+        )
+        return result.stdout.strip()
+
+    @classmethod
+    def release_reference_repository(cls, repository: Path) -> Path:
+        cls.git(repository, "init", "--quiet", "--initial-branch=main")
+        cls.git(repository, "config", "user.name", "Release Test")
+        cls.git(repository, "config", "user.email", "release@example.invalid")
+        (repository / "docs" / "releases").mkdir(parents=True)
+        (repository / "Cargo.toml").write_text(
+            '[workspace]\n\n[workspace.package]\nversion = "1.2.3"\n',
+            encoding="utf-8",
+        )
+        (repository / "docs" / "releases" / "v1.2.3.md").write_text(
+            "# Release\n", encoding="utf-8"
+        )
+        cls.git(repository, "add", ".")
+        cls.git(repository, "commit", "--quiet", "-m", "Create release fixture")
+        cls.git(repository, "tag", "-a", "v1.2.3", "-m", "release")
+        (repository / "main.txt").write_text("main\n", encoding="utf-8")
+        cls.git(repository, "add", "main.txt")
+        cls.git(repository, "commit", "--quiet", "-m", "Advance main")
+        return repository
+
     def test_mac_launcher_icon_is_a_bounded_native_icns_container(self) -> None:
         data = (ROOT / "assets" / "logo.icns").read_bytes()
         self.assertLess(len(data), 1024 * 1024)
@@ -525,6 +657,32 @@ class ReleasePackageTests(unittest.TestCase):
             with self.subTest(invalid=invalid):
                 with self.assertRaises(ValueError):
                     PACKAGE.safe_member_name(invalid)
+
+    def test_release_file_set_is_exact_canonical_and_regular(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            temp = Path(temporary)
+            release_set = temp / "dist"
+            release_set.mkdir()
+            (release_set / "a.sha256").write_text("a\n", encoding="utf-8")
+            (release_set / "b.zip").write_bytes(b"b")
+            manifest = temp / "release-set.txt"
+            manifest.write_text("a.sha256\nb.zip\n", encoding="utf-8")
+            self.assertEqual(
+                PACKAGE.verify_release_file_set(release_set, manifest),
+                ("a.sha256", "b.zip"),
+            )
+            (release_set / "extra.txt").write_text("extra\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "differs from manifest"):
+                PACKAGE.verify_release_file_set(release_set, manifest)
+            (release_set / "extra.txt").unlink()
+            manifest.write_text("b.zip\na.sha256\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "sorted and duplicate-free"):
+                PACKAGE.verify_release_file_set(release_set, manifest)
+            (release_set / "b.zip").unlink()
+            (release_set / "b.zip").mkdir()
+            manifest.write_text("a.sha256\nb.zip\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "not a regular file"):
+                PACKAGE.verify_release_file_set(release_set, manifest)
 
     def test_release_metadata_is_exact_and_duplicate_safe(self) -> None:
         exact = PACKAGE.release_metadata(
