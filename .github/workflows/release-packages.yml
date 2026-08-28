@@ -7,8 +7,31 @@ permissions:
   contents: read
 
 jobs:
+  validate-release-reference:
+    name: validate release reference
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a versioned tag on main
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          python3 scripts/package-release.py \
+            --validate-release-reference "${GITHUB_REF_NAME}" \
+            --tag-ref "${GITHUB_REF}" \
+            --expected-sha "${GITHUB_SHA}" \
+            --main-ref refs/remotes/origin/main
+
   package-binaries:
     name: package ${{ matrix.target }}
+    needs: validate-release-reference
     strategy:
       fail-fast: false
       matrix:
@@ -35,9 +58,6 @@ jobs:
       - name: Install Linux audio and input development libraries
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
-      - name: Validate release tag
-        if: startsWith(github.ref, 'refs/tags/')
-        run: python scripts/package-release.py --validate-tag "${{ github.ref_name }}"
       - name: Build release binaries
         run: cargo build --release --locked --target ${{ matrix.target }} --bin numinous --bin numinous-app --bin numinous-mcp
       - name: Smoke test CLI
@@ -119,6 +139,7 @@ jobs:
 
   package-soundtrack:
     name: package soundtrack
+    needs: validate-release-reference
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -126,9 +147,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Validate release tag
-        if: startsWith(github.ref, 'refs/tags/')
-        run: python3 scripts/package-release.py --validate-tag "${{ github.ref_name }}"
       - name: Build and verify soundtrack archive
         run: python3 scripts/package-release.py --kind soundtrack --target all --output-dir dist
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -182,14 +200,10 @@ jobs:
           else
             test "$SOUNDTRACK_RESULT" = skipped
           fi
-          mapfile -d '' -t actual < <(
-            find dist -mindepth 1 -maxdepth 1 -printf '%f\0' | LC_ALL=C sort -z
-          )
-          mapfile -t allowed < <(printf '%s\n' "${expected[@]}" | LC_ALL=C sort)
-          test "${#actual[@]}" -eq "${#allowed[@]}"
-          for index in "${!allowed[@]}"; do
-            test "${actual[$index]}" = "${allowed[$index]}"
-          done
+          input_manifest="${RUNNER_TEMP}/release-input-files"
+          printf '%s\n' "${expected[@]}" | LC_ALL=C sort >"$input_manifest"
+          python3 scripts/package-release.py \
+            --verify-file-set dist --file-set-manifest "$input_manifest"
           for archive in "${archives[@]}"; do
             python3 scripts/package-release.py \
               --verify-archive "$archive" \
@@ -216,9 +230,18 @@ jobs:
             --source-revision "$revision" \
             --source-date-epoch "$source_date_epoch" \
             --release-directory dist
+      - name: Verify final audited input set
+        shell: bash
+        run: |
+          version="$(python3 scripts/package-release.py --print-version)"
+          input_manifest="${RUNNER_TEMP}/release-input-files"
+          printf '%s\n' "numinous-v${version}-sbom.spdx.json" >>"$input_manifest"
+          LC_ALL=C sort -u -o "$input_manifest" "$input_manifest"
+          python3 scripts/package-release.py \
+            --verify-file-set dist --file-set-manifest "$input_manifest"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: verified-release-set
+          name: verified-release-input-set
           path: dist/*
           if-no-files-found: error
           retention-days: 7

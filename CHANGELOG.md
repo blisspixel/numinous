@@ -5,6 +5,20 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Tagged release builds now validate one complete Git history before starting
+  the platform matrix. The release verifier requires the versioned tag, release
+  notes, workflow commit, annotated-tag target, and `origin/main` ancestry to
+  agree, with real divergent-history and moved-tag regressions. The reusable
+  package and audit boundary stays read-only. A self-contained tag-only signer
+  requires the tag-push context, repeats tag and ancestry validation, invokes
+  that audit, and semantically rechecks every archive, checksum, and the native
+  SPDX document before signing. It then creates build provenance and the native
+  SPDX SBOM attestation through the official SBOM input and performs a second
+  exact filename closure before uploading one final set. Verification binds the
+  tag, source commit, signer workflow, and signer commit. Pull requests and manual
+  previews cannot enter that privileged path. Publication consumes the final
+  set through the named `release` environment and rechecks the live remote tag
+  immediately before release creation.
 - Pull requests now review dependency diffs for newly introduced moderate or
   higher vulnerabilities and run pinned CodeQL analysis over Rust plus GitHub
   Actions workflow code. Every runner job has an explicit timeout, every

@@ -6,28 +6,31 @@ comfort, and voluntary return play. Only part of that system is automated today.
 This document names both the enforced checks and the quality loops still to be
 built, so an aspiration is never mistaken for a result.
 
-## Evidence snapshot, 2026-08-22
+## Evidence snapshot, 2026-08-27
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
   doctests, 3,718 passing all-target test cases plus three expensive ignored
   diagnostics, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 94.90%
-  regions and 94.93% lines under the documented exclusions. Each of the four
+  three-OS test-and-build matrix. The current measured coverage is 94.14%
+  regions and 94.12% lines under the documented exclusions. Each of the four
   packaged release targets installs into a disposable root, renders Times
   Tables through the installed CLI, and completes modern MCP discovery, the
   exact 40-tool inventory, and a real `play_room` call from an isolated profile.
   Sixteen SBOM regressions require a deterministic SPDX 2.3 inventory of the
   exact locked all-feature Rust graph, including dependency edges, declared
-  licenses, package URLs, and registry checksums. Fifteen release-package
+  licenses, package URLs, and registry checksums. Twenty release-package
   regressions parse all packaged 64-bit PE, ELF, and Mach-O executables and bind
   exact hashes, formats, architectures, and unique direct header imports into
-  that inventory. Eleven release-workflow regressions require an exact audited
-  artifact allowlist with no additional files, tag-only least-privilege keyless
-  build and SBOM attestations, archive-only subjects from the audited release
-  set, both retained signed bundles, and publication ordered after audit and
-  attestation. Pull-request runs do not mint attestations, and no historic
-  release is represented as retroactively attested.
+  that inventory. Nineteen release-workflow regressions require early tag and
+  main-ancestry validation, an exact audited artifact allowlist, tag-only
+  least-privilege keyless build and native SPDX SBOM attestations, a
+  self-contained signer that repeats release-reference and semantic input
+  validation around the read-only audit boundary, both retained signed
+  bundles, a second exact final closure, and a live remote-tag recheck directly
+  before publication. Pull-request and manual-preview runs do not mint
+  attestations, and no historic release is represented as retroactively
+  attested.
   The disabled Sensory Lift App path has a typed platform probe in the existing
   three-OS build matrix. It repeats and hashes one fully composed App frame,
   requires the production presenter to negotiate an sRGB FIFO surface, and
