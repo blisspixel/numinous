@@ -78,6 +78,8 @@ echo "== release SBOM contract =="
 python3 scripts/test-release-sbom.py
 echo "== release workflow contract =="
 python3 scripts/test-release-workflow.py
+echo "== workflow action policy =="
+python3 scripts/test-workflow-pins.py
 echo "== dependency migration performance contract =="
 python3 scripts/test-dependency-migration-performance.py
 echo "== dependency migration performance receipt =="

@@ -5,6 +5,13 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Pull requests now review dependency diffs for newly introduced moderate or
+  higher vulnerabilities and run pinned CodeQL analysis over Rust plus GitHub
+  Actions workflow code. Every runner job has an explicit timeout, every
+  checkout disables credential persistence, and both CodeQL matrix legs feed
+  the existing single protected `main CI` aggregate. Focused workflow
+  contracts lock the language, query, permission, pin, timeout, dependency
+  review, checkout, aggregation, and Dependabot upload boundaries.
 - App room identity, visit resets, live status, universal wagers, staged Aha
   coordination, room touches, goal feedback, and Life cadence now live in a
   focused room runtime module. Core remains the owner of engineered-room
