@@ -31,19 +31,38 @@ pub mod nontransitive_aha;
 pub mod parrondo_aha;
 pub mod pendulum_aha;
 pub mod times_tables_aha;
-pub(super) fn variation_unit(seed: u64, salt: u64) -> f64 {
+/// Select a deterministic variation stream for replayable room novelty.
+///
+/// `stream_id` separates visual streams. It is not cryptographic material.
+pub(super) fn variation_unit(seed: u64, stream_id: u64) -> f64 {
     if seed == 0 {
         0.0
     } else {
-        let mut rng = crate::rng::SplitMix64::new(seed ^ salt);
+        let mut rng = crate::rng::SplitMix64::new(seed ^ stream_id);
         rng.next_f64()
     }
 }
 
-pub(super) fn variation_signed(seed: u64, salt: u64) -> f64 {
+pub(super) fn variation_signed(seed: u64, stream_id: u64) -> f64 {
     if seed == 0 {
         0.0
     } else {
-        variation_unit(seed, salt) * 2.0 - 1.0
+        variation_unit(seed, stream_id) * 2.0 - 1.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{variation_signed, variation_unit};
+
+    #[test]
+    fn variation_streams_are_canonical_replayable_and_distinct() {
+        assert_eq!(variation_unit(0, 11), 0.0);
+        assert_eq!(variation_signed(0, 11), 0.0);
+
+        let first = variation_unit(42, 11);
+        assert_eq!(first, variation_unit(42, 11));
+        assert_ne!(first, variation_unit(42, 12));
+        assert_eq!(variation_signed(42, 11), first * 2.0 - 1.0);
     }
 }

@@ -5,6 +5,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The first Rust CodeQL baseline was traced result by result instead of being
+  treated as a vulnerability count. Twelve domain-language and test-fixture
+  findings now carry narrow per-alert dispositions, while deterministic room
+  variation selectors are accurately named stream identifiers. Both security
+  queries and every analyzed source path remain enabled so future credential,
+  key, nonce, and salt mistakes stay visible.
 - Tagged release builds now validate one complete Git history before starting
   the platform matrix. The release verifier requires the versioned tag, release
   notes, workflow commit, annotated-tag target, and `origin/main` ancestry to
