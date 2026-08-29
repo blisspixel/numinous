@@ -2498,6 +2498,17 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
   Sphere Eversion), the hardest-to-make-playable, highest-ceiling rooms, as they
   earn their quality bar.
 - Refinement driven by the telemetry and playtest loops (`QUALITY.md`): tuning defaults, pacing, and difficulty toward measured awe and flow.
+- **The Rosetta tracks** (`ROSETTA.md`), filed here because the document
+  promised them and this map never carried them. Inbound: community translation
+  of the reveals and lore gated on the math-correctness bar, the math-payload
+  Cairn greeting, and language independence as a protected invariant, which
+  `QUALITY.md` is named as the owner of and does not yet record. Outbound: the
+  per-room invariant record, which is worth building on its own terms because it
+  makes a room state the mathematics it renders and a test recompute it, and
+  which today does not exist anywhere outside Rust constants no artifact emits.
+  Only 63 of 356 reveals currently carry a checkable relation. The static
+  export, the segmented text, and any translation beyond one language are gated
+  behind that record and behind the claim boundary the document sets.
 - Localization and broader hardware support.
 - **Extensibility Tier 1 hardening (see `EXTENSIBILITY.md`):** the `.num`
   room-manifest extension (expressions, named sliders, palette/Era, sound
