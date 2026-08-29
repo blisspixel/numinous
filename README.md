@@ -213,16 +213,20 @@ retain read-only authority.
 
 Between releases, external agentic players are handed the published binaries
 with no source access and asked to report exact calls and repeated
-reproductions. Seven such rounds have run, and every finding they raised is
+reproductions. Eight such rounds have run, and every finding they raised is
 either fixed with a regression that replays the reported call or recorded as a
-stated open boundary. The latest round was built around a single question and
+stated open boundary. The seventh round was built around a single question and
 answered it in the negative: the WAV arrived and decoded, the tester's host
 would not surface it, and so hearing could not be compared against reading
 cents at all. That is the most useful answer it could have given. The channel
-stayed; the claim that a mind down a pipe can hear did not. The same round found
-two scoreboards reciting a rounded constant the guard could not see and a room
-advertising a trick its own input handling made impossible, and sweeping for
-the first class found a third room nobody had played.
+stayed; the claim that a mind down a pipe can hear did not. The eighth round
+found the honest sentence in place and the same audio result, and spent its one
+first change on a room instead: the belt trick still could not be finished,
+because a two-point drag threw away the release that was half of it and the
+only column that read as two full turns sat in the outermost thirty-second of
+the window. Both are fixed, the tester's near-miss gesture now hangs the belt
+flat, and a landed pass is named on the status line without naming what it is
+worth.
 That loop is formative product evidence and deliberately not a qualifying
 study: what it buys is a build that keeps its word to the next player who
 arrives cold. Rounds and boundaries:
