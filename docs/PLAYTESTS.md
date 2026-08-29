@@ -685,6 +685,88 @@ wager, and that is recorded as a property of the face rather than a defect. The
 tester's verdict on the whole was casino rather than prison, with Attention and
 Strange Loop named as "thin tables at the back."
 
+## August 29 packaged agentic playtest, ninth round
+
+This section summarizes a ninth source-blind playtest, run against the published
+Linux `0.4.0-alpha.10` binaries by an external agentic player who read no Rust
+source, opened no room catalog document, and used the archive's own
+`bin/numinous-mcp`. It ran in the same two passes as the eighth round: a
+stranger pass written to disk before the archive's docs were opened, then a
+docs-informed redo. The tester supplied release pins, archive and per-payload
+digests, isolated file-path profiles, exact calls, repeated reproductions, and a
+claims audit against the tag's release notes. It is formative external product
+evidence, not a qualifying 0.4 cohort, a consciousness claim, or proof of
+lasting learning value. The raw dump set remains with the tester.
+
+Every alpha.10 claim the round checked held. The lift includes the release, the
+spin reaches two turns on the stone, a pass is named `OVER` and never `LOOPS`,
+`list_rooms` opens on three doors rather than 355 ids, `watch_show` returns one
+caller-paced cue with no stored cursor and no reveal, and `portable-1` returns a
+hashed capsule with `createdFile: false` and no host path. The eighth round's
+belt repair was confirmed by a player who did not know it was a repair: "Lift on
+that column: `OVER FLAT` and a win."
+
+**The trick was finished and could not be seen.** This is the round's one first
+change, and it is the sharpest finding any round has produced about this room.
+A winning poke returned `TURNS 2.00  OVER  FLAT`, `goalMet: true`, and `Touch: 0
+of 2304 cells answered`. The ASCII was the untouched room.
+
+Nothing was wrong with the physics or the grading. Two turns come off and leave
+a flat belt; a flat belt is what the room starts as; the stone's mark comes back
+to where it began after every full turn, so at two turns it points exactly where
+it pointed at rest. The finished trick is, frame for frame, the picture of
+nobody having played. That is the whole point of the room and it is invisible
+from the endpoint alone. In the tester's words: "The stranger hangs the belt and
+does not see two turns. I almost discarded the 720 win as a lying no-op."
+
+So the room keeps the twist a player cleared. Once the belt has been carried
+over, the frame draws it twice: the braid that was there before the pass in the
+fainter mark, and the belt that hangs now. From two turns the ghost is a full
+double braid behind two flat lines, and the win is worth looking at. From one
+turn the two lie exactly on top of each other, because a pass reverses a single
+twist into one that looks the same, and the picture says the belt did not
+change. That contrast is the double cover, drawn, and it arrives without the
+word Dirac and without the "two turns then lift" hint two rounds have now
+refused. The tester's own poke reports 132 of 2304 cells answered.
+
+**A room whose verb is TAKE A CELL owed a player the cells.** The Only Move
+reported `RULES 30  PLAYED 0  WON 0  TIED 0` after a click. The click had taken
+a cell and the machine had answered it, and the picture showed both, but the
+status counts finished games, and a row of zeros after an action reads as
+nothing happened. The tester clicked twenty five times at twenty five points
+before concluding that single clicks do not play: "Only Move: 25 single pokes
+and I had not played a game." A game still in play now reports the board it is
+in, `YOURS 1  MINE 1  OPEN 7`, and the record returns when a game finishes. The
+auto-win on `t` that the eighth round found stayed fixed, and the win is still
+only ever won by playing.
+
+**One leftover claim in the README.** The MCP paragraph still said "sound
+returned as sound rather than as notation describing it," which the seventh
+round had removed everywhere else. `PLAY.md` and both tool replies were correct
+and the README was two rounds stale, which is the worst place for it, because
+the README is what a reader who never opens `PLAY.md` reads. It now says the
+same thing they do: the file is sent beside the notation and whether it arrives
+as sound is the client's answer to give. The identical stale clause in the
+roadmap's own scoreboard went with it.
+
+**A doorway naming the trick went with the same broom.** The tester recorded
+twice, without filing it, that `describe_room` still name-drops Dirac's belt
+trick while play refuses to. The blurb also told a player to "keep turning and
+count what it takes to undo," which is the refused hint in gentler words. Both
+are gone; the reveal still names Dirac, SO(3), and Spin(3) once the trick is
+done. `dirac` and `double cover` join the enumerated list of answers no doorway
+or unplayed status may print, so the guard holds this rather than a habit.
+
+What stayed open is stated as open. Three doors are quieter than 355 ids but
+still not a single invitation, and a room id that is not on the greeting has to
+be guessed (`did you mean` recovered `the-only-move`, `buffon-needle`, and
+`nontransitive`). Stateless `play_room` still accepts a second named wager as a
+new first wager. `from_t` with a compact poke reapplies that poke at both
+phases, so a temporal delta across two identical phases is zero; `PLAY.md`
+documents it and each look now shows the trick on its own. The WAV still
+arrives, and this host still has no `/dev/snd`: parsed, not heard, and the
+product does not claim otherwise.
+
 ## July 2026 six-round technical cohort
 
 Six rounds of five fresh simulated reviewers examined mathematical truth,

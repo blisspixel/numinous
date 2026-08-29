@@ -5,6 +5,42 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The 720 Degree Room's finished trick no longer looks like an untouched room.
+  A ninth packaged playtest did the thing the room exists for and got `TURNS
+  2.00  OVER  FLAT`, `goalMet: true`, and `Touch: 0 of 2304 cells answered`,
+  with the ASCII identical to the opening frame. Nothing was wrong: two turns
+  come off and leave a flat belt, a flat belt is what the room starts as, and
+  the stone's mark returns after every full turn, so ending where you began is
+  both the point and invisible from the endpoint alone. Once the belt has been
+  carried over, the frame now keeps the twist that came off, drawn in a fainter
+  mark behind the belt that hangs now. From two turns that is a double braid
+  behind two flat lines; from one turn the two lie exactly on top of each other,
+  because a pass reverses a single twist into one that looks the same. The
+  contrast is the double cover drawn rather than told, and the same winning poke
+  now answers 132 of 2304 cells.
+- The Only Move reports the game it is in. A click took a cell and drew the
+  machine's reply, but the status counted only finished games, so it read
+  `PLAYED 0  WON 0  TIED 0` after every single touch and a packaged playtest
+  clicked twenty five times before concluding that clicking does not work. A
+  game in play now reads `YOURS 1  MINE 1  OPEN 7`, and the finished record
+  returns when a game ends. A room whose verb is `CLICK: TAKE A CELL` owes a
+  player the cells.
+- The README no longer promises sound returned as sound. That clause survived
+  in the one file a reader who never opens `PLAY.md` reads, two rounds after
+  the claim was corrected everywhere else. It now says what `PLAY.md` and both
+  audio tools say: the file is sent beside the notation, and whether it arrives
+  as sound is the client's answer to give. The same stale clause in the
+  roadmap's scoreboard went with it.
+- The 720 doorway no longer names Dirac's belt trick or tells a player to
+  "count what it takes to undo," which is the near-miss hint two rounds have
+  refused to add to the status, in gentler words. The reveal still names Dirac,
+  SO(3), and Spin(3) once the trick is done, and `dirac` and `double cover`
+  join the enumerated answers no doorway or unplayed status may print, so a
+  guard holds it rather than a habit.
+- The ninth source-blind packaged round is recorded in `docs/PLAYTESTS.md` with
+  its verified alpha.10 claims, the three tickets it filed, and the boundaries
+  it left open.
+
 ## [0.4.0-alpha.10] - 2026-08-28
 
 - Four of the verified connection edges are now deep cuts, so a room that
