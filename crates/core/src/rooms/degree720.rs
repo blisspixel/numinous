@@ -45,8 +45,41 @@ const MAX_LOOPS: u32 = 1;
 /// be cleared and an even number always can.
 const TURNS_PER_LOOP: f64 = 2.0;
 
+/// The stretch of the room a hand turns the stone across, as fractions of the
+/// width: from just off the wall to where the stone hangs.
+///
+/// Two full turns land on the stone, which is a place a player can see and put
+/// a hand. The mapping used to run the whole width, and because an exact
+/// landing is quantized to [`HAND_STEP`], the only hand position that read as
+/// two turns was the outermost thirty-second of the window. A packaged
+/// playtest dragged across onto the stone, read `TURNS 1.62`, and reported the
+/// advertised trick as a near miss it could not finish.
+const SPIN_FROM: f64 = 0.10;
+/// The far end of that stretch. See [`SPIN_FROM`].
+const SPIN_TO: f64 = 0.80;
+
 fn phase_unit(t: f64) -> f64 {
     if t.is_finite() { t.clamp(0.0, 1.0) } else { 0.0 }
+}
+
+/// Every point of the hand's gesture, including the one where it let go.
+///
+/// The shared poke reading drops release points, because in most rooms a lift
+/// paints nothing. Here it is half the trick: the belt is carried over the
+/// stone by a hand that goes up and lets go at the top, and a two-point drag
+/// (down low, up high) is the plainest way to ask for that. Reading only the
+/// painted points made that gesture register as a touch that never rose, so
+/// the room heard a spin where a player had done a lift.
+fn hand_points(inputs: &[RoomInput]) -> Vec<(f64, f64)> {
+    inputs
+        .iter()
+        .filter_map(|input| match *input {
+            RoomInput::PointerDown { x, y, .. }
+            | RoomInput::PointerMove { x, y, .. }
+            | RoomInput::PointerUp { x, y, .. } => Some((x, y)),
+            _ => None,
+        })
+        .collect()
 }
 
 fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
@@ -85,6 +118,16 @@ impl Belt {
     }
 }
 
+/// The spin a hand at this column has given the stone, in full turns.
+///
+/// Quantized to [`HAND_STEP`] so an exact landing on two turns is something a
+/// player can do rather than approach, and measured across [`SPIN_FROM`] to
+/// [`SPIN_TO`] so that landing sits on the stone.
+fn spin_at(x: f64) -> f64 {
+    let along = ((x - SPIN_FROM) / (SPIN_TO - SPIN_FROM)).clamp(0.0, 1.0);
+    ((along * MAX_TURNS / HAND_STEP).round() * HAND_STEP).clamp(0.0, MAX_TURNS)
+}
+
 /// Read the stone and the belt from the dial, or from the hand when there is one.
 ///
 /// With no hand the dial walks the stone through both turns, so a player who
@@ -117,8 +160,7 @@ fn belt_from(t: f64, pokes: &[(f64, f64)], seed: u64) -> Belt {
         .map(|&(x, _)| x)
         .next_back()
         .unwrap_or(opening_x);
-    let turns =
-        ((on_the_stone * MAX_TURNS / HAND_STEP).round() * HAND_STEP).clamp(0.0, MAX_TURNS);
+    let turns = spin_at(on_the_stone);
     // A pass is something the hand did, not somewhere the hand is, so the
     // highest lift reached counts even after the hand comes back down.
     let loops = hands
@@ -223,7 +265,13 @@ impl Degree720 {
             format!("TWIST {:+.2}", belt.twist())
         };
         if handled {
-            format!("TURNS {:.2}  LOOPS {}  {state}", belt.turns, belt.loops)
+            // A pass is named rather than counted. `LOOPS 1` read as a tally a
+            // player had to interpret, and a packaged playtest could not tell a
+            // lift that registered from one that did nothing. `OVER` says the
+            // belt went over the stone, which is what the hand did, and it says
+            // nothing about what that is worth.
+            let carried = if belt.loops > 0 { "OVER  " } else { "" };
+            format!("TURNS {:.2}  {carried}{state}", belt.turns)
         } else {
             format!("TURNS {:.2}  {state}  DRAG: SPIN AND LIFT", belt.turns)
         }
@@ -258,8 +306,7 @@ impl Room for Degree720 {
     }
 
     fn goal_met(&self, t: f64, inputs: &[RoomInput]) -> bool {
-        let pokes = crate::pokes_from_inputs(inputs);
-        let belt = belt_from(t, &pokes, self.seed);
+        let belt = belt_from(t, &hand_points(inputs), self.seed);
         belt.turns >= 1.0 && belt.is_flat()
     }
 
@@ -272,11 +319,17 @@ impl Room for Degree720 {
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let pokes = crate::pokes_from_inputs(inputs);
-        if finite_pokes(&pokes).is_empty() {
+        let hands = hand_points(inputs);
+        if finite_pokes(&hands).is_empty() {
             return self.status(t);
         }
-        Some(self.readout(belt_from(t, &pokes, self.seed), true))
+        Some(self.readout(belt_from(t, &hands, self.seed), true))
+    }
+
+    fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
+        // The picture reads the same gesture the status does, release included,
+        // so a lift that the scoreboard reports is a lift the belt shows.
+        draw_belt(canvas, belt_from(t, &hand_points(inputs), self.seed));
     }
 
     fn reveal(&self) -> &'static str {
@@ -293,12 +346,32 @@ impl Room for Degree720 {
 
 #[cfg(test)]
 mod tests {
-    use super::{Belt, Degree720, MAX_LOOPS, MAX_TURNS, belt_from};
+    use super::{Belt, Degree720, MAX_LOOPS, MAX_TURNS, SPIN_FROM, SPIN_TO, belt_from, spin_at};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
+    /// The column that turns the stone exactly once. Midway across the stretch
+    /// the hand spins over, which is where one turn has to be.
+    const ONE_TURN_X: f64 = (SPIN_FROM + SPIN_TO) / 2.0;
+
     fn hand(x: f64, y: f64) -> [RoomInput; 1] {
         [RoomInput::PointerDown { x, y, t: 0.0 }]
+    }
+
+    /// A two-point drag: the hand lands, then lets go somewhere else.
+    fn drag(from: (f64, f64), to: (f64, f64)) -> [RoomInput; 2] {
+        [
+            RoomInput::PointerDown {
+                x: from.0,
+                y: from.1,
+                t: 0.0,
+            },
+            RoomInput::PointerUp {
+                x: to.0,
+                y: to.1,
+                t: 0.0,
+            },
+        ]
     }
 
     #[test]
@@ -404,7 +477,7 @@ mod tests {
         // The same gesture from one turn cannot flatten, however it is drawn.
         // This is the fact the room exists for, so it has to hold on the path a
         // hand actually takes and not only on a single tap.
-        let odd = [(0.10, 0.80), (0.50, 0.80), (0.50, 0.30)];
+        let odd = [(0.10, 0.80), (ONE_TURN_X, 0.80), (ONE_TURN_X, 0.30)];
         let belt = belt_from(0.0, &odd, 0);
         assert_eq!(belt.turns, 1.0);
         assert!(!belt.is_flat());
@@ -437,6 +510,80 @@ mod tests {
         r.render(&mut base, 0.5);
         r.render_poked(&mut poked, 0.5, &[(0.8, 0.9)]);
         assert_ne!(base.to_text(), poked.to_text(), "hand must rotate the stone");
+    }
+
+    #[test]
+    fn the_hand_lets_go_at_the_top_and_the_belt_goes_with_it() {
+        // A packaged playtest asked for the trick the plainest way there is:
+        // put a hand on the belt, carry it up, let go above the stone. The room
+        // read only the points a drag paints, so the release at the top was
+        // never seen, the lift never happened, and the scoreboard reported a
+        // spin the player had not asked for. Two points are a gesture.
+        let room = Degree720::new();
+        let lifted = drag((0.90, 0.85), (0.90, 0.15));
+        assert!(
+            room.status_input(0.0, &lifted).unwrap().contains("OVER"),
+            "letting go above the stone has to carry the belt over it"
+        );
+        assert!(room.goal_met(0.0, &lifted));
+
+        // And the picture agrees with the scoreboard, which it cannot do while
+        // the default render reads a different half of the same gesture.
+        let mut held = Canvas::new(96, 40);
+        let mut carried = Canvas::new(96, 40);
+        room.render_input(&mut held, 0.0, &drag((0.90, 0.85), (0.90, 0.75)));
+        room.render_input(&mut carried, 0.0, &lifted);
+        assert_ne!(held.to_text(), carried.to_text());
+    }
+
+    #[test]
+    fn a_lift_that_landed_reads_differently_from_one_that_did_not_happen() {
+        // The same tester could not tell a lift that registered from a lift the
+        // room ignored: both scoreboards said the same thing. A pass is now
+        // named on the line, and naming it says nothing about what it is worth,
+        // so the room still keeps the discovery to itself.
+        let room = Degree720::new();
+        let held = room.status_input(0.0, &hand(ONE_TURN_X, 0.85)).unwrap();
+        let carried = room
+            .status_input(0.0, &drag((ONE_TURN_X, 0.85), (ONE_TURN_X, 0.15)))
+            .unwrap();
+        assert!(!held.contains("OVER"));
+        assert!(carried.contains("OVER"));
+        assert_ne!(held, carried);
+        assert!(carried.chars().count() <= 56);
+
+        // Carrying the belt over from one turn is a real pass that leaves the
+        // belt twisted. Saying so is the honest half; the reason is the reveal.
+        assert!(carried.contains("TWIST"));
+        assert!(!room.goal_met(0.0, &drag((ONE_TURN_X, 0.85), (ONE_TURN_X, 0.15))));
+    }
+
+    #[test]
+    fn two_turns_land_on_the_stone_a_hand_can_reach() {
+        // The winning spin used to sit in the outermost thirty-second of the
+        // window: a tester who dragged across onto the stone read TURNS 1.62
+        // and called the advertised trick a near miss. Two turns now land where
+        // the stone is drawn, and the whole stretch stays ordered and exact.
+        assert_eq!(spin_at(SPIN_TO), MAX_TURNS);
+        assert_eq!(spin_at(0.84), MAX_TURNS, "past the stone is still two turns");
+        assert_eq!(spin_at(SPIN_FROM), 0.0);
+        assert_eq!(spin_at(0.0), 0.0, "behind the wall is still no turn");
+        assert_eq!(spin_at(ONE_TURN_X), 1.0);
+        let mut previous = 0.0;
+        for step in 0..=100 {
+            let turns = spin_at(f64::from(step) / 100.0);
+            assert!(turns >= previous, "the stone must not turn backwards");
+            previous = turns;
+        }
+
+        // The gesture the tester reported as their near miss now finishes.
+        let room = Degree720::new();
+        let across_then_up = [(0.20, 0.50), (0.80, 0.50), (0.80, 0.10)];
+        assert!(belt_from(0.0, &across_then_up, 0).is_flat());
+        assert!(room.goal_met(
+            0.0,
+            &crate::room::inputs_from_pokes(&across_then_up, 0.0)
+        ));
     }
 
     #[test]

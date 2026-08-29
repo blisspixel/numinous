@@ -5,6 +5,28 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The 720 Degree Room finishes the trick it advertises. An eighth packaged
+  playtest asked for it the plainest way there is, a two-point drag from low on
+  the belt to above the stone, and the room heard a touch that never rose: the
+  shared poke reading drops release points because in most rooms a lift paints
+  nothing, and here the release is half the gesture. The room now reads every
+  point of a gesture including the one where the hand let go, in the picture as
+  well as on the status line. The same round dragged across onto the stone, read
+  `TURNS 1.62`, and reported the trick as a near miss, because the hand's column
+  mapped across the whole window while an exact landing is quantized to an
+  eighth of a turn, leaving the outermost thirty-second of the room as the only
+  position that read as two full turns. The spin is now measured from just off
+  the wall to where the stone hangs, so two turns land on the stone. The
+  tester's exact near-miss gesture now hangs the belt flat and earns the reveal.
+  A pass is also named rather than counted: `LOOPS 1` became `OVER`, so a lift
+  that landed and one that did not read differently, while the status still says
+  nothing about which twists come off. Four regressions cover the release point,
+  the reachable spin, the named pass, and the ordering of the whole stretch.
+- The eighth source-blind packaged round is recorded in `docs/PLAYTESTS.md`
+  with its confirmed repairs, its stated open boundaries, and the two requests
+  it made that were deliberately not honored: do not re-fix the audio channel,
+  and do not add a near-miss hint that recites the double cover.
+
 - CLI terminal game sessions now live in a focused game runtime module. It
   owns Bench plus Crack, SETI, Aliens, Munch, Arcade, Hackenbush, Party,
   Fifteen, Nim, Gauntlet, and Quiz presentation, input loops, Journey events,
