@@ -5,6 +5,30 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- `ROSETTA.md` gains the other direction: what this artifact would be worth to a
+  finder who has no human language and is holding only what we left. The
+  existing document is inbound, how a visitor gets in, and it works by letting
+  the visitor probe. A finder in the far future cannot probe, so the outbound
+  direction cannot inherit that move, and the section says so first. The
+  research behind it settles the claim: every decipherment that ever succeeded
+  had a known or descendant language, so mathematics is a source of cribs and
+  not a substitute for a language. That is not a consolation prize, since cribs
+  are what broke the readable scripts, and wherever arithmetic exists in an
+  undeciphered corpus it is the part that gets read. It also records the warning
+  attached to the strongest precedent: the Maya mathematical foothold came
+  seventy five years before the language and then impeded the rest for decades.
+  The measured state of the product is in the section rather than assumed: about
+  24,000 words of English, and only 63 of 356 reveals carrying a checkable
+  relation, with the Lorenz invariant existing only as Rust constants no
+  artifact emits. The plan's first step stands on its own merits with no Rosetta
+  framing at all, which is that a room should state the mathematics it renders
+  and a test should recompute it. The forbidden claims are enumerated, starting
+  with the one the idea invites.
+- The Rosetta tracks are filed in `ROADMAP.md`, which never carried them
+  although `ROSETTA.md` promised them, including the language-independence
+  invariant that names `QUALITY.md` as its owner and that `QUALITY.md` does not
+  yet record.
+
 - Two founder ideas are recorded as plans rather than wishes. **The Fair** is a
   designed, unbuilt room in `ROOMS.md`: a row of fairground stalls, not one of
   them fair, each pricing itself on a balance beam where a weight's moment is
