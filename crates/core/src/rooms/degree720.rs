@@ -174,6 +174,42 @@ fn belt_from(t: f64, pokes: &[(f64, f64)], seed: u64) -> Belt {
     }
 }
 
+/// The belt that is hanging now.
+const BELT: char = '*';
+
+/// The twist a pass took off, kept in the frame beside the belt.
+///
+/// Both marks paint the room's plain accent, so the two readings separate by
+/// glyph and never by color alone.
+const GHOST: char = '.';
+
+/// Draw one ribbon's two edges across the span, given the twist along it.
+fn draw_edges(
+    canvas: &mut dyn Surface,
+    wall: f64,
+    cy: f64,
+    span: f64,
+    half: f64,
+    twist: f64,
+    mark: char,
+) {
+    let steps = (span.round() as usize).clamp(24, 400);
+    let mut previous: Option<(i32, i32, i32)> = None;
+    for step in 0..=steps {
+        let along = step as f64 / steps as f64;
+        let turned = twist * TAU * along;
+        let x = (wall + span * along).round() as i32;
+        let offset = half * turned.cos();
+        let top = (cy - offset).round() as i32;
+        let bottom = (cy + offset).round() as i32;
+        if let Some((previous_x, previous_top, previous_bottom)) = previous {
+            canvas.line(previous_x, previous_top, x, top, mark);
+            canvas.line(previous_x, previous_bottom, x, bottom, mark);
+        }
+        previous = Some((x, top, bottom));
+    }
+}
+
 /// Draw the wall, the belt with the twist that is left in it, and the stone.
 fn draw_belt(canvas: &mut dyn Surface, belt: Belt) {
     let (width, height) = canvas.draw_bounds();
@@ -202,22 +238,20 @@ fn draw_belt(canvas: &mut dyn Surface, belt: Belt) {
     // its edges apart; a quarter turn on and it is edge on and they meet; a
     // half turn on and they have swapped. The crossings are the half turns, so
     // the twist is in the picture and not only on the scoreboard.
-    let twist = belt.twist();
-    let steps = (span.round() as usize).clamp(24, 400);
-    let mut previous: Option<(i32, i32, i32)> = None;
-    for step in 0..=steps {
-        let along = step as f64 / steps as f64;
-        let turned = twist * TAU * along;
-        let x = (wall + span * along).round() as i32;
-        let offset = half * turned.cos();
-        let top = (cy - offset).round() as i32;
-        let bottom = (cy + offset).round() as i32;
-        if let Some((previous_x, previous_top, previous_bottom)) = previous {
-            canvas.line(previous_x, previous_top, x, top, '*');
-            canvas.line(previous_x, previous_bottom, x, bottom, '*');
-        }
-        previous = Some((x, top, bottom));
+    //
+    // Once the belt has been carried over the stone it is drawn twice: the
+    // twist that was there before the pass, in the fainter mark, and the twist
+    // that is there now. A packaged playtest did the trick and saw nothing,
+    // because it is true that two turns come off and leave a flat belt, and it
+    // is also true that a flat belt is what the room starts as. Ending where
+    // you began is the whole point and it is invisible from the endpoint
+    // alone, so the room keeps the braid a player cleared in the frame beside
+    // the belt that is hanging now. From one turn the two lie on top of each
+    // other, which is the other half of the same fact.
+    if belt.loops > 0 {
+        draw_edges(canvas, wall, cy, span, half, belt.turns, GHOST);
     }
+    draw_edges(canvas, wall, cy, span, half, belt.twist(), BELT);
 
     // The stone, with a mark on it so its own turning is visible. The mark
     // comes back to where it started every full turn, which is the half of this
@@ -499,6 +533,41 @@ mod tests {
             twisted.to_text(),
             cleared.to_text(),
             "carrying the belt over the stone has to show"
+        );
+    }
+
+    #[test]
+    fn winning_does_not_look_like_never_having_played() {
+        // A packaged playtest did the trick and reported an empty win: "0 of
+        // 2304 cells answered", the ASCII the same as the untouched room. It
+        // was right, and the room was right too. Two turns come off and leave
+        // a flat belt, and a flat belt is what the room starts as, so the
+        // endpoint of the trick is the picture of nobody having done it. That
+        // is the whole point and it cannot be seen from the endpoint alone.
+        let room = Degree720::new();
+        let mut untouched = Canvas::new(96, 40);
+        let mut won = Canvas::new(96, 40);
+        room.render(&mut untouched, 0.0);
+        room.render_poked(&mut won, 0.0, &[(SPIN_TO, 0.45)]);
+        assert!(room.goal_met(0.0, &hand(SPIN_TO, 0.45)));
+        assert_ne!(
+            untouched.to_text(),
+            won.to_text(),
+            "a finished trick has to look different from an untouched room"
+        );
+        assert!(
+            won.to_text().contains(super::GHOST),
+            "the twist that came off is what makes the win visible"
+        );
+
+        // The same lift from one turn takes nothing off, so the belt that
+        // hangs now covers the belt that hung before and the frame says so.
+        let mut refused = Canvas::new(96, 40);
+        room.render_poked(&mut refused, 0.0, &[(ONE_TURN_X, 0.45)]);
+        assert!(!room.goal_met(0.0, &hand(ONE_TURN_X, 0.45)));
+        assert!(
+            !refused.to_text().contains(super::GHOST),
+            "from one turn a pass changes nothing, and the picture must agree"
         );
     }
 

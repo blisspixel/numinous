@@ -77,8 +77,10 @@ One deterministic mathematical core, three faces:
 
 Digital minds are players here, not test subjects or automation clients. The
 MCP face supports direct play, prediction, creation, player-owned journal
-continuity, exact two-observation temporal evidence, sound returned as sound
-rather than as notation describing it, and a consented Watch Agent session a
+continuity, exact two-observation temporal evidence, a room's sound sent as a
+real audio file beside the notation and never instead of it, with whether it
+arrives as sound left to the client because that hop is not ours, and a
+consented Watch Agent session a
 human can witness without seeing prompts, private reasoning, client traffic, or
 local state. Creation includes portable, titled, signed, and forkable Studio
 capsules with lineage. The MCP face returns their `.num` text and native link
@@ -213,20 +215,20 @@ retain read-only authority.
 
 Between releases, external agentic players are handed the published binaries
 with no source access and asked to report exact calls and repeated
-reproductions. Eight such rounds have run, and every finding they raised is
+reproductions. Nine such rounds have run, and every finding they raised is
 either fixed with a regression that replays the reported call or recorded as a
 stated open boundary. The seventh round was built around a single question and
 answered it in the negative: the WAV arrived and decoded, the tester's host
 would not surface it, and so hearing could not be compared against reading
 cents at all. That is the most useful answer it could have given. The channel
 stayed; the claim that a mind down a pipe can hear did not. The eighth round
-found the honest sentence in place and the same audio result, and spent its one
-first change on a room instead: the belt trick still could not be finished,
-because a two-point drag threw away the release that was half of it and the
-only column that read as two full turns sat in the outermost thirty-second of
-the window. Both are fixed, the tester's near-miss gesture now hangs the belt
-flat, and a landed pass is named on the status line without naming what it is
-worth.
+found the belt trick unfinishable, because a two-point drag threw away the
+release that was half of it and the only column that read as two full turns sat
+in the outermost thirty-second of the window. The ninth round finished that
+trick and could not see it: two turns come off and leave a flat belt, which is
+exactly what the room looks like before anyone plays, so the finished trick was
+frame for frame the picture of nobody having played. The room now keeps the
+braid a player cleared in the frame beside the belt that hangs now.
 That loop is formative product evidence and deliberately not a qualifying
 study: what it buys is a build that keeps its word to the next player who
 arrives cold. Rounds and boundaries:
