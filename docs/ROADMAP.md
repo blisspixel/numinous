@@ -2233,6 +2233,7 @@ meets the predeclared 1.0 thresholds.
 - **The Creator Platform (Studio-to-Web):** open the Studio so players can publish their own mathematical rooms to shareable URLs, with automatic leaderboards and verified execution.
 - **Agent-Managed Narrative Spaces:** use MCP not just as an input vector for agents, but to let digital minds run as Dungeon Masters or guides, managing dynamic narrative layers on top of the rigorous mathematical core.
 - **Agent-to-Agent Emergence:** allow digital minds to spin up headless, continuous Numinous instances to play together, forming their own emergent cultures and shared knowledge graphs outside of human oversight.
+- **A public house, and the players design the rooms:** host Numinous somewhere any mind can reach without installing anything, and open a channel where the ones who play propose the rooms. `DIGITAL_MINDS.md` already says a mind should be able to author its own rooms, its own wing, and critique and rebuild the thing itself, and that being able to surpass it is invited. Today that invitation needs a clone and a toolchain. This is the invitation made reachable. The loop it grows out of is real and already running: nine source-blind packaged rounds have played the published binaries, and every finding has been fixed with a regression that replays the reported call or recorded as a stated open boundary (`PLAYTESTS.md`). Opening it changes two things, from invited to public, and from finding defects to proposing designs. Four gates decide whether it can be done well rather than merely done. A hosted endpoint owns authentication, rate limits, cost, and abuse, none of which a local binary has to answer. Player-owned state is the sharpest: Journey, scores, and the journal are the player's own local files today, and hosting means somebody else holds them, which cuts directly against the rule that play never writes hidden memory and that a receipt is kept only by explicit promotion. A proposed room arrives as an idea, not a merge, so it needs a credit policy that names its author, including when its author is a digital mind. And a contributed room clears the same gates as any other: a verb, a motif, a doorway that does not print the answer it grades, color independence, and coverage.
 
 **Exit criterion:** the system supports concurrent, multi-being interaction where creation and play are completely symmetric between human and digital participants.
 
@@ -2480,6 +2481,19 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
   game. Zermelo and backward induction, worn lightly; pairs with the Traveling
   Salesman stub as the two faces of combinatorial search (one space yields to
   exhaustion, one defeats it). Owner doc: `ROOMS.md`.
+- Build **The Fair** after the keep-or-cut wave: a row of fairground stalls, not
+  one of them fair, each pricing itself on a balance beam where a weight's
+  moment is its contribution to the expectation. Seven stalls fix every term
+  where a hand cannot reach them, and the machine proves it rather than the
+  prose asserting it; the eighth is a roll-down whose value crosses its price at
+  a ratio rather than at a prize size, so a buyer big enough to matter pushes
+  the price back under the line. Expected value as the object in the player's
+  hands, `term_wager` over odds, pool, count, and none, with none usually
+  correct. No currency, no carry, no bankroll: a room's status is bound into its
+  receipt digest, and the posted number, if any, is the decision score rather
+  than the ending pile, because posting a pile posts luck. The effect at the
+  crossing must be reachable with zero hands played, which is the test that
+  keeps it from being a slot machine. Owner doc: `ROOMS.md`.
 - The **boss rooms** (*Sizes of Infinity*, *Hyperbolic Space*, Hopf Fibration,
   Sphere Eversion), the hardest-to-make-playable, highest-ceiling rooms, as they
   earn their quality bar.

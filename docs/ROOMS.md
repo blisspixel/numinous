@@ -437,6 +437,7 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [x] **Random walks** - the drunkard: stumble n steps, end up sqrt(n) from the bar, every time, on average.
 - [x] **Birthday paradox** (built: `birthday`) - a party-filling toy: watch the collision arrive absurdly early; bet against it and lose.
 - [x] **Markov chains** (built: `markov-chain`) - a weather machine with dials: today decides tomorrow; find the steady state by feel.
+- [ ] **Expected value** - The Fair: every stall prices itself by the same subtraction; seven of them fix every term where your hand cannot reach it.
 
 ## Structure (discrete)
 - [ ] **Graph theory** - the Bridges of Konigsberg as a walking puzzle; fail, then learn you were always going to fail, and why (degree parity, never named).
@@ -721,6 +722,187 @@ speed, loudness driving scale, so the shape is a creature moving to your
 music. Verb: DRAG UP AND DOWN: ADD DIMENSIONS. Ships with the visualizer
 workstream; the projection math (rotation in random 2-planes of R^n) is
 pure core and testable today.
+
+## Founder's room idea (August 2026): The Fair
+
+**Status:** designed, not built. Roadmap position: 1.x, after the keep-or-cut
+wave. Wing as designed: Chance, with a Decision resonance.
+
+The founder's ask was a room of flawed gambles a player could learn to beat,
+with a special number that pays off when you reach it. The research it opened
+found that the honest version of that room is better than the wished-for one,
+and that two rooms already in the catalog take the near misses.
+
+The entry is deliberately simple. A row of stalls at a fair, and the joke is
+that not one of them is. Each stall's offer hangs on a balance beam: every
+outcome is a weight, its position along the beam is what that outcome pays, its
+size is how often it pays, so each weight's moment about the pivot is exactly
+that outcome's contribution to the price. The stake is a fixed counterweight.
+A fair game would level. Ambient phase walks the shelf, stall by stall, weights
+swinging and settling, and the beam never levels. The monotony is the content,
+and it needs no words at all.
+
+`t` walks the shelf the way The Only Move's dial walks 256 rulebooks. Eight
+stalls: a lottery, a doubling-stake martingale, a coin with a rebate, a side
+bet, a bulk discount, a pure-odds bet, a parimutuel pool, and one roll-down.
+The verb is `DRAG: PRICE THE STALL`. A drag along the beam moves whichever term
+that stall exposes, and the beam answers live. A poke on a hanging weight takes
+that outcome as your line and plays one hand.
+
+The status line carries the ledger, and the ledger is the discipline of the
+room: the sampled take and the exact expectation stand side by side at every
+moment, so the noisy number is visibly the noisy one. That is Parrondo's
+separation of truth from variance, applied continuously rather than only at the
+grade, and it is also the Galton ruling, which is that grading one stochastic
+landing grades luck rather than a model.
+
+### The one aha
+
+**The price of a game is written in its own rules, and you beat it only by
+finding the one term in that price your hand is allowed to move.**
+
+The obvious candidate, that the house edge is a number with a line it can
+cross, is already drawn by Gambler's Ruin, whose dial moves p across one half
+and whose curve flips. And a room whose punchline is that losing games can be
+combined into a winning one is Parrondo's Trap wearing a costume. What no room
+does is make expected value itself the object in the player's hands, decomposed
+into its terms, so that the question becomes which term an advantage can attack.
+
+On seven stalls the answer is that no term you can reach will do it, and the
+room proves that by machine rather than asserting it in prose. That is not a
+disclaimer bolted to a gambling toy. It is the content.
+
+### The special number, and why it is a ratio
+
+The eighth stall is a roll-down: a game whose unclaimed top prize falls into the
+lower tiers instead of growing. A ticket's value is then
+
+```
+EV(J, T) = b + J / T
+```
+
+where `b` is the fixed lower-tier expectation and `J / T` is the rolled prize
+divided by the tickets sold. The threshold is not a prize size. It is a ratio,
+and that is the room's real surprise, because the player's own buying is in the
+denominator. Buy enough to matter and you push the price back under the line
+you crossed. The exploit argues with itself.
+
+Massachusetts Cash WinFall, 2004 to 2012, is the historical anchor and it is
+documented in a state Inspector General's report rather than in folklore. It
+was a two dollar ticket, six of forty six, so 9,366,819 combinations, with a two
+million dollar jackpot cap that triggered the roll-down into the match-5,
+match-4, and match-3 tiers. Its numbers give the room its arithmetic:
+
+- Fixed lower-tier expectation `b = 0.395332`.
+- The ticket is worth its price when `J / T > 1.604668`.
+- An ordinary drawing broke even only at a jackpot of `$15,030,638`, against a
+  cap of `$2,000,000`. The cap that protected the house made ordinary play
+  structurally unbeatable and guaranteed the roll-down that leaked.
+- The margin decayed exactly as the ratio predicts: 7 February 2005 at
+  `J/T = 4.26` was worth `$4.65` on a two dollar ticket; 8 February 2010 at
+  `J/T = 1.73` was worth `$2.12`; a late heavy drawing at `J/T = 1.375` was
+  worth `$1.77` and had crossed back under.
+
+### The wager
+
+`term_wager`, a categorical call with four values: `odds`, `pool`, `count`,
+`none`. Which term in this stall's price can your hand move? It grades the aha
+directly rather than an arithmetic byproduct, it fits the existing parser shape
+beside `policy_wager` and `speed_wager`, and on most of the shelf the correct
+answer is `none`. A number wager on the threshold would grade arithmetic, which
+is the consequence rather than the insight; let the number arrive in the morph
+as what the call turns out to have meant.
+
+Three tests carry the room's honesty so its prose does not have to. The sign
+change is measured either side of the root rather than asserted. Every other
+stall is proved to have strictly negative expectation for every reachable value
+of every parameter it exposes, which is the room's "prove it, do not quote it"
+call. And exact expectation is invariant under hand order, which is the guard
+that keeps the room from drifting into Parrondo during implementation.
+
+### What is not a bankroll
+
+No currency, no carry, no purchase, no balance that survives the visit. This is
+not squeamishness, it is three separate constraints agreeing.
+
+A room's status line is bound into the result digest of an Encounter Receipt.
+A bankroll read from durable state would make a room's answer depend on
+something outside its action tuple, so a receipt that verified when it was
+issued would fail later. Journey has no currency field and caps its counters
+against grinding on purpose, and `AGENT_PLAY.md` carries the audited claim that
+experience accrues from showing up and never from variable-ratio jackpots. And
+the room is better without one, because twenty four touches is at most twenty
+four hands, and twenty four hands is exactly the length at which variance still
+dominates and the ledger lies. That is the lesson rather than a limitation.
+
+If a number is ever posted, it is the decision score: the sum of the exact
+expected value of each hand taken, deterministic from the touch list and
+identical for a lucky and an unlucky run that made the same decisions. Posting
+an ending bankroll would post luck, and would invert the room's own thesis
+inside its own scoreboard.
+
+### The test that keeps it from being a slot machine
+
+**The exciting effect must be reachable with zero hands played.** The crossing
+is a property of the parameter, so a player can drag to it and watch the whole
+thing without gambling once. If the effect can be reached without a draw, then
+spinning is not what is being rewarded, and every other safeguard is secondary
+to that one. Winning a hand does nothing: no banner, no sting, no persistent
+number. When the beam levels and tips the other way, and the sound resolves
+from a tense interval to a consonance on the exact frame of the crossing,
+nothing pays out.
+
+### The ending, which is better than the legend
+
+The room's deep cuts carry the history, and the history refuses to flatter
+anyone. Four syndicates wagered over forty million dollars into Cash WinFall.
+They were right, and they were paid. Across the game's 769 drawings, the 44
+roll-downs took about 41 percent of all sales and paid out at about 109
+percent, while the other 94.3 percent of drawings returned about 26 percent.
+Blended, the game paid 60 percent, which is exactly what it was designed to
+pay, and the Lottery took 120 million dollars from 300 million in sales. The
+syndicates beat the drawing. Nobody beat the game, because the beatable
+drawings were funded by all the others.
+
+The same holds for the older lottery buyouts. A syndicate bought most of the
+Virginia 6/44 combinations in February 1992 and won, and a peer-reviewed
+account records that it covered only about 70 percent of the tickets and won
+anyway, as did an Irish syndicate the same year at about 92 percent. There is a
+structural result underneath worth its own cut: if a prize tier is funded as a
+fixed fraction of sales, then buying every ticket returns from that tier exactly
+what buying one ticket returns, because the buyer's share of the pool and the
+buyer's share of the winners scale together and cancel. For a six of forty nine
+style game that is 13 to 16 percent, and it is why bulk buying is not the
+loophole it looks like.
+
+And the popular ending, that dozens of states outlawed the strategy, is not
+supported. The 1992 Virginia board rules are not in today's codified
+regulations, and no permanent statutory ban was found. What closed the door was
+jackpot splitting, larger matrices from 1994, cash option haircuts, and
+withholding. Nobody outlawed the arithmetic. The arithmetic stopped working.
+
+### Build honestly
+
+Wow 5 / Build 2 as a room with a staged wager: the mathematics is closed-form
+arithmetic and one root, and the drawing is beams and weights on the existing
+surface substrate. Build 3 if it becomes the eighth Universal Wager room, since
+an eighth staged arc touches the engineered-aha room set, the action tuple and
+its receipt bytes, the MCP schema, the App key band, and a standing roadmap gate
+that currently says seven.
+
+Prose cannot go on the canvas, because the raster draws lit pixels and not
+glyphs, so the word problems the founder asked for live in the chrome: the
+stall's pitch on the status line, carrying every number and no conclusion, and
+the long history in the deep cuts after the reveal. The doorway names the
+question and never the threshold, and the room joins the enumerated answers no
+doorway or unplayed status may print.
+
+The room earns implementation when a player prices a stall before playing it,
+calls `none` on a stall that deserves it, finds the one that does not, and can
+say why buying more tickets made their own price worse. The stage must never
+acquire chips, felt, neon, or the word casino, and the name must stay The Fair,
+because the product is for children too and the joke only works if nothing on
+the shelf is.
 
 ## The Awe Engine wave (July 2026): the cheap-and-gorgeous batch
 

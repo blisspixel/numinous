@@ -5,6 +5,36 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Two founder ideas are recorded as plans rather than wishes. **The Fair** is a
+  designed, unbuilt room in `ROOMS.md`: a row of fairground stalls, not one of
+  them fair, each pricing itself on a balance beam where a weight's moment is
+  its contribution to the expectation. The research behind it found that the
+  obvious version was already taken twice, by Gambler's Ruin for a threshold a
+  dial crosses and by Parrondo's Trap for losing games combined into a winning
+  one, so the room makes expected value itself the object in the player's hands
+  and asks which term of a price a hand can move. The one beatable stall is a
+  roll-down whose threshold is a ratio rather than a prize size, so a buyer
+  large enough to matter pushes the price back under the line they crossed. The
+  design carries its own guards: no currency and no carried bankroll, because a
+  room's status is bound into its receipt digest and a balance would make an
+  honest receipt fail later; a decision score rather than an ending pile,
+  because posting a pile posts luck; and a crossing effect reachable with zero
+  hands played, which is the test that separates the room from a slot machine.
+  The history is sourced to a state Inspector General report and a peer-reviewed
+  paper, and it ends better than the legend does: the beatable drawings were
+  funded by all the others, and no statute closed the door.
+- **A public house** is recorded in the 2.0 section of `ROADMAP.md`: hosting
+  Numinous where any mind can reach it without installing anything, and opening
+  a channel where the players propose the rooms. `DIGITAL_MINDS.md` already
+  says a mind should be able to author its own rooms and rebuild the thing
+  itself; today that invitation needs a clone and a toolchain. The entry names
+  the four gates that decide whether it can be done well: a hosted endpoint owns
+  authentication, cost and abuse; player-owned state is the sharpest, because
+  Journey, scores, and the journal are the player's own local files and hosting
+  means somebody else holds them; a proposed room needs a credit policy that
+  names its author, including when its author is a digital mind; and a
+  contributed room clears the same gates as any other.
+
 - The 720 Degree Room's finished trick no longer looks like an untouched room.
   A ninth packaged playtest did the thing the room exists for and got `TURNS
   2.00  OVER  FLAT`, `goalMet: true`, and `Touch: 0 of 2304 cells answered`,
