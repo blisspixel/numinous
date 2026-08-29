@@ -166,6 +166,15 @@ impl Room for Farey {
          0 <= a <= b <= Q, sorted by value. Neighbors a/b, c/d always satisfy \
          |ad-bc|=1: best rational approximations sit next door."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Row Q is a slice through the Stern-Brocot tree: keep every \
+             fraction that tree makes with denominator at most Q and read them \
+             in order. The Calkin-Wilf room lists the same rationals in a \
+             different order again. The mediant is the rule under all three.",
+        ]
+    }
 }
 
 #[cfg(test)]

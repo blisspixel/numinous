@@ -150,6 +150,15 @@ impl Room for Evolute {
          centers of curvature. For an ellipse it is a stretched astroid with \
          four cusps: a classical conjugate of the ellipse itself."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Do this to a cycloid and a cycloid the same size comes back: a \
+             curve that is its own centers of curvature. Huygens built a clock \
+             on that in 1673, hanging a pendulum between cycloidal cheeks so \
+             the bob traveled a cycloid and kept equal time at any swing.",
+        ]
+    }
 }
 
 #[cfg(test)]

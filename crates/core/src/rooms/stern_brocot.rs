@@ -222,6 +222,15 @@ impl Room for SternBrocot {
          by repeated mediants of 0/1 and 1/0. Adjacent fractions a/b, c/d always \
          satisfy |ad-bc|=1: best approximations sit next door."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "The Farey room sorts these same fractions by size and finds the \
+             same |ad-bc|=1 next door, and the Calkin-Wilf room grows a \
+             different tree over the same rationals. One mediant rule runs all \
+             three; here it is the construction rather than a consequence.",
+        ]
+    }
 }
 
 #[cfg(test)]

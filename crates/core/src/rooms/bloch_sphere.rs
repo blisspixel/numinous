@@ -341,7 +341,9 @@ impl Room for BlochSphere {
         &[
             "Felix Bloch's nuclear-spin picture and the geometric pure-state \
              sphere are cousins of the Riemann sphere: pure states are CP^1, \
-             which is one complex coordinate plus infinity.",
+             which is one complex coordinate plus infinity. The Hopf Fibration \
+             room flies the circle of unmeasurable phase standing over every \
+             point of this surface.",
             "Measurement along Z collapses to a pole with probabilities \
              cos^2(theta/2) and sin^2(theta/2). A state on the equator is \
              maximally uncertain in the Z basis and pure in a rotated basis.",

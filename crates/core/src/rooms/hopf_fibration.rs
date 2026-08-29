@@ -141,6 +141,15 @@ impl Room for HopfFibration {
          circle. Any two distinct fibers are linked exactly once; stereographic \
          projection turns them into nested Villarceau circles in space."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "The Bloch Sphere is this picture wearing a physicist's hat. The \
+             pure states of one qubit are the base 2-sphere, and the phase no \
+             measurement can see is the circle standing over each point, so the \
+             fibers you are flying here are the phase you were told to ignore.",
+        ]
+    }
 }
 
 #[cfg(test)]
