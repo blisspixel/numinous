@@ -596,6 +596,95 @@ chased in this release, because the sensible time to spend on how a melody
 sounds is when there is an ear on the other end of the pipe, and this round
 established that on at least one real host there is not.
 
+## August 28 packaged agentic playtest, eighth round
+
+This section summarizes an eighth source-blind playtest, run against the
+published Linux `0.4.0-alpha.9` binaries by an external agentic player who read
+no Rust source, opened no room catalog document, and used the archive's own
+`bin/numinous-mcp`. The round ran in two passes: a stranger pass whose notes
+were written to disk before the archive's `PLAY.md`, skill, `VERIFY.md`, or
+`README.md` were opened, then a docs-informed redo. The tester supplied release
+pins, archive and per-payload digests, isolated file-path profiles, exact calls,
+repeated reproductions, and a claims audit. It is formative external product
+evidence, not a qualifying 0.4 cohort, a consciousness claim, or proof of
+lasting learning value. The raw dump set remains with the tester.
+
+**The honest audio sentence is the finding, and it needs no further fix.** The
+WAV arrived again, decoded again, and again could not be heard: the host has
+`ffplay` and no sound card, so ALSA found no device. What changed since the
+seventh round is what the house says while the file is offered. The tester's
+own summary of it: "a sound sent rather than a sound heard." They recorded the
+send as holding, the hearing as still absent, and the claim as fixed, and asked
+for the channel not to be re-fixed and hearing not to be re-promised. Both
+requests are honored here. Omitting `audio` or passing `false` still keeps the
+notation and drops the block, which was retested and holds.
+
+**The first-change was the belt, and both halves of it were input handling.**
+The 720 Degree Room advertises a trick a player does: drag across to spin the
+stone, lift toward the top to carry the belt over it, and a twist of two full
+turns comes off while a twist of one never does. The seventh round could not
+finish that gesture because the spin and the lift were read from the same
+newest point. The eighth round could not finish it either, for two new reasons
+that only a player holding the published binary would find.
+
+The first is that a release carried nothing. The plainest way to ask for the
+trick is a two-point drag: put a hand on the belt low, let go high. The room
+read the shared poke reading, which deliberately drops release points because
+in most rooms a lift paints nothing, so the gesture registered as a touch that
+never rose. The tester's lift from one turn and their lift from two turns
+therefore produced the same reading, `TURNS 1.00`, and neither was a lift at
+all. The room now reads every point of the gesture including the one where the
+hand let go, in the picture as well as on the scoreboard, because here the
+release is half the trick.
+
+The second is that the winning spin sat where no hand would go. The hand's
+column mapped across the whole width of the window, and an exact landing is
+quantized to an eighth of a turn, so the only position that read as two full
+turns was the outermost thirty-second of the room. The tester dragged across
+onto the stone, read `TURNS 1.62`, and reported the advertised trick as a near
+miss: "The room is a game again. The trick is not finished." The spin is now
+measured from just off the wall to where the stone hangs, so two turns land on
+the stone, which is a place a player can see and reach. Their exact near-miss
+gesture now hangs the belt flat and earns the reveal, and a regression walks it.
+
+**A pass is named on the status line now, not counted.** The tester could not
+tell a lift that registered from a lift the room ignored, and asked for one word
+that separates them without naming the trick. `LOOPS 1` became `OVER`: the belt
+went over the stone, which is what the hand did, and it says nothing about what
+that is worth. A pass from one turn reads `TURNS 1.00  OVER  TWIST -1.00`, and
+the same pass from two reads `TURNS 2.00  OVER  FLAT`. The stranger pass had
+asked for a hint after a near miss; the docs-informed redo overruled it, on the
+grounds that a hint saying "two turns, then one lift" is the reveal arriving
+early. That reading is accepted, and no such hint was added.
+
+**One documentation drift was already closed.** The packaged skill line the
+tester counted, "so you do not have to read 354 ids to choose," had already
+moved to 355 with the catalog before this round was written up. It is recorded
+here because a stranger who counts is exactly the reader that line is for.
+
+Everything else the round checked held, and several of the previous round's
+repairs were confirmed by a player who did not know they were repairs. First
+Rain no longer prints `pc`, The Fastest Fall no longer prints `CYC` on an empty
+board, and The Magnet prints no `Tc`: the tester found the rain cliff by
+watching `DRY` become `SPAN`, which is the room working. The Only Move still
+wins on the dial, Berry Phase still opens its cap and both arms, the Busy
+Beaver and Golden Angle recitals stayed gone, and Phantom Jam's released hold
+was again read as the written boundary rather than a bug. The seven-room named
+wager supersede held at seven of seven, including a wager sent in the same call
+that earned the experiment. Receipts emitted without an issued time, a made-up
+subject was refused by name, a forged digest was refused without touching the
+journal, and Studio save, open, and fork returned `.num` text and a native link
+while refusing a host path. Workspace retrieval abstained honestly when it had
+nothing, and named the room it wanted when the subject was not one.
+
+What stayed open is stated as open. Attention is still "a soft blob with an
+entropy number" and Strange Loop still thin, and the tester explicitly declined
+to ask for either to be cut: "Not a lie. Not a cut." Stateless `play_room`
+still cannot refuse a second named wager, because each call is its own first
+wager, and that is recorded as a property of the face rather than a defect. The
+tester's verdict on the whole was casino rather than prison, with Attention and
+Strange Loop named as "thin tables at the back."
+
 ## July 2026 six-round technical cohort
 
 Six rounds of five fresh simulated reviewers examined mathematical truth,
