@@ -133,6 +133,15 @@ impl Board {
         self.first.count_ones() + self.second.count_ones()
     }
 
+    /// How many cells each side holds, the mover first.
+    ///
+    /// The player always moves first here, so this reads as "yours, mine" on
+    /// the status line of a game that is still being played.
+    #[must_use]
+    pub fn counts(self) -> (u32, u32) {
+        (self.first.count_ones(), self.second.count_ones())
+    }
+
     /// Whether a cell is free.
     #[must_use]
     pub fn is_free(self, cell: usize) -> bool {
@@ -680,10 +689,27 @@ impl OnlyMove {
             };
             return format!("{opening}RULES {rules}  {lines} LINES  CLICK A CELL");
         }
-        let mut readout = format!(
-            "RULES {rules}  PLAYED {}  WON {}  TIED {}",
-            visit.finished, visit.won, visit.tied
-        );
+        // A game still in play is reported as the board, not as a row of
+        // zeros. A packaged playtest clicked twenty five times, was told
+        // PLAYED 0 WON 0 TIED 0 every time, and concluded that a click does
+        // not take a cell. The click had taken a cell and the machine had
+        // answered it; only the scoreboard was counting finished games while
+        // the doorway promised to take one. A room whose verb is TAKE A CELL
+        // owes a player the cells.
+        let live = visit.board.played() > 0 && !visit.board.is_over(rules);
+        let mut readout = if live {
+            let (yours, mine) = visit.board.counts();
+            let open = CELLS as u32 - yours - mine;
+            format!("RULES {rules}  YOURS {yours}  MINE {mine}  OPEN {open}")
+        } else {
+            format!(
+                "RULES {rules}  PLAYED {}  WON {}  TIED {}",
+                visit.finished, visit.won, visit.tied
+            )
+        };
+        if live && visit.finished > 0 {
+            readout.push_str(&format!("  PLAYED {}", visit.finished));
+        }
         if visit.wasted > 0 {
             readout.push_str(&format!("  WASTED {}", visit.wasted));
         }
@@ -880,6 +906,50 @@ mod tests {
             board = board.play(moves[0]).expect("a best move is legal");
         }
         assert!(!board.has_line(Side::First, ALL_RULES));
+    }
+
+    #[test]
+    fn one_click_says_it_took_a_cell() {
+        // A packaged playtest clicked twenty five times at twenty five points
+        // and read PLAYED 0 WON 0 TIED 0 every time, then reported that a
+        // click does not take a cell. Every one of those clicks had taken a
+        // cell and drawn an answer; the scoreboard was counting finished games
+        // while the doorway promised to take one. A game in play now reports
+        // the board, so the consequence of a touch is on the line that
+        // reported nothing.
+        use crate::room::Room;
+        let room = OnlyMove::new();
+        let clicked = room
+            .status_input(0.4, &crate::room::inputs_from_pokes(&[(0.5, 0.5)], 0.4))
+            .unwrap();
+        assert!(
+            clicked.contains("YOURS 1") && clicked.contains("MINE 1"),
+            "a click that took a cell must say so, got {clicked}"
+        );
+        assert!(
+            !clicked.contains("PLAYED 0"),
+            "an unfinished game is not a row of zeros, got {clicked}"
+        );
+        assert!(clicked.chars().count() <= 56);
+
+        // A finished game still reports the record, which is the player's
+        // evidence and the thing the goal is graded on.
+        let rules = room.rules_at(0.4);
+        let sweep: Vec<(f64, f64)> = (0..9)
+            .map(|cell| {
+                (
+                    (cell % 3) as f64 / 3.0 + 0.17,
+                    (cell / 3) as f64 / 3.0 + 0.17,
+                )
+            })
+            .collect();
+        let visit = replay(&sweep, rules);
+        assert!(visit.finished > 0, "nine touches finish a game");
+        let after = room
+            .status_input(0.4, &crate::room::inputs_from_pokes(&sweep, 0.4))
+            .unwrap();
+        assert!(after.contains("PLAYED"), "a finished game keeps its record");
+        assert!(after.chars().count() <= 56);
     }
 
     #[test]

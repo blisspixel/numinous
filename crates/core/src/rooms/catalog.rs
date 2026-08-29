@@ -273,8 +273,8 @@ macro_rules! catalog_rooms {
                 title: "The 720 Degree Room",
                 wing: "Shape & Space",
                 blurb: "A stone on a belt, turned all the way around, comes back facing the same way \
-                        with the belt still twisted. Dirac's belt trick: keep turning and count what \
-                        it takes to undo. t spins; DRAG rotates the stone.",
+                        with the belt still twisted. Some twists come off the belt without ever \
+                        turning the stone back. t spins; DRAG rotates the stone.",
                 accent: [160, 120, 220],
             }
         ),
@@ -4087,7 +4087,7 @@ macro_rules! metadata_array {
 /// wins", which is the same leak the doorway guard was written for, wearing an
 /// abbreviation.
 #[cfg(test)]
-pub(crate) const ROOM_OWN_ANSWER: [(&str, &str); 14] = [
+pub(crate) const ROOM_OWN_ANSWER: [(&str, &str); 16] = [
     ("buffon-needle", "pi"),
     ("parrondo", "abb"),
     ("times-tables", "mandelbrot"),
@@ -4100,6 +4100,11 @@ pub(crate) const ROOM_OWN_ANSWER: [(&str, &str); 14] = [
     ("soap-film", "steiner"),
     ("audioactive", "atoms"),
     ("degree-720", "quaternion"),
+    // The name of the trick is one search away from the answer, and a doorway
+    // saying "count what it takes to undo" is the hint two rounds refused to
+    // add to the status. The reveal still names Dirac, once it is earned.
+    ("degree-720", "dirac"),
+    ("degree-720", "double cover"),
     ("busy-beaver", "bb"),
     ("landauer", "kt"),
 ];
@@ -4212,7 +4217,7 @@ pub(crate) fn construct_hidden_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::*;
 
-    const ALPHA5_ORDERED_METADATA_CHECKSUM: u64 = 0xb517_f5ce_a445_6924;
+    const ALPHA5_ORDERED_METADATA_CHECKSUM: u64 = 0x692b_e58d_54d5_ac81;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {
