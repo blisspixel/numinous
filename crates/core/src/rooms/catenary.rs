@@ -158,6 +158,15 @@ impl Room for Catenary {
          y = a cosh(x/a). It is not a parabola. Archimedes knew the problem; \
          Huygens named the curve; Bernoulli and Leibniz found the cosh form."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Spin this curve about the line it hangs above and the surface you \
+             sweep is a catenoid, which is what a soap film does between two \
+             rings. The chain is minimizing its potential energy and the film \
+             is minimizing its area, and the same cosh answers both.",
+        ]
+    }
 }
 
 #[cfg(test)]
