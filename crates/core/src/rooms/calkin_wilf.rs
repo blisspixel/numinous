@@ -178,6 +178,15 @@ impl Room for CalkinWilf {
          a/b, the left child is a/(a+b) and the right is (a+b)/b. Reading left \
          to right by levels gives a complete listing without reduction."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "The Stern-Brocot room lists the same rationals from the same \
+             mediant, and row by row the two trees hold the same fractions in \
+             a different order: reverse the bits of a position in one row and \
+             you land on its place in the other. Farey sorts that set by size.",
+        ]
+    }
 }
 
 #[cfg(test)]

@@ -163,6 +163,15 @@ impl Room for Catenoid {
          Mean curvature vanishes, so a soap film spanning two rings settles into \
          this shape when the rings are not too far apart."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "The curve being spun here is the catenary, y = a cosh(x/a), the \
+             shape a chain takes when it hangs. Least energy for the chain and \
+             least area for the film are different demands with the same \
+             answer, which is why a film between two rings looks like a chain.",
+        ]
+    }
 }
 
 #[cfg(test)]

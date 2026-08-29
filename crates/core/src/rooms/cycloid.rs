@@ -196,6 +196,15 @@ impl Room for Cycloid {
          It is the brachistochrone and the tautochrone: fastest descent and \
          equal-time oscillation share this same curve."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Take the centers of curvature of this curve, the construction the \
+             Evolute room draws, and a cycloid the same size comes back. \
+             Huygens hung a pendulum between cycloidal cheeks in 1673 for that \
+             reason, turning the tautochrone into a clock.",
+        ]
+    }
 }
 
 #[cfg(test)]

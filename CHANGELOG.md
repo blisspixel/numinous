@@ -5,6 +5,16 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Four of the verified connection edges are now deep cuts, so a room that
+  already earned its explanation can hand over the room it rhymes with. The
+  Hopf Fibration names the Bloch Sphere and the phase no measurement sees; the
+  Bloch Sphere names the fibration standing over every point of its surface;
+  the Catenary and the Catenoid name each other as least energy and least area
+  with the same cosh; the Evolute and the Cycloid share Huygens hanging a
+  pendulum between cycloidal cheeks in 1673; and Stern-Brocot, Farey, and
+  Calkin-Wilf name each other as three enumerations of the rationals running on
+  one mediant. Nine rooms gained or extended a cut and nothing moved into a
+  doorway or a status line.
 - The 720 Degree Room finishes the trick it advertises. An eighth packaged
   playtest asked for it the plainest way there is, a two-point drag from low on
   the belt to above the stone, and the room heard a touch that never rose: the
