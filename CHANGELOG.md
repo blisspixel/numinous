@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.10] - 2026-08-28
+
 - Four of the verified connection edges are now deep cuts, so a room that
   already earned its explanation can hand over the room it rhymes with. The
   Hopf Fibration names the Bloch Sphere and the phase no measurement sees; the
