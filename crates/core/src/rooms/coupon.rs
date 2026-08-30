@@ -157,6 +157,17 @@ impl Room for Coupon {
          draws is n H_n, about n log n. The last few types dominate the wait: \
          each new one takes longer as the unseen set shrinks."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "This room and the Birthday Paradox are the same balls dropped into \
+             the same bins, asked opposite questions. Birthday asks when the \
+             first bin gets a second ball, and the answer is about the square \
+             root of the number of bins, which is why it arrives absurdly \
+             early. This asks when the last empty bin is finally hit, and that \
+             takes n log n. Collisions come fast; completeness comes slowly.",
+        ]
+    }
 }
 
 #[cfg(test)]

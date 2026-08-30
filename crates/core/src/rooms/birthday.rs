@@ -150,6 +150,17 @@ impl Room for Birthday {
          Pairwise comparisons grow like n^2, so collisions appear long before the \
          number of days: the birthday paradox is quadratic counting in disguise."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "The Coupon Collector room drops the same balls into the same bins \
+             and asks the opposite question. Here it is when some bin first gets \
+             a second ball, which happens after about the square root of the \
+             number of bins. There it is when the last empty bin is finally \
+             hit, which takes n log n. The first coincidence is far earlier than \
+             anyone guesses and the last gap is far later, for the same reason.",
+        ]
+    }
 }
 
 #[cfg(test)]

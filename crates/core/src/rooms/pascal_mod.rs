@@ -171,6 +171,16 @@ impl Room for PascalMod {
          picture is Sierpinski's gasket; Kummer's theorem says the fractal counts \
          carries when adding in base m. Arithmetic is the geometry."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "The Galton Board is a row of this triangle, dropped. A ball taking \
+             left or right at each pin lands in bin k by exactly the number of \
+             paths that reach it, which is the binomial coefficient sitting \
+             here. So the bell of piled balls and the gasket of odd entries are \
+             the same numbers read two ways, once by size and once by parity.",
+        ]
+    }
 }
 
 #[cfg(test)]

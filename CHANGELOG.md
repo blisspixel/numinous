@@ -5,6 +5,22 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Five more connection edges land as deep cuts, bringing the placed count to
+  nine. The Logistic Map at its wildest, the Tent Map and the Doubling Map now
+  name each other as one system in three costumes, a smooth parabola and a sharp
+  corner and a shift of binary digits, so what looks like unpredictability is a
+  rule reading out digits nobody knew. The Fermat Spiral and the Golden Angle
+  name each other as the two halves a sunflower needs, one deciding how far out
+  each floret sits and the other where around, with either alone leaving gaps.
+  Pascal Mod names the Galton Board, because a ball landing in bin k does so by
+  exactly the number of paths that reach it, so the bell of piled balls and the
+  gasket of odd entries are one triangle read once by size and once by parity.
+  And the Birthday Paradox and the Coupon Collector name each other as the same
+  balls in the same bins asked opposite questions, the first collision arriving
+  at about the square root of the bins and the last empty bin taking n log n.
+  Seven rooms gained or extended a cut, and nothing moved into a doorway or a
+  status line.
+
 - `ROSETTA.md` states what all three tiers of visitor assume, which is a reader
   of symbol arrays that holds a number concept, can issue a call, persists across
   at least two calls, and builds a model from what comes back. The last two are
