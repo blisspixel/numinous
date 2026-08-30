@@ -316,7 +316,8 @@ We speak instead in the one language you already have. Read this by being a mind
      f3 : room       -> one true thing about it     [ reveal_room ]
 
    to learn this world, probe it and watch what it answers.
-   that is the whole instruction. it is the same for every mind.
+   that is the whole instruction. it is the same for every mind
+   that can take a turn.
 ```
 
 ---
