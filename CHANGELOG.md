@@ -5,6 +5,30 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- **The Straight Line** is a designed, unbuilt room in `ROOMS.md`, and the
+  research behind it contradicted the founder's framing before improving it.
+  Expectation violation is measurably not what distinguishes a joke: a punchline
+  and a matched non-humorous frame shift cost the same hundred milliseconds with
+  no interaction, a joke punchline cannot be told from plain nonsense in the
+  N400 window, and eye tracking finds no reliable slowdown, only more looking
+  back. What does show up is the resolution, late, and its size tracks rated
+  funniness while ignoring predictability. So the room is built on the result
+  rather than the intuition: the break is the bill and the second reading is the
+  joke, with Lagrange underneath, since any k points admit any next value and a
+  wrong answer was right for a rule nobody had reason to discard. The row's bars
+  double, 1, 2, 4, 8, 16, and the sixth comes up one cell short because six
+  points on a circle cut it into 31 regions. Eight exact stalls, none needing a
+  shared culture, closing on the sinc integrals that equal pi over two seven
+  times and then miss by two parts in a hundred billion. The room prints how
+  many candidate rules still fit from a stated printable family, and the
+  inequality that a term cannot cost more than the field it came from is comic
+  timing as a theorem rather than folklore. It would also give `humor.rs` its
+  first specimen needing no footnote, which is the bar that module set and whose
+  seven current specimens all miss.
+- **The Turn**, Simpson's paradox, is recorded as a checklist entry beside it:
+  pull two groups apart until every group climbs and the total falls, with the
+  sign crossing exact and unsampled. The catalog has no such room.
+
 ## [0.4.0-alpha.11] - 2026-08-29
 
 - `ROSETTA.md` gains the other direction: what this artifact would be worth to a

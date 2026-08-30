@@ -2494,6 +2494,21 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
   than the ending pile, because posting a pile posts luck. The effect at the
   crossing must be reachable with zero hands played, which is the test that
   keeps it from being a slot machine. Owner doc: `ROOMS.md`.
+- Build **The Straight Line** after the keep-or-cut wave: a row of plates whose
+  bars double, 1, 2, 4, 8, 16, and a sixth that comes up one cell short because
+  six points on a circle cut it into 31 regions and not 32. The research behind
+  it contradicted the founder's framing and improved the room: expectation
+  violation is measurably not what distinguishes a joke, since a punchline and a
+  matched non-humorous frame shift cost the same hundred milliseconds and a joke
+  is indistinguishable from plain nonsense in the N400 window. What shows up is
+  the resolution, late. So the break is the bill and the second reading is the
+  joke, with Lagrange underneath: any k points admit any next value, so a wrong
+  answer was right for a rule nobody had reason to discard. The room prints how
+  many candidate rules still fit, from a stated and printable family, and the
+  inequality that a term cannot cost more than the field it came from is comic
+  timing as a theorem. It also gives `humor.rs` its first specimen needing no
+  shared culture, which is the bar that module set and cannot currently reach.
+  Owner doc: `ROOMS.md`.
 - The **boss rooms** (*Sizes of Infinity*, *Hyperbolic Space*, Hopf Fibration,
   Sphere Eversion), the hardest-to-make-playable, highest-ceiling rooms, as they
   earn their quality bar.
