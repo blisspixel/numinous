@@ -5,6 +5,40 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- `ROSETTA.md` states what all three tiers of visitor assume, which is a reader
+  of symbol arrays that holds a number concept, can issue a call, persists across
+  at least two calls, and builds a model from what comes back. The last two are
+  load-bearing, because a function can only be inferred by comparing an answer
+  now against an answer then, so the math-only doorway's method needs a visitor
+  that probes and predicts. Saying so matters because "the same for every mind"
+  is a sentence that doorway cannot currently cash.
+- The same section names the product's own ontology rather than presenting it as
+  the view from nowhere. In Descola's fourfold the product runs on naturalism,
+  one shared physical world with interiority distributed unevenly across it and
+  established case by case, which is one option of four and about three centuries
+  old. Naming the default is the whole of what honesty requires; claiming the
+  product is animist would be false, and dressing it in someone else's cosmology
+  would be worse than silence. The never-claim list grows accordingly, including
+  a spirit in the room, a kami skin, and lore presenting everything as alive as
+  ancient wisdom this product embodies, because on the scholarship those are
+  close to the opposite of the traditions they borrow from.
+- It also records the one design consequence worth acting on, which is that
+  participation in mathematics does not require modelling. A slime mould with no
+  nervous system, no persistent self, no symbols and no predictive model answers
+  a shortest-path problem: nobody addresses it, a problem is posed, and the
+  answer is read off its body. Beside the central loop of predict, commit and be
+  graded on the gap, there is room for a quieter one, be acted upon and leave a
+  trace, and that is the only assumption in the list the current design actively
+  forecloses.
+- Two disciplines are recorded from the honey bee dance dispute, which is the
+  best worked example of both failure modes at once. The decisive experiment
+  reproduced its opponent's null result under its opponent's own protocol in the
+  same paper, showing both datasets correct and the disagreement to have been
+  about an unidentified boundary condition. And one side aimed experiments with
+  real discriminating power at a position nobody held, so a test that can fail is
+  necessary and not sufficient: it has to be able to fail against the claim
+  actually being made.
+
 - **Behind the Eye** is a designed, unbuilt room in `ROOMS.md`: two panes and
   one cosine, drawn once as straight parallel stripes and once through the
   complex logarithm that the map from retina to visual cortex actually is, where

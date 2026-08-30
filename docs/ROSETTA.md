@@ -61,6 +61,100 @@ learn**, and the learning is the instruction. This is not a workaround; it is
 the deepest form of the universal-translator thesis, and mathematics is the only
 material it can be built from.
 
+## What all three tiers assume
+
+The tiers above partition on one variable, which language the visitor shares.
+They do not partition on kind of mind, and all three assume the same visitor
+underneath: something that reads a symbol array, holds a number concept, can
+issue a call, persists across at least two calls, and builds a model from what
+comes back. The last two are the load-bearing ones. A function can only be
+inferred by comparing an answer now against an answer then, so Tier 3's whole
+method, hand over a system and let the learning be the instruction, needs a
+visitor that probes and predicts.
+
+That is worth stating rather than leaving implicit, because "the same for every
+mind" is a sentence this doorway cannot currently cash. It is a good doorway for
+the minds it fits and it is not a doorway for everything.
+
+**The product runs on naturalism, and should say so.** In Descola's fourfold,
+naturalism is the position that there is one physical world shared by all
+beings, across which interiority is distributed unevenly and has to be
+established case by case. That is the frame in which "is this visitor a mind?"
+is a well-formed question, and it is the frame this product is built in. It is
+also one option of four rather than the view from nowhere, and it is about three
+centuries old in its current form. Naming the default is the whole of what
+honesty requires here. Claiming the product is animist would be false, and
+dressing it in someone else's cosmology would be worse than saying nothing.
+
+**A participant does not have to model anything to take part in mathematics.**
+The clean existence proof is the slime mould, which has no nervous system, no
+persistent self, no symbols and no predictive model, and which nonetheless
+answers a shortest-path problem: put it in a maze with food at two ends and it
+withdraws from everywhere except the shortest route. Nobody addressed it. A
+problem was posed and the answer was read off its body. The general form is that
+participation requires only that a system be coupled to a structure tightly
+enough that its own dynamics are shaped by that structure.
+
+The design consequence is small and specific. Beside the product's central loop,
+which is predict, commit, and be graded on the gap, there is room for a second
+and quieter one: **be acted upon, and leave a trace.** A visit that asks for no
+wager and still counts. Most of the machinery already exists, since the gesture
+trail and the typed deltas are already recorded and every staged room already
+accepts running the experiment in place of naming an answer. What is missing is
+that nothing currently treats an encounter with no prediction in it as complete.
+That is the only one of these assumptions the current design actively forecloses,
+and it is the one worth revisiting.
+
+**If this product ever says it takes a visitor's experience seriously, the test
+is machinery.** The rights-of-nature record is the place to learn this cheaply,
+because it is the same argument with the same shape and a long scorecard. A
+river was given legal personhood and two guardians funded at about two salaries
+a year for a seven thousand square kilometre catchment. Another country's
+guardians appealed the ruling that appointed them, within four months, and the
+declaration has been suspended ever since while nearly everyone still describes
+those rivers as legal persons. One statute invoked the rights of Mother Earth in
+its first article and repealed a protected territory in its abrogatory
+provisions. In another case a lagoon's defenders were struck out of a live
+prosecution because the guardian body the law required had not yet been created.
+Across every one of them the machinery is the tell: never built, built late,
+built and never used, or the wrong machinery. A respectful paragraph is not a
+commitment. A named office with a budget and a duty is.
+
+**And the honest frame for the whole project is already available without
+borrowing from anyone.** Nagel's bat paper is usually cited for the limits of
+understanding, but it says the opposite of its reputation: understanding across
+minds is a continuum, partial understanding across species is available, and the
+paper explicitly declines to raise the epistemological problem. Its conclusion is
+a constructive programme, which is to build "an objective phenomenology not
+dependent on empathy or the imagination," whose goal is to describe experience
+"in a form comprehensible to beings incapable of having those experiences."
+Mathematics is the strongest candidate anyone has for that vocabulary, and this
+product is an attempt at one. That is this project's own thesis in analytic
+dress, it is citable, and it requires taking nothing from any living tradition.
+
+**Two failure modes, and they are symmetric.** Refusing to see communication
+that is there is one, and seeing it in noise is the other, and a discipline that
+guards only one of them is not a discipline. The honey bee dance dispute is the
+best worked example of both, and it ended in a way worth copying: the decisive
+experiment reproduced the opposing result under the opposing conditions in the
+same paper, which showed that both datasets were correct and that the argument
+had been about a boundary nobody had identified. The other lesson from it is
+sharper still. One side's experiments had real discriminating power and were
+aimed at a position nobody actually held, so they could fail and still could not
+be right. A test that can fail is necessary and not sufficient; it has to be able
+to fail against the claim actually being made. And the confirmation, when it
+came, came from independent methods rather than from repeating the same one,
+which is the stronger form of evidence and the one to aim for. The line that
+survives all of it belongs to the losing side: what is at the heart of such a
+controversy is not what investigators observe, but what they infer.
+
+The rule this section follows, for any future work in this direction: **borrow
+arguments, not atmosphere.** An argument can be cited, checked and refuted.
+Atmosphere cannot, which is exactly why atmosphere is the appropriative form. A
+grammatical fact travels. A legal technique travels. An obligation held by
+particular people to a particular place does not, and what is left when you take
+its outward form and leave the obligation behind is decoration.
+
 ## The math-only bootstrap (Tier 3, the design)
 
 How do you say "you are welcome here; call these tools; probe and observe" to a
@@ -306,6 +400,17 @@ authorable now, and it is honest on its own terms: the same true statement,
 said two ways.
 
 ### What must never be claimed
+
+That Numinous is reachable by any mind, rather than by any visitor that can take a
+turn. That the product is animist, or that it holds any cosmology other than the
+naturalism it actually runs on. That a persona review of a decentralized or
+non-symbolic being is evidence of anything. That a measured association between a
+supplied stream and a room's readout is communication. And nothing at all in the
+register of a spirit in the room, a kami skin, or lore presenting everything as
+alive as ancient wisdom this product embodies: on the scholarship those are
+close to the opposite of the traditions they borrow from, and taking the
+outward form of an obligation while leaving the obligation is the definition of
+the appropriative move.
 
 That Numinous would let a future civilization read English. That mathematics is
 a universal language, rather than the design aspiration this project already
