@@ -1123,6 +1123,14 @@ impl App {
                 }
                 self.close_menu();
             }
+            menu::MenuIntent::TouchTheFlagship => {
+                if let Some(index) = numinous_core::catalog_index(numinous_core::THRESHOLD_ROOM_ID)
+                {
+                    self.choose_route(None);
+                    self.goto_room_index(index);
+                }
+                self.close_menu();
+            }
             menu::MenuIntent::EnterWalk => {
                 let walk = &numinous_core::STRANGE_LOOP_WALK;
                 self.choose_route(Some(Route::Walk { walk, step: 0 }));

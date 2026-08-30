@@ -5,6 +5,13 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The App's threshold is complete: the same three doors the protocol face has
+  offered since the threshold landed, in the same order. One astonishing room,
+  the authored walk, then a wander by wing, under a route now titled where to
+  start rather than wings. The flagship the first door opens is core's choice
+  rather than each face's, so the two cannot drift onto different rooms, while
+  each face still words its own invitation, because a protocol sentence and a
+  menu label are not the same writing.
 - The App's door onto the catalog gains the authored walk, so two of the
   protocol threshold's three doors now exist on both faces. The walk leads the
   list, because an ordered route that asks a question on the way into each room
