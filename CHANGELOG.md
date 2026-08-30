@@ -13,6 +13,15 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   Choosing a wing lands on its first room, keeps the arrows inside it, and says
   how many rooms it holds, which is the first place the App states that number
   out loud.
+- Exposing the wings surfaced a taxonomy question the roadmap now carries. The
+  fifteen wings are lopsided, with 94 rooms in one and a single room in each of
+  two others, and two pairs read as accidents from outside. `Chaos & Order` and
+  `Open Problems` are deliberate and are named as such in the roadmap and in
+  `PANEL.md`. `Fractals & the Infinite`, which holds the Mandelbrot, the Julia
+  set and the Barnsley fern, and `Chance & Noise` appear in no document at all,
+  and each sits beside a larger wing of nearly the same name. Nothing was
+  refiled, because which wing the Mandelbrot belongs to is a decision about the
+  catalog rather than a defect to quietly correct.
 - The wing reading moved into core, where both faces share it. The catalog is
   ordered for arrival rather than by wing, so a wing's rooms are scattered
   through it and stepping by one leaves a wing immediately; core now answers
