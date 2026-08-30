@@ -163,6 +163,16 @@ impl Room for DoublingMap {
          next binary digit of the starting angle. It is expanding, ergodic, and \
          conjugate to the full shift on two symbols."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "The Tent Map and the Logistic Map at its wildest are this map in \
+             other clothes. A change of variable carries each onto the others, \
+             so a smooth parabola, a folded line and a shift of binary digits \
+             are one system written three ways. Chaos here is not intricacy: it \
+             is reading out digits that were always in the starting number.",
+        ]
+    }
 }
 
 #[cfg(test)]
