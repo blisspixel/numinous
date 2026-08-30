@@ -37,7 +37,7 @@ weekly (`.github/dependabot.yml`) without migration-era ignore rules.
 
 **CI action pins (current):** `actions/checkout` v7.0.1,
 `actions/upload-artifact` v7.0.1, `actions/download-artifact` v8.0.1,
-`actions/attest` v4.2.2, `taiki-e/install-action` v2.86.7,
+`actions/attest` v4.2.2, `taiki-e/install-action` v2.87.0,
 `actions/dependency-review-action` v5.0.0, `github/codeql-action` v4.37.9,
 `EmbarkStudios/cargo-deny-action` v2.1.1, and `dtolnay/rust-toolchain` pinned
 to the 1.97.1 and 1.88.0 channel commits named in the workflows.
