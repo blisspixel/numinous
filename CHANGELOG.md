@@ -5,6 +5,41 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The last two of the ten verified connection edges are placed, closing the set.
+  The AGM and the Lemniscate name each other through Gauss's diary entry of the
+  thirtieth of May 1799, when he found the arithmetic-geometric mean of one and
+  the square root of two matched that curve's arc length to eleven decimals and
+  wrote that it would open a wholly new field of analysis. Basel and the Zeta
+  Walk name each other as one function asked an easy question and a hard one:
+  fed the number two it returns pi squared over six, and along a certain vertical
+  line its zeros are the unsolved problem.
+- `PEDAGOGY.md` drops both awe proxies it recommended, because neither measures
+  what it was said to measure. Self-reported chills were called a validated awe
+  marker; in a preregistered study of 210 people, objective piloerection occurred
+  in three to fifteen percent of viewings against about sixty percent reporting
+  goosebumps, and it correlated with awe below r = .06. The small-self measure is
+  partly circular, since half its ten-item form is an explicit perceived-vastness
+  subscale, so an induction defined by vastness is shown to work through a
+  mediator half made of vastness ratings; it carries about eighteen percent of
+  the path in the largest meta-analysis and has never been directly replicated.
+  The AWE-S stays, as the twelve-item short form reported by subscale and never
+  as a total, because its factors dissociate in opposite directions and a sum
+  cancels its own signal.
+- The same section states what may be claimed, which is stronger than what it was
+  reaching for. Awe inductions reliably work, and every failed replication in
+  that literature confirms the induction succeeded and only the downstream
+  outcome failed. This product is in the production business and not the lever
+  business: it does not need awe to make anyone kinder or more patient, it needs
+  awe to happen, and the fragile half of the literature is the half it does not
+  need. So it claims production on a named build and sample, never consequences,
+  and never that it induces the numinous, the mystical, an altered state, or
+  anything therapeutic. The definition is cited as a definition the field
+  adopted, because the paper that gave it says in its own closing pages that it
+  was developed in the absence of empirical evidence.
+- The vastness principle gains the failure mode it is most likely to hit: a room
+  that breaks an expectation without also carrying vastness has produced
+  surprise, which the same source is explicit is not awe. Both halves or neither.
+
 - The App's controls screen names the only way to reach a room that is not
   next to this one. Stepping is one room per press through a catalog of 355
   with wraparound, and the console is the sole jump, so a player who never

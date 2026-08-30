@@ -181,6 +181,17 @@ impl Room for Lemniscate {
          two foci equal to the square of half the interfocal distance. In polar \
          form r^2 = 2 a^2 cos(2 theta): the algebraic infinity sign."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Measuring around this curve is what the AGM room is secretly for. \
+             In 1799 Gauss noticed that the arithmetic-geometric mean of 1 and \
+             the square root of 2 matched this lemniscate's arc length to eleven \
+             decimals, wrote in his diary that it would open a new field of \
+             analysis, and was right. A ratio of averages and the length of a \
+             ribbon turned out to be the same number.",
+        ]
+    }
 }
 
 #[cfg(test)]

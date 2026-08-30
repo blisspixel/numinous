@@ -252,6 +252,12 @@ impl Room for ZetaWalk {
          heights where zeta is zero that spiral folds home. You are walking the \
          critical line by hand, hunting zeros as cadences."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "The same function, asked an easy question, is the Basel room. Feed              it the number two instead of a height on the critical line and the              sum of one over every square comes back as pi squared over six,              which Euler found in 1735. One function answers a schoolroom              question at one point and holds an unsolved problem along a line.",
+        ]
+    }
 }
 
 #[cfg(test)]

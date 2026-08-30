@@ -197,7 +197,11 @@ reference.
    exceeds your frameworks and demands accommodation (Keltner and Haidt, 2003). A
    live zoom-depth counter falling forever, "you are hearing digit 47 of 100
    trillion," makes the vastness legible alongside the rule's simplicity. The gap
-   between tiny rule and vast result is the awe; show both ends at once.
+   between tiny rule and vast result is the awe; show both ends at once. This is
+   the load-bearing beat, and it is the one a room is most likely to skip: a
+   room that breaks an expectation without also carrying vastness has produced
+   surprise, which the same source is explicit is not awe. Both halves or
+   neither.
 5. **The anomaly beat.** Name the expectation, break it, then resolve (Berlyne's
    collative variables). "Buffon's Needle produces pi with no circle anywhere" is
    an anomaly staged before its resolution.
@@ -229,12 +233,56 @@ reference.
 no measure of genuine understanding, and its awe measure is the hallway "whoa"
 count. Two additions, both bolting onto existing loops.
 
-**Awe (extend the playtest loop).** Add one validated instrument alongside
-GEQ/FSS-2: the Awe Experience Scale (AWE-S, Yaden et al., 2019), short form,
-capturing the two load-bearing dimensions, vastness and need for accommodation.
-Add two cheap behavioral proxies: self-reported chills (a validated awe marker)
-and the small-self measure (Piff et al., 2015). Awe becomes a tracked number with
-construct validity, not only a "whoa" tally.
+**Awe (extend the playtest loop).** Add one instrument alongside GEQ/FSS-2: the
+Awe Experience Scale (AWE-S, Yaden et al., 2019), the twelve-item short form,
+reported by subscale and **never as a total**. Its factors dissociate in
+opposite directions, with vastness and connectedness running one way and
+accommodation and self-diminishment the other, so a sum cancels its own signal.
+Two further cautions belong with it: six factors emerged only after item
+reduction, against parallel analysis saying nine and MAP saying seven, and
+measurement invariance has never been tested in any language, so cross-cultural
+mean comparisons rest on an untested assumption.
+
+**Both proxies this section used to recommend have to go, and the reason is the
+same in each case: they do not measure what they were said to measure.**
+Self-reported chills were called a validated awe marker here. In a preregistered
+study of 210 people, objective piloerection occurred in three to fifteen percent
+of viewings while about sixty percent reported goosebumps, and piloerection
+correlated with awe below r = .06. It measures the report, not the state. The
+small-self measure has a worse problem, which is partial circularity: half its
+final ten-item form is an explicit perceived-vastness subscale, so an induction
+defined by vastness is being shown to work through a mediator half made of
+vastness ratings. It carries about eighteen percent of the awe-prosociality path
+in the largest meta-analysis, it has never been directly replicated, and the best
+current test found awe did not significantly move self-size at all.
+
+**What this project may claim, and it is stronger than what it was reaching
+for.** Awe inductions reliably work, at effect sizes from d = 0.91 upward across
+labs, and every failed replication in this literature confirms the induction
+succeeded and only the downstream outcome failed. **Numinous is in the
+production business, not the lever business.** It does not need awe to make
+anyone kinder, more patient, or more interested in mathematics. It needs awe to
+happen. The fragile half of this literature is the half the product does not
+need, and the robust half is the half it does.
+
+So: claim production, on a named build and sample, measured by AWE-S subscales.
+Never claim consequences. Never say the product induces the numinous, the
+mystical, the transcendent, an altered state, ego dissolution, oneness, or
+anything therapeutic, and never compare the experience here to psychedelic,
+meditative, or religious experience, in any register, including a commit
+message. The definition itself, vastness plus need for accommodation, is cited
+as a definition the field adopted and not as evidence, because the paper that
+gave it says in its own closing pages that it was developed in the absence of
+empirical evidence and contains no participants and no statistics.
+
+Two things worth knowing while designing for it. Satisfied accommodation is not
+a failure: that same paper names it the enlightening variety of awe, as against
+the terrifying variety where accommodation fails, so a room that violates a
+committed prediction and then resolves it legibly is aimed correctly. The real
+risk is the other half of the definition, because surprise without vastness is
+not awe on their account, it is just surprise. And nobody has ever induced awe
+with mathematical content and measured anything, in any study, which makes this
+an experiment the product is unusually well placed to run first and properly.
 
 **Understanding without tests (the gap).** Three layers, none school-like:
 

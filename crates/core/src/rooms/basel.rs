@@ -157,6 +157,7 @@ impl Room for Basel {
             "The sum of 1/n^2 is the zeta function at 2. The same function's \
              walk through the complex plane lives in the Zeta Walk room, and \
              its zeros carry the deepest open question in mathematics.",
+            "This sum is one value of a single function, and the Zeta Walk              room walks the same function somewhere far stranger. At the number              two it hands over pi squared over six. Along a certain vertical              line its zeros are the unsolved problem, and nobody knows why the              easy point and the hard line belong to one object.",
         ]
     }
 }
