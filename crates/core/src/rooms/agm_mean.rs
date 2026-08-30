@@ -159,6 +159,17 @@ impl Room for AgmMean {
          The common limit AGM(a,g) is related to the complete elliptic integral \
          of the first kind. Gauss used it to compute pi and elliptic arcs."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "On the thirtieth of May 1799 Gauss computed this limit for 1 and \
+             the square root of 2, compared it against the arc length of a \
+             lemniscate, and found the two agreed to eleven decimal places. He \
+             wrote in his diary that the result would surely open a wholly new \
+             field of analysis, and it did. The Lemniscate room draws the curve \
+             on the other side of that coincidence.",
+        ]
+    }
 }
 
 #[cfg(test)]
