@@ -5,6 +5,44 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- **Behind the Eye** is a designed, unbuilt room in `ROOMS.md`: two panes and
+  one cosine, drawn once as straight parallel stripes and once through the
+  complex logarithm that the map from retina to visual cortex actually is, where
+  the same stripes are rings, spirals and fans. The discovery is not that a dial
+  turns one into another. It is that the visual field's angle wraps at two pi
+  and a stripe pattern does not, so the picture closes only when the arms are a
+  whole number: the hand does not glide it, it clicks, and the small discrete
+  set of shapes people report under flicker, in migraine aura and under pressure
+  on a closed eye is a winding number. One status number is at once the spiral's
+  pitch and the tilt of the straight lines that made it, an identity the
+  Logarithmic Spiral room already computes without knowing what it is. The claim
+  is scoped in the design: build on the map, which a macaque autoradiograph, the
+  blind who still see the forms, and two shapes whose cortical images are
+  orthogonal all support, and keep the pattern-forming theory in the reveal as
+  motivation, because stripes and hexagons fall out of many mechanisms. Two
+  further disciplines are recorded because both are easy to get wrong: the room
+  must not say Kluver found four classes, since the 1928 monograph names a small
+  recurring set and declines the tidy separation later authors imposed, and the
+  catalog's existing hyperbolic rooms must not acquire any claim about the
+  geometry of altered perception.
+- The roadmap records the App's missing front door. The menu offers modes,
+  games, settings and controls, the arrow keys step one room at a time through
+  355 with wraparound, and the only jump is a console where a player types an id
+  they have no way to learn, so a player who does not read the docs meets a
+  couple of dozen rooms and never learns the rest are there. The MCP face solved
+  exactly this with the three-door threshold and the humans, including the
+  children this is also for, were left with an arrow key.
+- A decisions entry answers whether Numinous should call out to a computational
+  answer engine. The useful half is native, because the Studio speaks seven
+  functions and one variable and freestyle play is bounded by vocabulary long
+  before rendering. The external half should not be built: a network read is the
+  hidden state the math-only doorway's promise excludes, and it would cost
+  offline play, the exact replay a receipt is verified against, and the
+  guarantee that a turn taken a decade later meets the same room. An answer
+  engine is also propositional where this product is built so a truth is met
+  rather than told. And the composition already works one level up, since a mind
+  can hold both servers at once and compute in one while playing in the other.
+
 - The world's independence from any clock is now an invariant instead of a
   happy accident. A room's state is a function of its phase and its touches,
   phases carry no duration, and input history is bounded by count and never by
