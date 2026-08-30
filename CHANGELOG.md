@@ -5,6 +5,15 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.13] - 2026-08-30
+
+- The roadmap and README no longer carry two claims this work made false. The
+  arc's cheap half is done rather than open, so the row that said the App has no
+  way to see the catalog at all now records the three doors it has and names
+  what remains, which is the authored opening the lift changes. And the
+  enumerated connection edge set is closed at ten rather than nine, with further
+  edges needing to be found before they can be placed.
+
 - The App's threshold is complete: the same three doors the protocol face has
   offered since the threshold landed, in the same order. One astonishing room,
   the authored walk, then a wander by wing, under a route now titled where to

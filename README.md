@@ -95,7 +95,7 @@ with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 
 ## Status
 
-**0.4.0-alpha.12** is playable today: 355 catalog rooms, games, Journey,
+**0.4.0-alpha.13** is playable today: 355 catalog rooms, games, Journey,
 Studio, controllers, and Watch Agent (consented local MCP session viewing).
 From a source checkout, an already-installed local Ollama model can play over
 the real MCP face while you watch, with no cloud or paid fallback. See
@@ -196,7 +196,13 @@ and Linux pacing set before changing the shipped App, alongside remaining
 structural debt. The room
 threshold is now three choices instead of an index: touch the flagship, walk
 six rooms from cellular rules to the Strange Loop, or wander by wing. Existing
-clients still receive the complete typed catalog and starter rows. The 0.4
+clients still receive the complete typed catalog and starter rows. **The App
+now carries those same three doors**, so a player who used to step one room per
+press through the whole catalog can choose a route instead: the walk carries a
+question into each of its rooms, and a chosen wing keeps the arrows inside it
+and says how many rooms it holds. The wing list, the walk, and which room the
+flagship is all live in core, so the two faces cannot drift apart, while each
+still writes its own invitation. The 0.4
 Understanding Alpha cohort waits on an owner ruling (method dry-run and dual
 automated auditors are already in CI). The creator loop is built end to end:
 save, exact paused reopen, one-key named share trio, Gallery wall with the
