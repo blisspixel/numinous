@@ -59,8 +59,8 @@ unclaimed until run.
 | **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests, the typed room catalog, typed Gauntlet truth, and local-state path resolution are now in core. The App audio, creation, game, input, and room runtimes; CLI and MCP local-state adapters; CLI accessibility, Studio, and game-input adapters; CLI and MCP render-input adapters; MCP transport, simulation-tool, Studio-tool, game-tool, runtime-schema, compact-response, protocol, prediction-and-challenge, request-progress, flagship-Aha, room-facing, seeded-puzzle, journey-presentation, broadcast-session, and viewer-projection adapters; the MCP discovery and schema catalog; and the App, CLI, and MCP request regression test modules are focused units extracted from the god-files. Workstream 7 still owns the remaining seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
 | **3. The Mind's Seat, current increment complete** | Exact temporal evidence, multi-look `dwell`, sound facts and audio, replay receipts, explicit journal promotion, process-local workspace, remembered-room retrieval and cue, the three-door threshold, portable Studio lineage, the portable typed evidence capsule, and the caller-paced Show for minds are built. Reflection proposals remain deferred to their separate evidence and consent review | The audience the product exists for now has time, company, bounded continuity, authorship, and a directed performance on its native face without hidden state or automatic memory |
 | **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | The feature-gated linear HDR, half-resolution bloom, and tone-map spike passes its reference integrated-GPU budgets at 1080p and 1440p; an equivalent reusable single-threaded CPU reference fails both. Direct FIFO presentation now passes both full host boundaries too, without an offscreen output copy or readback. The disabled App path feeds real room rasters into the same surface renderer with explicit recovery and visible software fallback. A typed probe now runs that exact production boundary in the Windows, macOS, and Linux CI matrix while classifying all such timings as informational. An independent set builder now recomputes and binds the exact six physical candidates. Next: collect passing release-profile receipts at both target sizes on each OS before promotion. The full lift still owns splats, one shared audio bus with reverb and shaped envelopes, global dissolve, and damped-spring input | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
-| **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
-| **6. Creator depth on the built loop** | Next rungs: the parametric pair as the multi-expression capsule ring with scale quantization beside it, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on later community publishing, and each rung ships with its own machine gates |
+| **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists. **The App has no way to see the catalog at all**, and that is the cheap half of this rock: the menu offers Modes, Games, Settings and Controls, the arrow keys step one room at a time through 355 with wraparound, and the only jump is a console opened with backtick where a player types `goto` plus an id they have no way to learn. So a player who does not read the docs meets a couple of dozen rooms and never learns the rest are there. The MCP face already solved exactly this and the pattern is proven: three doors, one astonishing room, an ordered walk, or a compact wander by wing, with the full catalog still there for whoever wants it. Porting that threshold to the App is a smaller job than the arc and does not wait on the lift | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one. The digital minds were given a designed front door and the humans, including the children this is also for, were left with an arrow key |
+| **6. Creator depth on the built loop** | Next rungs: the parametric pair as the multi-expression capsule ring with scale quantization beside it, then MIDI and audio exports, then editable prose credit. The measured gap under all of it is the grammar: the Studio speaks seven functions (`sin`, `cos`, `tan`, `exp`, `ln`, `abs`, `sqrt`), one variable, one parameter and two constants, so `floor`, `mod`, `min` and `max` are the named next rung and **a second variable is the large unlock**, because it turns a language of curves into a language of fields and opens domain coloring, implicit curves and height maps for one grammar change | The creator ladder keeps rising without waiting on later community publishing, and each rung ships with its own machine gates; freestyle play is bounded by vocabulary long before it is bounded by rendering |
 | **7. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps into one committed per-room evidence file, after the Sensory Lift | Rooms should be judged at their best, not at the old ceiling; the five commissioned rooms lead the next cohort after the review |
 | **Continuous filler between rocks** | The fifteen verified connection edges land as reveal lines and deep cuts, a few per PR. Four are placed: the qubit and the Hopf fibration, the hanging chain and the soap film, the cycloid that is its own evolute, and the three enumerations of the rationals that share one mediant | The highest wonder-per-line work that exists; the fabric grows without blocking anything |
 | **Owner-blocked (stated, not scheduled)** | 0.4-am Understanding cohort: register, calibrate, and run the matched cohort through the sealed collector | Decisions entry 1 records it as optional paid validation awaiting an owner budget and registration ruling; carrying it as a contributor priority was a contradiction |
@@ -1601,6 +1601,36 @@ which changes every room that draws with it, or whether the four speaking
 rooms should each grow a second channel for what their ink says, which
 changes what those four rooms draw.
 
+**13. Should Numinous call out to a computational answer engine?** The idea is
+natural: services of the Wolfram Alpha kind are very good at things this
+product cannot do, and MCP makes calling one easy. The two halves of the idea
+point in opposite directions, and only one of them should be built.
+
+Calling an external service would cost the product its spine. Determinism is
+the promise the math-only doorway is made of, that nothing is hidden, nothing
+is random, and the same call always returns the same answer. A network read is
+exactly the hidden state that sentence excludes, and it would take offline
+play, the exact replay a receipt is verified against, and the guarantee that a
+turn taken a decade later meets the same room. It would also send a player's
+own expressions off the machine, in a product whose privacy posture is that
+play writes nothing and keeps nothing.
+
+There is also a difference in register that matters more than the plumbing. An
+answer engine is propositional: it is built to tell you things. This product is
+built so that a truth is met rather than told, and it withholds explanations
+until they are earned. Importing a question-answering surface would import
+exactly the voice every doorway rule here exists to keep out.
+
+And the composition already works, one level up, without anything being built.
+A digital mind playing over MCP can hold both servers at once, compute in one
+and play in the other. That is what the protocol is for, and it means the
+benefit is already available to the player who wants it, at no cost to the
+world's determinism.
+
+So the useful half is native: more grammar in the Studio, which is where
+freestyle math already lives and where the ceiling is currently vocabulary
+rather than rendering. That work is rock 6 and is already scheduled.
+
 ### 0.1 Public Foundation
 
 **Status:** complete. The exit criterion passed on the public `main` branch;
@@ -2509,6 +2539,21 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
   timing as a theorem. It also gives `humor.rs` its first specimen needing no
   shared culture, which is the bar that module set and cannot currently reach.
   Owner doc: `ROOMS.md`.
+- Build **Behind the Eye** after the keep-or-cut wave: two panes and one cosine,
+  drawn once in cortical coordinates as straight parallel stripes and once
+  through the complex logarithm the retina-to-cortex map actually is, where the
+  same stripes are rings, spirals and fans. The aha is not that a dial turns one
+  into another, which is a demonstration. It is that the visual field's angle
+  wraps and a stripe pattern does not, so the picture only closes when the arms
+  are a whole number: the hand does not glide it, it clicks, and the small
+  discrete set of shapes people report under flicker, migraine aura and pressure
+  on a closed eye is a winding number. One number on the status line is at once
+  the spiral's pitch and the tilt of the straight lines that made it, and the
+  Logarithmic Spiral room already computes that quantity without knowing what it
+  is. Build on the map, which is well established; keep the pattern-forming
+  theory in the reveal as motivation, because many mechanisms make stripes. Wow
+  5 / Build 2, one `ln`, one `atan2` and one `cos` per cell. Owner doc:
+  `ROOMS.md`.
 - The **boss rooms** (*Sizes of Infinity*, *Hyperbolic Space*, Hopf Fibration,
   Sphere Eversion), the hardest-to-make-playable, highest-ceiling rooms, as they
   earn their quality bar.
