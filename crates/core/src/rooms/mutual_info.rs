@@ -44,27 +44,23 @@ fn hash_u(i: u64, salt: u64) -> f64 {
     (x as f64) / (u64::MAX as f64)
 }
 
-/// Binary mutual information I(X;Y) for P(X=Y)=c biased fair margins.
-fn mutual_bits(c: f64) -> f64 {
-    // joint: p00=p11=c/2, p01=p10=(1-c)/2 when margins fair and P(equal)=c
-    let c = c.clamp(0.0, 1.0);
-    let p_eq = c * 0.5 + (1.0 - c) * 0.25; // not right - simpler model:
-    // Use: X bernoulli 1/2, Y = X with prob r else flip.
-    let r = c;
-    let p11 = 0.5 * r;
-    let p10 = 0.5 * (1.0 - r);
-    let p01 = 0.5 * (1.0 - r);
-    let p00 = 0.5 * r;
-    let _ = p_eq;
-    let hx = 1.0; // fair binary
+/// Binary mutual information I(X;Y) in bits, for a fair X copied with
+/// probability `r`.
+///
+/// The channel is the simplest one that has a dial: X is a fair coin, and Y
+/// equals X with probability `r` and flips otherwise. Both margins stay fair,
+/// so H(X) and H(Y) are each exactly one bit and I(X;Y) = 2 - H(X,Y). At r=1
+/// and r=0 the pair is one bit; at r=1/2 it is none, because a copy that is
+/// wrong half the time carries nothing.
+fn mutual_bits(r: f64) -> f64 {
+    let r = r.clamp(0.0, 1.0);
+    let joint = [0.5 * r, 0.5 * (1.0 - r), 0.5 * (1.0 - r), 0.5 * r];
     let mut hxy = 0.0;
-    for p in [p00, p01, p10, p11] {
+    for p in joint {
         if p > 1e-15 {
             hxy -= p * p.log2();
         }
     }
-    // H(Y)=1 also fair; I = H(X)+H(Y)-H(X,Y) = 2 - H(X,Y)
-    let _ = hx;
     (2.0 - hxy).clamp(0.0, 1.0)
 }
 
@@ -192,9 +188,33 @@ impl Room for MutualInfo {
 
 #[cfg(test)]
 mod tests {
-    use super::MutualInfo;
+    use super::{MutualInfo, mutual_bits};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn a_copy_that_is_wrong_half_the_time_carries_nothing() {
+        // The three points that fix the curve, and the one that is the room.
+        // A perfect copy and a perfect anti-copy each carry one whole bit,
+        // because knowing either end tells you the other exactly. Halfway
+        // between them the pair is independent and carries none, which is the
+        // fact the dial exists to walk a hand across.
+        assert!((mutual_bits(1.0) - 1.0).abs() < 1e-12);
+        assert!((mutual_bits(0.0) - 1.0).abs() < 1e-12);
+        assert!(mutual_bits(0.5).abs() < 1e-12);
+
+        // Symmetric about the independent point, and monotone away from it.
+        for step in 0..=10 {
+            let d = f64::from(step) / 20.0;
+            assert!((mutual_bits(0.5 + d) - mutual_bits(0.5 - d)).abs() < 1e-12);
+        }
+        let mut previous = 0.0;
+        for step in 0..=10 {
+            let bits = mutual_bits(0.5 + f64::from(step) / 20.0);
+            assert!(bits >= previous - 1e-12);
+            previous = bits;
+        }
+    }
 
     #[test]
     fn status_invites() {

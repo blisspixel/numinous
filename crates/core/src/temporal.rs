@@ -85,6 +85,76 @@ impl TemporalPair {
 mod tests {
     use super::{DwellWindow, MAX_DWELL_LOOKS, TemporalPair};
 
+    /// The mathematical core reads no wall clock, so a turn can be taken at any
+    /// interval at all.
+    ///
+    /// This has been true since the beginning and has never been an invariant,
+    /// which means it could regress in a single commit and nobody would notice
+    /// until a participant on a slow clock arrived and found the room had moved
+    /// under them. A room's state is a function of its phase and its touches;
+    /// phases are exact and carry no duration; input history is bounded by
+    /// count and never by age. Nothing here decays and nothing times out, so a
+    /// visit resumed after a second and a visit resumed after a decade meet the
+    /// same room.
+    ///
+    /// File locking is the one exception and it is not about play: stale-lock
+    /// recovery and lock-token uniqueness genuinely need the host clock, and
+    /// they touch no room, no phase, and no grade.
+    #[test]
+    fn the_core_of_the_world_does_not_read_a_clock() {
+        // Spelled in halves so this scan does not find its own needles and so
+        // the file that owns the rule is still covered by it.
+        let clocks = [
+            format!("{}{}", "System", "Time"),
+            format!("{}{}", "Instant", "::now"),
+            format!("{}{}", "UNIX_", "EPOCH"),
+        ];
+        /// Where a clock is allowed, and why.
+        const LOCKING: &str = "persistence.rs";
+
+        let core = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut found = Vec::new();
+        let mut walk = vec![core.clone()];
+        while let Some(directory) = walk.pop() {
+            let Ok(entries) = std::fs::read_dir(&directory) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    walk.push(path);
+                    continue;
+                }
+                if path.extension().is_none_or(|kind| kind != "rs") {
+                    continue;
+                }
+                let name = path.file_name().unwrap_or_default().to_string_lossy();
+                if name == LOCKING {
+                    continue;
+                }
+                let Ok(source) = std::fs::read_to_string(&path) else {
+                    continue;
+                };
+                for line in source.lines() {
+                    // The doc comment above says the word, so read code only.
+                    let code = line.trim_start();
+                    if code.starts_with("//") || code.starts_with("///") {
+                        continue;
+                    }
+                    if clocks.iter().any(|clock| code.contains(clock.as_str())) {
+                        found.push(format!("{}: {}", name, code.trim()));
+                    }
+                }
+            }
+        }
+        assert!(
+            found.is_empty(),
+            "the core reads a wall clock outside {LOCKING}, so a room can now \
+             move under a participant who answers slowly: {}",
+            found.join("; ")
+        );
+    }
+
     #[test]
     fn a_window_accepts_two_through_the_maximum_looks() {
         for looks in 2..=MAX_DWELL_LOOKS {
