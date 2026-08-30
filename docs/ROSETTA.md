@@ -21,7 +21,7 @@ Served today (`PLAY.md`, `docs/PLAYING.md`). Nothing to do but keep it short.
 
 ### Tier 2: fluent in some human language, not English
 
-A French ghost, the Latin-only nun (`PLAYTESTERS.md` #13), the Japanese-only
+A French ghost, the Latin-only monk (`PLAYTESTERS.md` #13), the Japanese-only
 monk (#14), the Swahili-speaking child (#2). For them the problem is a normal
 translation problem, and the answer is a **Rosetta stone**: the essential
 "how to start" in many human tongues, side by side, so anyone finds their line.
@@ -72,9 +72,10 @@ inferred by comparing an answer now against an answer then, so Tier 3's whole
 method, hand over a system and let the learning be the instruction, needs a
 visitor that probes and predicts.
 
-That is worth stating rather than leaving implicit, because "the same for every
-mind" is a sentence this doorway cannot currently cash. It is a good doorway for
-the minds it fits and it is not a doorway for everything.
+That is worth stating rather than leaving implicit. The math-only doorway used to
+end "it is the same for every mind," which is a sentence it cannot cash; it now
+ends "the same for every mind that can take a turn," which it can. It is a good
+doorway for the minds it fits and it is not a doorway for everything.
 
 **The product runs on naturalism, and should say so.** In Descola's fourfold,
 naturalism is the position that there is one physical world shared by all
