@@ -203,7 +203,7 @@ pub use room::{
     pokes_from_inputs, renderable_poke_count, room_action, room_touch_action,
 };
 pub use room_walk::{RoomWalk, RoomWalkStep, STRANGE_LOOP_WALK};
-pub use rooms::{ROOM_CATALOG, canonical_room_id, room_meta_by_id};
+pub use rooms::{ROOM_CATALOG, canonical_room_id, catalog_index, room_meta_by_id};
 pub use scores::Scoreboard;
 pub use secret::{akousma, behind_the_veil, deep_akousma};
 pub use session::{

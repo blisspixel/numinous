@@ -333,12 +333,12 @@ struct App {
     room_wager: Option<wager::RoomWager>,
     rooms: Vec<Box<dyn Room>>,
     current: usize,
-    /// The wing the player chose to wander, if they chose one.
+    /// The route the player chose through the catalog, if they chose one.
     ///
-    /// Holds that wing's catalog indices, because the catalog is ordered for
-    /// arrival and a wing's rooms are scattered through it, so stepping by one
-    /// would leave the wing immediately. None means the whole catalog.
-    wing: Option<numinous_core::Wing>,
+    /// None means the whole catalog and the plain arrow step. A route is what
+    /// the protocol face calls a door: a smaller, ordered place to be, which
+    /// the arrows then stay inside until the player leaves it.
+    route: Option<Route>,
     t: f64,
     paused: bool,
     dragging: bool,
@@ -483,6 +483,68 @@ struct App {
     console: console::Console,
 }
 
+/// A smaller, ordered place inside the catalog that the arrows stay within.
+///
+/// The protocol face calls these doors, and offers three: one astonishing room,
+/// an ordered walk, and a wander by wing. A wing is a set of catalog indices
+/// walked in catalog order. A walk is an authored sequence that carries a
+/// question into each room, so its order is its own and not the catalog's.
+enum Route {
+    /// Wander one wing, in catalog order, wrapping inside it.
+    Wing(numinous_core::Wing),
+    /// Follow an authored walk, in its own order, carrying its questions.
+    Walk {
+        walk: &'static numinous_core::RoomWalk,
+        step: usize,
+    },
+}
+
+impl Route {
+    /// The room this route opens on.
+    fn doorway(&self) -> usize {
+        match self {
+            Self::Wing(wing) => wing.doorway(),
+            Self::Walk { walk, .. } => walk
+                .steps
+                .first()
+                .and_then(|first| numinous_core::catalog_index(first.room_id))
+                .unwrap_or(0),
+        }
+    }
+
+    /// Where a step of `delta` lands, advancing the route's own position.
+    ///
+    /// A wing walks catalog order. A walk walks its authored order, which is
+    /// why it tracks a step rather than reading the player's current room: two
+    /// steps of a walk could name the same room, and the catalog position
+    /// cannot tell those apart.
+    fn step(&mut self, current: usize, delta: isize, total: usize) -> usize {
+        match self {
+            Self::Wing(wing) => room_input::stepped_within(current, delta, &wing.rooms),
+            Self::Walk { walk, step } => {
+                let count = walk.steps.len();
+                if count == 0 {
+                    return current;
+                }
+                *step = room_input::wrapped_room_index(*step, delta, count);
+                walk.steps
+                    .get(*step)
+                    .and_then(|at| numinous_core::catalog_index(at.room_id))
+                    .filter(|index| *index < total)
+                    .unwrap_or(current)
+            }
+        }
+    }
+
+    /// The question this route carries into the room it is now on, if any.
+    fn question(&self) -> Option<&'static str> {
+        match self {
+            Self::Wing(_) => None,
+            Self::Walk { walk, step } => walk.steps.get(*step).map(|at| at.question),
+        }
+    }
+}
+
 impl App {
     fn new() -> Self {
         let state_paths = local_state_paths();
@@ -538,7 +600,7 @@ impl App {
             room_wager: None,
             rooms: all_rooms_with(0),
             current: 0,
-            wing: None,
+            route: None,
             t: 0.0,
             paused: false,
             dragging: false,
@@ -1056,13 +1118,24 @@ impl App {
                 if let Some(wing) = numinous_core::wings().into_iter().nth(index) {
                     let name = wing.name;
                     let count = wing.len();
-                    self.choose_wing(Some(wing));
+                    self.choose_route(Some(Route::Wing(wing)));
                     self.banner = Some(feedback::wing_entered(name, count));
                 }
                 self.close_menu();
             }
+            menu::MenuIntent::EnterWalk => {
+                let walk = &numinous_core::STRANGE_LOOP_WALK;
+                self.choose_route(Some(Route::Walk { walk, step: 0 }));
+                let question = self.route.as_ref().and_then(Route::question);
+                self.banner = Some(feedback::walk_entered(
+                    walk.title,
+                    walk.steps.len(),
+                    question,
+                ));
+                self.close_menu();
+            }
             menu::MenuIntent::LeaveWing => {
-                self.choose_wing(None);
+                self.choose_route(None);
                 self.banner = Some(feedback::wing_left());
                 self.close_menu();
             }
@@ -1402,8 +1475,8 @@ impl App {
         if self.the_show && self.show_crossfade_prev.is_some() {
             self.show_crossfade_frames = SHOW_CROSSFADE_FRAMES;
         }
-        self.current = match &self.wing {
-            Some(wing) => room_input::stepped_within(self.current, delta, &wing.rooms),
+        self.current = match &mut self.route {
+            Some(route) => route.step(self.current, delta, self.rooms.len()),
             None => room_input::wrapped_room_index(self.current, delta, self.rooms.len()),
         };
         self.rooms = room_input::redeal_rooms(&mut self.variation, &mut self.current);
@@ -1416,15 +1489,15 @@ impl App {
         self.update_audio();
     }
 
-    /// Enter a wing, or leave the one we are in.
+    /// Enter a route, or leave the one we are in.
     ///
-    /// Entering lands on the wing's first room and keeps the arrows inside it,
-    /// which is what makes a wing a place to wander rather than a label. The
-    /// whole catalog is always one step away, because leaving is the same call
-    /// with nothing chosen.
-    fn choose_wing(&mut self, wing: Option<numinous_core::Wing>) {
-        let doorway = wing.as_ref().map(numinous_core::Wing::doorway);
-        self.wing = wing;
+    /// Entering lands on the route's first room and keeps the arrows inside it,
+    /// which is what makes a door a place to be rather than a label. The whole
+    /// catalog is always one step away, because leaving is the same call with
+    /// nothing chosen.
+    fn choose_route(&mut self, route: Option<Route>) {
+        let doorway = route.as_ref().map(Route::doorway);
+        self.route = route;
         if let Some(index) = doorway {
             self.goto_room_index(index);
         }

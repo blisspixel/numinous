@@ -4181,6 +4181,18 @@ pub fn canonical_room_id(id: &str) -> &str {
         .unwrap_or(id)
 }
 
+/// Where a listed room sits in the catalog, by its id or an alias of it.
+///
+/// Faces that offer an ordered route need this: a walk names its rooms by id,
+/// and a face that navigates by position has to turn one into the other. It
+/// canonicalizes aliases first, so a route written against an old name still
+/// lands.
+#[must_use]
+pub fn catalog_index(id: &str) -> Option<usize> {
+    let id = canonical_room_id(id);
+    ROOM_CATALOG.iter().position(|metadata| metadata.id == id)
+}
+
 /// Find listed room metadata without constructing or rendering a room.
 #[must_use]
 pub fn room_meta_by_id(id: &str) -> Option<RoomMeta> {
