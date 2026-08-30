@@ -192,7 +192,7 @@ pub use raster::Raster;
 pub use registry::Wing;
 pub use registry::{
     KNOWN_OVER_FLASH_BUDGET, MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, RESPONSE_INVISIBLE_WITHOUT_COLOR,
-    all_rooms, all_rooms_with, display_safe, echoable_id, hidden_room_by_id,
+    THRESHOLD_ROOM_ID, all_rooms, all_rooms_with, display_safe, echoable_id, hidden_room_by_id,
     must_escape_for_display, nearest_names, nearest_room_ids, room_by_id, room_by_id_with, wings,
 };
 pub use resonance::{Resonance, resonances};

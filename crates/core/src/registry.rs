@@ -6,6 +6,14 @@
 use crate::room::Room;
 use crate::rooms;
 
+/// The one room the threshold offers as an astonishing first touch.
+///
+/// Face-neutral because it is a choice about the catalog rather than about any
+/// presentation of it: if the flagship ever changes, every door should move
+/// together. Each face still words its own invitation, because a protocol
+/// sentence and a menu label are not the same writing.
+pub const THRESHOLD_ROOM_ID: &str = "times-tables";
+
 /// One wing of the catalog: its name, how many rooms it holds, and where they are.
 ///
 /// The catalog is ordered for arrival and not by wing, so a wing's rooms are

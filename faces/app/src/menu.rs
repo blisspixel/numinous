@@ -81,6 +81,8 @@ pub enum MenuItemId {
     Wing(usize),
     /// The authored walk through several rooms.
     Walk,
+    /// The one astonishing room the threshold opens with.
+    Touch,
     Resume,
     Restart,
     LeaveActivity,
@@ -107,6 +109,8 @@ pub enum MenuIntent {
     EnterWing(usize),
     /// Follow the authored walk, in its own order, carrying its questions.
     EnterWalk,
+    /// Go straight to the one room the threshold opens with.
+    TouchTheFlagship,
     /// Leave the chosen wing and let the arrows reach the whole catalog again.
     LeaveWing,
 }
@@ -365,13 +369,22 @@ fn pause_items(kind: ActivityKind) -> Vec<MenuItem> {
 /// offers as its wander door, so the two faces cannot disagree about what
 /// wings exist.
 fn wing_items() -> Vec<MenuItem> {
-    let mut entries = vec![MenuItem {
-        id: MenuItemId::Walk,
-        title: numinous_core::STRANGE_LOOP_WALK.title,
-        description: numinous_core::STRANGE_LOOP_WALK.invitation,
-        shortcut: None,
-        action: MenuAction::Intent(MenuIntent::EnterWalk),
-    }];
+    let mut entries = vec![
+        MenuItem {
+            id: MenuItemId::Touch,
+            title: "TOUCH ONE ASTONISHING THING",
+            description: "TURN ONE DIAL AND WATCH MULTIPLICATION DRAW A LIVING CURVE.",
+            shortcut: None,
+            action: MenuAction::Intent(MenuIntent::TouchTheFlagship),
+        },
+        MenuItem {
+            id: MenuItemId::Walk,
+            title: numinous_core::STRANGE_LOOP_WALK.title,
+            description: numinous_core::STRANGE_LOOP_WALK.invitation,
+            shortcut: None,
+            action: MenuAction::Intent(MenuIntent::EnterWalk),
+        },
+    ];
     let wings: Vec<MenuItem> = numinous_core::wings()
         .into_iter()
         .enumerate()
@@ -414,7 +427,7 @@ fn default_focus(route: MenuRoute, origin: MenuOrigin) -> MenuItemId {
         MenuRoute::Games => MenuItemId::Quiz,
         MenuRoute::Settings => MenuItemId::Volume,
         MenuRoute::Controls => MenuItemId::Back,
-        MenuRoute::Wings => MenuItemId::Walk,
+        MenuRoute::Wings => MenuItemId::Touch,
         MenuRoute::Pause(_) => MenuItemId::Resume,
     }
 }
@@ -857,7 +870,7 @@ fn route_title(route: MenuRoute) -> String {
         MenuRoute::Games => "GAMES".to_string(),
         MenuRoute::Settings => "SETTINGS".to_string(),
         MenuRoute::Controls => "CONTROLS".to_string(),
-        MenuRoute::Wings => "WINGS".to_string(),
+        MenuRoute::Wings => "WHERE TO START".to_string(),
         MenuRoute::Pause(kind) => format!("{} PAUSED", kind.label()),
     }
 }
@@ -1357,19 +1370,26 @@ mod tests {
         let wings = numinous_core::wings();
         assert_eq!(
             entries.len(),
-            wings.len() + 2,
-            "the authored walk, every wing, and the way back to the catalog"
+            wings.len() + 3,
+            "three doors, every wing, and the way back to the catalog"
         );
 
-        // The walk leads, because an ordered route with a question at each step
-        // is a better first choice than a list of fifteen wings.
-        let walk = &entries[0];
+        // The same three doors the protocol face offers, in the same order:
+        // one astonishing room, an ordered walk, then a wander by wing.
+        let touch = &entries[0];
+        assert_eq!(touch.id, MenuItemId::Touch);
+        assert_eq!(
+            touch.action,
+            MenuAction::Intent(MenuIntent::TouchTheFlagship)
+        );
+
+        let walk = &entries[1];
         assert_eq!(walk.id, MenuItemId::Walk);
         assert_eq!(walk.action, MenuAction::Intent(MenuIntent::EnterWalk));
         assert_eq!(walk.title, numinous_core::STRANGE_LOOP_WALK.title);
 
         for (index, wing) in wings.iter().enumerate() {
-            let entry = &entries[index + 1];
+            let entry = &entries[index + 2];
             assert_eq!(entry.title, wing.name, "a wing is named by the catalog");
             assert_eq!(entry.id, MenuItemId::Wing(index));
             assert_eq!(
@@ -1385,10 +1405,14 @@ mod tests {
         // nowhere.
         assert_eq!(
             default_focus(MenuRoute::Wings, MenuOrigin::Room),
-            MenuItemId::Walk
+            MenuItemId::Touch
         );
-        assert!(entries.iter().any(|item| item.id == MenuItemId::Walk));
-        assert_eq!(route_title(MenuRoute::Wings), "WINGS");
+        assert!(entries.iter().any(|item| item.id == MenuItemId::Touch));
+        assert_eq!(route_title(MenuRoute::Wings), "WHERE TO START");
+
+        // The flagship the first door opens is core's choice, so the two faces
+        // cannot drift onto different rooms.
+        assert!(numinous_core::catalog_index(numinous_core::THRESHOLD_ROOM_ID).is_some());
     }
 
     #[test]
