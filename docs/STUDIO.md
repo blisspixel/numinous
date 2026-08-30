@@ -5,7 +5,7 @@ instrument and a shader toy. You type a little math, and it instantly *draws*
 and *sings*. This is the "Create" posture (see `DESIGN.md`), and it is a core
 part of the experience rather than a bonus feature.
 
-**Implementation boundary, 2026-08-08:** 0.4.0-alpha.12 ships a bounded scalar
+**Implementation boundary, 2026-08-08:** 0.4.0-alpha.13 ships a bounded scalar
 expression parser and evaluator, animated plots, deterministic melody mapping,
 an editable app panel, CLI and MCP operations, `.num` plus link round trips on
 both faces, exact app reopen (launch argument, dropped file, or link), the F5
