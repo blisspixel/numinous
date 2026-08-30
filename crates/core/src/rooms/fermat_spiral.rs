@@ -201,6 +201,16 @@ impl Room for FermatSpiral {
          areas, so it appears in phyllotaxis models and in the packing of \
          florets: nature's equal-share curve."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "This curve is half of the packing and the Golden Angle room is the \
+             other half. Equal areas between arms decide how far each floret \
+             sits from the center; the angle between successive florets decides \
+             where around. Get the curve right and the angle wrong and the seeds \
+             fall into spokes with gaps between them. A sunflower needs both.",
+        ]
+    }
 }
 
 #[cfg(test)]

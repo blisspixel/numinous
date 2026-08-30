@@ -191,6 +191,7 @@ impl Room for GoldenAngle {
              numbers, 34 one way and 55 the other, because ratios of consecutive \
              Fibonacci numbers are the best rational approximations to phi. The \
              flower is doing number theory.",
+            "The angle is only half of a sunflower. The Fermat Spiral room              carries the other half, the curve that puts equal area between              successive arms and so decides how far out each floret sits. This              room decides where around. Either one alone leaves gaps.",
         ]
     }
 

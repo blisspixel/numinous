@@ -236,6 +236,7 @@ impl Room for LogisticMap {
             "The constant is universal: any map with one smooth hump cascades into \
              chaos at the same ratio, and it has been measured in dripping faucets \
              and fluttering flames. One number, everywhere order breaks.",
+            "At r=4 this parabola is the Tent Map under the substitution              x = sin^2(pi y / 2), and the tent is the Doubling Map, which only              shifts the binary digits of a number along. One smooth curve, one              sharp corner, one shift of digits, all the same system. What looks              like unpredictability is a rule reading out digits you never knew.",
         ]
     }
 }

@@ -190,6 +190,17 @@ impl Room for TentMap {
          piecewise-linear engine of chaos. For mu>1 orbits densify; below the \
          critical value they die to a fixed point."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Set mu to two and this fold is the Logistic Map at its wildest, \
+             under the substitution x = sin^2(pi y / 2), and both are the \
+             Doubling Map in disguise. One is a parabola, one is a corner, one \
+             is a shift of binary digits, and they are the same system. The \
+             unpredictability is not in the rule, which is as simple as a rule \
+             can be. It is in how much of the starting number you never knew.",
+        ]
+    }
 }
 
 #[cfg(test)]
