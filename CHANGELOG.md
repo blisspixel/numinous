@@ -5,6 +5,25 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The world's independence from any clock is now an invariant instead of a
+  happy accident. A room's state is a function of its phase and its touches,
+  phases carry no duration, and input history is bounded by count and never by
+  age, so nothing decays and nothing times out and a visit resumed after a
+  second and a visit resumed after a decade meet the same room. That has been
+  true since the beginning and nothing enforced it, which meant a single commit
+  could have taken it away and no test would have noticed until a participant on
+  a slow clock arrived and found the room had moved under them. A scan now holds
+  it, with file locking as the one stated exception, because stale-lock recovery
+  and lock-token uniqueness genuinely need the host clock and touch no room, no
+  phase, and no grade.
+- The Mutual Information room's estimator carried a dead computation, a comment
+  reading "not right", and two discarded bindings, which is exactly what the
+  quality bar forbids in shipped code. The channel it actually models is now
+  stated plainly, a fair coin copied with probability r, and the arithmetic is
+  the joint distribution of that channel and nothing else. A test pins the three
+  points that fix the curve, including the one the room exists for: a copy that
+  is wrong half the time carries nothing at all.
+
 - **The Straight Line** is a designed, unbuilt room in `ROOMS.md`, and the
   research behind it contradicted the founder's framing before improving it.
   Expectation violation is measurably not what distinguishes a joke: a punchline
