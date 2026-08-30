@@ -11,6 +11,36 @@ pub(crate) fn wrapped_room_index(current: usize, delta: isize, room_count: usize
     (((current as isize + delta) % n + n) % n) as usize
 }
 
+/// Step within a chosen set of catalog indices, wrapping at its ends.
+///
+/// The catalog is ordered for arrival rather than by wing, so a wing's rooms
+/// are scattered through it and stepping by one never walks a wing. Given the
+/// wing's own indices this walks it in catalog order and wraps inside it, so a
+/// player who chose a wing stays in the wing until they leave it.
+///
+/// A room outside the set means the player arrived by some other route, and the
+/// honest answer is the nearest room of the set in the direction they asked
+/// for, rather than silently jumping to its first.
+pub(crate) fn stepped_within(current: usize, delta: isize, within: &[usize]) -> usize {
+    if within.is_empty() {
+        return current;
+    }
+    match within.binary_search(&current) {
+        Ok(position) => {
+            let step = wrapped_room_index(position, delta, within.len());
+            within[step]
+        }
+        Err(insertion) => {
+            let landing = if delta < 0 {
+                insertion.checked_sub(1).unwrap_or(within.len() - 1)
+            } else {
+                insertion % within.len()
+            };
+            within[landing.min(within.len() - 1)]
+        }
+    }
+}
+
 pub(crate) fn redeal_rooms(variation: &mut u64, current: &mut usize) -> Vec<Box<dyn Room>> {
     *variation = variation.wrapping_add(1);
     let rooms = all_rooms_with(*variation);
@@ -249,6 +279,61 @@ pub(crate) fn cancel_open_gesture(inputs: &mut Vec<RoomInput>, t: f64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stepping_within_a_wing_stays_in_the_wing_and_wraps_inside_it() {
+        // A wing's rooms are scattered through a catalog ordered for arrival,
+        // so this is the whole reason wing navigation needs its own step.
+        let wing = [3usize, 7, 8, 40];
+        assert_eq!(stepped_within(3, 1, &wing), 7);
+        assert_eq!(stepped_within(8, 1, &wing), 40);
+        assert_eq!(stepped_within(40, 1, &wing), 3, "the far end wraps home");
+        assert_eq!(stepped_within(3, -1, &wing), 40, "and wraps backwards");
+        assert_eq!(stepped_within(7, -1, &wing), 3);
+
+        // A room outside the wing means the player got here another way. Going
+        // forward lands on the next room of the wing, going back on the one
+        // before it, rather than throwing them to the wing's first room.
+        assert_eq!(stepped_within(5, 1, &wing), 7);
+        assert_eq!(stepped_within(5, -1, &wing), 3);
+        assert_eq!(stepped_within(100, 1, &wing), 3, "past the end wraps home");
+        assert_eq!(stepped_within(0, -1, &wing), 40);
+
+        // A wing of one is a room that never moves, and an empty set cannot
+        // move anyone anywhere.
+        assert_eq!(stepped_within(9, 1, &[9]), 9);
+        assert_eq!(stepped_within(9, -1, &[9]), 9);
+        assert_eq!(stepped_within(4, 1, &[]), 4);
+    }
+
+    #[test]
+    fn every_catalog_wing_can_be_walked_end_to_end() {
+        // The property that matters to a player: choose a wing, keep pressing,
+        // and you meet every room in it and then come back to where you began.
+        for wing in numinous_core::wings() {
+            let mut seen = vec![wing.doorway()];
+            let mut at = wing.doorway();
+            for _ in 1..wing.len() {
+                at = stepped_within(at, 1, &wing.rooms);
+                seen.push(at);
+            }
+            let mut walked = seen.clone();
+            walked.sort_unstable();
+            walked.dedup();
+            assert_eq!(
+                walked.len(),
+                wing.len(),
+                "{} repeats a room before showing them all",
+                wing.name
+            );
+            assert_eq!(
+                stepped_within(at, 1, &wing.rooms),
+                wing.doorway(),
+                "{} does not close its loop",
+                wing.name
+            );
+        }
+    }
 
     #[test]
     fn wrapped_room_index_handles_both_directions() {

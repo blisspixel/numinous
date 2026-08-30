@@ -85,6 +85,26 @@ pub(crate) fn fullscreen(label: &str) -> Banner {
     Banner::new(vec![format!("FULLSCREEN {label}")], FULLSCREEN_FRAMES)
 }
 
+/// Say which wing was entered and how far it reaches.
+///
+/// The count is the point. A player who has only ever pressed the arrows has
+/// no idea how much catalog is behind them, and this is the first place the
+/// App says a number out loud.
+pub(crate) fn wing_entered(wing: &str, rooms: usize) -> Banner {
+    Banner::new(
+        vec![
+            format!("{}: {rooms} ROOMS", wing.to_uppercase()),
+            "THE ARROWS STAY IN THIS WING".to_string(),
+        ],
+        FULLSCREEN_FRAMES,
+    )
+}
+
+/// Say the whole catalog is reachable again.
+pub(crate) fn wing_left() -> Banner {
+    Banner::new(vec!["THE WHOLE CABINET".to_string()], FULLSCREEN_FRAMES)
+}
+
 pub(crate) fn volume(volume: f32, muted: bool) -> Banner {
     let mut lines = vec![format!("VOLUME {:.0}%", volume.clamp(0.0, 1.0) * 100.0)];
     if muted {

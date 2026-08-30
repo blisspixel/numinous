@@ -6,6 +6,60 @@
 use crate::room::Room;
 use crate::rooms;
 
+/// One wing of the catalog: its name, how many rooms it holds, and where they are.
+///
+/// The catalog is ordered for arrival and not by wing, so a wing's rooms are
+/// scattered through it rather than contiguous. That is why this carries the
+/// indices: stepping one room at a time never walks a wing, and any face that
+/// wants to offer a wing as a place to wander has to know which rooms are in it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Wing {
+    /// The wing's name, exactly as its rooms report it.
+    pub name: &'static str,
+    /// Catalog indices of this wing's rooms, ascending.
+    pub rooms: Vec<usize>,
+}
+
+impl Wing {
+    /// How many rooms the wing holds.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.rooms.len()
+    }
+
+    /// Whether the wing holds no rooms. A catalog wing never does; this exists
+    /// because a length without an emptiness check is a lint away from a bug.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.rooms.is_empty()
+    }
+
+    /// The room a wing opens with, which is its first in catalog order.
+    #[must_use]
+    pub fn doorway(&self) -> usize {
+        self.rooms.first().copied().unwrap_or(0)
+    }
+}
+
+/// Every wing of the catalog, in the order the catalog first mentions each.
+///
+/// One reading, shared by every face, because a wing list built twice is two
+/// lists that can disagree about what the catalog contains.
+#[must_use]
+pub fn wings() -> Vec<Wing> {
+    let mut wings: Vec<Wing> = Vec::new();
+    for (index, metadata) in crate::rooms::ROOM_CATALOG.iter().enumerate() {
+        match wings.iter_mut().find(|wing| wing.name == metadata.wing) {
+            Some(wing) => wing.rooms.push(index),
+            None => wings.push(Wing {
+                name: metadata.wing,
+                rooms: vec![index],
+            }),
+        }
+    }
+    wings
+}
+
 /// All built-in rooms, in catalog order. Default variation 0 pins tests and postcards.
 #[must_use]
 pub fn all_rooms() -> Vec<Box<dyn Room>> {
@@ -1161,6 +1215,64 @@ mod tests {
                 fixed.join(", ")
             );
         }
+    }
+
+    #[test]
+    fn every_wing_is_named_once_and_holds_every_room_exactly_once() {
+        // The catalog is ordered for arrival, so a wing's rooms are scattered
+        // through it. A face that offers a wing as a place to wander needs the
+        // indices, and it needs them to be a partition: every room in exactly
+        // one wing, no room missed, no wing named twice.
+        let wings = super::wings();
+        assert!(wings.len() > 1, "a catalog with one wing is not a catalog");
+
+        let mut names = std::collections::BTreeSet::new();
+        let mut seen = Vec::new();
+        for wing in &wings {
+            assert!(!wing.is_empty(), "{} is an empty wing", wing.name);
+            assert_eq!(wing.len(), wing.rooms.len());
+            assert!(
+                names.insert(wing.name),
+                "{} is listed as a wing twice",
+                wing.name
+            );
+            let mut ascending = wing.rooms.clone();
+            ascending.sort_unstable();
+            assert_eq!(ascending, wing.rooms, "{} is out of order", wing.name);
+            assert_eq!(wing.doorway(), wing.rooms[0]);
+            seen.extend(wing.rooms.iter().copied());
+        }
+
+        seen.sort_unstable();
+        let catalog: Vec<usize> = (0..crate::rooms::ROOM_CATALOG.len()).collect();
+        assert_eq!(seen, catalog, "the wings do not partition the catalog");
+
+        // And every index really does report the wing it was filed under.
+        for wing in &wings {
+            for &index in &wing.rooms {
+                assert_eq!(crate::rooms::ROOM_CATALOG[index].wing, wing.name);
+            }
+        }
+    }
+
+    #[test]
+    fn a_wing_is_not_a_run_of_the_catalog() {
+        // The fact that makes a wing browser worth building: stepping one room
+        // at a time does not walk a wing, because the catalog interleaves them.
+        // If this ever becomes false, the App could filter by a range instead
+        // of a set, and someone should notice rather than discover it.
+        let scattered = super::wings()
+            .iter()
+            .filter(|wing| {
+                wing.rooms
+                    .windows(2)
+                    .any(|pair| pair[1] != pair[0].saturating_add(1))
+            })
+            .count();
+        assert!(
+            scattered > 0,
+            "every wing is contiguous, so wing navigation could be a range"
+        );
     }
 
     #[test]

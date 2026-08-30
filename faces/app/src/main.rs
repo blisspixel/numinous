@@ -333,6 +333,12 @@ struct App {
     room_wager: Option<wager::RoomWager>,
     rooms: Vec<Box<dyn Room>>,
     current: usize,
+    /// The wing the player chose to wander, if they chose one.
+    ///
+    /// Holds that wing's catalog indices, because the catalog is ordered for
+    /// arrival and a wing's rooms are scattered through it, so stepping by one
+    /// would leave the wing immediately. None means the whole catalog.
+    wing: Option<numinous_core::Wing>,
     t: f64,
     paused: bool,
     dragging: bool,
@@ -532,6 +538,7 @@ impl App {
             room_wager: None,
             rooms: all_rooms_with(0),
             current: 0,
+            wing: None,
             t: 0.0,
             paused: false,
             dragging: false,
@@ -1045,6 +1052,20 @@ impl App {
             menu::MenuIntent::None => {}
             menu::MenuIntent::Close | menu::MenuIntent::ResumeActivity => self.close_menu(),
             menu::MenuIntent::Choose(choice) => self.activate_menu_choice(choice),
+            menu::MenuIntent::EnterWing(index) => {
+                if let Some(wing) = numinous_core::wings().into_iter().nth(index) {
+                    let name = wing.name;
+                    let count = wing.len();
+                    self.choose_wing(Some(wing));
+                    self.banner = Some(feedback::wing_entered(name, count));
+                }
+                self.close_menu();
+            }
+            menu::MenuIntent::LeaveWing => {
+                self.choose_wing(None);
+                self.banner = Some(feedback::wing_left());
+                self.close_menu();
+            }
             menu::MenuIntent::VolumeDelta(percent) => {
                 self.change_volume(f32::from(percent) / 100.0);
             }
@@ -1381,7 +1402,10 @@ impl App {
         if self.the_show && self.show_crossfade_prev.is_some() {
             self.show_crossfade_frames = SHOW_CROSSFADE_FRAMES;
         }
-        self.current = room_input::wrapped_room_index(self.current, delta, self.rooms.len());
+        self.current = match &self.wing {
+            Some(wing) => room_input::stepped_within(self.current, delta, &wing.rooms),
+            None => room_input::wrapped_room_index(self.current, delta, self.rooms.len()),
+        };
         self.rooms = room_input::redeal_rooms(&mut self.variation, &mut self.current);
         self.reset_room_runtime();
         self.tune = Arc::new(Vec::new());
@@ -1390,6 +1414,20 @@ impl App {
         }
         self.visit_current();
         self.update_audio();
+    }
+
+    /// Enter a wing, or leave the one we are in.
+    ///
+    /// Entering lands on the wing's first room and keeps the arrows inside it,
+    /// which is what makes a wing a place to wander rather than a label. The
+    /// whole catalog is always one step away, because leaving is the same call
+    /// with nothing chosen.
+    fn choose_wing(&mut self, wing: Option<numinous_core::Wing>) {
+        let doorway = wing.as_ref().map(numinous_core::Wing::doorway);
+        self.wing = wing;
+        if let Some(index) = doorway {
+            self.goto_room_index(index);
+        }
     }
 
     /// Jump to a catalog index without bumping variation (console / power users).
