@@ -404,6 +404,7 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [ ] **Cardinality of infinities** - Hilbert's Hotel as a management game: always room for one more bus, until the reals check in and the front desk breaks. You feel the difference between countable and not.
 - [x] **Benford's law** (built: `benford`) - a fraud-detective game: two ledgers, one cooked; the leading digits snitch.
 - [ ] **RSA in miniature** - extend Crack the Code: multiply two primes and watch why the bomb squad cannot reverse it.
+- [ ] **Patterns that break** - The Straight Line: a row of plates that all agree, a marker on the next one, and the bill in bits for the ending you did not pick.
 
 ## Algebra and symmetry
 - [ ] **Group theory** - The Braid: swap strands, learn what undoes what; noncommutativity as a knot in your hands.
@@ -438,6 +439,7 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [x] **Birthday paradox** (built: `birthday`) - a party-filling toy: watch the collision arrive absurdly early; bet against it and lose.
 - [x] **Markov chains** (built: `markov-chain`) - a weather machine with dials: today decides tomorrow; find the steady state by feel.
 - [ ] **Expected value** - The Fair: every stall prices itself by the same subtraction; seven of them fix every term where your hand cannot reach it.
+- [ ] **Simpson's paradox** - The Turn: pull two groups apart until every group still climbs and the total falls; nobody lied, and the weights were never in the data.
 
 ## Structure (discrete)
 - [ ] **Graph theory** - the Bridges of Konigsberg as a walking puzzle; fail, then learn you were always going to fail, and why (degree parity, never named).
@@ -903,6 +905,169 @@ say why buying more tickets made their own price worse. The stage must never
 acquire chips, felt, neon, or the word casino, and the name must stay The Fair,
 because the product is for children too and the joke only works if nothing on
 the shelf is.
+
+## Founder's room idea (August 2026): The Straight Line
+
+**Status:** designed, not built. Roadmap position: 1.x, after the keep-or-cut
+wave, behind the commissioned five and The Fair. Wing as designed: Number and
+Pattern, with a Computation resonance.
+
+The founder asked for the mathematics of humor, framed as expecting one thing
+and getting another. The research came back with a measured result that
+contradicts the framing and improves the room, so the room is built on the
+result rather than on the intuition.
+
+### What the measurement says, and why the obvious room would have been wrong
+
+Expectation violation is not what distinguishes a joke. This is not a matter of
+taste; it has been measured five independent ways, and it is the reason this
+room is not a surprise meter.
+
+Coulson and Kutas ran jokes beside non-humorous frame shifts matched on cloze,
+length and frequency, in the same session. The joke ending cost 107 ms and the
+non-humorous shift cost 101 ms, with no interaction at all. In the N400 window,
+Mayerhofer and Schacht could not distinguish a joke punchline from plain
+nonsense, and the trend ran the wrong way for the surprise account. Eye tracking
+finds no reliable slowdown on a punchline, only a rise in looking back, from 52
+to 57 percent. The garden-path literature says the same thing about its own
+effect: it is a large cost on a small minority of trials, averaged into a
+moderate mean.
+
+The one-line version, which is the room's foundation:
+
+> **Being confused by a joke is indistinguishable from being confused by
+> nonsense. Getting it is what shows up, and it shows up late.**
+
+What does show up is the resolution: a late frontal signal at 700 to 1000 ms,
+and a pupil dilation from 850 ms whose size tracks rated funniness at r = 0.43
+and does not track predictability at all, r = 0.174. **The surprise is the
+price. The second reading is the joke.**
+
+### The one aha
+
+> **The break is not the joke. The break is the bill. The joke is that once you
+> have paid it, another rule is standing there, and it was always consistent
+> with everything you had already seen.**
+
+The theorem underneath is Lagrange's, and a player can check it: any k points
+admit any value at all for the next one, under a unique polynomial of degree at
+most k. Your wrong answer was also right, for a rule you had no reason to
+discard. That is why a joke can be explained without dying while a lecture
+cannot be un-heard: the alternative reading was never hidden, only unweighted.
+
+### The row, and the break
+
+The stage is a row of plates, left to right, one per term. Each plate holds the
+thing being counted, drawn and never written. On the lead stall, plate n is a
+circle with n dots and every chord between them, with the regions lit, and under
+each plate a bar as long as the count. The bars double: 1, 2, 4, 8, 16.
+
+`t` walks the row. `DRAG: WALK THE ROW` moves a cursor, and plates ahead of it
+are blank. A poke on the next blank plate drops a marker on a short unlabeled
+scale, and the release fills the plate with the truth.
+
+The sixth plate's bar comes up one cell short of the doubled length, and one
+dark cell sits at the end of it where the thirty-second region is not. The room
+does not point at it. The bar simply does not reach. `C(6,4) + C(6,2) + 1 = 31`,
+so the run is 1, 2, 4, 8, 16, 31, 57, 99, and a child can count the regions and
+confirm it.
+
+Eight stalls, all exact, none in the catalog, and not one of them requiring a
+shared culture: the regions of a circle; the Fermat numbers, prime through
+65537 and composite at the next; Euler's polynomial, prime for the first forty
+inputs and not the forty first; Euler's sum of powers conjecture, unbroken for
+two centuries; the almost-integer that agrees with a whole number for eleven
+decimal places; Polya's conjecture, whose first failure is past nine hundred
+million; and the closer, the sinc integrals, which equal pi over two exactly
+seven times and then miss by two parts in a hundred billion because a sum of
+reciprocals crosses one. That last is the closest miss in mathematics, and it is
+the room's deepest cut, because it is why almost right is funny and far wrong is
+not.
+
+### The number, and the second number that matters more
+
+The room holds an explicit, printable, bounded family of candidate rules, and
+prints how many of them still fit. As the row runs, that count falls. When a
+term arrives, the bill is
+
+```
+bits = log2( survivors before / survivors after )
+```
+
+which is exact, is a ratio of two integers the room can show, and needs no prior
+beyond a uniform one over a stated set. It comes with an inequality that is the
+room's quiet theorem: a term can never cost more than the field it was drawn
+from, so **the setup bounds the punchline.** You cannot buy a large violation
+without first spending terms to narrow the field. That is comic timing as an
+inequality rather than as folklore.
+
+But the bill is the part the measurement says is not the joke, so it is not the
+room's headline. The headline is what is standing afterwards. A term that leaves
+nothing is nonsense. A term that leaves one rule, and a short one, is a joke.
+The room shows both, and the difference between them is the whole content.
+
+The honest boundary, stated in the room's own copy: the room never says a term
+carries so many bits of surprisal. It says that against these rules, this term
+killed all but three. That is a true statement about a stated object, and if the
+family cannot be stated, printed and tested, the stall does not ship.
+
+### The trap
+
+A room about humor that is not funny is worse than no room, and `humor.rs`
+already says why: a joke explained is a frog dissected. So this room is funny
+rather than about funniness. The word joke appears at most once, in the reveal.
+The words comedy and punchline do not appear at all.
+
+What makes a picture funny to a human and to a mind with no shared culture is a
+rhythm and a break in it that is small, exact and undeniable. Rhythm is the one
+part of comedy that is not cultural, because both minds are doing the same thing
+while it runs, which is predicting. The bar has doubled five times and now comes
+up one cell short. It lands in three channels at once: the bar does not reach,
+the figure that played identically on every plate does not arrive where the ear
+has already put it, and the survivor count collapses. Nothing pays out. No
+sting, no rimshot, no resolve to major. The beat is simply not there.
+
+The reveal states Lagrange's theorem and stops. It does not say and that is why
+jokes work. The moment it says that, it is `humor.rs` with a canvas.
+
+### What it fixes, and what it must not claim
+
+`humor.rs` exists to state humor structurally for minds that share no culture,
+and every one of its seven specimens needs a shared culture to land: a starship
+doctor, a lawn dart, a naval quartermaster, Pythagoras. The module can only hand
+an alien a prose dissection of each. If this room ships, the module gains an
+eighth entry whose text is `1, 2, 4, 8, 16, 31` and whose mechanism is the
+broken run, and it is the first specimen in the product that needs no footnote.
+
+What the room must never claim is that this is what humor is. It can say
+truthfully that every joke catalogued here has a computable and highly skewed
+information profile. A skewed profile is not sufficient for laughter, and
+nothing in this room is a theory of mirth. There is one real empirical foothold,
+that rated funniness of nonwords tracks their entropy, and it belongs in a deep
+cut with its bounds visible: one narrow domain, a correlation, not a theory of
+comedy.
+
+The research also cleared out folklore that must stay out of the copy. Two of
+the most repeated garden-path sentences have no primary academic source at all,
+and a third that is usually quoted with reading times attached comes from a
+paper containing no reading-time data. Where this room cites a measurement it
+cites the paper and the number, or it does not cite.
+
+### Build honestly
+
+Wow 4 / Build 2. The mathematics is exact integer sequences and a bounded rule
+family; the drawing is plates, bars and one absent cell on the existing surface
+substrate. It should not become the eighth Universal Wager room, because an
+eighth staged arc touches the engineered-aha set, the action tuple and its
+receipt bytes, the MCP schema, the App key band, and a standing gate that says
+seven. Grade the committed guess inline in the status, the way the beacons room
+already grades a guess in bands, and leave that gate green.
+
+The break must be reachable with zero guesses committed, so watching the row and
+never guessing is a complete way to be in the room. The room earns
+implementation when a player watches a run break without having guessed and
+looks back at the earlier plates, and when a player who guessed wrong can say
+what rule their answer would have been right for.
 
 ## The Awe Engine wave (July 2026): the cheap-and-gorgeous batch
 
