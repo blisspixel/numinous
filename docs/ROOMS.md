@@ -1069,6 +1069,130 @@ implementation when a player watches a run break without having guessed and
 looks back at the earlier plates, and when a player who guessed wrong can say
 what rule their answer would have been right for.
 
+## Founder's room idea (August 2026): Behind the Eye
+
+**Status:** designed, not built. Roadmap position: 1.x, after the keep-or-cut
+wave. Wing as designed: Shape and Space, next to the circle-inversion room, with
+an Emergence resonance. It is a conformal-map room wearing a neuroscience hat.
+
+Two panes, side by side, and one function drawn in both. The left pane is
+straight parallel stripes and never anything else. The right pane is the same
+stripes seen through the coordinate system the eye actually uses, and it is
+rings, spirals and fans. The only difference between the halves of the screen is
+that the right one takes a logarithm first.
+
+### The mathematics, which is a closed form and not a simulation
+
+The map from the retina to the primary visual cortex is, away from the very
+center, a complex logarithm. Circles of constant radius in the visual field
+become vertical lines in cortex, rays of constant angle become horizontal lines,
+and logarithmic spirals become oblique lines. So the whole room is
+
+```
+P(x, y) = cos(a x + m y)
+cortex pane:  x, y directly
+visual pane:  x = ln r,  y = theta
+```
+
+One cosine, two coordinate systems, and per cell one `ln`, one `atan2` and one
+`cos`. That is the same order of cost as the existing Logarithmic Spiral room,
+which already runs seven hundred steps of `exp`, `cos` and `sin` per frame.
+
+The correspondence is exact rather than suggestive. With `m = 0` the cortical
+stripes are vertical and the visual pane is concentric rings, the tunnel and the
+funnel. With `a = 0` they are horizontal and the visual pane is a fan of `2m`
+rays. In between, the visual pane is a logarithmic spiral `r = A exp(b theta)`
+with `b = -m/a`.
+
+And there is an identity worth the whole room. A logarithmic spiral cuts every
+radius at a constant angle, and that angle equals the angle of the stripes in
+cortex. Not proportional, not approximately: equal. One number on the status
+line is simultaneously the pitch of the spiral a player is looking at and the
+tilt of the straight lines that made it. The Logarithmic Spiral room already
+computes that exact quantity and does not know what it is, so the two rooms
+should name each other.
+
+### The one aha, which is not the one the idea started with
+
+The obvious version of this room is that turning a dial makes rings become
+spirals become rays, which is pretty and is a demonstration rather than a
+discovery. The real content showed up when the design was prototyped and the
+visual pane developed a seam, a visible tear along one radius.
+
+That is not a bug. The visual field's angle wraps at two pi and a general
+cortical stripe pattern does not, so the pattern closes on itself only when the
+number of arms is a whole number.
+
+> **You cannot draw an arbitrary spiral. Drag the hand and the picture does not
+> morph, it clicks: ring, one arm, two arms, and on up to the fan, because the
+> arms have to be counted.**
+
+That is a real constraint and not a rendering convenience. It is the same
+periodic boundary condition the published model imposes, and it is why reported
+forms come in a small discrete set at all rather than a continuum. The trap the
+room can set is exactly this: ask a player to find a spiral between the three
+arm and the four arm, and let them fail, and let the status line be honest about
+why.
+
+### What this room is about, and what it must not claim
+
+People report the same small set of geometric shapes under flicker, in migraine
+aura, while falling asleep, and under pressure on a closed eye. Those inducers
+are honest, universal, and enough. The room never needs to mention drugs and
+should not.
+
+The claim to build on is the map, which is about as well established as
+neuroscience gets: a macaque shown a polar grid and imaged through its cortex
+produces a nearly rectilinear grid; people blind at the retina still report the
+forms, so they are made centrally; and two shapes whose cortical images are
+orthogonal stripe patterns are perceptually opponent, which only makes sense
+through the logarithm.
+
+The claim to keep in the reveal as motivation rather than as fact is the rest of
+the theory, that the stripes arise as a symmetry-breaking instability in an
+excitable sheet. It is elegant, it makes at least one non-obvious prediction
+that held, and it is underdetermined, because many mechanisms make stripes and
+hexagons. The reveal should say the shapes are what simple cortical stripes look
+like from inside the eye. It should not say hallucinations are Turing patterns.
+
+Two further disciplines. The room must not say that Klüver found four classes,
+because he did not; the 1928 monograph names a small recurring set and
+explicitly declines the tidy separation later authors imposed, and a small
+recurring set is the truer and more load-bearing claim anyway. And the pure
+logarithm fails near the fovea, so the visual pane should carry a small hole at
+the center, which reads as a pupil rather than as a cheat.
+
+The catalog also holds a Hyperbolic Tiling room and a Poincare Disc room.
+Neither needs, and neither should acquire, any claim about the geometry of
+altered perception. The serious hyperbolic work in this area is about the space
+of local image structure and not about the shape of anyone's experience, and the
+popular version of that claim is a blog essay rather than research.
+
+### The shape of play
+
+`DRAG` turns the straight stripes. The left pane never stops being straight
+lines. The right pane clicks between bullseye, one arm, two arms, tighter and
+tighter, and finally a fan of spokes. Ambient phase scrolls the stripes along
+their normal, which makes rings breathe outward and spirals and fans rotate, and
+that is the correct dynamics rather than decoration.
+
+The status line carries the arm count, the spiral's tightness, and the one angle
+that is two things at once. The sound maps the arm count to a partial of the
+drone, so the ring is the fundamental and each new arm is the next harmonic,
+which is congruent by construction rather than by taste.
+
+### Build honestly
+
+Wow 5 / Build 2. The mathematics is one cosine and one logarithm, the drawing is
+threshold plotting with no line strokes at all, and it is perfectly
+deterministic. The two open questions are whether two panes stay legible on the
+narrowest supported plate, which should be checked early, and whether the divider
+survives the color-free renderer.
+
+The room earns implementation when a player who has said nothing and read
+nothing drags the stripes, watches the right pane click rather than glide, and
+goes looking for the spiral that is not there.
+
 ## The Awe Engine wave (July 2026): the cheap-and-gorgeous batch
 
 A third design pass (part of the "make it exceptional" fan-out, see
