@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.12] - 2026-08-30
+
 - The App has a front door onto the catalog. Until now the menu offered modes,
   games, settings and controls, the arrows stepped one room at a time through
   355 with wraparound, and nothing anywhere said the catalog was larger than the
