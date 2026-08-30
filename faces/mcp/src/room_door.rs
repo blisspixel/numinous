@@ -69,20 +69,15 @@ fn strange_loop_chain() -> Value {
 }
 
 fn wing_rows() -> Vec<Value> {
-    let mut wings: Vec<(&str, usize, numinous_core::RoomMeta)> = Vec::new();
-    for metadata in numinous_core::ROOM_CATALOG {
-        if let Some((_, count, _)) = wings.iter_mut().find(|(wing, _, _)| *wing == metadata.wing) {
-            *count += 1;
-        } else {
-            wings.push((metadata.wing, 1, *metadata));
-        }
-    }
-    wings
+    // The wing reading is core's, shared with every other face, because a wing
+    // list built twice is two lists that can disagree about the catalog.
+    numinous_core::wings()
         .into_iter()
-        .map(|(wing, count, doorway)| {
+        .map(|wing| {
+            let doorway = numinous_core::ROOM_CATALOG[wing.doorway()];
             json!({
-                "wing": wing,
-                "count": count,
+                "wing": wing.name,
+                "count": wing.len(),
                 "doorway": catalog_row(&doorway),
                 "next": {
                     "tool": "describe_room",
