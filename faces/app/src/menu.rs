@@ -79,6 +79,8 @@ pub enum MenuItemId {
     Controls,
     /// One wing of the catalog, by its position in the shared wing list.
     Wing(usize),
+    /// The authored walk through several rooms.
+    Walk,
     Resume,
     Restart,
     LeaveActivity,
@@ -103,6 +105,8 @@ pub enum MenuIntent {
     LeaveActivity(ActivityKind),
     /// Wander one wing, by its position in the shared wing list.
     EnterWing(usize),
+    /// Follow the authored walk, in its own order, carrying its questions.
+    EnterWalk,
     /// Leave the chosen wing and let the arrows reach the whole catalog again.
     LeaveWing,
 }
@@ -361,7 +365,14 @@ fn pause_items(kind: ActivityKind) -> Vec<MenuItem> {
 /// offers as its wander door, so the two faces cannot disagree about what
 /// wings exist.
 fn wing_items() -> Vec<MenuItem> {
-    let mut entries: Vec<MenuItem> = numinous_core::wings()
+    let mut entries = vec![MenuItem {
+        id: MenuItemId::Walk,
+        title: numinous_core::STRANGE_LOOP_WALK.title,
+        description: numinous_core::STRANGE_LOOP_WALK.invitation,
+        shortcut: None,
+        action: MenuAction::Intent(MenuIntent::EnterWalk),
+    }];
+    let wings: Vec<MenuItem> = numinous_core::wings()
         .into_iter()
         .enumerate()
         .map(|(index, wing)| MenuItem {
@@ -372,6 +383,7 @@ fn wing_items() -> Vec<MenuItem> {
             action: MenuAction::Intent(MenuIntent::EnterWing(index)),
         })
         .collect();
+    entries.extend(wings);
     entries.push(MenuItem {
         id: MenuItemId::Back,
         title: "THE WHOLE CABINET",
@@ -402,7 +414,7 @@ fn default_focus(route: MenuRoute, origin: MenuOrigin) -> MenuItemId {
         MenuRoute::Games => MenuItemId::Quiz,
         MenuRoute::Settings => MenuItemId::Volume,
         MenuRoute::Controls => MenuItemId::Back,
-        MenuRoute::Wings => MenuItemId::Wing(0),
+        MenuRoute::Wings => MenuItemId::Walk,
         MenuRoute::Pause(_) => MenuItemId::Resume,
     }
 }
@@ -1345,12 +1357,19 @@ mod tests {
         let wings = numinous_core::wings();
         assert_eq!(
             entries.len(),
-            wings.len() + 1,
-            "every wing, plus the way back to the whole catalog"
+            wings.len() + 2,
+            "the authored walk, every wing, and the way back to the catalog"
         );
 
+        // The walk leads, because an ordered route with a question at each step
+        // is a better first choice than a list of fifteen wings.
+        let walk = &entries[0];
+        assert_eq!(walk.id, MenuItemId::Walk);
+        assert_eq!(walk.action, MenuAction::Intent(MenuIntent::EnterWalk));
+        assert_eq!(walk.title, numinous_core::STRANGE_LOOP_WALK.title);
+
         for (index, wing) in wings.iter().enumerate() {
-            let entry = &entries[index];
+            let entry = &entries[index + 1];
             assert_eq!(entry.title, wing.name, "a wing is named by the catalog");
             assert_eq!(entry.id, MenuItemId::Wing(index));
             assert_eq!(
@@ -1366,9 +1385,9 @@ mod tests {
         // nowhere.
         assert_eq!(
             default_focus(MenuRoute::Wings, MenuOrigin::Room),
-            MenuItemId::Wing(0)
+            MenuItemId::Walk
         );
-        assert!(entries.iter().any(|item| item.id == MenuItemId::Wing(0)));
+        assert!(entries.iter().any(|item| item.id == MenuItemId::Walk));
         assert_eq!(route_title(MenuRoute::Wings), "WINGS");
     }
 

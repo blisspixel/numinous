@@ -5,6 +5,24 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The App's door onto the catalog gains the authored walk, so two of the
+  protocol threshold's three doors now exist on both faces. The walk leads the
+  list, because an ordered route that asks a question on the way into each room
+  is a better first choice than fifteen wings. Entering it lands on its first
+  step, keeps the arrows inside the walk, and carries that step's question into
+  the room, which is the first time the App has had anywhere to put a question.
+- The App's route state generalized to carry either shape. A wing is a place: a
+  set of catalog indices walked in catalog order. A walk is a sequence: an
+  authored order that is not the catalog's, tracking its own step rather than
+  reading the player's current room, because two steps of a walk could name the
+  same room and a catalog position cannot tell those apart. Tests hold both,
+  including that the walk follows its authored order, asks each question,
+  closes its loop, and runs the same in reverse.
+- Core answers where a room sits in the catalog, canonicalizing aliases first,
+  because a route names its rooms by id and a face that navigates by position
+  has to turn one into the other. The walk content itself was already
+  face-neutral in core and is unchanged.
+
 ## [0.4.0-alpha.12] - 2026-08-30
 
 - The App has a front door onto the catalog. Until now the menu offered modes,

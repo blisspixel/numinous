@@ -1,5 +1,5 @@
 use super::{
-    App, AudioProgram, TestStateRoot, advance_gallery_phase, app_icon, append_crash_log_at,
+    App, AudioProgram, Route, TestStateRoot, advance_gallery_phase, app_icon, append_crash_log_at,
     bounded_tick_seconds, effective_room_phase, fullscreen_toggle_target, julia_gpu_c,
     julia_gpu_vertical_span, live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
 };
@@ -4161,4 +4161,63 @@ fn quiz_deal_rules_stay_out_of_the_event_loop_coordinator() {
         assert!(!source.contains(concat!("build", "_round", "_pool")));
         assert!(!source.contains(concat!("quiz_recent", ".", "push")));
     }
+}
+
+#[test]
+fn a_walk_follows_its_own_order_and_carries_a_question_into_each_room() {
+    // The protocol face has offered an ordered walk since the threshold
+    // landed; this is the App learning the same door. A walk is not a wing:
+    // its order is authored rather than the catalog's, and it asks something
+    // on the way into each room, which is the whole reason it exists.
+    let walk = &numinous_core::STRANGE_LOOP_WALK;
+    let mut route = Route::Walk { walk, step: 0 };
+    let total = numinous_core::ROOM_CATALOG.len();
+
+    assert_eq!(
+        route.doorway(),
+        numinous_core::catalog_index(walk.steps[0].room_id).expect("the walk starts somewhere"),
+        "a walk opens on its own first step"
+    );
+    assert_eq!(route.question(), Some(walk.steps[0].question));
+
+    // Stepping forward walks the authored order and asks each question.
+    let mut at = route.doorway();
+    for expected in walk.steps.iter().skip(1) {
+        at = route.step(at, 1, total);
+        assert_eq!(
+            at,
+            numinous_core::catalog_index(expected.room_id).expect("every step names a real room"),
+            "the walk left its own order"
+        );
+        assert_eq!(route.question(), Some(expected.question));
+    }
+
+    // And it closes its loop, so a player who keeps pressing returns to the
+    // beginning rather than falling out of the walk.
+    at = route.step(at, 1, total);
+    assert_eq!(at, route.doorway());
+    assert_eq!(route.question(), Some(walk.steps[0].question));
+
+    // Backwards is the same walk in reverse.
+    let back = route.step(at, -1, total);
+    assert_eq!(
+        back,
+        numinous_core::catalog_index(walk.steps[walk.steps.len() - 1].room_id)
+            .expect("a last step")
+    );
+}
+
+#[test]
+fn a_wing_route_carries_no_question_and_walks_the_catalog_order() {
+    // The two doors are different shapes and the type has to keep them apart:
+    // a wing is a place, a walk is a sequence that asks something.
+    let wing = numinous_core::wings().into_iter().next().expect("a wing");
+    let doorway = wing.doorway();
+    let rooms = wing.rooms.clone();
+    let mut route = Route::Wing(wing);
+    assert_eq!(route.doorway(), doorway);
+    assert_eq!(route.question(), None, "a wing asks nothing");
+
+    let next = route.step(doorway, 1, numinous_core::ROOM_CATALOG.len());
+    assert_eq!(next, rooms[1], "a wing walks catalog order");
 }
