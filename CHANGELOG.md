@@ -5,6 +5,18 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The App's controls screen names the only way to reach a room that is not
+  next to this one. Stepping is one room per press through a catalog of 355
+  with wraparound, and the console is the sole jump, so a player who never
+  found it met a couple of dozen rooms and never learned the rest were there.
+  The screen literally named for the controls listed nine keys and not that
+  one. The key is spelled rather than drawn because the bitmap font has no
+  glyph for a backtick or a tilde, and a blank column would have been worse
+  than silence; a regression holds both the line and the rule that every mark
+  in that reference is one the font can draw. This is the cheap half of the
+  larger gap, which is that the App still has no browsable door onto the
+  catalog while the MCP face has had three since the threshold landed.
+
 - Five more connection edges land as deep cuts, bringing the placed count to
   nine. The Logistic Map at its wildest, the Tent Map and the Doubling Map now
   name each other as one system in three costumes, a smooth parabola and a sharp

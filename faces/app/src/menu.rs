@@ -1055,6 +1055,14 @@ fn control_lines(input_mode: InputMode, copy: ControllerCopy) -> Vec<String> {
     match input_mode {
         InputMode::KeyboardMouse => [
             "A / D     PREVIOUS / NEXT ROOM".to_string(),
+            // The only way to reach a room that is not adjacent to this one.
+            // Stepping is one room per press through a catalog of hundreds, so
+            // a player who never learns this screen meets a couple of dozen
+            // rooms and never learns the rest are there. The key is spelled
+            // rather than drawn because the bitmap font has no glyph for a
+            // backtick or a tilde, and a blank column would be worse than
+            // silence.
+            "BACKTICK  FIND ANY ROOM".to_string(),
             "W / S     TIME SPEED".to_string(),
             "CLICK     TOUCH THE ROOM".to_string(),
             "E / ?     EXPLAIN".to_string(),
@@ -1248,6 +1256,39 @@ mod tests {
         assert_eq!(state.adjust_focused(10), Some(MenuIntent::VolumeDelta(10)));
         state.focus_next(1);
         assert_eq!(state.adjust_focused(10), None);
+    }
+
+    #[test]
+    fn the_keyboard_reference_names_the_only_way_to_reach_a_distant_room() {
+        // Stepping is one room per press through hundreds, and the console is
+        // the only jump. A player who opens the screen named for the controls
+        // has to be able to learn it exists from there, because nothing else
+        // in the app mentions it.
+        let lines = control_lines(
+            InputMode::KeyboardMouse,
+            ControllerCopy::empty(ControllerFace::PlayStation),
+        );
+        let jump = lines
+            .iter()
+            .find(|line| line.contains("FIND ANY ROOM"))
+            .expect("the controls screen must name the jump");
+        assert!(jump.starts_with("BACKTICK"));
+
+        // The key is named and not drawn on purpose. The bitmap font carries
+        // uppercase Latin, digits and a short list of marks, so a backtick or
+        // a tilde would render as a gap and teach nothing. Hold the whole
+        // keyboard reference to letters, digits, spaces and the two marks it
+        // already uses, which are all glyphs the font is known to have.
+        for line in &lines {
+            for mark in line.chars() {
+                assert!(
+                    mark.is_ascii_uppercase()
+                        || mark.is_ascii_digit()
+                        || matches!(mark, ' ' | '/' | '?' | '-'),
+                    "the controls reference uses {mark:?}, which the font may not draw"
+                );
+            }
+        }
     }
 
     #[test]
