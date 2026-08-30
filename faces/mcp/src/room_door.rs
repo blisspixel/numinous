@@ -12,7 +12,8 @@ pub(super) const STARTER_ROOM_IDS: [&str; 4] = [
     "mandelbrot",
 ];
 
-const TOUCH_ROOM_ID: &str = "times-tables";
+// The flagship is core's choice, so every face's first door names one room.
+const TOUCH_ROOM_ID: &str = numinous_core::THRESHOLD_ROOM_ID;
 
 fn catalog_row(metadata: &numinous_core::RoomMeta) -> Value {
     json!({
