@@ -100,6 +100,19 @@ pub(crate) fn wing_entered(wing: &str, rooms: usize) -> Banner {
     )
 }
 
+/// Announce the walk and carry its first question in.
+///
+/// The question is the point of a walk. A wing is a place; a walk is a
+/// sequence that asks something on the way into each room, and the App has
+/// nowhere else to put that.
+pub(crate) fn walk_entered(title: &str, steps: usize, question: Option<&str>) -> Banner {
+    let mut lines = vec![format!("{}: {steps} ROOMS", title.to_uppercase())];
+    if let Some(question) = question {
+        lines.push(question.to_uppercase());
+    }
+    Banner::new(lines, FULLSCREEN_FRAMES)
+}
+
 /// Say the whole catalog is reachable again.
 pub(crate) fn wing_left() -> Banner {
     Banner::new(vec!["THE WHOLE CABINET".to_string()], FULLSCREEN_FRAMES)
