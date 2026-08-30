@@ -5,6 +5,25 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The App has a front door onto the catalog. Until now the menu offered modes,
+  games, settings and controls, the arrows stepped one room at a time through
+  355 with wraparound, and nothing anywhere said the catalog was larger than the
+  couple of dozen rooms a player meets that way. Modes now opens Wings, which
+  lists every wing the catalog has and one way back out to the whole cabinet.
+  Choosing a wing lands on its first room, keeps the arrows inside it, and says
+  how many rooms it holds, which is the first place the App states that number
+  out loud.
+- The wing reading moved into core, where both faces share it. The catalog is
+  ordered for arrival rather than by wing, so a wing's rooms are scattered
+  through it and stepping by one leaves a wing immediately; core now answers
+  which catalog indices a wing holds, and a test proves the wings partition the
+  catalog exactly, every room in one wing, none missed, none named twice. The
+  MCP face's wander door was building that list itself and now reads the shared
+  one, because a wing list built twice is two lists that can disagree. A second
+  test records why the feature needs a set rather than a range: if the catalog
+  ever became contiguous by wing, someone should notice deliberately rather than
+  discover it.
+
 - The last two of the ten verified connection edges are placed, closing the set.
   The AGM and the Lemniscate name each other through Gauss's diary entry of the
   thirtieth of May 1799, when he found the arithmetic-geometric mean of one and

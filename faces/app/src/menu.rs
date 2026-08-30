@@ -52,6 +52,7 @@ pub enum MenuRoute {
     Games,
     Settings,
     Controls,
+    Wings,
     Pause(ActivityKind),
 }
 
@@ -76,6 +77,8 @@ pub enum MenuItemId {
     WindowMode,
     SkipTrack,
     Controls,
+    /// One wing of the catalog, by its position in the shared wing list.
+    Wing(usize),
     Resume,
     Restart,
     LeaveActivity,
@@ -98,6 +101,10 @@ pub enum MenuIntent {
     ResumeActivity,
     RestartActivity(ActivityKind),
     LeaveActivity(ActivityKind),
+    /// Wander one wing, by its position in the shared wing list.
+    EnterWing(usize),
+    /// Leave the chosen wing and let the arrows reach the whole catalog again.
+    LeaveWing,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -154,7 +161,7 @@ const HOME_ITEMS: [MenuItem; 5] = [
     },
 ];
 
-const MODE_ITEMS: [MenuItem; 6] = [
+const MODE_ITEMS: [MenuItem; 7] = [
     MenuItem {
         id: MenuItemId::Watch,
         title: "WATCH",
@@ -189,6 +196,13 @@ const MODE_ITEMS: [MenuItem; 6] = [
         description: "WATCH A PAIRED PLAYER'S PUBLIC ACTIONS, WITH THEIR CONSENT.",
         shortcut: Some('x'),
         action: MenuAction::Intent(MenuIntent::Choose(MenuChoice::WatchAgent)),
+    },
+    MenuItem {
+        id: MenuItemId::Controls,
+        title: "WINGS",
+        description: "CHOOSE A WING AND WANDER IT. THE CABINET HAS HUNDREDS OF ROOMS.",
+        shortcut: Some('n'),
+        action: MenuAction::Open(MenuRoute::Wings),
     },
     MenuItem {
         id: MenuItemId::Back,
@@ -340,6 +354,34 @@ fn pause_items(kind: ActivityKind) -> Vec<MenuItem> {
     pause
 }
 
+/// One entry per wing, plus a way out of the wing you are in.
+///
+/// Wing names are static catalog data, so this needs no owned strings. The
+/// list is the shared core reading, which is the same one the protocol face
+/// offers as its wander door, so the two faces cannot disagree about what
+/// wings exist.
+fn wing_items() -> Vec<MenuItem> {
+    let mut entries: Vec<MenuItem> = numinous_core::wings()
+        .into_iter()
+        .enumerate()
+        .map(|(index, wing)| MenuItem {
+            id: MenuItemId::Wing(index),
+            title: wing.name,
+            description: "WANDER THIS WING. THE ARROWS STAY INSIDE IT.",
+            shortcut: None,
+            action: MenuAction::Intent(MenuIntent::EnterWing(index)),
+        })
+        .collect();
+    entries.push(MenuItem {
+        id: MenuItemId::Back,
+        title: "THE WHOLE CABINET",
+        description: "LEAVE THIS WING. THE ARROWS REACH EVERY ROOM AGAIN.",
+        shortcut: None,
+        action: MenuAction::Intent(MenuIntent::LeaveWing),
+    });
+    entries
+}
+
 fn items(route: MenuRoute) -> Vec<MenuItem> {
     match route {
         MenuRoute::Home => HOME_ITEMS.to_vec(),
@@ -347,6 +389,7 @@ fn items(route: MenuRoute) -> Vec<MenuItem> {
         MenuRoute::Games => GAME_ITEMS.to_vec(),
         MenuRoute::Settings => SETTINGS_ITEMS.to_vec(),
         MenuRoute::Controls => CONTROLS_ITEMS.to_vec(),
+        MenuRoute::Wings => wing_items(),
         MenuRoute::Pause(kind) => pause_items(kind),
     }
 }
@@ -359,6 +402,7 @@ fn default_focus(route: MenuRoute, origin: MenuOrigin) -> MenuItemId {
         MenuRoute::Games => MenuItemId::Quiz,
         MenuRoute::Settings => MenuItemId::Volume,
         MenuRoute::Controls => MenuItemId::Back,
+        MenuRoute::Wings => MenuItemId::Wing(0),
         MenuRoute::Pause(_) => MenuItemId::Resume,
     }
 }
@@ -801,6 +845,7 @@ fn route_title(route: MenuRoute) -> String {
         MenuRoute::Games => "GAMES".to_string(),
         MenuRoute::Settings => "SETTINGS".to_string(),
         MenuRoute::Controls => "CONTROLS".to_string(),
+        MenuRoute::Wings => "WINGS".to_string(),
         MenuRoute::Pause(kind) => format!("{} PAUSED", kind.label()),
     }
 }
@@ -1289,6 +1334,53 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn the_wings_route_offers_every_wing_and_a_way_back_out() {
+        // The App's front door onto the catalog. Stepping is one room per press
+        // through hundreds, so a wing has to be choosable from the menu, and a
+        // player who chose one has to be able to leave without knowing a key.
+        let entries = items(MenuRoute::Wings);
+        let wings = numinous_core::wings();
+        assert_eq!(
+            entries.len(),
+            wings.len() + 1,
+            "every wing, plus the way back to the whole catalog"
+        );
+
+        for (index, wing) in wings.iter().enumerate() {
+            let entry = &entries[index];
+            assert_eq!(entry.title, wing.name, "a wing is named by the catalog");
+            assert_eq!(entry.id, MenuItemId::Wing(index));
+            assert_eq!(
+                entry.action,
+                MenuAction::Intent(MenuIntent::EnterWing(index))
+            );
+        }
+
+        let out = entries.last().expect("a way out");
+        assert_eq!(out.action, MenuAction::Intent(MenuIntent::LeaveWing));
+
+        // The route has to focus something that exists, or opening it lands
+        // nowhere.
+        assert_eq!(
+            default_focus(MenuRoute::Wings, MenuOrigin::Room),
+            MenuItemId::Wing(0)
+        );
+        assert!(entries.iter().any(|item| item.id == MenuItemId::Wing(0)));
+        assert_eq!(route_title(MenuRoute::Wings), "WINGS");
+    }
+
+    #[test]
+    fn the_modes_menu_says_the_cabinet_is_larger_than_the_arrows_suggest() {
+        // The gap this closes: nothing in the App told a player the catalog was
+        // bigger than the couple of dozen rooms an arrow key reaches.
+        let door = MODE_ITEMS
+            .iter()
+            .find(|item| item.action == MenuAction::Open(MenuRoute::Wings))
+            .expect("modes must open the wings");
+        assert!(door.description.contains("HUNDREDS"));
     }
 
     #[test]
