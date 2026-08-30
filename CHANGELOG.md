@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.11] - 2026-08-29
+
 - `ROSETTA.md` gains the other direction: what this artifact would be worth to a
   finder who has no human language and is holding only what we left. The
   existing document is inbound, how a visitor gets in, and it works by letting
