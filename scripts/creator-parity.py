@@ -74,11 +74,32 @@ CASES: tuple[tuple[str, dict[str, Any], list[str]], ...] = (
     ("singularity", {"expr": "1/x"}, ["1/x"]),
     ("knob", {"expr": "sin(a*x)", "a": 2.5}, ["sin(a*x)", "--a=2.5"]),
     ("negative knob", {"expr": "sin(a*x)", "a": -3}, ["sin(a*x)", "--a=-3"]),
+    (
+        "stepped wave",
+        {"expr": "floor(3*sin(x))/3"},
+        ["floor(3*sin(x))/3"],
+    ),
+    (
+        "Euclidean wrap",
+        {"expr": "mod(x + pi, 2*pi) - pi"},
+        ["mod(x + pi, 2*pi) - pi"],
+    ),
+    (
+        "nested clamp",
+        {"expr": "min(max(x, -2), 2)"},
+        ["min(max(x, -2), 2)"],
+    ),
+    (
+        "knob threshold",
+        {"expr": "max(abs(x) - a, 0)", "a": 1.5},
+        ["max(abs(x) - a, 0)", "--a=1.5"],
+    ),
     ("range", {"expr": "x*x", "xmin": -2, "xmax": 2}, ["x*x", "--xmin=-2", "--xmax=2"]),
     ("offset range", {"expr": "sin(x)", "xmin": 0, "xmax": 10},
      ["sin(x)", "--xmin=0", "--xmax=10"]),
     ("recipe", {"recipe": 0}, ["--recipe=0"]),
     ("later recipe", {"recipe": 3}, ["--recipe=3"]),
+    ("new grammar recipe", {"recipe": 15}, ["--recipe=15"]),
     ("seed", {"seed": 7}, ["--seed=7"]),
     ("later seed", {"seed": 42}, ["--seed=42"]),
 )

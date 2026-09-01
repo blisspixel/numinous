@@ -40,6 +40,10 @@ EXPRESSIONS = (
     "sin(2*x)",
     "x*x",
     "sin(a*x)",
+    "floor(3*sin(x))/3",
+    "mod(x + pi, 2*pi) - pi",
+    "min(max(x, -2), 2)",
+    "max(abs(x) - a, 0)",
 )
 
 

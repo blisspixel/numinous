@@ -21,7 +21,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   bounds, `.num` and encoded-link round trips, the live App panel, CLI plotting,
   direct MCP calls, and a real MCP stdio process. A comma-bearing creation can
   be plotted, sung, saved, reopened, linked, and remixed without a face-specific
-  interpretation.
+  interpretation. The creator parity cohort explicitly compares all four new
+  forms through the CLI and MCP, while the creator roundtrip cohort saves and
+  reopens each new curated expression.
 
 ## [0.4.0-alpha.14] - 2026-08-31
 

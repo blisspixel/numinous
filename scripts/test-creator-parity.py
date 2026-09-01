@@ -65,6 +65,13 @@ class CaseTableTests(unittest.TestCase):
         for required in ("expr", "recipe", "seed", "a", "xmin", "xmax"):
             self.assertIn(required, keys, f"no case exercises {required}")
 
+    def test_the_table_covers_the_current_scalar_grammar_rung(self) -> None:
+        expressions = "\n".join(
+            str(mcp_args.get("expr", "")) for _, mcp_args, _ in MODULE.CASES
+        )
+        for function in ("floor(", "mod(", "min(", "max("):
+            self.assertIn(function, expressions, f"no parity case exercises {function}")
+
     def test_range_cases_avoid_the_bare_negative_trap(self) -> None:
         # A bare -2 is read as a flag, not a value, so a case written that way
         # would fail for a reason that has nothing to do with parity.
