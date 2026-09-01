@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.14] - 2026-08-31
+
 - The Only Move's posted goal can now be reached at a phase a player can land.
   Its one winnable rulebook used to occupy one of 255 equal stops, less than
   half of one percent of the continuous phase dial. It now has a broad detent
