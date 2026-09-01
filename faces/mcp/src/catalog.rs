@@ -597,7 +597,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "plot_expression",
-                "description": "Create in Formula Jam / Studio. Three discovery paths: (1) manual expr, (2) curated recipe index, (3) random seed into the same bank the App uses for F2 Random. Optional auto_step with seed walks the bank like Auto without session state. Pass list_recipes true to inspect the bank. Functions: sin cos tan exp ln abs sqrt; constants pi, e.",
+                "description": "Create in Formula Jam / Studio. Three discovery paths: (1) manual expr, (2) curated recipe index, (3) random seed into the same bank the App uses for F2 Random. Optional auto_step with seed walks the bank like Auto without session state. Pass list_recipes true to inspect the bank. Unary functions: sin cos tan exp ln abs sqrt floor. Pair functions: mod min max. Constants: pi, e.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -727,7 +727,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "sing_expression",
-                "description": "Hear your own function: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block, which is the one part of the reply that is the music rather than a description of it.",
+                "description": "Hear your own function through the same Studio grammar: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block, which is the one part of the reply that is the music rather than a description of it.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {

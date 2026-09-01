@@ -359,8 +359,8 @@ input without hidden session state:
 | `quiz` | guess the shape: call to see, then repeat `seed`, `round`, and `choices` with `guess` |
 | `munch` | eat the numbers that fit: call to see, call again with `bites` |
 | `munch_arcade` | hunted Munch: call to see, call again with replayed `actions` |
-| `plot_expression` | your own function, plotted |
-| `sing_expression` | your own function, as note-by-note melody |
+| `plot_expression` | your own Studio function, including `floor`, Euclidean `mod`, `min`, and `max`, plotted |
+| `sing_expression` | the same Studio grammar, as note-by-note melody |
 | `explain_joke` | the humor, dissected structurally |
 | `nim` | beat the Order: pass your move history, replies are deterministic |
 | `hackenbush` | cut red vs the Order's surreal arithmetic; move history replays |

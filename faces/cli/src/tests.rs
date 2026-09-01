@@ -3455,6 +3455,14 @@ fn plot_report_uses_the_parameter() {
 }
 
 #[test]
+fn plot_report_accepts_the_full_studio_function_rung() {
+    let source = "min(max(mod(floor(3*x), 5), 1), 3)";
+    let out = super::plot_report(source, -2.0, 2.0, 0.0, 32, 10).expect("plot");
+    assert!(out.contains(source));
+    assert!(out.contains('#'));
+}
+
+#[test]
 fn plot_report_rejects_bad_input() {
     assert!(super::plot_report("sin(", -1.0, 1.0, 0.0, 24, 8).is_err());
     assert!(super::plot_report("x", 1.0, 1.0, 0.0, 24, 8).is_err()); // xmax not > xmin

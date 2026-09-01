@@ -2037,7 +2037,11 @@ fn a_full_agent_session_walks_every_tool() {
         ),
         call(10, "quiz", json!({"seed":7,"round":0})),
         call(11, "quiz", json!({"seed":7,"round":0,"guess":"A"})),
-        call(12, "plot_expression", json!({"expr":"sin(3*x) + x/2"})),
+        call(
+            12,
+            "plot_expression",
+            json!({"expr":"min(max(mod(floor(3*x), 5), 1), 3)"}),
+        ),
         call(13, "sing_expression", json!({"expr":"x","notes":6})),
         call(14, "explain_joke", json!({})),
         call(15, "munch", json!({"seed":7,"round":0})),
