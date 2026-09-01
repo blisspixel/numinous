@@ -1357,7 +1357,7 @@ dependencies = [
 
 [[package]]
 name = "numinous-app"
-version = "0.4.0-alpha.13"
+version = "0.4.0-alpha.14"
 dependencies = [
  "getrandom 0.4.3",
  "gilrs",
@@ -1378,7 +1378,7 @@ dependencies = [
 
 [[package]]
 name = "numinous-audio"
-version = "0.4.0-alpha.13"
+version = "0.4.0-alpha.14"
 dependencies = [
  "cpal",
  "hound",
@@ -1386,7 +1386,7 @@ dependencies = [
 
 [[package]]
 name = "numinous-broadcast"
-version = "0.4.0-alpha.13"
+version = "0.4.0-alpha.14"
 dependencies = [
  "getrandom 0.4.3",
  "numinous-core",
@@ -1398,7 +1398,7 @@ dependencies = [
 
 [[package]]
 name = "numinous-cli"
-version = "0.4.0-alpha.13"
+version = "0.4.0-alpha.14"
 dependencies = [
  "clap",
  "ctrlc",
@@ -1413,11 +1413,11 @@ dependencies = [
 
 [[package]]
 name = "numinous-core"
-version = "0.4.0-alpha.13"
+version = "0.4.0-alpha.14"
 
 [[package]]
 name = "numinous-gpu"
-version = "0.4.0-alpha.13"
+version = "0.4.0-alpha.14"
 dependencies = [
  "bytemuck",
  "png",
@@ -1430,7 +1430,7 @@ dependencies = [
 
 [[package]]
 name = "numinous-mcp"
-version = "0.4.0-alpha.13"
+version = "0.4.0-alpha.14"
 dependencies = [
  "numinous-app",
  "numinous-broadcast",

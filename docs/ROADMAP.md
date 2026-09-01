@@ -36,7 +36,7 @@ know it is done), and the **risk it retires**.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.4.0-alpha.13, Understanding Alpha active with its exit
+**Current release state: 0.4.0-alpha.14, Understanding Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are complete. Human stranger sessions sit with 0.8
 Closed Beta and 1.0 First Light.
@@ -2299,7 +2299,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-08-18)
 
-The package is **0.4.0-alpha.13**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.14**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -2344,7 +2344,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.4.0-alpha.13** because Understanding Alpha is the active
+Package label is **0.4.0-alpha.14** because Understanding Alpha is the active
 milestone. The alpha suffix says its exit remains open. External registration,
 calibration, fresh independent review, allocation freeze, and the qualifying
 cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
