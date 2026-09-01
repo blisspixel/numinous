@@ -626,10 +626,14 @@ and an engaging opponent all remain release gates.
 **Status:** the playable core is built and in the catalog as `the-only-move`
 (Chance & Order). A machine holds the grid, answers every touch with a move
 from its own best-move set, and never hands the player a win it could refuse.
-Which of the eight lines count is the room's dial, carried on `variation`, so a
-player can walk all 256 rulebooks. Exactly one of them can be won by the player
-who moves first, and none is ever won by the player who moves second; both
-facts are measured by an exhaustive test rather than quoted.
+Which of the eight lines count is the room's dial. The ordinary visit carries
+the 255 nonempty rulebooks on `t`, ordered by size and symmetry, while
+`variation` pins an exact mask for replay. The only winnable rulebook has a
+broad phase detent around `t=0.40`, so a continuous hand can actually land on
+it. Rejected pokes are reported by their one-based input positions. Exactly one
+of all 256 rulebooks can be won by the player who moves first, and none is ever
+won by the player who moves second; both facts are measured by an exhaustive
+test rather than quoted.
 
 **Not yet built** from the design below: the self-play burn visualization and
 its `HOLD` verb, the war-shaped second game, the decline beat, and the

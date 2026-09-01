@@ -312,6 +312,67 @@ fn modern_meta(capabilities: Value) -> Value {
 }
 
 #[test]
+fn packaged_room_findings_stay_fixed_over_real_stdio() {
+    let call = |id: u64, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{
+                "_meta":modern_meta(json!({})),
+                "name":"play_room",
+                "arguments":arguments
+            }
+        })
+    };
+    let replies = run_session(&[
+        call(
+            1,
+            json!({
+                "id":"the-only-move",
+                "t":0.40,
+                "pokes":[
+                    [0.32,0.32],[0.50,0.32],[0.68,0.32],
+                    [0.32,0.50],[0.50,0.50],[0.68,0.50],
+                    [0.32,0.68],[0.50,0.68],[0.68,0.68]
+                ]
+            }),
+        ),
+        call(
+            2,
+            json!({
+                "id":"degree-720",
+                "gesture":[
+                    {"kind":"down","x":0.20,"y":0.45,"t":0.0},
+                    {"kind":"up","x":0.85,"y":0.45,"t":0.0}
+                ]
+            }),
+        ),
+        call(3, json!({"id":"degree-720","pokes":[[0.85,0.45]]})),
+    ]);
+
+    let only_move = &reply_by_id(&replies, 1)["result"]["structuredContent"];
+    assert_eq!(only_move["goalMet"], true);
+    let status = only_move["status"].as_str().unwrap_or_default();
+    assert!(status.contains("WON 1"), "{status}");
+    assert!(status.contains("WASTE #2,#4,#6"), "{status}");
+
+    let across = &reply_by_id(&replies, 2)["result"]["structuredContent"];
+    assert_eq!(across["goalMet"], false);
+    let status = across["status"].as_str().unwrap_or_default();
+    assert!(status.contains("TURNS 2.00"), "{status}");
+    assert!(status.contains("TWIST +2.00"), "{status}");
+    assert!(!status.contains("OVER"), "{status}");
+
+    let stone = &reply_by_id(&replies, 3)["result"]["structuredContent"];
+    assert_eq!(stone["goalMet"], true);
+    assert!(
+        stone["status"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("OVER")
+    );
+}
+
+#[test]
 fn modern_play_room_returns_exact_temporal_evidence_over_real_stdio() {
     let play = |id: u64, arguments: Value| {
         json!({

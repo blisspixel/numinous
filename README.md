@@ -221,7 +221,7 @@ retain read-only authority.
 
 Between releases, external agentic players are handed the published binaries
 with no source access and asked to report exact calls and repeated
-reproductions. Nine such rounds have run, and every finding they raised is
+reproductions. Ten such rounds have run, and every finding they raised is
 either fixed with a regression that replays the reported call or recorded as a
 stated open boundary. The seventh round was built around a single question and
 answered it in the negative: the WAV arrived and decoded, the tester's host
@@ -234,7 +234,14 @@ in the outermost thirty-second of the window. The ninth round finished that
 trick and could not see it: two turns come off and leave a flat belt, which is
 exactly what the room looks like before anyone plays, so the finished trick was
 frame for frame the picture of nobody having played. The room now keeps the
-braid a player cleared in the frame beside the belt that hangs now.
+braid a player cleared in the frame beside the belt that hangs now. The tenth
+round found a different kind of unreachable goal: The Only Move had one
+winnable rulebook, but it occupied less than half of one percent of the
+continuous phase dial. That rulebook now has a broad detent around `t=0.40`; a
+short sequence on the visible board wins there, and rejected pokes are named by
+position. The same round separated ACROSS from UP in the belt room, so a
+horizontal stone-row drag spins without claiming a lift while the stone poke
+and an actual rise still carry the belt OVER.
 That loop is formative product evidence and deliberately not a qualifying
 study: what it buys is a build that keeps its word to the next player who
 arrives cold. Rounds and boundaries:

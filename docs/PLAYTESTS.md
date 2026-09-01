@@ -767,6 +767,65 @@ documents it and each look now shows the trick on its own. The WAV still
 arrives, and this host still has no `/dev/snd`: parsed, not heard, and the
 product does not claim otherwise.
 
+## August 31 packaged agentic playtest, tenth round
+
+This section summarizes a tenth source-blind playtest, run against the published
+Linux `0.4.0-alpha.13` binaries at commit
+`15d6d7febbba6c36e5c2a13833e1ff3c219b97c7`. The tester read no Rust source and
+used the archive's own `bin/numinous-mcp` in isolated profiles. As in the two
+prior rounds, a stranger pass was written before the packaged guidance was
+opened, followed by a docs-informed redo. The report supplied the release and
+binary hashes, exact calls, repeated reproductions, and a claims audit. It is
+formative external product evidence, not a qualifying 0.4 cohort, a
+consciousness claim, or proof of lasting learning value. The raw dump set
+remains with the tester.
+
+Every alpha.13 claim the round checked held. Both faces open the same three
+doors, though the headless test could directly inspect only the protocol face.
+The 720 stone poke and release-inclusive lift still returned `TURNS 2.00  OVER
+FLAT`, `goalMet: true`, and a 132-cell braid rather than the opening belt.
+Down-only on the same stone remained `TWIST +2.00`. The README's stale sound
+claim stayed gone. A single Only Move poke took a cell and `t` alone did not
+award the goal. The caller-paced Show, three-door threshold, exact temporal
+replay, named wager boundary, sent WAV, and path-free `portable-1` capsule also
+held their documented contracts.
+
+**The first change makes the posted win reachable.** The Only Move really did
+contain one first-player win, at board 11 of 255, and an exact three-poke path
+could cash it against the machine's best replies. The product still failed the
+player: 255 equal phase stops gave that board less than half of one percent of a
+continuous dial, while the report's `t=0.20`, `0.40`, `0.60`, and `0.99` probes
+could only play drawn rulebooks. Repeated nine-poke games and a 24-poke farm
+therefore produced ties and never paid `WIN ONE GAME`.
+
+The one winnable rulebook now has a broad detent from `t=0.35` through `t=0.45`.
+The 254 other nonempty rulebooks keep their established size-and-symmetry order
+on either side, `t` remains the rulebook dial, and `variation` still pins an
+exact mask. At the reported `t=0.40`, three visible cell choices win. The exact
+nine-center call from the report now reads `RULES 237 PLAYED 1 WON 1 TIED 0
+WASTE #2,#4,#6` and returns `goalMet: true`. Rejected pokes are identified by
+their one-based positions rather than collapsed into only a count, with compact
+ranges and a bounded remainder when a longer list cannot fit the 56-character
+status line.
+
+**ACROSS and UP are different gestures again.** A horizontal drag from
+`[0.20,0.45]` to `[0.85,0.45]` was classified as a lift because both points sat
+above the room's midpoint, even though the hand never moved upward. That same
+filter discarded the landing column when it read the spin, so the drag reported
+`TURNS 0.25  OVER  TWIST -1.75`. A multi-point gesture now has to rise visibly
+before it counts as carrying the belt over, and a horizontal gesture reads its
+landing column. The exact call now returns `TURNS 2.00  TWIST +2.00` with no
+OVER and no goal. A stone poke remains the compact winning form, a real rise
+still carries the belt OVER, and both retain the stone, flat belt, and visible
+braid.
+
+The round's open boundaries remain open. Audio was parsed on a host with no
+sound device and was not heard. Stateless `play_room` still treats a second
+named wager as a new first wager. The three-door greeting remains a threshold
+rather than a room-id listing. Compact temporal play still reapplies the hand at
+both phases by design. Understanding Alpha's qualifying cohort remains
+owner-blocked and was not advanced by this formative round.
+
 ## July 2026 six-round technical cohort
 
 Six rounds of five fresh simulated reviewers examined mathematical truth,

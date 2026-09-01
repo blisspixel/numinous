@@ -5,6 +5,27 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The Only Move's posted goal can now be reached at a phase a player can land.
+  Its one winnable rulebook used to occupy one of 255 equal stops, less than
+  half of one percent of the continuous phase dial. It now has a broad detent
+  from `t=0.35` through `t=0.45`, while every other rulebook keeps its order on
+  either side. At the reported `t=0.40`, three visible cell choices can win, and
+  the reported nine-cell sweep now returns `WON 1` and `goalMet: true`.
+- Rejected Only Move input is identified instead of merely counted. The same
+  nine-cell sweep reports `WASTE #2,#4,#6`, so a player can distinguish cells
+  the machine already took from cells their hand claimed. Consecutive rejected
+  positions compress to ranges, and the status remains inside the 56-character
+  footer budget.
+- A horizontal drag across The 720 Degree Room's stone row now spins the stone
+  without claiming the belt went over it. Multi-point gestures must visibly
+  rise before they count as a lift, and a horizontal landing uses its final
+  column, so the reported gesture reads `TURNS 2.00  TWIST +2.00`. The compact
+  stone poke, the release-inclusive lift, OVER, the flat belt, and the retained
+  braid remain intact.
+- The tenth source-blind packaged round is recorded in `docs/PLAYTESTS.md`,
+  including the alpha.13 claims it confirmed and both room findings reproduced
+  through the real MCP binary.
+
 ## [0.4.0-alpha.13] - 2026-08-30
 
 - The roadmap and README no longer carry two claims this work made false. The
