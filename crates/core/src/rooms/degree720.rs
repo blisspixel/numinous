@@ -58,6 +58,13 @@ const SPIN_FROM: f64 = 0.10;
 /// The far end of that stretch. See [`SPIN_FROM`].
 const SPIN_TO: f64 = 0.80;
 
+/// How far upward a multi-point gesture must travel to carry the belt over.
+///
+/// A horizontal drag may sit above the middle of the room without being a
+/// lift. Requiring visible upward travel keeps ACROSS and UP as different
+/// actions while the one-point stone shortcut remains available.
+const MIN_LIFT: f64 = 0.20;
+
 fn phase_unit(t: f64) -> f64 {
     if t.is_finite() { t.clamp(0.0, 1.0) } else { 0.0 }
 }
@@ -128,6 +135,44 @@ fn spin_at(x: f64) -> f64 {
     ((along * MAX_TURNS / HAND_STEP).round() * HAND_STEP).clamp(0.0, MAX_TURNS)
 }
 
+/// Read a hand path as a stone spin and, when present, one upward pass.
+fn hand_belt(hands: &[(f64, f64)]) -> Belt {
+    let [(x, y)] = hands else {
+        let mut lowest_y = hands[0].1;
+        let mut spin_x = hands[0].0;
+        let mut lifted = false;
+        for &(x, y) in &hands[1..] {
+            if !lifted && lowest_y - y >= MIN_LIFT && y < 0.5 {
+                lifted = true;
+            }
+            if !lifted {
+                if y >= lowest_y {
+                    lowest_y = y;
+                    spin_x = x;
+                } else if lowest_y - y < MIN_LIFT {
+                    // Before a meaningful rise begins, the newest horizontal
+                    // position is still where the stone was turned.
+                    spin_x = x;
+                }
+            }
+        }
+        if !lifted {
+            spin_x = hands.last().map_or(spin_x, |&(x, _)| x);
+        }
+        return Belt {
+            turns: spin_at(spin_x),
+            loops: u32::from(lifted),
+        };
+    };
+
+    Belt {
+        turns: spin_at(*x),
+        // A poke on the visible stone remains the compact form of the whole
+        // trick. Multi-point gestures have to earn OVER through upward travel.
+        loops: u32::from(*y < 0.5),
+    }
+}
+
 /// Read the stone and the belt from the dial, or from the hand when there is one.
 ///
 /// With no hand the dial walks the stone through both turns, so a player who
@@ -135,7 +180,7 @@ fn spin_at(x: f64) -> f64 {
 /// spin, and lifting toward the top of the room carries the belt over the stone.
 fn belt_from(t: f64, pokes: &[(f64, f64)], seed: u64) -> Belt {
     let hands = finite_pokes(pokes);
-    let Some(&(opening_x, _)) = hands.first() else {
+    let Some(_) = hands.first() else {
         let drift = if seed == 0 {
             0.0
         } else {
@@ -146,32 +191,9 @@ fn belt_from(t: f64, pokes: &[(f64, f64)], seed: u64) -> Belt {
             loops: 0,
         };
     };
-    // The stone is turned by the hand that is on it, which is the hand in the
-    // lower half of the room. Once the belt has been lifted, the spin it was
-    // already given stays given, because carrying a belt over a stone does not
-    // turn the stone. That is the fact the whole room is about, and reading
-    // both the spin and the lift off the newest point quietly denied it: a
-    // lift straight up overwrote the spin with its own x, so a player could
-    // spin, or lift, and never both. A packaged playtest tried the trick and
-    // reported "I did not flatten."
-    let on_the_stone = hands
-        .iter()
-        .filter(|&&(_, y)| y >= 0.5)
-        .map(|&(x, _)| x)
-        .next_back()
-        .unwrap_or(opening_x);
-    let turns = spin_at(on_the_stone);
-    // A pass is something the hand did, not somewhere the hand is, so the
-    // highest lift reached counts even after the hand comes back down.
-    let loops = hands
-        .iter()
-        .map(|&(_, y)| u32::from(y < 0.5))
-        .max()
-        .unwrap_or(0);
-    Belt {
-        turns,
-        loops: loops.min(MAX_LOOPS),
-    }
+    let mut belt = hand_belt(&hands);
+    belt.loops = belt.loops.min(MAX_LOOPS);
+    belt
 }
 
 /// The belt that is hanging now.
@@ -656,6 +678,50 @@ mod tests {
     }
 
     #[test]
+    fn horizontal_stone_row_drag_spins_without_claiming_a_lift() {
+        // A packaged playtest dragged horizontally onto the visible stone. The
+        // old reading treated every point above mid-height as a lift, so this
+        // motion said OVER at one quarter turn even though the hand never went
+        // up. ACROSS must use the landing column and UP must require a rise.
+        let room = Degree720::new();
+        let across = drag((0.20, 0.45), (0.85, 0.45));
+        let belt = belt_from(0.0, &[(0.20, 0.45), (0.85, 0.45)], 0);
+        assert_eq!(belt.turns, MAX_TURNS);
+        assert_eq!(belt.loops, 0);
+        assert!(!room.goal_met(0.0, &across));
+        let status = room.status_input(0.0, &across).unwrap();
+        assert!(status.contains("TURNS 2.00"), "{status}");
+        assert!(status.contains("TWIST +2.00"), "{status}");
+        assert!(!status.contains("OVER"), "{status}");
+
+        // The compact stone poke and the release-inclusive lift stay intact.
+        assert!(room.goal_met(0.0, &hand(0.85, 0.45)));
+        let across_then_up = [
+            RoomInput::PointerDown {
+                x: 0.20,
+                y: 0.45,
+                t: 0.0,
+            },
+            RoomInput::PointerMove {
+                x: 0.85,
+                y: 0.45,
+                t: 0.0,
+            },
+            RoomInput::PointerUp {
+                x: 0.85,
+                y: 0.10,
+                t: 0.0,
+            },
+        ];
+        assert!(room.goal_met(0.0, &across_then_up));
+        assert!(
+            room.status_input(0.0, &across_then_up)
+                .unwrap()
+                .contains("OVER")
+        );
+    }
+
+    #[test]
     fn motif_ok() {
         assert!(Degree720::new().motif().unwrap().line.len() >= 6);
     }
@@ -668,5 +734,3 @@ mod tests {
         Degree720::new().render_poked(&mut big, f64::INFINITY, &[(f64::NAN, f64::NAN)]);
     }
 }
-
-

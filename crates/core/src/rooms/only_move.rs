@@ -51,6 +51,19 @@ pub const ALL_RULES: u8 = 0b1111_1111;
 /// does not help you, because your opponent gets them too.
 pub const WINNABLE_RULES: u8 = ALL_RULES & !(1 << 1) & !(1 << 4);
 
+/// A stable phase in the middle of the only winnable rulebook's detent.
+const WINNABLE_PHASE: f64 = 0.40;
+/// Half the width of the only winnable rulebook's broad phase detent.
+const WINNABLE_DETENT_HALF_WIDTH: f64 = 0.05;
+/// Start of the broad phase detent for the only winnable rulebook.
+const WINNABLE_DETENT_START: f64 = WINNABLE_PHASE - WINNABLE_DETENT_HALF_WIDTH;
+/// End of the broad phase detent for the only winnable rulebook.
+const WINNABLE_DETENT_END: f64 = WINNABLE_PHASE + WINNABLE_DETENT_HALF_WIDTH;
+/// Maximum number of rejected poke positions retained for player feedback.
+const MAX_WASTED_POKE_DETAILS: usize = 24;
+/// Compact room status lines must fit every face's narrow footer.
+const STATUS_LIMIT: usize = 56;
+
 /// Who a finished search says will win from a position, with both sides perfect.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Outcome {
@@ -382,11 +395,29 @@ pub fn dial_order() -> &'static [u8] {
 /// The status shows this so a player can tell how fine the dial is. A stranger
 /// who does not know there are 255 stops will step by a tenth, see eight boards,
 /// and conclude the dial is coarse.
+///
+/// The only rulebook that can pay the room's goal has a broad detent from phase
+/// 0.35 through 0.45. The other rulebooks keep their authored order on either
+/// side. Without that detent the one playable stop occupied less than half of
+/// one percent of a continuous hand dial, which made the posted goal effectively
+/// unreachable even though the underlying search could win it.
 #[must_use]
 pub fn dial_position(t: f64) -> (usize, usize) {
     let order = dial_order();
     let phase = if t.is_finite() { t.clamp(0.0, 1.0) } else { 0.0 };
-    let index = ((phase * order.len() as f64) as usize).min(order.len() - 1);
+    let winnable = order
+        .iter()
+        .position(|&rules| rules == WINNABLE_RULES)
+        .unwrap_or(0);
+    let index = if phase < WINNABLE_DETENT_START && winnable > 0 {
+        ((phase / WINNABLE_DETENT_START * winnable as f64) as usize).min(winnable - 1)
+    } else if phase <= WINNABLE_DETENT_END {
+        winnable
+    } else {
+        let after = order.len().saturating_sub(winnable + 1);
+        let progress = (phase - WINNABLE_DETENT_END) / (1.0 - WINNABLE_DETENT_END);
+        (winnable + 1 + (progress * after as f64) as usize).min(order.len() - 1)
+    };
     (index + 1, order.len())
 }
 
@@ -563,7 +594,7 @@ pub fn is_live_cell(cell: usize, rules: u8) -> bool {
 }
 
 /// How a visit stands after replaying the hand that reached it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Visit {
     /// The position on the grid now.
     pub board: Board,
@@ -575,6 +606,11 @@ pub struct Visit {
     pub tied: u32,
     /// Touches that landed on a cell already taken.
     pub wasted: u32,
+    /// One-based positions of rejected pokes, retained in input order.
+    ///
+    /// The public room input is capped at 24 pokes. The same cap here keeps a
+    /// direct core caller from turning status feedback into unbounded state.
+    pub wasted_pokes: Vec<usize>,
 }
 
 /// Replay a hand into a visit: the player moves, the machine answers perfectly.
@@ -591,8 +627,9 @@ pub fn replay(pokes: &[(f64, f64)], rules: u8) -> Visit {
         won: 0,
         tied: 0,
         wasted: 0,
+        wasted_pokes: Vec::new(),
     };
-    for &(x, y) in pokes {
+    for (poke_index, &(x, y)) in pokes.iter().enumerate() {
         if visit.board.is_over(rules) {
             // A finished game is not a wall. The next touch deals a new one.
             visit.board = Board::new();
@@ -602,6 +639,9 @@ pub fn replay(pokes: &[(f64, f64)], rules: u8) -> Visit {
         };
         let Some(after_player) = visit.board.play(cell) else {
             visit.wasted += 1;
+            if visit.wasted_pokes.len() < MAX_WASTED_POKE_DETAILS {
+                visit.wasted_pokes.push(poke_index.saturating_add(1));
+            }
             continue;
         };
         visit.board = after_player;
@@ -621,6 +661,57 @@ pub fn replay(pokes: &[(f64, f64)], rules: u8) -> Visit {
         }
     }
     visit
+}
+
+fn wasted_tokens(pokes: &[usize]) -> Vec<(String, usize)> {
+    let mut tokens = Vec::new();
+    let mut index = 0;
+    while index < pokes.len() {
+        let start = pokes[index];
+        let mut end = start;
+        while index + 1 < pokes.len() && pokes[index + 1] == end.saturating_add(1) {
+            index += 1;
+            end = pokes[index];
+        }
+        let token = if start == end {
+            format!("#{start}")
+        } else {
+            format!("#{start}-{end}")
+        };
+        tokens.push((token, end.saturating_sub(start).saturating_add(1)));
+        index += 1;
+    }
+    tokens
+}
+
+fn append_waste_detail(readout: &mut String, visit: &Visit) {
+    if visit.wasted == 0 {
+        return;
+    }
+    let tokens = wasted_tokens(&visit.wasted_pokes);
+    let retained = visit.wasted_pokes.len();
+    let unretained = (visit.wasted as usize).saturating_sub(retained);
+    for keep in (1..=tokens.len()).rev() {
+        let represented: usize = tokens[..keep].iter().map(|(_, count)| count).sum();
+        let omitted = retained.saturating_sub(represented) + unretained;
+        let mut detail = tokens[..keep]
+            .iter()
+            .map(|(token, _)| token.as_str())
+            .collect::<Vec<_>>()
+            .join(",");
+        if omitted > 0 {
+            detail.push_str(&format!(",+{omitted}"));
+        }
+        let addition = format!(" WASTE {detail}");
+        if readout.len() + addition.len() <= STATUS_LIMIT {
+            readout.push_str(&addition);
+            return;
+        }
+    }
+    let addition = format!(" WASTE +{}", visit.wasted);
+    if readout.len() + addition.len() <= STATUS_LIMIT {
+        readout.push_str(&addition);
+    }
 }
 
 /// The cell a normalized point lands on.
@@ -697,22 +788,20 @@ impl OnlyMove {
         // the doorway promised to take one. A room whose verb is TAKE A CELL
         // owes a player the cells.
         let live = visit.board.played() > 0 && !visit.board.is_over(rules);
-        let mut readout = if live {
+        let mut readout = if live && visit.won == 0 {
             let (yours, mine) = visit.board.counts();
             let open = CELLS as u32 - yours - mine;
-            format!("RULES {rules}  YOURS {yours}  MINE {mine}  OPEN {open}")
+            format!("RULES {rules} YOURS {yours} MINE {mine} OPEN {open}")
         } else {
             format!(
-                "RULES {rules}  PLAYED {}  WON {}  TIED {}",
+                "RULES {rules} PLAYED {} WON {} TIED {}",
                 visit.finished, visit.won, visit.tied
             )
         };
-        if live && visit.finished > 0 {
-            readout.push_str(&format!("  PLAYED {}", visit.finished));
+        if live && visit.won == 0 && visit.finished > 0 && visit.wasted == 0 {
+            readout.push_str(&format!(" PLAYED {}", visit.finished));
         }
-        if visit.wasted > 0 {
-            readout.push_str(&format!("  WASTED {}", visit.wasted));
-        }
+        append_waste_detail(&mut readout, visit);
         readout
     }
 }
@@ -958,6 +1047,7 @@ mod tests {
         let corner = (0.17, 0.17);
         let visit = replay(&[corner, corner], ALL_RULES);
         assert_eq!(visit.wasted, 1, "the machine's own cell cannot be retaken");
+        assert_eq!(visit.wasted_pokes, vec![2]);
         assert_eq!(visit.finished, 0);
 
         // Nine touches down the board finish at least one game and never
@@ -978,6 +1068,50 @@ mod tests {
             visit.won + visit.tied + (visit.finished - visit.won - visit.tied),
             "every finished game is counted once"
         );
+    }
+
+    #[test]
+    fn the_reported_phase_pays_a_short_visible_win_and_names_waste() {
+        // A packaged player used the visible three by three cell centers at
+        // phase 0.40, finished games repeatedly, and never received the posted
+        // WIN ONE GAME goal. The only winnable rulebook used to occupy less
+        // than half of one percent of the dial. Its broad detent now makes the
+        // exact public call land on the square with an X through it.
+        use crate::room::Room;
+        let room = OnlyMove::new();
+        assert_eq!(room.rules_at(WINNABLE_PHASE), WINNABLE_RULES);
+
+        let short = [(0.17, 0.17), (0.17, 0.83), (0.17, 0.50)];
+        let short_inputs = crate::room::inputs_from_pokes(&short, WINNABLE_PHASE);
+        assert!(room.goal_met(WINNABLE_PHASE, &short_inputs));
+        let short_visit = replay(&short, WINNABLE_RULES);
+        assert_eq!(short_visit.finished, 1);
+        assert_eq!(short_visit.won, 1);
+
+        let sweep = [
+            (0.32, 0.32),
+            (0.50, 0.32),
+            (0.68, 0.32),
+            (0.32, 0.50),
+            (0.50, 0.50),
+            (0.68, 0.50),
+            (0.32, 0.68),
+            (0.50, 0.68),
+            (0.68, 0.68),
+        ];
+        let sweep_inputs = crate::room::inputs_from_pokes(&sweep, WINNABLE_PHASE);
+        let visit = replay(&sweep, WINNABLE_RULES);
+        assert!(visit.won > 0, "the published nine-poke call must pay: {visit:?}");
+        assert!(room.goal_met(WINNABLE_PHASE, &sweep_inputs));
+        let status = room.status_input(WINNABLE_PHASE, &sweep_inputs).unwrap();
+        assert!(status.contains("WON 1"), "the earned win must stay visible: {status}");
+        for poke in &visit.wasted_pokes {
+            assert!(
+                status.contains(&format!("#{poke}")),
+                "wasted poke #{poke} is unnamed in {status}"
+            );
+        }
+        assert!(status.chars().count() <= STATUS_LIMIT, "{status}");
     }
 
     #[test]
@@ -1022,7 +1156,21 @@ mod tests {
             "the winnable rulebook sits at stop {found} of {}, too deep to meet by turning",
             order.len()
         );
-        assert_eq!(rules_at_phase(found as f64 / order.len() as f64), WINNABLE_RULES);
+        assert_eq!(rules_at_phase(WINNABLE_PHASE), WINNABLE_RULES);
+        assert_eq!(dial_position(WINNABLE_DETENT_START).0, found + 1);
+        assert_eq!(dial_position(WINNABLE_DETENT_END).0, found + 1);
+        assert_ne!(dial_position(WINNABLE_DETENT_START - 0.001).0, found + 1);
+        assert_ne!(dial_position(WINNABLE_DETENT_END + 0.001).0, found + 1);
+        for index in 0..found {
+            let phase = (index as f64 + 0.5) / found as f64 * WINNABLE_DETENT_START;
+            assert_eq!(dial_position(phase).0 - 1, index);
+        }
+        let after = order.len() - found - 1;
+        for offset in 0..after {
+            let progress = (offset as f64 + 0.5) / after as f64;
+            let phase = WINNABLE_DETENT_END + progress * (1.0 - WINNABLE_DETENT_END);
+            assert_eq!(dial_position(phase).0 - 1, found + 1 + offset);
+        }
         // Rulebook zero is never on the dial, so the mask the status prints is
         // always a mask `variation` accepts to mean the same board.
         assert!(!order.contains(&0));
@@ -1130,4 +1278,3 @@ mod tests {
         assert_eq!(board.to_move(), Side::Second);
     }
 }
-
