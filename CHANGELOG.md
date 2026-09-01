@@ -27,6 +27,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 - The tenth source-blind packaged round is recorded in `docs/PLAYTESTS.md`,
   including the alpha.13 claims it confirmed and both room findings reproduced
   through the real MCP binary.
+- Real stdio test sessions retain the existing 30-second hang detector and add
+  a small allowance for each queued request. This keeps a loaded Windows runner
+  from killing the full-session walk while short stalled sessions still fail
+  promptly.
 
 ## [0.4.0-alpha.13] - 2026-08-30
 

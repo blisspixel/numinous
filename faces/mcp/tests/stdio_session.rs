@@ -16,6 +16,8 @@ use numinous_core::Raster;
 use serde_json::{Value, json};
 
 const SESSION_BARRIER_TIMEOUT: Duration = Duration::from_secs(15);
+const SESSION_EXIT_BASE_TIMEOUT: Duration = Duration::from_secs(30);
+const SESSION_EXIT_PER_REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 static NEXT_SESSION: AtomicU64 = AtomicU64::new(0);
 
 /// Run a full session: send each line, return the parsed response lines.
@@ -108,7 +110,11 @@ fn run_session_with_state_barrier(
     }
     drop(stdin);
 
-    let deadline = Instant::now() + Duration::from_secs(30);
+    let request_count = before_barrier.len().saturating_add(after_barrier.len());
+    let request_count = u32::try_from(request_count).unwrap_or(u32::MAX);
+    let exit_timeout = SESSION_EXIT_BASE_TIMEOUT
+        .saturating_add(SESSION_EXIT_PER_REQUEST_TIMEOUT.saturating_mul(request_count));
+    let deadline = Instant::now() + exit_timeout;
     let status = loop {
         if let Some(status) = child.try_wait().expect("inspect MCP process") {
             break status;
@@ -121,7 +127,7 @@ fn run_session_with_state_barrier(
                 let _ = std::fs::remove_file(&journey);
             }
             let _ = std::fs::remove_file(&scores);
-            panic!("MCP server did not exit within 30 seconds");
+            panic!("MCP server did not exit within {exit_timeout:?}");
         }
         thread::sleep(Duration::from_millis(5));
     };
