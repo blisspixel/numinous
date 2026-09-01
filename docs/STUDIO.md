@@ -5,7 +5,7 @@ instrument and a shader toy. You type a little math, and it instantly *draws*
 and *sings*. This is the "Create" posture (see `DESIGN.md`), and it is a core
 part of the experience rather than a bonus feature.
 
-**Implementation boundary, 2026-08-08:** 0.4.0-alpha.14 ships a bounded scalar
+**Implementation boundary, 2026-09-01:** 0.4.0-alpha.15 ships a bounded scalar
 expression parser and evaluator, animated plots, deterministic melody mapping,
 an editable app panel, CLI and MCP operations, `.num` plus link round trips on
 both faces, exact app reopen (launch argument, dropped file, or link), the F5
@@ -21,6 +21,27 @@ the default `[-tau, tau]` window, the default `a = 1` knob, bounds, and the
 undefined-function refusal. All three faces use a 32-note default melody. A
 face still owns transport parsing and presentation, but it does not resample or
 reinterpret the formula.
+
+## Shipped formula vocabulary
+
+The current scalar language is deliberately small and total:
+
+- Values: the plotted variable `x`, the adjustable parameter `a`, and constants
+  `pi` and `e`.
+- Operators: `+`, `-`, `*`, `/`, and right-associative `^`, with parentheses
+  and conventional unary minus.
+- One-argument functions: `sin`, `cos`, `tan`, `exp`, `ln` (also `log`), `abs`,
+  `sqrt`, and `floor`.
+- Two-argument functions: `mod(left, divisor)`, `min(left, right)`, and
+  `max(left, right)`.
+
+`mod` uses Euclidean remainder, so a finite result is nonnegative even when
+`x` is negative. `min` and `max` do not hide an undefined argument. A comma is
+part of the grammar only where a two-argument function expects it, and wrong
+arity errors name the missing separator or closing parenthesis with a one-based
+source column. The curated bank includes stepped, wrapped, clamped, and
+thresholded examples using this vocabulary. The App help overlay names it, and
+the CLI and MCP descriptions point at the same core grammar.
 
 ## The one-liner
 

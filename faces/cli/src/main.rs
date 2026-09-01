@@ -476,7 +476,8 @@ enum Command {
     /// Plot a function of x, e.g. numinous plot "sin(a*x)". Use a for a knob.
     /// Discovery: pass an expression, or --recipe N, or --seed N (curated bank).
     Plot {
-        /// Manual expression in x and a (funcs: sin cos tan exp ln abs sqrt; consts pi e).
+        /// Manual expression in x and a. Unary: sin cos tan exp ln abs sqrt floor.
+        /// Pair functions: mod min max. Constants: pi e.
         /// Omit when using --recipe, --seed, or --list-recipes.
         expr: Option<String>,
         /// Curated Formula Jam recipe index (wraps). Mutually exclusive with expr and --seed.
@@ -582,7 +583,7 @@ enum Command {
     },
     /// Sing a function: turn y = f(x) into a melody and write a WAV.
     Sing {
-        /// The expression in x, a Studio .num file path, or a numinous:// link.
+        /// The same Studio expression grammar, a .num file path, or a numinous:// link.
         expr: String,
         /// Left edge of the x range (default -tau; a Studio input supplies its own).
         #[arg(long)]

@@ -5,6 +5,24 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.15] - 2026-09-01
+
+- Formula Jam's bounded scalar language now includes `floor(value)`, Euclidean
+  `mod(value, divisor)`, `min(left, right)`, and `max(left, right)`. The shared
+  core parser accepts comma-separated pairs, reports exact one-based columns
+  for missing separators and wrong arity, and keeps undefined inputs undefined
+  instead of letting `min` or `max` conceal them.
+- The curated Studio bank grows from twelve to sixteen complete expressions.
+  Its new stepped wave, wrapped sawtooth, clamp, and threshold recipes are the
+  same entries used by App Random and Auto, CLI recipe discovery, and MCP
+  recipe discovery. The App help overlay and both programmatic faces name the
+  new vocabulary.
+- New grammar coverage reaches evaluation semantics, hostile-input parser
+  bounds, `.num` and encoded-link round trips, the live App panel, CLI plotting,
+  direct MCP calls, and a real MCP stdio process. A comma-bearing creation can
+  be plotted, sung, saved, reopened, linked, and remixed without a face-specific
+  interpretation.
+
 ## [0.4.0-alpha.14] - 2026-08-31
 
 - The Only Move's posted goal can now be reached at a phase a player can land.
