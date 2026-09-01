@@ -38,6 +38,8 @@ pub(crate) const STUDIO_RECIPES: &[&str] = numinous_core::STUDIO_RECIPES;
 pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "FORMULA JAM",
     "TYPE: BUILD A CURVE  (Y = ...)",
+    "ONE: SIN COS TAN EXP LN ABS SQRT FLOOR",
+    "TWO: MOD(V,V) MIN(V,V) MAX(V,V)",
     "F2: RANDOM RECIPE FROM THE BANK",
     "F3: AUTO SET  (~21S, PHRASE SAFE)",
     "F4: NAME + SHARE  .NUM + LINK + PNG",
@@ -692,8 +694,8 @@ impl StudioPanel {
 #[cfg(test)]
 mod tests {
     use super::{
-        AUTO_DWELL_SECONDS, MAX_STUDIO_SOURCE_CHARS, RECIPE_MORPH_SECONDS, STUDIO_RECIPES,
-        StudioPanel, studio_scale,
+        AUTO_DWELL_SECONDS, MAX_STUDIO_SOURCE_CHARS, RECIPE_MORPH_SECONDS, STUDIO_HELP_LINES,
+        STUDIO_RECIPES, StudioPanel, studio_scale,
     };
     use crate::input_legend::{self, InputMode};
     use numinous_core::Raster;
@@ -789,6 +791,14 @@ mod tests {
             panel.advance_morph(RECIPE_MORPH_SECONDS);
         }
         assert_eq!(panel.source, STUDIO_RECIPES[0]);
+    }
+
+    #[test]
+    fn help_names_the_complete_scalar_vocabulary() {
+        let help = STUDIO_HELP_LINES.join("\n");
+        for name in ["FLOOR", "MOD(V,V)", "MIN(V,V)", "MAX(V,V)"] {
+            assert!(help.contains(name), "help must name {name}");
+        }
     }
 
     #[test]

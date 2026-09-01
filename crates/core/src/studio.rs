@@ -28,6 +28,10 @@ pub const STUDIO_RECIPES: &[&str] = &[
     "sin(a*x) * cos(x)",
     "x/4 + sin(2*x)",
     "cos(x)^2 - sin(x)^2",
+    "floor(3*sin(x))/3",
+    "mod(x + pi, 2*pi) - pi",
+    "min(max(x, -2), 2)",
+    "max(abs(x) - a, 0)",
 ];
 
 /// How many curated recipes the bank holds.
@@ -678,6 +682,8 @@ pub enum Expr {
     Bin(Op, Box<Expr>, Box<Expr>),
     /// A function call, e.g. `sin(...)`.
     Call(Func, Box<Expr>),
+    /// A two-argument function call, e.g. `min(..., ...)`.
+    PairCall(PairFunc, Box<Expr>, Box<Expr>),
 }
 
 /// A binary operator.
@@ -712,6 +718,19 @@ pub enum Func {
     Abs,
     /// Square root.
     Sqrt,
+    /// Greatest integer less than or equal to the argument.
+    Floor,
+}
+
+/// A supported two-argument function.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PairFunc {
+    /// Euclidean remainder. A finite result is nonnegative.
+    Mod,
+    /// The lesser of two defined values.
+    Min,
+    /// The greater of two defined values.
+    Max,
 }
 
 /// Evaluate a parsed expression at variable `x` and parameter `a`.
@@ -742,6 +761,18 @@ pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
                 Func::Ln => arg.ln(),
                 Func::Abs => arg.abs(),
                 Func::Sqrt => arg.sqrt(),
+                Func::Floor => arg.floor(),
+            }
+        }
+        Expr::PairCall(func, lhs, rhs) => {
+            let (lhs, rhs) = (eval(lhs, x, a), eval(rhs, x, a));
+            if lhs.is_nan() || rhs.is_nan() {
+                return f64::NAN;
+            }
+            match func {
+                PairFunc::Mod => lhs.rem_euclid(rhs),
+                PairFunc::Min => lhs.min(rhs),
+                PairFunc::Max => lhs.max(rhs),
             }
         }
     }
@@ -923,6 +954,7 @@ enum Tok {
     Star,
     Slash,
     Caret,
+    Comma,
     LParen,
     RParen,
 }
@@ -937,6 +969,7 @@ impl Tok {
             Self::Star => "'*'".to_string(),
             Self::Slash => "'/'".to_string(),
             Self::Caret => "'^'".to_string(),
+            Self::Comma => "','".to_string(),
             Self::LParen => "'('".to_string(),
             Self::RParen => "')'".to_string(),
         }
@@ -985,6 +1018,7 @@ fn tokenize(source: &str) -> Result<Tokenized, String> {
                 '*' => Tok::Star,
                 '/' => Tok::Slash,
                 '^' => Tok::Caret,
+                ',' => Tok::Comma,
                 '(' => Tok::LParen,
                 ')' => Tok::RParen,
                 other => {
@@ -1043,6 +1077,23 @@ impl Parser {
             )),
             None => Err(format!(
                 "expression ended at column {column}; expected ')' {context}"
+            )),
+        }
+    }
+
+    fn expect_comma(&mut self, function: &str) -> Result<(), String> {
+        let column = self.current_column();
+        match self.peek() {
+            Some(Tok::Comma) => {
+                self.pos += 1;
+                Ok(())
+            }
+            Some(token) => Err(format!(
+                "expected ',' between arguments to {function} at column {column}; found {}",
+                token.diagnostic_name()
+            )),
+            None => Err(format!(
+                "expression ended at column {column}; expected ',' between arguments to {function}"
             )),
         }
     }
@@ -1111,7 +1162,7 @@ impl Parser {
         Ok(base)
     }
 
-    /// atom := number | name | name '(' expr ')' | '(' expr ')'
+    /// atom := number | name | name '(' expr (',' expr)? ')' | '(' expr ')'
     fn atom(&mut self, depth: usize) -> Result<Expr, String> {
         let column = self.current_column();
         match self.bump() {
@@ -1135,24 +1186,42 @@ impl Parser {
     /// Resolve an identifier: the variable, a constant, or a function call.
     fn ident(&mut self, name: &str, depth: usize, name_column: usize) -> Result<Expr, String> {
         if matches!(self.peek(), Some(Tok::LParen)) {
-            let func = match name {
-                "sin" => Func::Sin,
-                "cos" => Func::Cos,
-                "tan" => Func::Tan,
-                "exp" => Func::Exp,
-                "ln" | "log" => Func::Ln,
-                "abs" => Func::Abs,
-                "sqrt" => Func::Sqrt,
-                other => {
-                    return Err(format!(
-                        "unknown function '{other}' at column {name_column}"
-                    ));
-                }
+            let unary = match name {
+                "sin" => Some(Func::Sin),
+                "cos" => Some(Func::Cos),
+                "tan" => Some(Func::Tan),
+                "exp" => Some(Func::Exp),
+                "ln" | "log" => Some(Func::Ln),
+                "abs" => Some(Func::Abs),
+                "sqrt" => Some(Func::Sqrt),
+                "floor" => Some(Func::Floor),
+                _ => None,
             };
+            let pair = match name {
+                "mod" => Some(PairFunc::Mod),
+                "min" => Some(PairFunc::Min),
+                "max" => Some(PairFunc::Max),
+                _ => None,
+            };
+            if unary.is_none() && pair.is_none() {
+                return Err(format!("unknown function '{name}' at column {name_column}"));
+            }
             self.pos += 1; // consume '('
-            let arg = self.expr(depth)?;
-            self.expect_right_paren(&format!("after {name}( "))?;
-            Ok(Expr::Call(func, Box::new(arg)))
+            if let Some(func) = unary {
+                let arg = self.expr(depth)?;
+                self.expect_right_paren(&format!("after {name}( "))?;
+                Ok(Expr::Call(func, Box::new(arg)))
+            } else {
+                let lhs = self.expr(depth)?;
+                self.expect_comma(name)?;
+                let rhs = self.expr(depth)?;
+                self.expect_right_paren(&format!("after {name}( "))?;
+                Ok(Expr::PairCall(
+                    pair.expect("validated pair function"),
+                    Box::new(lhs),
+                    Box::new(rhs),
+                ))
+            }
         } else {
             match name {
                 "x" => Ok(Expr::Var),
@@ -1175,7 +1244,7 @@ mod tests {
 
     #[test]
     fn curated_recipes_parse_and_auto_walk_is_deterministic() {
-        assert!(studio_recipe_count() >= 8);
+        assert!(studio_recipe_count() >= 16);
         for (index, source) in STUDIO_RECIPES.iter().enumerate() {
             let expr = parse(source).unwrap_or_else(|e| panic!("recipe {index}: {e}"));
             let _ = eval(&expr, 0.5, 1.0);
@@ -1288,6 +1357,46 @@ mod tests {
     }
 
     #[test]
+    fn floor_and_pair_functions_cover_steps_wraps_and_clamps() {
+        assert!((at("floor(x)", -1.2) + 2.0).abs() < 1e-9);
+        assert!((at("mod(x, 3)", -1.0) - 2.0).abs() < 1e-9);
+        assert!((at("mod(x, 3)", 7.0) - 1.0).abs() < 1e-9);
+        assert!((at("min(max(x, -2), 2)", -4.0) + 2.0).abs() < 1e-9);
+        assert!((at("min(max(x, -2), 2)", 1.5) - 1.5).abs() < 1e-9);
+        assert!((at("min(max(x, -2), 2)", 4.0) - 2.0).abs() < 1e-9);
+
+        let threshold = parse("max(abs(x) - a, 0)").expect("pair function accepts a");
+        assert!((eval(&threshold, -3.0, 1.25) - 1.75).abs() < 1e-9);
+    }
+
+    #[test]
+    fn pair_functions_do_not_hide_undefined_arguments() {
+        assert!(at("mod(1, 0)", 0.0).is_nan());
+        assert!(at("min(sqrt(-1), 2)", 0.0).is_nan());
+        assert!(at("max(2, sqrt(-1))", 0.0).is_nan());
+    }
+
+    #[test]
+    fn function_arity_errors_name_the_expected_separator() {
+        assert_eq!(
+            parse("min(1)").expect_err("pair function needs two arguments"),
+            "expected ',' between arguments to min at column 6; found ')'"
+        );
+        assert_eq!(
+            parse("min(1 2)").expect_err("pair function needs a comma"),
+            "expected ',' between arguments to min at column 7; found number"
+        );
+        assert_eq!(
+            parse("floor(1, 2)").expect_err("unary function rejects a second argument"),
+            "expected ')' after floor( at column 8; found ','"
+        );
+        assert_eq!(
+            parse("min(1, 2, 3)").expect_err("pair function rejects a third argument"),
+            "expected ')' after min( at column 9; found ','"
+        );
+    }
+
+    #[test]
     fn the_parameter_a_is_read() {
         let expr = parse("a * x").expect("parse");
         assert!((eval(&expr, 3.0, 2.0) - 6.0).abs() < 1e-9);
@@ -1358,6 +1467,26 @@ mod tests {
 
         let link = creation.to_link();
         assert!(link.starts_with("numinous://studio?expr=sin%28a%2Ax%29%20%2B%20x%2F2"));
+        assert_eq!(
+            StudioCreation::from_link(&link).expect("link round trip"),
+            creation
+        );
+    }
+
+    #[test]
+    fn pair_function_capsules_round_trip_their_separator() {
+        let creation = StudioCreation::new("min(max(x, -2), 2)", -3.0, 3.0, 1.0)
+            .expect("pair function creation");
+        assert_eq!(
+            StudioCreation::from_num_file(&creation.to_num_file()).expect("file round trip"),
+            creation
+        );
+
+        let link = creation.to_link();
+        assert!(
+            link.contains("%2C"),
+            "the comma is encoded in the URI: {link}"
+        );
         assert_eq!(
             StudioCreation::from_link(&link).expect("link round trip"),
             creation

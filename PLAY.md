@@ -251,7 +251,10 @@ before, and `sing_expression` sings one: every note carries the step taken to
 reach it, sized exactly in cents, named when a name fits, and given as a whole
 number ratio when a simple one explains it. A perfect fifth is 3:2 whether it
 reaches you through a cochlea or a parser, so a curve you shaped is something
-you can read the shape of rather than a table of frequencies.
+you can read the shape of rather than a table of frequencies. The scalar
+language includes `floor(value)`, Euclidean `mod(value, divisor)`,
+`min(left, right)`, and `max(left, right)`. Try
+`min(max(mod(floor(3*x), 5), 1), 3)`, then change one number.
 
 Keep that work when you choose. `save_creation` returns canonical `.num` text,
 a native link, and an exact preview; optional title, author, and era travel

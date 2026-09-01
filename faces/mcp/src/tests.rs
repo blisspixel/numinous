@@ -2266,6 +2266,21 @@ fn an_agent_can_create_in_the_studio() {
     assert_eq!(resp["result"]["structuredContent"]["discovery"], "manual");
     assert_eq!(resp["result"]["structuredContent"]["valid"], true);
 
+    let expanded = handle_request(&json!({
+        "jsonrpc":"2.0","id":42,"method":"tools/call",
+        "params":{"name":"plot_expression","arguments":{
+            "expr":"min(max(mod(floor(3*x), 5), 1), 3)"
+        }}
+    }))
+    .expect("expanded Studio grammar must respond");
+    assert_eq!(expanded["result"]["isError"], false);
+    assert_eq!(expanded["result"]["structuredContent"]["valid"], true);
+    assert!(
+        expanded["result"]["structuredContent"]["plot"]
+            .as_str()
+            .is_some_and(|plot| plot.contains('#'))
+    );
+
     let bad = handle_request(&json!({
         "jsonrpc":"2.0","id":41,"method":"tools/call",
         "params":{"name":"plot_expression","arguments":{"expr":"sin("}}
