@@ -6,14 +6,14 @@ comfort, and voluntary return play. Only part of that system is automated today.
 This document names both the enforced checks and the quality loops still to be
 built, so an aspiration is never mistaken for a result.
 
-## Evidence snapshot, 2026-08-28
+## Evidence snapshot, 2026-09-01
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 3,723 passing all-target test cases plus three expensive ignored
+  doctests, 3,774 passing all-target test cases plus three expensive ignored
   diagnostics, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 94.24%
-  regions and 94.25% lines under the documented exclusions. Each of the four
+  three-OS test-and-build matrix. The current measured coverage is 94.17%
+  regions and 94.17% lines under the documented exclusions. Each of the four
   packaged release targets installs into a disposable root, renders Times
   Tables through the installed CLI, and completes modern MCP discovery, the
   exact 40-tool inventory, and a real `play_room` call from an isolated profile.
@@ -43,8 +43,8 @@ built, so an aspiration is never mistaken for a result.
   source parity, one revision, and at least two physical adapters before writing
   a source-bound manifest.
   The consented MCP
-  broadcast path has 65 focused shared-crate tests, 121 MCP unit tests, and
-  12 real stdio tests. Real loopback cases cover pairing, compatibility,
+  broadcast path has 69 focused shared-crate tests, 215 MCP unit tests, and
+  23 real stdio tests. Real loopback cases cover pairing, compatibility,
   ordered controls, redaction, disconnect cleanup, private-call silence, exact
   parity for state-independent public results, and Journey noninterference for
   the four state-sensitive tools. Shared coordinator and queue tests separately
@@ -65,7 +65,7 @@ built, so an aspiration is never mistaken for a result.
   delivery through the live App renderers with exact board-body pixels,
   fail-closed argument and result validation, and bounded deterministic sound
   where supported.
-  The Understanding Alpha boundary has 105 focused runner and collector tests,
+  The Understanding Alpha boundary has 106 focused runner and collector tests,
   including a complete session that executes all 20 tracked encounter calls
   through 20 fresh real MCP processes, sealed calibration delivery and crash
   recovery, exact committed-source and independent start-receipt binding,

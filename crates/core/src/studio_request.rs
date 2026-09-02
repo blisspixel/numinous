@@ -9,8 +9,8 @@ use std::fmt;
 
 use crate::sound::SoundSpec;
 use crate::studio::{
-    Expr, MAX_MELODY_NOTES, MAX_STUDIO_SOURCE_CHARS, PlotTextError, parse, plot_parsed_text,
-    studio_auto_recipe, studio_recipe, studio_recipe_count, to_melody,
+    Expr, MAX_MELODY_NOTES, MAX_STUDIO_SOURCE_CHARS, PlotTextError, StudioScale, parse,
+    plot_parsed_text, studio_auto_recipe, studio_recipe, studio_recipe_count, to_melody_with_scale,
 };
 
 /// Default left edge of a Studio expression window.
@@ -269,12 +269,22 @@ impl SingRequest {
     /// Returns [`StudioRequestError::Undefined`] when no finite sample exists
     /// across the requested window.
     pub fn execute(&self) -> Result<SoundSpec, StudioRequestError> {
-        let spec = to_melody(
+        self.execute_with_scale(StudioScale::Continuous)
+    }
+
+    /// Execute through one portable Studio pitch map.
+    ///
+    /// # Errors
+    /// Returns [`StudioRequestError::Undefined`] when no finite sample exists
+    /// across the requested window.
+    pub fn execute_with_scale(&self, scale: StudioScale) -> Result<SoundSpec, StudioRequestError> {
+        let spec = to_melody_with_scale(
             &self.expression,
             self.xmin,
             self.xmax,
             self.notes,
             self.parameter,
+            scale,
         );
         if spec.notes.is_empty() {
             Err(StudioRequestError::Undefined)

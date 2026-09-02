@@ -29,9 +29,9 @@ determinism-as-safety.**
 ## The Minimum Lovable Creator Surface (build first, in order)
 
 **1. Reopen plus the room-manifest capsule (Tier 1).** Grow `StudioCreation`
-(today: one expression, xmin/xmax/a) into the room manifest specified in
-`EXTENSIBILITY.md`: multiple expressions, named sliders with ranges, a palette
-and Visual Era, sound parameters from fixed enums, and metadata (title, author).
+into the room manifest specified in `EXTENSIBILITY.md`: general
+multi-expression programs, named sliders with ranges, a palette and Visual Era,
+sound parameters from fixed enums, and metadata (title, author).
 Add app-side reopen so a capsule reopens exactly, live and singing. Keep the
 hand-written strict parser and the per-field caps. This is the floor everything
 stands on; nothing else works without reopen. The v1 expression-capsule reopen
@@ -39,8 +39,10 @@ is built: a launch argument or a dropped `.num` opens a paused exact preview
 that Enter starts singing, and the first edit hands the creation to the player.
 The manifest's first growth ring is built too: version 2 carries a capped
 title, author, Era, and a validated `descends` parent link, written only when
-present so plain shares stay version 1. Sliders and multiple expressions
-remain open.
+present so plain shares stay version 1. Version 3 adds the first bounded
+multi-expression form, one atomic `x(t), y(t)` pair, plus a stored pitch map.
+Existing version 1 and 2 documents remain unchanged. Named sliders and general
+multi-expression programs remain open.
 
 **2. The one-button share bundle.** On any Studio state, one action emits the
 trio: the `.num` file, the `numinous://` link, and the PNG postcard. The link
@@ -61,8 +63,8 @@ fork with one keystroke. Fork opens a copy in the Studio with lineage recorded.
 Start local-first (a folder of `.num` files rendered as live thumbnails) so it
 ships before any server exists. Fork must be as cheap as play; the remixers are
 the engine of a creative community (the Scratch research is explicit on this).
-The local wall is built for expression capsules: F5 in the Studio discovers
-the folder the share keys write into, draws each creation's exact curve
+The local wall is built for graph and parametric capsules: F5 in the Studio
+discovers the folder the share keys write into, draws each creation's exact path
 newest first, and Enter opens one paused. F forks the chosen creation:
 editable and singing at once, in the creation's own era, with the parent's
 link remembered so the next share records the descent.
@@ -93,7 +95,8 @@ you share are the same object at every rung:
 | Rung | You type | Shared as | Tier |
 |---|---|---|---|
 | Doodle | `y = sin(x)` | `.num` (one expression) | Tier 1 |
-| Toy | `sin(a*x + t)`, drag `a` | `.num` manifest (sliders, palette, sound) | Tier 1 |
+| Curve | `x(t)=cos(3*t); y(t)=sin(2*t)` | `.num` v3 (pair and pitch map) | Tier 1 |
+| Toy | `sin(a*x)`, tune `a` | `.num` manifest (sliders, palette, sound) | Tier 1 |
 | Instrument | `euclid(3,8)`, layered patterns | `.num` manifest (pattern algebra) | Tier 2 |
 | Room | the above plus a challenge and a reveal | signed capsule via portal | Tier 2 |
 
@@ -155,8 +158,9 @@ The genuinely novel part, and equal footing by construction: duet capsules with
 dual authorship in the lineage (a human wrote the geometry, an agent the sound),
 gifting as a native share verb ("I found this and thought of you"), and
 the built `save_creation`, `open_creation`, and `fork_creation` MCP tools for
-portable Studio work with identity and lineage. They return `.num` text and a
-native link without host filesystem access. The later `create_room` proof-packet
+portable graph or paired parametric Studio work with pitch map, identity, and
+lineage. They return `.num` text and a native link without host filesystem
+access. The later `create_room` proof-packet
 portal is a distinct community publishing boundary, where a mind's room can be
 signed, curated, and featured on the same terms as a human's. A long-lived mind
 can eventually author and curate its own wing. See `DIGITAL_MINDS.md`.

@@ -232,9 +232,10 @@ pub use spectrum::{
     spectrum_time_scale,
 };
 pub use studio::{
-    Expr, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_SHARE_INPUT_BYTES, MAX_STUDIO_SOURCE_CHARS,
-    NumFileError, STUDIO_RECIPES, StudioCreation, eval, parse, plot_text, studio_auto_recipe,
-    studio_recipe, studio_recipe_count, to_melody,
+    Expr, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_SHARE_INPUT_BYTES, MAX_STUDIO_EDITOR_CHARS,
+    MAX_STUDIO_SOURCE_CHARS, NumFileError, STUDIO_RECIPES, StudioCreation, StudioKind, StudioPlot,
+    StudioProgram, StudioScale, eval, parse, plot_text, studio_auto_recipe, studio_recipe,
+    studio_recipe_count, to_melody, to_melody_with_scale,
 };
 pub use studio_request::{
     DEFAULT_MELODY_NOTES, DEFAULT_PLOT_HEIGHT, DEFAULT_PLOT_WIDTH, DEFAULT_STUDIO_PARAMETER,

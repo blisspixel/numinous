@@ -404,11 +404,13 @@ pub(super) fn sing_action(
     xmax: f64,
     a: f64,
     notes: u64,
+    scale: numinous_core::StudioScale,
     audio: bool,
 ) -> SingExpressionAction {
     SingExpressionAction::new(expr)
         .with_window(xmin, xmax, a)
         .with_notes(notes)
+        .with_scale(scale)
         .with_audio(audio)
 }
 
@@ -433,6 +435,7 @@ pub(super) fn sing_action_json(action: &SingExpressionAction) -> Value {
         "xmax": action.xmax(),
         "a": action.a(),
         "notes": action.notes(),
+        "scale": action.scale().name(),
         "audio": action.audio(),
     })
 }
@@ -445,6 +448,7 @@ pub(super) fn sing_args_from_action(action: &SingExpressionAction) -> Value {
         "xmax": action.xmax(),
         "a": action.a(),
         "notes": action.notes(),
+        "scale": action.scale().name(),
         "receipt": true,
     });
     if action.audio() {
@@ -805,9 +809,15 @@ fn parse_sing_action(value: Option<&Value>) -> Result<SingExpressionAction, Stri
         .get("notes")
         .and_then(Value::as_u64)
         .ok_or_else(|| "A sing receipt action must name notes.".to_string())?;
+    let scale = object
+        .get("scale")
+        .and_then(Value::as_str)
+        .and_then(numinous_core::StudioScale::parse)
+        .ok_or_else(|| "A sing receipt action must name a valid scale.".to_string())?;
     Ok(SingExpressionAction::new(expr)
         .with_window(xmin, xmax, a)
         .with_notes(notes)
+        .with_scale(scale)
         .with_audio(
             object
                 .get("audio")

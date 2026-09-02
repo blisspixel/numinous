@@ -95,17 +95,19 @@ with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 
 ## Status
 
-**0.4.0-alpha.15** is playable today: 355 catalog rooms, games, Journey,
+**0.4.0-alpha.16** is playable today: 355 catalog rooms, games, Journey,
 Studio, controllers, and Watch Agent (consented local MCP session viewing).
 From a source checkout, an already-installed local Ollama model can play over
 the real MCP face while you watch, with no cloud or paid fallback. See
 [`docs/LOCAL_AGENT_PLAYTEST.md`](docs/LOCAL_AGENT_PLAYTEST.md).
 
-Formula Jam now adds steps, wraps, clamps, and thresholds to its shared scalar
-language: `floor(value)`, Euclidean `mod(value, divisor)`, `min(left, right)`,
-and `max(left, right)`. Four curated recipes expose the new vocabulary through
-App Random and Auto, CLI discovery, and MCP discovery. The same formulas plot,
-sing, save, reopen, link, and remix across all three faces.
+Formula Jam now accepts either one graph or an atomic parametric pair such as
+`x(t)=cos(3*t); y(t)=sin(2*t)`. The path auto-scales across both axes, and its
+`y(t)` coordinate becomes the voice. Continuous, chromatic, major, minor, and
+pentatonic pitch maps are shared by the App, CLI, and MCP. The App cycles them
+with F6. Version 3 capsules and native links keep the pair and pitch map through
+save, exact reopen, Gallery, and fork, while existing version 1 and 2 capsules
+retain their original bytes and behavior.
 
 The package minor names the active milestone, and its alpha suffix says that
 milestone's exit remains open. **0.2** and **0.3** are exit-met and CI-locked

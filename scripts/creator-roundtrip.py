@@ -2,7 +2,8 @@
 """Machine acceptance for the local Studio make / save / reopen loop (CLI).
 
 Creates a .num document, reopens it, and checks deterministic identity of the
-saved document and reopened expression text.
+saved document and reopened expression text. The version 3 case also proves
+one parametric pair, its pitch scale, exact WAV voice, and atomic fork.
 
 A creation is more than its expression. A player who narrowed the range or
 turned the knob made those part of what they saved, so the range and the knob
@@ -146,7 +147,28 @@ def drawing(reopened: str) -> str:
         line
         for line in lines
         if line
-        and not line.startswith(("Studio creation", "expr=", "xmin=", "xmax=", "a=", "link=", "y = "))
+        and not line.startswith(
+            (
+                "Studio creation",
+                "kind=",
+                "expr=",
+                "xexpr=",
+                "yexpr=",
+                "xmin=",
+                "xmax=",
+                "tmin=",
+                "tmax=",
+                "a=",
+                "scale=",
+                "title=",
+                "author=",
+                "link=",
+                "remix it:",
+                "y = ",
+                "x(t) = ",
+                "t in [",
+            )
+        )
     ]
     return "\n".join(line.rstrip() for line in body)
 
@@ -233,6 +255,171 @@ def check_recipe_bank(cli: list[str], env: dict[str, str]) -> dict[str, Any]:
     return {"name": "list_recipes", "passed": True, "detail": "recipe bank listed"}
 
 
+def check_parametric_pair(
+    cli: list[str], work: Path, env: dict[str, str]
+) -> dict[str, Any]:
+    """Version 3 must keep one pair and its sound through save, open and fork."""
+    parent = work / "lissajous.num"
+    arguments = [
+        "plot",
+        "--x-expr=cos(3*t)",
+        "--y-expr=sin(2*t)",
+        "--tmin=0",
+        "--tmax=6.283185307179586",
+        "--a=0.25",
+        "--scale=pentatonic",
+        "--title=Five Petals",
+        "--save",
+        str(parent),
+    ]
+    code, stdout, stderr = run_cli(cli, arguments, env)
+    if code != 0 or not parent.is_file():
+        return {
+            "name": "parametric pair",
+            "passed": False,
+            "detail": f"save failed: {(stderr or stdout)[:400]}",
+        }
+    body = parent.read_text(encoding="utf-8")
+    required = (
+        "NUMINOUS_STUDIO 3\n",
+        "kind=parametric\n",
+        "xexpr=cos(3*t)\n",
+        "yexpr=sin(2*t)\n",
+        "tmin=0\n",
+        "tmax=6.283185307179586\n",
+        "a=0.25\n",
+        "scale=pentatonic\n",
+        "title=Five Petals\n",
+    )
+    missing = [field.rstrip() for field in required if field not in body]
+    if missing:
+        return {
+            "name": "parametric pair",
+            "passed": False,
+            "detail": f"version 3 capsule omitted {missing}",
+        }
+    link = next(
+        (line.removeprefix("link: ") for line in stdout.splitlines() if line.startswith("link: ")),
+        "",
+    )
+    if not link:
+        return {"name": "parametric pair", "passed": False, "detail": "save omitted link"}
+
+    code, reopened, error = run_cli(cli, ["open-studio", str(parent)], env)
+    if code != 0 or not drawing(reopened).strip():
+        return {
+            "name": "parametric pair",
+            "passed": False,
+            "detail": f"reopen failed or drew nothing: {(error or reopened)[:400]}",
+        }
+    for spoken in (
+        "kind=parametric",
+        "xexpr=cos(3*t)",
+        "yexpr=sin(2*t)",
+        "scale=pentatonic",
+    ):
+        if spoken not in reopened:
+            return {
+                "name": "parametric pair",
+                "passed": False,
+                "detail": f"reopen omitted {spoken}",
+            }
+
+    repeated = work / "lissajous-repeat.num"
+    repeat_args = [*arguments]
+    repeat_args[-1] = str(repeated)
+    code, _, error = run_cli(cli, repeat_args, env)
+    if code != 0 or not repeated.is_file() or sha256_file(repeated) != sha256_file(parent):
+        return {
+            "name": "parametric pair",
+            "passed": False,
+            "detail": f"repeated version 3 save drifted: {error[:300]}",
+        }
+
+    capsule_wav = work / "capsule.wav"
+    raw_wav = work / "raw.wav"
+    code, _, error = run_cli(
+        cli, ["sing", str(parent), "--notes=24", "--out", str(capsule_wav)], env
+    )
+    code_raw, _, error_raw = run_cli(
+        cli,
+        [
+            "sing",
+            "sin(2*t)",
+            "--xmin=0",
+            "--xmax=6.283185307179586",
+            "--a=0.25",
+            "--notes=24",
+            "--scale=pentatonic",
+            "--out",
+            str(raw_wav),
+        ],
+        env,
+    )
+    if (
+        code != 0
+        or code_raw != 0
+        or not capsule_wav.is_file()
+        or not raw_wav.is_file()
+        or sha256_file(capsule_wav) != sha256_file(raw_wav)
+    ):
+        return {
+            "name": "parametric pair",
+            "passed": False,
+            "detail": f"stored scale voice drifted: {(error or error_raw)[:300]}",
+        }
+
+    child = work / "lissajous-child.num"
+    code, _, error = run_cli(
+        cli,
+        [
+            "fork",
+            str(parent),
+            "--x-expr=cos(5*t)",
+            "--y-expr=sin(4*t)",
+            "--scale=minor",
+            "--out",
+            str(child),
+        ],
+        env,
+    )
+    child_body = child.read_text(encoding="utf-8") if child.is_file() else ""
+    if code != 0 or any(
+        field not in child_body
+        for field in (
+            "xexpr=cos(5*t)\n",
+            "yexpr=sin(4*t)\n",
+            "scale=minor\n",
+            f"descends={link}\n",
+        )
+    ):
+        return {
+            "name": "parametric pair",
+            "passed": False,
+            "detail": f"atomic fork lost pair, scale, or lineage: {(error or child_body)[:400]}",
+        }
+
+    refused = work / "partial.num"
+    partial, _, partial_error = run_cli(
+        cli,
+        ["plot", "--x-expr=t", "--save", str(refused)],
+        env,
+    )
+    if partial == 0 or refused.exists() or "both --x-expr and --y-expr" not in partial_error:
+        return {
+            "name": "parametric pair",
+            "passed": False,
+            "detail": "a half-pair was not refused atomically",
+        }
+
+    return {
+        "name": "parametric pair",
+        "passed": True,
+        "detail": "version 3 pair, scale, drawing, voice, deterministic save, and fork agree",
+        "sha256": sha256_file(parent),
+    }
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     cli = resolve_cli()
@@ -244,6 +431,7 @@ def main() -> int:
         env = isolated_env(profile)
         results.append(check_recipe_bank(cli, env))
         results.append(check_settings_survive(cli, work, env))
+        results.append(check_parametric_pair(cli, work, env))
         for expr in EXPRESSIONS:
             results.append(check_expression(cli, expr, work, env))
     failed = [item for item in results if not item.get("passed")]
