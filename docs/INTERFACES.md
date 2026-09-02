@@ -11,7 +11,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
 **Implementation boundary, 2026-07-18:** all three faces are shipped from the
-same headless core in 0.4.0-alpha.15. Descriptions below mix current behavior
+same headless core in 0.4.0-alpha.16. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -222,13 +222,15 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   Export creates no file, accepts no filesystem path, returns no host path, and
   does not implement import. `PLAYING.md` carries the complete user-facing list.
 - **Portable creation and lineage parity (built):** `save_creation` produces a
-  canonical Studio capsule from an expression, optional title and author,
-  visual era, canvas, and parameter. `open_creation` accepts only canonical
+  canonical Studio capsule from one graph or one atomic parametric pair,
+  a named pitch map, optional title and author, visual era, canvas, and
+  parameter. `open_creation` accepts only canonical
   `.num` text or a native capsule link. `fork_creation` accepts either capsule
   form and creates a child whose `descends` field is the exact canonical parent
   link. CLI and MCP use the same core fork operation: children retain the
-  parent's canvas and function unless replaced, but never inherit title or
-  author. Every successful result uses schema
+  parent's canvas, complete program, and pitch map unless replaced, but never
+  inherit title or author. A parametric replacement must provide both
+  coordinates. Every successful result uses schema
   `numinous.studio-creation` version 1 and includes canonical `.num` text, native
   link, the same link as `journalSubject`, normalized fields, and an exact
   bounded core-rendered preview. The tools neither read a host path nor create

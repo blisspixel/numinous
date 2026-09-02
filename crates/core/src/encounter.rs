@@ -1,6 +1,7 @@
 //! Versioned Numinous Encounter Receipts: a replay proof, not a memory.
 
 use crate::rooms::canonical_room_id;
+use crate::studio::StudioScale;
 use crate::studio_request::{
     DEFAULT_MELODY_NOTES, DEFAULT_STUDIO_PARAMETER, DEFAULT_STUDIO_XMAX, DEFAULT_STUDIO_XMIN,
 };
@@ -957,6 +958,7 @@ pub struct SingExpressionAction {
     xmax: f64,
     a: f64,
     notes: u64,
+    scale: StudioScale,
     audio: bool,
 }
 
@@ -970,6 +972,7 @@ impl SingExpressionAction {
             xmax: DEFAULT_STUDIO_XMAX,
             a: DEFAULT_STUDIO_PARAMETER,
             notes: DEFAULT_MELODY_NOTES as u64,
+            scale: StudioScale::Continuous,
             audio: false,
         }
     }
@@ -987,6 +990,13 @@ impl SingExpressionAction {
     #[must_use]
     pub fn with_notes(mut self, notes: u64) -> Self {
         self.notes = notes;
+        self
+    }
+
+    /// Portable pitch map.
+    #[must_use]
+    pub fn with_scale(mut self, scale: StudioScale) -> Self {
+        self.scale = scale;
         self
     }
 
@@ -1027,6 +1037,12 @@ impl SingExpressionAction {
         self.notes
     }
 
+    /// Portable pitch map.
+    #[must_use]
+    pub const fn scale(&self) -> StudioScale {
+        self.scale
+    }
+
     /// Whether a WAV was requested.
     #[must_use]
     pub fn audio(&self) -> bool {
@@ -1045,6 +1061,7 @@ impl SingExpressionAction {
         push_f64(&mut bytes, self.xmax);
         push_f64(&mut bytes, self.a);
         push_u64(&mut bytes, self.notes);
+        push_str(&mut bytes, self.scale.name());
         bytes.push(u8::from(self.audio));
         bytes
     }

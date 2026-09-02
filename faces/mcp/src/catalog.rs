@@ -597,14 +597,24 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "plot_expression",
-                "description": "Create in Formula Jam / Studio. Three discovery paths: (1) manual expr, (2) curated recipe index, (3) random seed into the same bank the App uses for F2 Random. Optional auto_step with seed walks the bank like Auto without session state. Pass list_recipes true to inspect the bank. Unary functions: sin cos tan exp ln abs sqrt floor. Pair functions: mod min max. Constants: pi, e.",
+                "description": "Create in Formula Jam / Studio. Draw one graph with expr, or one parametric path with x_expr and y_expr over t. Curated recipe and seeded discovery remain graph paths. Optional auto_step with seed walks the same bank like Auto without session state. Pass list_recipes true to inspect it. Unary functions: sin cos tan exp ln abs sqrt floor. Pair functions: mod min max. Constants: pi, e.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "expr": {
                             "type": "string",
                             "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
-                            "description": "Manual expression in x. Omit when using recipe, seed, or list_recipes."
+                            "description": "Manual graph expression in x. Omit for a parametric pair, recipe, seed, or list_recipes."
+                        },
+                        "x_expr": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
+                            "description": "Parametric x(t) expression. Requires y_expr and excludes graph discovery."
+                        },
+                        "y_expr": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
+                            "description": "Parametric y(t) expression. Requires x_expr and excludes graph discovery."
                         },
                         "recipe": {
                             "type": "integer",
@@ -627,6 +637,8 @@ fn build_tools_catalog() -> Value {
                         },
                         "xmin": { "type": "number", "description": "Left edge of x (default -tau)." },
                         "xmax": { "type": "number", "description": "Right edge of x (default tau)." },
+                        "tmin": { "type": "number", "description": "Left edge of parametric time (default -tau)." },
+                        "tmax": { "type": "number", "description": "Right edge of parametric time (default tau)." },
                         "a": { "type": "number", "description": "Value of the knob a (default 1)." }
                     },
                     "additionalProperties": false
@@ -634,18 +646,35 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "save_creation",
-                "description": "Save a Studio expression as a portable, titled, signed capsule. Returns bounded .num text, a native numinous:// link, exact parsed fields, and a preview. No host file is created and no host path is accepted or returned. Keep the numFile field as a .num file in your own storage, or pass either representation to open_creation and fork_creation.",
+                "description": "Save one Studio graph or parametric pair as a portable, titled, signed capsule with a stored pitch scale. Returns bounded .num text, a native numinous:// link, exact parsed fields, and a preview. No host file is created and no host path is accepted or returned. Keep numFile in your own storage, or pass either representation to open_creation and fork_creation.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "expr": {
                             "type": "string",
                             "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
-                            "description": "Expression in x and optional parameter a."
+                            "description": "Graph expression in x and optional parameter a. Mutually exclusive with x_expr and y_expr."
+                        },
+                        "x_expr": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
+                            "description": "Parametric x(t) expression. Requires y_expr and excludes expr."
+                        },
+                        "y_expr": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
+                            "description": "Parametric y(t) expression. Requires x_expr and excludes expr."
                         },
                         "xmin": { "type": "number", "description": "Left edge of x (default -tau)." },
                         "xmax": { "type": "number", "description": "Right edge of x (default tau)." },
+                        "tmin": { "type": "number", "description": "Left edge of parametric time (default -tau)." },
+                        "tmax": { "type": "number", "description": "Right edge of parametric time (default tau)." },
                         "a": { "type": "number", "description": "Saved value of parameter a (default 1)." },
+                        "scale": {
+                            "type": "string",
+                            "enum": ["continuous", "chromatic", "major", "minor", "pentatonic"],
+                            "description": "Portable pitch map used when the creation sings (default continuous)."
+                        },
                         "title": {
                             "type": "string",
                             "minLength": 1,
@@ -666,7 +695,6 @@ fn build_tools_catalog() -> Value {
                         "width": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_WIDTH, "description": "Preview width (default 72)." },
                         "height": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_HEIGHT, "description": "Preview height (default 26)." }
                     },
-                    "required": ["expr"],
                     "additionalProperties": false
                 }
             },
@@ -691,7 +719,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "fork_creation",
-                "description": "Remix portable Studio capsule data with explicit lineage. Pass parent .num text or its native link, optionally replace the expression, then title and sign the child. The child keeps the parent's window, parameter, and Visual Era, takes only its own title and author, and records the parent's canonical link. Returns .num text and a link; no host file is read or created.",
+                "description": "Remix portable Studio capsule data with explicit lineage. A graph may replace expr; a parametric pair may replace both x_expr and y_expr. The child keeps the parent's domain, parameter, Visual Era, and pitch scale unless scale is supplied, takes only its own title and author, and records the parent's canonical link. Returns .num text and a link; no host file is read or created.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -705,6 +733,21 @@ fn build_tools_catalog() -> Value {
                             "type": "string",
                             "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
                             "description": "Optional replacement expression. Omit to keep the parent's expression."
+                        },
+                        "x_expr": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
+                            "description": "Optional replacement x(t) expression for a parametric parent. Requires y_expr."
+                        },
+                        "y_expr": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
+                            "description": "Optional replacement y(t) expression for a parametric parent. Requires x_expr."
+                        },
+                        "scale": {
+                            "type": "string",
+                            "enum": ["continuous", "chromatic", "major", "minor", "pentatonic"],
+                            "description": "Optional replacement pitch map. Omit to inherit the parent."
                         },
                         "title": {
                             "type": "string",
@@ -727,7 +770,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "sing_expression",
-                "description": "Hear your own function through the same Studio grammar: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block, which is the one part of the reply that is the music rather than a description of it.",
+                "description": "Hear your own function through the same Studio grammar: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Choose a portable pitch scale or keep the continuous default. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block, which is the one part of the reply that is the music rather than a description of it.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -763,6 +806,11 @@ fn build_tools_catalog() -> Value {
                         "xmax": {
                             "type": "number",
                             "description": "Right edge of x (default tau), as plot_expression uses it."
+                        },
+                        "scale": {
+                            "type": "string",
+                            "enum": ["continuous", "chromatic", "major", "minor", "pentatonic"],
+                            "description": "Pitch map for this melody (default continuous)."
                         },
                         "receipt": {
                             "type": "boolean",

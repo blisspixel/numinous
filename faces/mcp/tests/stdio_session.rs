@@ -2468,6 +2468,94 @@ fn creation_capsules_cross_real_stdio_with_lineage_and_v2_journal_migration() {
 }
 
 #[test]
+fn parametric_v3_capsules_cross_real_stdio_with_scale_and_lineage() {
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous_mcp_parametric_creation_{}_{}",
+        std::process::id(),
+        session
+    ));
+    std::fs::create_dir(&root).expect("fresh parametric root");
+    let journey = root.join("journey.txt");
+    let journal = root.join("journal.txt");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{"name":name,"arguments":arguments}
+        })
+    };
+    let replies = run_session_with_state(
+        &[
+            call(
+                1,
+                "plot_expression",
+                json!({
+                    "x_expr":"cos(3*t)", "y_expr":"sin(2*t)",
+                    "tmin":0.0, "tmax":std::f64::consts::TAU
+                }),
+            ),
+            call(
+                2,
+                "save_creation",
+                json!({
+                    "x_expr":"cos(3*t)", "y_expr":"sin(2*t)",
+                    "tmin":0.0, "tmax":std::f64::consts::TAU,
+                    "scale":"pentatonic", "title":"Five Petals"
+                }),
+            ),
+        ],
+        &journey,
+        &journal,
+    );
+    assert_eq!(reply_by_id(&replies, 1)["result"]["isError"], false);
+    assert_eq!(
+        reply_by_id(&replies, 1)["result"]["structuredContent"]["kind"],
+        "parametric"
+    );
+    let saved = &reply_by_id(&replies, 2)["result"]["structuredContent"];
+    let parent = numinous_core::StudioCreation::from_num_file(
+        saved["numFile"].as_str().expect("parent .num"),
+    )
+    .expect("parent");
+    assert_eq!(parent.scale(), numinous_core::StudioScale::Pentatonic);
+
+    let second = run_session_with_state(
+        &[
+            call(3, "open_creation", json!({"capsule":saved["link"]})),
+            call(
+                4,
+                "fork_creation",
+                json!({
+                    "parent":saved["numFile"],
+                    "x_expr":"cos(5*t)", "y_expr":"sin(4*t)",
+                    "scale":"minor"
+                }),
+            ),
+        ],
+        &journey,
+        &journal,
+    );
+    assert_eq!(
+        reply_by_id(&second, 3)["result"]["structuredContent"]["numFile"],
+        saved["numFile"]
+    );
+    let child = numinous_core::StudioCreation::from_num_file(
+        reply_by_id(&second, 4)["result"]["structuredContent"]["numFile"]
+            .as_str()
+            .expect("child .num"),
+    )
+    .expect("child");
+    assert_eq!(child.second_source(), Some("sin(4*t)"));
+    assert_eq!(child.scale(), numinous_core::StudioScale::Minor);
+    assert_eq!(child.descends(), Some(parent.to_link().as_str()));
+
+    assert_eq!(numinous_core::load_journey_file(&journey).plays, 4);
+    numinous_core::remove_persisted_file(&journey).expect("remove journey");
+    numinous_core::erase_journal_file(&journal).ok();
+    std::fs::remove_dir(root).expect("remove parametric root");
+}
+
+#[test]
 fn malformed_input_gets_a_parse_error_and_the_server_keeps_going() {
     let journey = std::env::temp_dir().join("numinous_mcp_e2e_parse_journey.txt");
     let _ = std::fs::remove_file(&journey);

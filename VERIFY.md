@@ -107,14 +107,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 3,723 passing all-target Rust test cases,
+Expected right now: **format and clippy clean, 3,774 passing all-target Rust test cases,
 agent hallway, tactile, and first-contact live MCP cohorts PASS as CI gates,
 flagship visual and room-bed audio goldens PASS, agent cohort contract unit
 tests pass, 106 study runner and collector regressions, and 15
 physical input contract regressions plus twenty release-package, sixteen SBOM,
 nineteen release workflow, and nine workflow action-policy regressions pass,
 three expensive diagnostics are
-ignored by the ordinary all-target run, 94.24% region coverage, and 94.25% line
+ignored by the ordinary all-target run, 94.17% region coverage, and 94.17% line
 coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
