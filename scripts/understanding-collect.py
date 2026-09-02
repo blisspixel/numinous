@@ -639,6 +639,7 @@ MCP_RESULT_FIELDS = {
             "a",
             "discovery",
             "expression",
+            "kind",
             "plot",
             "recipeCount",
             "recipeIndex",
@@ -774,6 +775,8 @@ def project_mcp_result(
         if projection["room"] != arguments.get("id"):
             raise CollectorError("MCP reveal_room result identity differs")
     else:
+        if structured["kind"] != "graph":
+            raise CollectorError("MCP plot_expression kind must be graph")
         for field in ("expression", "plot"):
             bounded_string(field)
         if projection["expression"] != arguments.get("expr"):

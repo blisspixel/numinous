@@ -5,15 +5,17 @@ instrument and a shader toy. You type a little math, and it instantly *draws*
 and *sings*. This is the "Create" posture (see `DESIGN.md`), and it is a core
 part of the experience rather than a bonus feature.
 
-**Implementation boundary, 2026-09-01:** 0.4.0-alpha.15 ships a bounded scalar
-expression parser and evaluator, animated plots, deterministic melody mapping,
-an editable app panel, CLI and MCP operations, `.num` plus link round trips on
-both faces, exact app reopen (launch argument, dropped file, or link), the F5
+**Implementation boundary, 2026-09-01:** 0.4.0-alpha.16 ships a bounded
+expression parser and evaluator, graph and paired parametric plots,
+deterministic continuous or scale-quantized melody mapping, an editable app
+panel, CLI and MCP operations, `.num` plus link round trips on all three faces,
+exact app reopen (launch argument, dropped file, or link), the F5
 Gallery wall with its remix tree, fork with recorded lineage on the App and
-the terminal, and the F4 naming step. Parse diagnostics use one-based source
-columns and name the expected expression input across every face. Pattern
-algebra, tracker, step grid, piano roll, MIDI, raw shader authoring, and
-community rooms are design targets. `ROADMAP.md` is the status authority.
+the terminal, the F4 naming step, and F6 pitch-map selection. Parse diagnostics
+use one-based source columns and name the expected expression input across every
+face. General multi-expression programs, named sliders, pattern algebra,
+tracker, step grid, piano roll, MIDI, raw shader authoring, and community rooms
+are design targets. `ROADMAP.md` is the status authority.
 
 CLI and MCP plot and melody calls resolve through core `PlotRequest` and
 `SingRequest` types. Those types own curated discovery, expression parsing,
@@ -24,10 +26,11 @@ reinterpret the formula.
 
 ## Shipped formula vocabulary
 
-The current scalar language is deliberately small and total:
+The current expression language is deliberately small and total:
 
-- Values: the plotted variable `x`, the adjustable parameter `a`, and constants
-  `pi` and `e`.
+- Values: one input written as `x` for a graph or `t` for a parametric path,
+  the adjustable parameter `a`, and constants `pi` and `e`. The aliases do not
+  create two independent variables.
 - Operators: `+`, `-`, `*`, `/`, and right-associative `^`, with parentheses
   and conventional unary minus.
 - One-argument functions: `sin`, `cos`, `tan`, `exp`, `ln` (also `log`), `abs`,
@@ -43,10 +46,16 @@ source column. The curated bank includes stepped, wrapped, clamped, and
 thresholded examples using this vocabulary. The App help overlay names it, and
 the CLI and MCP descriptions point at the same core grammar.
 
+A graph remains one source such as `sin(a*x)`. A parametric path is exactly one
+atomic pair such as `x(t)=cos(3*t); y(t)=sin(2*t)`. The pair shares one bounded
+time window and knob, draws both planar coordinates, and sings `y(t)`. A missing
+coordinate or a graph mixed with a pair is rejected. The named pitch maps are
+`continuous`, `chromatic`, `major`, `minor`, and `pentatonic`.
+
 ## The one-liner
 
-> **A live, forgiving audiovisual math playground where one expression can be
-> both a shape and a song.**
+> **A live, forgiving audiovisual math playground where one bounded program
+> can be both a shape and a song.**
 
 Three useful points of comparison:
 - **Desmos / a graphing calculator**: type `y = sin(x)`, see it, drag the numbers, add sliders. Instant, visual, tactile, fun.
@@ -66,13 +75,14 @@ listening tests, not claimed from the design alone.
   rooms are native Rust today. A bounded pattern language can become a second
   authoring path only after it satisfies the safety and compatibility contracts
   in `EXTENSIBILITY.md`.
-- It is **infinitely replayable and endlessly shareable**: every creation is text plus deterministic parameters, so it exports as a clip and a `.num` file / `numinous://` link (native, no browser, see `ARCHITECTURE.md`). Both faces speak the whole loop today: the CLI saves, opens, sings, and forks capsules (`plot --save`, `open-studio`, `sing`, `fork`, lineage recorded), and the App reopens a saved capsule exactly (launch argument, dropped file, or link, paused until confirmed), walls it in the F5 Gallery with its remix tree, forks it with one keystroke, and names and signs shares in the F4 naming step.
+- It is **infinitely replayable and endlessly shareable**: every creation is text plus deterministic parameters, so it exports as a clip and a `.num` file / `numinous://` link (native, no browser, see `ARCHITECTURE.md`). All three faces speak the portable loop today: the CLI saves, opens, sings, and forks capsules (`plot --save`, `open-studio`, `sing`, `fork`, lineage recorded); MCP saves, opens, and forks the same data without host filesystem access; and the App reopens a saved capsule exactly (launch argument, dropped file, or link, paused until confirmed), walls it in the F5 Gallery with its remix tree, forks it with one keystroke, and names and signs shares in the F4 naming step.
 
-## The core idea: one expression, two senses
+## The core idea: one program, two senses
 
 This is the thing that makes the Studio special and not just "Desmos next to a music app."
 
-A single pattern or expression is bound to **both** the visual channels **and** the audio channels at once:
+A single bounded program is bound to **both** the visual channels **and** the
+audio channels at once:
 
 | The expression describes | Drives visually | Drives audibly |
 | --- | --- | --- |
@@ -88,7 +98,7 @@ So when you write a euclidean rhythm, you *see* the beats land and *hear* them a
 The Studio is a ramp, not a cliff. Same tool, radically different ceilings.
 
 - **Level 0, the graphing calculator.** `y = sin(x)`. It draws, glowing, and it sings the curve. A curious newcomer is delighted in ten seconds. This is the whole onboarding.
-- **Level 1, make it move.** `y = sin(x + t)` (t is time) and it animates. Free variables auto-spawn **sliders**; every number is **draggable** (Desmos-style scrubbing). Parametric, polar, and 3D toggles. Now it is alive.
+- **Level 1, draw a path.** `x(t)=cos(3*t); y(t)=sin(2*t)` draws and sings a Lissajous figure. The exact parametric pair and pitch map are built. Named sliders, draggable numbers, polar, and 3D representations remain planned.
 - **Level 2, mathematical patterns.** `note("c e g")`, `euclid(3, 8)`, layered and transformed live (`rev`, `fast`, `slow`, `every`, `degrade`). The pattern drives sound *and* geometry together. Now it is an instrument and a generative visual at once, algorithmic techno you can see (see `MUSIC.md`).
 - **Level 3, fields and shaders.** Write an expression over the whole plane for domain coloring and SDFs, or drop into raw **WGSL** for full control (see `VISUALS.md`). Now it is a shader toy with a soundtrack.
 
@@ -129,6 +139,13 @@ and edited in the other.
 
 Formula Jam grows the expression surface already in the app. It keeps manual
 entry, then adds two discovery controls for players who do not know what to type:
+
+The shipped editor accepts one graph or one exact `x(t)=...; y(t)=...` pair.
+The graph uses its saved x window. The pair uses a saved t window and auto-scales
+its complete finite path across both visible axes. F6 cycles the same five pitch
+maps the CLI and MCP expose. A saved pair reopens paused with its exact source,
+window, knob, pitch map, era, and lineage, and the first edit hands it to the
+player through the same takeover rule as a graph.
 
 - **Random** chooses a complete expression from a curated, tested recipe bank.
   It varies a seed and safe parameters, rather than assembling arbitrary syntax

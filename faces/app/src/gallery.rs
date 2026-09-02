@@ -9,7 +9,7 @@
 
 use std::path::{Path, PathBuf};
 
-use numinous_core::{Expr, Raster, StudioCreation, Surface};
+use numinous_core::{Raster, StudioCreation, StudioKind, StudioProgram, Surface};
 
 /// The most creations one wall shows. Discovery is newest first, so the cap
 /// keeps the wall recent rather than complete; the folder stays the archive.
@@ -25,7 +25,7 @@ pub(crate) struct GalleryEntry {
     /// The validated creation, exactly as the file holds it.
     pub creation: StudioCreation,
     /// Parsed once at discovery so a wall of tiles does not reparse per frame.
-    expr: Expr,
+    program: StudioProgram,
     modified: std::time::SystemTime,
     /// The wall index of the creation this one descends from, when that
     /// exact creation is on the wall too. Matched by canonical link, so a
@@ -52,7 +52,7 @@ fn entry_at(path: PathBuf) -> Option<GalleryEntry> {
     // The shared bounded loader: an oversized or invalid file is skipped, not
     // shown as a broken tile. Symlinks were already skipped by the caller.
     let creation = StudioCreation::from_num_path(&path).ok()?;
-    let expr = numinous_core::parse(creation.source()).ok()?;
+    let program = creation.program().ok()?;
     // A filesystem that cannot answer for the timestamp must not hide the
     // creation itself: the file opened and parsed, so it belongs on the
     // wall, merely sorted as oldest.
@@ -62,7 +62,7 @@ fn entry_at(path: PathBuf) -> Option<GalleryEntry> {
     Some(GalleryEntry {
         path,
         creation,
-        expr,
+        program,
         modified,
         parent: None,
         remixes: 0,
@@ -401,7 +401,8 @@ fn tile_label(entry: &GalleryEntry, inner_width: usize) -> String {
     let source = entry
         .creation
         .title()
-        .unwrap_or(entry.creation.source())
+        .map(str::to_string)
+        .unwrap_or_else(|| entry.creation.editor_source())
         .to_uppercase();
     // The shared 6-pixel glyph advance at scale 1.
     let fits = (inner_width.saturating_sub(4)) / 6;
@@ -434,11 +435,26 @@ fn draw_tile_curve(
     let (xmin, xmax) = (entry.creation.xmin(), entry.creation.xmax());
     let a = entry.creation.a();
     let span = xmax - xmin;
+    if entry.program.kind() == StudioKind::Parametric {
+        let _ = numinous_app::studio_render::draw_parametric_rect(
+            raster,
+            numinous_app::studio_render::CurveRect {
+                left: x0.max(0) as usize,
+                top: y0.max(0) as usize,
+                width: tile_width,
+                height: tile_height,
+            },
+            xmin,
+            xmax,
+            |input| entry.program.point(input, a),
+        );
+        return;
+    }
     let points: Vec<(usize, f64)> = (0..tile_width)
         .filter_map(|column| {
             let x = xmin + span * column as f64 / (tile_width as f64 - 1.0);
-            let value = numinous_core::eval(&entry.expr, x, a);
-            value.is_finite().then_some((column, value))
+            let point = entry.program.point(x, a)?;
+            point.1.is_finite().then_some((column, point.1))
         })
         .collect();
     if points.is_empty() {
@@ -517,6 +533,26 @@ mod tests {
         assert!(sources.contains(&"sin(x)"));
         assert!(sources.contains(&"x*x"));
         assert!(sources.contains(&"cos(x)"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_wall_discovers_and_draws_a_parametric_capsule_inside_its_tile() {
+        let dir = scratch("parametric");
+        let creation =
+            StudioCreation::new_parametric("cos(3*t)", "sin(2*t)", 0.0, std::f64::consts::TAU, 0.0)
+                .expect("pair");
+        std::fs::write(dir.join("lissajous.num"), creation.to_num_file()).expect("write");
+
+        let panel = GalleryPanel::open(&dir);
+        assert_eq!(panel.len(), 1);
+        assert_eq!(
+            panel.selected_creation().expect("tile").kind(),
+            numinous_core::StudioKind::Parametric
+        );
+        let mut wall = Raster::new(600, 400);
+        panel.draw(&mut wall, 600, 400);
+        assert!(wall.lit_count() > 100, "the pair has a gallery preview");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

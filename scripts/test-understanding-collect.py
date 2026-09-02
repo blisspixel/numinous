@@ -120,6 +120,7 @@ def fake_tool_call(
             "a": 1.0,
             "discovery": "manual",
             "expression": arguments["expr"],
+            "kind": "graph",
             "plot": visible,
             "recipeCount": 1,
             "recipeIndex": None,
@@ -1776,6 +1777,17 @@ class CollectorTests(unittest.TestCase):
                 "reveal_room",
                 result,
                 {"id": "times-tables"},
+                initialization["serverInfo"],
+            )
+
+        arguments = {"expr": "sin(2*x)"}
+        initialization, result = fake_tool_call("plot_expression", arguments)
+        result["structuredContent"]["kind"] = "parametric"
+        with self.assertRaisesRegex(collector.CollectorError, "kind must be graph"):
+            collector.project_mcp_result(
+                "plot_expression",
+                result,
+                arguments,
                 initialization["serverInfo"],
             )
 

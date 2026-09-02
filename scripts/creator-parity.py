@@ -7,8 +7,9 @@ reopen it byte-identically. Nothing checked that a second face draws the same
 picture from the same inputs, so the two could drift apart and every existing
 gate would stay green.
 
-Both faces are driven here with the same expression, recipe, seed, knob, and
-range, and their plots must match exactly. Only the plot body is compared:
+Both faces are driven here with the same graph or parametric pair, recipe,
+seed, knob, range, and pitch scale, and their plots must match exactly. Only
+the plot body is compared:
 headers and discovery chrome are each face speaking in its own voice, and
 requiring those to match would be requiring the faces to be the same thing
 rather than to agree about the mathematics.
@@ -97,6 +98,21 @@ CASES: tuple[tuple[str, dict[str, Any], list[str]], ...] = (
     ("range", {"expr": "x*x", "xmin": -2, "xmax": 2}, ["x*x", "--xmin=-2", "--xmax=2"]),
     ("offset range", {"expr": "sin(x)", "xmin": 0, "xmax": 10},
      ["sin(x)", "--xmin=0", "--xmax=10"]),
+    (
+        "parametric circle",
+        {"x_expr": "cos(t)", "y_expr": "sin(t)"},
+        ["--x-expr=cos(t)", "--y-expr=sin(t)"],
+    ),
+    (
+        "parametric Lissajous",
+        {"x_expr": "cos(3*t)", "y_expr": "sin(2*t)", "tmin": 0, "tmax": 6.283185307179586},
+        ["--x-expr=cos(3*t)", "--y-expr=sin(2*t)", "--tmin=0", "--tmax=6.283185307179586"],
+    ),
+    (
+        "parametric knob",
+        {"x_expr": "cos(a*t)", "y_expr": "sin(2*t)", "a": 3},
+        ["--x-expr=cos(a*t)", "--y-expr=sin(2*t)", "--a=3"],
+    ),
     ("recipe", {"recipe": 0}, ["--recipe=0"]),
     ("later recipe", {"recipe": 3}, ["--recipe=3"]),
     ("new grammar recipe", {"recipe": 15}, ["--recipe=15"]),
@@ -148,7 +164,7 @@ def plot_body(text: str) -> str:
     rows = [
         line.rstrip()
         for line in text.split("\n")
-        if not line.startswith("y = ") and not line.startswith("Discovery:")
+        if not line.startswith(("y = ", "x(t) = ", "t in [", "Discovery:"))
     ]
     # The single separator between the chrome and the drawing.
     if rows and not rows[0]:
@@ -261,6 +277,8 @@ SING_RANGES: tuple[tuple[str, float, float], ...] = (
     ("wide window", -20.0, 20.0),
 )
 
+SING_SCALES: tuple[str, ...] = ("chromatic", "major", "minor", "pentatonic")
+
 # note  1:   440.0 Hz ( A4)  at  0.00s
 MCP_NOTE = re.compile(r"note\s+(\d+):\s+([\d.]+) Hz.*?at\s+([\d.]+)s")
 
@@ -324,12 +342,14 @@ def check_sing(
     env: dict[str, str],
     xmin: float | None = None,
     xmax: float | None = None,
+    scale: str | None = None,
 ) -> dict[str, Any]:
     """One face's audio must hold the pitches the other face names."""
     window = "" if xmin is None else f" over [{xmin}, {xmax}]"
     name = (
         f"sing {label}: {source} a={'default' if knob is None else knob} "
-        f"notes={'default' if notes is None else notes}{window}"
+        f"notes={'default' if notes is None else notes}{window} "
+        f"scale={'continuous' if scale is None else scale}"
     )
     try:
         arguments: dict[str, Any] = {"expr": source}
@@ -340,6 +360,8 @@ def check_sing(
         if xmin is not None:
             arguments["xmin"] = xmin
             arguments["xmax"] = xmax
+        if scale is not None:
+            arguments["scale"] = scale
         reported = mcp_sing(mcp, arguments, env)
         with tempfile.TemporaryDirectory(
             prefix="numinous-sing-parity-", ignore_cleanup_errors=True
@@ -352,6 +374,8 @@ def check_sing(
                 command += [f"--a={knob}"]
             if xmin is not None:
                 command += [f"--xmin={xmin}", f"--xmax={xmax}"]
+            if scale is not None:
+                command += [f"--scale={scale}"]
             command += ["--out", str(wav)]
             result = subprocess.run(
                 command,
@@ -468,6 +492,22 @@ def main() -> int:
                     check_sing(
                         cli, mcp, label, "sin(a*x)", 16, 1.5,
                         isolated_env(Path(home)), xmin=xmin, xmax=xmax,
+                    )
+                )
+        for scale in SING_SCALES:
+            with tempfile.TemporaryDirectory(
+                prefix="numinous-creator-parity-", ignore_cleanup_errors=True
+            ) as home:
+                results.append(
+                    check_sing(
+                        cli,
+                        mcp,
+                        f"{scale} quantization",
+                        "sin(x)+x/3",
+                        24,
+                        1.0,
+                        isolated_env(Path(home)),
+                        scale=scale,
                     )
                 )
     failed = [item for item in results if not item["passed"]]

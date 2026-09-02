@@ -2594,6 +2594,10 @@ impl ApplicationHandler for App {
                                 &postcard::default_postcard_dir(),
                             ));
                         }
+                        Key::Named(NamedKey::F6) => {
+                            let spec = self.studio_panel.cycle_scale();
+                            self.set_studio_edit_sound(spec);
+                        }
                         Key::Named(NamedKey::F2) => {
                             // Formula Jam Random: draw a curated, tested recipe.
                             let spec = self.studio_panel.load_random_recipe();

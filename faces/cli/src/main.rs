@@ -51,9 +51,13 @@ use render_input::{parse_gesture_arg, parse_gestures, parse_poke_arg, parse_poke
 #[cfg(test)]
 use studio::load_studio_creation;
 use studio::{
-    fork_studio_creation, open_studio_report, plot_report, plot_request_error, resolve_plot_source,
-    resolve_sing_input, save_studio_creation, sing_request_error,
+    CreationIdentity, ForkEdits, StudioParameters, fork_studio_creation_extended,
+    open_studio_report, parametric_report, plot_report, plot_request_error, resolve_plot_source,
+    resolve_sing_input, save_parametric_creation, save_studio_creation_with_scale,
+    sing_request_error,
 };
+#[cfg(test)]
+use studio::{fork_studio_creation, save_studio_creation};
 
 const MAX_ENV_FILE_BYTES: u64 = 16 * 1024;
 const ELEVENLABS_MUSIC_URL: &str = "https://api.elevenlabs.io/v1/music?output_format=pcm_44100";
@@ -478,8 +482,14 @@ enum Command {
     Plot {
         /// Manual expression in x and a. Unary: sin cos tan exp ln abs sqrt floor.
         /// Pair functions: mod min max. Constants: pi e.
-        /// Omit when using --recipe, --seed, or --list-recipes.
+        /// Omit when using --x-expr/--y-expr, --recipe, --seed, or --list-recipes.
         expr: Option<String>,
+        /// Parametric x(t) expression. Requires --y-expr and excludes graph discovery.
+        #[arg(long)]
+        x_expr: Option<String>,
+        /// Parametric y(t) expression. Requires --x-expr and excludes graph discovery.
+        #[arg(long)]
+        y_expr: Option<String>,
         /// Curated Formula Jam recipe index (wraps). Mutually exclusive with expr and --seed.
         #[arg(long)]
         recipe: Option<u64>,
@@ -493,11 +503,17 @@ enum Command {
         #[arg(long)]
         list_recipes: bool,
         /// Left edge of the x range.
-        #[arg(long, default_value_t = numinous_core::DEFAULT_STUDIO_XMIN)]
-        xmin: f64,
+        #[arg(long)]
+        xmin: Option<f64>,
         /// Right edge of the x range.
-        #[arg(long, default_value_t = numinous_core::DEFAULT_STUDIO_XMAX)]
-        xmax: f64,
+        #[arg(long)]
+        xmax: Option<f64>,
+        /// Left edge of parametric time (default -tau).
+        #[arg(long)]
+        tmin: Option<f64>,
+        /// Right edge of parametric time (default tau).
+        #[arg(long)]
+        tmax: Option<f64>,
         /// Value of the parameter a (constant unless animating).
         #[arg(long, default_value_t = numinous_core::DEFAULT_STUDIO_PARAMETER)]
         a: f64,
@@ -525,6 +541,9 @@ enum Command {
         /// With --save: credit the creation (printable ASCII, 64 characters).
         #[arg(long)]
         author: Option<String>,
+        /// Portable pitch map stored with a saved creation.
+        #[arg(long, value_enum, default_value_t)]
+        scale: StudioScaleArg,
     },
     /// Open a Studio .num file or numinous://studio link and render it.
     #[command(name = "open-studio")]
@@ -598,6 +617,9 @@ enum Command {
         /// Studio input supplies its own).
         #[arg(long)]
         a: Option<f64>,
+        /// Override the capsule pitch map, or quantize a raw expression.
+        #[arg(long, value_enum)]
+        scale: Option<StudioScaleArg>,
         /// Write a WAV audio file to this path.
         #[arg(long)]
         out: PathBuf,
@@ -612,6 +634,15 @@ enum Command {
         /// Replace the expression in the fork (the remix itself).
         #[arg(long)]
         expr: Option<String>,
+        /// Replace the parametric x(t) coordinate. Requires --y-expr.
+        #[arg(long)]
+        x_expr: Option<String>,
+        /// Replace the parametric y(t) coordinate. Requires --x-expr.
+        #[arg(long)]
+        y_expr: Option<String>,
+        /// Replace the parent's stored pitch map.
+        #[arg(long, value_enum)]
+        scale: Option<StudioScaleArg>,
         /// Title for the fork.
         #[arg(long)]
         title: Option<String>,
@@ -619,6 +650,28 @@ enum Command {
         #[arg(long)]
         author: Option<String>,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Default)]
+enum StudioScaleArg {
+    #[default]
+    Continuous,
+    Chromatic,
+    Major,
+    Minor,
+    Pentatonic,
+}
+
+impl From<StudioScaleArg> for numinous_core::StudioScale {
+    fn from(value: StudioScaleArg) -> Self {
+        match value {
+            StudioScaleArg::Continuous => Self::Continuous,
+            StudioScaleArg::Chromatic => Self::Chromatic,
+            StudioScaleArg::Major => Self::Major,
+            StudioScaleArg::Minor => Self::Minor,
+            StudioScaleArg::Pentatonic => Self::Pentatonic,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -1744,12 +1797,16 @@ Or name a room to watch it as ASCII: numinous play lorenz"
         }
         Command::Plot {
             expr,
+            x_expr,
+            y_expr,
             recipe,
             seed,
             auto_step,
             list_recipes,
             xmin,
             xmax,
+            tmin,
+            tmax,
             a,
             animate,
             amin,
@@ -1759,6 +1816,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             save,
             title,
             author,
+            scale,
         } => {
             if list_recipes {
                 let mut lines = vec![format!(
@@ -1782,10 +1840,114 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                     "a title or author names a saved creation; add --save\n".to_string(),
                 ));
             }
+            let scale = numinous_core::StudioScale::from(scale);
+            if save.is_none() && scale != numinous_core::StudioScale::Continuous {
+                return emit(Err(
+                    "--scale is stored with a creation; add --save\n".to_string()
+                ));
+            }
+            let parametric = match (x_expr.as_deref(), y_expr.as_deref()) {
+                (Some(x_expr), Some(y_expr)) => Some((x_expr, y_expr)),
+                (None, None) => None,
+                _ => {
+                    return emit(Err(
+                        "a parametric plot needs both --x-expr and --y-expr\n".to_string()
+                    ));
+                }
+            };
+            if let Some((x_expr, y_expr)) = parametric {
+                if xmin.is_some() || xmax.is_some() {
+                    return emit(Err(
+                        "a parametric plot uses --tmin and --tmax, not --xmin and --xmax\n"
+                            .to_string(),
+                    ));
+                }
+                if expr.is_some() || recipe.is_some() || seed.is_some() || auto_step != 0 {
+                    return emit(Err(
+                        "--x-expr/--y-expr cannot be combined with a graph expression, --recipe, --seed, or --auto-step\n"
+                            .to_string(),
+                    ));
+                }
+                let tmin = tmin.unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN);
+                let tmax = tmax.unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX);
+                if animate {
+                    if let Err(message) = parametric_report(
+                        x_expr,
+                        y_expr,
+                        StudioParameters {
+                            minimum: tmin,
+                            maximum: tmax,
+                            a: amin,
+                            scale,
+                        },
+                        (width, height),
+                    ) {
+                        return emit(Err(message));
+                    }
+                    let before = journey.clone();
+                    journey.play();
+                    persist_progress_or_warn(&before, journey);
+                    return plot_parametric_animate(
+                        x_expr,
+                        y_expr,
+                        StudioParameters {
+                            minimum: tmin,
+                            maximum: tmax,
+                            a: amin,
+                            scale,
+                        },
+                        amax,
+                        (width, height),
+                    );
+                }
+                let report = match parametric_report(
+                    x_expr,
+                    y_expr,
+                    StudioParameters {
+                        minimum: tmin,
+                        maximum: tmax,
+                        a,
+                        scale,
+                    },
+                    (width, height),
+                ) {
+                    Ok(report) => report,
+                    Err(message) => return emit(Err(message)),
+                };
+                if let Some(path) = save.as_deref() {
+                    match save_parametric_creation(
+                        x_expr,
+                        y_expr,
+                        StudioParameters {
+                            minimum: tmin,
+                            maximum: tmax,
+                            a,
+                            scale,
+                        },
+                        CreationIdentity {
+                            title: title.as_deref(),
+                            author: author.as_deref(),
+                        },
+                        path,
+                    ) {
+                        Ok(message) => print!("{message}"),
+                        Err(message) => return emit(Err(message)),
+                    }
+                }
+                journey.play();
+                return emit(Ok(report));
+            }
+            if tmin.is_some() || tmax.is_some() {
+                return emit(Err(
+                    "--tmin and --tmax are only valid with --x-expr/--y-expr\n".to_string(),
+                ));
+            }
             let source = match resolve_plot_source(expr.as_deref(), recipe, seed, auto_step) {
                 Ok(source) => source,
                 Err(message) => return emit(Err(message)),
             };
+            let xmin = xmin.unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN);
+            let xmax = xmax.unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX);
             let request = match PlotRequest::new(
                 source,
                 Some(xmin),
@@ -1814,13 +1976,18 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                     Err(message) => return emit(Err(message)),
                 };
                 if let Some(path) = save.as_deref() {
-                    match save_studio_creation(
+                    match save_studio_creation_with_scale(
                         &expr,
-                        xmin,
-                        xmax,
-                        a,
-                        title.as_deref(),
-                        author.as_deref(),
+                        StudioParameters {
+                            minimum: xmin,
+                            maximum: xmax,
+                            a,
+                            scale,
+                        },
+                        CreationIdentity {
+                            title: title.as_deref(),
+                            author: author.as_deref(),
+                        },
                         path,
                     ) {
                         Ok(message) => print!("{message}"),
@@ -1898,28 +2065,47 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             xmax,
             notes,
             a,
+            scale,
             out,
         } => {
             journey.play();
-            emit(
-                resolve_sing_input(&expr, xmin, xmax, a).and_then(|(source, xmin, xmax, a)| {
-                    sing_wav(&source, xmin, xmax, notes, a, &out)
-                }),
-            )
+            emit(resolve_sing_input(&expr, xmin, xmax, a).and_then(
+                |(source, xmin, xmax, a, stored_scale)| {
+                    sing_wav_with_scale(
+                        &source,
+                        xmin,
+                        xmax,
+                        notes,
+                        a,
+                        scale.map(Into::into).unwrap_or(stored_scale),
+                        &out,
+                    )
+                },
+            ))
         }
         Command::Fork {
             parent,
             out,
             expr,
+            x_expr,
+            y_expr,
+            scale,
             title,
             author,
         } => {
             journey.play();
-            emit(fork_studio_creation(
+            emit(fork_studio_creation_extended(
                 &parent,
-                expr.as_deref(),
-                title.as_deref(),
-                author.as_deref(),
+                ForkEdits {
+                    expr: expr.as_deref(),
+                    x_expr: x_expr.as_deref(),
+                    y_expr: y_expr.as_deref(),
+                    scale: scale.map(Into::into),
+                    identity: CreationIdentity {
+                        title: title.as_deref(),
+                        author: author.as_deref(),
+                    },
+                },
                 &out,
             ))
         }
@@ -1942,6 +2128,45 @@ fn plot_animate(
     loop {
         let a = amin + (amax - amin) * phase;
         match plot_report(source, xmin, xmax, a, width, height) {
+            Ok(text) => {
+                let _ = write!(
+                    stdout,
+                    "\x1b[2J\x1b[H{text}\na = {a:.3}   (Ctrl+C to stop)\n"
+                );
+                let _ = stdout.flush();
+            }
+            Err(message) => {
+                report_diagnostic(&message);
+                return ExitCode::FAILURE;
+            }
+        }
+        std::thread::sleep(frame_time);
+        phase = if phase + 0.02 >= 1.0 {
+            0.0
+        } else {
+            phase + 0.02
+        };
+    }
+}
+
+fn plot_parametric_animate(
+    x_source: &str,
+    y_source: &str,
+    parameters: StudioParameters,
+    amax: f64,
+    size: (usize, usize),
+) -> ExitCode {
+    let frame_time = Duration::from_secs_f64(1.0 / 12.0);
+    let mut stdout = std::io::stdout();
+    let mut phase = 0.0_f64;
+    loop {
+        let a = parameters.a + (amax - parameters.a) * phase;
+        match parametric_report(
+            x_source,
+            y_source,
+            StudioParameters { a, ..parameters },
+            size,
+        ) {
             Ok(text) => {
                 let _ = write!(
                     stdout,
@@ -2272,6 +2497,7 @@ fn tune_wav(seed: u64, bars: usize, path: &Path) -> Result<String, String> {
 }
 
 /// Turn `source` into a melody over `[xmin, xmax]` and write it as a WAV.
+#[cfg(test)]
 fn sing_wav(
     source: &str,
     xmin: f64,
@@ -2280,17 +2506,41 @@ fn sing_wav(
     a: f64,
     path: &Path,
 ) -> Result<String, String> {
+    sing_wav_with_scale(
+        source,
+        xmin,
+        xmax,
+        notes,
+        a,
+        numinous_core::StudioScale::Continuous,
+        path,
+    )
+}
+
+/// Turn `source` into a melody through one portable scale and write it as WAV.
+fn sing_wav_with_scale(
+    source: &str,
+    xmin: f64,
+    xmax: f64,
+    notes: usize,
+    a: f64,
+    scale: numinous_core::StudioScale,
+    path: &Path,
+) -> Result<String, String> {
     let request = SingRequest::new(source, Some(xmin), Some(xmax), Some(a), Some(notes))
         .map_err(sing_request_error)?;
     let sample_rate = 44_100u32;
-    let spec = request.execute().map_err(sing_request_error)?;
+    let spec = request
+        .execute_with_scale(scale)
+        .map_err(sing_request_error)?;
     write_wav(path, &spec.render(sample_rate), sample_rate, 1)?;
     Ok(format!(
-        "wrote {} ({:.1}s, {} notes) from y = {}\n",
+        "wrote {} ({:.1}s, {} notes) from y = {} on the {} scale\n",
         terminal_safe_path(path),
         spec.duration,
         spec.notes.len(),
-        terminal_safe(source)
+        terminal_safe(source),
+        scale.name()
     ))
 }
 

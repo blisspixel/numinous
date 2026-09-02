@@ -212,9 +212,12 @@ guessing a symbolic form for a point cloud, "what times table draws this heart."
 
 ### Function to Shape (the Studio; first slice built)
 
-The first slice is live: a safe expression engine (`crates/core/src/studio.rs`)
-parses and evaluates single-variable math in `x`, and `numinous plot "sin(3*x) +
-x/2"` draws the curve. Next it grows into the full instrument.
+The first two slices are live: a safe expression engine
+(`crates/core/src/studio.rs`) parses and evaluates single-input math, and
+`numinous plot "sin(3*x) + x/2"` draws a graph. Paired `--x-expr` and
+`--y-expr` fields draw a parametric path over `t`, and its y coordinate can sing
+continuously or through a named pitch map. Next it grows named sliders, richer
+programs, and export into the full instrument.
 
 The graphing calculator reimagined as an instrument. You type a system, parametric,
 complex, an IFS, a cellular rule, and it comes alive with color and sound in real

@@ -2433,6 +2433,104 @@ fn creations_save_open_fork_and_enter_the_journal_without_host_files() {
 }
 
 #[test]
+fn parametric_creations_plot_save_open_and_fork_as_atomic_pairs() {
+    let plotted = call(
+        "plot_expression",
+        json!({
+            "x_expr":"cos(3*t)", "y_expr":"sin(2*t)",
+            "tmin":0.0, "tmax":std::f64::consts::TAU, "a":0.25
+        }),
+    );
+    assert_eq!(plotted["result"]["isError"], false, "{plotted}");
+    let plot = &plotted["result"]["structuredContent"];
+    assert_eq!(plot["kind"], "parametric");
+    assert_eq!(plot["xExpression"], "cos(3*t)");
+    assert_eq!(plot["yExpression"], "sin(2*t)");
+    assert!(plot["plot"].as_str().is_some_and(|text| text.contains('#')));
+    assert!(plot["xmin"].as_f64().is_some_and(|value| value < -0.99));
+    assert!(plot["xmax"].as_f64().is_some_and(|value| value > 0.99));
+
+    let saved = call(
+        "save_creation",
+        json!({
+            "x_expr":"cos(3*t)", "y_expr":"sin(2*t)",
+            "tmin":0.0, "tmax":std::f64::consts::TAU, "a":0.25,
+            "scale":"pentatonic", "title":"Five Petals", "era":"vector",
+            "width":48, "height":18
+        }),
+    );
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let capsule = &saved["result"]["structuredContent"];
+    assert_eq!(capsule["capsuleFormatVersion"], 3);
+    assert_eq!(capsule["kind"], "parametric");
+    assert_eq!(capsule["expression"], Value::Null);
+    assert_eq!(capsule["xExpression"], "cos(3*t)");
+    assert_eq!(capsule["yExpression"], "sin(2*t)");
+    assert_eq!(capsule["scale"], "pentatonic");
+    assert_eq!(capsule["tmin"], 0.0);
+    assert_eq!(capsule["tmax"], std::f64::consts::TAU);
+    assert_eq!(capsule["preview"]["width"], 48);
+    assert_eq!(capsule["preview"]["height"], 18);
+    let parent = numinous_core::StudioCreation::from_num_file(
+        capsule["numFile"].as_str().expect(".num text"),
+    )
+    .expect("v3 capsule");
+    assert_eq!(parent.kind(), numinous_core::StudioKind::Parametric);
+    assert_eq!(parent.scale(), numinous_core::StudioScale::Pentatonic);
+    assert_eq!(
+        numinous_core::StudioCreation::from_link(capsule["link"].as_str().expect("link"))
+            .expect("v3 link"),
+        parent
+    );
+
+    let opened = call("open_creation", json!({"capsule":capsule["link"]}));
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert_eq!(
+        opened["result"]["structuredContent"]["numFile"],
+        capsule["numFile"]
+    );
+
+    let forked = call(
+        "fork_creation",
+        json!({
+            "parent":capsule["numFile"],
+            "x_expr":"cos(5*t)", "y_expr":"sin(4*t)",
+            "scale":"minor", "title":"Next Orbit"
+        }),
+    );
+    assert_eq!(forked["result"]["isError"], false, "{forked}");
+    let child = numinous_core::StudioCreation::from_num_file(
+        forked["result"]["structuredContent"]["numFile"]
+            .as_str()
+            .expect("child .num"),
+    )
+    .expect("child");
+    assert_eq!(child.source(), "cos(5*t)");
+    assert_eq!(child.second_source(), Some("sin(4*t)"));
+    assert_eq!(child.scale(), numinous_core::StudioScale::Minor);
+    assert_eq!(child.descends(), Some(parent.to_link().as_str()));
+
+    for refusal in [
+        call("plot_expression", json!({"x_expr":"t"})),
+        call("save_creation", json!({"x_expr":"t"})),
+        call(
+            "save_creation",
+            json!({"expr":"x", "x_expr":"t", "y_expr":"t"}),
+        ),
+        call(
+            "fork_creation",
+            json!({"parent":capsule["numFile"], "x_expr":"t"}),
+        ),
+        call(
+            "fork_creation",
+            json!({"parent":capsule["numFile"], "expr":"t"}),
+        ),
+    ] {
+        assert_eq!(refusal["result"]["isError"], true, "{refusal}");
+    }
+}
+
+#[test]
 fn refused_capsules_do_not_count_as_creation_play() {
     let journey = super::test_state_path("refused-creation-progress");
     let response = handle_request_with(
@@ -5852,6 +5950,7 @@ fn listen_and_sing_receipts_are_digest_stable_and_exclude_wav_bytes() {
     let sing_receipt = &sing["result"]["structuredContent"]["encounter"];
     assert_eq!(sing_receipt["tool"], "sing_expression");
     assert_eq!(sing_receipt["action"]["expr"], "sin(x)");
+    assert_eq!(sing_receipt["action"]["scale"], "continuous");
     assert_eq!(
         sing_receipt["actionDigest"],
         sing_explicit["result"]["structuredContent"]["encounter"]["actionDigest"]
@@ -5861,6 +5960,30 @@ fn listen_and_sing_receipts_are_digest_stable_and_exclude_wav_bytes() {
             .expect("serialize sing receipt")
             .contains("UklGR")
     );
+
+    let scaled = call(
+        "sing_expression",
+        json!({"expr":"x","notes":19,"scale":"major","receipt":true}),
+    );
+    assert_eq!(scaled["result"]["isError"], false, "{scaled}");
+    assert_eq!(scaled["result"]["structuredContent"]["scale"], "major");
+    assert_eq!(
+        scaled["result"]["structuredContent"]["encounter"]["action"]["scale"],
+        "major"
+    );
+    assert_ne!(
+        scaled["result"]["structuredContent"]["encounter"]["actionDigest"],
+        sing_receipt["actionDigest"]
+    );
+    let allowed = [0, 2, 4, 5, 7, 9, 11];
+    for note in scaled["result"]["structuredContent"]["notes"]
+        .as_array()
+        .expect("notes")
+    {
+        let frequency = note["frequency_hz"].as_f64().expect("frequency");
+        let semitones = (12.0 * (frequency / 220.0).log2()).round() as i32;
+        assert!(allowed.contains(&semitones.rem_euclid(12)) || semitones == 24);
+    }
 }
 
 #[test]

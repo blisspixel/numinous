@@ -13,6 +13,11 @@ use crate::sound::{Note, SoundSpec};
 /// Maximum accepted Studio source length for share files and links.
 pub const MAX_STUDIO_SOURCE_CHARS: usize = 512;
 
+/// Maximum editable text for one scalar formula or one labeled parametric
+/// pair. Each expression keeps the per-source cap above; this larger bound
+/// only accounts for the second expression and the `x(t)` / `y(t)` labels.
+pub const MAX_STUDIO_EDITOR_CHARS: usize = MAX_STUDIO_SOURCE_CHARS * 2 + 16;
+
 /// Curated Formula Jam recipes shared by App Random/Auto, CLI, and MCP.
 /// Random discovery draws only from this bank, never free assembly.
 pub const STUDIO_RECIPES: &[&str] = &[
@@ -61,9 +66,97 @@ pub const MAX_META_TEXT_CHARS: usize = 64;
 /// cap so a capsule with lineage still has room for its own expression.
 const MAX_DESCENDS_BYTES: usize = 4096;
 
-/// A shareable Studio expression plus its viewing parameters, and since the
-/// second capsule version, its identity: an optional title, author, Visual
-/// Era, and the link of the creation it descends from.
+/// The mathematical form carried by a Studio capsule.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StudioKind {
+    /// One graph, `y = f(x)`.
+    Graph,
+    /// One planar path, `x = f(t)` and `y = g(t)`.
+    Parametric,
+}
+
+impl StudioKind {
+    /// Stable lowercase capsule and protocol name.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Graph => "graph",
+            Self::Parametric => "parametric",
+        }
+    }
+
+    #[must_use]
+    fn parse(value: &str) -> Option<Self> {
+        match value {
+            "graph" => Some(Self::Graph),
+            "parametric" => Some(Self::Parametric),
+            _ => None,
+        }
+    }
+}
+
+/// A bounded pitch map stored with a Studio creation.
+///
+/// `Continuous` preserves every capsule and melody from versions 1 and 2.
+/// The named scales quantize the same two-octave voice to semitone classes
+/// relative to A, making the musical choice portable rather than face-local.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum StudioScale {
+    /// Preserve the continuous pitch curve.
+    #[default]
+    Continuous,
+    /// Twelve equal-tempered pitch classes.
+    Chromatic,
+    /// Major scale: 0, 2, 4, 5, 7, 9, 11.
+    Major,
+    /// Natural minor scale: 0, 2, 3, 5, 7, 8, 10.
+    Minor,
+    /// Major pentatonic scale: 0, 2, 4, 7, 9.
+    Pentatonic,
+}
+
+impl StudioScale {
+    /// Stable lowercase capsule and protocol name.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Continuous => "continuous",
+            Self::Chromatic => "chromatic",
+            Self::Major => "major",
+            Self::Minor => "minor",
+            Self::Pentatonic => "pentatonic",
+        }
+    }
+
+    /// Parse a stable scale name.
+    #[must_use]
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "continuous" => Some(Self::Continuous),
+            "chromatic" => Some(Self::Chromatic),
+            "major" => Some(Self::Major),
+            "minor" => Some(Self::Minor),
+            "pentatonic" => Some(Self::Pentatonic),
+            _ => None,
+        }
+    }
+
+    /// Next scale in the App's bounded performance cycle.
+    #[must_use]
+    pub const fn next(self) -> Self {
+        match self {
+            Self::Continuous => Self::Chromatic,
+            Self::Chromatic => Self::Major,
+            Self::Major => Self::Minor,
+            Self::Minor => Self::Pentatonic,
+            Self::Pentatonic => Self::Continuous,
+        }
+    }
+}
+
+/// A shareable Studio program plus its viewing parameters. The second capsule
+/// version adds identity: an optional title, author, Visual Era, and parent
+/// link. The third adds one paired parametric form and a stored pitch map.
 ///
 /// The metadata is data-only, per `docs/EXTENSIBILITY.md` Tier 1: every field
 /// is capped, character-whitelisted, and interpreted by trusted engine code.
@@ -73,9 +166,11 @@ const MAX_DESCENDS_BYTES: usize = 4096;
 #[derive(Debug, Clone, PartialEq)]
 pub struct StudioCreation {
     source: String,
+    second_source: Option<String>,
     xmin: f64,
     xmax: f64,
     a: f64,
+    scale: StudioScale,
     title: Option<String>,
     author: Option<String>,
     era: Option<crate::era::Era>,
@@ -95,9 +190,46 @@ impl StudioCreation {
         validate_share_numbers(xmin, xmax, a)?;
         Ok(Self {
             source,
+            second_source: None,
             xmin,
             xmax,
             a,
+            scale: StudioScale::Continuous,
+            title: None,
+            author: None,
+            era: None,
+            descends: None,
+        })
+    }
+
+    /// Build a validated parametric creation over one bounded parameter
+    /// interval. `t` is an alias for the expression engine's single input
+    /// variable, so this adds a second expression without adding a second
+    /// simultaneously varying variable or any executable surface.
+    ///
+    /// # Errors
+    /// Returns a message if either source or any shared number is invalid.
+    pub fn new_parametric(
+        x_source: impl Into<String>,
+        y_source: impl Into<String>,
+        tmin: f64,
+        tmax: f64,
+        a: f64,
+    ) -> Result<Self, String> {
+        let x_source = x_source.into().trim().to_string();
+        let y_source = y_source.into().trim().to_string();
+        validate_share_source(&x_source)?;
+        validate_share_source(&y_source)?;
+        parse(&x_source)?;
+        parse(&y_source)?;
+        validate_share_numbers(tmin, tmax, a)?;
+        Ok(Self {
+            source: x_source,
+            second_source: Some(y_source),
+            xmin: tmin,
+            xmax: tmax,
+            a,
+            scale: StudioScale::Continuous,
             title: None,
             author: None,
             era: None,
@@ -163,7 +295,54 @@ impl StudioCreation {
         title: Option<&str>,
         author: Option<&str>,
     ) -> Result<Self, String> {
-        let mut child = Self::new(source.unwrap_or(&self.source), self.xmin, self.xmax, self.a)?;
+        let mut child = match (&self.second_source, source) {
+            (None, source) => {
+                Self::new(source.unwrap_or(&self.source), self.xmin, self.xmax, self.a)?
+            }
+            (Some(y_source), None) => {
+                Self::new_parametric(&self.source, y_source, self.xmin, self.xmax, self.a)?
+            }
+            (Some(_), Some(_)) => {
+                return Err("a parametric fork needs both x(t) and y(t) replacements".to_string());
+            }
+        };
+        child = child.with_scale(self.scale);
+        if let Some(era) = self.era {
+            child = child.with_era(era);
+        }
+        if let Some(title) = title {
+            child = child.with_title(title)?;
+        }
+        if let Some(author) = author {
+            child = child.with_author(author)?;
+        }
+        child.with_descends(&self.to_link())
+    }
+
+    /// Fork a parametric creation, optionally replacing both coordinate
+    /// expressions. A pair is atomic: providing only one replacement is
+    /// refused rather than silently mixing a new coordinate with an old one.
+    ///
+    /// # Errors
+    /// Returns a message for a scalar parent, a partial replacement, or any
+    /// invalid child field.
+    pub fn fork_parametric(
+        &self,
+        x_source: Option<&str>,
+        y_source: Option<&str>,
+        title: Option<&str>,
+        author: Option<&str>,
+    ) -> Result<Self, String> {
+        let Some(parent_y) = self.second_source.as_deref() else {
+            return Err("the parent is a graph, not a parametric pair".to_string());
+        };
+        let (x_source, y_source) = match (x_source, y_source) {
+            (None, None) => (self.source.as_str(), parent_y),
+            (Some(x_source), Some(y_source)) => (x_source, y_source),
+            _ => return Err("replace both x(t) and y(t), or neither".to_string()),
+        };
+        let mut child = Self::new_parametric(x_source, y_source, self.xmin, self.xmax, self.a)?
+            .with_scale(self.scale);
         if let Some(era) = self.era {
             child = child.with_era(era);
         }
@@ -180,6 +359,13 @@ impl StudioCreation {
     #[must_use]
     pub fn with_era(mut self, era: crate::era::Era) -> Self {
         self.era = Some(era);
+        self
+    }
+
+    /// Store the pitch map used when the creation sings.
+    #[must_use]
+    pub fn with_scale(mut self, scale: StudioScale) -> Self {
+        self.scale = scale;
         self
     }
 
@@ -212,19 +398,44 @@ impl StudioCreation {
         Ok(self)
     }
 
-    /// The Studio expression source.
+    /// The graph expression, or the parametric x-coordinate expression.
     #[must_use]
     pub fn source(&self) -> &str {
         &self.source
     }
 
-    /// Left edge of the shared x range.
+    /// The parametric y-coordinate expression, when this is a pair.
+    #[must_use]
+    pub fn second_source(&self) -> Option<&str> {
+        self.second_source.as_deref()
+    }
+
+    /// Whether this capsule is one graph or one parametric path.
+    #[must_use]
+    pub const fn kind(&self) -> StudioKind {
+        if self.second_source.is_some() {
+            StudioKind::Parametric
+        } else {
+            StudioKind::Graph
+        }
+    }
+
+    /// One canonical editor-facing formula label.
+    #[must_use]
+    pub fn editor_source(&self) -> String {
+        match &self.second_source {
+            Some(y_source) => format!("x(t)={}; y(t)={y_source}", self.source),
+            None => self.source.clone(),
+        }
+    }
+
+    /// Left edge of the graph x range or parametric t range.
     #[must_use]
     pub fn xmin(&self) -> f64 {
         self.xmin
     }
 
-    /// Right edge of the shared x range.
+    /// Right edge of the graph x range or parametric t range.
     #[must_use]
     pub fn xmax(&self) -> f64 {
         self.xmax
@@ -234,6 +445,51 @@ impl StudioCreation {
     #[must_use]
     pub fn a(&self) -> f64 {
         self.a
+    }
+
+    /// Stored musical pitch map.
+    #[must_use]
+    pub const fn scale(&self) -> StudioScale {
+        self.scale
+    }
+
+    /// Parse this creation into its reusable graph or parametric program.
+    ///
+    /// # Errors
+    /// Returns a parser diagnostic if a constructor invariant has regressed.
+    pub fn program(&self) -> Result<StudioProgram, String> {
+        StudioProgram::from_creation(self)
+    }
+
+    /// Render this exact creation as text, including a parametric path when
+    /// the capsule carries two coordinate expressions.
+    ///
+    /// # Errors
+    /// Returns a parser, geometry, or all-undefined diagnostic.
+    pub fn plot_text(&self, width: usize, height: usize) -> Result<StudioPlot, String> {
+        let program = self.program()?;
+        plot_program_text(&program, self.xmin, self.xmax, self.a, width, height)
+            .map_err(|error| error.message().to_string())
+    }
+
+    /// Render this exact creation's voice. A parametric creation sings its
+    /// y-coordinate over `t`; the x-coordinate remains the visible path.
+    #[must_use]
+    pub fn to_melody(&self, notes: usize) -> SoundSpec {
+        match self.program() {
+            Ok(program) => to_melody_with_scale(
+                program.voice_expression(),
+                self.xmin,
+                self.xmax,
+                notes,
+                self.a,
+                self.scale,
+            ),
+            Err(_) => SoundSpec {
+                duration: 0.12,
+                notes: Vec::new(),
+            },
+        }
     }
 
     /// The creation's name, when it has one.
@@ -268,18 +524,47 @@ impl StudioCreation {
     }
 
     /// Serialize to a `.num` Studio file, in the lowest format version that
-    /// carries the content: a capsule without metadata stays a version 1
-    /// file, so builds that predate version 2 keep opening it.
+    /// carries the content. Plain graphs stay version 1, identity makes them
+    /// version 2, and a parametric pair or stored scale uses version 3.
     #[must_use]
     pub fn to_num_file(&self) -> String {
-        let version = if self.has_meta() { 2 } else { 1 };
-        let mut out = format!(
-            "NUMINOUS_STUDIO {version}\nexpr={}\nxmin={}\nxmax={}\na={}\n",
-            self.source,
-            format_share_number(self.xmin),
-            format_share_number(self.xmax),
-            format_share_number(self.a)
-        );
+        let version =
+            if self.kind() == StudioKind::Parametric || self.scale != StudioScale::Continuous {
+                3
+            } else if self.has_meta() {
+                2
+            } else {
+                1
+            };
+        let mut out = format!("NUMINOUS_STUDIO {version}\n");
+        if version < 3 {
+            out.push_str(&format!(
+                "expr={}\nxmin={}\nxmax={}\na={}\n",
+                self.source,
+                format_share_number(self.xmin),
+                format_share_number(self.xmax),
+                format_share_number(self.a)
+            ));
+        } else {
+            out.push_str(&format!("kind={}\n", self.kind().name()));
+            match &self.second_source {
+                Some(y_source) => out.push_str(&format!(
+                    "xexpr={}\nyexpr={y_source}\ntmin={}\ntmax={}\na={}\n",
+                    self.source,
+                    format_share_number(self.xmin),
+                    format_share_number(self.xmax),
+                    format_share_number(self.a)
+                )),
+                None => out.push_str(&format!(
+                    "expr={}\nxmin={}\nxmax={}\na={}\n",
+                    self.source,
+                    format_share_number(self.xmin),
+                    format_share_number(self.xmax),
+                    format_share_number(self.a)
+                )),
+            }
+            out.push_str(&format!("scale={}\n", self.scale.name()));
+        }
         if let Some(title) = &self.title {
             out.push_str(&format!("title={title}\n"));
         }
@@ -295,11 +580,11 @@ impl StudioCreation {
         out
     }
 
-    /// Parse a `.num` Studio file, version 1 or 2.
+    /// Parse a `.num` Studio file, version 1 through 3.
     ///
     /// Version 1 rejects the metadata fields rather than ignoring them, so a
     /// file cannot claim the old header while smuggling new content. A header
-    /// past version 2 is refused by name: a future capsule is a fact to
+    /// past version 3 is refused by name: a future capsule is a fact to
     /// report, not a guess to parse.
     ///
     /// # Errors
@@ -311,6 +596,7 @@ impl StudioCreation {
         let version = match lines.next() {
             Some("NUMINOUS_STUDIO 1") => 1,
             Some("NUMINOUS_STUDIO 2") => 2,
+            Some("NUMINOUS_STUDIO 3") => 3,
             Some(header) if header.starts_with("NUMINOUS_STUDIO ") => {
                 return Err(
                     "this Studio .num file is from a newer Numinous; update to open it".to_string(),
@@ -318,10 +604,16 @@ impl StudioCreation {
             }
             _ => return Err("not a Numinous Studio .num file".to_string()),
         };
+        let mut kind: Option<StudioKind> = None;
         let mut source: Option<String> = None;
+        let mut x_source: Option<String> = None;
+        let mut y_source: Option<String> = None;
         let mut xmin: Option<f64> = None;
         let mut xmax: Option<f64> = None;
+        let mut tmin: Option<f64> = None;
+        let mut tmax: Option<f64> = None;
         let mut a: Option<f64> = None;
+        let mut scale: Option<StudioScale> = None;
         let mut title: Option<String> = None;
         let mut author: Option<String> = None;
         let mut era: Option<crate::era::Era> = None;
@@ -334,10 +626,31 @@ impl StudioCreation {
                 .split_once('=')
                 .ok_or_else(|| format!("bad Studio .num line '{line}'"))?;
             match key {
+                "kind" | "xexpr" | "yexpr" | "tmin" | "tmax" | "scale" if version < 3 => {
+                    return Err(format!(
+                        "Studio .num field '{key}' needs a NUMINOUS_STUDIO 3 header"
+                    ));
+                }
+                "kind" if kind.is_none() => {
+                    kind = Some(
+                        StudioKind::parse(value)
+                            .ok_or_else(|| format!("unknown Studio kind '{value}'"))?,
+                    );
+                }
                 "expr" if source.is_none() => source = Some(value.to_string()),
+                "xexpr" if x_source.is_none() => x_source = Some(value.to_string()),
+                "yexpr" if y_source.is_none() => y_source = Some(value.to_string()),
                 "xmin" if xmin.is_none() => xmin = Some(parse_share_number("xmin", value)?),
                 "xmax" if xmax.is_none() => xmax = Some(parse_share_number("xmax", value)?),
+                "tmin" if tmin.is_none() => tmin = Some(parse_share_number("tmin", value)?),
+                "tmax" if tmax.is_none() => tmax = Some(parse_share_number("tmax", value)?),
                 "a" if a.is_none() => a = Some(parse_share_number("a", value)?),
+                "scale" if scale.is_none() => {
+                    scale = Some(
+                        StudioScale::parse(value)
+                            .ok_or_else(|| format!("unknown Studio scale '{value}'"))?,
+                    );
+                }
                 "title" | "author" | "era" | "descends" if version < 2 => {
                     return Err(format!(
                         "Studio .num field '{key}' needs a NUMINOUS_STUDIO 2 header"
@@ -352,18 +665,52 @@ impl StudioCreation {
                     );
                 }
                 "descends" if descends.is_none() => descends = Some(value.to_string()),
-                "expr" | "xmin" | "xmax" | "a" | "title" | "author" | "era" | "descends" => {
+                "kind" | "expr" | "xexpr" | "yexpr" | "xmin" | "xmax" | "tmin" | "tmax" | "a"
+                | "scale" | "title" | "author" | "era" | "descends" => {
                     return Err(format!("duplicate Studio .num field '{key}'"));
                 }
                 other => return Err(format!("unknown Studio .num field '{other}'")),
             }
         }
-        let mut creation = Self::new(
-            source.ok_or_else(|| "missing Studio expression".to_string())?,
-            xmin.ok_or_else(|| "missing xmin".to_string())?,
-            xmax.ok_or_else(|| "missing xmax".to_string())?,
-            a.ok_or_else(|| "missing a".to_string())?,
-        )?;
+        let a = a.ok_or_else(|| "missing a".to_string())?;
+        let mut creation = if version < 3 {
+            Self::new(
+                source.ok_or_else(|| "missing Studio expression".to_string())?,
+                xmin.ok_or_else(|| "missing xmin".to_string())?,
+                xmax.ok_or_else(|| "missing xmax".to_string())?,
+                a,
+            )?
+        } else {
+            let kind = kind.ok_or_else(|| "missing Studio kind".to_string())?;
+            let scale = scale.ok_or_else(|| "missing Studio scale".to_string())?;
+            let creation = match kind {
+                StudioKind::Graph => {
+                    if x_source.is_some() || y_source.is_some() || tmin.is_some() || tmax.is_some()
+                    {
+                        return Err("graph Studio capsule mixes parametric fields".to_string());
+                    }
+                    Self::new(
+                        source.ok_or_else(|| "missing Studio expression".to_string())?,
+                        xmin.ok_or_else(|| "missing xmin".to_string())?,
+                        xmax.ok_or_else(|| "missing xmax".to_string())?,
+                        a,
+                    )?
+                }
+                StudioKind::Parametric => {
+                    if source.is_some() || xmin.is_some() || xmax.is_some() {
+                        return Err("parametric Studio capsule mixes graph fields".to_string());
+                    }
+                    Self::new_parametric(
+                        x_source.ok_or_else(|| "missing parametric x expression".to_string())?,
+                        y_source.ok_or_else(|| "missing parametric y expression".to_string())?,
+                        tmin.ok_or_else(|| "missing tmin".to_string())?,
+                        tmax.ok_or_else(|| "missing tmax".to_string())?,
+                        a,
+                    )?
+                }
+            };
+            creation.with_scale(scale)
+        };
         if let Some(title) = title {
             creation = creation.with_title(&title)?;
         }
@@ -427,13 +774,37 @@ impl StudioCreation {
     /// `.num` files, where the byte cap bounds it flat.
     #[must_use]
     pub fn to_link(&self) -> String {
-        let mut link = format!(
-            "numinous://studio?expr={}&xmin={}&xmax={}&a={}",
-            percent_encode(&self.source),
-            format_share_number(self.xmin),
-            format_share_number(self.xmax),
-            format_share_number(self.a)
-        );
+        let mut link = if self.kind() == StudioKind::Graph && self.scale == StudioScale::Continuous
+        {
+            format!(
+                "numinous://studio?expr={}&xmin={}&xmax={}&a={}",
+                percent_encode(&self.source),
+                format_share_number(self.xmin),
+                format_share_number(self.xmax),
+                format_share_number(self.a)
+            )
+        } else {
+            let mut link = format!("numinous://studio?kind={}", self.kind().name());
+            match &self.second_source {
+                Some(y_source) => link.push_str(&format!(
+                    "&xexpr={}&yexpr={}&tmin={}&tmax={}&a={}",
+                    percent_encode(&self.source),
+                    percent_encode(y_source),
+                    format_share_number(self.xmin),
+                    format_share_number(self.xmax),
+                    format_share_number(self.a)
+                )),
+                None => link.push_str(&format!(
+                    "&expr={}&xmin={}&xmax={}&a={}",
+                    percent_encode(&self.source),
+                    format_share_number(self.xmin),
+                    format_share_number(self.xmax),
+                    format_share_number(self.a)
+                )),
+            }
+            link.push_str(&format!("&scale={}", self.scale.name()));
+            link
+        };
         if let Some(title) = &self.title {
             link.push_str(&format!("&title={}", percent_encode(title)));
         }
@@ -458,10 +829,16 @@ impl StudioCreation {
             .strip_prefix("numinous://studio?")
             .or_else(|| link.strip_prefix("numinous://studio/?"))
             .ok_or_else(|| "not a Numinous Studio link".to_string())?;
+        let mut kind: Option<StudioKind> = None;
         let mut source: Option<String> = None;
+        let mut x_source: Option<String> = None;
+        let mut y_source: Option<String> = None;
         let mut xmin: Option<f64> = None;
         let mut xmax: Option<f64> = None;
+        let mut tmin: Option<f64> = None;
+        let mut tmax: Option<f64> = None;
         let mut a: Option<f64> = None;
+        let mut scale: Option<StudioScale> = None;
         let mut title: Option<String> = None;
         let mut author: Option<String> = None;
         let mut era: Option<crate::era::Era> = None;
@@ -473,10 +850,28 @@ impl StudioCreation {
                 .split_once('=')
                 .ok_or_else(|| format!("bad Studio link parameter '{pair}'"))?;
             match key {
+                "kind" if kind.is_none() => {
+                    let decoded = percent_decode(value)?;
+                    kind = Some(
+                        StudioKind::parse(&decoded)
+                            .ok_or_else(|| format!("unknown Studio kind '{decoded}'"))?,
+                    );
+                }
                 "expr" if source.is_none() => source = Some(percent_decode(value)?),
+                "xexpr" if x_source.is_none() => x_source = Some(percent_decode(value)?),
+                "yexpr" if y_source.is_none() => y_source = Some(percent_decode(value)?),
                 "xmin" if xmin.is_none() => xmin = Some(parse_share_number("xmin", value)?),
                 "xmax" if xmax.is_none() => xmax = Some(parse_share_number("xmax", value)?),
+                "tmin" if tmin.is_none() => tmin = Some(parse_share_number("tmin", value)?),
+                "tmax" if tmax.is_none() => tmax = Some(parse_share_number("tmax", value)?),
                 "a" if a.is_none() => a = Some(parse_share_number("a", value)?),
+                "scale" if scale.is_none() => {
+                    let decoded = percent_decode(value)?;
+                    scale = Some(
+                        StudioScale::parse(&decoded)
+                            .ok_or_else(|| format!("unknown Studio scale '{decoded}'"))?,
+                    );
+                }
                 "title" if title.is_none() => title = Some(percent_decode(value)?),
                 "author" if author.is_none() => author = Some(percent_decode(value)?),
                 "era" if era.is_none() => {
@@ -486,18 +881,57 @@ impl StudioCreation {
                             .ok_or_else(|| format!("unknown Studio era '{decoded}'"))?,
                     );
                 }
-                "expr" | "xmin" | "xmax" | "a" | "title" | "author" | "era" => {
+                "kind" | "expr" | "xexpr" | "yexpr" | "xmin" | "xmax" | "tmin" | "tmax" | "a"
+                | "scale" | "title" | "author" | "era" => {
                     return Err(format!("duplicate Studio link field '{key}'"));
                 }
                 other => return Err(format!("unknown Studio link field '{other}'")),
             }
         }
-        let mut creation = Self::new(
-            source.ok_or_else(|| "missing Studio expression".to_string())?,
-            xmin.ok_or_else(|| "missing xmin".to_string())?,
-            xmax.ok_or_else(|| "missing xmax".to_string())?,
-            a.ok_or_else(|| "missing a".to_string())?,
-        )?;
+        let a = a.ok_or_else(|| "missing a".to_string())?;
+        let mut creation = match kind {
+            None => {
+                if x_source.is_some()
+                    || y_source.is_some()
+                    || tmin.is_some()
+                    || tmax.is_some()
+                    || scale.is_some()
+                {
+                    return Err("Studio link needs kind for version 3 fields".to_string());
+                }
+                Self::new(
+                    source.ok_or_else(|| "missing Studio expression".to_string())?,
+                    xmin.ok_or_else(|| "missing xmin".to_string())?,
+                    xmax.ok_or_else(|| "missing xmax".to_string())?,
+                    a,
+                )?
+            }
+            Some(StudioKind::Graph) => {
+                if x_source.is_some() || y_source.is_some() || tmin.is_some() || tmax.is_some() {
+                    return Err("graph Studio link mixes parametric fields".to_string());
+                }
+                Self::new(
+                    source.ok_or_else(|| "missing Studio expression".to_string())?,
+                    xmin.ok_or_else(|| "missing xmin".to_string())?,
+                    xmax.ok_or_else(|| "missing xmax".to_string())?,
+                    a,
+                )?
+                .with_scale(scale.ok_or_else(|| "missing Studio scale".to_string())?)
+            }
+            Some(StudioKind::Parametric) => {
+                if source.is_some() || xmin.is_some() || xmax.is_some() {
+                    return Err("parametric Studio link mixes graph fields".to_string());
+                }
+                Self::new_parametric(
+                    x_source.ok_or_else(|| "missing parametric x expression".to_string())?,
+                    y_source.ok_or_else(|| "missing parametric y expression".to_string())?,
+                    tmin.ok_or_else(|| "missing tmin".to_string())?,
+                    tmax.ok_or_else(|| "missing tmax".to_string())?,
+                    a,
+                )?
+                .with_scale(scale.ok_or_else(|| "missing Studio scale".to_string())?)
+            }
+        };
         if let Some(title) = title {
             creation = creation.with_title(&title)?;
         }
@@ -667,14 +1101,15 @@ fn hex_value(byte: u8) -> Option<u8> {
     }
 }
 
-/// A parsed expression tree over the single variable `x`.
+/// A parsed expression tree over one input variable, written as `x` for a
+/// graph or `t` for a parametric coordinate.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     /// A literal number (also holds folded constants like pi).
     Num(f64),
     /// The variable `x`.
     Var,
-    /// The animation parameter `a`.
+    /// The adjustable parameter `a`.
     Param,
     /// Unary negation.
     Neg(Box<Expr>),
@@ -684,6 +1119,172 @@ pub enum Expr {
     Call(Func, Box<Expr>),
     /// A two-argument function call, e.g. `min(..., ...)`.
     PairCall(PairFunc, Box<Expr>, Box<Expr>),
+}
+
+/// A parsed Studio program ready for repeated drawing or sound generation.
+#[derive(Debug, Clone, PartialEq)]
+pub enum StudioProgram {
+    /// One graph, `y = f(x)`.
+    Graph {
+        /// Canonical source without a `y =` label.
+        source: String,
+        /// Parsed expression.
+        expression: Expr,
+    },
+    /// One planar path, `x = f(t)` and `y = g(t)`.
+    Parametric {
+        /// Canonical x-coordinate source without its label.
+        x_source: String,
+        /// Parsed x-coordinate expression.
+        x_expression: Expr,
+        /// Canonical y-coordinate source without its label.
+        y_source: String,
+        /// Parsed y-coordinate expression.
+        y_expression: Expr,
+    },
+}
+
+impl StudioProgram {
+    /// Parse the App's one-line editor form. A scalar is ordinary expression
+    /// text. A parametric pair is exactly `x(t)=...; y(t)=...`, with flexible
+    /// ASCII whitespace around labels and the separator.
+    ///
+    /// # Errors
+    /// Returns the same bounded expression diagnostics as a capsule import,
+    /// plus a short pair-form diagnostic when only half a pair is present.
+    pub fn from_editor(source: &str) -> Result<Self, String> {
+        let source = source.trim();
+        if source.chars().count() > MAX_STUDIO_EDITOR_CHARS {
+            return Err(format!(
+                "Studio editor text is too long; limit is {MAX_STUDIO_EDITOR_CHARS} characters"
+            ));
+        }
+        if !source.contains(';') {
+            validate_share_source(source)?;
+            return Ok(Self::Graph {
+                source: source.to_string(),
+                expression: parse(source)?,
+            });
+        }
+        let mut parts = source.split(';');
+        let first = parts.next().unwrap_or_default().trim();
+        let second = parts.next().unwrap_or_default().trim();
+        if parts.next().is_some() {
+            return Err("parametric Studio text needs exactly one ';' separator".to_string());
+        }
+        let x_source = strip_coordinate_label(first, 'x')?;
+        let y_source = strip_coordinate_label(second, 'y')?;
+        Self::parametric(&x_source, &y_source)
+    }
+
+    /// Parse a graph program.
+    ///
+    /// # Errors
+    /// Returns an expression validation or parser diagnostic.
+    pub fn graph(source: &str) -> Result<Self, String> {
+        validate_share_source(source)?;
+        Ok(Self::Graph {
+            source: source.to_string(),
+            expression: parse(source)?,
+        })
+    }
+
+    /// Parse a parametric pair.
+    ///
+    /// # Errors
+    /// Returns an expression validation or parser diagnostic for either
+    /// coordinate.
+    pub fn parametric(x_source: &str, y_source: &str) -> Result<Self, String> {
+        validate_share_source(x_source)?;
+        validate_share_source(y_source)?;
+        Ok(Self::Parametric {
+            x_source: x_source.to_string(),
+            x_expression: parse(x_source)?,
+            y_source: y_source.to_string(),
+            y_expression: parse(y_source)?,
+        })
+    }
+
+    /// Parse the program stored in one already-validated creation.
+    ///
+    /// # Errors
+    /// Returns a parser diagnostic if an invariant has regressed.
+    pub fn from_creation(creation: &StudioCreation) -> Result<Self, String> {
+        match creation.second_source() {
+            Some(y_source) => Self::parametric(creation.source(), y_source),
+            None => Self::graph(creation.source()),
+        }
+    }
+
+    /// Mathematical form of this program.
+    #[must_use]
+    pub const fn kind(&self) -> StudioKind {
+        match self {
+            Self::Graph { .. } => StudioKind::Graph,
+            Self::Parametric { .. } => StudioKind::Parametric,
+        }
+    }
+
+    /// Canonical editor text.
+    #[must_use]
+    pub fn editor_source(&self) -> String {
+        match self {
+            Self::Graph { source, .. } => source.clone(),
+            Self::Parametric {
+                x_source, y_source, ..
+            } => format!("x(t)={x_source}; y(t)={y_source}"),
+        }
+    }
+
+    /// Source fields without editor labels.
+    #[must_use]
+    pub fn sources(&self) -> (&str, Option<&str>) {
+        match self {
+            Self::Graph { source, .. } => (source, None),
+            Self::Parametric {
+                x_source, y_source, ..
+            } => (x_source, Some(y_source)),
+        }
+    }
+
+    /// Evaluate one graph input or parametric time into a planar point.
+    #[must_use]
+    pub fn point(&self, input: f64, a: f64) -> Option<(f64, f64)> {
+        let point = match self {
+            Self::Graph { expression, .. } => (input, eval(expression, input, a)),
+            Self::Parametric {
+                x_expression,
+                y_expression,
+                ..
+            } => (eval(x_expression, input, a), eval(y_expression, input, a)),
+        };
+        (point.0.is_finite() && point.1.is_finite()).then_some(point)
+    }
+
+    /// Expression that carries pitch when this program sings. Graphs sing
+    /// their y value; parametric paths sing their y coordinate over `t`.
+    #[must_use]
+    pub fn voice_expression(&self) -> &Expr {
+        match self {
+            Self::Graph { expression, .. } => expression,
+            Self::Parametric { y_expression, .. } => y_expression,
+        }
+    }
+}
+
+fn strip_coordinate_label(source: &str, coordinate: char) -> Result<String, String> {
+    let compact: String = source
+        .chars()
+        .filter(|c| !c.is_ascii_whitespace())
+        .collect();
+    let prefix = format!("{coordinate}(t)=");
+    let Some(value) = compact.strip_prefix(&prefix) else {
+        return Err(format!("parametric Studio text needs '{prefix}...'"));
+    };
+    if value.is_empty() {
+        return Err(format!("parametric {coordinate}(t) expression is empty"));
+    }
+    Ok(value.to_string())
 }
 
 /// A binary operator.
@@ -788,6 +1389,19 @@ pub const MAX_MELODY_NOTES: usize = 512;
 /// map each value to a pitch, stepping through time. You hear the curve.
 #[must_use]
 pub fn to_melody(expr: &Expr, xmin: f64, xmax: f64, notes: usize, a: f64) -> SoundSpec {
+    to_melody_with_scale(expr, xmin, xmax, notes, a, StudioScale::Continuous)
+}
+
+/// Turn one expression into a melody through a named, portable pitch map.
+#[must_use]
+pub fn to_melody_with_scale(
+    expr: &Expr,
+    xmin: f64,
+    xmax: f64,
+    notes: usize,
+    a: f64,
+    scale: StudioScale,
+) -> SoundSpec {
     let notes = notes.clamp(1, MAX_MELODY_NOTES);
     let step = 0.12_f32;
     let denom = (notes as f64 - 1.0).max(1.0);
@@ -803,16 +1417,17 @@ pub fn to_melody(expr: &Expr, xmin: f64, xmax: f64, notes: usize, a: f64) -> Sou
     }
     let ymin = samples.iter().copied().fold(f64::INFINITY, f64::min);
     let ymax = samples.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let scale = ymin.abs().max(ymax.abs()).max(1.0);
-    let scaled_min = ymin / scale;
-    let span = (ymax / scale - scaled_min).max(f64::EPSILON);
+    let amplitude_scale = ymin.abs().max(ymax.abs()).max(1.0);
+    let scaled_min = ymin / amplitude_scale;
+    let span = (ymax / amplitude_scale - scaled_min).max(f64::EPSILON);
     let note_vec: Vec<Note> = samples
         .iter()
         .enumerate()
         .map(|(i, &y)| {
-            let norm = ((y / scale - scaled_min) / span).clamp(0.0, 1.0) as f32;
+            let norm = ((y / amplitude_scale - scaled_min) / span).clamp(0.0, 1.0) as f32;
+            let semitones = quantized_semitones(norm * 24.0, scale);
             Note {
-                freq: 220.0 * 2.0_f32.powf(norm * 2.0), // two octaves, 220..880 Hz
+                freq: 220.0 * 2.0_f32.powf(semitones / 12.0),
                 start: i as f32 * step,
                 dur: step * 1.4,
                 amp: 0.3,
@@ -823,6 +1438,34 @@ pub fn to_melody(expr: &Expr, xmin: f64, xmax: f64, notes: usize, a: f64) -> Sou
         duration: note_vec.len() as f32 * step + 0.3,
         notes: note_vec,
     }
+}
+
+fn quantized_semitones(value: f32, scale: StudioScale) -> f32 {
+    if scale == StudioScale::Continuous {
+        return value;
+    }
+    let classes: &[i32] = match scale {
+        StudioScale::Continuous => unreachable!("returned above"),
+        StudioScale::Chromatic => &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        StudioScale::Major => &[0, 2, 4, 5, 7, 9, 11],
+        StudioScale::Minor => &[0, 2, 3, 5, 7, 8, 10],
+        StudioScale::Pentatonic => &[0, 2, 4, 7, 9],
+    };
+    let value = value.clamp(0.0, 24.0);
+    (0..=2)
+        .flat_map(|octave| {
+            classes
+                .iter()
+                .map(move |class| (octave * 12 + class) as f32)
+        })
+        .filter(|candidate| *candidate <= 24.0)
+        .min_by(|left, right| {
+            (left - value)
+                .abs()
+                .total_cmp(&(right - value).abs())
+                .then_with(|| left.total_cmp(right))
+        })
+        .unwrap_or(0.0)
 }
 
 /// Plot `source` as ASCII over `[xmin, xmax]` at parameter `a`, auto-scaling y.
@@ -844,10 +1487,105 @@ pub fn plot_text(
         .map_err(|error| error.message().to_string())
 }
 
+/// Bounded text rendering and its planar bounds.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StudioPlot {
+    /// Rendered character path.
+    pub text: String,
+    /// Lowest finite x-coordinate drawn.
+    pub xmin: f64,
+    /// Highest finite x-coordinate drawn.
+    pub xmax: f64,
+    /// Lowest finite y-coordinate drawn.
+    pub ymin: f64,
+    /// Highest finite y-coordinate drawn.
+    pub ymax: f64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PlotTextError {
     InvalidGeometry,
     Undefined,
+}
+
+fn plot_program_text(
+    program: &StudioProgram,
+    input_min: f64,
+    input_max: f64,
+    a: f64,
+    width: usize,
+    height: usize,
+) -> Result<StudioPlot, PlotTextError> {
+    if width < 2 || height < 2 || input_max <= input_min {
+        return Err(PlotTextError::InvalidGeometry);
+    }
+    match program {
+        StudioProgram::Graph { expression, .. } => plot_parsed_text(
+            expression, input_min, input_max, a, width, height,
+        )
+        .map(|(text, ymin, ymax)| StudioPlot {
+            text,
+            xmin: input_min,
+            xmax: input_max,
+            ymin,
+            ymax,
+        }),
+        StudioProgram::Parametric { .. } => {
+            let sample_count = width.saturating_mul(4).clamp(64, 16_384);
+            let denom = (sample_count - 1) as f64;
+            let points: Vec<Option<(f64, f64)>> = (0..sample_count)
+                .map(|index| {
+                    let input = input_min + (input_max - input_min) * index as f64 / denom;
+                    program.point(input, a)
+                })
+                .collect();
+            let finite: Vec<(f64, f64)> = points.iter().flatten().copied().collect();
+            if finite.is_empty() {
+                return Err(PlotTextError::Undefined);
+            }
+            let xmin = finite
+                .iter()
+                .map(|point| point.0)
+                .fold(f64::INFINITY, f64::min);
+            let xmax = finite
+                .iter()
+                .map(|point| point.0)
+                .fold(f64::NEG_INFINITY, f64::max);
+            let ymin = finite
+                .iter()
+                .map(|point| point.1)
+                .fold(f64::INFINITY, f64::min);
+            let ymax = finite
+                .iter()
+                .map(|point| point.1)
+                .fold(f64::NEG_INFINITY, f64::max);
+            let xspan = (xmax - xmin).max(1e-9);
+            let yspan = (ymax - ymin).max(1e-9);
+            let mut canvas = crate::canvas::Canvas::new(width, height);
+            let mut previous: Option<(i32, i32)> = None;
+            for point in points {
+                let Some((x, y)) = point else {
+                    previous = None;
+                    continue;
+                };
+                let sx = ((x - xmin) / xspan * (width as f64 - 1.0)).round() as i32;
+                let sy = ((height as f64 - 1.0) - (y - ymin) / yspan * (height as f64 - 1.0))
+                    .round() as i32;
+                if let Some((px, py)) = previous {
+                    use crate::surface::Surface;
+                    canvas.line(px, py, sx, sy, '#');
+                }
+                previous = Some((sx, sy));
+            }
+            Ok(StudioPlot {
+                text: canvas.to_text(),
+                xmin,
+                xmax,
+                ymin,
+                ymax,
+            })
+        }
+    }
 }
 
 impl PlotTextError {
@@ -1224,7 +1962,7 @@ impl Parser {
             }
         } else {
             match name {
-                "x" => Ok(Expr::Var),
+                "x" | "t" => Ok(Expr::Var),
                 "a" => Ok(Expr::Param),
                 "pi" => Ok(Expr::Num(PI)),
                 "e" => Ok(Expr::Num(E)),
@@ -1238,8 +1976,9 @@ impl Parser {
 mod tests {
     use super::{
         MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_PARSE_DEPTH,
-        MAX_STUDIO_SOURCE_CHARS, STUDIO_RECIPES, StudioCreation, eval, parse, studio_auto_recipe,
-        studio_recipe, studio_recipe_count, to_melody,
+        MAX_STUDIO_SOURCE_CHARS, STUDIO_RECIPES, StudioCreation, StudioKind, StudioProgram,
+        StudioScale, eval, parse, studio_auto_recipe, studio_recipe, studio_recipe_count,
+        to_melody, to_melody_with_scale,
     };
 
     #[test]
@@ -1678,9 +2417,124 @@ mod tests {
         let err = StudioCreation::from_num_file(smuggled).expect_err("smuggling refused");
         assert!(err.contains("NUMINOUS_STUDIO 2"), "{err}");
         // A future version is a fact to report, not a guess to parse.
-        let future = "NUMINOUS_STUDIO 3\nexpr=x\nxmin=-1\nxmax=1\na=0\n";
+        let future = "NUMINOUS_STUDIO 4\nexpr=x\nxmin=-1\nxmax=1\na=0\n";
         let err = StudioCreation::from_num_file(future).expect_err("future refused");
         assert!(err.contains("newer Numinous"), "{err}");
+    }
+
+    #[test]
+    fn parametric_capsules_round_trip_as_version_three() {
+        let creation = StudioCreation::new_parametric(
+            "cos(3*t + a)",
+            "sin(2*t)",
+            0.0,
+            std::f64::consts::TAU,
+            0.25,
+        )
+        .expect("parametric creation")
+        .with_scale(StudioScale::Minor)
+        .with_title("Three by Two")
+        .expect("title")
+        .with_author("Curve Hand")
+        .expect("author");
+
+        assert_eq!(creation.kind(), StudioKind::Parametric);
+        assert_eq!(creation.second_source(), Some("sin(2*t)"));
+        assert_eq!(creation.scale(), StudioScale::Minor);
+        assert_eq!(creation.editor_source(), "x(t)=cos(3*t + a); y(t)=sin(2*t)");
+
+        let text = creation.to_num_file();
+        assert!(text.starts_with("NUMINOUS_STUDIO 3\n"), "{text}");
+        assert!(text.contains("kind=parametric\n"), "{text}");
+        assert!(text.contains("scale=minor\n"), "{text}");
+        assert_eq!(
+            StudioCreation::from_num_file(&text).expect("file"),
+            creation
+        );
+
+        let link = creation.to_link();
+        assert!(link.contains("kind=parametric"), "{link}");
+        assert!(link.contains("xexpr=cos%283%2At%20%2B%20a%29"), "{link}");
+        assert_eq!(StudioCreation::from_link(&link).expect("link"), creation);
+    }
+
+    #[test]
+    fn stored_scale_grows_a_graph_capsule_without_changing_old_defaults() {
+        let plain = StudioCreation::new("sin(x)", -2.0, 2.0, 0.0).expect("plain");
+        assert_eq!(plain.scale(), StudioScale::Continuous);
+        assert!(plain.to_num_file().starts_with("NUMINOUS_STUDIO 1\n"));
+
+        let scaled = plain.clone().with_scale(StudioScale::Pentatonic);
+        let text = scaled.to_num_file();
+        assert!(text.starts_with("NUMINOUS_STUDIO 3\n"), "{text}");
+        assert!(text.contains("kind=graph\n"), "{text}");
+        assert_eq!(StudioCreation::from_num_file(&text).expect("file"), scaled);
+        assert_eq!(
+            StudioCreation::from_link(&scaled.to_link()).expect("link"),
+            scaled
+        );
+    }
+
+    #[test]
+    fn parametric_editor_and_plot_are_one_bounded_program() {
+        let program =
+            StudioProgram::from_editor(" x(t) = cos(t) ; y(t) = sin(t) ").expect("editor pair");
+        assert_eq!(program.kind(), StudioKind::Parametric);
+        assert_eq!(program.editor_source(), "x(t)=cos(t); y(t)=sin(t)");
+        let creation =
+            StudioCreation::new_parametric("cos(t)", "sin(t)", 0.0, std::f64::consts::TAU, 0.0)
+                .expect("circle");
+        let plot = creation.plot_text(40, 18).expect("plot");
+        assert!(plot.text.contains('#'));
+        assert!((plot.xmin + 1.0).abs() < 0.01, "{}", plot.xmin);
+        assert!((plot.xmax - 1.0).abs() < 0.01, "{}", plot.xmax);
+        assert!((plot.ymin + 1.0).abs() < 0.01, "{}", plot.ymin);
+        assert!((plot.ymax - 1.0).abs() < 0.01, "{}", plot.ymax);
+
+        assert!(StudioProgram::from_editor("x(t)=t").is_err());
+        assert!(StudioProgram::from_editor("x(t)=t; y(t)=t; y(t)=0").is_err());
+        assert!(StudioCreation::from_num_file(
+            "NUMINOUS_STUDIO 3\nkind=parametric\nxexpr=cos(t)\ntmin=0\ntmax=1\na=0\nscale=major\n"
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn named_scales_quantize_the_portable_voice() {
+        let expression = parse("x").expect("expression");
+        let continuous =
+            to_melody_with_scale(&expression, 0.0, 1.0, 19, 0.0, StudioScale::Continuous);
+        let major = to_melody_with_scale(&expression, 0.0, 1.0, 19, 0.0, StudioScale::Major);
+        assert_eq!(continuous.notes.len(), major.notes.len());
+        assert!(
+            continuous
+                .notes
+                .iter()
+                .zip(&major.notes)
+                .any(|(left, right)| (left.freq - right.freq).abs() > 0.1)
+        );
+        let allowed = [0, 2, 4, 5, 7, 9, 11];
+        for note in &major.notes {
+            let semitones = (12.0 * (note.freq / 220.0).log2()).round() as i32;
+            assert!(allowed.contains(&semitones.rem_euclid(12)) || semitones == 24);
+        }
+    }
+
+    #[test]
+    fn parametric_forks_keep_both_coordinates_and_scale() {
+        let parent = StudioCreation::new_parametric("cos(t)", "sin(t)", 0.0, 6.0, 0.5)
+            .expect("parent")
+            .with_scale(StudioScale::Pentatonic)
+            .with_era(crate::era::Era::Vector);
+        let child = parent
+            .fork_parametric(Some("cos(3*t)"), Some("sin(2*t)"), Some("Lissajous"), None)
+            .expect("fork");
+        assert_eq!(child.source(), "cos(3*t)");
+        assert_eq!(child.second_source(), Some("sin(2*t)"));
+        assert_eq!(child.scale(), StudioScale::Pentatonic);
+        assert_eq!(child.descends(), Some(parent.to_link().as_str()));
+        assert!(parent.fork(Some("cos(2*t)"), None, None).is_err());
+        assert!(parent.fork_parametric(Some("t"), None, None, None).is_err());
     }
 
     #[test]

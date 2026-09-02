@@ -3417,12 +3417,16 @@ fn plot_discovery_resolves_recipe_seed_and_list() {
     let code = run(
         Command::Plot {
             expr: None,
+            x_expr: None,
+            y_expr: None,
             recipe: None,
             seed: None,
             auto_step: 0,
             list_recipes: true,
-            xmin: -1.0,
-            xmax: 1.0,
+            xmin: Some(-1.0),
+            xmax: Some(1.0),
+            tmin: None,
+            tmax: None,
             a: 1.0,
             animate: false,
             amin: 0.0,
@@ -3432,6 +3436,7 @@ fn plot_discovery_resolves_recipe_seed_and_list() {
             save: None,
             title: None,
             author: None,
+            scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
     );
@@ -3444,6 +3449,138 @@ fn plot_report_draws_a_known_function() {
     let out = super::plot_report("x", -1.0, 1.0, 0.0, 24, 8).expect("plot");
     assert!(out.contains("y = x"));
     assert!(out.contains('#'));
+}
+
+#[test]
+fn parametric_report_draws_both_coordinates_and_names_the_scale() {
+    let out = super::parametric_report(
+        "cos(3*t)",
+        "sin(2*t)",
+        super::StudioParameters {
+            minimum: 0.0,
+            maximum: std::f64::consts::TAU,
+            a: 0.0,
+            scale: numinous_core::StudioScale::Major,
+        },
+        (40, 16),
+    )
+    .expect("parametric plot");
+    assert!(out.contains("x(t) = cos(3*t)"));
+    assert!(out.contains("y(t) = sin(2*t)"));
+    assert!(out.contains("scale major"));
+    assert!(out.contains('#'));
+}
+
+#[test]
+fn parametric_plot_saves_reopens_and_records_progress_once() {
+    let path = std::env::temp_dir().join("numinous_cli_parametric_pair_test.num");
+    let _ = std::fs::remove_file(&path);
+    let mut journey = numinous_core::Journey::default();
+    let code = run(
+        Command::Plot {
+            expr: None,
+            x_expr: Some("cos(3*t+a)".to_string()),
+            y_expr: Some("sin(2*t)".to_string()),
+            recipe: None,
+            seed: None,
+            auto_step: 0,
+            list_recipes: false,
+            xmin: None,
+            xmax: None,
+            tmin: Some(0.0),
+            tmax: Some(std::f64::consts::TAU),
+            a: 0.25,
+            animate: false,
+            amin: 0.0,
+            amax: std::f64::consts::TAU,
+            width: 40,
+            height: 16,
+            save: Some(path.clone()),
+            title: Some("Three by Two".to_string()),
+            author: None,
+            scale: super::StudioScaleArg::Pentatonic,
+        },
+        &mut journey,
+    );
+    assert_eq!(code, std::process::ExitCode::SUCCESS);
+    assert_eq!(journey.plays, 1);
+    let creation = numinous_core::StudioCreation::from_num_path(&path).expect("saved pair");
+    assert_eq!(creation.kind(), numinous_core::StudioKind::Parametric);
+    assert_eq!(creation.second_source(), Some("sin(2*t)"));
+    assert_eq!(creation.scale(), numinous_core::StudioScale::Pentatonic);
+    assert_eq!(creation.title(), Some("Three by Two"));
+    let opened =
+        super::open_studio_report(path.to_str().expect("path"), 40, 16).expect("open saved pair");
+    assert!(opened.contains("kind=parametric"));
+    assert!(opened.contains("scale=pentatonic"));
+    assert!(opened.contains("x(t) = cos(3*t+a)"));
+    std::fs::remove_file(path).expect("cleanup");
+}
+
+#[test]
+fn a_partial_parametric_pair_is_refused_before_progress() {
+    let mut journey = numinous_core::Journey::default();
+    let code = run(
+        Command::Plot {
+            expr: None,
+            x_expr: Some("cos(t)".to_string()),
+            y_expr: None,
+            recipe: None,
+            seed: None,
+            auto_step: 0,
+            list_recipes: false,
+            xmin: Some(-1.0),
+            xmax: Some(1.0),
+            tmin: None,
+            tmax: None,
+            a: 0.0,
+            animate: false,
+            amin: 0.0,
+            amax: 1.0,
+            width: 24,
+            height: 8,
+            save: None,
+            title: None,
+            author: None,
+            scale: super::StudioScaleArg::Continuous,
+        },
+        &mut journey,
+    );
+    assert_eq!(code, std::process::ExitCode::FAILURE);
+    assert_eq!(journey.plays, 0);
+}
+
+#[test]
+fn a_parametric_plot_refuses_graph_range_flags_before_progress() {
+    let mut journey = numinous_core::Journey::default();
+    let code = run(
+        Command::Plot {
+            expr: None,
+            x_expr: Some("cos(t)".to_string()),
+            y_expr: Some("sin(t)".to_string()),
+            recipe: None,
+            seed: None,
+            auto_step: 0,
+            list_recipes: false,
+            xmin: Some(-1.0),
+            xmax: None,
+            tmin: None,
+            tmax: None,
+            a: 0.0,
+            animate: false,
+            amin: 0.0,
+            amax: 1.0,
+            width: 24,
+            height: 8,
+            save: None,
+            title: None,
+            author: None,
+            scale: super::StudioScaleArg::Continuous,
+        },
+        &mut journey,
+    );
+    assert_eq!(code, std::process::ExitCode::FAILURE);
+    assert_eq!(journey.plays, 0);
 }
 
 #[test]
@@ -3540,12 +3677,16 @@ fn a_title_without_save_is_refused_before_progress() {
     let code = run(
         Command::Plot {
             expr: Some("x".to_string()),
+            x_expr: None,
+            y_expr: None,
             recipe: None,
             seed: None,
             auto_step: 0,
             list_recipes: false,
-            xmin: -1.0,
-            xmax: 1.0,
+            xmin: Some(-1.0),
+            xmax: Some(1.0),
+            tmin: None,
+            tmax: None,
             a: 1.0,
             animate: false,
             amin: 0.0,
@@ -3555,6 +3696,7 @@ fn a_title_without_save_is_refused_before_progress() {
             save: None,
             title: Some("Slow Waves".to_string()),
             author: None,
+            scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
     );
@@ -3570,12 +3712,16 @@ fn plot_save_and_animate_is_rejected_before_progress() {
     let code = run(
         Command::Plot {
             expr: Some("x".to_string()),
+            x_expr: None,
+            y_expr: None,
             recipe: None,
             seed: None,
             auto_step: 0,
             list_recipes: false,
-            xmin: -1.0,
-            xmax: 1.0,
+            xmin: Some(-1.0),
+            xmax: Some(1.0),
+            tmin: None,
+            tmax: None,
             a: 1.0,
             animate: true,
             amin: 0.0,
@@ -3585,6 +3731,7 @@ fn plot_save_and_animate_is_rejected_before_progress() {
             save: Some(path.clone()),
             title: None,
             author: None,
+            scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
     );
@@ -3599,12 +3746,16 @@ fn invalid_animated_plot_is_rejected_before_progress() {
     let code = run(
         Command::Plot {
             expr: Some("x".to_string()),
+            x_expr: None,
+            y_expr: None,
             recipe: None,
             seed: None,
             auto_step: 0,
             list_recipes: false,
-            xmin: -1.0,
-            xmax: 1.0,
+            xmin: Some(-1.0),
+            xmax: Some(1.0),
+            tmin: None,
+            tmax: None,
             a: 1.0,
             animate: true,
             amin: 0.0,
@@ -3614,6 +3765,7 @@ fn invalid_animated_plot_is_rejected_before_progress() {
             save: None,
             title: None,
             author: None,
+            scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
     );
@@ -3630,12 +3782,16 @@ fn plot_save_waits_for_a_valid_still_plot() {
     let code = run(
         Command::Plot {
             expr: Some("x".to_string()),
+            x_expr: None,
+            y_expr: None,
             recipe: None,
             seed: None,
             auto_step: 0,
             list_recipes: false,
-            xmin: -1.0,
-            xmax: 1.0,
+            xmin: Some(-1.0),
+            xmax: Some(1.0),
+            tmin: None,
+            tmax: None,
             a: 1.0,
             animate: false,
             amin: 0.0,
@@ -3645,6 +3801,7 @@ fn plot_save_waits_for_a_valid_still_plot() {
             save: Some(path.clone()),
             title: None,
             author: None,
+            scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
     );
@@ -3661,12 +3818,16 @@ fn plot_save_waits_for_finite_samples() {
     let code = run(
         Command::Plot {
             expr: Some("ln(-1)".to_string()),
+            x_expr: None,
+            y_expr: None,
             recipe: None,
             seed: None,
             auto_step: 0,
             list_recipes: false,
-            xmin: -2.0,
-            xmax: -1.0,
+            xmin: Some(-2.0),
+            xmax: Some(-1.0),
+            tmin: None,
+            tmax: None,
             a: 1.0,
             animate: false,
             amin: 0.0,
@@ -3676,6 +3837,7 @@ fn plot_save_waits_for_finite_samples() {
             save: Some(path.clone()),
             title: None,
             author: None,
+            scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
     );
@@ -3692,12 +3854,16 @@ fn failed_plot_save_does_not_record_progress() {
     let code = run(
         Command::Plot {
             expr: Some("x".to_string()),
+            x_expr: None,
+            y_expr: None,
             recipe: None,
             seed: None,
             auto_step: 0,
             list_recipes: false,
-            xmin: -1.0,
-            xmax: 1.0,
+            xmin: Some(-1.0),
+            xmax: Some(1.0),
+            tmin: None,
+            tmax: None,
             a: 1.0,
             animate: false,
             amin: 0.0,
@@ -3707,6 +3873,7 @@ fn failed_plot_save_does_not_record_progress() {
             save: Some(path.clone()),
             title: None,
             author: None,
+            scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
     );
@@ -3798,26 +3965,62 @@ fn sing_resolves_a_studio_capsule_with_its_own_window_and_knob() {
     let creation = numinous_core::StudioCreation::new("sin(a*x)", -2.0, 3.0, 0.5).expect("capsule");
     std::fs::write(&path, creation.to_num_file()).expect("write capsule");
 
-    let (source, xmin, xmax, a) =
+    let (source, xmin, xmax, a, scale) =
         super::resolve_sing_input(&path.to_string_lossy(), None, None, None)
             .expect("capsule resolves");
     assert_eq!(source, "sin(a*x)");
     assert_eq!((xmin, xmax, a), (-2.0, 3.0, 0.5));
+    assert_eq!(scale, numinous_core::StudioScale::Continuous);
 
     // An explicit flag still overrides the capsule's own value.
-    let (_, _, _, a) = super::resolve_sing_input(&path.to_string_lossy(), None, None, Some(2.0))
+    let (_, _, _, a, _) = super::resolve_sing_input(&path.to_string_lossy(), None, None, Some(2.0))
         .expect("override resolves");
     assert_eq!(a, 2.0);
 
     // Raw math keeps the documented defaults.
-    let (source, xmin, xmax, a) =
+    let (source, xmin, xmax, a, scale) =
         super::resolve_sing_input("sin(x)", None, None, None).expect("math resolves");
     assert_eq!(source, "sin(x)");
     assert_eq!(
         (xmin, xmax, a),
         (-std::f64::consts::TAU, std::f64::consts::TAU, 1.0)
     );
+    assert_eq!(scale, numinous_core::StudioScale::Continuous);
     let _ = std::fs::remove_file(&path);
+}
+
+#[test]
+fn sing_resolves_a_parametric_capsules_y_voice_and_stored_scale() {
+    let path = std::env::temp_dir().join(format!(
+        "numinous_cli_sing_parametric_{}.num",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let creation = numinous_core::StudioCreation::new_parametric(
+        "cos(3*t)",
+        "sin(2*t)",
+        0.0,
+        std::f64::consts::TAU,
+        0.25,
+    )
+    .expect("pair")
+    .with_scale(numinous_core::StudioScale::Pentatonic);
+    std::fs::write(&path, creation.to_num_file()).expect("write capsule");
+
+    let (source, xmin, xmax, a, scale) =
+        super::resolve_sing_input(&path.to_string_lossy(), None, None, None)
+            .expect("capsule resolves");
+    assert_eq!(source, "sin(2*t)");
+    assert_eq!((xmin, xmax, a), (0.0, std::f64::consts::TAU, 0.25));
+    assert_eq!(scale, numinous_core::StudioScale::Pentatonic);
+
+    let wav = path.with_extension("wav");
+    let message =
+        super::sing_wav_with_scale(&source, xmin, xmax, 16, a, scale, &wav).expect("scaled voice");
+    assert!(message.contains("pentatonic scale"), "{message}");
+    assert!(std::fs::metadata(&wav).expect("wav").len() > 1000);
+    let _ = std::fs::remove_file(&path);
+    let _ = std::fs::remove_file(&wav);
 }
 
 #[test]

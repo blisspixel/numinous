@@ -22,17 +22,20 @@ core). Community content keeps that shape.
 ### Tier 1: data-only capsules (the sharing substrate; extend what exists)
 
 The `.num` format is already Tier 1: a size-capped text file, a hand-written
-strict parser, no code. It grows from "one expression plus range parameters"
-into a **room manifest**: one or more expressions, named sliders with ranges,
+strict parser, no code. It grows from a graph or one atomic parametric pair
+into a **room manifest**: general expression sets, named sliders with ranges,
 a palette and Era choice, sound parameters drawn from fixed enums, and
 metadata (title, author). Trusted engine code interprets everything; content
-can only recombine primitives we already ship. The first growth ring is
-built: `NUMINOUS_STUDIO 2` carries an optional capped printable-ASCII title
+can only recombine primitives we already ship. The first growth ring,
+`NUMINOUS_STUDIO 2`, carries an optional capped printable-ASCII title
 and author, an Era from the fixed set, and a `descends` parent link that is
 validated by reopening it. Serialization writes the lowest header that
-carries the content, links never carry `descends` so the handoff format
-cannot nest itself, and sliders plus multiple expressions remain the next
-rings. This is the Baba Is You and
+carries the content, and links never carry `descends` so the handoff format
+cannot nest itself. The second growth ring, `NUMINOUS_STUDIO 3`, carries either
+one graph or one complete `x(t), y(t)` pair and a named pitch map. Plain graphs
+still write version 1, identity or lineage alone still writes version 2, and
+unknown future headers are refused. Named sliders and general multi-expression
+programs remain later rings. This is the Baba Is You and
 Doom-WAD model, and its safety record is perfect for a structural reason:
 there is no code to escape with.
 
@@ -171,7 +174,7 @@ quality. Never the other way around.
 - **Now / 1.x:** Tier 1 hardening. The parser budgets (token and depth caps),
   the import byte and magnitude caps, and the in-suite totality stress harness
   are done and gate every commit; the link-preview confirmation, a nightly
-  cargo-fuzz run, and the `.num` room-manifest extension remain. These protect
+  cargo-fuzz run, and later `.num` room-manifest fields remain. These protect
   surfaces that already exist.
 - **2.0:** Tier 2, the Studio pattern language as the creation surface, with
   the gallery, fork/remix, promote-to-room, the proof-packet portal CI, and

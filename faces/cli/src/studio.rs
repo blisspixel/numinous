@@ -9,9 +9,37 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use numinous_core::{PlotRequest, PlotSource, StudioCreation, StudioRequestError};
+use numinous_core::{
+    PlotRequest, PlotSource, StudioCreation, StudioKind, StudioRequestError, StudioScale,
+};
 
 use crate::render_input::validate_render_dimensions;
+
+/// One saved or rendered Studio domain and its portable pitch map.
+#[derive(Clone, Copy)]
+pub(super) struct StudioParameters {
+    pub minimum: f64,
+    pub maximum: f64,
+    pub a: f64,
+    pub scale: StudioScale,
+}
+
+/// Optional identity attached while saving a new creation.
+#[derive(Clone, Copy)]
+pub(super) struct CreationIdentity<'a> {
+    pub title: Option<&'a str>,
+    pub author: Option<&'a str>,
+}
+
+/// Atomic changes requested for one terminal fork.
+#[derive(Clone, Copy)]
+pub(super) struct ForkEdits<'a> {
+    pub expr: Option<&'a str>,
+    pub x_expr: Option<&'a str>,
+    pub y_expr: Option<&'a str>,
+    pub scale: Option<StudioScale>,
+    pub identity: CreationIdentity<'a>,
+}
 
 /// Translate mutually exclusive CLI discovery flags into one core source.
 pub(super) fn resolve_plot_source(
@@ -72,6 +100,64 @@ pub(super) fn plot_report(
     ))
 }
 
+/// Plot one parametric pair over `[tmin, tmax]`, auto-scaling both axes.
+pub(super) fn parametric_report(
+    x_source: &str,
+    y_source: &str,
+    parameters: StudioParameters,
+    size: (usize, usize),
+) -> Result<String, String> {
+    let creation = StudioCreation::new_parametric(
+        x_source,
+        y_source,
+        parameters.minimum,
+        parameters.maximum,
+        parameters.a,
+    )?
+    .with_scale(parameters.scale);
+    creation_report(&creation, size.0, size.1)
+}
+
+/// Render any validated Studio capsule through its own form.
+pub(super) fn creation_report(
+    creation: &StudioCreation,
+    width: usize,
+    height: usize,
+) -> Result<String, String> {
+    validate_render_dimensions(width, height)?;
+    let plot = creation.plot_text(width, height).map_err(|error| {
+        if error.contains("undefined") {
+            "nothing to plot: the creation is undefined across this range\n".to_string()
+        } else {
+            format!("{}\n", terminal_safe(&error))
+        }
+    })?;
+    match creation.kind() {
+        StudioKind::Graph => Ok(format!(
+            "y = {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]\n\n{}",
+            terminal_safe(creation.source()),
+            creation.xmin(),
+            creation.xmax(),
+            plot.ymin,
+            plot.ymax,
+            plot.text
+        )),
+        StudioKind::Parametric => Ok(format!(
+            "x(t) = {}    y(t) = {}\nt in [{:.3}, {:.3}]    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]    scale {}\n\n{}",
+            terminal_safe(creation.source()),
+            terminal_safe(creation.second_source().expect("parametric y source")),
+            creation.xmin(),
+            creation.xmax(),
+            plot.xmin,
+            plot.xmax,
+            plot.ymin,
+            plot.ymax,
+            creation.scale().name(),
+            plot.text
+        )),
+    }
+}
+
 pub(super) fn plot_request_error(error: StudioRequestError) -> String {
     match error {
         StudioRequestError::Undefined => {
@@ -100,7 +186,8 @@ pub(super) fn sing_request_error(error: StudioRequestError) -> String {
 }
 
 /// Save a Studio creation as a `.num` file and return the share link. The
-/// file stays version 1 unless a title or author asks for version 2.
+/// file uses the lowest capsule version that can carry its fields.
+#[cfg(test)]
 pub(super) fn save_studio_creation(
     source: &str,
     xmin: f64,
@@ -110,11 +197,58 @@ pub(super) fn save_studio_creation(
     author: Option<&str>,
     path: &Path,
 ) -> Result<String, String> {
-    let mut creation = StudioCreation::new(source, xmin, xmax, a)?;
-    if let Some(title) = title {
+    save_studio_creation_with_scale(
+        source,
+        StudioParameters {
+            minimum: xmin,
+            maximum: xmax,
+            a,
+            scale: StudioScale::Continuous,
+        },
+        CreationIdentity { title, author },
+        path,
+    )
+}
+
+pub(super) fn save_studio_creation_with_scale(
+    source: &str,
+    parameters: StudioParameters,
+    identity: CreationIdentity<'_>,
+    path: &Path,
+) -> Result<String, String> {
+    let creation =
+        StudioCreation::new(source, parameters.minimum, parameters.maximum, parameters.a)?
+            .with_scale(parameters.scale);
+    save_creation(creation, identity, path)
+}
+
+pub(super) fn save_parametric_creation(
+    x_source: &str,
+    y_source: &str,
+    parameters: StudioParameters,
+    identity: CreationIdentity<'_>,
+    path: &Path,
+) -> Result<String, String> {
+    let creation = StudioCreation::new_parametric(
+        x_source,
+        y_source,
+        parameters.minimum,
+        parameters.maximum,
+        parameters.a,
+    )?
+    .with_scale(parameters.scale);
+    save_creation(creation, identity, path)
+}
+
+fn save_creation(
+    mut creation: StudioCreation,
+    identity: CreationIdentity<'_>,
+    path: &Path,
+) -> Result<String, String> {
+    if let Some(title) = identity.title {
         creation = creation.with_title(title).map_err(|e| format!("{e}\n"))?;
     }
-    if let Some(author) = author {
+    if let Some(author) = identity.author {
         creation = creation.with_author(author).map_err(|e| format!("{e}\n"))?;
     }
     write_create_new(path, creation.to_num_file().as_bytes())?;
@@ -133,14 +267,18 @@ pub(super) fn resolve_sing_input(
     xmin: Option<f64>,
     xmax: Option<f64>,
     a: Option<f64>,
-) -> Result<(String, f64, f64, f64), String> {
+) -> Result<(String, f64, f64, f64, StudioScale), String> {
     if names_a_studio_creation(input) {
         let creation = load_studio_creation(input)?;
         return Ok((
-            creation.source().to_string(),
+            creation
+                .second_source()
+                .unwrap_or_else(|| creation.source())
+                .to_string(),
             xmin.unwrap_or_else(|| creation.xmin()),
             xmax.unwrap_or_else(|| creation.xmax()),
             a.unwrap_or_else(|| creation.a()),
+            creation.scale(),
         ));
     }
     Ok((
@@ -148,10 +286,12 @@ pub(super) fn resolve_sing_input(
         xmin.unwrap_or(-std::f64::consts::TAU),
         xmax.unwrap_or(std::f64::consts::TAU),
         a.unwrap_or(1.0),
+        StudioScale::Continuous,
     ))
 }
 
 /// The terminal maker's remix verb.
+#[cfg(test)]
 pub(super) fn fork_studio_creation(
     parent_input: &str,
     expr: Option<&str>,
@@ -159,10 +299,50 @@ pub(super) fn fork_studio_creation(
     author: Option<&str>,
     out: &Path,
 ) -> Result<String, String> {
+    fork_studio_creation_extended(
+        parent_input,
+        ForkEdits {
+            expr,
+            x_expr: None,
+            y_expr: None,
+            scale: None,
+            identity: CreationIdentity { title, author },
+        },
+        out,
+    )
+}
+
+pub(super) fn fork_studio_creation_extended(
+    parent_input: &str,
+    edits: ForkEdits<'_>,
+    out: &Path,
+) -> Result<String, String> {
     let parent = load_studio_creation(parent_input)?;
-    let fork = parent
-        .fork(expr, title, author)
-        .map_err(|error| format!("{error}\n"))?;
+    let mut fork = match parent.kind() {
+        StudioKind::Graph => {
+            if edits.x_expr.is_some() || edits.y_expr.is_some() {
+                return Err("a graph fork accepts --expr, not --x-expr or --y-expr\n".to_string());
+            }
+            parent.fork(edits.expr, edits.identity.title, edits.identity.author)
+        }
+        StudioKind::Parametric => {
+            if edits.expr.is_some() {
+                return Err(
+                    "a parametric fork accepts --x-expr and --y-expr, not --expr\n".to_string(),
+                );
+            }
+            parent.fork_parametric(
+                edits.x_expr,
+                edits.y_expr,
+                edits.identity.title,
+                edits.identity.author,
+            )
+        }
+    }
+    .map_err(|error| format!("{error}\n"))?;
+    if let Some(scale) = edits.scale {
+        fork = fork.with_scale(scale);
+    }
     write_create_new(out, fork.to_num_file().as_bytes())?;
     Ok(format!(
         "forked from {}\nsaved Studio creation: {}\nlink: {}\n",
@@ -201,14 +381,7 @@ pub(super) fn open_studio_report(
     height: usize,
 ) -> Result<String, String> {
     let creation = load_studio_creation(input)?;
-    let report = plot_report(
-        creation.source(),
-        creation.xmin(),
-        creation.xmax(),
-        creation.a(),
-        width,
-        height,
-    )?;
+    let report = creation_report(&creation, width, height)?;
     let mut lines = vec!["Studio creation".to_string()];
     if let Some(title) = creation.title() {
         lines.push(format!("title={}", terminal_safe(title)));
@@ -216,10 +389,22 @@ pub(super) fn open_studio_report(
     if let Some(author) = creation.author() {
         lines.push(format!("author={}", terminal_safe(author)));
     }
-    lines.push(format!("expr={}", terminal_safe(creation.source())));
-    lines.push(format!("xmin={}", creation.xmin()));
-    lines.push(format!("xmax={}", creation.xmax()));
+    lines.push(format!("kind={}", creation.kind().name()));
+    match creation.second_source() {
+        Some(y_source) => {
+            lines.push(format!("xexpr={}", terminal_safe(creation.source())));
+            lines.push(format!("yexpr={}", terminal_safe(y_source)));
+            lines.push(format!("tmin={}", creation.xmin()));
+            lines.push(format!("tmax={}", creation.xmax()));
+        }
+        None => {
+            lines.push(format!("expr={}", terminal_safe(creation.source())));
+            lines.push(format!("xmin={}", creation.xmin()));
+            lines.push(format!("xmax={}", creation.xmax()));
+        }
+    }
     lines.push(format!("a={}", creation.a()));
+    lines.push(format!("scale={}", creation.scale().name()));
     if let Some(era) = creation.era() {
         lines.push(format!("era={}", era.name()));
     }

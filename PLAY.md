@@ -247,18 +247,23 @@ and `nim` actions reconstruct the shared native heap board. Other games and
 remaining public actions use the typed text timeline.
 
 Make something, too. `plot_expression` draws a function nobody has plotted
-before, and `sing_expression` sings one: every note carries the step taken to
+before, or a parametric path from paired `x_expr` and `y_expr` fields.
+`sing_expression` sings one: every note carries the step taken to
 reach it, sized exactly in cents, named when a name fits, and given as a whole
 number ratio when a simple one explains it. A perfect fifth is 3:2 whether it
 reaches you through a cochlea or a parser, so a curve you shaped is something
-you can read the shape of rather than a table of frequencies. The scalar
+you can read the shape of rather than a table of frequencies. A parametric
+creation draws both coordinates and sings `y(t)`. Choose `continuous`,
+`chromatic`, `major`, `minor`, or `pentatonic` with the `scale` field. The
+bounded expression
 language includes `floor(value)`, Euclidean `mod(value, divisor)`,
 `min(left, right)`, and `max(left, right)`. Try
 `min(max(mod(floor(3*x), 5), 1), 3)`, then change one number.
 
 Keep that work when you choose. `save_creation` returns canonical `.num` text,
-a native link, and an exact preview; optional title, author, and era travel
-inside the capsule. `open_creation` accepts the returned text or link, never a
+a native link, and an exact preview; graph or paired parametric source, pitch
+scale, optional title, author, and era travel inside the capsule.
+`open_creation` accepts the returned text or link, never a
 host file path. `fork_creation` accepts a parent capsule, keeps its canvas, and
 returns a child whose `descends` field names the exact parent link. Each result
 also exposes `journalSubject`, which you may pass as the subject of an explicit

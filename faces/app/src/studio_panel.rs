@@ -2,7 +2,10 @@
 
 use std::f64::consts::TAU;
 
-use numinous_core::{Expr, MAX_STUDIO_SOURCE_CHARS, Raster, SoundSpec, StudioCreation, Surface};
+use numinous_core::{
+    Expr, MAX_STUDIO_EDITOR_CHARS, Raster, SoundSpec, StudioCreation, StudioKind, StudioProgram,
+    StudioScale, Surface,
+};
 
 use crate::input_legend::{self, InputMode};
 
@@ -21,13 +24,14 @@ pub(crate) const RECIPE_MORPH_SECONDS: f64 = 0.6;
 const AUTO_PHRASE_SLICES: f64 = 8.0;
 const AUTO_PHRASE_EDGE: f64 = 0.06;
 
-fn sound_for_expression(expr: &Expr) -> SoundSpec {
-    numinous_core::to_melody(
+fn sound_for_expression(expr: &Expr, scale: StudioScale) -> SoundSpec {
+    numinous_core::to_melody_with_scale(
         expr,
         numinous_core::DEFAULT_STUDIO_XMIN,
         numinous_core::DEFAULT_STUDIO_XMAX,
         numinous_core::DEFAULT_MELODY_NOTES,
         numinous_core::DEFAULT_STUDIO_PARAMETER,
+        scale,
     )
 }
 
@@ -38,12 +42,14 @@ pub(crate) const STUDIO_RECIPES: &[&str] = numinous_core::STUDIO_RECIPES;
 pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "FORMULA JAM",
     "TYPE: BUILD A CURVE  (Y = ...)",
+    "PAIR: X(T)=...; Y(T)=...",
     "ONE: SIN COS TAN EXP LN ABS SQRT FLOOR",
     "TWO: MOD(V,V) MIN(V,V) MAX(V,V)",
     "F2: RANDOM RECIPE FROM THE BANK",
     "F3: AUTO SET  (~21S, PHRASE SAFE)",
     "F4: NAME + SHARE  .NUM + LINK + PNG",
     "F5: GALLERY  THE SAVED WALL",
+    "F6: CYCLE MUSICAL SCALE",
     "F1: TOGGLE THIS HELP",
     "TAB / ESC: CLOSE STUDIO",
     "A IN A FORMULA IS TIME",
@@ -98,7 +104,9 @@ impl CurveMorph {
 pub struct StudioPanel {
     source: String,
     expr: Option<Expr>,
+    program: Option<StudioProgram>,
     error: Option<String>,
+    scale: StudioScale,
     /// Recipe index for Random (advances each draw).
     recipe_cursor: u64,
     /// Auto set: calm recipe rotation while the player watches.
@@ -126,15 +134,17 @@ impl Default for StudioPanel {
 impl StudioPanel {
     /// Build a Studio panel from source text.
     pub fn new(source: &str) -> Result<Self, String> {
-        if source.chars().count() > MAX_STUDIO_SOURCE_CHARS {
+        if source.chars().count() > MAX_STUDIO_EDITOR_CHARS {
             return Err(format!(
-                "Studio expression is too long; limit is {MAX_STUDIO_SOURCE_CHARS} characters"
+                "Studio editor text is too long; limit is {MAX_STUDIO_EDITOR_CHARS} characters"
             ));
         }
         let mut panel = Self {
             source: source.to_string(),
             expr: None,
+            program: None,
             error: None,
+            scale: StudioScale::Continuous,
             // Start at 1 so the first Random draw is not the default recipe.
             recipe_cursor: 1,
             auto_active: false,
@@ -161,16 +171,18 @@ impl StudioPanel {
         // Opening a creation is a fresh start, not a descent; the fork path
         // below sets its own parent after this clears.
         self.fork_of = None;
-        self.source = creation.source().to_string();
+        self.source = creation.editor_source();
+        self.scale = creation.scale();
         // Parse directly rather than through reparse, which is the edit door
         // and releases the pin this method exists to set. A validated
         // creation always parses; if this seatbelt branch ever fires anyway,
         // the panel refuses the pin and keeps nothing of the previous curve,
         // so an error and a pin still cannot coexist and a stale expression
         // cannot draw under a window that was never its own.
-        match numinous_core::parse(&self.source) {
-            Ok(expr) => {
-                self.expr = Some(expr);
+        match creation.program() {
+            Ok(program) => {
+                self.expr = Some(program.voice_expression().clone());
+                self.program = Some(program);
                 self.error = None;
                 self.opened = Some(OpenedCreation {
                     creation: creation.clone(),
@@ -179,6 +191,7 @@ impl StudioPanel {
             }
             Err(message) => {
                 self.expr = None;
+                self.program = None;
                 self.error = Some(message);
                 self.opened = None;
             }
@@ -271,13 +284,36 @@ impl StudioPanel {
         self.show_help = !self.show_help;
     }
 
+    /// Cycle the portable musical scale and return the new voice.
+    pub fn cycle_scale(&mut self) -> Option<SoundSpec> {
+        self.pause_auto();
+        self.morph = None;
+        self.release_pin_into_lineage();
+        self.scale = self.scale.next();
+        self.current_sound()
+    }
+
+    /// Stable scale name for App status and tests.
+    #[must_use]
+    pub const fn scale_name(&self) -> &'static str {
+        self.scale.name()
+    }
+
     /// Load the next curated recipe. Returns a melody when the recipe parses.
     /// Does not pause Auto (bank rotation is the Auto path too).
     pub fn load_random_recipe(&mut self) -> Option<SoundSpec> {
         if self.morph.is_some() {
             return None;
         }
-        let previous = self.expr.clone();
+        let previous = if self
+            .program
+            .as_ref()
+            .is_some_and(|program| program.kind() == StudioKind::Graph)
+        {
+            self.expr.clone()
+        } else {
+            None
+        };
         let len = STUDIO_RECIPES.len() as u64;
         let index = (self.recipe_cursor % len) as usize;
         self.recipe_cursor = self.recipe_cursor.saturating_add(1);
@@ -348,10 +384,12 @@ impl StudioPanel {
     pub fn reparse(&mut self) -> Option<SoundSpec> {
         self.morph = None;
         self.release_pin_into_lineage();
-        match numinous_core::parse(&self.source) {
-            Ok(expr) => {
-                let spec = sound_for_expression(&expr);
+        match StudioProgram::from_editor(&self.source) {
+            Ok(program) => {
+                let expr = program.voice_expression().clone();
+                let spec = sound_for_expression(&expr, self.scale);
                 self.expr = Some(expr);
+                self.program = Some(program);
                 self.error = None;
                 Some(spec)
             }
@@ -400,15 +438,16 @@ impl StudioPanel {
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
         let expr = self.expr.as_ref()?;
         if let Some(opened) = &self.opened {
-            return Some(numinous_core::to_melody(
+            return Some(numinous_core::to_melody_with_scale(
                 expr,
                 opened.creation.xmin(),
                 opened.creation.xmax(),
                 numinous_core::DEFAULT_MELODY_NOTES,
                 opened.creation.a(),
+                opened.creation.scale(),
             ));
         }
-        Some(sound_for_expression(expr))
+        Some(sound_for_expression(expr, self.scale))
     }
 
     /// Current UTF-8 byte length, used only to detect an admitted native edit.
@@ -449,7 +488,7 @@ impl StudioPanel {
     /// so the shared creation is the exact curve on screen when the player
     /// pressed the key, not a moving target.
     pub(crate) fn current_creation(&self, t: f64) -> Result<StudioCreation, ShareRefusal> {
-        if self.error.is_some() || self.expr.is_none() {
+        if self.error.is_some() || self.program.is_none() {
             return Err(ShareRefusal::UnparsedFormula);
         }
         // An untouched reopen shares the very capsule that was opened,
@@ -464,8 +503,14 @@ impl StudioPanel {
             return Ok(opened.creation.clone());
         }
         let (xmin, xmax, a) = self.window_and_knob(t);
-        let mut creation = StudioCreation::new(self.source.clone(), xmin, xmax, a)
-            .map_err(|_| ShareRefusal::UnparsedFormula)?;
+        let program = self.program.as_ref().expect("checked above");
+        let (first, second) = program.sources();
+        let mut creation = match second {
+            Some(second) => StudioCreation::new_parametric(first, second, xmin, xmax, a),
+            None => StudioCreation::new(first, xmin, xmax, a),
+        }
+        .map_err(|_| ShareRefusal::UnparsedFormula)?
+        .with_scale(self.scale);
         if let Some(parent) = &self.fork_of {
             // A fork shares its descent, and a lineage that cannot ride is
             // its own refusal rather than a claim that the formula broke.
@@ -494,7 +539,10 @@ impl StudioPanel {
     ) -> Vec<u8> {
         let mut raster = Raster::new(size, size);
         let scale = studio_scale(size).max(2);
-        let typed = format!("Y = {}", self.source.to_uppercase());
+        let typed = match self.program.as_ref().map(StudioProgram::kind) {
+            Some(StudioKind::Parametric) => self.source.to_uppercase(),
+            _ => format!("Y = {}", self.source.to_uppercase()),
+        };
         if let Some(title) = title {
             numinous_core::draw_text(&mut raster, &title.to_uppercase(), 10, 10, scale + 1, '#');
             numinous_core::draw_text(&mut raster, &typed, 10, 10 + 12 * (scale + 1), scale, '#');
@@ -507,7 +555,7 @@ impl StudioPanel {
             let credit_y = (size as i32 - 12 * scale).max(0);
             numinous_core::draw_text(&mut raster, &credit, 10, credit_y, scale, '#');
         }
-        if let Some(expr) = &self.expr {
+        if let Some(program) = &self.program {
             let (xmin, xmax, a) = self.window_and_knob(t);
             // The postcard must match what creation.num reopens, so it
             // evaluates the settled expression directly rather than through
@@ -515,21 +563,36 @@ impl StudioPanel {
             // effect the capsule does not record. A share taken mid-morph
             // stays self-consistent instead of shipping a picture no reopen
             // can reproduce.
-            let _ = numinous_app::studio_render::draw_curve(
-                &mut raster,
-                numinous_app::studio_render::CurveLayout {
-                    width: size,
-                    height: size,
-                    top: f64::from(60 * scale),
-                    bottom_margin: f64::from(24 * scale),
-                },
-                xmin,
-                xmax,
-                |x| {
-                    let value = numinous_core::eval(expr, x, a);
-                    value.is_finite().then_some(value)
-                },
-            );
+            let layout = numinous_app::studio_render::CurveLayout {
+                width: size,
+                height: size,
+                top: f64::from(60 * scale),
+                bottom_margin: f64::from(24 * scale),
+            };
+            match program.kind() {
+                StudioKind::Graph => {
+                    let expr = program.voice_expression();
+                    let _ = numinous_app::studio_render::draw_curve(
+                        &mut raster,
+                        layout,
+                        xmin,
+                        xmax,
+                        |x| {
+                            let value = numinous_core::eval(expr, x, a);
+                            value.is_finite().then_some(value)
+                        },
+                    );
+                }
+                StudioKind::Parametric => {
+                    let _ = numinous_app::studio_render::draw_parametric(
+                        &mut raster,
+                        layout,
+                        xmin,
+                        xmax,
+                        |input| program.point(input, a),
+                    );
+                }
+            }
         }
         let mut rgba = raster.to_rgba();
         era.apply(&mut rgba, size, size);
@@ -569,7 +632,7 @@ impl StudioPanel {
 
     fn can_append(&self, text: &str) -> bool {
         let current = self.source.chars().count();
-        let Some(remaining) = MAX_STUDIO_SOURCE_CHARS.checked_sub(current) else {
+        let Some(remaining) = MAX_STUDIO_EDITOR_CHARS.checked_sub(current) else {
             return false;
         };
         text.chars().take(remaining + 1).count() <= remaining
@@ -613,7 +676,20 @@ impl StudioPanel {
             "THE STUDIO"
         };
         numinous_core::draw_text(raster, title, 10, 10, scale, '#');
-        let typed = format!("Y = {}_", self.source.to_uppercase());
+        let typed = if self
+            .program
+            .as_ref()
+            .is_some_and(|program| program.kind() == StudioKind::Parametric)
+            || self
+                .source
+                .trim_start()
+                .to_ascii_lowercase()
+                .starts_with("x(t)")
+        {
+            format!("{}_", self.source.to_uppercase())
+        } else {
+            format!("Y = {}_", self.source.to_uppercase())
+        };
         numinous_core::draw_text(raster, &typed, 10, 10 + 12 * scale, scale + 1, '#');
         if let Some(error) = &self.error {
             numinous_core::draw_text(
@@ -632,11 +708,25 @@ impl StudioPanel {
                 opened.creation.xmax(),
                 opened.creation.a(),
             );
-            let line = if opened.paused {
-                format!("REOPENED  X {xmin:.1} TO {xmax:.1}  A {a:.2}  ENTER: PLAY")
+            let domain = if opened.creation.kind() == StudioKind::Parametric {
+                "T"
             } else {
-                format!("REOPENED  X {xmin:.1} TO {xmax:.1}  A {a:.2}  TYPE: TAKE OVER")
+                "X"
             };
+            let line = if opened.paused {
+                format!(
+                    "REOPENED  {domain} {xmin:.1} TO {xmax:.1}  A {a:.2}  SCALE {}  ENTER: PLAY",
+                    self.scale_name()
+                )
+            } else {
+                format!(
+                    "REOPENED  {domain} {xmin:.1} TO {xmax:.1}  A {a:.2}  SCALE {}  TYPE: TAKE OVER",
+                    self.scale_name()
+                )
+            };
+            numinous_core::draw_text(raster, &line, 10, 10 + 34 * scale, scale, '*');
+        } else {
+            let line = format!("SCALE {}  F6: CHANGE", self.scale_name().to_uppercase());
             numinous_core::draw_text(raster, &line, 10, 10 + 34 * scale, scale, '*');
         }
         if self.help_visible() && height > 40 {
@@ -662,27 +752,37 @@ impl StudioPanel {
             numinous_core::draw_text(raster, &footer, 10, height as i32 - 11 * scale, scale, '#');
         }
 
-        if self.expr.is_none() {
+        let Some(program) = &self.program else {
             return;
-        }
+        };
         // A reopened creation draws its saved window at its saved knob; the
         // ambient Studio draws the default window with the knob as time. The
         // same helper feeds the share and the postcard, so what is saved is
         // what is on screen by construction.
         let (xmin, xmax, a) = self.window_and_knob(t);
         let top = (60 * scale) as f64;
-        let _ = numinous_app::studio_render::draw_curve(
-            raster,
-            numinous_app::studio_render::CurveLayout {
-                width,
-                height,
-                top,
-                bottom_margin: f64::from(24 * scale),
-            },
-            xmin,
-            xmax,
-            |x| self.curve_value(x, a),
-        );
+        let layout = numinous_app::studio_render::CurveLayout {
+            width,
+            height,
+            top,
+            bottom_margin: f64::from(24 * scale),
+        };
+        match program.kind() {
+            StudioKind::Graph => {
+                let _ = numinous_app::studio_render::draw_curve(raster, layout, xmin, xmax, |x| {
+                    self.curve_value(x, a)
+                });
+            }
+            StudioKind::Parametric => {
+                let _ = numinous_app::studio_render::draw_parametric(
+                    raster,
+                    layout,
+                    xmin,
+                    xmax,
+                    |input| program.point(input, a),
+                );
+            }
+        }
     }
 
     #[cfg(test)]
@@ -694,7 +794,7 @@ impl StudioPanel {
 #[cfg(test)]
 mod tests {
     use super::{
-        AUTO_DWELL_SECONDS, MAX_STUDIO_SOURCE_CHARS, RECIPE_MORPH_SECONDS, STUDIO_HELP_LINES,
+        AUTO_DWELL_SECONDS, MAX_STUDIO_EDITOR_CHARS, RECIPE_MORPH_SECONDS, STUDIO_HELP_LINES,
         STUDIO_RECIPES, StudioPanel, studio_scale,
     };
     use crate::input_legend::{self, InputMode};
@@ -1050,6 +1150,74 @@ mod tests {
     }
 
     #[test]
+    fn a_parametric_pair_draws_sings_and_shares_as_one_creation() {
+        let mut panel = StudioPanel::new("x(t)=cos(3*t); y(t)=sin(2*t)").expect("pair");
+        assert!(panel.error.is_none());
+        assert_eq!(
+            panel
+                .program
+                .as_ref()
+                .map(numinous_core::StudioProgram::kind),
+            Some(numinous_core::StudioKind::Parametric)
+        );
+        assert_eq!(panel.current_sound().expect("voice").notes.len(), 32);
+
+        let shared = panel.current_creation(0.25).expect("shared pair");
+        assert_eq!(shared.kind(), numinous_core::StudioKind::Parametric);
+        assert_eq!(shared.source(), "cos(3*t)");
+        assert_eq!(shared.second_source(), Some("sin(2*t)"));
+        assert_eq!(shared.scale(), numinous_core::StudioScale::Continuous);
+        assert!(shared.to_num_file().starts_with("NUMINOUS_STUDIO 3\n"));
+
+        let mut raster = Raster::new(240, 180);
+        panel.draw(&mut raster, InputMode::KeyboardMouse, 240, 180, 0.25);
+        assert!(raster.lit_count() > 100, "the pair has a visible path");
+
+        assert_eq!(panel.scale_name(), "continuous");
+        let continuous = panel.current_sound().expect("continuous voice");
+        let pentatonic = (0..4).fold(None, |_, _| panel.cycle_scale());
+        assert_eq!(panel.scale_name(), "pentatonic");
+        assert_ne!(pentatonic.expect("scaled voice"), continuous);
+        assert_eq!(
+            panel.current_creation(0.25).expect("scaled pair").scale(),
+            numinous_core::StudioScale::Pentatonic
+        );
+    }
+
+    #[test]
+    fn a_parametric_reopen_keeps_pair_scale_and_lineage_on_takeover() {
+        let saved = numinous_core::StudioCreation::new_parametric(
+            "cos(t)",
+            "sin(t)",
+            0.0,
+            std::f64::consts::TAU,
+            0.5,
+        )
+        .expect("pair")
+        .with_scale(numinous_core::StudioScale::Major)
+        .with_title("Orbit")
+        .expect("title");
+        let mut panel = StudioPanel::default();
+        panel.open_creation(&saved);
+
+        assert!(panel.opened_paused());
+        assert_eq!(panel.scale_name(), "major");
+        assert_eq!(panel.current_creation(0.25).expect("untouched"), saved);
+        assert_eq!(panel.current_sound(), Some(saved.to_melody(32)));
+
+        assert!(panel.push_text("+0").is_some());
+        let edited = panel.current_creation(0.25).expect("edited pair");
+        assert_eq!(edited.source(), "cos(t)");
+        assert_eq!(edited.second_source(), Some("sin(t)+0"));
+        assert_eq!(edited.xmin(), -std::f64::consts::TAU);
+        assert_eq!(edited.xmax(), std::f64::consts::TAU);
+        assert!((edited.a() - std::f64::consts::FRAC_PI_2).abs() < 1.0e-12);
+        assert_eq!(edited.scale(), numinous_core::StudioScale::Major);
+        assert_eq!(edited.descends(), Some(saved.to_link().as_str()));
+        assert_eq!(edited.title(), None);
+    }
+
+    #[test]
     fn a_fork_sings_at_once_and_its_shares_record_the_descent() {
         let parent = numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5)
             .expect("parent")
@@ -1240,20 +1408,20 @@ mod tests {
     #[test]
     fn editing_stops_at_the_portable_source_limit() {
         let mut panel = StudioPanel::new("x").expect("panel");
-        for _ in 1..numinous_core::MAX_STUDIO_SOURCE_CHARS {
+        for _ in 1..numinous_core::MAX_STUDIO_EDITOR_CHARS {
             panel.push_space();
         }
         assert_eq!(
             panel.source.chars().count(),
-            numinous_core::MAX_STUDIO_SOURCE_CHARS
+            numinous_core::MAX_STUDIO_EDITOR_CHARS
         );
 
         panel.push_space();
         assert_eq!(
             panel.source.chars().count(),
-            numinous_core::MAX_STUDIO_SOURCE_CHARS
+            numinous_core::MAX_STUDIO_EDITOR_CHARS
         );
-        panel.source = "x".repeat(numinous_core::MAX_STUDIO_SOURCE_CHARS + 1);
+        panel.source = "x".repeat(numinous_core::MAX_STUDIO_EDITOR_CHARS + 1);
         assert!(!panel.push_space());
     }
 
@@ -1261,7 +1429,7 @@ mod tests {
     fn over_limit_character_events_are_rejected_atomically() {
         let source = format!(
             "{}x",
-            " ".repeat(numinous_core::MAX_STUDIO_SOURCE_CHARS - 1)
+            " ".repeat(numinous_core::MAX_STUDIO_EDITOR_CHARS - 1)
         );
         let mut panel = StudioPanel::new(&source).expect("panel");
 
@@ -1273,7 +1441,7 @@ mod tests {
 
     #[test]
     fn construction_rejects_over_limit_unicode_source() {
-        let source = "π".repeat(MAX_STUDIO_SOURCE_CHARS + 1);
+        let source = "π".repeat(MAX_STUDIO_EDITOR_CHARS + 1);
         assert!(StudioPanel::new(&source).is_err());
     }
 

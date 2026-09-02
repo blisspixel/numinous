@@ -8,6 +8,14 @@ struct CurveSamples {
     ymax: f64,
 }
 
+struct ParametricSamples {
+    points: Vec<Option<(f64, f64)>>,
+    xmin: f64,
+    xmax: f64,
+    ymin: f64,
+    ymax: f64,
+}
+
 /// Raster dimensions and reserved chrome surrounding one curve.
 #[derive(Clone, Copy)]
 pub struct CurveLayout {
@@ -19,6 +27,19 @@ pub struct CurveLayout {
     pub top: f64,
     /// Rows reserved below the curve band.
     pub bottom_margin: f64,
+}
+
+/// One bounded raster rectangle for a curve preview.
+#[derive(Clone, Copy)]
+pub struct CurveRect {
+    /// Left pixel column.
+    pub left: usize,
+    /// Top pixel row.
+    pub top: usize,
+    /// Requested width in pixels.
+    pub width: usize,
+    /// Requested height in pixels.
+    pub height: usize,
 }
 
 fn sample_curve(
@@ -97,6 +118,132 @@ pub fn draw_curve(
         previous = Some((x, y));
     }
     Some((samples.ymin, samples.ymax))
+}
+
+/// Draw one auto-scaled parametric path into the same bounded vertical band.
+/// Sampling is denser than the pixel width so closed curves do not become a
+/// sparse polygon at small windows, but stays capped independently of input.
+pub fn draw_parametric(
+    raster: &mut Raster,
+    layout: CurveLayout,
+    tmin: f64,
+    tmax: f64,
+    point_at: impl FnMut(f64) -> Option<(f64, f64)>,
+) -> Option<(f64, f64, f64, f64)> {
+    let width = layout.width.min(raster.width());
+    let height = layout.height.min(raster.height());
+    let plot_height = height as f64 - layout.top - layout.bottom_margin;
+    if !layout.top.is_finite()
+        || !layout.bottom_margin.is_finite()
+        || layout.top < 0.0
+        || layout.bottom_margin < 0.0
+        || plot_height < 8.0
+    {
+        return None;
+    }
+    draw_parametric_rect(
+        raster,
+        CurveRect {
+            left: 0,
+            top: layout.top.round() as usize,
+            width,
+            height: plot_height.round() as usize,
+        },
+        tmin,
+        tmax,
+        point_at,
+    )
+}
+
+fn sample_parametric(
+    width: usize,
+    tmin: f64,
+    tmax: f64,
+    mut point_at: impl FnMut(f64) -> Option<(f64, f64)>,
+) -> Option<ParametricSamples> {
+    if width < 2 || !tmin.is_finite() || !tmax.is_finite() || tmax <= tmin {
+        return None;
+    }
+    let sample_count = width.saturating_mul(4).clamp(64, 16_384);
+    let span = tmax - tmin;
+    if !span.is_finite() {
+        return None;
+    }
+    let points: Vec<Option<(f64, f64)>> = (0..sample_count)
+        .map(|index| {
+            let t = tmin + span * index as f64 / (sample_count - 1) as f64;
+            point_at(t).filter(|(x, y)| x.is_finite() && y.is_finite())
+        })
+        .collect();
+    let finite: Vec<(f64, f64)> = points.iter().flatten().copied().collect();
+    if finite.is_empty() {
+        return None;
+    }
+    let xmin = finite
+        .iter()
+        .map(|point| point.0)
+        .fold(f64::INFINITY, f64::min);
+    let xmax = finite
+        .iter()
+        .map(|point| point.0)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let ymin = finite
+        .iter()
+        .map(|point| point.1)
+        .fold(f64::INFINITY, f64::min);
+    let ymax = finite
+        .iter()
+        .map(|point| point.1)
+        .fold(f64::NEG_INFINITY, f64::max);
+    Some(ParametricSamples {
+        points,
+        xmin,
+        xmax,
+        ymin,
+        ymax,
+    })
+}
+
+/// Draw one auto-scaled parametric path inside an explicit raster rectangle.
+/// This is the gallery form of [`draw_parametric`], with the same sampling
+/// and finite-value behavior but no dependence on full-surface chrome.
+pub fn draw_parametric_rect(
+    raster: &mut Raster,
+    rect: CurveRect,
+    tmin: f64,
+    tmax: f64,
+    point_at: impl FnMut(f64) -> Option<(f64, f64)>,
+) -> Option<(f64, f64, f64, f64)> {
+    let width = rect.width.min(raster.width().saturating_sub(rect.left));
+    let height = rect.height.min(raster.height().saturating_sub(rect.top));
+    if width < 2 || height < 2 {
+        return None;
+    }
+    let samples = sample_parametric(width, tmin, tmax, point_at)?;
+    let ParametricSamples {
+        points,
+        xmin,
+        xmax,
+        ymin,
+        ymax,
+    } = samples;
+    let xspan = (xmax - xmin).max(1e-9);
+    let yspan = (ymax - ymin).max(1e-9);
+    let mut previous = None;
+    for point in points {
+        let Some((x, y)) = point else {
+            previous = None;
+            continue;
+        };
+        let px = rect.left as i32 + ((x - xmin) / xspan * (width as f64 - 1.0)).round() as i32;
+        let py =
+            rect.top as i32 + ((1.0 - (y - ymin) / yspan) * (height as f64 - 1.0)).round() as i32;
+        if let Some((previous_x, previous_y)) = previous {
+            raster.line(previous_x, previous_y, px, py, '#');
+        }
+        previous = Some((px, py));
+    }
+    Some((xmin, xmax, ymin, ymax))
 }
 
 #[cfg(test)]
@@ -338,5 +485,28 @@ mod tests {
             let mut raster = Raster::new(32, 32);
             assert!(draw_curve(&mut raster, layout, -1.0, 1.0, Some).is_none());
         }
+    }
+
+    #[test]
+    fn parametric_drawing_closes_a_circle_and_reports_both_axes() {
+        let mut raster = Raster::new(80, 80);
+        let bounds = draw_parametric(
+            &mut raster,
+            CurveLayout {
+                width: 80,
+                height: 80,
+                top: 8.0,
+                bottom_margin: 8.0,
+            },
+            0.0,
+            std::f64::consts::TAU,
+            |t| Some((t.cos(), t.sin())),
+        )
+        .expect("circle");
+        assert!((bounds.0 + 1.0).abs() < 0.01);
+        assert!((bounds.1 - 1.0).abs() < 0.01);
+        assert!((bounds.2 + 1.0).abs() < 0.01);
+        assert!((bounds.3 - 1.0).abs() < 0.01);
+        assert!(raster.lit_count() > 100);
     }
 }

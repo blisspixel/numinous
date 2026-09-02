@@ -41,17 +41,89 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
     }
 
     let has_expr = args.get("expr").and_then(Value::as_str).is_some();
+    let has_x_expr = args.get("x_expr").and_then(Value::as_str).is_some();
+    let has_y_expr = args.get("y_expr").and_then(Value::as_str).is_some();
+    if has_x_expr != has_y_expr {
+        return tool_error("A parametric plot needs both x_expr and y_expr.");
+    }
+    let has_parametric = has_x_expr && has_y_expr;
     let has_recipe = args.get("recipe").is_some();
     let has_seed = args.get("seed").is_some();
     let has_auto_step = args.get("auto_step").is_some();
-    let mode_count = usize::from(has_expr) + usize::from(has_recipe) + usize::from(has_seed);
+    let mode_count = usize::from(has_expr)
+        + usize::from(has_parametric)
+        + usize::from(has_recipe)
+        + usize::from(has_seed);
     if mode_count != 1 {
         return tool_error(
-            "Provide exactly one of: expr (manual), recipe (index), or seed (random bank). Use list_recipes true to inspect the bank.",
+            "Provide exactly one of: expr (graph), x_expr with y_expr (parametric), recipe (index), or seed (random bank). Use list_recipes true to inspect the bank.",
         );
     }
     if has_auto_step && !has_seed {
         return tool_error("auto_step requires seed (stateless Auto walk over the curated bank).");
+    }
+
+    if has_parametric {
+        if args.get("xmin").is_some() || args.get("xmax").is_some() {
+            return tool_error("A parametric plot uses tmin and tmax, not xmin and xmax.");
+        }
+        let x_source = args
+            .get("x_expr")
+            .and_then(Value::as_str)
+            .expect("x expression present");
+        let y_source = args
+            .get("y_expr")
+            .and_then(Value::as_str)
+            .expect("y expression present");
+        let tmin = args
+            .get("tmin")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN);
+        let tmax = args
+            .get("tmax")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX);
+        let a = args
+            .get("a")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER);
+        let creation = match numinous_core::StudioCreation::new_parametric(
+            x_source, y_source, tmin, tmax, a,
+        ) {
+            Ok(creation) => creation,
+            Err(error) => return tool_error(&error),
+        };
+        let result = match creation.plot_text(
+            numinous_core::DEFAULT_PLOT_WIDTH,
+            numinous_core::DEFAULT_PLOT_HEIGHT,
+        ) {
+            Ok(result) => result,
+            Err(error) => return tool_error(&error),
+        };
+        return tool_structured(
+            &format!(
+                "x(t) = {x_source}    y(t) = {y_source}\nt in [{tmin:.3}, {tmax:.3}]    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]\nDiscovery: manual\n\n{}",
+                result.xmin, result.xmax, result.ymin, result.ymax, result.text
+            ),
+            json!({
+                "kind": "parametric",
+                "xExpression": x_source,
+                "yExpression": y_source,
+                "discovery": "manual",
+                "a": a,
+                "tmin": tmin,
+                "tmax": tmax,
+                "xmin": result.xmin,
+                "xmax": result.xmax,
+                "ymin": result.ymin,
+                "ymax": result.ymax,
+                "valid": true,
+                "plot": result.text
+            }),
+        );
+    }
+    if args.get("tmin").is_some() || args.get("tmax").is_some() {
+        return tool_error("tmin and tmax are only valid with x_expr and y_expr.");
     }
 
     let source = if has_expr {
@@ -102,6 +174,7 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
             tool_structured(
                 &summary,
                 json!({
+                    "kind": "graph",
                     "expression": expr,
                     "discovery": discovery,
                     "recipeIndex": request.recipe_index(),
@@ -126,22 +199,61 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
 /// Build a portable Studio capsule without granting the MCP face filesystem
 /// access. The complete `.num` document and native link travel in the result.
 pub(super) fn save_creation_tool(args: &Value) -> Value {
-    let Some(source) = args.get("expr").and_then(Value::as_str) else {
-        return tool_error("Missing required string argument 'expr'.");
+    let source = args.get("expr").and_then(Value::as_str);
+    let x_source = args.get("x_expr").and_then(Value::as_str);
+    let y_source = args.get("y_expr").and_then(Value::as_str);
+    if x_source.is_some() != y_source.is_some() {
+        return tool_error("A parametric creation needs both x_expr and y_expr.");
+    }
+    if usize::from(source.is_some()) + usize::from(x_source.is_some()) != 1 {
+        return tool_error(
+            "Provide expr for a graph, or x_expr with y_expr for a parametric pair.",
+        );
+    }
+    let a = args
+        .get("a")
+        .and_then(Value::as_f64)
+        .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER);
+    let creation_result = match (source, x_source, y_source) {
+        (Some(source), None, None) => {
+            if args.get("tmin").is_some() || args.get("tmax").is_some() {
+                return tool_error("A graph creation uses xmin and xmax, not tmin and tmax.");
+            }
+            numinous_core::StudioCreation::new(
+                source,
+                args.get("xmin")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN),
+                args.get("xmax")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX),
+                a,
+            )
+        }
+        (None, Some(x_source), Some(y_source)) => {
+            if args.get("xmin").is_some() || args.get("xmax").is_some() {
+                return tool_error("A parametric creation uses tmin and tmax, not xmin and xmax.");
+            }
+            numinous_core::StudioCreation::new_parametric(
+                x_source,
+                y_source,
+                args.get("tmin")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN),
+                args.get("tmax")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX),
+                a,
+            )
+        }
+        _ => unreachable!("creation mode validated"),
     };
-    let mut creation = match numinous_core::StudioCreation::new(
-        source,
-        args.get("xmin")
-            .and_then(Value::as_f64)
-            .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN),
-        args.get("xmax")
-            .and_then(Value::as_f64)
-            .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX),
-        args.get("a")
-            .and_then(Value::as_f64)
-            .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER),
-    ) {
+    let mut creation = match creation_result {
         Ok(creation) => creation,
+        Err(error) => return tool_error(&error),
+    };
+    creation = match studio_scale(args.get("scale").and_then(Value::as_str)) {
+        Ok(scale) => creation.with_scale(scale),
         Err(error) => return tool_error(&error),
     };
     if let Some(title) = args.get("title").and_then(Value::as_str) {
@@ -188,15 +300,56 @@ pub(super) fn fork_creation_tool(args: &Value) -> Value {
         Err(error) => return tool_error(&format!("Could not open parent capsule: {error}")),
     };
     let parent_link = parent.to_link();
-    let child = match parent.fork(
-        args.get("expr").and_then(Value::as_str),
-        args.get("title").and_then(Value::as_str),
-        args.get("author").and_then(Value::as_str),
-    ) {
+    let expr = args.get("expr").and_then(Value::as_str);
+    let x_expr = args.get("x_expr").and_then(Value::as_str);
+    let y_expr = args.get("y_expr").and_then(Value::as_str);
+    if x_expr.is_some() != y_expr.is_some() {
+        return tool_error("A parametric fork replaces both x_expr and y_expr, or neither.");
+    }
+    let child_result = match parent.kind() {
+        numinous_core::StudioKind::Graph => {
+            if x_expr.is_some() || y_expr.is_some() {
+                return tool_error("A graph fork accepts expr, not x_expr or y_expr.");
+            }
+            parent.fork(
+                expr,
+                args.get("title").and_then(Value::as_str),
+                args.get("author").and_then(Value::as_str),
+            )
+        }
+        numinous_core::StudioKind::Parametric => {
+            if expr.is_some() {
+                return tool_error("A parametric fork accepts x_expr and y_expr, not expr.");
+            }
+            parent.fork_parametric(
+                x_expr,
+                y_expr,
+                args.get("title").and_then(Value::as_str),
+                args.get("author").and_then(Value::as_str),
+            )
+        }
+    };
+    let mut child = match child_result {
         Ok(creation) => creation,
         Err(error) => return tool_error(&error),
     };
+    if let Some(raw_scale) = args.get("scale").and_then(Value::as_str) {
+        child = match studio_scale(Some(raw_scale)) {
+            Ok(scale) => child.with_scale(scale),
+            Err(error) => return tool_error(&error),
+        };
+    }
     studio_creation_result("fork", &child, Some(&parent_link), args)
+}
+
+fn studio_scale(value: Option<&str>) -> Result<numinous_core::StudioScale, String> {
+    match value {
+        Some(value) => numinous_core::StudioScale::parse(value).ok_or_else(|| {
+            "Argument 'scale' must be continuous, chromatic, major, minor, or pentatonic."
+                .to_string()
+        }),
+        None => Ok(numinous_core::StudioScale::Continuous),
+    }
 }
 
 fn studio_preview_size(args: &Value) -> Result<(usize, usize), String> {
@@ -239,25 +392,14 @@ fn studio_creation_result(
         Ok(size) => size,
         Err(error) => return tool_error(&error),
     };
-    let request = match numinous_core::PlotRequest::new(
-        numinous_core::PlotSource::Manual(creation.source().to_string()),
-        Some(creation.xmin()),
-        Some(creation.xmax()),
-        Some(creation.a()),
-        Some(width),
-        Some(height),
-    ) {
-        Ok(request) => request,
-        Err(error) => return tool_error(&error.to_string()),
-    };
-    let preview = match request.execute() {
+    let preview = match creation.plot_text(width, height) {
         Ok(preview) => preview,
-        Err(numinous_core::StudioRequestError::Undefined) => {
+        Err(error) if error.contains("undefined") => {
             return tool_error(&format!(
-                "Cannot {action} this Studio creation: the function is undefined across its saved range."
+                "Cannot {action} this Studio creation: it is undefined across its saved range."
             ));
         }
-        Err(error) => return tool_error(&error.to_string()),
+        Err(error) => return tool_error(&error),
     };
 
     let num_file = creation.to_num_file();
@@ -265,7 +407,9 @@ fn studio_creation_result(
     if link.chars().count() > numinous_core::MAX_JOURNAL_SUBJECT_CHARS {
         return tool_error("The canonical Studio link exceeds the journal subject bound.");
     }
-    let capsule_format_version = if num_file.starts_with("NUMINOUS_STUDIO 2\n") {
+    let capsule_format_version = if num_file.starts_with("NUMINOUS_STUDIO 3\n") {
+        3
+    } else if num_file.starts_with("NUMINOUS_STUDIO 2\n") {
         2
     } else {
         1
@@ -281,10 +425,16 @@ fn studio_creation_result(
         "schemaVersion": 1,
         "action": action,
         "capsuleFormatVersion": capsule_format_version,
-        "expression": creation.source(),
-        "xmin": creation.xmin(),
-        "xmax": creation.xmax(),
+        "kind": creation.kind().name(),
+        "expression": (creation.kind() == numinous_core::StudioKind::Graph).then(|| creation.source()),
+        "xExpression": (creation.kind() == numinous_core::StudioKind::Parametric).then(|| creation.source()),
+        "yExpression": creation.second_source(),
+        "xmin": (creation.kind() == numinous_core::StudioKind::Graph).then(|| creation.xmin()),
+        "xmax": (creation.kind() == numinous_core::StudioKind::Graph).then(|| creation.xmax()),
+        "tmin": (creation.kind() == numinous_core::StudioKind::Parametric).then(|| creation.xmin()),
+        "tmax": (creation.kind() == numinous_core::StudioKind::Parametric).then(|| creation.xmax()),
         "a": creation.a(),
+        "scale": creation.scale().name(),
         "title": creation.title(),
         "author": creation.author(),
         "era": creation.era().map(numinous_core::Era::name),
@@ -298,6 +448,8 @@ fn studio_creation_result(
         "preview": {
             "width": width,
             "height": height,
+            "xmin": preview.xmin,
+            "xmax": preview.xmax,
             "ymin": preview.ymin,
             "ymax": preview.ymax,
             "render": preview.text,
@@ -308,8 +460,9 @@ fn studio_creation_result(
     }
     tool_structured(
         &format!(
-            "{verb} Studio creation as portable capsule data. No host file was read or created.\nExpression: {}\nLink: {}\n\n{}",
-            creation.source(),
+            "{verb} Studio creation as portable capsule data. No host file was read or created.\nForm: {}\nScale: {}\nLink: {}\n\n{}",
+            creation.editor_source(),
+            creation.scale().name(),
             creation.to_link(),
             preview.text
         ),
@@ -341,7 +494,11 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         Ok(request) => request,
         Err(error) => return tool_error(&error.to_string()),
     };
-    let spec = match request.execute() {
+    let scale = match studio_scale(args.get("scale").and_then(Value::as_str)) {
+        Ok(scale) => scale,
+        Err(error) => return tool_error(&error),
+    };
+    let spec = match request.execute_with_scale(scale) {
         Ok(spec) => spec,
         Err(numinous_core::StudioRequestError::Undefined) => {
             return tool_error("Nothing to sing: the function is undefined across this range.");
@@ -349,10 +506,11 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         Err(error) => return tool_error(&error.to_string()),
     };
     let mut lines = vec![format!(
-        "y = {source} as a melody: {:.1}s, {} notes. Each line names the step \
+        "y = {source} as a melody on the {} scale: {:.1}s, {} notes. Each line names the step \
          taken to reach it: the size measured in cents, the equal-tempered \
          name when one is near enough, and the whole number ratio when one is, \
          with how far off it sits.",
+        scale.name(),
         spec.duration,
         spec.notes.len()
     )];
@@ -398,6 +556,7 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
     }
     let mut structured = json!({
         "expr": source,
+        "scale": scale.name(),
         "duration_seconds": spec.duration,
         "notes": spec.notes.iter().enumerate().map(|(index, note)| json!({
             "index": index + 1,
@@ -424,6 +583,7 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
                 .and_then(Value::as_f64)
                 .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER),
             notes.unwrap_or(numinous_core::DEFAULT_MELODY_NOTES) as u64,
+            scale,
             audio_asked,
         );
         let result = encounter_sing_result(

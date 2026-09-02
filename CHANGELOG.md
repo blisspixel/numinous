@@ -5,6 +5,29 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.16] - 2026-09-01
+
+- Formula Jam now accepts one atomic parametric path, written in the App as
+  `x(t)=...; y(t)=...` and exposed as paired fields through the CLI and MCP.
+  One shared core program plots both coordinates over a bounded time range,
+  auto-scales both planar axes, and uses `y(t)` as the creation's voice.
+  Partial pairs and graph-plus-pair mixtures are refused before a result or
+  file can be produced.
+- Studio pitch can now remain continuous or quantize to chromatic, major,
+  minor, or pentatonic steps. F6 cycles the App pitch map, CLI and MCP calls
+  accept the same named choices, saved creations retain the choice, and MCP
+  audio receipts bind it as part of the replayed action.
+- `NUMINOUS_STUDIO 3` and the version 3 native link carry the creation kind,
+  exact parametric pair, time window, and pitch map. Plain graph capsules still
+  serialize as version 1, identity and lineage alone still use version 2, and
+  older files and links reopen unchanged. Parametric forks replace both
+  coordinates atomically and retain exact lineage.
+- The App editor, paused reopen, share postcard, Gallery thumbnail, fork path,
+  CLI, direct MCP tools, and a real two-process MCP stdio session all cover the
+  new form. The creator roundtrip gate now passes 11 save, reopen, drawing,
+  voice, deterministic serialization, and fork checks. The creator parity gate
+  passes 34 independent CLI and MCP plot and synthesized-pitch comparisons.
+
 ## [0.4.0-alpha.15] - 2026-09-01
 
 - Formula Jam's bounded scalar language now includes `floor(value)`, Euclidean
