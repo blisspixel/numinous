@@ -3060,6 +3060,81 @@ fn a_dropped_num_creation_reopens_exactly_paused_then_enter_sings() {
 }
 
 #[test]
+fn returning_to_an_untouched_capsule_preserves_identity_and_preview() {
+    let ancestor = numinous_core::StudioCreation::new("sin(x)", -1.0, 1.0, 0.0).expect("ancestor");
+    let creation = numinous_core::StudioCreation::new("sin(a*x)", 0.0, 1.0, 0.25)
+        .expect("creation")
+        .with_title("Slow Waves")
+        .expect("title")
+        .with_author("A Curious Mind")
+        .expect("author")
+        .with_descends(&ancestor.to_link())
+        .expect("lineage")
+        .with_scale(numinous_core::StudioScale::Major)
+        .with_era(numinous_core::Era::Phosphor);
+    let mut app = headless("numinous_app_test_studio_return_preview.txt");
+    app.open_studio_creation(&creation);
+
+    for confirmed in [false, true] {
+        if confirmed {
+            app.studio_confirm_opened();
+        }
+        app.exit_studio();
+        app.t = 0.75;
+        app.enter_studio();
+
+        assert!(app.studio);
+        assert_eq!(app.audio_program, AudioProgram::Studio);
+        assert_eq!(app.studio_panel.opened_paused(), !confirmed);
+        assert_eq!(
+            app.studio_panel
+                .current_creation(app.t)
+                .expect("untouched capsule"),
+            creation,
+            "entering Studio is not a remix or a metadata edit"
+        );
+        let resumed = app.studio_panel.entry_sound().expect("entry audio");
+        if confirmed {
+            assert_eq!(resumed, creation.to_melody(32));
+        } else {
+            assert!(resumed.notes.is_empty(), "the preview remains silent");
+        }
+    }
+}
+
+#[test]
+fn returning_to_an_edited_capsule_keeps_its_draft_and_settings() {
+    let creation =
+        numinous_core::StudioCreation::new("sin(a*x)", 0.0, 1.0, 0.25).expect("creation");
+    let mut app = headless("numinous_app_test_studio_return_draft.txt");
+    app.open_studio_creation(&creation);
+    assert!(app.studio_panel.push_text("+").is_none());
+    app.exit_studio();
+    app.t = 0.75;
+    app.enter_studio();
+
+    assert_eq!(app.studio_panel.source_for_test(), "sin(a*x)+");
+    assert!(!app.studio_panel.opened_paused());
+    assert_eq!(app.studio_panel.entry_sound(), Some(creation.to_melody(32)));
+    assert_eq!(
+        app.studio_panel.current_creation(app.t),
+        Err(crate::studio_panel::ShareRefusal::UnparsedFormula)
+    );
+
+    assert_eq!(
+        app.studio_panel.push_text("0"),
+        Some(creation.to_melody(32))
+    );
+    let edited = app
+        .studio_panel
+        .current_creation(app.t)
+        .expect("repaired draft");
+    assert_eq!(edited.source(), "sin(a*x)+0");
+    assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
+    assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
+}
+
+#[test]
 fn the_launch_argument_front_door_opens_files_and_links() {
     let mut app = headless("numinous_app_test_start_open.txt");
     let creation = numinous_core::StudioCreation::new("x*x", -1.0, 1.0, 0.0).expect("creation");
@@ -3259,16 +3334,18 @@ fn fork_share_and_reopen_carry_lineage_and_era_around_the_whole_loop() {
     let bundle = app
         .share_studio_creation_to(&shares, None)
         .expect("share io")
-        .expect("the fork parses, so the trio writes");
+        .expect("the fork parses, so the bundle writes");
     let saved = numinous_core::StudioCreation::from_num_path(&bundle.join("creation.num"))
         .expect("the shared capsule reopens");
     assert_eq!(saved.descends(), Some(parent.to_link().as_str()));
     assert_eq!(saved.era(), Some(numinous_core::Era::Phosphor));
+    assert_eq!(saved.credit(), Some("After Parent Wave"));
     let readme = std::fs::read_to_string(bundle.join("README.share.txt")).expect("readme");
     assert!(
         readme.contains("It descends from this creation:"),
         "{readme}"
     );
+    assert!(readme.contains("credit After Parent Wave"), "{readme}");
 
     // A stranger dropping the shared capsule gets the era and the record.
     let mut stranger = headless("numinous_app_test_fork_loop_stranger.txt");
@@ -3396,7 +3473,8 @@ fn clearing_a_prefilled_name_clears_it_everywhere_the_share_lands() {
         naming.identity(),
         super::ShareIdentity {
             title: None,
-            author: None
+            author: None,
+            credit: None,
         },
         "an emptied field is a clearing, not an absence"
     );
@@ -3482,6 +3560,7 @@ fn the_naming_step_edits_signs_and_slugs_the_share() {
             Some(super::ShareIdentity {
                 title: Some("Fading Wave".to_string()),
                 author: Some("A Curious Mind".to_string()),
+                credit: None,
             }),
         )
         .expect("share io")
@@ -3505,6 +3584,7 @@ fn the_naming_step_edits_signs_and_slugs_the_share() {
     app.share_naming = Some(super::ShareNaming {
         title: "Second".to_string(),
         author: "A Curious Mind".to_string(),
+        credit: String::new(),
         field: super::NamingField::Title,
     });
     assert!(app.studio_panel.push_text("(((").is_none());
@@ -3521,7 +3601,7 @@ fn the_naming_step_edits_signs_and_slugs_the_share() {
 }
 
 #[test]
-fn one_action_shares_the_studio_trio_or_refuses_with_a_reason() {
+fn one_action_shares_the_studio_bundle_or_refuses_with_a_reason() {
     let app = headless("numinous_app_test_studio_share.txt");
     let parent =
         std::env::temp_dir().join(format!("numinous-studio-share-app-{}", std::process::id()));
@@ -3530,7 +3610,7 @@ fn one_action_shares_the_studio_trio_or_refuses_with_a_reason() {
     let dir = app
         .share_studio_creation_to(&parent, None)
         .expect("share io")
-        .expect("default formula parses, so the trio writes");
+        .expect("default formula parses, so the bundle writes");
     let num_path = dir.join("creation.num");
     let reopened =
         numinous_core::StudioCreation::from_num_path(&num_path).expect("creation.num reopens");
@@ -3542,11 +3622,22 @@ fn one_action_shares_the_studio_trio_or_refuses_with_a_reason() {
         "the bundle reopens to exactly the shared state"
     );
     assert!(dir.join("postcard.png").is_file());
+    let midi = std::fs::read(dir.join("melody.mid")).expect("melody.mid");
+    assert_eq!(&midi[0..4], b"MThd");
+    assert_eq!(
+        midi,
+        reopened
+            .to_melody(numinous_core::DEFAULT_MELODY_NOTES)
+            .midi(),
+        "the shared MIDI is the same voice the Studio sings"
+    );
     let readme = std::fs::read_to_string(dir.join("README.share.txt")).expect("bundle readme");
     assert!(
         readme.contains(&reopened.to_link()),
         "the link is the handoff"
     );
+    assert!(readme.contains("melody.mid"), "{readme}");
+    assert!(readme.contains("12-TET"), "{readme}");
 
     // An unparsed formula is refused, and nothing lands on disk for it.
     let mut broken = headless("numinous_app_test_studio_share_broken.txt");

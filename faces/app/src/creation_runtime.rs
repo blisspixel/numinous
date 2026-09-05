@@ -6,6 +6,7 @@ use numinous_core::Raster;
 pub(super) enum NamingField {
     Title,
     Author,
+    Credit,
 }
 
 /// The naming step's fields, exactly as the player left them.
@@ -22,14 +23,16 @@ pub(super) enum NamingField {
 pub(super) struct ShareIdentity {
     pub(super) title: Option<String>,
     pub(super) author: Option<String>,
+    pub(super) credit: Option<String>,
 }
 
 /// The F4 naming step's editable state: one text line for the creation's
-/// name, one for its signature.
+/// name, one for its signature, one for prose credit.
 #[derive(Debug, Clone)]
 pub(super) struct ShareNaming {
     pub(super) title: String,
     pub(super) author: String,
+    pub(super) credit: String,
     pub(super) field: NamingField,
 }
 
@@ -43,6 +46,7 @@ impl ShareNaming {
         ShareIdentity {
             title: field(&self.title),
             author: field(&self.author),
+            credit: field(&self.credit),
         }
     }
 
@@ -50,6 +54,7 @@ impl ShareNaming {
         match self.field {
             NamingField::Title => &mut self.title,
             NamingField::Author => &mut self.author,
+            NamingField::Credit => &mut self.credit,
         }
     }
 }
@@ -181,13 +186,6 @@ impl App {
         )
     }
 
-    /// The Studio share trio on one key: `creation.num`, the link in the
-    /// README, and the postcard, into one fresh share folder.
-    ///
-    /// Success and failure both speak through the shared export reporter;
-    /// the writer discards its own partial folder on failure, so the failure
-    /// line stays short rather than promising a cleanup state it cannot
-    /// fully guarantee.
     /// Open the F4 naming step. The title prefills from the creation being
     /// shared (so an untouched re-share keeps its identity by default) and
     /// the author from the last signature, because naming happens in the
@@ -207,9 +205,15 @@ impl App {
             .and_then(|creation| creation.author())
             .unwrap_or(&self.remembered_author)
             .to_string();
+        let credit = identity
+            .as_ref()
+            .and_then(|creation| creation.credit())
+            .unwrap_or_default()
+            .to_string();
         self.share_naming = Some(ShareNaming {
             title,
             author,
+            credit,
             field: NamingField::Title,
         });
     }
@@ -221,9 +225,12 @@ impl App {
         let Some(naming) = self.share_naming.as_mut() else {
             return;
         };
+        let cap = match naming.field {
+            NamingField::Title | NamingField::Author => numinous_core::MAX_META_TEXT_CHARS,
+            NamingField::Credit => numinous_core::MAX_CREDIT_CHARS,
+        };
         let field = naming.active_field_mut();
-        let mut remaining =
-            numinous_core::MAX_META_TEXT_CHARS.saturating_sub(field.chars().count());
+        let mut remaining = cap.saturating_sub(field.chars().count());
         for c in text.chars() {
             if remaining > 0 && (' '..='~').contains(&c) {
                 field.push(c);
@@ -242,7 +249,8 @@ impl App {
         if let Some(naming) = self.share_naming.as_mut() {
             naming.field = match naming.field {
                 NamingField::Title => NamingField::Author,
-                NamingField::Author => NamingField::Title,
+                NamingField::Author => NamingField::Credit,
+                NamingField::Credit => NamingField::Title,
             };
         }
     }
@@ -256,7 +264,7 @@ impl App {
         }
     }
 
-    /// Confirm the naming step: remember the signature and share the trio.
+    /// Confirm the naming step: remember the signature and share the bundle.
     pub(super) fn confirm_share_naming(&mut self) {
         let Some(naming) = self.share_naming.take() else {
             return;
@@ -267,6 +275,14 @@ impl App {
         self.share_studio_creation(Some(naming.identity()));
     }
 
+    /// The Studio share bundle on one key: `creation.num`, the link in the
+    /// README, the postcard, and the sung melody as MIDI, into one fresh
+    /// share folder.
+    ///
+    /// Success and failure both speak through the shared export reporter;
+    /// the writer discards its own partial folder on failure, so the failure
+    /// line stays short rather than promising a cleanup state it cannot
+    /// fully guarantee.
     pub(super) fn share_studio_creation(&mut self, identity: Option<ShareIdentity>) {
         match self.share_studio_creation_to(&postcard::default_postcard_dir(), identity) {
             Ok(Ok(dir)) => {
@@ -275,7 +291,10 @@ impl App {
                     "SHARE FAILED  SEE .NUMINOUS-CRASH.LOG",
                     Ok(dir),
                 );
-                self.banner = Some(feedback::Banner::status("SHARED  .NUM + LINK + PNG", 90));
+                self.banner = Some(feedback::Banner::status(
+                    "SHARED  .NUM + LINK + PNG + MIDI",
+                    90,
+                ));
             }
             Ok(Err(studio_panel::ShareRefusal::UnparsedFormula)) => {
                 // An unparsed edit has no curve to promise; the refusal names
@@ -323,7 +342,12 @@ impl App {
         // cannot be refused; if the two rules ever drift, the share fails
         // loudly through the io path rather than silently shipping wrong
         // identity.
-        if let Some(ShareIdentity { title, author }) = identity {
+        if let Some(ShareIdentity {
+            title,
+            author,
+            credit,
+        }) = identity
+        {
             creation = match title {
                 Some(title) => creation.with_title(&title).map_err(std::io::Error::other)?,
                 None => creation.without_title(),
@@ -333,6 +357,12 @@ impl App {
                     .with_author(&author)
                     .map_err(std::io::Error::other)?,
                 None => creation.without_author(),
+            };
+            creation = match credit {
+                Some(credit) => creation
+                    .with_credit(&credit)
+                    .map_err(std::io::Error::other)?,
+                None => creation.without_credit(),
             };
         }
         // Record the era only when it says something: Modern is the default
@@ -442,7 +472,7 @@ impl App {
     }
     pub(super) fn enter_studio(&mut self) {
         self.enter_studio_shell();
-        self.studio_reparse();
+        self.set_studio_sound(self.studio_panel.entry_sound());
     }
 
     /// Enter Studio mode without touching the panel's formula or voice, so a
@@ -484,11 +514,7 @@ impl App {
             self.era = era;
         }
         self.studio_panel.open_creation(creation);
-        self.enter_studio_shell();
-        self.set_studio_sound(Some(numinous_core::SoundSpec {
-            duration: 0.12,
-            notes: Vec::new(),
-        }));
+        self.enter_studio();
     }
 
     /// Enter confirms a paused reopened preview: the creation starts singing.
