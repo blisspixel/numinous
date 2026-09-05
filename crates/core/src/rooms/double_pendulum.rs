@@ -64,27 +64,16 @@ fn derivative(s: State) -> State {
     }
 }
 
-fn add_scaled(state: State, delta: State, scale: f64) -> State {
-    State {
-        t1: state.t1 + delta.t1 * scale,
-        t2: state.t2 + delta.t2 * scale,
-        w1: state.w1 + delta.w1 * scale,
-        w2: state.w2 + delta.w2 * scale,
-    }
-}
-
 /// One classical fourth-order Runge-Kutta step.
 fn step_with_dt(state: State, dt: f64) -> State {
-    let k1 = derivative(state);
-    let k2 = derivative(add_scaled(state, k1, dt * 0.5));
-    let k3 = derivative(add_scaled(state, k2, dt * 0.5));
-    let k4 = derivative(add_scaled(state, k3, dt));
-    State {
-        t1: state.t1 + dt * (k1.t1 + 2.0 * k2.t1 + 2.0 * k3.t1 + k4.t1) / 6.0,
-        t2: state.t2 + dt * (k1.t2 + 2.0 * k2.t2 + 2.0 * k3.t2 + k4.t2) / 6.0,
-        w1: state.w1 + dt * (k1.w1 + 2.0 * k2.w1 + 2.0 * k3.w1 + k4.w1) / 6.0,
-        w2: state.w2 + dt * (k1.w2 + 2.0 * k2.w2 + 2.0 * k3.w2 + k4.w2) / 6.0,
-    }
+    let [t1, t2, w1, w2] = crate::numerics::rk4(
+        [state.t1, state.t2, state.w1, state.w2], dt,
+        |[t1, t2, w1, w2]| {
+            let d = derivative(State { t1, t2, w1, w2 });
+            [d.t1, d.t2, d.w1, d.w2]
+        },
+    );
+    State { t1, t2, w1, w2 }
 }
 
 fn step(state: State) -> State {

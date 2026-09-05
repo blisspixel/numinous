@@ -74,6 +74,7 @@ pub mod motion;
 pub mod munch_arcade;
 pub mod munchers;
 pub mod nim;
+mod numerics;
 pub mod party;
 pub mod persistence;
 pub mod photosensitivity;

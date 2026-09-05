@@ -2,12 +2,11 @@
 //!
 //! Before the answer is shown, a player or a digital mind commits a prediction
 //! of a room's own readout at a hidden moment. The gap between the guess and
-//! the truth is graded as a compression score with a learning-progress band,
-//! so "how well did my model of this phenomenon actually predict it" becomes a
-//! legible number. A human learner who guesses first restructures their model
-//! when the truth arrives (the generation effect); a digital mind reads the
-//! band as compression progress (nailed is mastery, close is the fertile band,
-//! wild is noise). One mechanic, both minds; see `docs/PEDAGOGY.md`.
+//! the truth is reported as an absolute error and a closeness band relative to
+//! the readout's sampled span. That is feedback about this answer. One answer
+//! does not establish mastery, learning progress, compression, or enjoyment.
+//! Players may use the revealed gap to revise a model and choose another
+//! experiment; see `docs/PEDAGOGY.md` for the design and its evidence limits.
 //!
 //! This is a self-owned mirror, not a leaderboard. It never posts a score and
 //! never awards a win for accuracy, because the value is the signal itself, not
@@ -21,9 +20,9 @@ use crate::challenge::{PARAMETER_SAMPLES, find_readout, fmt_sig, fnv1a, status_n
 use crate::rng::SplitMix64;
 use crate::room::Room;
 
-/// The span-fraction within which a prediction counts as mastered.
+/// The sampled-span fraction defining the tightest closeness band.
 const NAILED_FRACTION: f64 = 0.02;
-/// The span-fraction within which a prediction sits in the fertile band.
+/// The sampled-span fraction defining the middle closeness band.
 const CLOSE_FRACTION: f64 = 0.15;
 /// Samples on each side of the posed moment when a rate model is graded.
 const RATE_RADIUS: u64 = 2;
@@ -52,16 +51,14 @@ pub struct Prediction {
     pub prompt: String,
 }
 
-/// How close a prediction landed, and what that says about the guesser's model.
+/// How close one prediction landed relative to the sampled readout span.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Band {
-    /// Within `NAILED_FRACTION` of the span: the model has this phenomenon
-    /// compressed. Mastery, and a signal the room has little left to teach.
+    /// Within `NAILED_FRACTION` of the sampled span.
     Nailed,
-    /// Within `CLOSE_FRACTION` of the span: the fertile band, where a model
-    /// is close enough to be improving. This is where learning progress lives.
+    /// Outside the tightest band but within `CLOSE_FRACTION` of the sampled span.
     Close,
-    /// Further than that: the prediction was noise against this phenomenon.
+    /// Further than `CLOSE_FRACTION` of the sampled span.
     Wild,
 }
 
@@ -88,7 +85,7 @@ pub struct PredictionGrade {
     pub error: f64,
     /// A graded 0-100 score: closeness across the readout's observed span.
     pub score: u32,
-    /// The learning-progress band the guess fell in.
+    /// The closeness band this guess fell in, not a learning or affect measure.
     pub band: Band,
 }
 
@@ -362,7 +359,7 @@ mod tests {
         assert_eq!(perfect.score, 100);
         assert_eq!(perfect.band, Band::Nailed);
         // A guess a full span above the maximum is at least one span from any
-        // real value, so it is noise: banded Wild and scored 0.
+        // real value, so it is banded Wild and scored 0.
         let far = p.span.1 + (p.span.1 - p.span.0);
         let wild = grade_prediction(room.as_ref(), &p, far).expect("grades");
         assert_eq!(wild.band, Band::Wild);
@@ -370,14 +367,14 @@ mod tests {
     }
 
     #[test]
-    fn the_band_marks_the_fertile_middle() {
+    fn the_band_marks_the_middle_closeness_interval() {
         let room = crate::registry::room_by_id("harmonograph").expect("room");
         let p = pose_prediction(room.as_ref(), 5).expect("poses");
         let truth = grade_prediction(room.as_ref(), &p, p.span.0)
             .expect("grades")
             .actual;
         let span = p.span.1 - p.span.0;
-        // A guess one tenth of the span off is close (fertile), not nailed.
+        // A guess one tenth of the span off is close, not nailed.
         let close = grade_prediction(room.as_ref(), &p, truth + span * 0.1).expect("grades");
         assert_eq!(close.band, Band::Close);
         assert!(close.score > 0 && close.score < 100);

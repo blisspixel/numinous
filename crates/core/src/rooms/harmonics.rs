@@ -1,7 +1,7 @@
 //! Spherical Harmonics / Hydrogen: the singing sphere and the shape of the atom.
 //!
-//! Real spherical harmonics Y_lm lobed patterns (toy sampling on a sphere
-//! projection). See `docs/ROOMS.md`.
+//! Orthonormal real spherical harmonics, sampled as signed angular amplitudes
+//! on a sphere projection. See `docs/ROOMS.md`.
 
 use std::f64::consts::PI;
 
@@ -26,12 +26,17 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-/// Associated Legendre toys for low l,m (hardcoded for determinism and speed).
-fn ylm(l: u32, m: i32, theta: f64, phi: f64) -> f64 {
+/// Orthonormal real harmonics for the exposed degrees 0 through 3.
+///
+/// Uses the normalization and Ferrers phase in DLMF 14.30.1:
+/// https://dlmf.nist.gov/14.30.E1
+/// Positive m takes sqrt(2) times the real part of the complex harmonic;
+/// negative m takes sqrt(2) times its imaginary part at order |m|. Unsupported
+/// degree/order pairs return None rather than an unnormalized substitute.
+fn ylm(l: u32, m: i32, theta: f64, phi: f64) -> Option<f64> {
     let ct = theta.cos();
     let st = theta.sin();
-    let m = m.clamp(-(l as i32), l as i32);
-    let base = match (l, m.abs()) {
+    let base = match (l, m.unsigned_abs()) {
         (0, 0) => 0.5 * (1.0 / PI).sqrt(),
         (1, 0) => (0.75 / PI).sqrt() * ct,
         (1, 1) => -(0.375 / PI).sqrt() * st,
@@ -40,20 +45,17 @@ fn ylm(l: u32, m: i32, theta: f64, phi: f64) -> f64 {
         (2, 2) => (0.46875 / PI).sqrt() * st * st,
         (3, 0) => (1.75 / PI).sqrt() * 0.5 * (5.0 * ct * ct * ct - 3.0 * ct),
         (3, 1) => -(1.3125 / PI).sqrt() * st * (5.0 * ct * ct - 1.0) * 0.5,
-        (3, 2) => (3.28125 / PI).sqrt() * st * st * ct * 0.5,
+        (3, 2) => (3.28125 / PI).sqrt() * st * st * ct,
         (3, 3) => -(0.546875 / PI).sqrt() * st * st * st,
-        _ => {
-            // Fallback: product of sins for higher.
-            st.powi(m.abs()) * ct.powi((l as i32 - m.abs()).max(0))
-        }
+        _ => return None,
     };
-    if m == 0 {
+    Some(if m == 0 {
         base
     } else if m > 0 {
         base * (m as f64 * phi).cos() * std::f64::consts::SQRT_2
     } else {
-        base * ((-m) as f64 * phi).sin() * std::f64::consts::SQRT_2
-    }
+        base * (m.unsigned_abs() as f64 * phi).sin() * std::f64::consts::SQRT_2
+    })
 }
 
 fn quantum(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (u32, i32) {
@@ -99,7 +101,9 @@ fn draw(canvas: &mut dyn Surface, l: u32, m: i32, phase: f64) {
             // Standard polar: theta from +z.
             let theta = zz.clamp(-1.0, 1.0).acos();
             let phi = y.atan2(x);
-            let val = ylm(l, m, theta, phi);
+            let Some(val) = ylm(l, m, theta, phi) else {
+                continue;
+            };
             if val.abs() < 0.08 {
                 continue;
             }
@@ -149,7 +153,6 @@ impl Harmonics {
 }
 
 impl Room for Harmonics {
-
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (l, m) = quantum(t, None, self.seed);
         draw(canvas, l, m, phase_unit(t) * 1.2);
@@ -165,7 +168,7 @@ impl Room for Harmonics {
             root: 329.63,
             tempo: 85,
             line: &[0, 4, 8, 11, 16, 11, 8, 4],
-            encodes: "spherical harmonics: the atom's and the bell's shared shape",
+            encodes: "angular patterns shared by orbitals and the microwave sky",
         })
     }
 
@@ -200,13 +203,16 @@ impl Room for Harmonics {
             (3, _) => "f",
             _ => "Y",
         };
-        Some(format!("Y({l},{m})  {name}  orbital"))
+        Some(format!("Y({l},{m})  {name}  orbital angular part"))
     }
 
     fn reveal(&self) -> &'static str {
-        "Spherical harmonics are the angular shapes of free vibration on a \
-         sphere and of the hydrogen wavefunction. The same lobes are orbitals, \
-         drum modes, and the cosmic microwave background's multipoles."
+        // Hydrogen separation: https://dlmf.nist.gov/18.39.E24
+        // CMB basis: https://lambda.gsfc.nasa.gov/product/wmap/dr1/pub_papers/firstyear/basic/wmap_basic_results.pdf
+        "These signed lobes are angular amplitudes, shared by hydrogen orbitals \
+         and the spherical modes used to map the cosmic microwave background. \
+         A full orbital also needs a radial factor; its squared magnitude gives \
+         probability density."
     }
 }
 
@@ -215,6 +221,94 @@ mod tests {
     use super::{Harmonics, ylm};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
+    use std::f64::consts::{PI, TAU};
+
+    fn sphere_inner_product(left: (u32, i32), right: (u32, i32)) -> f64 {
+        // Integrate with u = cos(theta), so the sphere measure is du dphi.
+        // Four-point Gauss-Legendre is exact through polynomial degree seven;
+        // equal-order products here have degree at most six. Sixteen equally
+        // spaced azimuths integrate every Fourier product of these modes.
+        let outer = ((3.0 + 2.0 * 1.2_f64.sqrt()) / 7.0).sqrt();
+        let inner = ((3.0 - 2.0 * 1.2_f64.sqrt()) / 7.0).sqrt();
+        let outer_weight = (18.0 - 30.0_f64.sqrt()) / 36.0;
+        let inner_weight = (18.0 + 30.0_f64.sqrt()) / 36.0;
+        let quadrature = [
+            (-outer, outer_weight),
+            (-inner, inner_weight),
+            (inner, inner_weight),
+            (outer, outer_weight),
+        ];
+        let azimuth_step = TAU / 16.0;
+        let mut integral = 0.0;
+        for (cos_theta, weight) in quadrature {
+            let theta = cos_theta.acos();
+            for sample in 0..16 {
+                let phi = (sample as f64 + 0.5) * azimuth_step;
+                integral += weight
+                    * azimuth_step
+                    * ylm(left.0, left.1, theta, phi).expect("exposed left mode")
+                    * ylm(right.0, right.1, theta, phi).expect("exposed right mode");
+            }
+        }
+        integral
+    }
+
+    #[test]
+    fn exposed_real_harmonics_are_orthonormal_on_the_sphere() {
+        // DLMF 14.30.8, after the orthonormal complex-to-real basis change:
+        // https://dlmf.nist.gov/14.30.E8
+        let modes: Vec<_> = (0_u32..=3)
+            .flat_map(|l| (-(l as i32)..=l as i32).map(move |m| (l, m)))
+            .collect();
+        let mut failures = Vec::new();
+        for &left in &modes {
+            for &right in &modes {
+                let integral = sphere_inner_product(left, right);
+                let expected = if left == right { 1.0 } else { 0.0 };
+                if !integral.is_finite() || (integral - expected).abs() > 1e-12 {
+                    failures.push(format!(
+                        "Y{left:?} against Y{right:?}: integral {integral:.15}, expected {expected}"
+                    ));
+                }
+            }
+        }
+        assert!(failures.is_empty(), "{}", failures.join("\n"));
+    }
+
+    #[test]
+    fn each_degree_has_rotation_independent_total_power() {
+        // The coincident-point addition theorem, DLMF 14.30.9, is unchanged
+        // by the real basis: sum_m Y(l,m)^2 = (2l+1)/(4*pi).
+        // https://dlmf.nist.gov/14.30.E9
+        for l in 0..=3 {
+            let expected = (2 * l + 1) as f64 / (4.0 * PI);
+            for theta in [0.0, 0.31, 0.91, PI / 2.0, 2.23, PI] {
+                for phi in [0.0, 0.47, 1.29, 3.71] {
+                    let power: f64 = (-(l as i32)..=l as i32)
+                        .map(|m| ylm(l, m, theta, phi).expect("exposed mode").powi(2))
+                        .sum();
+                    assert!(
+                        (power - expected).abs() < 1e-12,
+                        "l={l}, theta={theta}, phi={phi}: {power}, expected {expected}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn unsupported_modes_do_not_fabricate_harmonics() {
+        for (l, m) in [
+            (0, 1),
+            (2, -3),
+            (3, 4),
+            (4, 0),
+            (3, i32::MIN),
+            (u32::MAX, 0),
+        ] {
+            assert_eq!(ylm(l, m, 0.61, 0.37), None, "l={l}, m={m}");
+        }
+    }
 
     #[test]
     fn status_invites() {
@@ -242,7 +336,7 @@ mod tests {
 
     #[test]
     fn y00_positive() {
-        assert!(ylm(0, 0, 0.0, 0.0) > 0.0);
+        assert!(ylm(0, 0, 0.0, 0.0).expect("exposed mode") > 0.0);
     }
 
     #[test]

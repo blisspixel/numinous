@@ -10,8 +10,6 @@ use super::kepler_laws::{MAX_ECCENTRICITY, orbit_geometry, point_at_mean};
 
 /// Vertical start of the wager band, shared with the other staged rooms.
 pub const WAGER_BAND_Y: f64 = 0.88;
-/// Eccentricities at or below this value are treated as visually circular.
-pub const CIRCULAR_EPSILON: f64 = 0.02;
 /// Morph progress that counts as complete.
 pub const MORPH_DONE: f64 = 1.0;
 const TIME_MARKS: usize = 24;
@@ -70,7 +68,7 @@ impl SpeedRelation {
 /// Exact answer for an ellipse with the supplied eccentricity.
 #[must_use]
 pub fn truth_for_eccentricity(eccentricity: f64) -> SpeedRelation {
-    if !eccentricity.is_finite() || eccentricity.abs() <= CIRCULAR_EPSILON {
+    if bounded_eccentricity(eccentricity) == 0.0 {
         SpeedRelation::Same
     } else {
         SpeedRelation::Faster
@@ -83,11 +81,7 @@ pub fn truth_for_eccentricity(eccentricity: f64) -> SpeedRelation {
 /// circular limit is one.
 #[must_use]
 pub fn apsidal_speed_ratio(eccentricity: f64) -> f64 {
-    let e = if eccentricity.is_finite() {
-        eccentricity.abs().clamp(0.0, MAX_ECCENTRICITY)
-    } else {
-        MAX_ECCENTRICITY
-    };
+    let e = bounded_eccentricity(eccentricity);
     (1.0 + e) / (1.0 - e)
 }
 
@@ -138,7 +132,7 @@ pub fn render_equal_time_overlay(canvas: &mut dyn Surface, progress: f64, eccent
     } else {
         0.0
     };
-    let geometry = orbit_geometry(width, height, e);
+    let geometry = orbit_geometry(width, height, e, canvas.safe_char_aspect());
     for index in 0..visible.min(TIME_MARKS) {
         let mean = std::f64::consts::TAU * index as f64 / TIME_MARKS as f64;
         let (x, y) = point_at_mean(geometry, e, mean);
@@ -428,6 +422,18 @@ impl KeplerAha {
         let truth = self.truth();
         let e = self.eccentricity;
         let ratio = apsidal_speed_ratio(e);
+        let displayed_e = if e > 0.0 && e < 0.001 {
+            format!("{e:.3e}")
+        } else {
+            e.to_string()
+        };
+        // Preserve a positive difference even when adding it to one would
+        // round away in f64. This is the stable identity ratio = 1 + 2e/(1-e).
+        let displayed_ratio = if e > 0.0 && e < 0.005 {
+            format!("1 + {:.3e}", 2.0 * e / (1.0 - e))
+        } else {
+            format!("{ratio:.2}")
+        };
         let verdict = if called == truth {
             "Nailed."
         } else if truth == SpeedRelation::Same {
@@ -436,7 +442,7 @@ impl KeplerAha {
             "The fertile miss: equal-time marks spread where the orbit nears the sun."
         };
         Some(format!(
-            "You called {}; at e={e:.3}, the truth is {} (perihelion/aphelion speed ratio {ratio:.2}). {verdict}",
+            "You called {}; at e={displayed_e}, the truth is {} (perihelion/aphelion speed ratio approximately {displayed_ratio}). {verdict}",
             called.name(),
             truth.name(),
         ))
@@ -518,12 +524,40 @@ mod tests {
     }
 
     #[test]
+    fn every_nonzero_eccentricity_answers_faster_even_below_pixel_resolution() {
+        for e in [f64::EPSILON, 0.001, 0.01, 0.02, 0.03, 0.9] {
+            assert_eq!(truth_for_eccentricity(e), SpeedRelation::Faster, "e={e}");
+        }
+        let mut aha = KeplerAha::new(0.01);
+        aha.note_tunings(1);
+        assert!(aha.commit_call(SpeedRelation::Faster));
+        assert_eq!(aha.earn_label().as_deref(), Some("call:faster:right"));
+    }
+
+    #[test]
     fn four_tunings_earn_observation_without_forcing_a_call() {
         let mut aha = KeplerAha::new(0.6);
         aha.note_tunings(4);
         assert_eq!(aha.beat(), AhaBeat::Withheld);
         assert_eq!(aha.earn_label().as_deref(), Some("tunings:4"));
         assert!(aha.summon());
+    }
+
+    #[test]
+    fn small_ellipses_do_not_print_a_circular_eccentricity_or_unit_speed_ratio() {
+        for e in [f64::from_bits(1), f64::EPSILON, 0.0001, 0.001] {
+            let mut aha = KeplerAha::new(e);
+            aha.note_tunings(1);
+            assert!(aha.commit_call(SpeedRelation::Faster));
+            assert!(aha.summon());
+            aha.advance_morph(1.0);
+            assert!(aha.summon());
+            let grade = aha.graded().expect("consolidated call");
+            assert!(grade.contains("truth is FASTER"), "{grade}");
+            assert!(!grade.contains("e=0.000,"), "{grade}");
+            assert!(grade.contains("approximately 1 + "), "{grade}");
+            assert!(!grade.contains("1 + 0.000"), "{grade}");
+        }
     }
 
     #[test]
@@ -550,7 +584,7 @@ mod tests {
     fn hostile_values_are_bounded() {
         let aha = KeplerAha::new(f64::NAN);
         assert_eq!(aha.eccentricity(), 0.0);
-        assert!((apsidal_speed_ratio(f64::INFINITY) - 19.0).abs() < 1.0e-12);
+        assert_eq!(apsidal_speed_ratio(f64::INFINITY), 1.0);
         let mut tiny = Canvas::new(2, 2);
         render_equal_time_overlay(&mut tiny, f64::NAN, f64::INFINITY);
         assert_eq!(tiny.ink_count(), 0);
