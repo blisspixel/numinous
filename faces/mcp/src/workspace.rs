@@ -10,6 +10,7 @@ use numinous_core::{
     WorkspaceUnfinishedDraft, WorkspaceUpdate,
 };
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 
 use super::{journal::entry_json, tool_error, tool_structured};
 
@@ -57,20 +58,42 @@ pub(super) fn workspace_tool(
     let mut retrieval = None;
     let outcome = match op {
         "inspect" => Ok(()),
-        "edit" => parse_update(args).and_then(|update| state.edit(update)),
+        "edit" => {
+            let mut update = match parse_update(args) {
+                Ok(update) => update,
+                Err(error) => return tool_error(&error.to_string()),
+            };
+            if let Some(handles) = update.retrieved.as_mut()
+                && !handles.is_empty()
+            {
+                let snapshot = match numinous_core::try_load_journal_file(journal_path) {
+                    Ok(journal) => journal,
+                    Err(error) => {
+                        return tool_error(&format!(
+                            "Failed to select workspace journal handles: {error}"
+                        ));
+                    }
+                };
+                bind_retrieved(handles, &snapshot);
+                journal = Some(snapshot);
+            }
+            state.edit(update)
+        }
         "defer" => required_field(args).and_then(|field| state.defer(field)),
         "clear" => required_clear(args).map(|field| state.clear(field)),
         "retrieve" => match retrieve_room(args, journal_path) {
             Ok(found) => {
                 let reason = retrieval_reason(&found.outcome.room);
-                let retrieved = found
+                let mut retrieved = found
                     .entry_ids
                     .iter()
                     .map(|entry_id| WorkspaceRetrievalDraft {
                         entry_id: *entry_id,
                         reason: Some(reason.clone()),
+                        record_digest: None,
                     })
-                    .collect();
+                    .collect::<Vec<_>>();
+                bind_retrieved(&mut retrieved, &found.journal);
                 let result = state.edit(WorkspaceUpdate {
                     retrieved: Some(retrieved),
                     ..WorkspaceUpdate::default()
@@ -226,6 +249,16 @@ fn has_retrieved_handles(workspace: &SessionWorkspace) -> bool {
     !workspace.retrieved().is_empty() || !workspace.deferred().retrieved().is_empty()
 }
 
+fn bind_retrieved(handles: &mut [WorkspaceRetrievalDraft], journal: &numinous_core::Journal) {
+    for handle in handles {
+        handle.record_digest = journal.entry(handle.entry_id).map(record_digest);
+    }
+}
+
+fn record_digest(entry: &numinous_core::JournalEntry) -> [u8; 32] {
+    Sha256::digest(entry.identity_bytes()).into()
+}
+
 fn parse_update(args: &Value) -> Result<WorkspaceUpdate, WorkspaceError> {
     Ok(WorkspaceUpdate {
         place: optional_place(args)?,
@@ -341,6 +374,7 @@ fn optional_retrieved(
                     .get("reason")
                     .and_then(Value::as_str)
                     .map(str::to_string),
+                record_digest: None,
             })
         })
         .collect::<Result<Vec<_>, _>>()
@@ -437,11 +471,14 @@ fn retrieval_json(
     let Some(journal) = journal else {
         return resolved;
     };
-    let Some(entry) = journal.entry(retrieval.entry_id()) else {
+    let Some(entry) = journal
+        .entry(retrieval.entry_id())
+        .filter(|entry| Some(record_digest(entry)) == retrieval.record_digest())
+    else {
         resolved["status"] = json!("missing");
         resolved["entry"] = Value::Null;
         resolved["source_explanation"] = json!(
-            "This handle no longer resolves in the player-owned journal. It may have been erased."
+            "The record selected by this handle is unavailable or no longer matches. It may have been erased or replaced. Select a record explicitly to open it."
         );
         return resolved;
     };
@@ -563,6 +600,29 @@ mod tests {
             std::process::id(),
             serial
         ))
+    }
+
+    struct IsolatedJournal {
+        directory: std::path::PathBuf,
+        path: std::path::PathBuf,
+    }
+
+    impl IsolatedJournal {
+        fn new(label: &str) -> Self {
+            let directory = journal_path(label).with_extension("d");
+            std::fs::create_dir(&directory).expect("create isolated journal directory");
+            Self {
+                path: directory.join("journal.txt"),
+                directory,
+            }
+        }
+    }
+
+    impl Drop for IsolatedJournal {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.path);
+            let _ = std::fs::remove_dir(&self.directory);
+        }
     }
 
     #[test]
@@ -708,5 +768,170 @@ mod tests {
             "missing"
         );
         assert!(missing["structuredContent"]["retrieved"][0]["entry"].is_null());
+    }
+
+    #[test]
+    fn room_handles_do_not_follow_reused_journal_identifiers() {
+        let isolated = IsolatedJournal::new("recreated-room-handle");
+        let path = isolated.path.clone();
+        let original = numinous_core::JournalRecord {
+            recorded_at_utc: 10,
+            event_at_utc: 10,
+            source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+            kind: "encounter",
+            subject: "times-tables",
+            text: "The original chosen encounter.",
+            affect: None,
+        };
+        let first =
+            numinous_core::record_journal_file(&path, original).expect("record original encounter");
+        let workspace = ProcessWorkspace::new();
+        let selected = workspace_tool(
+            &json!({"op": "retrieve", "room": "times-tables"}),
+            &workspace,
+            &path,
+        );
+        assert_eq!(
+            selected["structuredContent"]["retrieved"][0]["status"],
+            "current"
+        );
+        numinous_core::erase_journal_file(&path).expect("erase journal");
+        let replacement = numinous_core::record_journal_file(
+            &path,
+            numinous_core::JournalRecord {
+                text: "A different encounter in the same room and second.",
+                ..original
+            },
+        )
+        .expect("recreate journal");
+        assert_eq!(first.entry_id, replacement.entry_id);
+
+        let inspected = workspace_tool(&json!({}), &workspace, &path);
+        let handle = &inspected["structuredContent"]["retrieved"][0];
+        assert_eq!(handle["status"], "missing");
+        assert!(handle["entry"].is_null());
+        assert!(!inspected.to_string().contains("different encounter"));
+    }
+
+    #[test]
+    fn deferred_handle_keeps_its_selection_when_active_id_is_reselected() {
+        let isolated = IsolatedJournal::new("recreated-deferred-handle");
+        let path = isolated.path.clone();
+        let original = numinous_core::JournalRecord {
+            recorded_at_utc: 10,
+            event_at_utc: 10,
+            source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+            kind: "encounter",
+            subject: "times-tables",
+            text: "An encounter selected before erasure.",
+            affect: None,
+        };
+        let first =
+            numinous_core::record_journal_file(&path, original).expect("record original encounter");
+        let workspace = ProcessWorkspace::new();
+        let selection = json!({
+            "op": "edit", "retrieved": [{"entry_id": first.entry_id}]
+        });
+        workspace_tool(&selection, &workspace, &path);
+        workspace_tool(
+            &json!({"op": "defer", "field": "retrieved"}),
+            &workspace,
+            &path,
+        );
+        numinous_core::erase_journal_file(&path).expect("erase journal");
+        numinous_core::record_journal_file(
+            &path,
+            numinous_core::JournalRecord {
+                subject: "mandelbrot",
+                text: "An encounter deliberately selected after erasure.",
+                ..original
+            },
+        )
+        .expect("recreate journal");
+
+        let reselected = workspace_tool(&selection, &workspace, &path);
+        let structured = &reselected["structuredContent"];
+        assert_eq!(structured["retrieved"][0]["status"], "current");
+        assert_eq!(structured["retrieved"][0]["entry"]["subject"], "mandelbrot");
+        assert_eq!(structured["deferred"]["retrieved"][0]["status"], "missing");
+        assert!(structured["deferred"]["retrieved"][0]["entry"].is_null());
+    }
+
+    #[test]
+    fn unresolved_handle_needs_a_new_selection_before_opening_a_later_record() {
+        let isolated = IsolatedJournal::new("unresolved-handle");
+        let path = isolated.path.clone();
+        let workspace = ProcessWorkspace::new();
+        let selection = json!({"op": "edit", "retrieved": [{"entry_id": 1}]});
+        let selected = workspace_tool(&selection, &workspace, &path);
+        assert_eq!(
+            selected["structuredContent"]["retrieved"][0]["status"],
+            "missing"
+        );
+        numinous_core::record_journal_file(
+            &path,
+            numinous_core::JournalRecord {
+                recorded_at_utc: 10,
+                event_at_utc: 10,
+                source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "encounter",
+                subject: "times-tables",
+                text: "An encounter that did not exist when the id was selected.",
+                affect: None,
+            },
+        )
+        .expect("record later encounter");
+
+        let inspected = workspace_tool(&json!({}), &workspace, &path);
+        assert_eq!(
+            inspected["structuredContent"]["retrieved"][0]["status"],
+            "missing"
+        );
+        assert!(inspected["structuredContent"]["retrieved"][0]["entry"].is_null());
+        let reselected = workspace_tool(&selection, &workspace, &path);
+        assert_eq!(
+            reselected["structuredContent"]["retrieved"][0]["status"],
+            "current"
+        );
+    }
+
+    #[test]
+    fn empty_retrieved_edit_clears_handles_with_malformed_journal() {
+        let isolated = IsolatedJournal::new("clear-malformed-journal");
+        let path = &isolated.path;
+        let original = numinous_core::record_journal_file(
+            path,
+            numinous_core::JournalRecord {
+                recorded_at_utc: 10,
+                event_at_utc: 10,
+                source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "encounter",
+                subject: "times-tables",
+                text: "An encounter selected while the journal was readable.",
+                affect: None,
+            },
+        )
+        .expect("record encounter");
+        let workspace = ProcessWorkspace::new();
+        let selected = workspace_tool(
+            &json!({"op": "edit", "retrieved": [{"entry_id": original.entry_id}]}),
+            &workspace,
+            path,
+        );
+        assert_eq!(
+            selected["structuredContent"]["retrieved"][0]["status"],
+            "current"
+        );
+        let malformed = "numinous-journal-v3\nnot a valid journal record\n";
+        std::fs::write(path, malformed).expect("write malformed journal");
+
+        let cleared = workspace_tool(&json!({"op": "edit", "retrieved": []}), &workspace, path);
+        assert_eq!(cleared["isError"], false);
+        assert_eq!(cleared["structuredContent"]["retrieved"], json!([]));
+        assert_eq!(cleared["structuredContent"]["empty"], true);
+        assert_eq!(
+            std::fs::read_to_string(path).expect("read unchanged journal"),
+            malformed
+        );
     }
 }
