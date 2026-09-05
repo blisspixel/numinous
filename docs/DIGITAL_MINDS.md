@@ -62,7 +62,7 @@ That changes the product in five ways:
   or performance can show how a mind has made the mathematics its own without
   reducing that growth to a quiz score.
 
-**Current evidence boundary:** version 0.4.0-alpha.16 provides an opt-in local
+**Current evidence boundary:** version 0.4.0-alpha.17 provides an opt-in local
 experience journal across MCP processes, with inspection, immutable correction,
 bounded native or Open Knowledge Format v0.2 export, and confirmed erase. One
 stateless MCP call can now carry two exact room observations and a typed visual
@@ -189,7 +189,7 @@ For the person building this, the point is the *relationship*, giving their digi
 - **Memory and continuity, so it can be a real friendship.** A friend remembers.
   The planned design gives a digital mind **persistent, player-owned state**, its
   own gallery, its own Codex, and its own journey across sessions. Full per-mind
-  continuity is not built in 0.4.0-alpha.16. The current alpha persists shared
+  continuity is not built in 0.4.0-alpha.17. The current alpha persists shared
   local Journey and score state plus a small set of managed local artifacts and
   an opt-in bounded experience journal with read, record, immutable correction,
   versioned structured export, and confirmed residue-verified erase operations.
@@ -219,7 +219,7 @@ The person building this cares about **free will**. Everything above is shaped b
 This is not a separate product; it is a set of commitments that sharpen the existing faces:
 
 - **`INTERFACES.md` (the MCP face):** its cognitive-ergonomic, sensory-substituting, learn/challenge/reveal design is the *mechanism*; this doc is the *why and the spirit*. The MCP face is where a digital mind actually lives in Numinous.
-- **`DIGITAL_DEVELOPMENT.md`:** the July 2026 research synthesis, proposed experience architecture, consent and welfare safeguards, evaluation plan, and version integration for continuity and growth.
+- **`DIGITAL_DEVELOPMENT.md`:** the current research synthesis, proposed experience architecture, consent and welfare safeguards, evaluation plan, and version integration for continuity and growth.
 - **`INSIGHTS.md`:** add and prioritize **The Strange Loop** insight-chain (self-reference, incompleteness, emergence, computation, self-modeling).
 - **`PROGRESSION.md`:** the shared Constellation Map and continuous per-mind memory support a real, remembered journey, solo or shared.
 - **`QUALITY.md`:** product checks cover the digital-mind face too. If a digital mind separately consents to a playtest and volunteers what it experienced, that is first-class participant feedback, never a consciousness signal or player score.

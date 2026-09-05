@@ -16,6 +16,13 @@ know it is done), and the **risk it retires**.
 - **1.0 is a high bar, not a minimum viable product.** Because the whole point is to do this *exceptionally well*, 1.0 means "a complete, coherent, genuinely exceptional experience," not "the least we could ship." The MVP-shaped thinking lives in the 0.x line; 1.0 is where it becomes worthy of the name.
 - **Guiding rule, at every version: feel before features.** We build depth-first. One unforgettable thing beats ten mediocre ones. A pretty menu of boring toys is failure.
 
+## How this file relates to the README
+
+The root `README.md` is the public front door: what Numinous is, how to play,
+and a short honest status. This file is the evidence-labeled plan. If the two
+disagree on what is built or what is next, this file wins, and the README
+should link here rather than restating the board.
+
 ## The version map at a glance
 
 - **0.1 Public Foundation** reproducible source, honest docs, green CI, and a safe public repository. Complete.
@@ -36,7 +43,7 @@ know it is done), and the **risk it retires**.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.4.0-alpha.16, Understanding Alpha active with its exit
+**Current release state: 0.4.0-alpha.17, Understanding Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are complete. Human stranger sessions sit with 0.8
 Closed Beta and 1.0 First Light.
@@ -63,6 +70,23 @@ mastery, exploration, and company also remain complete reasons to play.
   missing handles. Core session and MCP workspace regressions cover the failure.
   This repairs the existing Mind's Seat increment; it does not implement identity
   continuity or portable memory import.
+- **Built in the next review:** Lissajous uses true unit-amplitude oscillators
+  and one frequency pair for its picture, readout, and sound. Live oscillator
+  glides preserve each absolute target frequency. Studio edits and leave/return
+  preserve the selected creation's window, knob, and untouched identity.
+  `MATHEMATICS.md` and the source regressions define these bounded claims.
+- **Built:** Standing Wave preserves one wave speed across modes, Simple
+  Pendulum has closed analytic contours and exact regimes, and Braess computes
+  the equilibrium appropriate to demand. Wet Oracle's copy now describes its
+  simulated field without claiming a route solution. Their mathematical
+  contracts and evidence are in `MATHEMATICS.md`.
+- **Playable now:** [Returning home](experiments/returning-home.md) has three
+  portable Studio contrasts with exact formulas and retained fork lineage.
+  These are current-tool experiments; the proposed in-app quest stays open.
+- **Designed:** [Route Lab](ROUTE_LAB.md) makes shortest-path search and
+  traveling-salesman improvement visible on one small street map. Its first
+  slice includes a complete four-stop comparison, an exact small-case solver,
+  and honest heuristic limits. Implementation and player evidence remain open.
 - **Designed next:** one capability quest that carries a law into a new
   construction, with a contrasting-case and transfer gate (`PROGRESSION.md`);
   one explicitly kept and previewed project that resumes the selected question,
@@ -86,9 +110,9 @@ unclaimed until run.
 | **1. Keep agent first contact CI-green** | Agent hallway and tactile cohorts run on every PR; optional local-model visits exercise genuine choice after meaningful MCP experience changes | Deterministic cohorts guard 0.2 and 0.3 regressions, while real-model visits can expose interaction failures without turning free play into a flaky or expensive gate |
 | **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Face-neutral Studio requests, the typed room catalog, typed Gauntlet truth, and local-state path resolution are now in core. The App audio, creation, game, input, and room runtimes; CLI and MCP local-state adapters; CLI accessibility, Studio, and game-input adapters; CLI and MCP render-input adapters; MCP transport, simulation-tool, Studio-tool, game-tool, runtime-schema, compact-response, protocol, prediction-and-challenge, request-progress, flagship-Aha, room-facing, seeded-puzzle, journey-presentation, broadcast-session, and viewer-projection adapters; the MCP discovery and schema catalog; and the App, CLI, and MCP request regression test modules are focused units extracted from the god-files. Workstream 7 still owns the remaining seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
 | **3. The Mind's Seat, current increment complete** | Exact temporal evidence, multi-look `dwell`, sound facts and audio, replay receipts, explicit journal promotion, process-local workspace, remembered-room retrieval and cue, the three-door threshold, portable Studio lineage, the portable typed evidence capsule, and the caller-paced Show for minds are built. Reflection proposals remain deferred to their separate evidence and consent review | The audience the product exists for now has time, company, bounded continuity, authorship, and a directed performance on its native face without hidden state or automatic memory |
-| **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | The feature-gated linear HDR, half-resolution bloom, and tone-map spike passes its reference integrated-GPU budgets at 1080p and 1440p; an equivalent reusable single-threaded CPU reference fails both. Direct FIFO presentation now passes both full host boundaries too, without an offscreen output copy or readback. The disabled App path feeds real room rasters into the same surface renderer with explicit recovery and visible software fallback. A typed probe now runs that exact production boundary in the Windows, macOS, and Linux CI matrix while classifying all such timings as informational. An independent set builder now recomputes and binds the exact six physical candidates. Next: collect passing release-profile receipts at both target sizes on each OS before promotion. The full lift still owns splats, one shared audio bus with reverb and shaped envelopes, global dissolve, and damped-spring input | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
+| **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | The feature-gated linear HDR, half-resolution bloom, and tone-map spike passes its reference integrated-GPU budgets at 1080p and 1440p; an equivalent reusable single-threaded CPU reference fails both. Direct FIFO presentation now passes both full host boundaries too, without an offscreen output copy or readback. The disabled App path feeds real room rasters into the same surface renderer with explicit recovery and visible software fallback. A typed probe now runs that exact production boundary in the Windows, macOS, and Linux CI matrix while classifying all such timings as informational. An independent set builder now recomputes and binds the exact six physical candidates. The Windows pair now passes on the Framework 13 AMD Radeon 780M reference: release-profile, AC power, exact client area, FIFO sRGB, 30 warmups and 120 samples, zero skipped or suboptimal frames, combined p95 17.842 ms at 1080p against 33 ms and 17.830 ms at 1440p against 50 ms. Receipts: `docs/evidence/sensory-app-windows-1080p-2026-09-02.json` and `docs/evidence/sensory-app-windows-1440p-2026-09-02.json`. WSL2 Ubuntu on this laptop is not a Linux cell: the 780M appears only as Mesa Dozen (Vulkan-on-D3D12), wgpu 30 hides that non-conformant adapter, and the presenter falls back to software. Next: native macOS and Linux pairs at one frozen revision before the closed set can be built. The full lift still owns splats, one shared audio bus with reverb and shaped envelopes, global dissolve, and damped-spring input | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists, all still after the lift so the opening is authored in the new light. **The cheap half is done:** the App had no way to see the catalog at all, and now carries the same three doors the protocol face has offered since the threshold landed, in the same order. Touch one astonishing thing, walk the authored route carrying a question into each room, or wander by wing with the arrows staying inside the one chosen. The wing list, the walk, and which room the flagship is are core's, so the faces cannot drift; each still writes its own invitation. **What remains here is the authored opening itself**, which is the part the lift changes | Awe today is a rare event in a long random walk; the arc makes it the designed path. The humans, including the children this is also for, no longer meet the catalog through an arrow key |
-| **6. Creator depth on the built loop** | **The first multi-expression ring is built in alpha.16:** one atomic `x(t), y(t)` pair draws a planar path and sings its y coordinate through continuous, chromatic, major, minor, or pentatonic pitch mapping. Version 3 capsules carry the pair and scale through the App, CLI, MCP, Gallery, exact reopen, and lineage-preserving fork while old version 1 and 2 documents stay unchanged. Next rungs: MIDI and audio exports, then editable prose credit. **A second independent variable remains the large unlock**, because it turns a language of curves into a language of fields and opens domain coloring, implicit curves, and height maps for one grammar change | The creator ladder keeps rising without waiting on later community publishing, and each rung ships with its own machine gates; freestyle play is bounded by vocabulary long before it is bounded by rendering |
+| **6. Creator depth on the built loop** | **The first multi-expression ring is built in alpha.16:** one atomic `x(t), y(t)` pair draws a planar path and sings its y coordinate through continuous, chromatic, major, minor, or pentatonic pitch mapping. Version 3 capsules carry the pair and scale through the App, CLI, MCP, Gallery, exact reopen, and lineage-preserving fork while old version 1 and 2 documents stay unchanged. **MIDI export of that sung melody is built on all three faces:** core writes a Standard MIDI File type 0 from the same SoundSpec (nearest 12-TET key, leftover cents as pitch bend over plus or minus two semitones, range declared as Registered Parameter Number 0). CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` `midi: true`, and the App F4 share as `melody.mid` share it. WAV was already the audio export. **Editable prose credit is built:** a fork offers `After {title} by {author}` from the parent, the forker can rewrite or clear it, and version 4 capsules carry that sentence through every face. Next rungs: named sliders and general multi-expression programs. **A second independent variable remains the large unlock**, because it turns a language of curves into a language of fields and opens domain coloring, implicit curves, and height maps for one grammar change | The creator ladder keeps rising without waiting on later community publishing, and each rung ships with its own machine gates; freestyle play is bounded by vocabulary long before it is bounded by rendering |
 | **7. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps into one committed per-room evidence file, after the Sensory Lift. **The wing taxonomy now needs a ruling too**, because the App's wing browser makes it visible to players for the first time. Fifteen wings hold 355 rooms, and the shape reads oddly from outside: `Shape & Space` holds 94 while `Signals & Codes` and `Open Problems` hold one each, and two pairs look like accidents even though only one of each pair is documented. `Chaos & Order` and `Open Problems` are deliberate, named as such in this file and in `PANEL.md`. `Fractals & the Infinite` (Mandelbrot, Julia, Barnsley Fern) and `Chance & Noise` appear in no document at all, and each sits beside a larger wing of nearly the same name, so a player browsing wings will see the three most famous fractals in the product filed outside `Fractals` and read it as a bug | Rooms should be judged at their best, not at the old ceiling; the five commissioned rooms lead the next cohort after the review |
 | **Continuous filler between rocks** | The fifteen verified connection edges land as reveal lines and deep cuts, a few per PR. **The enumerated set of ten is closed**: the qubit and the Hopf fibration, the hanging chain and the soap film, the cycloid that is its own evolute, the three enumerations of the rationals that share one mediant, the parabola and the corner and the digit shift that are one system, the angle and the curve that a sunflower needs both of, the bell and the gasket that are one triangle read by size and by parity, the first collision against the last empty bin, Gauss's diary of 1799, and the two faces of one function at an easy point and along a hard line. Further edges need finding before they can be placed | The highest wonder-per-line work that exists; the fabric grows without blocking anything |
 | **Owner-blocked (stated, not scheduled)** | 0.4-am Understanding cohort: register, calibrate, and run the matched cohort through the sealed collector | Decisions entry 1 records it as optional paid validation awaiting an owner budget and registration ruling; carrying it as a contributor priority was a contradiction |
@@ -230,9 +254,15 @@ The Sensory Lift de-risk spike advances through separately honest boundaries:
    arithmetic, requires one 1080p and one 1440p result on every operating
    system, binds pair and release identity plus cross-platform source parity,
    and writes a canonical manifest over the exact six receipt hashes.
-   Release-profile physical pacing receipts at 1080p and 1440p on all three
-   operating systems remain open before promotion. Compositor work, scanout,
-   input latency, and aesthetics remain separate boundaries.
+   The Windows pair is now a passing named-reference candidate on the
+   Framework 13 AMD Radeon 780M laptop, recorded at
+   `17262777d65f5d1b7d29d9a544534febe7850ba1`. Combined
+   acquire-through-present-request p95 was 17.842 ms at 1080p against 33 ms
+   and 17.830 ms at 1440p against 50 ms, with exact client areas and zero
+   skipped or suboptimal frames. Those receipts cannot promote the feature
+   alone. macOS and Linux at one frozen revision remain before the closed
+   set can be built. Compositor work, scanout, input latency, and aesthetics
+   remain separate boundaries.
 
 ### The Polish Wave (August 2026): seven critics, one goal
 
@@ -285,7 +315,7 @@ The workstreams, in landing order:
    recipients down the one path that loses lineage; the postcard carries
    title and author; naming happens in the instrument, not only in flags;
    the terminal gains the fork verb; `sing` learns to read a `.num`.
-   Landed: the reopen pin releases into lineage on first edit, F4 opens
+   Landed: first edit records lineage while preserving the saved window and knob, F4 opens
    the in-instrument naming step with a remembered signature, postcards
    wear title and author, bundle folders carry the title slug, the README
    teaches the remix path, and the terminal speaks fork and sings
@@ -511,8 +541,9 @@ sequence:
    and contrast-aware ordering; a curated front wing of the deepest rooms
    with playlists weighted toward them. Curation, not deletion.
 
-The creator rungs (named sliders, general multi-expression programs, MIDI and audio
-exports, prose credit) continue behind these, each with its machine gates.
+The creator rungs (named sliders, general multi-expression programs, MusicXML)
+continue behind these, each with its machine gates. MIDI export of the sung
+melody and editable prose credit are already built on the CLI, MCP, and the App.
 The keep-or-cut scorecard moves after the Sensory Lift so all 355 rooms are
 judged at their best, not at the old ceiling. 0.4-am stays owner-blocked and
 the critical-path table now says so plainly instead of carrying it as a
@@ -576,7 +607,9 @@ access.
    rung is built: floor, Euclidean mod, min, and max are visible and portable
    through every face. The first multi-expression ring is built too: one
    atomic parametric pair and five named pitch maps travel through every face
-   in a version 3 capsule. MIDI and audio exports go next. The Daily Seed (one deterministic
+   in a version 3 capsule. MIDI export of the sung melody is built on CLI, MCP,
+   and the App F4 share; editable prose credit is built on version 4 capsules.
+   MusicXML and named sliders go next. The Daily Seed (one deterministic
    provocation per day, the same for every human and agent) doubles as the
    generative loop and a return hook; the postcard prints its own link;
    the morph machinery points at two Gallery capsules.
@@ -596,7 +629,7 @@ journal
 sovereignty is complete on the clean-process machine acceptance bar.
 Detail below and in the version sections.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **355 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,774 passing all-target test cases plus three expensive ignored diagnostics, locked build, Windows release gate, 94.17% region coverage, and 94.17% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **355 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local verification and dated coverage measurements live in `QUALITY.md`; the full Windows release gate and three-platform CI remain required.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -1147,8 +1180,9 @@ Detail below and in the version sections.
   saved expression capsule exactly. A `.num` path or `numinous://` link as a
   launch argument, or a `.num` file dropped on the window, opens the Studio
   with the saved source, window, and knob pinned, in a paused preview: the
-  exact curve draws, and Enter starts it singing. The first edit releases the
-  pin, because from the first keystroke the creation is the player's. The
+  exact curve draws, and Enter starts it singing. The September 2026 correction
+  keeps that window and knob across edits and leave/return; first edit records
+  the remix parent without replacing the chosen experiment. The
   bounded file loader moved into the core (`StudioCreation::from_num_path`
   with a typed refusal) and the CLI import path now rides the same door, so
   no face keeps its own byte cap. A drop never abandons a scored run in
@@ -1166,7 +1200,20 @@ Detail below and in the version sections.
   two saved windows. An unparsed formula is refused with a reason rather
   than shared as the last-good curve, a refusal writes nothing, and the
   action sits behind the same save gate as the other file-producing keys.
-  Gallery, fork, and lineage remain open 0.7 work.
+  Gallery, fork, and lineage are built in the increments below. Named sliders,
+  general multi-expression programs, and MusicXML remain open.
+- **Done (App MIDI in the share bundle):** F4 writes `melody.mid` beside
+  `creation.num` and the postcard. The bytes are the same Standard MIDI File
+  type 0 core already writes from the creation's sung SoundSpec: nearest
+  12-TET key, leftover cents as pitch bend over plus or minus two semitones,
+  overlapping envelopes one voice, range declared as Registered Parameter
+  Number 0. A parametric share maps `y(t)` to melody at its saved window and knob.
+  The fresh unsaved animated-knob limitation is recorded in `STUDIO.md`.
+  The README stays `numinous-studio-share 1` and names that 12-TET loss. A
+  failure still discards the fresh folder rather than leaving a half-written
+  share. CLI `numinous sing 'sin(t)' --out song.mid` and MCP `midi: true` keep the same
+  projection. Editable prose credit is built on version 4. Named sliders,
+  general multi-expression programs, and MusicXML remain open.
 - **Done (local Gallery wall, 0.7 item 3 browse slice):** F5 in the Studio
   opens a wall of saved creations discovered from the home folder and its
   share bundles: top-level `.num` files plus each bundle's `creation.num`,
@@ -1200,8 +1247,8 @@ Detail below and in the version sections.
   lineage intact. Version 3 is the next growth ring: it carries one graph or
   one atomic `x(t), y(t)` pair plus a named pitch map. It preserves version 1
   and 2 serialization for older content, renders and sings the pair through
-  every face, and requires both coordinates on replacement. Named sliders,
-  general multi-expression programs, and editable prose credit remain open.
+  every face, and requires both coordinates on replacement. Named sliders
+  and general multi-expression programs remain open.
 - **Done (the remix tree on the wall, 0.7 item 4 local half):** the lineage
   the capsule records is now visible where creations live. The wall resolves
   its own tree at discovery, matching each entry's recorded parent link
@@ -1210,8 +1257,16 @@ Detail below and in the version sections.
   carries a REMIXED count as its point of pride; the selected fork names its
   parent in a lineage line above the footer; D walks the cursor one step up
   the tree, and refusing to walk says exactly why, because no lineage and an
-  absent parent are different answers. Editable prose credit waits on its
-  own capsule field.
+  absent parent are different answers.
+- **Done (editable prose credit):** a fork offers `After {title} by {author}`
+  from the parent, omitting whichever identity the parent never recorded, and
+  invents nothing when the parent is nameless. The forker can rewrite or
+  clear that sentence. `NUMINOUS_STUDIO 4` carries it; older headers refuse
+  the field rather than ignore it; a header past 4 is still named as newer.
+  CLI `--credit`, MCP `credit`, the App F4 naming step, the share README, and
+  native links share the same field. Title and author still identify the
+  child and are never inherited. Named sliders, general multi-expression
+  programs, and MusicXML remain open.
 - **Immediate next (product, after 0.3 agent-and-machine exit):** the 0.4-am
   Understanding Alpha cohort is owner-blocked (decisions entry 1); the
   permanent CI locks on agent hallway and tactile already shipped (cycle 21).
@@ -2205,8 +2260,9 @@ otherwise verifiable artifact.
   negotiation, durable opaque handles, bounded retention, polling backoff,
   cancellation, restart recovery, input updates, and exact final-result parity.
   Keep instant room and game operations as ordinary complete results.
-- Export MIDI broadly and MusicXML only where the event data maps honestly to
-  conventional notation.
+- Export MIDI of the sung Studio melody is built on CLI, MCP, and the App F4
+  share. Broader MIDI performance exchange and MusicXML remain only where the
+  event data maps honestly to conventional notation.
 - Render WAV, lossless FLAC, and shareable MP3 through one deterministic core.
   Expose the same operation in the app, CLI, and MCP, with host-approved bounded
   artifact delivery for MCP rather than arbitrary filesystem writes.
@@ -2334,7 +2390,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-08-18)
 
-The package is **0.4.0-alpha.16**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.17**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -2361,8 +2417,8 @@ subjective human taste gates, so this scorecard records evidence instead.
 | Full sensory identity | Four Eras, deterministic synthesis, chiptune, and two GPU fractal paths are built | HDR post-stack, congruency review, accessibility controls, audio separation, and human sensory review |
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally, and the MCP face can send a player a room's sound as a real audio file beside the notation, with the last hop the client's to make | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
-| Real creative surface | Studio graphs and paired parametric paths, continuous and named-scale voices, versioned `.num` serialization with title, author, era, and lineage, links, plotting, animation, singing, exact paused App reopen, the one-key share trio, the local Gallery wall, and fork with recorded descent exist | Named sliders, general multi-expression programs, MIDI and audio exports, editable prose credit in the capsule, safe share preview for incoming links, and clean-install round trip |
-| Rigor and care are provable | 3,774 passing all-target test cases plus three expensive ignored diagnostics, 94.17% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a native SPDX Rust plus packaged-native SBOM attested from the exact audited release set | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
+| Real creative surface | Studio graphs and paired parametric paths, continuous and named-scale voices, versioned `.num` serialization with title, author, era, lineage, and editable prose credit, links, plotting, animation, singing, WAV and Standard MIDI File export of the sung melody on CLI, MCP, and the App F4 share, exact paused App reopen, the one-key share bundle, the local Gallery wall, and fork with recorded descent exist | Named sliders, general multi-expression programs, MusicXML, safe share preview for incoming links, and clean-install round trip |
+| Rigor and care are provable | Dated full-gate and coverage evidence in `QUALITY.md`, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a native SPDX Rust plus packaged-native SBOM attested from the exact audited release set | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,945-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
@@ -2375,11 +2431,11 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort open |
 | 0.5 Sensory | Partial | flagship visual/audio goldens; the App footer measured to truncate the status at the default 900 pixel window while a narrower 720 shows it whole, tracked with a test that pins the inversion and requires a marked cut that keeps the start of the status; scalable text and separate music, effect and room volume still unbuilt; reduced motion locked in CI across the terminal and the App, including The Show, which no longer auto-advances in the terminal when it is set and is proved so end to end by counting the rooms a held gallery shows; the reduced-motion gate has a test twin covering its judgment; NO_COLOR locked for the terminal face, chrome and games as well as picture, and swept across every advertised subcommand by a gate that reads the subcommand list from the binary so a new one cannot ship unchecked; WCAG 2.3.1 general-flash budget measured across all 354 rooms, with three known violations tracked; the 2.3.1 red-flash budget implemented and measured across the same sweep, no violations and no room reaching the saturated-red ratio; the 2.3.1 flashing-area rule declared unimplemented rather than assumed; mono audio selectable with a non-clipping downmix; all three switches documented in docs/PLAYING.md and reported by `numinous access`, with a test that fails if a switch is added and left undocumented; the Muncher's position marked by bracket shape rather than hue after an audit found it color-only in the terminal; the semantic warning ink held to being legible through the color-free renderer in every room that draws with it, with the room list read from the sources so a new user of the ink is picked up; 18 rooms measured to lose one of their two drawn brightness levels without color, tracked shrink-only because fixing it changes what all 354 rooms look like; cult-of-pi measured to show no fault marks at all on a character terminal, pinned by a test and tracked as an owner decision about what the room says; color-independence of touch response audited across all 354 rooms, 17 of 21 failures fixed by shading the color-free renderer and measuring its thresholds, 4 tracked; what a color-blind player sees measured for the first time, since NO_COLOR and the color-free renderer answer a different question, with protanopia, deuteranopia and tritanopia simulated per Vienot, Brettel and Mollon 1999, compared in CIELAB, and the simulation held to four properties it must satisfy rather than to its own output; the rule requires both halves, clear for ordinary vision and folded for a dichromat, so contrast defects are not mixed in; two rooms measured to hide their fault marks from a color-blind player and tracked shrink-only, one neighbouring case excluded as contrast rather than color blindness, and anomalous trichromacy declared unmodelled rather than assumed; the spectral palette swept the same way across every pairing an ink can form, 16 pairs in 10 rooms measured to fold for a dichromat while ordinary vision separates them, including the catalog's largest collapse at 95 down to under 1, tracked shrink-only with the three marks that paint the plain accent recorded once rather than three times; which of those ten rooms speak with the ink now read room by room from the draw code rather than left unread, four speaking and six decorating, with the readings locked to the collapse list both ways and each room required to be filed under its own verdict in the decisions section; the App's own surfaces swept the same way and measured clean, with its ten accents and its drawn marks both read from the sources so a new one cannot ship unchecked, one pair recorded as measured and benign because it is heading against body text where the words carry the meaning, and the sweep itself checked with two mutations that add a non-ink literal and require it to stay quiet; the whole room-by-room audit committed as evidence at docs/evidence/color-independence.json rather than only asserted, 354 rooms with the marks each draws, its closest pair and how far apart that pair is for ordinary vision and for the dichromat who sees it worst, generated and compared line by line so a failure names the room that moved; 19 rooms carry a pair a colour-blind player cannot separate, reconciling exactly with the three tracked groups, and a lock now requires every room the audit flags to be held by some list, which found seven that were measured, real and held by nothing; the MCP face held to emitting no colour at all, sweeping every tool with the list read from the binary and requiring three real calls to have succeeded so a mistyped argument cannot leave the render path unswept, which completes the sweep across all three faces; the colour work added to the nightly am-QA suite, and both nightly steps that pin a test by name moved behind a helper that requires exactly one test to have run, since cargo runs nothing and exits 0 for a name that matches nothing and such a step reports success while checking nothing; no full HDR/a11y stack yet |
 | 0.6 Portable | Partial | release packaging, engagement smoke judged on signal and PNG geometry rather than file size and run against a freshly built binary rather than whichever one was on disk, with one shared resolver and a test that fails if a gate grows its own, provenance/SBOM, install/play/uninstall roundtrip with all three player-owned files preserved, not just the journey, run nightly against a freshly packaged archive as well as on the tagged artifact, and now on THREE operating systems rather than Linux alone, as a matrix job with fail-fast off so a green Linux leg cannot stand in for Windows, each platform packaging its own archive format and keeping its own summary; the Windows leg verified locally first at 4 of 4 with all three player-owned files byte-identical after uninstall, which nothing had previously checked; workflow actions gated for being pinned to a commit and pinned consistently across every workflow, after a pin written from memory rather than copied; all 42 bundled tracks now decoded and required to carry real audio rather than the first of each station being decoded and the other 39 checked against a header duration a truncated body also satisfies, run nightly on each of the three platforms; and every ignored test gated for being named by a workflow or a script, which found a catalog visual contract sweep that had never run anywhere |
-| 0.7 Creator | Partial | The CLI creator gate passes 11 save, reopen, drawing, voice, deterministic serialization, and fork checks, including a version 3 parametric pair with stored pitch map and atomic replacement. CLI and MCP parity passes 20 plot and 14 sing cases through face-neutral core types; the audio cases measure actual WAV pitch against MCP notation and cover all four quantized maps. App graph and parametric framing share the same bounded core program, including undefined-sample gap handling and two-axis parametric scaling. MCP can save, open, and fork portable `.num` text or native links with exact previews and lineage while rejecting host file paths; the App reopens a saved `.num` or link exactly through the launch argument and file drop, paused until confirmed; F4 shares the trio from any parsed Studio state; F5 opens the local Gallery wall with exact graph or path thumbnails; Gallery F records descent; and the wall resolves its remix tree. Named sliders, general multi-expression programs, MIDI and audio exports, and editable prose credit remain |
+| 0.7 Creator | Partial | The CLI creator gate passes 12 save, reopen, drawing, voice, deterministic serialization, fork, and prose-credit checks, including a version 3 parametric pair with stored pitch map and atomic replacement. CLI and MCP parity passes 20 plot and 14 sing cases through face-neutral core types; the audio cases measure actual WAV pitch against MCP notation and cover all four quantized maps. App graph and parametric framing share the same bounded core program, including undefined-sample gap handling and two-axis parametric scaling. MCP can save, open, and fork portable `.num` text or native links with exact previews and lineage while rejecting host file paths; the App reopens a saved `.num` or link exactly through the launch argument and file drop, paused until confirmed; F4 shares the bundle from any parsed Studio state, including `melody.mid` as the same Standard MIDI File type 0 the CLI and MCP already write and prose credit in a version 4 capsule; F5 opens the local Gallery wall with exact graph or path thumbnails; Gallery F records descent; and the wall resolves its remix tree. Named sliders, general multi-expression programs, and MusicXML remain |
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.4.0-alpha.16** because Understanding Alpha is the active
+Package label is **0.4.0-alpha.17** because Understanding Alpha is the active
 milestone. The alpha suffix says its exit remains open. External registration,
 calibration, fresh independent review, allocation freeze, and the qualifying
 cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active

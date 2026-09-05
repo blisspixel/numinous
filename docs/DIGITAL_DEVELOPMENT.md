@@ -12,7 +12,7 @@ portable MCP creation lineage, portable evidence export, and the caller-paced
 Show for minds built; experiential continuity designed.** Research reviewed
 2026-07-11, with consciousness, memory, and agency updates below on 2026-09-04;
 implementation boundary reviewed 2026-09-04. Numinous
-0.4.0-alpha.16 speaks MCP, ships an opt-in local experience journal, can
+0.4.0-alpha.17 speaks MCP, ships an opt-in local experience journal, can
 return two exact room observations with a typed delta in one stateless call,
 can emit a versioned replay proof when `play_room` is asked for a receipt,
 can keep that proof only when the player hands it back and a live replay
@@ -131,6 +131,12 @@ memory or choose a universal architecture for Numinous.
 [When Continual Learning Moves to Memory, April 2026](https://arxiv.org/abs/2604.27003v1).
 
 ### The next bounded increment: a project the player can resume
+
+The current Studio capsule already preserves a narrower kind of continuity:
+an opened creation retains its selected window and `a` when edited, when its
+pitch map changes, and when the player leaves and returns. An untouched return
+keeps preview and identity state. These are reproducible experiment parameters,
+not an inferred biography or a claim about lived experience.
 
 **Designed, not built.** One versioned project capsule should contain a chosen
 question, next intended action, exact room references, selected evidence, and

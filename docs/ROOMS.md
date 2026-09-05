@@ -445,7 +445,7 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [ ] **Graph theory** - the Bridges of Konigsberg as a walking puzzle; fail, then learn you were always going to fail, and why (degree parity, never named).
 - [ ] **Pigeonhole** - a party trick generator: guaranteed handshake-twins in any crowd of a certain size.
 - [ ] **Ramsey** - the party of six: find strangers or friends; order is unavoidable, chaos is impossible.
-- [ ] **Traveling salesman** - route the pizza drone; beat the greedy algorithm; meet hardness personally.
+- [ ] **Traveling salesman** - route the pizza drone; compare greedy choices with exact small tours; [Route Lab](ROUTE_LAB.md) designs a visible map search and delivery-order instrument.
 
 ## Computation and logic
 - [x] **Universality** - Rule 110 and Life (the reveals and deep cuts carry it).
@@ -708,12 +708,13 @@ so predict can ask a mind to call the value before the burn finishes.
 **Build honestly:** Wow 5 / Build 2. Minimax with memoization over 5,478
 positions is a few pages of tested core code; the visual is the existing
 surface substrate drawing a tree; the war-shaped second game is a payoff
-matrix, not a simulation. The sibling checklist stub, the Traveling Salesman
-(route the pizza drone, meet hardness personally), shares this room's soul,
-searching a combinatorial space you cannot brute-force, and stays its own
-room: the salesman's space (9!/2 = 181,440 routes for ten cities) defeats
-exhaustion where tic-tac-toe's yields to it, and feeling that boundary from
-both sides is the pair's lesson. Both face the full Definition of Done, and
+matrix, not a simulation. The sibling [Route Lab](ROUTE_LAB.md) design develops
+the Traveling Salesman checklist stub and stays its own room. Ten cities have
+9!/2 = 181,440 symmetric tours with a fixed start and reversal identified,
+small enough for an exhaustive comparison. Larger instances expose the rapid
+growth of naive enumeration, while difficulty also depends on the instance
+and the algorithm. The pair's lesson is the difference between finding a good
+answer and proving the best one. Both face the full Definition of Done, and
 the non-textbook reveal claim (checkers) carries its source above.
 
 ## Founder's room idea (July 2026): The Dimension Dial

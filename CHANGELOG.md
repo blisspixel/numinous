@@ -5,7 +5,78 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.17] - 2026-09-05
+
+### Added
+- Three portable Studio experiments explore full returns, ideal irrational
+  near returns, and a deceptive position-only return. The optional guide in
+  `docs/experiments/returning-home.md` lets a player compare, remix, and keep a
+  construction using current tools. The in-app capability quest remains open.
+- Route Lab now has a concrete design in `docs/ROUTE_LAB.md`: visible shortest
+  paths, tours improved by hand, solver traces, and exact small-map comparisons.
+  It is a proposed room, not an implemented route optimizer.
+- Studio forks carry editable prose credit. A child offers
+  `After {title} by {author}` from the parent (omitting whichever identity
+  the parent never recorded), the forker can rewrite or clear it, and
+  `NUMINOUS_STUDIO 4` holds the sentence. CLI `--credit`, MCP `credit`, the
+  App F4 naming step, the share README, and native links share that field.
+  Title and author still identify the child and are never inherited. Named
+  sliders, general multi-expression programs, and MusicXML are not this rung.
+- Studio melodies can leave as a Standard MIDI File type 0 as well as WAV.
+  Core writes the file from the same `SoundSpec` the faces already sing:
+  nearest 12-TET MIDI key, leftover cents as pitch bend over plus or minus two
+  semitones, overlapping envelopes become one voice at a time. The file
+  declares that bend range as Registered Parameter Number 0 so a DAW that
+  does not default to General MIDI's plus-or-minus two still reads the cents
+  as written. CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` with
+  `midi: true`, and the App F4 share (`melody.mid` beside `creation.num` and
+  the postcard) share that projection. The bundle README names the pitch, timing, and voice
+  limits. WAV remains the audio export. MIDI-in and MusicXML are not this rung.
+- Windows Sensory Lift App physical pacing receipts at 1080p and 1440p on the
+  Framework 13 AMD Radeon 780M reference. Release-profile, AC power, exact
+  client area, FIFO sRGB, 30 warmups and 120 samples, zero skipped or
+  suboptimal frames. Combined acquire-through-present-request p95 was
+  17.842 ms at 1080p against 33 ms and 17.830 ms at 1440p against 50 ms.
+  These are named-reference candidates, not the promotion set. macOS and Linux
+  receipts at one frozen revision remain before the closed six-receipt set.
+  Evidence: `docs/evidence/sensory-app-windows-1080p-2026-09-02.json` and
+  `docs/evidence/sensory-app-windows-1440p-2026-09-02.json`.
+
 ### Fixed
+- Simple Pendulum has one selected energy across controls, contours, and
+  status, with reachable small swings and exact regime boundaries. Libration
+  endpoints close, both separatrix branches show, and the speed window contains
+  admitted rotations. The distorted decorative bob is removed; the reveal
+  explicitly identifies an analytic phase portrait rather than timed motion.
+- Braess Trap uses actual Wardrop route flows across the admitted demand
+  range. Above unit demand, the bridge equilibrium costs 2 rather than the
+  incorrect all-shortcut formula `2*d`. Drawing and status share one scenario;
+  the comparison identifies when a bridge helps, harms, or approximately ties.
+- Wet Oracle describes the scent field it simulates and its limits. It no
+  longer promises a shortest-path race, player victory, or optimal-route proof
+  that the implementation does not provide.
+- Standing Wave uses the same dimensionless wave speed for every mode, with
+  temporal frequency proportional to mode number. Repeating a selection no
+  longer changes its clock. Wave-equation and period regressions cover the
+  correction.
+- MIDI exports preserve declared duration and trailing silence, quantize
+  absolute endpoints, and resolve same-tick starts into one voice. Decoded-file
+  regressions check pitch, bend range, note lifetime, and legal time encoding.
+- Lissajous now uses unit-amplitude oscillators, physical aspect correction,
+  and one accepted frequency pair for its curve, readout, and both sound paths.
+  Common framing keeps its turning points visible beneath the App overlays;
+  a composed-frame regression rejects the previously clipped geometry.
+  Seed variation changes phase without flattening peaks, and the continuous
+  frequency sweep no longer snaps audibly to integers. Independent sinusoidal,
+  geometry, crossing-count, and full-period regressions cover the model.
+- Live two-oscillator voices smooth each absolute frequency, preserving a
+  fixed second note when a root change is balanced by its ratio. The previous
+  independent root-and-ratio glide could send that note far beyond both targets.
+  Phase-increment regressions cover both transition directions.
+- Editing an opened Studio creation preserves its saved window and parameter.
+  Invalid drafts, repair, and pitch-map changes retain the chosen experiment;
+  leaving and returning preserves an untouched preview and its identity.
+  Selecting a new recipe still starts a new experiment.
 - Kepler Areas now puts the sun at the focus used by its orbital clock, draws
   equal-time sectors with orbital arcs, and preserves circular geometry on pixel
   and terminal surfaces. Geometric swept-area and apsidal-speed tests catch the
@@ -39,6 +110,18 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   The next designed slices are one transferable capability quest and one
   explicitly resumable project. The North Star reflects the aim of a gift future
   minds can extend; `docs/MATHEMATICS.md` records the room review and its limits.
+- The root README is a GitHub front door again: short pitch, current App
+  screenshots, install, three faces, and a brief status with links. Adapter
+  extraction, Sensory Lift receipts, Mind's Seat protocol detail, Formula Jam
+  capsule growth, and playtest rounds stay in ROADMAP, PLAYING, STUDIO,
+  PLAYTESTS, and VERIFY. The docs index no longer restates the critical-path
+  board, and ROADMAP names itself as the status authority when the two differ.
+- Public README plates are current App frames of the Cabinet, Times Tables,
+  Golden Angle, Mandelbrot, Double Pendulum, Formula Jam, Kepler Areas, and
+  Lissajous, composed through
+  the live HUD and Cabinet rather than older CLI-only or inspect-overlay
+  captures. `cargo run -p numinous-app --example screens -- --readme`
+  regenerates them.
 
 ## [0.4.0-alpha.16] - 2026-09-01
 

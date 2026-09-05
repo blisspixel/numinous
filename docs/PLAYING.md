@@ -124,23 +124,31 @@ is aimed with the arrow keys and committed with Enter. The
 A saved creation reopens exactly. Launch the App with a `.num` path or a
 `numinous://studio` link, or drop a `.num` file on the window, and the Studio
 opens with the saved formula, window, and knob pinned, paused: the exact curve
-is drawn, and Enter starts it singing. The first edit makes it yours again,
-window and all, and your next share credits the creation you opened, because
-taking over a creation by editing it is a remix. Save one from the terminal
+is drawn, and Enter starts it singing. The first edit begins a remix while
+keeping the saved window and knob. F6 changes only the pitch map. Leaving and
+returning keeps an untouched preview and its identity; choosing an F2 or F3
+recipe starts a new experiment. Your next edited share records the creation
+you opened as its parent. Save one from the terminal
 with `numinous plot "sin(a*x)" --save mine.num`, and remix any capsule or
 link with `numinous fork parent.num --out mine.num`. A drop never abandons a
 game in progress, and files that are not valid creations are refused with a
 reason, never half-opened.
 
+For a small creation you can investigate and extend, try the optional
+[Returning home](experiments/returning-home.md) experiments.
+
 F4 in the Studio opens the naming step: one line for a title, one for your
-signature (offered again on your next share), Tab to switch, Enter to share,
-Esc to cancel. Enter writes the whole trio into a fresh folder in your home
+signature (offered again on your next share), one for prose credit (a fork
+prefills After {title} by {author}), Tab to switch, Enter to share,
+Esc to cancel. Enter writes the whole bundle into a fresh folder in your home
 directory: `creation.num` (reopens exactly), `postcard.png` (the picture that
 travels, wearing the title as its headline and the author in its corner),
-and a README carrying the `numinous://` link. A titled share's folder carries
-the title's slug in its name. What is shared is the exact curve on screen at
-that moment, knob and all. A formula that does not parse is refused with FIX
-THE FORMULA TO SHARE rather than shared as whatever last worked.
+`melody.mid` (the sung melody as a Standard MIDI File: 12-TET keys plus pitch
+bend of leftover cents), and a README carrying the `numinous://` link and
+naming that MIDI loss and any prose credit. A titled share's folder carries the title's slug in
+its name. What is shared is the exact curve on screen at that moment, knob
+and all. A formula that does not parse is refused with FIX THE FORMULA TO
+SHARE rather than shared as whatever last worked.
 
 F5 opens the Gallery: a wall of saved creations discovered from the same home
 folder and its share bundles, newest first, each drawn as its own exact curve
@@ -201,6 +209,7 @@ numinous sonify times-tables --poke 0.375,0.5 --out four-lobes.wav
 numinous sonify times-tables --layer room-bed --variation 42 --out times-bed.wav
 numinous plot "sin(a*x)" --animate
 numinous sing "sin(x) + x/3" --out song.wav
+numinous sing "sin(x) + x/3" --out song.mid
 numinous tune --seed 7 --out chip.wav   a seeded chiptune (Music Engine A)
 numinous radio                    the dial: trance, chill, arcade stations
 ```

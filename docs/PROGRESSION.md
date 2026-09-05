@@ -32,6 +32,12 @@ compares frequency ratios, investigates closure, and makes a portable path.
 The power is the ability to construct and recognize periodic motion in a new
 case. An expert can enter at construction; Watch and free exploration stay open.
 
+The current [Returning home](experiments/returning-home.md) guide offers three
+playable capsules: a full return, an ideal irrational near return, and a
+position-only return with reversed velocity. They use existing Studio tools
+and retained fork lineage. The in-app quest, cross-face trial contract, and
+participant evidence are still open.
+
 This needs real contrasting cases. Current Lissajous hand tuning snaps to
 integer frequencies, so every hand-built ratio is rational. That alone cannot
 teach what distinguishes closing and nonclosing ideal trajectories. A finite
