@@ -486,6 +486,54 @@ curve pixel with the final App frame for six Henon-Heiles, Van der Pol, and
 Duffing settings at both supported sizes. `phase_plane.rs` also checks inverse
 mapping of fractional display footprints used by Gray-Scott.
 
+## Parametric Studio's planar fit (alpha 19)
+
+In alpha 18, Studio fitted sampled x and y ranges independently. A circle and
+the path `(4*cos(t),sin(t))` consequently became the same plotted shape. The
+coordinate ranges in CLI and MCP remained correct, but the App, postcards,
+and Gallery did not show those ranges.
+
+The shared `PlanarProjection` now fits a sampled planar path with one physical
+scale. For an available rectangle of `W` by `H` cells, sampled spans `dx, dy`,
+and cell width-to-height ratio `c`, the nondegenerate fit is
+
+```text
+s = min((W - 1) / dx, (H - 1) / (c * dy))
+screen_x = left + (W - 1)/2 + s * (x - center_x)
+screen_y = top  + (H - 1)/2 - c * s * (y - center_y)
+```
+
+Raster pixels use `c = 1`; the terminal assumes `c = 0.5` for cells twice as
+tall as they are wide.
+Actual font proportions can differ. A constant coordinate stays centered and
+does not constrain the other axis; a constant pair becomes a centered point.
+Undefined samples break the path, including on either side of an isolated
+finite point. The expression, window, sound, and capsule remain unchanged.
+
+The implementation centers and normalizes before scaling, so finite opposite
+extremes need not overflow and tiny paths are not inflated by an arbitrary
+minimum span. The viewport is clipped to the surface before projection.
+Fits whose internal spans or scales lose a varying coordinate to underflow
+are refused, as are nonfinite scales, instead of returning a distorted path.
+Core text and App rendering use this same primitive; room portraits retain
+their separately tested margins and inverse display-footprint contract.
+
+Regressions examine actual circle and 4:1 ellipse ink, translated paths,
+constant lines and points, gaps, finite extremes, and bounded viewports. App
+checks include portrait and landscape rasters, composed keyboard/controller
+Studio panels, saved postcards, and Gallery thumbnails. Checking coordinate
+ranges alone would miss the original failure.
+
+CLI/MCP parity also preserves the complete canvas, including blank margins.
+MCP `plot_expression` returns its actual `width` and `height` beside the plot.
+The black-box comparison uses those dimensions: inferring width from the
+rightmost ink would incorrectly shrink a centered path before comparing it.
+
+This preserves proportions within each fitted path. It does not establish a
+common absolute magnification across separate creations, certify a continuous
+curve from finite samples, or make the audio map invertible. Ordinary
+`y=f(x)` graph autoscaling remains a separate presentation contract.
+
 ## What remains open
 
 Independent mathematical review before 1.0 remains unstaffed. The rest of the
@@ -517,11 +565,7 @@ range, and retains the MIDI limits in `STUDIO.md`. Auto uses a presentation
 clock and does not establish audio phrase alignment. Continuous parameter
 sweeping remains separate audio-transport work.
 
-The follow-on source review identifies a separate planar-geometry correction.
-Parametric Studio currently fits sampled x and y ranges independently. A circle
-and the path `(4*cos(t),sin(t))` therefore normalize to the same plotted shape.
-CLI and MCP report the coordinate ranges, while the App, postcards, and Gallery
-discard those ranges. Equal coordinate units need one centered scale within
-the available rectangle, with actual circle/ellipse and export regressions.
-Ordinary `y=f(x)` graph autoscaling is a separate presentation choice. This
-preexisting issue remains open in alpha 18; capsule contents need no change.
+Parametric Studio's independent-axis distortion is addressed by the alpha 19
+correction above. General graph framing, sampling density, sound-to-geometry
+interpretation, and visible absolute coordinate scales remain distinct review
+questions; a corrected circle does not close the Studio review.

@@ -5,7 +5,7 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.4.0-alpha.18.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
+Status: **0.4.0-alpha.19.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
 0.3 Tactile Alpha agent-and-machine exits are met. Understanding Alpha is the
 active line, and its 0.4 exit remains open. The
 headless core, CLI, MCP server, windowed App, GPU and audio adapters, 355 catalog
@@ -61,6 +61,8 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
   bounded room-authoring layer.
 - [Returning home](experiments/returning-home.md) three playable Studio
   experiments about full motion, near returns, and a deceptive repeated position.
+- [Shape and scale](experiments/shape-and-scale.md) stretch a circle, compare
+  proportions with fitted size, and share a named creation.
 - `ROUTE_LAB.md` the proposed visual route-planning room, with shortest paths,
   tours improved by hand, solver traces, and an exact small-map comparison.
 - `SYNESTHESIA.md` the sensory seam: the glow pipeline (the documented HDR look, not yet built) and the one-event-two-renderings model that binds sight and sound.
@@ -98,7 +100,7 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 - `PLAYTESTERS.md` the casting pool: forty-two playtester personas with backstories (Norm the newcomer, a barefoot kid, returned geniuses, living experts, digital minds, and invented beings), spanning ages, languages, understanding levels, and kinds of mind, to draw from for testing rounds.
 - `REVIEW.md` the July 2026 external review: the grades, the three-products insight (instrument, Studio, progression), and the near-term stack it set.
 - `PANEL.md` a working review session: composed minds (plus a real cold-start-AI seat) reading the build as it stood for what is missing, not what it has.
-- `ENGINEERING.md` code-quality standards: pinned July-2026 GA versions, lint/test/unsafe/doc policy, CI gates.
+- `ENGINEERING.md` code-quality standards: pinned toolchain and dependency versions, lint/test/unsafe/doc policy, CI gates.
 
 ## Single source of truth (the anti-redundancy map)
 
