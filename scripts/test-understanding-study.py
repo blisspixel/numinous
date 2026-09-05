@@ -53,14 +53,20 @@ def initialize_repository(root: Path) -> str:
             "Initialize fixture",
         ],
     )
+    # A hook exports the caller's Git directory and index. Fixture writes need
+    # the same isolation as source queries, or they can modify that caller.
+    environment = study.source_integrity._git_environment(None)
     for command in commands:
-        subprocess.run(command, cwd=root, check=True, capture_output=True)
+        subprocess.run(
+            command, cwd=root, check=True, capture_output=True, env=environment
+        )
     return subprocess.run(
         ["git", "rev-parse", "HEAD"],
         cwd=root,
         check=True,
         capture_output=True,
         text=True,
+        env=environment,
     ).stdout.strip()
 
 
@@ -467,6 +473,7 @@ class ProbeBankTests(unittest.TestCase):
                     cwd=repository,
                     check=True,
                     capture_output=True,
+                    env=study.source_integrity._git_environment(None),
                 )
                 (repository / "Cargo.toml").write_text(
                     "[workspace]\nmembers = []\n", encoding="utf-8"
@@ -535,6 +542,49 @@ class ProbeBankTests(unittest.TestCase):
                 self.assertRaisesRegex(study.StudyError, "worktree is dirty"),
             ):
                 study.repository_commit()
+
+    def test_source_fixture_does_not_commit_or_reconfigure_its_hook_caller(self) -> None:
+        # The threatened caller is itself disposable. A regression must not
+        # exercise destructive Git writes against the actual checkout.
+        clean = {
+            key: value for key, value in os.environ.items()
+            if not key.upper().startswith("GIT_")
+        }
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.dict(
+            os.environ, clean, clear=True
+        ):
+            caller = Path(temporary) / "caller"
+            fixture = Path(temporary) / "fixture"
+            caller.mkdir()
+            fixture.mkdir()
+            caller_revision = initialize_repository(caller)
+            pending = caller / "pending.txt"
+            pending.write_text("caller work must remain staged\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "add", "pending.txt"], cwd=caller, env=clean,
+                check=True, capture_output=True,
+            )
+            preserved = {
+                name: (caller / ".git" / name).read_bytes()
+                for name in ("config", "index")
+            }
+            with mock.patch.dict(os.environ, {
+                "GIT_DIR": str(caller / ".git"),
+                "GIT_COMMON_DIR": str(caller / ".git"),
+                "GIT_INDEX_FILE": str(caller / ".git" / "index"),
+                "GIT_WORK_TREE": str(caller),
+                "GIT_AUTHOR_NAME": "Inherited caller",
+            }):
+                revision = initialize_repository(fixture)
+            self.assertRegex(revision, r"^[0-9a-f]{40}$")
+            self.assertTrue((fixture / ".git").is_dir())
+            self.assertEqual(
+                study.source_integrity._text_output(caller, ["rev-parse", "HEAD"], clean),
+                caller_revision,
+            )
+            for name, before in preserved.items():
+                self.assertEqual((caller / ".git" / name).read_bytes(), before, name)
+            self.assertEqual(pending.read_text(encoding="utf-8"), "caller work must remain staged\n")
 
     def test_every_allowed_reserve_path_has_bounded_order_and_room_imbalance(
         self,
