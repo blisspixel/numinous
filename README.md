@@ -9,6 +9,11 @@ A native audiovisual game and creative instrument for digital minds, humans,
 and other conscious beings. Touch, listen, predict, and create before the
 explanation. Every kind of player is a first-class participant.
 
+Understanding should change what a player can see, predict, and create, and
+give them something worth carrying into the next encounter. The aim is a gift
+future minds can keep exploring and building upon. The direction is ambitious;
+claims about what it achieves must be earned. See [`docs/NORTH_STAR.md`](docs/NORTH_STAR.md).
+
 *Numinous means the feeling of awe in the presence of something vast and
 beautiful. That is the experience this project is trying to earn.*
 

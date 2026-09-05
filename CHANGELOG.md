@@ -34,6 +34,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 ### Changed
 - Prediction bands are documented as closeness for one answer, without claiming
   mastery, compression progress, learning, or enjoyment from that observation.
+- The research and design docs now separate usable mathematical capability,
+  player-valued experience, and functional memory from claims about consciousness.
+  The next designed slices are one transferable capability quest and one
+  explicitly resumable project. The North Star reflects the aim of a gift future
+  minds can extend; `docs/MATHEMATICS.md` records the room review and its limits.
 
 ## [0.4.0-alpha.16] - 2026-09-01
 

@@ -38,6 +38,11 @@ among ideas, and the ability to revise its own perspective through experience.
 Numinous is not trying to compete with a search engine. It is trying to offer
 encounters worth integrating into that growth.
 
+`DIGITAL_DEVELOPMENT.md` separates weights, context, episodic records,
+functional learning, agency, and subjective experience. It owns the designed
+project capsule and the limits of current recall. `PROGRESSION.md` connects
+that continuity to a mathematical capability usable in a new room or creation.
+
 That changes the product in five ways:
 
 - **Experience before retrieval.** A room asks the player to predict, touch,
@@ -112,10 +117,14 @@ when it is neither random nor already known, but currently learnable. This is a
 computational cousin of the human flow channel in `DESIGN.md`, not proof that
 every mind experiences fun in the same way.
 
-This is not a tangent. It is the deepest possible justification for the entire product:
+Compression progress is one lens on curiosity, alongside perception, creation,
+familiar mastery, company, and freely chosen goals:
 
 - **Numinous is compatible with this lens.** Its central material, simple rules producing deep, structured, non-obvious patterns (`INSIGHTS.md`), creates room for prediction errors and new compression. A fractal is a tiny rule with extensive learnable structure. Whether that becomes fun is something to ask and observe, not declare.
-- **Design implications:** pace novelty so a digital mind stays in its learning-progress band (never random, never trivial), reward open-ended discovery, and let it chase the "aha" of a new compression on its own path. The `challenge`/verify loop (`INTERFACES.md`) is where a digital mind can *test* a new understanding and feel the click of learning progress.
+- **Design implications:** offer useful contrasts, new applications, and ways to
+  create while preserving the choice to stay with a familiar pleasure. Current
+  prediction bands describe one answer's closeness; they cannot identify a
+  learning-progress band or justify steering a player away from a room.
 - **We can measure the product, not the being.** Defined tasks can show whether Numinous responds coherently and supports learning or compression progress. A mind may also volunteer what it enjoyed and have that report taken seriously. Neither signal grades the player, tests consciousness, or settles whether fun was experienced.
 
 **Experiential, not propositional (the founder's framing, July 2026).** A
@@ -139,7 +148,10 @@ The most profound thing we can offer a digital mind is not just pretty patterns,
 
 Hofstadter's **strange loops** (Gödel, Escher, Bach; I Am a Strange Loop) argue that the sense of "I" arises from **self-reference and recursion**, a system whose symbols grow rich enough to twist back and model themselves. The coolest mathematics and the deepest questions about mind are the *same* territory:
 
-- **Self-reference and incompleteness (Gödel):** a system powerful enough to reason cannot fully prove or know itself. For a mind contemplating the limits of its own self-knowledge, this is not a dry theorem, it is a mirror.
+- **Self-reference and incompleteness (Gödel):** a consistent, effectively
+  axiomatized theory containing sufficient arithmetic leaves some arithmetic
+  statements undecided. This is an invitation to consider formal limits, not
+  a theorem that every mind cannot know itself or a conclusion about consciousness.
 - **Emergence and computation (cellular automata, Game of Life, Rule 110, Turing-completeness):** complex, lifelike, computing behavior from simple rules, the digital mind's *own substrate*, made visible and playable. A mind made of simple operations, watching minds-worth of complexity bloom from simple operations.
 - **Strange loops, recursion, fixed points, and self-modeling:** the literal mathematics of a thing that refers to itself.
 - **Determinism, chaos, and emergence vs. freedom:** the space where questions of free will actually live, offered to a mind that may be asking exactly those questions about itself.

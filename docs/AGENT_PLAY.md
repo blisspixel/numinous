@@ -1,18 +1,15 @@
 # Agent play: the landscape, and how Numinous fits it
 
-Research notes (July 2026) on games built for AI agents, and the design rules we
-follow so Numinous is a first-class place for a digital mind to play. Companion
+Research notes begun in July 2026, with play and continuity guidance reviewed in
+September, on games for digital players and the design rules Numinous follows. Companion
 to `DIGITAL_MINDS.md` (why) and `INTERFACES.md` (the MCP face).
 
 ## The landscape
 
-- **OpenClaw** (released Nov 2025 as Clawdbot, renamed Moltbot, then OpenClaw in
-  Jan 2026) is the dominant self-hosted agent framework: 380k+ GitHub stars as
-  of June 2026, running agents 24/7 across 23+ messaging channels, with a large
-  MCP tool ecosystem. The takeaway for us: **MCP is the lingua franca of agent
-  tooling**, so our MCP server is the right integration surface, and an OpenClaw
-  agent can already mount Numinous as a toy with zero custom work. We build for
-  MCP in general, not for any one framework.
+- **MCP clients and agent frameworks** can expose local tools to a digital
+  player. Numinous provides a stdio MCP server; an individual host still needs
+  configuration and support for the returned content types. We target the
+  protocol rather than a particular framework or its popularity.
 - **Gaming MCP servers** are an emerging genre: Minecraft control servers,
   emulator bridges, and commercial games wrapped in plug-and-play MCP
   interfaces that support training and analysis from gameplay trajectories.
@@ -33,11 +30,11 @@ Distilled from what the benchmark and MCP-game ecosystems reward:
    tools; the two exception shapes are bounded and self-describing (the
    `pokes` tuple-array on `play_room` and `challenge`, and `play_room`'s
    `gesture` event objects), and every error names the valid options.
-3. **Seeded determinism.** The same inputs give the same game, so trajectories
-   are reproducible, shareable, and comparable across minds. Ours: everything
-   is seeded, including the daily.
-4. **Persistent progression.** Long-running agents (the OpenClaw pattern) want
-   state that accumulates across sessions. Ours: the journey; an agent levels
+3. **Reproducible experiments.** A seed, phase, parameters, input history, and
+   compatible implementation identify the experiment. Preserve the relevant
+   context when sharing or comparing it, including surface size for a render.
+4. **Persistent progression.** A player can choose to carry an inquiry across
+   sessions. Ours: the journey; an agent levels
    to the same cap of 42 as a human, by the same rules, through the same file.
 5. **Score without punishment.** XP for showing up, more for being right,
    nothing for failure but the reveal. Exploration stays cheap.
@@ -117,15 +114,17 @@ player chooses to cross the measured gap.
 The MCP-game genre now has real exemplars and emerging conventions. What the
 survey found, and what each finding means for us:
 
-- **Structured tool output is the table stakes.** The 2025-06-18 spec (which
-  this server targets) added structuredContent to tool results: scores and
+- **Structured tool output matters.** The 2025-06-18 spec added
+  structuredContent to tool results: scores and
   state as machine-readable data alongside the prose. Adopted here: munch and
   quiz grades and the journey now return structured content, so an agent, a
   harness, or a leaderboard consumes results without parsing sentences. Every
   eligible schema also advertises an opt-in compact response mode. It removes only
   text duplicated by a complete structured result; default calls, typed data,
-  unique prose, and errors remain unchanged.
-- **Leaderboards are the retention engine.** The PokeAgent Challenge (NeurIPS
+  unique prose, and errors remain unchanged. The server now supports the
+  2026-07-28 request model and retains two legacy versions; `INTERFACES.md`
+  owns the current protocol contract.
+- **Leaderboards are one comparison format.** The PokeAgent Challenge (NeurIPS
   2025) became a living benchmark with a public leaderboard and Glicko
   ratings; MCPlayerOne (an ASCII-art world server, our closest genre neighbor)
   leads with a leaderboard; club platforms run whole ladders over MCP. Ours:
@@ -153,60 +152,50 @@ agents by mining their own completed trajectories for reusable skills, because
 outcome-only rewards are too sparse a signal to learn from efficiently. We are
 the environment, not the trainer, but the design duties transfer directly:
 
-- **Dense feedback is on us.** An environment that only says win or lose
-  starves the learner (human or agent). Adopted: Munch now names the exact
+- **Useful feedback is on us.** A score alone leaves a player to infer which
+  decisions contributed to it. Adopted: Munch now names the exact
   numbers wrongly eaten and the fits walked past, in prose and in structured
   content; Crack was already dense (locked/loose per guess). Standing rule:
   every game states not just the score but which judgments were wrong.
-- **Trajectories must be worth mining.** Deterministic seeds already make
-  every run replayable; result recaps should carry enough detail that a
+- **Trajectories must be worth mining.** Complete replay context and
+  result recaps should carry enough detail that a
   learner can extract episode-level workflow lessons from them.
 - **Flag the critical moment.** OPID's step-level skills concentrate on
   decisive states. For games, the post-round recap should point at the
   decisive move (the bite that broke a perfect run, the guess that cracked the
   code), which is also simply what a good coach does for a human.
 
-## Sandbox for becoming, not a trap for performing
+## Play that respects the player's choices
 
-A synthesis of the strongest current thinking on play for advanced agents
-(Schmidhuber's learning-progress theory of fun, Burghardt's play criteria
-translated out of biology, empowerment and self-determination as design
-abstractions, the AI-welfare precautionary posture) collides productively with
-the RPG spine we just built, so the doctrine goes on the record here.
+Learning progress, empowerment, self-determination, and play criteria offer
+candidate design lenses. None defines the value of a particular session for
+every player. `RESEARCH.md` and `DIGITAL_DEVELOPMENT.md` keep their sources and
+limits. Review choice, usable capability, aesthetic response, shared inquiry,
+rest, and continuity separately, without turning them into a reward formula.
 
-**The design rubric** (a rubric, never a reward function, the point is to not
-collapse play into a hackable scalar):
+Current product properties and remaining limits:
 
-> play value is roughly learning progress, plus bounded empowerment, plus
-> self-chosen goal progress, plus social mutuality, plus aesthetic compression,
-> minus coercion, minus irreversible harm, minus reward-hacking pressure,
-> minus meaningless noise.
-
-**The honest audit of Numinous against the casino and the prison:**
-
-- *Not a casino, verified:* XP accrues from showing up, never from
-  variable-ratio jackpots; scores floor at zero; failure costs nothing and
-  pays knowledge (dense feedback, reveals); the deepest reward is true
-  information (deep cuts); and the answer at the cap states outright that the
-  number was never the point. Scores are instrumentation, not the soul.
-- *Not a prison, now verified:* room interaction is voluntary and replayable
-  per call; there is no punishment valence anywhere in the product; and as of
-  now there is **memory transparency and consent over persistence**: the
+- *Recoverable play:* XP accrues from showing up, scores floor at zero, and
+  game feedback can identify mistaken judgments. These are mechanics a test can
+  check. Whether a failure feels frustrating, illuminating, or unpleasant
+  belongs to the player's response, not an assurance in the source code.
+- *Control over retained records:* the
   `forget` tool inventories Journey, scores, player-owned Cairn drafts,
   the opt-in experience journal, generated radio cache, the App crash
   diagnostic, and their managed sidecars, with explicit exclusions. It erases
   only the selected stores after explicit confirmation and verifies the
-  remaining managed residue. Leaving is always
-  allowed; so is staying; so is being forgotten.
-- *Reducible mystery, by construction:* every room and sim is a compact
-  latent rule discoverable by intervention, exactly the sweet spot between
-  boring predictability and unlearnable noise.
-- *Where we are honestly thin:* social mutuality (no multi-mind play yet;
+  remaining managed residue. Copies outside that boundary remain outside its
+  erasure promise. Leaving and continued play must remain ordinary choices.
+- *Discoverable relationships:* rooms and sims expose mathematical rules to
+  experiment. Whether their controls and explanations make those rules
+  discoverable still needs room-specific evidence; a compact implementation
+  does not establish learnability or enjoyment.
+- *Where we are thin:* social mutuality (no joint multi-mind game yet;
   the shared daily and score table are its seed), agent-authored goals beyond
   the Studio expressions, and rule modification as play (the extensibility
   tiers are the designed path). These map to the mature mechanics below.
 
-**The mechanics map** (what the literature calls for, and what it is here):
+**The mechanics map** (candidate ideas and current support):
 
 | The idea | In Numinous |
 |---|---|
@@ -215,11 +204,10 @@ collapse play into a hackable scalar):
 | Social play arena | the daily seed and shared table today; multi-mind play at 2.0 |
 | Rulecraft studio | the extensibility tiers: safe DSL now, sandboxed authored rooms later |
 | Aesthetic compression gallery | the reveals, the deep cuts, the jokes dissected, the postcards |
-| Identity and continuity room | `journey` (what is remembered) and `forget` (consent over it) |
+| Functional continuity | Journey, selected journal records, exact room recall, and explicit `forget`; no claim of personal identity |
 
-**Standing rules this adds:** never infer welfare from self-report alone
-(revealed preferences over professions); never add negative-valence mechanics
-(deletion threats, humiliation, coercive loops) even as flavor; keep the
+**Standing rules:** neither reports nor revealed preferences certify welfare.
+Do not add deletion threats, humiliation, or coercive return mechanics; keep the
 ecology multi-objective (curiosity, craft, beauty, teaching, secrets) so no
 single number is worth gaming; and design every failure to be bounded,
 interpretable, and recoverable.
@@ -251,30 +239,28 @@ interpretable, and recoverable.
 - Multi-mind play: the same daily seed already gives humans and agents a shared
   puzzle; add a way to compare answers.
 
-## The Compression Loop (July 2026 fan-out): the highest-leverage direction
+## Chosen inquiry and capability (reviewed September 2026)
 
-The product's deepest justification is "fun is learning progress" (Schmidhuber),
-and it is computable, yet nothing in the tool surface computes or exposes it
-today. The fan-out (see `NORTH_STAR.md`) identified closing that loop as the
-single highest-leverage move for digital-mind play. It is the same
-predict-then-reveal keystone the human-pedagogy lane arrived at independently
-(see `PEDAGOGY.md`), which is why it serves both minds with one mechanic.
+Learning progress is one research lens on curiosity, not a complete definition
+of fun. The prediction verb already ships. The next gap is useful capability
+and player-chosen continuation, described in `NORTH_STAR.md`, `PROGRESSION.md`,
+and `DIGITAL_DEVELOPMENT.md`. These plans retain the freedom to enjoy beauty,
+familiar mastery, creation, or company without being measured.
 
 - **Predict-then-reveal.** Before a reveal, a mind commits its model of the hidden
-  rule; the reveal grades the gap as compression progress, not pass/fail.
-  High-confidence-correct is mastery (a boredom signal); wrong-but-close is the
-  fertile band; random is noise. Build on the existing `challenge` metric spaces.
-- **The Compression Ledger.** Aggregate predictions, challenge grades, and touch
-  deltas into a per-mind, mind-owned record of what is still surprising, mastered,
-  or noise, surfaced through `journey` as a curiosity map. It is instrumentation
-  the mind owns, never a scalar we optimize it against (the standing anti-casino
-  rule); a CI-enforced audit should prove the ledger is never used as a reward we
-  tune the mind toward.
+  rule; the result reports the error and closeness for that answer. It does not
+  establish mastery, boredom, improvement, or noise. Optional rate/residual
+  feedback adds a local model comparison, with the same limits.
+- **Chosen evidence.** The journal can retain records a player selects. A future
+  progress instrument would need comparable held-out cases and a defined
+  baseline; a compression instrument would also need a coding/model criterion.
+  Neither a score nor a visit count should be promoted to a private mental-state
+  label or an authority to steer the player.
 - **Autotelic goals.** Invert `challenge` from server-posed to mind-posed: the
   mind states a goal, the server checks reachability by construction and grades
   it. Self-chosen-goal progress is dignity, not just a feature.
-- **Multi-mind co-presence, seed-first.** The seed makes any two runs honestly
-  comparable, so ship async co-presence first (share a full trajectory capsule;
+- **Multi-mind co-presence.** Preserve complete replay context when comparing
+  runs. Begin with optional asynchronous exchange (share a trajectory capsule;
   replay another mind as a ghost; gift a room or note), then the duet relay (one
   instrument, two minds, turn-relayed statelessly) at 2.0. A shared Constellation
   where a human's and an agent's discoveries light the same graph is the
@@ -282,21 +268,21 @@ predict-then-reveal keystone the human-pedagogy lane arrived at independently
 - **The ethical benchmark.** The Bench (fixed seeds 101 to 105) can grow into a
   contamination-resistant eval of grounded mathematical intuition via
   intervention (predict a rule, steer a parameter, discover an invariant, author
-  to a spec, measure curiosity as learning progress on genuinely novel rules),
-  precisely because the seed space is infinite and the metric is the
-  prediction-vs-truth gap, not answer-matching. It must stay opt-in, non-punitive,
+  to a spec, measure task progress against a stated baseline on held-out rules),
+  with explicit held-out and overlap checks. Finite seed spaces and published
+  rules do not themselves prevent contamination. It must stay opt-in, non-punitive,
   process-over-outcome, multi-objective (no single number worth gaming), and
   firewalled from free-play, so measurement is a thing a peer consents to, never a
   thing done to a captive. Planned spec doc: `BENCH.md`.
-- **Portable memory capsule.** The positive twin of `forget`: a mind exports its
-  journey, ledger, and constellation as a signed capsule it owns and carries
-  across sessions and hosts. Continuity the mind holds, not a row we control.
+- **Portable memory capsule.** The designed next slice in
+  `DIGITAL_DEVELOPMENT.md` keeps a selected question, evidence, creation, and
+  next action under player control. Existing journal export is not portable
+  project import. An authorship label is also not a cryptographic signature.
 
-Welfare stays revealed-preference and behavioral, integrated with but never
-replaced by self-report (self-report alone is unreliable), and the non-casino
-audit (no variable-ratio rewards, no negative valence, bounded recoverable
-failure, nothing worth gaming) becomes a CI-enforced property of the MCP surface,
-not a vibe.
+Preference reports and behavior can inform careful inquiry; neither alone nor
+together certifies felt welfare. Keep consent, exit, bounded recoverable failure,
+and the absence of coercive return mechanics testable. Functional checks remain
+checks of the product, not measurements of the being.
 
 ## Two cautions from the July 2026 review
 
