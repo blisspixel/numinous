@@ -14,6 +14,14 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   chaos from energy or orbit size. A single scale preserves orbit shapes on
   pixel and text surfaces. Discovery text and the citation describe the
   Hamiltonian model consistently.
+- Fresh Studio formulas now share one explicit `a` across drawing, live sound,
+  postcards, saved capsules, and MIDI. Up/Down tune by 0.25 and Home restores 1;
+  controller Up/Down and Reset use the same actions. Imported values remain
+  exact, deliberate edits retain their window and parent, and unchanged or
+  repeated input does not retrigger audio. Recipes restore the default window
+  and `a` and blend only across matching numerical settings. Auto no longer
+  claims musical phrase alignment from its presentation clock. Exact parameter values, paused
+  preview guidance, and effective controller hints fit both supported App sizes.
 - Van der Pol uses RK4 with a shared 100-unit observation horizon and coordinate
   frame for its selected and reference paths. It recognizes the exact resting
   equilibrium, discloses coupled control of damping and initial position, and

@@ -2149,6 +2149,80 @@ fn accelerated_mandelbrot_uses_the_core_camera_and_shared_chrome() {
 }
 
 #[test]
+fn phase_portrait_curves_survive_composed_room_chrome_at_both_window_sizes() {
+    let mut app = headless("numinous_app_test_phase_portrait_composition.txt");
+    app.close_menu();
+    app.room_card = 0;
+    app.show_info = false;
+    app.input_mode = InputMode::KeyboardMouse;
+    // These rooms draw model states rather than a clicked-cell marker. The
+    // hand cases include an escaping orbit, strong nonlinear damping, and
+    // Duffing g=0.9, whose velocity extrema previously met the App chrome.
+    for (id, phase, hand) in [
+        ("henon-heiles", 0.0, None),
+        ("henon-heiles", 0.0, Some((1.0, 0.5))),
+        ("van-der-pol", 1.0, None),
+        ("van-der-pol", 0.0, Some((1.0, 0.5))),
+        ("duffing", 0.0, None),
+        ("duffing", 0.0, Some((1.0, 0.5))),
+    ] {
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == id)
+            .expect("room");
+        app.t = phase;
+        app.inputs = hand
+            .map(|(x, y)| numinous_core::RoomInput::PointerDown { x, y, t: phase })
+            .into_iter()
+            .collect();
+        let room = &app.rooms[app.current];
+        for (width, height) in [(900, 700), (360, 240)] {
+            let background = numinous_core::Raster::with_accent(width, height, room.meta().accent);
+            let mut source = background.clone();
+            room.render_input(&mut source, app.t, &app.inputs);
+            assert!(
+                source.lit_count() > height / 2,
+                "{id}, hand={hand:?}: the fitted source must contain a visible trajectory"
+            );
+            let mut composed = source.clone();
+            crate::input_feedback::draw(&mut composed, &app.inputs);
+            app.draw_room_interface(&mut composed, room.as_ref(), width, height);
+            crate::hud::draw_audio_state(&mut composed, &app.audio_state(), width);
+            crate::hud::draw_spectrum_meter(
+                &mut composed,
+                &[0.15, 0.35, 0.7, 0.45, 0.25, 0.1, 0.05],
+                width,
+                height,
+            );
+            let source = source.to_rgba();
+            let composed = composed.to_rgba();
+            let background = background.to_rgba();
+            assert_ne!(
+                source, composed,
+                "the real App chrome must actually be drawn"
+            );
+            for (index, ((source_pixel, composed_pixel), background_pixel)) in source
+                .chunks_exact(4)
+                .zip(composed.chunks_exact(4))
+                .zip(background.chunks_exact(4))
+                .enumerate()
+            {
+                if source_pixel != background_pixel {
+                    assert_eq!(
+                        composed_pixel,
+                        source_pixel,
+                        "{id}, hand={hand:?}, {width}x{height}: chrome changed curve pixel ({}, {})",
+                        index % width,
+                        index / width,
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn elapsed_simulation_time_is_measured_and_bounded() {
     let ordinary = bounded_tick_seconds(Duration::from_millis(16));
     assert!((ordinary - 0.016).abs() < 1e-9);
@@ -3088,7 +3162,7 @@ fn returning_to_an_untouched_capsule_preserves_identity_and_preview() {
         assert_eq!(app.studio_panel.opened_paused(), !confirmed);
         assert_eq!(
             app.studio_panel
-                .current_creation(app.t)
+                .current_creation()
                 .expect("untouched capsule"),
             creation,
             "entering Studio is not a remix or a metadata edit"
@@ -3117,7 +3191,7 @@ fn returning_to_an_edited_capsule_keeps_its_draft_and_settings() {
     assert!(!app.studio_panel.opened_paused());
     assert_eq!(app.studio_panel.entry_sound(), Some(creation.to_melody(32)));
     assert_eq!(
-        app.studio_panel.current_creation(app.t),
+        app.studio_panel.current_creation(),
         Err(crate::studio_panel::ShareRefusal::UnparsedFormula)
     );
 
@@ -3125,10 +3199,7 @@ fn returning_to_an_edited_capsule_keeps_its_draft_and_settings() {
         app.studio_panel.push_text("0"),
         Some(creation.to_melody(32))
     );
-    let edited = app
-        .studio_panel
-        .current_creation(app.t)
-        .expect("repaired draft");
+    let edited = app.studio_panel.current_creation().expect("repaired draft");
     assert_eq!(edited.source(), "sin(a*x)+0");
     assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
     assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
@@ -3601,6 +3672,168 @@ fn the_naming_step_edits_signs_and_slugs_the_share() {
 }
 
 #[test]
+fn studio_parameter_keys_and_controller_buttons_share_one_edit_path() {
+    use crate::gamepad::Command;
+    for controller in [false, true] {
+        let mut app = headless(&format!(
+            "numinous_app_test_studio_parameter_{controller}.txt"
+        ));
+        app.enter_studio();
+        let original = app.studio_panel.current_creation().expect("initial");
+        for (key, command, expected) in [
+            (NamedKey::ArrowUp, Command::Up, 1.25),
+            (NamedKey::ArrowDown, Command::Down, 1.0),
+            (NamedKey::ArrowDown, Command::Down, 0.75),
+            (NamedKey::Home, Command::Reset, 1.0),
+            (NamedKey::Home, Command::Reset, 1.0),
+        ] {
+            let previous = app.studio_panel.current_creation().expect("before").a();
+            // Sound submission selects Studio before it looks for a device.
+            // A no-op must not make even that submission in a headless App.
+            app.audio_program = AudioProgram::RoomScore;
+            if controller {
+                app.handle_gamepad_command(command);
+            } else {
+                assert!(app.handle_studio_parameter_key(&Key::Named(key), false));
+            }
+            let creation = app.studio_panel.current_creation().expect("edited");
+            assert_eq!(creation.a(), expected);
+            assert_eq!(creation.source(), original.source());
+            assert_eq!(
+                (creation.xmin(), creation.xmax()),
+                (original.xmin(), original.xmax())
+            );
+            assert_eq!(
+                app.studio_panel.current_sound(),
+                Some(creation.to_melody(32))
+            );
+            assert_eq!(
+                app.audio_program,
+                if previous == expected {
+                    AudioProgram::RoomScore
+                } else {
+                    AudioProgram::Studio
+                }
+            );
+        }
+    }
+}
+
+#[test]
+fn studio_parameter_repeat_and_other_panels_cannot_change_a_paused_import() {
+    use crate::gamepad::Command;
+    let saved = numinous_core::StudioCreation::new("sin(a*x)+x/3", -2.0, 3.0, 1.0)
+        .expect("saved")
+        .with_title("A kept experiment")
+        .expect("title");
+    let mut app = headless("numinous_app_test_studio_parameter_ownership.txt");
+    app.open_studio_creation(&saved);
+    assert!(app.handle_studio_parameter_key(&Key::Named(NamedKey::ArrowUp), true));
+    assert!(app.handle_studio_parameter_key(&Key::Named(NamedKey::Home), false));
+    assert!(app.studio_panel.opened_paused());
+    assert_eq!(app.studio_panel.current_creation().expect("no edit"), saved);
+    assert!(!app.handle_studio_parameter_key(&Key::Character("a".into()), false));
+
+    app.begin_share_naming();
+    for command in [Command::Up, Command::Down, Command::Reset] {
+        app.handle_gamepad_command(command);
+        assert!(!app.handle_studio_parameter_key(&Key::Named(NamedKey::ArrowUp), false));
+        assert_eq!(
+            app.studio_panel
+                .current_creation()
+                .expect("naming owns input"),
+            saved
+        );
+    }
+    app.share_naming = None;
+    let absent =
+        std::env::temp_dir().join(format!("numinous-parameter-gallery-{}", std::process::id()));
+    app.gallery = Some(crate::gallery::GalleryPanel::open(&absent));
+    app.handle_gamepad_command(Command::Up);
+    assert!(!app.handle_studio_parameter_key(&Key::Named(NamedKey::ArrowUp), false));
+    assert_eq!(
+        app.studio_panel
+            .current_creation()
+            .expect("gallery owns input"),
+        saved
+    );
+    app.gallery = None;
+    app.exit_studio();
+    assert!(!app.handle_studio_parameter_key(&Key::Named(NamedKey::ArrowUp), false));
+    app.enter_studio();
+    assert!(app.studio_panel.opened_paused());
+    assert_eq!(
+        app.studio_panel.current_creation().expect("returned"),
+        saved
+    );
+
+    app.handle_gamepad_command(Command::Up);
+    let remix = app.studio_panel.current_creation().expect("remix");
+    assert_eq!(remix.a(), 1.25);
+    assert_eq!(remix.descends(), Some(saved.to_link().as_str()));
+    assert!(!app.studio_panel.opened_paused());
+    app.exit_studio();
+    app.t = 0.75;
+    app.enter_studio();
+    assert_eq!(
+        app.studio_panel.current_creation().expect("returned remix"),
+        remix
+    );
+}
+
+#[test]
+fn fresh_studio_picture_live_voice_and_shared_midi_ignore_gallery_phase() {
+    let parent = std::env::temp_dir().join(format!(
+        "numinous-studio-parameter-parity-{}",
+        std::process::id()
+    ));
+    for (index, source) in ["sin(a*x)+x/3", "x(t)=cos(t); y(t)=sin(a*t)+t/3"]
+        .into_iter()
+        .enumerate()
+    {
+        let mut app = headless(&format!("numinous_app_test_studio_phase_{index}.txt"));
+        app.studio_panel = crate::studio_panel::StudioPanel::new(source).expect("formula");
+        app.enter_studio();
+        app.studio_panel.toggle_help();
+        for steps in [0, 1, -3] {
+            app.studio_panel.adjust_parameter(steps);
+            let creation = app.studio_panel.current_creation().expect("creation");
+            let voice = app.studio_panel.current_sound().expect("voice");
+            assert_eq!(voice, creation.to_melody(32));
+            let mut baseline = numinous_core::Raster::new(360, 240);
+            app.draw_studio(&mut baseline, 360, 240);
+            for phase in [0.0, 0.25, 0.75, 1.0, f64::NAN] {
+                app.t = phase;
+                assert!(app.studio_panel.tick_auto(1.0, phase).is_none());
+                app.advance_presentation_time(1.0);
+                let mut actual = numinous_core::Raster::new(360, 240);
+                app.draw_studio(&mut actual, 360, 240);
+                assert_eq!(actual.to_rgba(), baseline.to_rgba());
+                assert_eq!(
+                    app.studio_panel
+                        .current_creation()
+                        .expect("stable creation"),
+                    creation
+                );
+                assert_eq!(app.studio_panel.current_sound(), Some(voice.clone()));
+            }
+            let dir = app
+                .share_studio_creation_to(&parent, None)
+                .expect("share I/O")
+                .expect("valid creation");
+            let saved = numinous_core::StudioCreation::from_num_path(&dir.join("creation.num"))
+                .expect("reopened");
+            assert_eq!(saved, creation);
+            assert_eq!(
+                std::fs::read(dir.join("melody.mid")).expect("MIDI"),
+                voice.midi()
+            );
+        }
+    }
+    let _ = std::fs::remove_dir_all(&parent);
+}
+
+#[test]
 fn one_action_shares_the_studio_bundle_or_refuses_with_a_reason() {
     let app = headless("numinous_app_test_studio_share.txt");
     let parent =
@@ -3617,7 +3850,7 @@ fn one_action_shares_the_studio_bundle_or_refuses_with_a_reason() {
     assert_eq!(
         reopened,
         app.studio_panel
-            .current_creation(app.t)
+            .current_creation()
             .expect("the panel's own creation"),
         "the bundle reopens to exactly the shared state"
     );
@@ -3630,6 +3863,10 @@ fn one_action_shares_the_studio_bundle_or_refuses_with_a_reason() {
             .to_melody(numinous_core::DEFAULT_MELODY_NOTES)
             .midi(),
         "the shared MIDI is the same voice the Studio sings"
+    );
+    assert_eq!(
+        midi,
+        app.studio_panel.current_sound().expect("live voice").midi()
     );
     let readme = std::fs::read_to_string(dir.join("README.share.txt")).expect("bundle readme");
     assert!(

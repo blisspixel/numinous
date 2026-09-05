@@ -520,9 +520,11 @@ pub fn studio_controls_with_controller(mode: InputMode, copy: ControllerCopy) ->
     match mode {
         InputMode::KeyboardMouse => "TYPE  F1 HELP  F2 RANDOM  F3 AUTO  TAB/ESC CLOSE".to_string(),
         InputMode::Controller => format!(
-            "KEYBOARD TYPES   {} CLOSES   {} HELP",
+            "{} A+  {} A-  {} A=1  {} MENU  KEYBOARD TYPES",
+            copy.action_token(ControllerAction::Up),
+            copy.action_token(ControllerAction::Down),
+            copy.token(Control::Reset),
             copy.token(Control::Back),
-            copy.token(Control::Menu)
         ),
     }
 }
@@ -870,6 +872,26 @@ mod tests {
         assert_eq!(
             show_controls_with_controller(InputMode::Controller, copy),
             "A EXIT SHOW   B PAUSE"
+        );
+    }
+
+    #[test]
+    fn studio_copy_names_effective_parameter_keys_and_the_back_menu() {
+        let mut copy = ControllerCopy::empty(ControllerFace::PlayStation);
+        copy.bind(ControllerAction::Up, ControllerButton::North);
+        copy.bind(ControllerAction::Down, ControllerButton::West);
+        copy.bind(ControllerAction::Reset, ControllerButton::East);
+        copy.bind(ControllerAction::Back, ControllerButton::South);
+        assert_eq!(
+            studio_controls_with_controller(InputMode::Controller, copy),
+            "TRIANGLE A+  SQUARE A-  CIRCLE A=1  CROSS MENU  KEYBOARD TYPES"
+        );
+        assert_eq!(
+            studio_controls_with_controller(
+                InputMode::Controller,
+                ControllerCopy::empty(ControllerFace::Generic),
+            ),
+            "UNBOUND A+  UNBOUND A-  UNBOUND A=1  UNBOUND MENU  KEYBOARD TYPES"
         );
     }
 
