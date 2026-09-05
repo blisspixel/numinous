@@ -2,12 +2,14 @@
 
 How Numinous feels, moment to moment, and the rules that keep it feeling that way.
 
-**Implementation boundary, 2026-07-13:** this is the experience specification,
-not a claim that every element below ships in 0.4.0-alpha.18. The native app,
+**Implementation boundary, 2026-09-05:** this is the experience specification,
+not a claim that every element below ships in 0.4.0-alpha.19. The native app,
 CLI, MCP face, catalog, Show, deterministic room voices, four Visual Eras,
-Studio expression surface, and PNG postcard export are built. The full theme
-system, loop export, native deep-link reopening, creator platform, and complete
-audio architecture remain roadmap work. `ROADMAP.md` is the status authority.
+Studio expression surface, PNG postcards, short APNG loops, exact file/link
+reopening through App arguments and drops, and the local Gallery are built.
+The full theme system, longer video export, operating-system URL registration,
+community creator platform, and complete audio architecture remain roadmap
+work. `ROADMAP.md` is the status authority.
 
 ## The design pillars (and how to obey them)
 
@@ -128,9 +130,11 @@ The creator tier, and the thing that makes Numinous a tool people *live in*, not
 - **Live-code sight and sound at once.** You write terse **patterns** (see `MUSIC.md`, Engine A3) that drive geometry and audio from the *same* expression. Change a number, the visual and the music both shift, instantly, no recompile. The feedback loop is sub-second, which is what makes it feel like an instrument and not an IDE.
 - **A ladder, not a cliff.** The surface is a friendly expression box ("type `sin(x)` and watch it sing") that a curious newcomer can enjoy in ten seconds. Underneath, it goes as deep as raw WGSL shaders and full pattern algebra for people who want it. Same tool, radically different ceilings.
 - **Everything should become shareable and reproducible.** A current Studio
-  expression can be saved as a bounded `.num` file and matching link, then
-  reopened through the CLI. Exact app reopening, loop export, remix, and
-  promotion into community rooms are later creator milestones.
+  graph or paired path can be saved as a bounded `.num` file and matching link,
+  then reopened exactly through all three faces. The App opens a paused preview
+  and can share a postcard and MIDI; Gallery and fork operations retain remix
+  lineage. Longer video export and promotion into community rooms remain later
+  creator milestones.
 - **The point of it all:** this is where "math is fun, non-ironically, seriously" stops being a slogan and becomes something a person *did with their own hands*. Consuming beauty is good; making it is the conversion that sticks.
 
 The current Studio foundation is the bounded expression engine used by the app,

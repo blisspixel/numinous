@@ -1,4 +1,4 @@
-# Numinous
+# <img src="assets/logo.png" width="40" height="40" alt=""> Numinous
 
 [![CI](https://github.com/blisspixel/numinous/actions/workflows/ci.yml/badge.svg)](https://github.com/blisspixel/numinous/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -52,16 +52,22 @@ manual is [`docs/PLAYING.md`](docs/PLAYING.md).
 These frames are the current App, composed through the same HUD and Cabinet
 the live window uses.
 
+![Cabinet](assets/screens/menu.png)
+
+**Cabinet.** Choose a way in.
+
 | | |
 |---|---|
-| ![Times Tables](assets/screens/times-tables.png) | ![Cabinet](assets/screens/menu.png) |
-| **Times Tables.** Turn the dial. | **Cabinet.** Choose a way in. |
-| ![Mandelbrot](assets/screens/mandelbrot.png) | ![Golden Angle](assets/screens/golden-angle.png) |
-| **Mandelbrot.** Dive the set. | **Golden Angle.** Pack a sunflower. |
-| ![Double Pendulum](assets/screens/double-pendulum.png) | ![Formula Jam](assets/screens/studio.png) |
-| **Double Pendulum.** Fling the arms. | **Formula Jam.** Type math, hear it. |
+| ![Times Tables](assets/screens/times-tables.png) | ![Mandelbrot](assets/screens/mandelbrot.png) |
+| **Times Tables.** Turn the dial. | **Mandelbrot.** Dive the set. |
+| ![Golden Angle](assets/screens/golden-angle.png) | ![Double Pendulum](assets/screens/double-pendulum.png) |
+| **Golden Angle.** Pack a sunflower. | **Double Pendulum.** Fling the arms. |
 | ![Kepler Areas](assets/screens/kepler-laws.png) | ![Lissajous](assets/screens/lissajous.png) |
 | **Kepler Areas.** Equal times, equal areas. | **Lissajous.** Tune a relationship. |
+
+![Formula Jam](assets/screens/studio.png)
+
+**Formula Jam.** Make a relationship of your own, then share it.
 
 ## What you get
 
@@ -87,11 +93,13 @@ Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 Make something you can keep: the optional
 [Returning home experiments](docs/experiments/returning-home.md) offer three
 Studio paths to investigate and remix. The mathematical review and its limits
-live in [`docs/MATHEMATICS.md`](docs/MATHEMATICS.md).
+live in [`docs/MATHEMATICS.md`](docs/MATHEMATICS.md). The
+[Shape and scale experiment](docs/experiments/shape-and-scale.md) starts with
+a circle you can stretch, name, and give someone else.
 
 ## Status
 
-**0.4.0-alpha.18** is playable: 355 catalog rooms, games, Journey, Studio,
+**0.4.0-alpha.19** is playable: 355 catalog rooms, games, Journey, Studio,
 controllers, and Watch Agent. The **0.2** Flagship Proof and **0.3** Tactile
 Alpha agent-and-machine exits are met and CI-locked. **0.4 Understanding Alpha
 is active, not complete.**

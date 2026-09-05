@@ -5,14 +5,14 @@ screenshot-worthy.** If you pause at a random instant and it is not beautiful,
 that is a bug. This document owns both the current rendering boundary and the
 target visual system.
 
-**Implementation boundary:** 0.4.0-alpha.18 renders every room
+**Implementation boundary:** 0.4.0-alpha.19 renders every room
 deterministically through CPU `Surface` implementations and presents app frames
 with `softbuffer`. Mandelbrot and Julia alone have targeted `wgpu` paths. Four
 CPU-styled Eras ship: phosphor, 8-bit, vector, and modern. PNG room renders,
 gallery sheets, app postcards, and short-loop APNG bundles ship. HDR, bloom,
 feedback persistence, a universal GPU pipeline, 16-bit and blueprint Eras,
-audio voice swaps, longer video export, and native link reopening are targets,
-not current evidence.
+audio voice swaps, longer video export, and operating-system URL registration
+are targets, not current evidence.
 
 ## Philosophy
 
@@ -68,6 +68,11 @@ naturally. A resolution-aware sample count preserves negative space in ASCII
 without changing the 240-point mathematical circle used by full-size raster
 frames. Its in-scene dial draws explicit ticks and a bright current marker.
 
+The README's deterministic Mandelbrot plate uses the CPU glyph-density image,
+whose filled interior differs from the dark-interior GPU treatment described
+above. That plate establishes the CPU appearance; it is not evidence of GPU
+presentation or display pacing.
+
 The target systemic GPU post-stack has five stages:
 
 1. **Compute pass:** run only measured simulations or fields that benefit from
@@ -78,6 +83,32 @@ The target systemic GPU post-stack has five stages:
    per-face duplication without erasing room meaning.
 5. **Capture tap:** export deterministic stills and, later, bounded loops from a
    defined pre-grade or post-grade surface.
+
+## The identity mark
+
+The current mark is a cyan circle with one open horizontal band. A broad gap
+survives at small sizes; the circle connects it to the rooms while the existing
+cartridge wordmark remains the name. Keep the mark simple, without decorative
+glyphs, hidden letters, or extra orbiting elements.
+
+`assets/logo.svg` is the vector source. Its cyan `#4effff` matches the Cabinet's
+highlight, on the shared `#0a0b0f` stage. Windows, macOS, and Linux use the PNG,
+ICO, and ICNS assets derived from that source. The transparent corners and
+dark backing preserve the silhouette on either light or dark desktops.
+
+Regenerate from the repository root with Node.js installed:
+
+```text
+npm install --prefix .agent/logo-tools --save-exact @resvg/resvg-js@2.6.2
+node scripts/render-logo.mjs
+node scripts/render-logo.mjs --check
+```
+
+The package stays in the ignored working directory. ICO contains separate
+16, 20, 24, 32, 48, 64, 128, and 256 pixel renders; ICNS carries the 256 pixel
+PNG. Check the smallest sizes, monochrome silhouette, and the mark beside
+the cartridge wordmark when changing it. These files do not add a runtime
+renderer or font dependency.
 
 ## Target technique toolbox
 
@@ -136,7 +167,7 @@ HDR modern pass, and per-Era audio voices are planned. Era progression must not
 be described as complete until those visual and sonic variants are both built
 and tested.
 
-## Per-wing visual identity (so 354 rooms feel varied but unified)
+## Per-wing visual identity (so 355 rooms feel varied but unified)
 
 The shared pipeline guarantees coherence; these keep the wings distinct:
 - **Emergence:** dense fields and grids, particle clouds, feedback trails. Cellular, alive.
@@ -151,9 +182,11 @@ The shared pipeline guarantees coherence; these keep the wings distinct:
 - **Shipped:** deterministic CPU PNG renders, full catalog galleries and contact
   sheets, and app postcards of the live room state.
 - **Separate shipped artifacts:** Studio `.num` files and matching links round
-  trip through the CLI, but do not reopen in the app yet.
+  trip through all three faces. The App opens files and links through launch
+  arguments and file drops, preserving the saved numerical state in a paused
+  preview. Shared bundles also carry the postcard and melody MIDI.
 - **Planned:** HDR still capture after that pipeline exists, longer video
-  export, and native application reopening for files and links.
+  export, and operating-system registration of the native URL scheme.
 
 ## Open questions
 1. Bloom approach: physically-based HDR bloom vs. a cheaper stylized glow, per performance budget on integrated GPUs.
