@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title description">
+  <title id="title">Numinous</title>
+  <desc id="description">A cyan circle with one open horizontal band, on a near-black stage.</desc>
+  <rect width="256" height="256" rx="32" fill="#0a0b0f"/>
+  <defs>
+    <clipPath id="circle">
+      <circle cx="128" cy="128" r="96"/>
+    </clipPath>
+  </defs>
+  <g fill="#4effff" clip-path="url(#circle)">
+    <path d="M32 32H224V144H32ZM32 176H224V224H32Z"/>
+  </g>
+</svg>

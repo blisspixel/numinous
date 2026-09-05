@@ -3665,7 +3665,7 @@ macro_rules! catalog_rooms {
                 title: "Kepler Areas",
                 wing: "Motion & Dynamics",
                 blurb: "Equal areas in equal times on an ellipse.",
-                accent: [100, 70, 30],
+                accent: [155, 108, 47],
             }
         ),
         (
@@ -4228,10 +4228,10 @@ pub(crate) fn construct_hidden_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::*;
 
-    // Alpha 18 corrects the Gray-Scott, Van der Pol, Duffing and Henon-Heiles
-    // blurbs. Only those four fields change from alpha 17; order, ids, titles,
-    // wings and accents stay fixed across all 355 entries.
-    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x4875_b8f0_6f48_a89f;
+    // The alpha 18 catalog with Kepler's amber raised for small interface text.
+    // Only that accent changes from alpha 18; order, ids, titles, wings and
+    // blurbs stay fixed across all 355 entries.
+    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x7c5e_b72a_88fc_f317;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {

@@ -186,7 +186,7 @@
     {"id": "kaplan-yorke", "marks": "#*", "closestPair": "#*", "normal": 41.2, "folded": 35.9, "dichromacy": "deuteranopia", "colorAlone": []},
     {"id": "kappa", "marks": "#*", "closestPair": "#*", "normal": 32.1, "folded": 29.2, "dichromacy": "deuteranopia", "colorAlone": []},
     {"id": "kaprekar", "marks": "#*", "closestPair": "#*", "normal": 43.7, "folded": 22.5, "dichromacy": "tritanopia", "colorAlone": ["#*"]},
-    {"id": "kepler-laws", "marks": "#*", "closestPair": "#*", "normal": 27.2, "folded": 25.1, "dichromacy": "protanopia", "colorAlone": []},
+    {"id": "kepler-laws", "marks": "#*", "closestPair": "#*", "normal": 36.8, "folded": 35.3, "dichromacy": "protanopia", "colorAlone": []},
     {"id": "kepler-loom", "marks": "#*", "closestPair": "#*", "normal": 22.2, "folded": 21.2, "dichromacy": "deuteranopia", "colorAlone": []},
     {"id": "klein-bottle", "marks": "#*", "closestPair": "#*", "normal": 31.6, "folded": 19.6, "dichromacy": "tritanopia", "colorAlone": []},
     {"id": "koch", "marks": "*", "closestPair": null, "colorAlone": []},

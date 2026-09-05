@@ -41,7 +41,7 @@ else
   # space is read literally, not as a git-quoted, octal-escaped string that then
   # fails to open and would either be skipped or misreported.
   mapfile -d '' -t files < <(git -c core.quotePath=false ls-files -z \
-    '*.rs' '*.md' '*.toml' '*.wgsl' '*.sh' '*.ps1' '*.yml' '*.yaml' '*.py' '*.txt' '*.json')
+    '*.rs' '*.md' '*.toml' '*.wgsl' '*.sh' '*.ps1' '*.yml' '*.yaml' '*.py' '*.txt' '*.json' '*.mjs' '*.svg')
   existing_files=()
   for file in "${files[@]}"; do
     if [ -f "$file" ]; then
@@ -97,4 +97,3 @@ if [ "$fail" -ne 0 ]; then
   echo "Fix the above before merging. House style: no emojis, no em-dashes, no AI/tool attribution."
 fi
 exit "$fail"
-
