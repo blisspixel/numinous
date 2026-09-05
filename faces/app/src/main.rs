@@ -1709,7 +1709,6 @@ impl App {
             self.gamepad.controller_copy(),
             width,
             height,
-            self.t,
         );
         if let Some(naming) = &self.share_naming {
             let scale = ((width as i32) / 450).clamp(1, 3);
@@ -2580,6 +2579,7 @@ impl ApplicationHandler for App {
                 } else if self.studio {
                     // Studio mode: the keyboard is a math keyboard.
                     match logical_key {
+                        key if self.handle_studio_parameter_key(&key, repeat) => {}
                         Key::Named(NamedKey::Escape) | Key::Named(NamedKey::Tab) => {
                             self.exit_studio();
                         }
@@ -3147,7 +3147,7 @@ impl ApplicationHandler for App {
                 let _ = run.munch.tick_bite_flash();
             }
             if self.studio {
-                // Auto advances only after dwell and a phrase-edge of gallery phase.
+                // Auto advances after dwell and a presentation-clock edge.
                 if let Some(spec) = self.studio_panel.tick_auto(elapsed, self.t) {
                     self.set_studio_recipe_sound(Some(spec));
                 }

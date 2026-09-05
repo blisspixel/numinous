@@ -11,8 +11,8 @@ deterministic continuous or scale-quantized melody mapping, an editable app
 panel, CLI and MCP operations, `.num` plus link round trips on all three faces,
 exact app reopen (launch argument, dropped file, or link), the F5
 Gallery wall with its remix tree, fork with recorded lineage on the App and
-the terminal, the F4 naming step with title, signature, and prose credit, and F6
-pitch-map selection. The same melody
+the terminal, the F4 naming step with title, signature, and prose credit, F6
+pitch-map selection, and explicit App parameter controls. The same melody
 can leave as WAV or as a Standard MIDI File type 0: CLI `numinous sing 'sin(t)' --out song.mid`,
 MCP `sing_expression` with `midi: true`, and the App F4 share as `melody.mid`.
 MIDI is 12-TET keys plus pitch bend of leftover cents over plus or minus two
@@ -34,11 +34,24 @@ undefined-function refusal. All three faces use a 32-note default melody. A
 face still owns transport parsing and presentation, but it does not resample or
 reinterpret the formula.
 
-Opened creations keep their window and `a` across edits, invalid-draft repair,
-pitch-map changes, and leave/return. A fresh unsaved App expression still has a
-known synchronization gap: the drawing can vary `a` with gallery phase while
-the live melody uses `a = 1`. A shared transport-aware update is needed before
-claiming that animated knob is one experiment across both senses.
+**Alpha 18 correction:** fresh App formulas use the same default `a = 1` as
+their melody. Up/Down change `a` by 0.25 per press; Home restores 1. Controller
+Up/Down and Reset use the same actions and honor the effective button bindings.
+The displayed parameter drives drawing, live melody, postcards, saved capsules,
+and MIDI. The gallery clock does not change it. A deliberate change starts the
+new melody; held keyboard repeats and unchanged resets do not retrigger it.
+Values must remain finite with `|a| <= 1e12`. A step beyond those bounds
+preserves the creation and its playback state.
+
+Opened creations retain their exact window and `a` across text edits,
+invalid-draft repair, pitch-map changes, and leave/return. A parameter edit
+changes only `a`, starts a remix, and preserves the window and parent link.
+Imported values are not rounded onto the quarter-step grid. Recipes intentionally
+restore the default window and `a`; a curve morph is used only when the old
+and new numerical settings match. Auto retains its approximate 21-second dwell
+and presentation-clock edge, with an audio crossfade. That clock does not
+establish a musical phrase boundary. Continuous parameter sweeping still needs
+a dedicated audio transport before it can be offered as one changing experiment.
 
 ## Shipped formula vocabulary
 
@@ -166,28 +179,28 @@ untouched creation keeps its preview and identity. The optional
 [Returning home](experiments/returning-home.md) capsules offer a repeating path,
 an ideal irrational contrast, and a deceptive shorter return to investigate.
 
-- **Random** chooses a complete expression from a curated, tested recipe bank.
-  It varies a seed and safe parameters, rather than assembling arbitrary syntax
-  that may be ugly, silent, or invalid. The chosen expression remains visible
-  and editable, so discovery can turn into understanding.
+- **Random** chooses a complete expression from a curated recipe bank and
+  restores the default window and parameter. The chosen expression remains
+  visible and editable, so discovery can turn into understanding.
 - **Auto** plays the recipe bank as a calm audiovisual set. Its target dwell is
-  about 21 seconds per expression, but changes wait for a musical phrase
-  boundary and morph or crossfade instead of cutting abruptly. Any edit pauses
-  Auto. A visible control resumes it.
+  about 21 seconds per expression, followed by a presentation-clock edge.
+  Changes request an audio crossfade and use a curve morph when the old and new
+  numerical settings permit it. Any edit pauses Auto; F3 resumes it. Musical
+  phrase alignment remains future transport work.
 - **Help** is a dismissible overlay, never permanent text over the artwork. It
-  teaches the small useful vocabulary through playable examples, remembers its
-  dismissed state, and returns on demand. Reduced-motion mode replaces spatial
-  morphs with a short accessible fade.
+  names the available formula vocabulary and controls and returns with F1.
+  Examples within the overlay and reduced-motion recipe transitions remain
+  design work.
 
 Random and Auto are not a substitute for authoring. They are an invitation into
 it: watch something compelling, inspect the expression that caused it, change
 one number, and make it yours.
 
-The current App implementation gives each curated Random or Auto recipe change
-one 600 ms transition. Curve values interpolate with smoothstep between the two
-exact expression trees while audio applies an equal-power crossfade for the
-same duration. Another recipe request waits until the morph finishes, preventing
-a rapid sequence from jumping to a target the player never saw. Typing cancels
+The current App implementation requests a 600 ms audio crossfade for each
+admitted Random or Auto recipe. When the old and new programs are graphs with
+matching windows and parameters, curve values interpolate with smoothstep
+between their exact expression trees for the same duration. An active visual
+morph must finish before another recipe request is admitted. Typing cancels
 the visual morph and interrupts the long audio fade from its current audible
 mix into the default fast response. Invalid intermediate text and literal spaces
 reuse the last-good sound, and equivalent edits preserve its playhead without

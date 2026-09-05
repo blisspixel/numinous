@@ -1,7 +1,5 @@
 //! App-local Studio input, parsing, audio, and drawing helpers.
 
-use std::f64::consts::TAU;
-
 use numinous_core::{
     Expr, MAX_STUDIO_EDITOR_CHARS, Raster, SoundSpec, StudioCreation, StudioKind, StudioProgram,
     StudioScale, Surface,
@@ -13,27 +11,59 @@ fn studio_scale(width: usize) -> i32 {
     (width as i32 / 450).clamp(1, 3)
 }
 
+/// Both Rust formats round-trip; choose the shorter one so tiny imports do
+/// not fill the readout with zeros or lose their significant digits.
+fn compact_number(value: f64) -> String {
+    let decimal = value.to_string();
+    let scientific = format!("{value:e}");
+    if scientific.len() < decimal.len() {
+        scientific
+    } else {
+        decimal
+    }
+}
+
+fn fit_studio_line(text: &str, columns: usize) -> String {
+    if text.chars().count() <= columns {
+        return text.to_string();
+    }
+    let kept: String = text.chars().take(columns.saturating_sub(3)).collect();
+    format!("{kept}{}", ".".repeat(columns.min(3)))
+}
+
+fn studio_footer_lines(
+    mode: InputMode,
+    copy: input_legend::ControllerCopy,
+    columns: usize,
+) -> Vec<String> {
+    if columns == 0 {
+        return Vec::new();
+    }
+    let text = input_legend::studio_controls_with_controller(mode, copy);
+    let wrapped = numinous_core::wrap_text(&text, columns);
+    let mut lines: Vec<_> = wrapped
+        .iter()
+        .take(2)
+        .map(|line| fit_studio_line(line, columns))
+        .collect();
+    if wrapped.len() > lines.len()
+        && let Some(last) = lines.last_mut()
+    {
+        *last = fit_studio_line(&format!("{last} ..."), columns);
+    }
+    lines
+}
+
 const DEFAULT_SOURCE: &str = "sin(a*x) + x/3";
 
-/// Target seconds a recipe holds before Auto looks for a phrase boundary.
+/// Target seconds a recipe holds before Auto checks a presentation-clock edge.
 pub(crate) const AUTO_DWELL_SECONDS: f64 = 21.0;
 /// Shared visual and audio duration for a curated recipe transition.
 pub(crate) const RECIPE_MORPH_SECONDS: f64 = 0.6;
-/// Phrase grid in gallery phase units: Auto advances only near these edges
-/// after the dwell, so recipe changes land on musical-ish boundaries.
-const AUTO_PHRASE_SLICES: f64 = 8.0;
-const AUTO_PHRASE_EDGE: f64 = 0.06;
-
-fn sound_for_expression(expr: &Expr, scale: StudioScale) -> SoundSpec {
-    numinous_core::to_melody_with_scale(
-        expr,
-        numinous_core::DEFAULT_STUDIO_XMIN,
-        numinous_core::DEFAULT_STUDIO_XMAX,
-        numinous_core::DEFAULT_MELODY_NOTES,
-        numinous_core::DEFAULT_STUDIO_PARAMETER,
-        scale,
-    )
-}
+/// Presentation-clock grid for recipe changes after the dwell. These edges
+/// belong to gallery phase and are independent of the melody's playhead.
+const AUTO_PHASE_SLICES: f64 = 8.0;
+const AUTO_PHASE_EDGE: f64 = 0.06;
 
 /// App-local alias of the shared curated bank (core owns the list).
 pub(crate) const STUDIO_RECIPES: &[&str] = numinous_core::STUDIO_RECIPES;
@@ -46,21 +76,21 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "ONE: SIN COS TAN EXP LN ABS SQRT FLOOR",
     "TWO: MOD(V,V) MIN(V,V) MAX(V,V)",
     "F2: RANDOM RECIPE FROM THE BANK",
-    "F3: AUTO SET  (~21S, PHRASE SAFE)",
+    "F3: AUTO SET  (~21S)",
     "F4: NAME + SHARE  .NUM + LINK + PNG + MIDI",
     "F5: GALLERY  THE SAVED WALL",
     "F6: CYCLE MUSICAL SCALE",
     "F1: TOGGLE THIS HELP",
     "TAB / ESC: CLOSE STUDIO",
-    "A IN A FORMULA IS TIME",
+    "UP/DOWN: TUNE A BY 0.25",
+    "HOME: RESET A TO 1",
     "EDITING PAUSES AUTO",
 ];
 
 /// A reopened `.num` creation whose saved window and knob survive editing.
 ///
-/// While this is present the panel draws the saved window instead of the
-/// ambient one and pins `a` to the saved value instead of the gallery phase,
-/// which is what makes a reopen exact rather than approximate. The complete
+/// While this is present the panel draws the saved window. Its parameter starts
+/// at the saved value and changes only when the player adjusts it. The complete
 /// capsule is kept, not just its numbers: an untouched reopen must re-share
 /// with its title, author, and lineage intact, and rebuilding from the
 /// window alone would silently strip them. It opens in a paused preview, the
@@ -107,6 +137,8 @@ pub struct StudioPanel {
     program: Option<StudioProgram>,
     error: Option<String>,
     scale: StudioScale,
+    /// Explicit parameter shared by the picture, melody, and portable creation.
+    parameter: f64,
     /// Recipe index for Random (advances each draw).
     recipe_cursor: u64,
     /// Auto set: calm recipe rotation while the player watches.
@@ -145,6 +177,7 @@ impl StudioPanel {
             program: None,
             error: None,
             scale: StudioScale::Continuous,
+            parameter: numinous_core::DEFAULT_STUDIO_PARAMETER,
             // Start at 1 so the first Random draw is not the default recipe.
             recipe_cursor: 1,
             auto_active: false,
@@ -177,6 +210,7 @@ impl StudioPanel {
         // clear the old program so it cannot draw under the new window.
         match creation.program() {
             Ok(program) => {
+                self.parameter = creation.a();
                 self.expr = Some(program.voice_expression().clone());
                 self.program = Some(program);
                 self.error = None;
@@ -295,12 +329,39 @@ impl StudioPanel {
         self.scale.name()
     }
 
+    /// Move the explicit parameter in quarter steps. An admitted change is
+    /// one edit: it pauses Auto, ends a morph, and returns one replacement voice.
+    pub fn adjust_parameter(&mut self, steps: i32) -> Option<SoundSpec> {
+        self.set_parameter(self.parameter + f64::from(steps) * 0.25)
+    }
+
+    /// Return the parameter to the shared Studio default without replacing the
+    /// formula, its window, or its lineage.
+    pub fn reset_parameter(&mut self) -> Option<SoundSpec> {
+        self.set_parameter(numinous_core::DEFAULT_STUDIO_PARAMETER)
+    }
+
+    fn set_parameter(&mut self, parameter: f64) -> Option<SoundSpec> {
+        if parameter == self.parameter {
+            return None;
+        }
+        // Core's capsule constructor owns numerical bounds. Use the last-good
+        // program so an unfinished text edit need not disable this control.
+        self.creation_for_parameter(parameter).ok()?;
+        self.pause_auto();
+        self.morph = None;
+        self.begin_remix();
+        self.parameter = parameter;
+        self.current_sound()
+    }
+
     /// Load the next curated recipe. Returns a melody when the recipe parses.
     /// Does not pause Auto (bank rotation is the Auto path too).
     pub fn load_random_recipe(&mut self) -> Option<SoundSpec> {
         if self.morph.is_some() {
             return None;
         }
+        let previous_numbers = self.window_and_knob();
         let previous = if self
             .program
             .as_ref()
@@ -318,23 +379,27 @@ impl StudioPanel {
         // and a still-pinned reopen drops without becoming a parent.
         self.opened = None;
         self.fork_of = None;
+        self.parameter = numinous_core::DEFAULT_STUDIO_PARAMETER;
         self.source = STUDIO_RECIPES[index].to_string();
         self.auto_elapsed = 0.0;
         let spec = self.reparse();
         if spec.is_some()
+            && previous_numbers == self.window_and_knob()
             && let Some(from) = previous
             && self.expr.as_ref().is_some_and(|current| current != &from)
         {
+            // A different window or parameter would redraw the old formula
+            // with the new numbers. Only blend curves from the same domain.
             self.morph = Some(CurveMorph { from, elapsed: 0.0 });
         }
         spec
     }
 
-    /// Advance Auto when dwell and phrase edge are both ready.
+    /// Advance Auto when dwell and a presentation-clock edge are both ready.
     ///
     /// `phase` is the app gallery phase in [0, 1). After [`AUTO_DWELL_SECONDS`],
-    /// the next recipe loads only near an 1/8-phase edge so changes do not cut
-    /// mid-gesture. Returns a new melody when a recipe advances.
+    /// the next recipe loads near a 1/8-phase edge. This is independent of the
+    /// voice transport. Returns a new melody for the App to crossfade.
     pub fn tick_auto(&mut self, dt: f64, phase: f64) -> Option<SoundSpec> {
         if !(dt.is_finite() && dt > 0.0) {
             return None;
@@ -353,8 +418,8 @@ impl StudioPanel {
         } else {
             0.0
         };
-        let edge = (phase * AUTO_PHRASE_SLICES).fract();
-        if edge > AUTO_PHRASE_EDGE && edge < (1.0 - AUTO_PHRASE_EDGE) {
+        let edge = (phase * AUTO_PHASE_SLICES).fract();
+        if edge > AUTO_PHASE_EDGE && edge < (1.0 - AUTO_PHASE_EDGE) {
             return None;
         }
         self.load_random_recipe()
@@ -425,22 +490,20 @@ impl StudioPanel {
 
     /// Render the last-good expression into the same deterministic Studio voice.
     ///
-    /// A reopened creation and its edits sing over the saved window at the
-    /// saved knob, using the current scale. Fresh Studio retains its ambient
-    /// voice defaults.
+    /// The picture, voice, and portable creation use one window and parameter.
+    /// A reopened creation supplies its saved window; a fresh formula uses the
+    /// shared defaults. Gallery playback never changes these numbers.
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
         let expr = self.expr.as_ref()?;
-        if let Some(opened) = &self.opened {
-            return Some(numinous_core::to_melody_with_scale(
-                expr,
-                opened.creation.xmin(),
-                opened.creation.xmax(),
-                numinous_core::DEFAULT_MELODY_NOTES,
-                opened.creation.a(),
-                self.scale,
-            ));
-        }
-        Some(sound_for_expression(expr, self.scale))
+        let (xmin, xmax, a) = self.window_and_knob();
+        Some(numinous_core::to_melody_with_scale(
+            expr,
+            xmin,
+            xmax,
+            numinous_core::DEFAULT_MELODY_NOTES,
+            a,
+            self.scale,
+        ))
     }
 
     /// Restore audio on entry without editing or confirming the creation.
@@ -462,39 +525,40 @@ impl StudioPanel {
         self.source.len()
     }
 
-    /// The window and knob the panel is presenting at moment `t`: a reopened
-    /// pin's own saved values, or the ambient default window with the knob as
-    /// time.
-    ///
-    /// One helper for the screen, the share, and the postcard, because three
-    /// copies of this expression is how the share stops being the curve on
-    /// screen. The moment is deliberately not normalized: the console can
-    /// park the phase at exactly 1.0, where a wrap would hand the share
-    /// `a = 0` while the screen draws `a = tau`. Only a non-finite moment
-    /// falls back, to zero, on every surface alike.
-    fn window_and_knob(&self, t: f64) -> (f64, f64, f64) {
+    /// One numerical state for the screen, sound, share, and postcard.
+    fn window_and_knob(&self) -> (f64, f64, f64) {
         match &self.opened {
             Some(opened) => (
                 opened.creation.xmin(),
                 opened.creation.xmax(),
-                opened.creation.a(),
+                self.parameter,
             ),
-            None => {
-                let a = if t.is_finite() { t * TAU } else { 0.0 };
-                (-TAU, TAU, a)
-            }
+            None => (
+                numinous_core::DEFAULT_STUDIO_XMIN,
+                numinous_core::DEFAULT_STUDIO_XMAX,
+                self.parameter,
+            ),
         }
+    }
+
+    fn creation_for_parameter(&self, a: f64) -> Result<StudioCreation, ShareRefusal> {
+        let program = self.program.as_ref().ok_or(ShareRefusal::UnparsedFormula)?;
+        let (xmin, xmax, _) = self.window_and_knob();
+        let (first, second) = program.sources();
+        match second {
+            Some(second) => StudioCreation::new_parametric(first, second, xmin, xmax, a),
+            None => StudioCreation::new(first, xmin, xmax, a),
+        }
+        .map(|creation| creation.with_scale(self.scale))
+        .map_err(|_| ShareRefusal::UnparsedFormula)
     }
 
     /// The current Studio state as a shareable creation, or `None` while the
     /// typed source does not parse: an unparsed edit has no curve to promise,
     /// so it is refused rather than shared as whatever last happened to work.
     ///
-    /// A reopened pin shares its saved window and knob. The ambient Studio
-    /// shares the default window with the knob frozen at this moment's phase,
-    /// so the shared creation is the exact curve on screen when the player
-    /// pressed the key, not a moving target.
-    pub(crate) fn current_creation(&self, t: f64) -> Result<StudioCreation, ShareRefusal> {
+    /// Numerical settings change only through an explicit edit or recipe draw.
+    pub(crate) fn current_creation(&self) -> Result<StudioCreation, ShareRefusal> {
         if self.error.is_some() || self.program.is_none() {
             return Err(ShareRefusal::UnparsedFormula);
         }
@@ -509,15 +573,7 @@ impl StudioPanel {
         {
             return Ok(opened.creation.clone());
         }
-        let (xmin, xmax, a) = self.window_and_knob(t);
-        let program = self.program.as_ref().expect("checked above");
-        let (first, second) = program.sources();
-        let mut creation = match second {
-            Some(second) => StudioCreation::new_parametric(first, second, xmin, xmax, a),
-            None => StudioCreation::new(first, xmin, xmax, a),
-        }
-        .map_err(|_| ShareRefusal::UnparsedFormula)?
-        .with_scale(self.scale);
+        let mut creation = self.creation_for_parameter(self.parameter)?;
         if let Some(parent) = &self.fork_of {
             // A fork shares its descent, and a lineage that cannot ride is
             // its own refusal rather than a claim that the formula broke.
@@ -544,7 +600,6 @@ impl StudioPanel {
     /// the corner; identity rides the pixels, not only the capsule.
     pub(crate) fn postcard_rgba(
         &self,
-        t: f64,
         size: usize,
         era: numinous_core::Era,
         title: Option<&str>,
@@ -569,7 +624,7 @@ impl StudioPanel {
             numinous_core::draw_text(&mut raster, &credit, 10, credit_y, scale, '#');
         }
         if let Some(program) = &self.program {
-            let (xmin, xmax, a) = self.window_and_knob(t);
+            let (xmin, xmax, a) = self.window_and_knob();
             // The postcard must match what creation.num reopens, so it
             // evaluates the settled expression directly rather than through
             // curve_value, whose recipe-morph blend is a 600 ms presentation
@@ -651,23 +706,66 @@ impl StudioPanel {
         text.chars().take(remaining + 1).count() <= remaining
     }
 
+    fn status_lines(&self, mode: InputMode, columns: usize) -> [(String, char); 2] {
+        let parameter = compact_number(self.parameter);
+        let paused = self.opened.as_ref().is_some_and(|opened| opened.paused);
+        let primary = if paused {
+            format!("A {parameter}  ENTER: PLAY")
+        } else {
+            format!("A {parameter}  SCALE {}", self.scale_name().to_uppercase())
+        };
+        let context = if let Some(error) = &self.error {
+            format!("DRAFT: {}", error.to_uppercase())
+        } else if self.opened.is_some() {
+            let (xmin, xmax, _) = self.window_and_knob();
+            let domain = if self
+                .program
+                .as_ref()
+                .is_some_and(|program| program.kind() == StudioKind::Parametric)
+            {
+                "T"
+            } else {
+                "X"
+            };
+            let state = if self.fork_of.is_some() {
+                "REMIX"
+            } else {
+                "REOPENED"
+            };
+            let window = format!(
+                "{state}  {domain} {} TO {}",
+                compact_number(xmin),
+                compact_number(xmax)
+            );
+            if paused {
+                format!("SCALE {}  {window}", self.scale_name().to_uppercase())
+            } else {
+                window
+            }
+        } else {
+            match mode {
+                InputMode::KeyboardMouse => "UP/DOWN: A +/-0.25  HOME: A=1  F6: SCALE".to_string(),
+                InputMode::Controller => "KEYBOARD F1: HELP  F6: SCALE".to_string(),
+            }
+        };
+        [
+            (fit_studio_line(&primary, columns), '*'),
+            (
+                fit_studio_line(&context, columns),
+                if self.error.is_some() { '-' } else { '*' },
+            ),
+        ]
+    }
+
     /// Draw the Studio panel into the raster.
     #[cfg(test)]
-    pub(crate) fn draw(
-        &self,
-        raster: &mut Raster,
-        mode: InputMode,
-        width: usize,
-        height: usize,
-        t: f64,
-    ) {
+    pub(crate) fn draw(&self, raster: &mut Raster, mode: InputMode, width: usize, height: usize) {
         self.draw_with_controller(
             raster,
             mode,
             crate::input_legend::ControllerFace::Generic.into(),
             width,
             height,
-            t,
         );
     }
 
@@ -678,11 +776,13 @@ impl StudioPanel {
         copy: crate::input_legend::ControllerCopy,
         width: usize,
         height: usize,
-        t: f64,
     ) {
         let width = width.min(raster.width());
         let height = height.min(raster.height());
         let scale = studio_scale(width);
+        let columns = width.saturating_sub(20) / (6 * scale as usize);
+        let footer = studio_footer_lines(mode, copy, columns);
+        let footer_height = (16 + 10 * footer.len().saturating_sub(1) as i32) * scale;
         let title = if self.auto_active() {
             "THE STUDIO  AUTO"
         } else {
@@ -704,55 +804,46 @@ impl StudioPanel {
             format!("Y = {}_", self.source.to_uppercase())
         };
         numinous_core::draw_text(raster, &typed, 10, 10 + 12 * scale, scale + 1, '#');
-        if let Some(error) = &self.error {
+        for (index, (line, mark)) in self.status_lines(mode, columns).iter().enumerate() {
             numinous_core::draw_text(
                 raster,
-                &error.to_uppercase(),
+                line,
                 10,
-                10 + 34 * scale,
+                10 + (34 + index as i32 * 10) * scale,
                 scale,
-                '-',
+                *mark,
             );
-        } else if let Some(opened) = &self.opened {
-            // Saved numerical settings survive a remix. Parse errors use this
-            // row while the last-good program still draws with those settings.
-            let (xmin, xmax, a) = (
-                opened.creation.xmin(),
-                opened.creation.xmax(),
-                opened.creation.a(),
-            );
-            let domain = if self
-                .program
-                .as_ref()
-                .is_some_and(|program| program.kind() == StudioKind::Parametric)
-            {
-                "T"
-            } else {
-                "X"
-            };
-            let line = if opened.paused {
-                format!(
-                    "REOPENED  {domain} {xmin:.1} TO {xmax:.1}  A {a:.2}  SCALE {}  ENTER: PLAY",
-                    self.scale_name()
-                )
-            } else if self.fork_of.is_some() {
-                format!(
-                    "REMIX  {domain} {xmin:.1} TO {xmax:.1}  A {a:.2}  SCALE {}  F6: CHANGE",
-                    self.scale_name()
-                )
-            } else {
-                format!(
-                    "REOPENED  {domain} {xmin:.1} TO {xmax:.1}  A {a:.2}  SCALE {}  TYPE: TAKE OVER",
-                    self.scale_name()
-                )
-            };
-            numinous_core::draw_text(raster, &line, 10, 10 + 34 * scale, scale, '*');
-        } else {
-            let line = format!("SCALE {}  F6: CHANGE", self.scale_name().to_uppercase());
-            numinous_core::draw_text(raster, &line, 10, 10 + 34 * scale, scale, '*');
         }
+
+        if let Some(program) = &self.program {
+            let (xmin, xmax, a) = self.window_and_knob();
+            let layout = numinous_app::studio_render::CurveLayout {
+                width,
+                height,
+                top: f64::from(10 + 56 * scale),
+                bottom_margin: f64::from(footer_height + 8 * scale),
+            };
+            match program.kind() {
+                StudioKind::Graph => {
+                    let _ =
+                        numinous_app::studio_render::draw_curve(raster, layout, xmin, xmax, |x| {
+                            self.curve_value(x, a)
+                        });
+                }
+                StudioKind::Parametric => {
+                    let _ = numinous_app::studio_render::draw_parametric(
+                        raster,
+                        layout,
+                        xmin,
+                        xmax,
+                        |input| program.point(input, a),
+                    );
+                }
+            }
+        }
+
         if self.help_visible() && height > 40 {
-            let help_top = 10 + 48 * scale;
+            let help_top = 10 + 58 * scale;
             raster.clear_rows(
                 help_top - 4,
                 help_top + STUDIO_HELP_LINES.len() as i32 * 10 * scale + 4,
@@ -769,39 +860,16 @@ impl StudioPanel {
             }
         }
         if height >= 20 {
-            let footer = input_legend::studio_controls_with_controller(mode, copy);
-            raster.clear_rows(height as i32 - 16 * scale, height as i32);
-            numinous_core::draw_text(raster, &footer, 10, height as i32 - 11 * scale, scale, '#');
-        }
-
-        let Some(program) = &self.program else {
-            return;
-        };
-        // A reopened creation draws its saved window at its saved knob; the
-        // ambient Studio draws the default window with the knob as time. The
-        // same helper feeds the share and the postcard, so what is saved is
-        // what is on screen by construction.
-        let (xmin, xmax, a) = self.window_and_knob(t);
-        let top = (60 * scale) as f64;
-        let layout = numinous_app::studio_render::CurveLayout {
-            width,
-            height,
-            top,
-            bottom_margin: f64::from(24 * scale),
-        };
-        match program.kind() {
-            StudioKind::Graph => {
-                let _ = numinous_app::studio_render::draw_curve(raster, layout, xmin, xmax, |x| {
-                    self.curve_value(x, a)
-                });
-            }
-            StudioKind::Parametric => {
-                let _ = numinous_app::studio_render::draw_parametric(
+            raster.clear_rows(height as i32 - footer_height, height as i32);
+            for (index, line) in footer.iter().enumerate() {
+                let rows_below = footer.len() - index - 1;
+                numinous_core::draw_text(
                     raster,
-                    layout,
-                    xmin,
-                    xmax,
-                    |input| program.point(input, a),
+                    line,
+                    10,
+                    height as i32 - (11 + 10 * rows_below as i32) * scale,
+                    scale,
+                    '#',
                 );
             }
         }
@@ -817,10 +885,13 @@ impl StudioPanel {
 mod tests {
     use super::{
         AUTO_DWELL_SECONDS, MAX_STUDIO_EDITOR_CHARS, RECIPE_MORPH_SECONDS, STUDIO_HELP_LINES,
-        STUDIO_RECIPES, StudioPanel, studio_scale,
+        STUDIO_RECIPES, StudioPanel, compact_number, fit_studio_line, studio_footer_lines,
+        studio_scale,
     };
-    use crate::input_legend::{self, InputMode};
-    use numinous_core::Raster;
+    use crate::input_legend::{
+        self, ControllerAction, ControllerButton, ControllerCopy, ControllerFace, InputMode,
+    };
+    use numinous_core::{Raster, Surface};
 
     #[test]
     fn default_panel_has_a_curve_and_a_voice() {
@@ -839,7 +910,7 @@ mod tests {
         assert!(panel.error.is_some());
         assert!(panel.expr.is_some());
         let mut raster = Raster::new(120, 90);
-        panel.draw(&mut raster, InputMode::KeyboardMouse, 120, 90, 0.25);
+        panel.draw(&mut raster, InputMode::KeyboardMouse, 120, 90);
         assert!(raster.lit_count() > 0, "last good curve should still draw");
     }
 
@@ -847,32 +918,32 @@ mod tests {
     fn draw_handles_tiny_and_mismatched_sizes() {
         let mut panel = StudioPanel::new("sin(x)").expect("panel");
         let mut zero = Raster::new(0, 0);
-        panel.draw(&mut zero, InputMode::KeyboardMouse, 0, 0, 0.0);
+        panel.draw(&mut zero, InputMode::KeyboardMouse, 0, 0);
         assert_eq!(zero.lit_count(), 0);
 
         let mut one = Raster::new(1, 1);
-        panel.draw(&mut one, InputMode::KeyboardMouse, 1, 1, 0.0);
+        panel.draw(&mut one, InputMode::KeyboardMouse, 1, 1);
 
         let mut short = Raster::new(80, 20);
-        panel.draw(&mut short, InputMode::KeyboardMouse, 500, 20, 0.0);
+        panel.draw(&mut short, InputMode::KeyboardMouse, 500, 20);
         assert!(short.lit_count() > 0);
 
         let mut mismatched = Raster::new(24, 90);
-        panel.draw(&mut mismatched, InputMode::KeyboardMouse, 200, 90, 0.5);
+        panel.draw(&mut mismatched, InputMode::KeyboardMouse, 200, 90);
         assert!(mismatched.lit_count() > 0);
 
         panel.toggle_auto();
         let mut auto = Raster::new(120, 90);
-        panel.draw(&mut auto, InputMode::KeyboardMouse, 120, 90, 0.5);
+        panel.draw(&mut auto, InputMode::KeyboardMouse, 120, 90);
         assert!(auto.lit_count() > 0);
 
         panel.expr = None;
         let mut no_expression = Raster::new(120, 90);
-        panel.draw(&mut no_expression, InputMode::KeyboardMouse, 120, 90, 0.5);
+        panel.draw(&mut no_expression, InputMode::KeyboardMouse, 120, 90);
 
         let non_finite = StudioPanel::new("1/0").expect("parseable non-finite expression");
         let mut no_samples = Raster::new(120, 90);
-        non_finite.draw(&mut no_samples, InputMode::KeyboardMouse, 120, 90, 0.5);
+        non_finite.draw(&mut no_samples, InputMode::KeyboardMouse, 120, 90);
     }
 
     #[test]
@@ -928,7 +999,7 @@ mod tests {
     }
 
     #[test]
-    fn auto_waits_for_dwell_and_phrase_edge_then_advances() {
+    fn auto_waits_for_dwell_and_presentation_clock_edge_then_advances() {
         let mut panel = StudioPanel::default();
         let start = panel.source.clone();
         assert!(panel.tick_auto(1.0, 0.3).is_none(), "Auto is inactive");
@@ -941,15 +1012,15 @@ mod tests {
         // Phase 0.3 sits between 1/8 edges (0.3 * 8 = 2.4).
         assert!(panel.tick_auto(1.0, 0.3).is_none(), "dwell not met");
         assert_eq!(panel.source, start);
-        // Dwell complete but mid-phrase: still wait.
+        // Dwell complete but between presentation-clock edges: still wait.
         assert!(
             panel.tick_auto(AUTO_DWELL_SECONDS, 0.3).is_none(),
-            "mid-phrase must not cut"
+            "a presentation-clock edge is still required"
         );
         assert_eq!(panel.source, start);
-        // Near a phrase edge after dwell: advance.
+        // Near a presentation-clock edge after dwell: advance.
         let advanced = panel.tick_auto(0.1, f64::NAN);
-        assert!(advanced.is_some(), "phrase edge after dwell advances");
+        assert!(advanced.is_some(), "clock edge after dwell advances");
         assert_ne!(panel.source, start);
         assert!(panel.morph.is_some(), "Auto begins one recipe morph");
     }
@@ -1100,31 +1171,29 @@ mod tests {
         let mut panel = StudioPanel::default();
         panel.open_creation(&creation);
         assert!(panel.confirm_opened().is_some());
-        let curve_band = |panel: &StudioPanel, phase| {
+        let curve_band = |panel: &StudioPanel| {
             let mut raster = Raster::new(200, 150);
-            panel.draw(&mut raster, InputMode::KeyboardMouse, 200, 150, phase);
+            panel.draw(&mut raster, InputMode::KeyboardMouse, 200, 150);
             raster.to_rgba()[200 * 4 * 70..200 * 4 * 120].to_vec()
         };
-        let before = curve_band(&panel, 0.25);
+        let before = curve_band(&panel);
 
         let spec = panel.push_text("+0").expect("still parses");
         assert!(panel.opened_active());
         assert_eq!(spec, creation.to_melody(32));
-        assert_eq!(curve_band(&panel, 0.75), before);
-        for phase in [0.0, 0.75, 1.0] {
-            let edited = panel.current_creation(phase).expect("edited creation");
-            assert_eq!(edited.source(), "sin(a*x)+0");
-            assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
-            assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
-            assert_eq!(Some(edited.to_melody(32)), panel.current_sound());
-            let mut reopened = StudioPanel::default();
-            reopened.open_creation(&edited);
-            assert_eq!(
-                panel.postcard_rgba(phase, 200, numinous_core::Era::Modern, None, None),
-                reopened.postcard_rgba(0.5, 200, numinous_core::Era::Modern, None, None),
-                "the edited postcard must match the creation it saves"
-            );
-        }
+        assert_eq!(curve_band(&panel), before);
+        let edited = panel.current_creation().expect("edited creation");
+        assert_eq!(edited.source(), "sin(a*x)+0");
+        assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
+        assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
+        assert_eq!(Some(edited.to_melody(32)), panel.current_sound());
+        let mut reopened = StudioPanel::default();
+        reopened.open_creation(&edited);
+        assert_eq!(
+            panel.postcard_rgba(200, numinous_core::Era::Modern, None, None),
+            reopened.postcard_rgba(200, numinous_core::Era::Modern, None, None),
+            "the edited postcard must match the creation it saves"
+        );
     }
 
     #[test]
@@ -1137,7 +1206,7 @@ mod tests {
         assert!(panel.push_space());
         assert!(panel.opened_active());
         assert!(!panel.opened_paused());
-        let edited = panel.current_creation(0.75).expect("whitespace edit");
+        let edited = panel.current_creation().expect("whitespace edit");
         assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
         assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
         assert_eq!(panel.current_sound(), Some(creation.to_melody(32)));
@@ -1145,10 +1214,10 @@ mod tests {
         // Recipe discovery intentionally replaces the complete creation.
         assert!(panel.load_random_recipe().is_some());
         assert!(!panel.opened_active());
-        let recipe = panel.current_creation(0.75).expect("recipe");
+        let recipe = panel.current_creation().expect("recipe");
         assert_eq!(recipe.xmin(), numinous_core::DEFAULT_STUDIO_XMIN);
         assert_eq!(recipe.xmax(), numinous_core::DEFAULT_STUDIO_XMAX);
-        assert_eq!(recipe.a(), 0.75 * std::f64::consts::TAU);
+        assert_eq!(recipe.a(), numinous_core::DEFAULT_STUDIO_PARAMETER);
         assert_eq!(recipe.descends(), None);
     }
 
@@ -1160,22 +1229,22 @@ mod tests {
         panel.open_creation(&creation);
         assert!(panel.push_text("+").is_none());
         assert!(!panel.opened_paused());
-        assert_eq!(panel.window_and_knob(0.75), (0.0, 1.0, 0.25));
+        assert_eq!(panel.window_and_knob(), (0.0, 1.0, 0.25));
         assert_eq!(panel.current_sound(), Some(creation.to_melody(32)));
         assert_eq!(
-            panel.current_creation(0.75),
+            panel.current_creation(),
             Err(super::ShareRefusal::UnparsedFormula)
         );
 
         let scaled = creation.clone().with_scale(creation.scale().next());
         assert_eq!(panel.cycle_scale(), Some(scaled.to_melody(32)));
         assert_eq!(
-            panel.current_creation(0.75),
+            panel.current_creation(),
             Err(super::ShareRefusal::UnparsedFormula),
             "changing scale does not repair an invalid formula"
         );
         assert_eq!(panel.backspace(), Some(scaled.to_melody(32)));
-        let repaired = panel.current_creation(0.75).expect("repaired formula");
+        let repaired = panel.current_creation().expect("repaired formula");
         assert_eq!(
             (repaired.xmin(), repaired.xmax(), repaired.a()),
             (0.0, 1.0, 0.25)
@@ -1190,20 +1259,20 @@ mod tests {
             numinous_core::StudioCreation::new("sin(a*x)", 0.0, 1.0, 0.25).expect("creation");
         let mut panel = StudioPanel::default();
         panel.open_creation(&creation);
-        let before = panel.postcard_rgba(0.25, 200, numinous_core::Era::Modern, None, None);
+        let before = panel.postcard_rgba(200, numinous_core::Era::Modern, None, None);
 
         let expected = creation.clone().with_scale(creation.scale().next());
         let sound = panel.cycle_scale().expect("scaled voice");
         assert_eq!(sound, expected.to_melody(32));
         assert_ne!(sound, creation.to_melody(32));
         assert!(!panel.opened_paused());
-        let edited = panel.current_creation(0.75).expect("scale edit");
+        let edited = panel.current_creation().expect("scale edit");
         assert_eq!(edited.source(), creation.source());
         assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
         assert_eq!(edited.scale(), expected.scale());
         assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
         assert_eq!(
-            panel.postcard_rgba(0.75, 200, numinous_core::Era::Modern, None, None),
+            panel.postcard_rgba(200, numinous_core::Era::Modern, None, None),
             before
         );
     }
@@ -1219,7 +1288,7 @@ mod tests {
             let mut panel = StudioPanel::default();
             panel.open_creation(creation);
             let mut raster = Raster::new(200, 150);
-            panel.draw(&mut raster, InputMode::KeyboardMouse, 200, 150, 0.25);
+            panel.draw(&mut raster, InputMode::KeyboardMouse, 200, 150);
             // Rows inside the curve area only, clear of chrome and footer,
             // so the difference cannot come from the reopened status line.
             raster.to_rgba()[200 * 4 * 70..200 * 4 * 120].to_vec()
@@ -1230,37 +1299,155 @@ mod tests {
     #[test]
     fn the_shared_creation_is_the_curve_on_screen() {
         use std::f64::consts::TAU;
-        // Ambient Studio: the knob freezes at this moment's phase, so the
-        // share is the exact curve on screen at the chosen phase.
+        // Fresh Studio uses the shared numerical defaults for every output.
         let panel = StudioPanel::new("sin(a*x)").expect("panel");
-        let creation = panel.current_creation(0.25).expect("creation");
+        let creation = panel.current_creation().expect("creation");
         assert_eq!(creation.source(), "sin(a*x)");
         assert!((creation.xmin() + TAU).abs() < 1e-12);
         assert!((creation.xmax() - TAU).abs() < 1e-12);
-        assert!((creation.a() - 0.25 * TAU).abs() < 1e-12);
-
-        // The console can park the phase at exactly 1.0. The screen draws
-        // a = tau there, so the share must save a = tau, not wrap to zero.
-        let parked = panel.current_creation(1.0).expect("parked");
-        assert!((parked.a() - TAU).abs() < 1e-12);
+        assert_eq!(creation.a(), numinous_core::DEFAULT_STUDIO_PARAMETER);
+        assert_eq!(panel.current_sound(), Some(creation.to_melody(32)));
 
         // A reopened pin shares its own saved window and knob.
         let saved = numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5).expect("saved");
         let mut reopened = StudioPanel::default();
         reopened.open_creation(&saved);
-        let shared = reopened.current_creation(0.75).expect("shared");
+        let shared = reopened.current_creation().expect("shared");
         assert_eq!(shared, saved);
 
         // An unparsed edit has no curve to promise.
         let mut broken = StudioPanel::new("sin(a*x)").expect("panel");
         assert!(broken.push_text("(").is_none());
         assert_eq!(
-            broken.current_creation(0.25),
+            broken.current_creation(),
             Err(super::ShareRefusal::UnparsedFormula)
         );
+    }
 
-        // A non-finite moment falls back to phase zero rather than a NaN knob.
-        assert!(panel.current_creation(f64::NAN).is_ok());
+    #[test]
+    fn explicit_parameter_matches_the_saved_picture_and_voice() {
+        for source in ["sin(a*x)+x/3", "x(t)=cos(t); y(t)=sin(a*t)+t/3"] {
+            let mut panel = StudioPanel::new(source).expect("panel");
+            let original = panel.current_sound().expect("voice");
+            let mut voices = Vec::new();
+            for a in [0.0, 0.25, 1.25, -0.5] {
+                let voice = panel.set_parameter(a).expect("changed parameter");
+                let creation = panel.current_creation().expect("creation");
+                assert_eq!(creation.a(), a);
+                assert_eq!(creation.xmin(), numinous_core::DEFAULT_STUDIO_XMIN);
+                assert_eq!(creation.xmax(), numinous_core::DEFAULT_STUDIO_XMAX);
+                assert_eq!(voice, creation.to_melody(32));
+                assert_eq!(voice.midi(), creation.to_melody(32).midi());
+                let mut reopened = StudioPanel::default();
+                reopened.open_creation(&creation);
+                assert_eq!(
+                    panel.postcard_rgba(240, numinous_core::Era::Modern, None, None),
+                    reopened.postcard_rgba(240, numinous_core::Era::Modern, None, None),
+                );
+                voices.push(voice);
+            }
+            assert!(voices.iter().all(|voice| voice != &original));
+            assert!(voices.windows(2).all(|pair| pair[0] != pair[1]));
+        }
+    }
+
+    #[test]
+    fn parameter_edits_retain_exact_imports_and_refuse_out_of_bounds_noops() {
+        for a in [1e12, -1e12, 1.0, 0.123_456_789_012_345_66] {
+            let saved = numinous_core::StudioCreation::new("sin(a*x)+x/3", -2.0, 3.0, a)
+                .expect("saved")
+                .with_title("A kept experiment")
+                .expect("title");
+            let mut panel = StudioPanel::default();
+            panel.open_creation(&saved);
+            panel.toggle_auto();
+            assert_eq!(panel.window_and_knob(), (-2.0, 3.0, a));
+            for invalid in [
+                f64::NAN,
+                f64::INFINITY,
+                -f64::INFINITY,
+                1e12 + 0.25,
+                -1e12 - 0.25,
+            ] {
+                assert!(panel.set_parameter(invalid).is_none());
+            }
+            assert!(panel.adjust_parameter(0).is_none());
+            if a == 1.0 {
+                assert!(panel.reset_parameter().is_none());
+            } else if a.abs() == 1e12 {
+                assert!(
+                    panel
+                        .adjust_parameter(if a > 0.0 { 1 } else { -1 })
+                        .is_none()
+                );
+            }
+            assert!(panel.opened_paused());
+            assert!(panel.auto_active());
+            assert_eq!(panel.current_creation().expect("unchanged"), saved);
+
+            let steps = if a > 0.0 { -1 } else { 1 };
+            let voice = panel.adjust_parameter(steps).expect("one admitted step");
+            let edited = panel.current_creation().expect("remix");
+            assert_eq!(edited.a(), a + f64::from(steps) * 0.25);
+            assert_eq!((edited.xmin(), edited.xmax()), (-2.0, 3.0));
+            assert_eq!(edited.descends(), Some(saved.to_link().as_str()));
+            assert_eq!(edited.title(), None);
+            assert!(!panel.opened_paused());
+            assert!(!panel.auto_active());
+            assert_eq!(voice, edited.to_melody(32));
+        }
+    }
+
+    #[test]
+    fn parameter_edits_work_through_invalid_drafts_and_cancel_recipe_morphs() {
+        let mut panel = StudioPanel::default();
+        assert!(panel.load_random_recipe().is_some());
+        assert!(panel.morph.is_some());
+        assert!(panel.adjust_parameter(1).is_some());
+        assert!(panel.morph.is_none());
+        let valid_source = panel.source.clone();
+        assert!(panel.push_text("+").is_none());
+        let voice = panel.adjust_parameter(-2).expect("last-good voice");
+        assert!(panel.error.is_some());
+        assert_eq!(panel.parameter, 0.75);
+        assert!(panel.current_creation().is_err());
+        assert_eq!(panel.backspace(), Some(voice));
+        assert_eq!(panel.source, valid_source);
+        assert_eq!(panel.current_creation().expect("repaired").a(), 0.75);
+        let scaled = panel.cycle_scale().expect("scale");
+        assert_eq!(
+            scaled,
+            panel.current_creation().expect("scaled").to_melody(32)
+        );
+        assert_eq!(panel.current_creation().expect("scaled").a(), 0.75);
+    }
+
+    #[test]
+    fn recipe_changes_blend_only_when_the_old_numbers_still_apply() {
+        for (xmin, xmax, a, should_blend) in [
+            (
+                numinous_core::DEFAULT_STUDIO_XMIN,
+                numinous_core::DEFAULT_STUDIO_XMAX,
+                1.0,
+                true,
+            ),
+            (
+                numinous_core::DEFAULT_STUDIO_XMIN,
+                numinous_core::DEFAULT_STUDIO_XMAX,
+                1.25,
+                false,
+            ),
+            (0.0, 1.0, 1.0, false),
+        ] {
+            let saved = numinous_core::StudioCreation::new("x^3", xmin, xmax, a).expect("saved");
+            let mut panel = StudioPanel::default();
+            panel.open_creation(&saved);
+            let sound = panel.load_random_recipe().expect("recipe");
+            let next = panel.current_creation().expect("next");
+            assert_eq!(panel.morph.is_some(), should_blend);
+            assert_eq!(next.a(), 1.0);
+            assert_eq!(sound, next.to_melody(32));
+        }
     }
 
     #[test]
@@ -1276,7 +1463,7 @@ mod tests {
         );
         assert_eq!(panel.current_sound().expect("voice").notes.len(), 32);
 
-        let shared = panel.current_creation(0.25).expect("shared pair");
+        let shared = panel.current_creation().expect("shared pair");
         assert_eq!(shared.kind(), numinous_core::StudioKind::Parametric);
         assert_eq!(shared.source(), "cos(3*t)");
         assert_eq!(shared.second_source(), Some("sin(2*t)"));
@@ -1284,7 +1471,7 @@ mod tests {
         assert!(shared.to_num_file().starts_with("NUMINOUS_STUDIO 3\n"));
 
         let mut raster = Raster::new(240, 180);
-        panel.draw(&mut raster, InputMode::KeyboardMouse, 240, 180, 0.25);
+        panel.draw(&mut raster, InputMode::KeyboardMouse, 240, 180);
         assert!(raster.lit_count() > 100, "the pair has a visible path");
 
         assert_eq!(panel.scale_name(), "continuous");
@@ -1293,7 +1480,7 @@ mod tests {
         assert_eq!(panel.scale_name(), "pentatonic");
         assert_ne!(pentatonic.expect("scaled voice"), continuous);
         assert_eq!(
-            panel.current_creation(0.25).expect("scaled pair").scale(),
+            panel.current_creation().expect("scaled pair").scale(),
             numinous_core::StudioScale::Pentatonic
         );
     }
@@ -1316,11 +1503,11 @@ mod tests {
 
         assert!(panel.opened_paused());
         assert_eq!(panel.scale_name(), "major");
-        assert_eq!(panel.current_creation(0.25).expect("untouched"), saved);
+        assert_eq!(panel.current_creation().expect("untouched"), saved);
         assert_eq!(panel.current_sound(), Some(saved.to_melody(32)));
 
         assert_eq!(panel.push_text("+0"), Some(saved.to_melody(32)));
-        let edited = panel.current_creation(0.25).expect("edited pair");
+        let edited = panel.current_creation().expect("edited pair");
         assert_eq!(edited.source(), "cos(3*t+a)");
         assert_eq!(edited.second_source(), Some("sin(2*t+a)+0"));
         assert_eq!(edited.xmin(), saved.xmin());
@@ -1348,27 +1535,24 @@ mod tests {
             "the parent window and knob still pin"
         );
 
-        let shared = panel.current_creation(0.25).expect("shared");
+        let shared = panel.current_creation().expect("shared");
         assert_eq!(shared.descends(), Some(parent.to_link().as_str()));
 
         // Edits keep the descent, because edits are the remix.
         assert!(panel.push_text("+0").is_some());
-        let edited = panel.current_creation(0.25).expect("edited");
+        let edited = panel.current_creation().expect("edited");
         assert_eq!(edited.descends(), Some(parent.to_link().as_str()));
 
         // A recipe draw is a different creation, not a descent.
         assert!(panel.load_random_recipe().is_some());
-        let drawn = panel.current_creation(0.25).expect("recipe");
+        let drawn = panel.current_creation().expect("recipe");
         assert_eq!(drawn.descends(), None);
 
         // So is opening something else.
         assert!(panel.fork_creation(&parent).is_some());
         let other = numinous_core::StudioCreation::new("x*x", -1.0, 1.0, 0.0).expect("other");
         panel.open_creation(&other);
-        assert_eq!(
-            panel.current_creation(0.25).expect("opened").descends(),
-            None
-        );
+        assert_eq!(panel.current_creation().expect("opened").descends(), None);
     }
 
     #[test]
@@ -1389,21 +1573,21 @@ mod tests {
         let mut panel = StudioPanel::default();
         panel.open_creation(&full);
         assert_eq!(
-            panel.current_creation(0.25).expect("reshared"),
+            panel.current_creation().expect("reshared"),
             full,
             "identity and lineage survive an untouched re-share"
         );
 
         assert!(panel.push_text("").is_none());
         assert!(panel.opened_paused());
-        assert_eq!(panel.current_creation(0.75).expect("no edit"), full);
+        assert_eq!(panel.current_creation().expect("no edit"), full);
 
         // The first edit starts a remix. The parent's identity becomes
         // lineage while its numerical settings remain. The edited share
         // descends from what was opened, not from the
         // grandparent the opened capsule itself descends from.
         assert!(panel.push_text("+0").is_some());
-        let taken_over = panel.current_creation(0.25).expect("taken over");
+        let taken_over = panel.current_creation().expect("taken over");
         assert_eq!(taken_over.title(), None);
         assert_eq!(
             taken_over.credit(),
@@ -1420,7 +1604,7 @@ mod tests {
         let mut panel = StudioPanel::default();
         panel.open_creation(&parent);
         assert!(panel.load_random_recipe().is_some());
-        let drawn = panel.current_creation(0.25).expect("recipe");
+        let drawn = panel.current_creation().expect("recipe");
         assert_eq!(drawn.descends(), None);
     }
 
@@ -1432,7 +1616,7 @@ mod tests {
             .expect("title");
         let mut panel = StudioPanel::default();
         assert!(panel.fork_creation(&parent).is_some());
-        let fork = panel.current_creation(0.25).expect("fork");
+        let fork = panel.current_creation().expect("fork");
         assert_eq!(fork.descends(), Some(parent.to_link().as_str()));
         assert_eq!(
             fork.title(),
@@ -1458,7 +1642,7 @@ mod tests {
             "&".repeat(5000)
         ));
         assert_eq!(
-            panel.current_creation(0.25),
+            panel.current_creation(),
             Err(super::ShareRefusal::LineageTooLarge),
             "a lineage that cannot ride is its own refusal"
         );
@@ -1471,12 +1655,12 @@ mod tests {
         // does not record, so the postcard must ignore it.
         let mut morphing = StudioPanel::default();
         assert!(morphing.load_random_recipe().is_some());
-        let mid_morph = morphing.postcard_rgba(0.25, 240, numinous_core::Era::Modern, None, None);
+        let mid_morph = morphing.postcard_rgba(240, numinous_core::Era::Modern, None, None);
 
         let mut settled = StudioPanel::default();
         assert!(settled.load_random_recipe().is_some());
         settled.advance_morph(RECIPE_MORPH_SECONDS);
-        let after = settled.postcard_rgba(0.25, 240, numinous_core::Era::Modern, None, None);
+        let after = settled.postcard_rgba(240, numinous_core::Era::Modern, None, None);
 
         assert_eq!(
             mid_morph, after,
@@ -1495,7 +1679,7 @@ mod tests {
         let postcard = |creation: &numinous_core::StudioCreation| {
             let mut panel = StudioPanel::default();
             panel.open_creation(creation);
-            panel.postcard_rgba(0.25, 300, numinous_core::Era::Modern, None, None)
+            panel.postcard_rgba(300, numinous_core::Era::Modern, None, None)
         };
         let narrow_rgba = postcard(&narrow);
         assert!(
@@ -1512,16 +1696,10 @@ mod tests {
         // author signs the corner, and an anonymous card stays exactly the
         // card it always was.
         let panel = StudioPanel::default();
-        let plain = panel.postcard_rgba(0.25, 300, numinous_core::Era::Modern, None, None);
-        let titled = panel.postcard_rgba(
-            0.25,
-            300,
-            numinous_core::Era::Modern,
-            Some("Fading Wave"),
-            None,
-        );
+        let plain = panel.postcard_rgba(300, numinous_core::Era::Modern, None, None);
+        let titled =
+            panel.postcard_rgba(300, numinous_core::Era::Modern, Some("Fading Wave"), None);
         let signed = panel.postcard_rgba(
-            0.25,
             300,
             numinous_core::Era::Modern,
             Some("Fading Wave"),
@@ -1575,8 +1753,8 @@ mod tests {
     #[test]
     fn controller_footer_names_the_keyboard_requirement_and_fits() {
         let copy = input_legend::studio_controls(InputMode::Controller);
-        assert_eq!(copy, "KEYBOARD TYPES   EAST CLOSES   START HELP");
-        assert!(copy.starts_with("KEYBOARD TYPES"));
+        assert_eq!(copy, "UP A+  DOWN A-  L3 A=1  EAST MENU  KEYBOARD TYPES");
+        assert!(copy.contains("KEYBOARD TYPES"));
 
         for (width, height) in [(360, 240), (900, 700)] {
             let scale = studio_scale(width);
@@ -1586,8 +1764,202 @@ mod tests {
             );
             let panel = StudioPanel::default();
             let mut raster = Raster::new(width, height);
-            panel.draw(&mut raster, InputMode::Controller, width, height, 0.25);
+            panel.draw(&mut raster, InputMode::Controller, width, height);
             assert!(raster.lit_count() > 100);
+        }
+    }
+
+    #[test]
+    fn compact_parameter_labels_preserve_every_significant_digit() {
+        for value in [
+            0.0,
+            -0.0,
+            1.0,
+            0.123_456_789_012_345_66,
+            1.234_567_890_123_456_7e-100,
+            -f64::MIN_POSITIVE,
+            f64::from_bits(1),
+            -f64::from_bits(1),
+            1e12,
+            -1e12,
+        ] {
+            let label = compact_number(value);
+            assert_eq!(
+                label.parse::<f64>().expect("displayed number").to_bits(),
+                value.to_bits(),
+                "the label must retain the exact imported value: {label}"
+            );
+            assert!(label.len() <= 24, "the complete label must fit: {label}");
+        }
+        assert_eq!(compact_number(1.25), "1.25");
+        assert_eq!(compact_number(1e-300), "1e-300");
+        assert_eq!(compact_number(1e12), "1e12");
+    }
+
+    fn assert_composed_text_line(raster: &Raster, text: &str, y: i32, scale: i32, mark: char) {
+        assert!(
+            10 + numinous_core::text_width(text, scale) <= raster.width() as i32 - 10,
+            "the entire text must fit with both margins: {text}"
+        );
+        let mut expected = Raster::new(raster.width(), raster.height());
+        numinous_core::draw_text(&mut expected, text, 10, y, scale, mark);
+        assert!(
+            expected.lit_count() > 0,
+            "the expected text must be visible"
+        );
+        let band = y as usize * raster.width() * 4..(y + 7 * scale) as usize * raster.width() * 4;
+        assert_eq!(
+            &raster.to_rgba()[band.clone()],
+            &expected.to_rgba()[band],
+            "all text pixels must survive the composed panel: {text}"
+        );
+    }
+
+    #[test]
+    fn exact_parameter_and_preview_action_survive_compact_and_large_panels() {
+        for (width, height) in [(360, 240), (900, 700)] {
+            let scale = studio_scale(width);
+            for mode in [InputMode::KeyboardMouse, InputMode::Controller] {
+                for value in [
+                    0.123_456_789_012_345_66,
+                    1e-300,
+                    -f64::MIN_POSITIVE,
+                    f64::from_bits(1),
+                    1e12,
+                    -1e12,
+                ] {
+                    let saved =
+                        numinous_core::StudioCreation::new("sin(a*x)+x/3", -1e12, 1e12, value)
+                            .expect("admitted values");
+                    let mut panel = StudioPanel::default();
+                    panel.open_creation(&saved);
+                    let mut raster = Raster::new(width, height);
+                    panel.draw(&mut raster, mode, width, height);
+                    assert_composed_text_line(
+                        &raster,
+                        &format!("A {}  ENTER: PLAY", compact_number(value)),
+                        10 + 34 * scale,
+                        scale,
+                        '*',
+                    );
+                    assert_eq!(panel.current_creation().expect("untouched"), saved);
+
+                    assert!(panel.push_text("(").is_none());
+                    let mut draft = Raster::new(width, height);
+                    panel.draw(&mut draft, mode, width, height);
+                    assert_composed_text_line(
+                        &draft,
+                        &format!("A {}  SCALE CONTINUOUS", compact_number(value)),
+                        10 + 34 * scale,
+                        scale,
+                        '*',
+                    );
+                    let columns = width.saturating_sub(20) / (6 * scale as usize);
+                    let [_, (error, mark)] = panel.status_lines(mode, columns);
+                    assert!(error.starts_with("DRAFT: "));
+                    assert_composed_text_line(&draft, &error, 10 + 44 * scale, scale, mark);
+                    assert!(panel.current_creation().is_err());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn secondary_text_marks_truncation_and_hostile_footer_widths_stay_bounded() {
+        assert_eq!(fit_studio_line("REOPENED X -1 TO 2", 14), "REOPENED X ...");
+        assert_eq!(fit_studio_line("DRAFT: unexpected character", 2), "..");
+        assert_eq!(fit_studio_line("DRAFT", 0), "");
+        for columns in 0..58 {
+            let lines = studio_footer_lines(
+                InputMode::Controller,
+                ControllerCopy::empty(ControllerFace::Generic),
+                columns,
+            );
+            assert!(lines.len() <= 2);
+            assert!(lines.iter().all(|line| line.chars().count() <= columns));
+            if (1..20).contains(&columns) {
+                assert!(lines.last().expect("bounded footer").ends_with('.'));
+            }
+        }
+    }
+
+    #[test]
+    fn mapped_and_unbound_controls_survive_the_composed_footer() {
+        let mut mapped = ControllerCopy::empty(ControllerFace::PlayStation);
+        for (action, buttons) in [
+            (
+                ControllerAction::Up,
+                [
+                    ControllerButton::North,
+                    ControllerButton::Start,
+                    ControllerButton::LeftThumb,
+                    ControllerButton::RightThumb,
+                ],
+            ),
+            (
+                ControllerAction::Down,
+                [
+                    ControllerButton::West,
+                    ControllerButton::RightTrigger,
+                    ControllerButton::LeftTrigger2,
+                    ControllerButton::RightTrigger2,
+                ],
+            ),
+            (
+                ControllerAction::Reset,
+                [
+                    ControllerButton::East,
+                    ControllerButton::LeftTrigger,
+                    ControllerButton::DPadLeft,
+                    ControllerButton::DPadRight,
+                ],
+            ),
+            (
+                ControllerAction::Back,
+                [
+                    ControllerButton::South,
+                    ControllerButton::Select,
+                    ControllerButton::DPadUp,
+                    ControllerButton::DPadDown,
+                ],
+            ),
+        ] {
+            for button in buttons {
+                mapped.bind(action, button);
+            }
+        }
+        for copy in [
+            ControllerFace::Generic.into(),
+            ControllerFace::Xbox.into(),
+            ControllerFace::PlayStation.into(),
+            ControllerCopy::empty(ControllerFace::Generic),
+            mapped,
+        ] {
+            for (width, height) in [(360, 240), (900, 700)] {
+                let scale = studio_scale(width);
+                let columns = width.saturating_sub(20) / (6 * scale as usize);
+                let lines = studio_footer_lines(InputMode::Controller, copy, columns);
+                let complete =
+                    input_legend::studio_controls_with_controller(InputMode::Controller, copy);
+                assert_eq!(
+                    lines.join(" ").split_whitespace().collect::<Vec<_>>(),
+                    complete.split_whitespace().collect::<Vec<_>>(),
+                    "every effective control must fit at {width}x{height}"
+                );
+                let panel = StudioPanel::default();
+                let mut raster = Raster::new(width, height);
+                panel.draw_with_controller(&mut raster, InputMode::Controller, copy, width, height);
+                for (index, line) in lines.iter().enumerate() {
+                    let rows_below = lines.len() - index - 1;
+                    assert_composed_text_line(
+                        &raster,
+                        line,
+                        height as i32 - (11 + 10 * rows_below as i32) * scale,
+                        scale,
+                        '#',
+                    );
+                }
+            }
         }
     }
 }
