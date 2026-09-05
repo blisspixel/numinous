@@ -60,6 +60,24 @@ pub struct JournalEntry {
     pub supersedes: Option<u64>,
 }
 
+impl JournalEntry {
+    /// Canonical native journal bytes identifying this immutable record.
+    ///
+    /// Includes the schema header and every stored field. Later entries and
+    /// correction status do not change these bytes. This identifies record
+    /// content, not a journal generation or an authenticated player, so an
+    /// exact restoration has the same identity. The returned bytes contain
+    /// player-owned text; callers may hash them to retain an opaque handle.
+    #[must_use]
+    pub fn identity_bytes(&self) -> Vec<u8> {
+        Journal {
+            entries: vec![self.clone()],
+        }
+        .to_text()
+        .into_bytes()
+    }
+}
+
 /// Borrowed fields for one original or corrective journal record.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct JournalRecord<'a> {
@@ -545,6 +563,53 @@ mod tests {
         JOURNAL_SOURCE_SELF_AUTHORED, JOURNAL_V2_MAX_SUBJECT_CHARS, Journal, JournalEntry,
         JournalError, JournalRecord, MAX_JOURNAL_ENTRIES, MAX_JOURNAL_SUBJECT_CHARS,
     };
+
+    #[test]
+    fn record_identity_survives_correction_and_native_roundtrip() {
+        let mut journal = Journal::new();
+        let original = journal
+            .record(JournalRecord {
+                recorded_at_utc: 20,
+                event_at_utc: 10,
+                source: JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "encounter",
+                subject: "times-tables",
+                text: "A first look\nwith a second line.",
+                affect: Some("curious"),
+            })
+            .expect("record original");
+        let original_identity = journal.entry(original).expect("original").identity_bytes();
+        let corrected = journal
+            .correct(
+                30,
+                None,
+                JOURNAL_SOURCE_SELF_AUTHORED,
+                original,
+                "A revised account.",
+                None,
+            )
+            .expect("correct original");
+        assert!(!journal.is_current(original));
+        assert_eq!(
+            journal.entry(original).expect("original").identity_bytes(),
+            original_identity
+        );
+        assert_ne!(
+            journal
+                .entry(corrected)
+                .expect("correction")
+                .identity_bytes(),
+            original_identity
+        );
+        let restored = Journal::try_from_text(&journal.to_text()).expect("restore journal");
+        assert_eq!(
+            restored
+                .entry(original)
+                .expect("restored original")
+                .identity_bytes(),
+            original_identity
+        );
+    }
 
     #[test]
     fn v3_round_trip_preserves_all_fields_and_escapes() {

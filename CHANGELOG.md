@@ -27,6 +27,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   modes. Sphere integration now checks all 256 inner products of the 16 exposed
   modes, plus the addition theorem. Unsupported modes are refused, and room text
   distinguishes angular amplitude from a full orbital or probability density.
+- Workspace journal references bind the exact immutable records selected.
+  Erasing and recreating a journal can no longer substitute unrelated content
+  through a reused ID. Deferred and unresolved references follow the same rule.
 
 ### Changed
 - Prediction bands are documented as closeness for one answer, without claiming
