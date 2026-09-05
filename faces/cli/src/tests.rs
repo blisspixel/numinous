@@ -3436,6 +3436,7 @@ fn plot_discovery_resolves_recipe_seed_and_list() {
             save: None,
             title: None,
             author: None,
+            credit: None,
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3498,6 +3499,7 @@ fn parametric_plot_saves_reopens_and_records_progress_once() {
             save: Some(path.clone()),
             title: Some("Three by Two".to_string()),
             author: None,
+            credit: None,
             scale: super::StudioScaleArg::Pentatonic,
         },
         &mut journey,
@@ -3542,6 +3544,7 @@ fn a_partial_parametric_pair_is_refused_before_progress() {
             save: None,
             title: None,
             author: None,
+            credit: None,
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3575,6 +3578,7 @@ fn a_parametric_plot_refuses_graph_range_flags_before_progress() {
             save: None,
             title: None,
             author: None,
+            credit: None,
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3672,6 +3676,171 @@ fn a_titled_save_round_trips_and_the_report_names_it() {
 }
 
 #[test]
+fn a_credited_save_and_fork_round_trip() {
+    let parent = std::env::temp_dir().join("numinous_cli_credit_parent.num");
+    let child = std::env::temp_dir().join("numinous_cli_credit_child.num");
+    let _ = std::fs::remove_file(&parent);
+    let _ = std::fs::remove_file(&child);
+    save_studio_creation(
+        "sin(a*x)",
+        -2.0,
+        2.0,
+        0.5,
+        Some("Slow Waves"),
+        Some("A Curious Mind"),
+        &parent,
+    )
+    .expect("parent save");
+    let parent_report =
+        super::open_studio_report(parent.to_str().expect("utf8"), 24, 8).expect("parent report");
+    assert!(
+        !parent_report.contains("credit="),
+        "a first creation has no fork sentence: {parent_report}"
+    );
+
+    let message = super::fork_studio_creation(
+        parent.to_str().expect("utf8"),
+        None,
+        Some("Remix"),
+        None,
+        &child,
+    )
+    .expect("fork");
+    assert!(message.contains("forked from"));
+    let body = std::fs::read_to_string(&child).expect("child file");
+    assert!(body.starts_with("NUMINOUS_STUDIO 4\n"), "{body}");
+    assert!(
+        body.contains("credit=After Slow Waves by A Curious Mind\n"),
+        "{body}"
+    );
+    let report =
+        super::open_studio_report(child.to_str().expect("utf8"), 24, 8).expect("child report");
+    assert!(
+        report.contains("credit=After Slow Waves by A Curious Mind"),
+        "{report}"
+    );
+    assert!(report.contains("title=Remix"), "{report}");
+
+    let _ = std::fs::remove_file(&parent);
+    let _ = std::fs::remove_file(&child);
+}
+
+#[test]
+fn studio_credit_commands_preserve_replace_and_clear_portable_credit() {
+    let directory = super::test_state_path("studio-credit-capsules").with_extension("");
+    std::fs::create_dir_all(&directory).expect("capsule directory");
+    let execute = |arguments: Vec<String>| {
+        let cli = Cli::try_parse_from(arguments).expect("parse Studio command");
+        run(
+            cli.command.expect("Studio command"),
+            &mut numinous_core::Journey::default(),
+        )
+    };
+    for (kind, source_arguments) in [
+        ("graph", vec!["sin(x)"]),
+        ("pair", vec!["--x-expr", "cos(t)", "--y-expr", "sin(t)"]),
+    ] {
+        let parent_path = directory.join(format!("{kind}-parent.num"));
+        let mut arguments = vec!["numinous".to_string(), "plot".to_string()];
+        arguments.extend(source_arguments.into_iter().map(str::to_string));
+        arguments.extend(
+            [
+                "--save",
+                parent_path.to_str().expect("parent path"),
+                "--title",
+                "First Wave",
+                "--author",
+                "First Hand",
+                "--credit",
+                "An earlier source",
+                "--width",
+                "24",
+                "--height",
+                "8",
+            ]
+            .into_iter()
+            .map(str::to_string),
+        );
+        assert_eq!(execute(arguments), std::process::ExitCode::SUCCESS);
+        let parent =
+            load_studio_creation(parent_path.to_str().expect("parent path")).expect("saved parent");
+        assert_eq!(parent.credit(), Some("An earlier source"));
+
+        for (index, (edit, expected)) in [
+            (None, Some("After First Wave by First Hand")),
+            (Some(""), None),
+            (Some(" \t "), None),
+            (Some("  A different source  "), Some("A different source")),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let child_path = directory.join(format!("{kind}-child-{index}.num"));
+            let mut arguments: Vec<String> = [
+                "numinous",
+                "fork",
+                parent_path.to_str().expect("parent path"),
+                "--out",
+                child_path.to_str().expect("child path"),
+            ]
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+            if let Some(edit) = edit {
+                arguments.extend(["--credit".to_string(), edit.to_string()]);
+            }
+            assert_eq!(execute(arguments), std::process::ExitCode::SUCCESS);
+            let child = load_studio_creation(child_path.to_str().expect("child path"))
+                .expect("saved child");
+            assert_eq!(child.credit(), expected);
+            assert_eq!(child.descends(), Some(parent.to_link().as_str()));
+            let link = numinous_core::StudioCreation::from_link(&child.to_link())
+                .expect("portable child link");
+            assert_eq!(link.credit(), expected);
+            assert_eq!(link.kind(), parent.kind());
+        }
+    }
+
+    for (index, credit) in ["", " \t ", "bad\ncredit"].into_iter().enumerate() {
+        for command in ["plot", "fork"] {
+            let path = directory.join(format!("{command}-edit-{index}.num"));
+            let input = if command == "plot" {
+                "x".to_string()
+            } else {
+                directory
+                    .join("graph-parent.num")
+                    .to_string_lossy()
+                    .into_owned()
+            };
+            let arguments = [
+                "numinous",
+                command,
+                &input,
+                if command == "plot" { "--save" } else { "--out" },
+                path.to_str().expect("output path"),
+                "--credit",
+                credit,
+            ]
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+            if credit.contains('\n') {
+                assert_eq!(execute(arguments), std::process::ExitCode::FAILURE);
+                assert!(!path.exists(), "invalid credit must not write a capsule");
+            } else {
+                assert_eq!(execute(arguments), std::process::ExitCode::SUCCESS);
+                assert_eq!(
+                    load_studio_creation(path.to_str().expect("output path"))
+                        .expect("cleared capsule")
+                        .credit(),
+                    None
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn a_title_without_save_is_refused_before_progress() {
     let mut journey = numinous_core::Journey::default();
     let code = run(
@@ -3696,6 +3865,7 @@ fn a_title_without_save_is_refused_before_progress() {
             save: None,
             title: Some("Slow Waves".to_string()),
             author: None,
+            credit: None,
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3731,6 +3901,7 @@ fn plot_save_and_animate_is_rejected_before_progress() {
             save: Some(path.clone()),
             title: None,
             author: None,
+            credit: None,
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3765,6 +3936,7 @@ fn invalid_animated_plot_is_rejected_before_progress() {
             save: None,
             title: None,
             author: None,
+            credit: None,
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3801,6 +3973,7 @@ fn plot_save_waits_for_a_valid_still_plot() {
             save: Some(path.clone()),
             title: None,
             author: None,
+            credit: None,
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3837,6 +4010,7 @@ fn plot_save_waits_for_finite_samples() {
             save: Some(path.clone()),
             title: None,
             author: None,
+            credit: None,
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3873,6 +4047,7 @@ fn failed_plot_save_does_not_record_progress() {
             save: Some(path.clone()),
             title: None,
             author: None,
+            credit: None,
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -4016,7 +4191,7 @@ fn sing_resolves_a_parametric_capsules_y_voice_and_stored_scale() {
 
     let wav = path.with_extension("wav");
     let message =
-        super::sing_wav_with_scale(&source, xmin, xmax, 16, a, scale, &wav).expect("scaled voice");
+        super::sing_to_path(&source, xmin, xmax, 16, a, scale, &wav).expect("scaled voice");
     assert!(message.contains("pentatonic scale"), "{message}");
     assert!(std::fs::metadata(&wav).expect("wav").len() > 1000);
     let _ = std::fs::remove_file(&path);
@@ -4051,6 +4226,7 @@ fn the_terminal_fork_records_lineage_and_never_clobbers() {
     assert_eq!((child.xmin(), child.xmax(), child.a()), (-3.0, 3.0, 1.0));
     assert_eq!(child.title(), Some("Wave II"));
     assert_eq!(child.author(), Some("A Friend"));
+    assert_eq!(child.credit(), Some("After Wave"));
     assert_eq!(
         child.descends(),
         Some(parent.to_link().as_str()),
@@ -4176,6 +4352,43 @@ fn sing_wav_writes_a_melody() {
     assert!(message.contains("wrote"));
     assert!(std::fs::metadata(&path).expect("file").len() > 0);
     let _ = std::fs::remove_file(&path);
+}
+
+#[test]
+fn sing_writes_midi_when_the_path_says_so() {
+    let path = std::env::temp_dir().join("numinous_sing_test.mid");
+    let _ = std::fs::remove_file(&path);
+    let message = super::sing_to_path(
+        "sin(x)",
+        -3.0,
+        3.0,
+        16,
+        1.0,
+        numinous_core::StudioScale::Continuous,
+        &path,
+    )
+    .expect("sing midi");
+    assert!(message.contains("wrote"));
+    let bytes = std::fs::read(&path).expect("midi bytes");
+    assert_eq!(&bytes[0..4], b"MThd");
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
+fn sing_refuses_an_unknown_export_extension() {
+    let path = std::env::temp_dir().join("numinous_sing_test.mp3");
+    let error = super::sing_to_path(
+        "sin(x)",
+        -3.0,
+        3.0,
+        8,
+        1.0,
+        numinous_core::StudioScale::Continuous,
+        &path,
+    )
+    .expect_err("mp3 is not this rung");
+    assert!(error.contains(".wav or .mid"), "{error}");
+    assert!(std::fs::metadata(&path).is_err());
 }
 
 #[test]

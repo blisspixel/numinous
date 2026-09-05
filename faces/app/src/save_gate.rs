@@ -13,7 +13,7 @@ pub(crate) enum SaveKind {
     Postcard,
     ShortLoop,
     ShareBundle,
-    /// The Studio trio: creation, link, and postcard in one folder.
+    /// The Studio share: creation, link, postcard, and melody in one folder.
     StudioShare,
 }
 

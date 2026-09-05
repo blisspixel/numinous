@@ -3,8 +3,8 @@
 //! Every room can describe its own sound (the "everything is an instrument"
 //! pillar, see `docs/SOUND.md`). Rendering to samples is pure (std `sin`),
 //! deterministic, and needs no audio device, so it is testable and can be
-//! written straight to a WAV. Real-time playback (the `audio` crate) renders the
-//! same `SoundSpec`.
+//! written straight to a WAV or to a Standard MIDI File. Real-time playback
+//! (the `audio` crate) renders the same `SoundSpec`.
 
 use std::f32::consts::TAU;
 

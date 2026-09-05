@@ -29,6 +29,7 @@ pub(super) struct StudioParameters {
 pub(super) struct CreationIdentity<'a> {
     pub title: Option<&'a str>,
     pub author: Option<&'a str>,
+    pub credit: Option<&'a str>,
 }
 
 /// Atomic changes requested for one terminal fork.
@@ -205,7 +206,11 @@ pub(super) fn save_studio_creation(
             a,
             scale: StudioScale::Continuous,
         },
-        CreationIdentity { title, author },
+        CreationIdentity {
+            title,
+            author,
+            credit: None,
+        },
         path,
     )
 }
@@ -251,6 +256,9 @@ fn save_creation(
     if let Some(author) = identity.author {
         creation = creation.with_author(author).map_err(|e| format!("{e}\n"))?;
     }
+    creation = creation
+        .with_credit_override(identity.credit)
+        .map_err(|error| format!("{error}\n"))?;
     write_create_new(path, creation.to_num_file().as_bytes())?;
     Ok(format!(
         "saved Studio creation: {}\nlink: {}\n",
@@ -306,7 +314,11 @@ pub(super) fn fork_studio_creation(
             x_expr: None,
             y_expr: None,
             scale: None,
-            identity: CreationIdentity { title, author },
+            identity: CreationIdentity {
+                title,
+                author,
+                credit: None,
+            },
         },
         out,
     )
@@ -343,6 +355,9 @@ pub(super) fn fork_studio_creation_extended(
     if let Some(scale) = edits.scale {
         fork = fork.with_scale(scale);
     }
+    fork = fork
+        .with_credit_override(edits.identity.credit)
+        .map_err(|error| format!("{error}\n"))?;
     write_create_new(out, fork.to_num_file().as_bytes())?;
     Ok(format!(
         "forked from {}\nsaved Studio creation: {}\nlink: {}\n",
@@ -388,6 +403,9 @@ pub(super) fn open_studio_report(
     }
     if let Some(author) = creation.author() {
         lines.push(format!("author={}", terminal_safe(author)));
+    }
+    if let Some(credit) = creation.credit() {
+        lines.push(format!("credit={}", terminal_safe(credit)));
     }
     lines.push(format!("kind={}", creation.kind().name()));
     match creation.second_source() {

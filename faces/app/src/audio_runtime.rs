@@ -278,11 +278,6 @@ impl App {
         }
     }
 
-    pub(super) fn studio_reparse(&mut self) {
-        let spec = self.studio_panel.reparse();
-        self.set_studio_edit_sound(spec);
-    }
-
     pub(super) fn set_studio_edit_sound(&mut self, parsed: Option<numinous_core::SoundSpec>) {
         let spec = parsed.or_else(|| self.studio_panel.current_sound());
         self.set_studio_sound(spec);

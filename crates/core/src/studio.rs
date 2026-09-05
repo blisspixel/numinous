@@ -62,6 +62,11 @@ pub fn studio_auto_recipe(seed: u64, step: u64) -> &'static str {
 
 /// The most characters a capsule title or author may hold.
 pub const MAX_META_TEXT_CHARS: usize = 64;
+/// The most characters a capsule prose credit may hold.
+///
+/// Wider than a title so a fork's default sentence `After {title} by {author}`
+/// always fits when both identity fields are at their own cap.
+pub const MAX_CREDIT_CHARS: usize = 160;
 /// The most bytes a recorded parent link may hold. Well under the whole-file
 /// cap so a capsule with lineage still has room for its own expression.
 const MAX_DESCENDS_BYTES: usize = 4096;
@@ -157,6 +162,8 @@ impl StudioScale {
 /// A shareable Studio program plus its viewing parameters. The second capsule
 /// version adds identity: an optional title, author, Visual Era, and parent
 /// link. The third adds one paired parametric form and a stored pitch map.
+/// The fourth adds editable prose credit, the sentence a forker writes so
+/// honor is not only a machine `descends` link.
 ///
 /// The metadata is data-only, per `docs/EXTENSIBILITY.md` Tier 1: every field
 /// is capped, character-whitelisted, and interpreted by trusted engine code.
@@ -173,6 +180,7 @@ pub struct StudioCreation {
     scale: StudioScale,
     title: Option<String>,
     author: Option<String>,
+    credit: Option<String>,
     era: Option<crate::era::Era>,
     descends: Option<String>,
 }
@@ -197,6 +205,7 @@ impl StudioCreation {
             scale: StudioScale::Continuous,
             title: None,
             author: None,
+            credit: None,
             era: None,
             descends: None,
         })
@@ -232,6 +241,7 @@ impl StudioCreation {
             scale: StudioScale::Continuous,
             title: None,
             author: None,
+            credit: None,
             era: None,
             descends: None,
         })
@@ -279,12 +289,70 @@ impl StudioCreation {
         self
     }
 
+    /// Record the prose credit a forker writes for the parent.
+    ///
+    /// # Errors
+    /// Returns a message when the credit is empty, longer than
+    /// [`MAX_CREDIT_CHARS`], or holds anything outside printable ASCII.
+    pub fn with_credit(mut self, credit: &str) -> Result<Self, String> {
+        let credit = credit.trim();
+        validate_credit_text(credit)?;
+        self.credit = Some(credit.to_string());
+        Ok(self)
+    }
+
+    /// Take the prose credit off, leaving the machine lineage to speak alone.
+    #[must_use]
+    pub fn without_credit(mut self) -> Self {
+        self.credit = None;
+        self
+    }
+
+    /// Apply an optional prose-credit edit without storing an empty field.
+    ///
+    /// An omitted edit keeps the current credit, including a fork suggestion.
+    /// An explicitly empty or whitespace-only edit removes it. Other text is
+    /// trimmed and validated by [`Self::with_credit`]. Machine lineage remains.
+    ///
+    /// # Errors
+    /// Returns a message when nonempty credit is longer than
+    /// [`MAX_CREDIT_CHARS`] or holds anything outside printable ASCII.
+    pub fn with_credit_override(self, credit: Option<&str>) -> Result<Self, String> {
+        match credit {
+            None => Ok(self),
+            Some(credit) if credit.trim().is_empty() => Ok(self.without_credit()),
+            Some(credit) => self.with_credit(credit),
+        }
+    }
+
+    /// The default sentence a fork offers: `After {title} by {author}`,
+    /// omitting whichever identity the parent never recorded. Empty when the
+    /// parent has neither, so a nameless parent is not invented.
+    #[must_use]
+    pub fn fork_credit_suggestion(&self) -> Option<String> {
+        match (self.title(), self.author()) {
+            (Some(title), Some(author)) => Some(format!("After {title} by {author}")),
+            (Some(title), None) => Some(format!("After {title}")),
+            (None, Some(author)) => Some(format!("After a creation by {author}")),
+            (None, None) => None,
+        }
+    }
+
+    fn with_suggested_fork_credit(self, parent: &Self) -> Self {
+        match parent.fork_credit_suggestion() {
+            Some(credit) => self.clone().with_credit(&credit).unwrap_or(self),
+            None => self,
+        }
+    }
+
     /// Make a new creation that records this one as its parent.
     ///
     /// A fork keeps the parent's window, parameter, and recorded Visual Era,
     /// but it does not inherit the parent's title or author. Those fields
     /// identify the child and are present only when the caller supplies them.
-    /// The source is copied unless the caller provides the remix expression.
+    /// It offers prose credit from the parent's identity, which the caller
+    /// may replace or clear. The source is copied unless the caller provides
+    /// the remix expression.
     ///
     /// # Errors
     /// Returns a message when the replacement expression, child identity, or
@@ -316,6 +384,7 @@ impl StudioCreation {
         if let Some(author) = author {
             child = child.with_author(author)?;
         }
+        child = child.with_suggested_fork_credit(self);
         child.with_descends(&self.to_link())
     }
 
@@ -352,6 +421,7 @@ impl StudioCreation {
         if let Some(author) = author {
             child = child.with_author(author)?;
         }
+        child = child.with_suggested_fork_credit(self);
         child.with_descends(&self.to_link())
     }
 
@@ -504,6 +574,12 @@ impl StudioCreation {
         self.author.as_deref()
     }
 
+    /// The prose credit recorded for this creation, when present.
+    #[must_use]
+    pub fn credit(&self) -> Option<&str> {
+        self.credit.as_deref()
+    }
+
     /// The Visual Era the creation was made in, when recorded.
     #[must_use]
     pub fn era(&self) -> Option<crate::era::Era> {
@@ -525,17 +601,19 @@ impl StudioCreation {
 
     /// Serialize to a `.num` Studio file, in the lowest format version that
     /// carries the content. Plain graphs stay version 1, identity makes them
-    /// version 2, and a parametric pair or stored scale uses version 3.
+    /// version 2, a parametric pair or stored scale uses version 3, and
+    /// prose credit uses version 4.
     #[must_use]
     pub fn to_num_file(&self) -> String {
-        let version =
-            if self.kind() == StudioKind::Parametric || self.scale != StudioScale::Continuous {
-                3
-            } else if self.has_meta() {
-                2
-            } else {
-                1
-            };
+        let version = if self.credit.is_some() {
+            4
+        } else if self.kind() == StudioKind::Parametric || self.scale != StudioScale::Continuous {
+            3
+        } else if self.has_meta() {
+            2
+        } else {
+            1
+        };
         let mut out = format!("NUMINOUS_STUDIO {version}\n");
         if version < 3 {
             out.push_str(&format!(
@@ -577,14 +655,17 @@ impl StudioCreation {
         if let Some(descends) = &self.descends {
             out.push_str(&format!("descends={descends}\n"));
         }
+        if let Some(credit) = &self.credit {
+            out.push_str(&format!("credit={credit}\n"));
+        }
         out
     }
 
-    /// Parse a `.num` Studio file, version 1 through 3.
+    /// Parse a `.num` Studio file, version 1 through 4.
     ///
     /// Version 1 rejects the metadata fields rather than ignoring them, so a
     /// file cannot claim the old header while smuggling new content. A header
-    /// past version 3 is refused by name: a future capsule is a fact to
+    /// past version 4 is refused by name: a future capsule is a fact to
     /// report, not a guess to parse.
     ///
     /// # Errors
@@ -597,6 +678,7 @@ impl StudioCreation {
             Some("NUMINOUS_STUDIO 1") => 1,
             Some("NUMINOUS_STUDIO 2") => 2,
             Some("NUMINOUS_STUDIO 3") => 3,
+            Some("NUMINOUS_STUDIO 4") => 4,
             Some(header) if header.starts_with("NUMINOUS_STUDIO ") => {
                 return Err(
                     "this Studio .num file is from a newer Numinous; update to open it".to_string(),
@@ -616,6 +698,7 @@ impl StudioCreation {
         let mut scale: Option<StudioScale> = None;
         let mut title: Option<String> = None;
         let mut author: Option<String> = None;
+        let mut credit: Option<String> = None;
         let mut era: Option<crate::era::Era> = None;
         let mut descends: Option<String> = None;
         for line in lines {
@@ -656,8 +739,14 @@ impl StudioCreation {
                         "Studio .num field '{key}' needs a NUMINOUS_STUDIO 2 header"
                     ));
                 }
+                "credit" if version < 4 => {
+                    return Err(format!(
+                        "Studio .num field '{key}' needs a NUMINOUS_STUDIO 4 header"
+                    ));
+                }
                 "title" if title.is_none() => title = Some(value.to_string()),
                 "author" if author.is_none() => author = Some(value.to_string()),
+                "credit" if credit.is_none() => credit = Some(value.to_string()),
                 "era" if era.is_none() => {
                     era = Some(
                         crate::era::Era::parse(value)
@@ -666,7 +755,7 @@ impl StudioCreation {
                 }
                 "descends" if descends.is_none() => descends = Some(value.to_string()),
                 "kind" | "expr" | "xexpr" | "yexpr" | "xmin" | "xmax" | "tmin" | "tmax" | "a"
-                | "scale" | "title" | "author" | "era" | "descends" => {
+                | "scale" | "title" | "author" | "era" | "descends" | "credit" => {
                     return Err(format!("duplicate Studio .num field '{key}'"));
                 }
                 other => return Err(format!("unknown Studio .num field '{other}'")),
@@ -716,6 +805,9 @@ impl StudioCreation {
         }
         if let Some(author) = author {
             creation = creation.with_author(&author)?;
+        }
+        if let Some(credit) = credit {
+            creation = creation.with_credit(&credit)?;
         }
         if let Some(era) = era {
             creation = creation.with_era(era);
@@ -768,10 +860,10 @@ impl StudioCreation {
 
     /// Produce a native `numinous://` Studio link for this creation.
     ///
-    /// A link carries the creation and its identity (title, author, era) but
-    /// never `descends`: lineage nests links inside links, and a handoff
-    /// format that can nest itself is a growth format. Lineage lives in
-    /// `.num` files, where the byte cap bounds it flat.
+    /// A link carries the creation and its identity (title, author, era,
+    /// credit) but never `descends`: lineage nests links inside links, and a
+    /// handoff format that can nest itself is a growth format. Lineage lives
+    /// in `.num` files, where the byte cap bounds it flat.
     #[must_use]
     pub fn to_link(&self) -> String {
         let mut link = if self.kind() == StudioKind::Graph && self.scale == StudioScale::Continuous
@@ -811,6 +903,9 @@ impl StudioCreation {
         if let Some(author) = &self.author {
             link.push_str(&format!("&author={}", percent_encode(author)));
         }
+        if let Some(credit) = &self.credit {
+            link.push_str(&format!("&credit={}", percent_encode(credit)));
+        }
         if let Some(era) = self.era {
             link.push_str(&format!("&era={}", percent_encode(era.name())));
         }
@@ -841,6 +936,7 @@ impl StudioCreation {
         let mut scale: Option<StudioScale> = None;
         let mut title: Option<String> = None;
         let mut author: Option<String> = None;
+        let mut credit: Option<String> = None;
         let mut era: Option<crate::era::Era> = None;
         for pair in query.split('&') {
             if pair.is_empty() {
@@ -874,6 +970,7 @@ impl StudioCreation {
                 }
                 "title" if title.is_none() => title = Some(percent_decode(value)?),
                 "author" if author.is_none() => author = Some(percent_decode(value)?),
+                "credit" if credit.is_none() => credit = Some(percent_decode(value)?),
                 "era" if era.is_none() => {
                     let decoded = percent_decode(value)?;
                     era = Some(
@@ -882,7 +979,7 @@ impl StudioCreation {
                     );
                 }
                 "kind" | "expr" | "xexpr" | "yexpr" | "xmin" | "xmax" | "tmin" | "tmax" | "a"
-                | "scale" | "title" | "author" | "era" => {
+                | "scale" | "title" | "author" | "era" | "credit" => {
                     return Err(format!("duplicate Studio link field '{key}'"));
                 }
                 other => return Err(format!("unknown Studio link field '{other}'")),
@@ -937,6 +1034,9 @@ impl StudioCreation {
         }
         if let Some(author) = author {
             creation = creation.with_author(&author)?;
+        }
+        if let Some(credit) = credit {
+            creation = creation.with_credit(&credit)?;
         }
         if let Some(era) = era {
             creation = creation.with_era(era);
@@ -1014,6 +1114,21 @@ fn validate_meta_text(name: &str, value: &str) -> Result<(), String> {
     }
     if !value.chars().all(|c| (' '..='~').contains(&c)) {
         return Err(format!("Studio {name} may hold only printable ASCII"));
+    }
+    Ok(())
+}
+
+fn validate_credit_text(value: &str) -> Result<(), String> {
+    if value.is_empty() {
+        return Err("Studio credit is empty".to_string());
+    }
+    if value.chars().count() > MAX_CREDIT_CHARS {
+        return Err(format!(
+            "Studio credit is too long; limit is {MAX_CREDIT_CHARS} characters"
+        ));
+    }
+    if !value.chars().all(|c| (' '..='~').contains(&c)) {
+        return Err("Studio credit may hold only printable ASCII".to_string());
     }
     Ok(())
 }
@@ -1975,7 +2090,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_PARSE_DEPTH,
+        MAX_CREDIT_CHARS, MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_PARSE_DEPTH,
         MAX_STUDIO_SOURCE_CHARS, STUDIO_RECIPES, StudioCreation, StudioKind, StudioProgram,
         StudioScale, eval, parse, studio_auto_recipe, studio_recipe, studio_recipe_count,
         to_melody, to_melody_with_scale,
@@ -2381,7 +2496,106 @@ mod tests {
         assert_eq!(unsigned.source(), parent.source());
         assert_eq!(unsigned.title(), None);
         assert_eq!(unsigned.author(), None);
+        assert_eq!(
+            unsigned.credit(),
+            Some("After First Wave by First Hand"),
+            "a fork offers editable prose credit from the parent's identity"
+        );
+        assert!(unsigned.to_num_file().starts_with("NUMINOUS_STUDIO 4\n"));
         assert_eq!(unsigned.descends(), Some(parent.to_link().as_str()));
+        assert_eq!(
+            unsigned.clone().without_credit().credit(),
+            None,
+            "clearing the suggestion leaves the machine lineage"
+        );
+    }
+
+    #[test]
+    fn credit_overrides_retain_clear_or_replace_without_empty_records() {
+        let parent = StudioCreation::new("sin(x)", -2.0, 3.0, 0.5)
+            .expect("parent")
+            .with_title("First Wave")
+            .expect("title");
+        let child = parent.fork(None, None, None).expect("child");
+        assert_eq!(
+            child.clone().with_credit_override(None).expect("no edit"),
+            child
+        );
+        assert_eq!(child.credit(), Some("After First Wave"));
+        for edit in ["", "   ", "\t\n"] {
+            let cleared = child
+                .clone()
+                .with_credit_override(Some(edit))
+                .expect("clear");
+            assert_eq!(cleared, child.clone().without_credit());
+            assert_eq!(cleared.descends(), Some(parent.to_link().as_str()));
+            assert!(!cleared.to_num_file().contains("credit="));
+            assert!(!cleared.to_link().contains("credit="));
+            assert_eq!(
+                StudioCreation::from_num_file(&cleared.to_num_file()).expect("cleared file"),
+                cleared
+            );
+        }
+        let replaced = child
+            .clone()
+            .with_credit_override(Some("  A different source  "))
+            .expect("replace");
+        assert_eq!(replaced.credit(), Some("A different source"));
+        assert_eq!(replaced.descends(), child.descends());
+        for invalid in ["x".repeat(MAX_CREDIT_CHARS + 1), "line\nbreak".to_string()] {
+            assert!(child.clone().with_credit_override(Some(&invalid)).is_err());
+        }
+        // Editing emptiness removes the field; stored emptiness remains invalid.
+        let invalid_file = child
+            .to_num_file()
+            .replace("credit=After First Wave\n", "credit=\n");
+        assert!(StudioCreation::from_num_file(&invalid_file).is_err());
+        let invalid_link = child
+            .to_link()
+            .replace("credit=After%20First%20Wave", "credit=");
+        assert!(StudioCreation::from_link(&invalid_link).is_err());
+    }
+
+    #[test]
+    fn prose_credit_round_trips_as_version_four() {
+        let parent = StudioCreation::new("sin(x)", -1.0, 1.0, 0.0).expect("parent");
+        let credited = StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5)
+            .expect("creation")
+            .with_title("Second Wave")
+            .expect("title")
+            .with_credit("After Slow Waves by A Curious Mind")
+            .expect("credit");
+        let text = credited.to_num_file();
+        assert!(text.starts_with("NUMINOUS_STUDIO 4\n"), "{text}");
+        assert!(text.contains("kind=graph\n"), "{text}");
+        assert!(
+            text.contains("credit=After Slow Waves by A Curious Mind\n"),
+            "{text}"
+        );
+        assert_eq!(
+            StudioCreation::from_num_file(&text).expect("file"),
+            credited
+        );
+        let link = credited.to_link();
+        assert!(link.contains("credit=After%20Slow%20Waves"), "{link}");
+        assert!(!link.contains("descends"), "{link}");
+        assert_eq!(StudioCreation::from_link(&link).expect("link"), credited);
+
+        let child = parent
+            .clone()
+            .with_title("Slow Waves")
+            .expect("title")
+            .fork(None, Some("Remix"), None)
+            .expect("fork");
+        assert_eq!(child.credit(), Some("After Slow Waves"));
+        assert_eq!(child.title(), Some("Remix"));
+
+        let nameless = parent.fork(None, None, None).expect("nameless parent");
+        assert_eq!(
+            nameless.credit(),
+            None,
+            "a nameless parent invents no thanks"
+        );
     }
 
     #[test]
@@ -2416,8 +2630,11 @@ mod tests {
         let smuggled = "NUMINOUS_STUDIO 1\nexpr=x\nxmin=-1\nxmax=1\na=0\ntitle=Sneak\n";
         let err = StudioCreation::from_num_file(smuggled).expect_err("smuggling refused");
         assert!(err.contains("NUMINOUS_STUDIO 2"), "{err}");
+        let smuggled_credit = "NUMINOUS_STUDIO 3\nkind=graph\nexpr=x\nxmin=-1\nxmax=1\na=0\nscale=continuous\ncredit=After Waves\n";
+        let err = StudioCreation::from_num_file(smuggled_credit).expect_err("credit needs v4");
+        assert!(err.contains("NUMINOUS_STUDIO 4"), "{err}");
         // A future version is a fact to report, not a guess to parse.
-        let future = "NUMINOUS_STUDIO 4\nexpr=x\nxmin=-1\nxmax=1\na=0\n";
+        let future = "NUMINOUS_STUDIO 5\nexpr=x\nxmin=-1\nxmax=1\na=0\n";
         let err = StudioCreation::from_num_file(future).expect_err("future refused");
         assert!(err.contains("newer Numinous"), "{err}");
     }
@@ -2560,6 +2777,30 @@ mod tests {
             base().with_title("Prismatic Chord No. 7").is_ok(),
             "an ordinary name passes"
         );
+        assert!(base().with_credit("").is_err(), "empty is not credit");
+        assert!(
+            base()
+                .with_credit(&"x".repeat(MAX_CREDIT_CHARS + 1))
+                .is_err(),
+            "the credit cap bites"
+        );
+        assert!(
+            base().with_credit("thanks\nnope").is_err(),
+            "a line break cannot fork the line format"
+        );
+        let title = "T".repeat(MAX_META_TEXT_CHARS);
+        let author = "A".repeat(MAX_META_TEXT_CHARS);
+        let maxed = base()
+            .with_title(&title)
+            .expect("max title")
+            .with_author(&author)
+            .expect("max author");
+        let suggestion = maxed.fork_credit_suggestion().expect("suggestion");
+        assert!(
+            suggestion.chars().count() <= MAX_CREDIT_CHARS,
+            "the default sentence must fit the credit cap"
+        );
+        assert!(base().with_credit(&suggestion).is_ok());
 
         // Lineage must reopen or it is not lineage.
         assert!(base().with_descends("not a link").is_err());

@@ -162,6 +162,9 @@ def drawing(reopened: str) -> str:
                 "scale=",
                 "title=",
                 "author=",
+                "credit=",
+                "era=",
+                "descends=",
                 "link=",
                 "remix it:",
                 "y = ",
@@ -420,6 +423,89 @@ def check_parametric_pair(
     }
 
 
+def check_prose_credit(cli: list[str], work: Path, env: dict[str, str]) -> dict[str, Any]:
+    """A fork offers editable prose credit, and a first save does not invent it."""
+    parent = work / "credited-parent.num"
+    code, _, error = run_cli(
+        cli,
+        [
+            "plot",
+            "sin(a*x)",
+            "--title=Slow Waves",
+            "--author=A Curious Mind",
+            "--save",
+            str(parent),
+        ],
+        env,
+    )
+    if code != 0 or not parent.is_file():
+        return {
+            "name": "prose credit",
+            "passed": False,
+            "detail": f"parent save failed: {error[:300]}",
+        }
+    body = parent.read_text(encoding="utf-8")
+    if body.startswith("NUMINOUS_STUDIO 4") or "credit=" in body:
+        return {
+            "name": "prose credit",
+            "passed": False,
+            "detail": "a first creation invented a fork sentence",
+        }
+
+    child = work / "credited-child.num"
+    code, _, error = run_cli(
+        cli,
+        ["fork", str(parent), "--title=Remix", "--out", str(child)],
+        env,
+    )
+    child_body = child.read_text(encoding="utf-8") if child.is_file() else ""
+    if (
+        code != 0
+        or not child_body.startswith("NUMINOUS_STUDIO 4\n")
+        or "credit=After Slow Waves by A Curious Mind\n" not in child_body
+        or "title=Remix\n" not in child_body
+    ):
+        return {
+            "name": "prose credit",
+            "passed": False,
+            "detail": f"fork did not offer editable credit: {(error or child_body)[:400]}",
+        }
+
+    code, reopened, error = run_cli(cli, ["open-studio", str(child)], env)
+    if code != 0 or "credit=After Slow Waves by A Curious Mind" not in reopened:
+        return {
+            "name": "prose credit",
+            "passed": False,
+            "detail": f"reopen omitted credit: {(error or reopened)[:400]}",
+        }
+
+    overridden = work / "credited-override.num"
+    code, _, error = run_cli(
+        cli,
+        [
+            "fork",
+            str(parent),
+            "--credit=After the quiet one",
+            "--out",
+            str(overridden),
+        ],
+        env,
+    )
+    override_body = overridden.read_text(encoding="utf-8") if overridden.is_file() else ""
+    if code != 0 or "credit=After the quiet one\n" not in override_body:
+        return {
+            "name": "prose credit",
+            "passed": False,
+            "detail": f"an explicit credit did not replace the default: {(error or override_body)[:400]}",
+        }
+
+    return {
+        "name": "prose credit",
+        "passed": True,
+        "detail": "fork offers After {title} by {author}, reopen speaks it, and --credit replaces it",
+    }
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     cli = resolve_cli()
@@ -432,6 +518,7 @@ def main() -> int:
         results.append(check_recipe_bank(cli, env))
         results.append(check_settings_survive(cli, work, env))
         results.append(check_parametric_pair(cli, work, env))
+        results.append(check_prose_credit(cli, work, env))
         for expr in EXPRESSIONS:
             results.append(check_expression(cli, expr, work, env))
     failed = [item for item in results if not item.get("passed")]

@@ -1726,6 +1726,11 @@ impl App {
                     naming.author.to_uppercase(),
                     cursor(NamingField::Author)
                 ),
+                format!(
+                    "CREDIT: {}{}",
+                    naming.credit.to_uppercase(),
+                    cursor(NamingField::Credit)
+                ),
                 "TAB: SWITCH  ENTER: SHARE  ESC: CANCEL".to_string(),
             ];
             let top = (height as i32 / 2 - 24 * scale).max(0);
@@ -2608,8 +2613,8 @@ impl ApplicationHandler for App {
                             self.studio_panel.toggle_auto();
                         }
                         Key::Named(NamedKey::F4) => {
-                            // The share trio starts with its name: F4 opens
-                            // the naming step, Enter there writes the bundle.
+                            // The share starts with its name: F4 opens the
+                            // naming step, Enter there writes the bundle.
                             if self.save_gate.admit(
                                 save_gate::SaveKind::StudioShare,
                                 Instant::now(),

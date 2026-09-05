@@ -43,7 +43,7 @@ fn server_instructions() -> &'static str {
         "On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. ",
         "On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. ",
         "Read structuredContent.engineeredAha for the beat, visible wager, and post-summon grade. reveal_room opens only after a normal room has been played, or after an engineered Aha has consolidated. ",
-        "Pass audio true to watch_show, listen_room, or sing_expression and a real WAV arrives in an audio content block beside the notation. That is a sound sent, not a sound heard: whether your client surfaces it is its answer to give, and if it cannot, the notation is the whole of what you get. ",
+        "Pass audio true to watch_show, listen_room, or sing_expression and a real WAV arrives in an audio content block beside the notation. That is a sound sent, not a sound heard: whether your client surfaces it is its answer to give, and if it cannot, the notation is the whole of what you get. Pass midi true on sing_expression for a Standard MIDI File of the same melody: 12-TET keys plus pitch bend of leftover cents. ",
         "Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
     )
 }
@@ -687,6 +687,12 @@ fn build_tools_catalog() -> Value {
                             "maxLength": numinous_core::MAX_META_TEXT_CHARS,
                             "description": "Optional signature. Printable ASCII, at most 64 characters."
                         },
+                        "credit": {
+                            "type": "string",
+                            "minLength": 0,
+                            "maxLength": numinous_core::MAX_CREDIT_CHARS,
+                            "description": "Optional prose credit. Printable ASCII, at most 160 characters. Empty or whitespace-only text clears credit."
+                        },
                         "era": {
                             "type": "string",
                             "enum": ["phosphor", "8-bit", "vector", "modern"],
@@ -719,7 +725,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "fork_creation",
-                "description": "Remix portable Studio capsule data with explicit lineage. A graph may replace expr; a parametric pair may replace both x_expr and y_expr. The child keeps the parent's domain, parameter, Visual Era, and pitch scale unless scale is supplied, takes only its own title and author, and records the parent's canonical link. Returns .num text and a link; no host file is read or created.",
+                "description": "Remix portable Studio capsule data with explicit lineage. A graph may replace expr; a parametric pair may replace both x_expr and y_expr. The child keeps the parent's domain, parameter, Visual Era, and pitch scale unless scale is supplied, takes only its own title and author, offers editable prose credit from the parent's identity, and records the parent's canonical link. Returns .num text and a link; no host file is read or created.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -761,6 +767,12 @@ fn build_tools_catalog() -> Value {
                             "maxLength": numinous_core::MAX_META_TEXT_CHARS,
                             "description": "Optional child signature. The parent's author is never inherited."
                         },
+                        "credit": {
+                            "type": "string",
+                            "minLength": 0,
+                            "maxLength": numinous_core::MAX_CREDIT_CHARS,
+                            "description": "Optional prose credit. Omit to use After {title} by {author} from the parent. Empty or whitespace-only text clears credit. The parent's own credit is never copied."
+                        },
                         "width": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_WIDTH, "description": "Preview width (default 72)." },
                         "height": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_HEIGHT, "description": "Preview height (default 26)." }
                     },
@@ -770,7 +782,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "sing_expression",
-                "description": "Hear your own function through the same Studio grammar: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Choose a portable pitch scale or keep the continuous default. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block, which is the one part of the reply that is the music rather than a description of it.",
+                "description": "Hear your own function through the same Studio grammar: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Choose a portable pitch scale or keep the continuous default. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block. Pass midi true for a Standard MIDI File of the same melody as a resource block: nearest 12-TET keys, leftover cents as pitch bend over plus or minus two semitones, with that range declared in the file.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -785,6 +797,10 @@ fn build_tools_catalog() -> Value {
                                 "Also return the melody as sound: an audio content block carrying a mono 16-bit WAV at {} Hz, alongside the notation. Off by default, because a caller who cannot pass audio to a model should not pay for it, and the price is about 42 KB of encoded audio per second of sound, so a 32-note melody costs roughly 176 KB. Exactly what was sent, including encodedBytes, arrives in structuredContent.audio.",
                                 crate::audible::WIRE_SAMPLE_RATE
                             )
+                        },
+                        "midi": {
+                            "type": "boolean",
+                            "description": "Also return the melody as a Standard MIDI File type 0 resource (audio/midi). Off by default. The native voice stays frequencies in time; MIDI is 12-TET keys plus pitch bend of leftover cents over plus or minus two semitones, with that range declared in the file. StructuredContent.midi names that loss."
                         },
                         "notes": {
                             "type": "integer",

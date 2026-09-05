@@ -47,7 +47,7 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "TWO: MOD(V,V) MIN(V,V) MAX(V,V)",
     "F2: RANDOM RECIPE FROM THE BANK",
     "F3: AUTO SET  (~21S, PHRASE SAFE)",
-    "F4: NAME + SHARE  .NUM + LINK + PNG",
+    "F4: NAME + SHARE  .NUM + LINK + PNG + MIDI",
     "F5: GALLERY  THE SAVED WALL",
     "F6: CYCLE MUSICAL SCALE",
     "F1: TOGGLE THIS HELP",
@@ -56,7 +56,7 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "EDITING PAUSES AUTO",
 ];
 
-/// A reopened `.num` creation, held whole until the player takes over.
+/// A reopened `.num` creation whose saved window and knob survive editing.
 ///
 /// While this is present the panel draws the saved window instead of the
 /// ambient one and pins `a` to the saved value instead of the gallery phase,
@@ -65,9 +65,9 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
 /// with its title, author, and lineage intact, and rebuilding from the
 /// window alone would silently strip them. It opens in a paused preview, the
 /// hostile-input posture for shared content: the curve is drawn, the voice
-/// waits for the player. Any edit releases the pin, because from the first
-/// keystroke the creation is theirs, not the file's; the pin releases into
-/// lineage, so the edited work descends from what was opened.
+/// waits for the player. An edit starts a remix through `fork_of`, so the
+/// original identity becomes lineage while its numerical settings remain.
+/// Only replacing the creation, such as drawing a recipe, releases them.
 #[derive(Debug, Clone)]
 struct OpenedCreation {
     creation: StudioCreation,
@@ -117,7 +117,7 @@ pub struct StudioPanel {
     morph: Option<CurveMorph>,
     /// Dismissible help overlay; open by default on first Studio entry.
     show_help: bool,
-    /// A reopened creation's saved window and knob, until the player edits.
+    /// Saved numerical settings and the original capsule for identity/lineage.
     opened: Option<OpenedCreation>,
     /// The parent link while this Studio session is a fork. Edits keep it,
     /// because edits are the remix; a fresh open or a recipe draw clears it,
@@ -173,12 +173,8 @@ impl StudioPanel {
         self.fork_of = None;
         self.source = creation.editor_source();
         self.scale = creation.scale();
-        // Parse directly rather than through reparse, which is the edit door
-        // and releases the pin this method exists to set. A validated
-        // creation always parses; if this seatbelt branch ever fires anyway,
-        // the panel refuses the pin and keeps nothing of the previous curve,
-        // so an error and a pin still cannot coexist and a stale expression
-        // cannot draw under a window that was never its own.
+        // A validated creation always parses. If this seatbelt branch fires,
+        // clear the old program so it cannot draw under the new window.
         match creation.program() {
             Ok(program) => {
                 self.expr = Some(program.voice_expression().clone());
@@ -288,7 +284,7 @@ impl StudioPanel {
     pub fn cycle_scale(&mut self) -> Option<SoundSpec> {
         self.pause_auto();
         self.morph = None;
-        self.release_pin_into_lineage();
+        self.begin_remix();
         self.scale = self.scale.next();
         self.current_sound()
     }
@@ -364,34 +360,28 @@ impl StudioPanel {
         self.load_random_recipe()
     }
 
-    /// Release a reopened creation's pin into lineage. Taking over a
-    /// creation by editing it is the definition of a remix, so the edited
-    /// work descends from what was opened; a fork chosen on the wall keeps
-    /// the parent it already set.
-    fn release_pin_into_lineage(&mut self) {
-        if let Some(opened) = self.opened.take()
-            && self.fork_of.is_none()
-        {
-            self.fork_of = Some(opened.creation.to_link());
+    /// Start a remix without changing the saved window or knob. A fork
+    /// chosen on the wall keeps the parent it already set. The first edit
+    /// also leaves the paused preview, including an invalid draft whose
+    /// last-good expression remains available.
+    fn begin_remix(&mut self) {
+        if let Some(opened) = self.opened.as_mut() {
+            opened.paused = false;
+            if self.fork_of.is_none() {
+                self.fork_of = Some(opened.creation.to_link());
+            }
         }
     }
 
     /// Re-parse the Studio text, keeping the last good curve alive on errors.
-    ///
-    /// This is the edit door, so it releases a reopened creation's pin: from
-    /// the first keystroke the window and knob are the player's again, and
-    /// the opened creation becomes this work's parent.
-    pub fn reparse(&mut self) -> Option<SoundSpec> {
+    fn reparse(&mut self) -> Option<SoundSpec> {
         self.morph = None;
-        self.release_pin_into_lineage();
         match StudioProgram::from_editor(&self.source) {
             Ok(program) => {
-                let expr = program.voice_expression().clone();
-                let spec = sound_for_expression(&expr, self.scale);
-                self.expr = Some(expr);
+                self.expr = Some(program.voice_expression().clone());
                 self.program = Some(program);
                 self.error = None;
-                Some(spec)
+                self.current_sound()
             }
             Err(message) => {
                 self.error = Some(message);
@@ -402,17 +392,19 @@ impl StudioPanel {
 
     /// Remove one character and reparse. Editing pauses Auto.
     pub fn backspace(&mut self) -> Option<SoundSpec> {
+        self.source.pop()?;
         self.pause_auto();
-        self.source.pop();
+        self.begin_remix();
         self.reparse()
     }
 
     /// Append ordinary text and reparse. Editing pauses Auto.
     pub fn push_text(&mut self, text: &str) -> Option<SoundSpec> {
-        if !self.can_append(text) {
+        if text.is_empty() || !self.can_append(text) {
             return None;
         }
         self.pause_auto();
+        self.begin_remix();
         self.source.push_str(text);
         self.reparse()
     }
@@ -424,7 +416,7 @@ impl StudioPanel {
         if self.can_append(" ") {
             self.pause_auto();
             self.morph = None;
-            self.release_pin_into_lineage();
+            self.begin_remix();
             self.source.push(' ');
             return true;
         }
@@ -433,8 +425,9 @@ impl StudioPanel {
 
     /// Render the last-good expression into the same deterministic Studio voice.
     ///
-    /// A reopened creation sings its own saved window at its saved knob;
-    /// everything else sings the ambient default.
+    /// A reopened creation and its edits sing over the saved window at the
+    /// saved knob, using the current scale. Fresh Studio retains its ambient
+    /// voice defaults.
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
         let expr = self.expr.as_ref()?;
         if let Some(opened) = &self.opened {
@@ -444,10 +437,24 @@ impl StudioPanel {
                 opened.creation.xmax(),
                 numinous_core::DEFAULT_MELODY_NOTES,
                 opened.creation.a(),
-                opened.creation.scale(),
+                self.scale,
             ));
         }
         Some(sound_for_expression(expr, self.scale))
+    }
+
+    /// Restore audio on entry without editing or confirming the creation.
+    /// A paused preview submits silence so a room's voice cannot continue
+    /// underneath a capsule the player has not chosen to hear.
+    pub(crate) fn entry_sound(&self) -> Option<SoundSpec> {
+        if self.opened.as_ref().is_some_and(|opened| opened.paused) {
+            Some(SoundSpec {
+                duration: 0.12,
+                notes: Vec::new(),
+            })
+        } else {
+            self.current_sound()
+        }
     }
 
     /// Current UTF-8 byte length, used only to detect an admitted native edit.
@@ -517,6 +524,12 @@ impl StudioPanel {
             creation = creation
                 .with_descends(parent)
                 .map_err(|_| ShareRefusal::LineageTooLarge)?;
+            if let Ok(parent_creation) = StudioCreation::from_link(parent) {
+                creation = match parent_creation.fork_credit_suggestion() {
+                    Some(credit) => creation.clone().with_credit(&credit).unwrap_or(creation),
+                    None => creation,
+                };
+            }
         }
         Ok(creation)
     }
@@ -701,14 +714,18 @@ impl StudioPanel {
                 '-',
             );
         } else if let Some(opened) = &self.opened {
-            // The pin and the error share a row because they cannot coexist:
-            // editing releases the pin before it can produce a parse error.
+            // Saved numerical settings survive a remix. Parse errors use this
+            // row while the last-good program still draws with those settings.
             let (xmin, xmax, a) = (
                 opened.creation.xmin(),
                 opened.creation.xmax(),
                 opened.creation.a(),
             );
-            let domain = if opened.creation.kind() == StudioKind::Parametric {
+            let domain = if self
+                .program
+                .as_ref()
+                .is_some_and(|program| program.kind() == StudioKind::Parametric)
+            {
                 "T"
             } else {
                 "X"
@@ -716,6 +733,11 @@ impl StudioPanel {
             let line = if opened.paused {
                 format!(
                     "REOPENED  {domain} {xmin:.1} TO {xmax:.1}  A {a:.2}  SCALE {}  ENTER: PLAY",
+                    self.scale_name()
+                )
+            } else if self.fork_of.is_some() {
+                format!(
+                    "REMIX  {domain} {xmin:.1} TO {xmax:.1}  A {a:.2}  SCALE {}  F6: CHANGE",
                     self.scale_name()
                 )
             } else {
@@ -899,6 +921,10 @@ mod tests {
         for name in ["FLOOR", "MOD(V,V)", "MIN(V,V)", "MAX(V,V)"] {
             assert!(help.contains(name), "help must name {name}");
         }
+        assert!(
+            help.contains("MIDI"),
+            "F4 help must name the MIDI file the share writes"
+        );
     }
 
     #[test]
@@ -1068,30 +1094,118 @@ mod tests {
     }
 
     #[test]
-    fn an_edit_releases_the_reopened_pin() {
-        use std::f64::consts::TAU;
+    fn an_edit_preserves_the_reopened_window_and_knob() {
         let creation =
             numinous_core::StudioCreation::new("sin(a*x)", 0.0, 1.0, 0.25).expect("creation");
         let mut panel = StudioPanel::default();
         panel.open_creation(&creation);
         assert!(panel.confirm_opened().is_some());
+        let curve_band = |panel: &StudioPanel, phase| {
+            let mut raster = Raster::new(200, 150);
+            panel.draw(&mut raster, InputMode::KeyboardMouse, 200, 150, phase);
+            raster.to_rgba()[200 * 4 * 70..200 * 4 * 120].to_vec()
+        };
+        let before = curve_band(&panel, 0.25);
 
-        // From the first keystroke the window and knob are the player's.
         let spec = panel.push_text("+0").expect("still parses");
-        assert!(!panel.opened_active());
-        let expr = numinous_core::parse("sin(a*x)+0").expect("expr");
-        assert_eq!(spec, numinous_core::to_melody(&expr, -TAU, TAU, 32, 1.0));
+        assert!(panel.opened_active());
+        assert_eq!(spec, creation.to_melody(32));
+        assert_eq!(curve_band(&panel, 0.75), before);
+        for phase in [0.0, 0.75, 1.0] {
+            let edited = panel.current_creation(phase).expect("edited creation");
+            assert_eq!(edited.source(), "sin(a*x)+0");
+            assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
+            assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
+            assert_eq!(Some(edited.to_melody(32)), panel.current_sound());
+            let mut reopened = StudioPanel::default();
+            reopened.open_creation(&edited);
+            assert_eq!(
+                panel.postcard_rgba(phase, 200, numinous_core::Era::Modern, None, None),
+                reopened.postcard_rgba(0.5, 200, numinous_core::Era::Modern, None, None),
+                "the edited postcard must match the creation it saves"
+            );
+        }
+    }
 
-        // A space is an edit too, even though it keeps the parse state.
+    #[test]
+    fn whitespace_keeps_reopened_settings_while_starting_a_remix() {
+        let creation =
+            numinous_core::StudioCreation::new("sin(a*x)", 0.0, 1.0, 0.25).expect("creation");
+        let mut panel = StudioPanel::default();
         panel.open_creation(&creation);
         assert!(panel.opened_paused());
         assert!(panel.push_space());
-        assert!(!panel.opened_active());
+        assert!(panel.opened_active());
+        assert!(!panel.opened_paused());
+        let edited = panel.current_creation(0.75).expect("whitespace edit");
+        assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
+        assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
+        assert_eq!(panel.current_sound(), Some(creation.to_melody(32)));
 
-        // So is a recipe draw: the bank replaces the reopened source.
-        panel.open_creation(&creation);
+        // Recipe discovery intentionally replaces the complete creation.
         assert!(panel.load_random_recipe().is_some());
         assert!(!panel.opened_active());
+        let recipe = panel.current_creation(0.75).expect("recipe");
+        assert_eq!(recipe.xmin(), numinous_core::DEFAULT_STUDIO_XMIN);
+        assert_eq!(recipe.xmax(), numinous_core::DEFAULT_STUDIO_XMAX);
+        assert_eq!(recipe.a(), 0.75 * std::f64::consts::TAU);
+        assert_eq!(recipe.descends(), None);
+    }
+
+    #[test]
+    fn invalid_drafts_keep_the_last_good_capsule_math() {
+        let creation =
+            numinous_core::StudioCreation::new("sin(a*x)", 0.0, 1.0, 0.25).expect("creation");
+        let mut panel = StudioPanel::default();
+        panel.open_creation(&creation);
+        assert!(panel.push_text("+").is_none());
+        assert!(!panel.opened_paused());
+        assert_eq!(panel.window_and_knob(0.75), (0.0, 1.0, 0.25));
+        assert_eq!(panel.current_sound(), Some(creation.to_melody(32)));
+        assert_eq!(
+            panel.current_creation(0.75),
+            Err(super::ShareRefusal::UnparsedFormula)
+        );
+
+        let scaled = creation.clone().with_scale(creation.scale().next());
+        assert_eq!(panel.cycle_scale(), Some(scaled.to_melody(32)));
+        assert_eq!(
+            panel.current_creation(0.75),
+            Err(super::ShareRefusal::UnparsedFormula),
+            "changing scale does not repair an invalid formula"
+        );
+        assert_eq!(panel.backspace(), Some(scaled.to_melody(32)));
+        let repaired = panel.current_creation(0.75).expect("repaired formula");
+        assert_eq!(
+            (repaired.xmin(), repaired.xmax(), repaired.a()),
+            (0.0, 1.0, 0.25)
+        );
+        assert_eq!(repaired.scale(), scaled.scale());
+        assert_eq!(repaired.descends(), Some(creation.to_link().as_str()));
+    }
+
+    #[test]
+    fn changing_a_reopened_scale_preserves_its_geometry() {
+        let creation =
+            numinous_core::StudioCreation::new("sin(a*x)", 0.0, 1.0, 0.25).expect("creation");
+        let mut panel = StudioPanel::default();
+        panel.open_creation(&creation);
+        let before = panel.postcard_rgba(0.25, 200, numinous_core::Era::Modern, None, None);
+
+        let expected = creation.clone().with_scale(creation.scale().next());
+        let sound = panel.cycle_scale().expect("scaled voice");
+        assert_eq!(sound, expected.to_melody(32));
+        assert_ne!(sound, creation.to_melody(32));
+        assert!(!panel.opened_paused());
+        let edited = panel.current_creation(0.75).expect("scale edit");
+        assert_eq!(edited.source(), creation.source());
+        assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
+        assert_eq!(edited.scale(), expected.scale());
+        assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
+        assert_eq!(
+            panel.postcard_rgba(0.75, 200, numinous_core::Era::Modern, None, None),
+            before
+        );
     }
 
     #[test]
@@ -1117,7 +1231,7 @@ mod tests {
     fn the_shared_creation_is_the_curve_on_screen() {
         use std::f64::consts::TAU;
         // Ambient Studio: the knob freezes at this moment's phase, so the
-        // share is the exact curve the player was hearing, not a=1.0 always.
+        // share is the exact curve on screen at the chosen phase.
         let panel = StudioPanel::new("sin(a*x)").expect("panel");
         let creation = panel.current_creation(0.25).expect("creation");
         assert_eq!(creation.source(), "sin(a*x)");
@@ -1187,8 +1301,8 @@ mod tests {
     #[test]
     fn a_parametric_reopen_keeps_pair_scale_and_lineage_on_takeover() {
         let saved = numinous_core::StudioCreation::new_parametric(
-            "cos(t)",
-            "sin(t)",
+            "cos(3*t+a)",
+            "sin(2*t+a)",
             0.0,
             std::f64::consts::TAU,
             0.5,
@@ -1205,16 +1319,17 @@ mod tests {
         assert_eq!(panel.current_creation(0.25).expect("untouched"), saved);
         assert_eq!(panel.current_sound(), Some(saved.to_melody(32)));
 
-        assert!(panel.push_text("+0").is_some());
+        assert_eq!(panel.push_text("+0"), Some(saved.to_melody(32)));
         let edited = panel.current_creation(0.25).expect("edited pair");
-        assert_eq!(edited.source(), "cos(t)");
-        assert_eq!(edited.second_source(), Some("sin(t)+0"));
-        assert_eq!(edited.xmin(), -std::f64::consts::TAU);
-        assert_eq!(edited.xmax(), std::f64::consts::TAU);
-        assert!((edited.a() - std::f64::consts::FRAC_PI_2).abs() < 1.0e-12);
+        assert_eq!(edited.source(), "cos(3*t+a)");
+        assert_eq!(edited.second_source(), Some("sin(2*t+a)+0"));
+        assert_eq!(edited.xmin(), saved.xmin());
+        assert_eq!(edited.xmax(), saved.xmax());
+        assert_eq!(edited.a(), saved.a());
         assert_eq!(edited.scale(), numinous_core::StudioScale::Major);
         assert_eq!(edited.descends(), Some(saved.to_link().as_str()));
         assert_eq!(edited.title(), None);
+        assert_eq!(panel.current_sound(), Some(edited.to_melody(32)));
     }
 
     #[test]
@@ -1279,14 +1394,21 @@ mod tests {
             "identity and lineage survive an untouched re-share"
         );
 
-        // The first edit makes it the player's: the parent's title drops
-        // with the pin, but the pin releases into lineage, because taking
-        // over a creation by editing it is the definition of a remix. The
-        // edited share descends from what was opened, not from the
+        assert!(panel.push_text("").is_none());
+        assert!(panel.opened_paused());
+        assert_eq!(panel.current_creation(0.75).expect("no edit"), full);
+
+        // The first edit starts a remix. The parent's identity becomes
+        // lineage while its numerical settings remain. The edited share
+        // descends from what was opened, not from the
         // grandparent the opened capsule itself descends from.
         assert!(panel.push_text("+0").is_some());
         let taken_over = panel.current_creation(0.25).expect("taken over");
         assert_eq!(taken_over.title(), None);
+        assert_eq!(
+            taken_over.credit(),
+            Some("After Slow Waves by A Curious Mind")
+        );
         assert_eq!(taken_over.descends(), Some(full.to_link().as_str()));
     }
 
@@ -1317,6 +1439,11 @@ mod tests {
             None,
             "a fork is a new creation descending from the parent, not the \
              parent wearing its own name"
+        );
+        assert_eq!(
+            fork.credit(),
+            Some("After Parent Wave"),
+            "a fork offers prose credit the player can edit before sharing"
         );
     }
 

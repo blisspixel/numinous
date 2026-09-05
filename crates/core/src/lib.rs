@@ -69,6 +69,7 @@ pub mod journal;
 pub mod journal_okf;
 pub mod journey;
 pub mod life_sound;
+pub mod midi;
 pub mod motifs;
 pub mod motion;
 pub mod munch_arcade;
@@ -156,6 +157,9 @@ pub use journey::{
     Boon, CUT_LEVELS, ENGINEERED_AHA_ROOM_IDS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options,
     constellation, is_engineered_aha_room, level_lore,
 };
+pub use midi::{
+    MIDI_PITCH_BEND_RANGE_SEMITONES, MIDI_TEMPO_MICROSECONDS, MIDI_TICKS_PER_QUARTER, midi_file,
+};
 pub use motifs::{MAX_ROOM_BED_EVENTS, Motif, ROOM_BED_SOURCE_RATE};
 pub use motion::{Motion, REDUCED_MOTION_VAR, setting_is_on};
 pub use munchers::{
@@ -233,10 +237,10 @@ pub use spectrum::{
     spectrum_time_scale,
 };
 pub use studio::{
-    Expr, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_SHARE_INPUT_BYTES, MAX_STUDIO_EDITOR_CHARS,
-    MAX_STUDIO_SOURCE_CHARS, NumFileError, STUDIO_RECIPES, StudioCreation, StudioKind, StudioPlot,
-    StudioProgram, StudioScale, eval, parse, plot_text, studio_auto_recipe, studio_recipe,
-    studio_recipe_count, to_melody, to_melody_with_scale,
+    Expr, MAX_CREDIT_CHARS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_SHARE_INPUT_BYTES,
+    MAX_STUDIO_EDITOR_CHARS, MAX_STUDIO_SOURCE_CHARS, NumFileError, STUDIO_RECIPES, StudioCreation,
+    StudioKind, StudioPlot, StudioProgram, StudioScale, eval, parse, plot_text, studio_auto_recipe,
+    studio_recipe, studio_recipe_count, to_melody, to_melody_with_scale,
 };
 pub use studio_request::{
     DEFAULT_MELODY_NOTES, DEFAULT_PLOT_HEIGHT, DEFAULT_PLOT_WIDTH, DEFAULT_STUDIO_PARAMETER,
