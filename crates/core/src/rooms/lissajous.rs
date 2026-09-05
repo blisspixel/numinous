@@ -1,15 +1,16 @@
 //! Lissajous: two perpendicular oscillations tracing a curve.
 //!
-//! One oscillation drives the x axis and another the y axis. When their
-//! frequencies form a simple ratio the figure is stable and closed; off-ratio it
-//! tumbles. A stable figure is a musical interval you can see. `t` sweeps the
-//! second frequency. See `docs/ROOMS.md` and `docs/INSIGHTS.md`.
+//! Unit-amplitude harmonic oscillators drive both axes. A rational frequency
+//! ratio gives the ideal motion a common period; a finite trace or a return
+//! to one position does not establish that period. Gallery phase `t` sweeps
+//! the second frequency, or the relative phase after a hand tuning. Each frame
+//! samples a separate oscillator-time window. See `docs/ROOMS.md`.
 
 use std::f64::consts::{FRAC_PI_2, TAU};
 
 use super::variation_unit;
-use crate::room::{Room, RoomInput, pokes_from_inputs};
-use crate::sound::SoundSpec;
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, pokes_from_inputs};
+use crate::sound::{ParametricSound, SoundSpec};
 use crate::surface::Surface;
 
 /// The fixed x-axis frequency; `t` sweeps the y-axis frequency against it.
@@ -22,6 +23,91 @@ const FREQ_Y_SWEEP: f64 = 3.0;
 const SAMPLES: usize = 1500;
 /// The largest whole number either oscillator can be tuned to by hand.
 const MAX_TUNE: f64 = 8.0;
+/// Convert oscillator frequency ratios to an audible register, in Hz.
+const VOICE_BASE_HZ: f32 = 110.0;
+/// Per-voice gain for the continuous mathematical interval.
+const VOICE_GAIN: f32 = 0.06;
+
+#[derive(Debug, Clone, Copy)]
+struct OscillatorPair {
+    frequency_x: f64,
+    frequency_y: f64,
+    phase_x: f64,
+    phase_y: f64,
+}
+
+impl OscillatorPair {
+    fn point(self, theta: f64) -> (f64, f64) {
+        (
+            (self.frequency_x * theta + FRAC_PI_2 + self.phase_x).sin(),
+            (self.frequency_y * theta + self.phase_y).sin(),
+        )
+    }
+
+    fn audio_parameters(self) -> (f32, f32) {
+        (
+            VOICE_BASE_HZ * self.frequency_x as f32,
+            (self.frequency_y / self.frequency_x) as f32,
+        )
+    }
+
+    fn voice(self) -> Option<ParametricSound> {
+        let (root, ratio) = self.audio_parameters();
+        // The audio interface carries frequencies, not the displayed phases.
+        ParametricSound::new(root, ratio, VOICE_GAIN)
+    }
+
+    fn sound(self) -> SoundSpec {
+        let (root, ratio) = self.audio_parameters();
+        SoundSpec::chord(&[root, root * ratio], 1.5, VOICE_GAIN)
+    }
+
+    fn draw(self, canvas: &mut dyn Surface, mark: char) {
+        let (width, height) = canvas.draw_bounds();
+        if width == 0 || height == 0 {
+            return;
+        }
+        let cx = width.saturating_sub(1) as f64 * 0.5;
+        let cy = height.saturating_sub(1) as f64 * 0.5;
+        let aspect = canvas.safe_char_aspect();
+        // Both coordinates have unit amplitude in the same spatial units.
+        // Text cells need aspect correction before those units reach pixels.
+        let radius_x = cx.min(cy / aspect);
+        let radius_y = radius_x * aspect;
+        let to_pixel = |theta| {
+            let (x, y) = self.point(theta);
+            (
+                (cx + x * radius_x).round() as i32,
+                (cy + y * radius_y).round() as i32,
+            )
+        };
+        let mut previous = to_pixel(0.0);
+        for index in 1..=SAMPLES {
+            let theta = index as f64 / SAMPLES as f64 * TAU;
+            let current = to_pixel(theta);
+            canvas.line(previous.0, previous.1, current.0, current.1, mark);
+            previous = current;
+        }
+    }
+}
+
+fn phase_unit(t: f64) -> f64 {
+    if t.is_finite() {
+        t.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+fn accepted_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
+    let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
+    pokes[start..]
+        .iter()
+        .copied()
+        .filter(|(x, y)| x.is_finite() && y.is_finite())
+        .map(|(x, y)| (x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+        .collect()
+}
 
 /// The Lissajous room.
 #[derive(Debug, Default)]
@@ -44,23 +130,7 @@ impl Lissajous {
 
     /// The y-axis frequency selected by phase `t`.
     fn freq_y_for(t: f64) -> f64 {
-        FREQ_Y_MIN + FREQ_Y_SWEEP * t.clamp(0.0, 1.0)
-    }
-
-    fn point_normalized_shifted(theta: f64, freq_y: f64, phase_x: f64, phase_y: f64) -> (f64, f64) {
-        Self::point_tuned(theta, FREQ_X, freq_y, phase_x, phase_y)
-    }
-
-    /// One curve point for any pair of oscillator frequencies.
-    fn point_tuned(theta: f64, freq_x: f64, freq_y: f64, phase_x: f64, phase_y: f64) -> (f64, f64) {
-        let base_x = (freq_x * theta + FRAC_PI_2).sin();
-        let y = (freq_y * theta + phase_y).sin();
-        let x = if phase_x == 0.0 {
-            base_x
-        } else {
-            (base_x + (freq_x * theta + FRAC_PI_2 + phase_x).sin() * 0.15).clamp(-1.0, 1.0)
-        };
-        (x, y)
+        FREQ_Y_MIN + FREQ_Y_SWEEP * phase_unit(t)
     }
 
     fn phase_offsets(&self) -> (f64, f64) {
@@ -71,73 +141,41 @@ impl Lissajous {
     }
 
     /// The whole-number frequencies a hand point tunes: x picks the y-axis
-    /// count, y picks the x-axis count, both 1 through 8. Every click is an
-    /// exact integer ratio, so every figure the hand makes closes: the hand
-    /// plays intervals, never noise.
+    /// count, y picks the x-axis count, both 1 through 8. Every hand tuning
+    /// therefore has a common oscillator period.
     fn tuned_freqs(x: f64, y: f64) -> (f64, f64) {
         let fy = 1.0 + (x.clamp(0.0, 1.0) * (MAX_TUNE - 1.0)).round();
         let fx = 1.0 + (y.clamp(0.0, 1.0) * (MAX_TUNE - 1.0)).round();
         (fx, fy)
     }
 
-    /// Draw one full closed curve at the given frequencies.
-    fn draw_tuned(&self, canvas: &mut dyn Surface, freq_x: f64, freq_y: f64, t: f64, mark: char) {
-        let width = canvas.width();
-        let height = canvas.height();
-        if width == 0 || height == 0 {
-            return;
-        }
-        let (fw, fh) = (width as f64, height as f64);
-        let (cx, cy) = (fw / 2.0, fh / 2.0);
-        let rx = (fw / 2.0 - 1.0).max(0.0);
-        let ry = (fh / 2.0 - 1.0).max(0.0);
+    fn oscillators(&self, t: f64, hand: Option<(f64, f64)>) -> OscillatorPair {
         let (phase_x, phase_y) = self.phase_offsets();
-        let motion = if t.is_finite() {
-            t.clamp(0.0, 1.0) * TAU
-        } else {
-            0.0
+        let (frequency_x, frequency_y, relative_phase) = match hand {
+            Some((x, y)) => {
+                let (fx, fy) = Self::tuned_freqs(x, y);
+                // Zero and one select the same relative phase. This is a
+                // control animation, not elapsed time along the trajectory.
+                (fx, fy, phase_unit(t).fract() * TAU)
+            }
+            None => (FREQ_X, Self::freq_y_for(t), 0.0),
         };
-        let to_pixel = |theta: f64| -> (i32, i32) {
-            let (nx, ny) = Self::point_tuned(theta, freq_x, freq_y, phase_x, phase_y + motion);
-            ((cx + nx * rx).round() as i32, (cy + ny * ry).round() as i32)
-        };
-        let mut prev = to_pixel(0.0);
-        for i in 1..=SAMPLES {
-            let theta = (i as f64 / SAMPLES as f64) * TAU;
-            let current = to_pixel(theta);
-            canvas.line(prev.0, prev.1, current.0, current.1, mark);
-            prev = current;
+        OscillatorPair {
+            frequency_x,
+            frequency_y,
+            phase_x,
+            phase_y: phase_y + relative_phase,
         }
+    }
+
+    fn selected_hand(inputs: &[RoomInput]) -> Option<(f64, f64)> {
+        accepted_pokes(&pokes_from_inputs(inputs)).last().copied()
     }
 }
 
 impl Room for Lissajous {
-
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let width = canvas.width();
-        let height = canvas.height();
-        if width == 0 || height == 0 {
-            return;
-        }
-        let freq_y = Self::freq_y_for(if t.is_finite() { t } else { 0.0 });
-        let (fw, fh) = (width as f64, height as f64);
-        let (cx, cy) = (fw / 2.0, fh / 2.0);
-        let rx = (fw / 2.0 - 1.0).max(0.0);
-        let ry = (fh / 2.0 - 1.0).max(0.0);
-        let (phase_x, phase_y) = self.phase_offsets();
-
-        let to_pixel = |theta: f64| -> (i32, i32) {
-            let (nx, ny) = Self::point_normalized_shifted(theta, freq_y, phase_x, phase_y);
-            ((cx + nx * rx).round() as i32, (cy + ny * ry).round() as i32)
-        };
-
-        let mut prev = to_pixel(0.0);
-        for i in 1..=SAMPLES {
-            let theta = (i as f64 / SAMPLES as f64) * TAU;
-            let current = to_pixel(theta);
-            canvas.line(prev.0, prev.1, current.0, current.1, '*');
-            prev = current;
-        }
+        self.oscillators(t, None).draw(canvas, '*');
     }
 
     fn verb(&self) -> Option<&'static str> {
@@ -145,20 +183,12 @@ impl Room for Lissajous {
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
-        // The newest bounded raw tail first, finite filtering after, matching
-        // the catalog input contract.
-        let start = pokes.len().saturating_sub(crate::room::MAX_ROOM_POKES);
-        let tuned: Vec<(f64, f64)> = pokes[start..]
-            .iter()
-            .copied()
-            .filter(|&(x, y)| x.is_finite() && y.is_finite())
-            .collect();
+        let tuned = accepted_pokes(pokes);
         let Some((&newest, older)) = tuned.split_last() else {
             self.render(canvas, t);
             return;
         };
-        let width = canvas.width();
-        let height = canvas.height();
+        let (width, height) = canvas.draw_bounds();
         if width == 0 || height == 0 {
             return;
         }
@@ -174,10 +204,10 @@ impl Room for Lissajous {
             let tuning = Self::tuned_freqs(x, y);
             if !drawn.contains(&tuning) {
                 drawn.push(tuning);
-                self.draw_tuned(canvas, tuning.0, tuning.1, t, '.');
+                self.oscillators(t, Some((x, y))).draw(canvas, '.');
             }
         }
-        self.draw_tuned(canvas, fx, fy, t, '*');
+        self.oscillators(t, Some(newest)).draw(canvas, '*');
         for &(x, y) in &tuned {
             let px = (x.clamp(0.0, 1.0) * (width - 1) as f64).round() as i32;
             let py = (y.clamp(0.0, 1.0) * (height - 1) as f64).round() as i32;
@@ -186,21 +216,19 @@ impl Room for Lissajous {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let freq_y = Self::freq_y_for(if t.is_finite() { t } else { 0.0 });
-        Some(format!("X:Y = {FREQ_X:.0}:{freq_y:.2}  CLICK:TUNE"))
+        let pair = self.oscillators(t, None);
+        Some(format!(
+            "X:Y = {:.0}:{:.2}  CLICK:TUNE",
+            pair.frequency_x, pair.frequency_y
+        ))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let pokes = pokes_from_inputs(inputs);
-        let Some((x, y)) = pokes
-            .iter()
-            .rev()
-            .copied()
-            .find(|(x, y)| x.is_finite() && y.is_finite())
-        else {
+        let Some(hand) = Self::selected_hand(inputs) else {
             return self.status(t);
         };
-        let (fx, fy) = Self::tuned_freqs(x, y);
+        let pair = self.oscillators(t, Some(hand));
+        let (fx, fy) = (pair.frequency_x, pair.frequency_y);
         let a = fx.round() as i32;
         let b = fy.round() as i32;
         let g = {
@@ -228,10 +256,13 @@ impl Room for Lissajous {
     }
 
     fn reveal(&self) -> &'static str {
-        "A rational frequency ratio closes the figure, and small-integer ratios \
-         can also sound consonant. The 2:3 ratio is a perfect fifth. You are not \
-         just drawing a curve: old oscilloscopes made the same connection between \
-         shape and interval visible."
+        // Periodic motion can revisit a position before its full state returns:
+        // https://math.mit.edu/classes/18.353J/PSetAnswers/AnswerPSet_2024_07.pdf
+        "A rational frequency ratio gives the ideal motion a common period. \
+         A position can return sooner while moving another way. Small-integer \
+         ratios can also sound consonant: the 2:3 ratio is a perfect fifth. \
+         Sound follows the two frequencies; the picture also shows their \
+         relative phase."
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -245,21 +276,88 @@ impl Room for Lissajous {
     }
 
     fn sound(&self, t: f64) -> SoundSpec {
-        // The two axis frequencies as a chord. The y axis snaps to its nearest
-        // whole number, so the interval you hear is always a clean integer
-        // ratio, the room's own lesson that only whole-number tunings close
-        // into a figure and ring true. A swept, non-integer value would sound
-        // a sour near-unison, which is exactly the noise the room is not about.
-        let fy = (Self::freq_y_for(t).round() as f32).max(1.0);
-        SoundSpec::chord(&[110.0 * FREQ_X as f32, 110.0 * fy], 1.5, 0.25)
+        self.oscillators(t, None).sound()
+    }
+
+    fn parameter_sound(&self, t: f64, inputs: &[RoomInput]) -> Option<ParametricSound> {
+        self.oscillators(t, Self::selected_hand(inputs)).voice()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Lissajous;
+    use std::f64::consts::TAU;
+
+    use super::{Lissajous, MAX_ROOM_POKES, SAMPLES};
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{Room, RoomInput};
+    use crate::surface::Surface;
+
+    #[derive(Debug)]
+    struct SampledSurface {
+        width: usize,
+        height: usize,
+        aspect: f64,
+        segments: Vec<(i32, i32, i32, i32)>,
+        marks: Vec<(i32, i32)>,
+    }
+
+    impl SampledSurface {
+        fn new(width: usize, height: usize, aspect: f64) -> Self {
+            Self {
+                width,
+                height,
+                aspect,
+                segments: Vec::new(),
+                marks: Vec::new(),
+            }
+        }
+
+        fn points(&self) -> impl Iterator<Item = (i32, i32)> + '_ {
+            self.segments
+                .first()
+                .map(|&(x, y, _, _)| (x, y))
+                .into_iter()
+                .chain(self.segments.iter().map(|&(_, _, x, y)| (x, y)))
+        }
+    }
+
+    impl Surface for SampledSurface {
+        fn width(&self) -> usize {
+            self.width
+        }
+
+        fn height(&self) -> usize {
+            self.height
+        }
+
+        fn char_aspect(&self) -> f64 {
+            self.aspect
+        }
+
+        fn plot(&mut self, x: i32, y: i32, _mark: char) {
+            self.marks.push((x, y));
+        }
+
+        fn line(&mut self, x: i32, y: i32, next_x: i32, next_y: i32, _mark: char) {
+            self.segments.push((x, y, next_x, next_y));
+        }
+    }
+
+    fn axis_crossings(values: impl Iterator<Item = i32>, center: i32) -> usize {
+        let mut previous_sign = 0;
+        let mut crossings = 0;
+        for value in values {
+            let sign = (value - center).signum();
+            if sign != 0 {
+                if previous_sign != 0 && previous_sign != sign {
+                    crossings += 1;
+                }
+                previous_sign = sign;
+            }
+        }
+        crossings
+    }
 
     #[test]
     fn freq_y_starts_at_two() {
@@ -267,12 +365,154 @@ mod tests {
     }
 
     #[test]
-    fn normalized_points_stay_in_range() {
-        for i in 0..1000 {
-            let theta = f64::from(i) * 0.017;
-            let (x, y) = Lissajous::point_normalized_shifted(theta, 2.0, 0.0, 0.0);
-            assert!((-1.0..=1.0).contains(&x));
-            assert!((-1.0..=1.0).contains(&y));
+    fn sampled_axes_are_unit_amplitude_harmonic_oscillators() {
+        // A sampled sinusoid obeys q[n+1] + q[n-1] = 2*cos(w*h)*q[n].
+        // Over an integer number of cycles its mean square is 1/2. Together
+        // these detect both flattened extrema and changed amplitudes, without
+        // copying the phase formula used to construct the path.
+        let step = TAU / SAMPLES as f64;
+        for seed in [0, 2, 7, u64::MAX] {
+            let room = Lissajous::new_with(seed);
+            let mut pairs: Vec<_> = (1..=8)
+                .flat_map(|fx| (1..=8).map(move |fy| (fx, fy)))
+                .map(|(fx, fy)| {
+                    room.oscillators(0.37, Some(((fy - 1) as f64 / 7.0, (fx - 1) as f64 / 7.0)))
+                })
+                .collect();
+            pairs.extend([0.0, 0.2, 0.5, 1.0].map(|t| room.oscillators(t, None)));
+            for pair in pairs {
+                let frequencies = [pair.frequency_x, pair.frequency_y];
+                let mut mean = [0.0; 2];
+                let mut mean_square = [0.0; 2];
+                let mut previous = pair.point(-step);
+                let mut current = pair.point(0.0);
+                for sample in 0..SAMPLES {
+                    let next = pair.point((sample + 1) as f64 / SAMPLES as f64 * TAU);
+                    let values = [current.0, current.1];
+                    let neighbors = [previous.0 + next.0, previous.1 + next.1];
+                    for axis in 0..2 {
+                        assert!(values[axis].is_finite() && (-1.0..=1.0).contains(&values[axis]));
+                        let residual =
+                            neighbors[axis] - 2.0 * (frequencies[axis] * step).cos() * values[axis];
+                        assert!(
+                            residual.abs() < 1e-12,
+                            "seed={seed} axis={axis}: harmonic residual {residual}"
+                        );
+                        mean[axis] += values[axis] / SAMPLES as f64;
+                        mean_square[axis] += values[axis].powi(2) / SAMPLES as f64;
+                    }
+                    previous = current;
+                    current = next;
+                }
+                for axis in 0..2 {
+                    if frequencies[axis].fract() == 0.0 {
+                        assert!(
+                            mean[axis].abs() < 1e-12,
+                            "seed={seed} axis={axis}: mean {}",
+                            mean[axis]
+                        );
+                        assert!(
+                            (mean_square[axis] - 0.5).abs() < 1e-12,
+                            "seed={seed} axis={axis}: mean square {}",
+                            mean_square[axis]
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn rendered_circle_preserves_equal_axis_units_on_both_surface_types() {
+        for aspect in [1.0, 0.5] {
+            let mut surface = SampledSurface::new(181, 101, aspect);
+            Lissajous::new().render_poked(&mut surface, 0.0, &[(0.0, 0.0)]);
+            assert_eq!(surface.segments.len(), SAMPLES);
+            let rx = surface.points().map(|(x, _)| (x - 90).abs()).max().unwrap() as f64;
+            let ry = surface.points().map(|(_, y)| (y - 50).abs()).max().unwrap() as f64;
+            assert!(
+                (rx - ry / aspect).abs() <= 1.0,
+                "aspect={aspect}: extents {rx}, {ry}"
+            );
+            // The radius error budget includes rounding to whole pixels/cells.
+            for (x, y) in surface.points() {
+                let x = (x as f64 - 90.0) / rx;
+                let y = (y as f64 - 50.0) / ry;
+                assert!((x * x + y * y - 1.0).abs() < 2.0 / rx + 2.0 / ry);
+            }
+        }
+    }
+
+    #[test]
+    fn every_hand_tuning_reaches_the_drawn_axes_readout_and_sound() {
+        let room = Lissajous::new_with(2);
+        for fx in 1..=8 {
+            for fy in 1..=8 {
+                let hand = ((fy - 1) as f64 / 7.0, (fx - 1) as f64 / 7.0);
+                let inputs = crate::room::inputs_from_pokes(&[hand], 0.2);
+                let mut surface = SampledSurface::new(2049, 2049, 1.0);
+                room.render_input(&mut surface, 0.2, &inputs);
+                // Count the actual renderer's crossings, ignoring rounded
+                // samples exactly on an axis. Each cycle crosses twice.
+                assert_eq!(
+                    axis_crossings(surface.points().map(|(x, _)| x), 1024),
+                    2 * fx
+                );
+                assert_eq!(
+                    axis_crossings(surface.points().map(|(_, y)| y), 1024),
+                    2 * fy
+                );
+                let status = room.status_input(0.2, &inputs).unwrap();
+                assert!(status.contains(&format!("TUNED {fx}:{fy}")), "{status}");
+                let voice = room.parameter_sound(0.2, &inputs).unwrap();
+                let sound = room.sound_input(0.2, &inputs);
+                assert_eq!(sound, voice.snapshot());
+                assert_eq!(sound.notes[0].freq, 110.0 * fx as f32);
+                assert!((sound.notes[1].freq as f64 - 110.0 * fy as f64).abs() < 1e-4);
+                assert!((voice.ratio() as f64 - fy as f64 / fx as f64).abs() < 3e-7);
+            }
+        }
+    }
+
+    #[test]
+    fn continuous_sweep_sound_is_not_snapped_to_integer_frequencies() {
+        for seed in [0, 2, 7, u64::MAX] {
+            let room = Lissajous::new_with(seed);
+            for t in [0.0, 0.1, 0.2, 0.5, 0.7, 1.0] {
+                let sound = room.sound(t);
+                assert_eq!(sound, room.sound_input(t, &[]));
+                assert_eq!(sound.notes[0].freq, 330.0);
+                let expected_y = 110.0 * (2.0 + 3.0 * t);
+                assert!((sound.notes[1].freq as f64 - expected_y).abs() < 1e-4);
+                assert!(
+                    room.status(t)
+                        .unwrap()
+                        .contains(&format!("3:{:.2}", expected_y / 110.0))
+                );
+            }
+            assert_ne!(room.sound(0.5), room.sound(0.51));
+        }
+    }
+
+    #[test]
+    fn a_position_return_can_precede_the_common_period() {
+        // The swept 3:3.5 ratio is rational despite its noninteger frequency.
+        // Its full state has period 4*pi. At 2*pi the starting position
+        // returns, but y velocity reverses, so the motion has not repeated.
+        let pair = Lissajous::new().oscillators(0.5, None);
+        let start = pair.point(0.0);
+        let halfway = pair.point(TAU);
+        assert!((start.0 - halfway.0).hypot(start.1 - halfway.1) < 1e-12);
+        let y_velocity = |theta| {
+            let h = 1e-5;
+            (pair.point(theta + h).1 - pair.point(theta - h).1) / (2.0 * h)
+        };
+        assert!((y_velocity(0.0) - 3.5).abs() < 1e-8);
+        assert!((y_velocity(TAU) + 3.5).abs() < 1e-8);
+        for theta in [0.0, 0.27, 1.13] {
+            let p = pair.point(theta);
+            let q = pair.point(theta + 2.0 * TAU);
+            assert!((p.0 - q.0).hypot(p.1 - q.1) < 1e-12);
         }
     }
 
@@ -308,10 +548,10 @@ mod tests {
     #[test]
     fn reveal_names_the_interval() {
         let reveal = Lissajous::new().reveal();
-        assert!(reveal.contains("rational frequency ratio closes"));
-        assert!(reveal.contains("small-integer ratios"));
+        assert!(reveal.contains("rational frequency ratio gives the ideal motion a common period"));
+        assert!(reveal.contains("Small-integer ratios"));
         assert!(reveal.contains("2:3 ratio is a perfect fifth"));
-        assert!(!reveal.contains("stable figure means"));
+        assert!(reveal.contains("A position can return sooner"));
     }
 
     #[test]
@@ -364,7 +604,9 @@ mod tests {
         let mut early = Canvas::new(64, 40);
         room.render_poked(&mut early, 0.2, &click);
         let mut late = Canvas::new(64, 40);
-        room.render_poked(&mut late, 0.7, &click);
+        // A half-turn of relative phase gives this 2:7 tuning the same
+        // geometric curve. Use distinct shapes instead of rounding artifacts.
+        room.render_poked(&mut late, 0.4, &click);
 
         assert_ne!(early.to_text(), late.to_text());
         let px = (click[0].0 * 63.0_f64).round() as usize;
@@ -374,7 +616,7 @@ mod tests {
     }
 
     #[test]
-    fn tuned_motion_is_continuous_at_the_phase_boundary() {
+    fn tuned_phase_control_loops_at_the_gallery_boundary() {
         let room = Lissajous::new();
         let click = [(0.73, 0.36)];
         let mut start = Canvas::new(64, 40);
@@ -460,5 +702,89 @@ mod tests {
         let mut zero_phase = Canvas::new(30, 15);
         room.render(&mut zero_phase, 0.0);
         assert_eq!(nan_phase.to_text(), zero_phase.to_text());
+    }
+
+    #[test]
+    fn all_projections_agree_on_hostile_phase_and_the_newest_raw_input_tail() {
+        for seed in [0, 2, u64::MAX] {
+            let room = Lissajous::new_with(seed);
+            for phase in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -3.0] {
+                assert_eq!(room.sound(phase), room.sound(0.0));
+                assert_eq!(room.status(phase), room.status(0.0));
+            }
+            assert_eq!(room.sound(3.0), room.sound(1.0));
+            assert_eq!(room.status(3.0), room.status(1.0));
+
+            let mut inputs = vec![RoomInput::PointerDown {
+                x: 1.0,
+                y: 1.0,
+                t: 0.0,
+            }];
+            inputs.extend(std::iter::repeat_n(
+                RoomInput::PointerDown {
+                    x: f64::NAN,
+                    y: 0.5,
+                    t: 0.0,
+                },
+                MAX_ROOM_POKES,
+            ));
+            assert_eq!(room.sound_input(0.2, &inputs), room.sound(0.2));
+            assert_eq!(room.status_input(0.2, &inputs), room.status(0.2));
+            let mut actual = Canvas::new(48, 24);
+            let mut expected = Canvas::new(48, 24);
+            room.render_input(&mut actual, 0.2, &inputs);
+            room.render(&mut expected, 0.2);
+            assert_eq!(actual.to_text(), expected.to_text());
+
+            // A finite point beyond the control square clamps consistently.
+            inputs.push(RoomInput::PointerMove {
+                x: 9.0,
+                y: -3.0,
+                t: 0.2,
+            });
+            let sound = room.sound_input(f64::NAN, &inputs);
+            assert_eq!((sound.notes[0].freq, sound.notes[1].freq), (110.0, 880.0));
+            assert!(
+                room.status_input(f64::NAN, &inputs)
+                    .unwrap()
+                    .contains("TUNED 1:8")
+            );
+            let voice = room.parameter_sound(f64::NAN, &inputs).unwrap();
+            assert!(voice.gain() > 0.0 && voice.gain() <= crate::sound::ParametricSound::MAX_GAIN);
+        }
+    }
+
+    #[test]
+    fn surface_coordinates_and_segment_work_stay_bounded() {
+        let room = Lissajous::new_with(2);
+        let pokes: Vec<_> = (0..MAX_ROOM_POKES * 4)
+            .map(|i| ((i % 8) as f64 / 7.0, (i / 8 % 8) as f64 / 7.0))
+            .collect();
+        for (width, height) in [(usize::MAX, usize::MAX), (1, 1), (0, 8), (8, 0)] {
+            for aspect in [
+                0.5,
+                1.0,
+                f64::NAN,
+                f64::NEG_INFINITY,
+                f64::MAX,
+                f64::from_bits(1),
+            ] {
+                let mut surface = SampledSurface::new(width, height, aspect);
+                room.render_poked(&mut surface, f64::NAN, &pokes);
+                assert!(surface.segments.len() <= MAX_ROOM_POKES * SAMPLES);
+                assert!(surface.marks.len() <= MAX_ROOM_POKES);
+                let (draw_width, draw_height) = surface.draw_bounds();
+                for (x, y) in surface.points().chain(surface.marks.iter().copied()) {
+                    assert!(
+                        x >= 0 && (x as usize) < draw_width,
+                        "width={width}, aspect={aspect}: x={x}"
+                    );
+                    assert!(
+                        y >= 0 && (y as usize) < draw_height,
+                        "height={height}, aspect={aspect}: y={y}"
+                    );
+                }
+            }
+        }
     }
 }
