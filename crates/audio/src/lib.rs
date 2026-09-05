@@ -290,13 +290,15 @@ struct ParameterTarget {
 
 /// A quiet two-oscillator voice that follows a continuously changing ratio.
 ///
-/// Phases persist across target changes. Frequency, ratio, and gain approach
-/// their targets inside the callback, so control-thread updates never restart
-/// either oscillator or introduce an abrupt parameter step.
+/// Phases persist across target changes. Both absolute frequencies and gain
+/// approach their targets inside the callback, so control-thread updates
+/// never restart either oscillator or introduce an abrupt parameter step.
+/// Smoothing root and ratio separately would bend a fixed second frequency
+/// whenever a root change is balanced by the reciprocal ratio change.
 struct ParameterVoice {
     target: Option<ParameterTarget>,
     current_root_hz: f32,
-    current_ratio: f32,
+    current_second_hz: f32,
     current_gain: f32,
     root_phase: f32,
     ratio_phase: f32,
@@ -312,7 +314,7 @@ impl ParameterVoice {
         Self {
             target: None,
             current_root_hz: 220.0,
-            current_ratio: 1.0,
+            current_second_hz: 220.0,
             current_gain: 0.0,
             root_phase: 0.0,
             ratio_phase: 0.0,
@@ -340,7 +342,7 @@ impl ParameterVoice {
 
         if self.target.is_none() && self.current_gain == 0.0 {
             self.current_root_hz = root_hz;
-            self.current_ratio = ratio;
+            self.current_second_hz = root_hz * ratio;
         }
         self.target = Some(ParameterTarget {
             root_hz,
@@ -355,13 +357,12 @@ impl ParameterVoice {
     }
 
     fn next_sample(&mut self) -> f32 {
-        let (target_root, target_ratio, target_gain) = self
-            .target
-            .map_or((self.current_root_hz, self.current_ratio, 0.0), |target| {
-                (target.root_hz, target.ratio, target.gain)
-            });
+        let (target_root, target_second, target_gain) = self.target.map_or(
+            (self.current_root_hz, self.current_second_hz, 0.0),
+            |target| (target.root_hz, target.root_hz * target.ratio, target.gain),
+        );
         self.current_root_hz += (target_root - self.current_root_hz) * self.smoothing;
-        self.current_ratio += (target_ratio - self.current_ratio) * self.smoothing;
+        self.current_second_hz += (target_second - self.current_second_hz) * self.smoothing;
         if self.current_gain < target_gain {
             self.current_gain = (self.current_gain + self.gain_step).min(target_gain);
         } else if self.current_gain > target_gain {
@@ -369,7 +370,7 @@ impl ParameterVoice {
         }
 
         let upper_frequency = self.sample_rate * 0.45;
-        let ratio_frequency = (self.current_root_hz * self.current_ratio).min(upper_frequency);
+        let ratio_frequency = self.current_second_hz.min(upper_frequency);
         self.root_phase =
             (self.root_phase + TAU * self.current_root_hz / self.sample_rate).rem_euclid(TAU);
         self.ratio_phase =
@@ -1911,6 +1912,76 @@ mod tests {
             let sample = mixer.next_frame().0;
             assert!(sample.is_finite());
             assert!(sample.abs() <= PARAMETER_MAX_GAIN);
+        }
+    }
+
+    #[test]
+    fn parameter_glides_preserve_each_oscillators_frequency_bounds() {
+        const SAMPLE_RATE: u32 = 8_000;
+        let frequency = |before: f32, after: f32| {
+            (after - before).rem_euclid(std::f32::consts::TAU) * SAMPLE_RATE as f32
+                / std::f32::consts::TAU
+        };
+        for (from_root, from_ratio, to_root, to_ratio) in [
+            // The second oscillator stays at 880 Hz in both directions.
+            (110.0, 8.0, 880.0, 1.0),
+            (880.0, 1.0, 110.0, 8.0),
+            // A fixed root still supports an ascending or descending ratio.
+            (146.83, 1.5, 146.83, 2.0),
+            (146.83, 2.0, 146.83, 1.5),
+        ] {
+            let mut mixer = MixerState::new(SAMPLE_RATE);
+            assert!(mixer.set_parameter_voice(from_root, from_ratio, 0.04));
+            for _ in 0..400 {
+                let _ = mixer.next_frame();
+            }
+            let before = (
+                mixer.parameter_voice.root_phase,
+                mixer.parameter_voice.ratio_phase,
+            );
+            assert!(mixer.set_parameter_voice(to_root, to_ratio, 0.04));
+            assert_eq!(
+                (
+                    mixer.parameter_voice.root_phase,
+                    mixer.parameter_voice.ratio_phase,
+                ),
+                before,
+                "a new frequency target must preserve both oscillator phases"
+            );
+            let start = [from_root, from_root * from_ratio];
+            let end = [to_root, to_root * to_ratio];
+            let mut observed = [0.0; 2];
+            for _ in 0..SAMPLE_RATE {
+                let before = (
+                    mixer.parameter_voice.root_phase,
+                    mixer.parameter_voice.ratio_phase,
+                );
+                let _ = mixer.next_frame();
+                // Measure the phase actually advanced by each oscillator,
+                // independently of its cached frequency or smoothing rule.
+                observed = [
+                    frequency(before.0, mixer.parameter_voice.root_phase),
+                    frequency(before.1, mixer.parameter_voice.ratio_phase),
+                ];
+                for axis in 0..2 {
+                    assert!(
+                        observed[axis] >= start[axis].min(end[axis]) - 0.03
+                            && observed[axis] <= start[axis].max(end[axis]) + 0.03,
+                        "oscillator {axis}: {} Hz escaped [{}, {}] Hz",
+                        observed[axis],
+                        start[axis].min(end[axis]),
+                        start[axis].max(end[axis]),
+                    );
+                }
+            }
+            for axis in 0..2 {
+                assert!(
+                    (observed[axis] - end[axis]).abs() < 0.03,
+                    "oscillator {axis}: {} Hz did not settle at {} Hz",
+                    observed[axis],
+                    end[axis]
+                );
+            }
         }
     }
 

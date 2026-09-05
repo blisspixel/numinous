@@ -1,7 +1,8 @@
-//! The Wet Oracle: slime mold races you to the shortest path (and wins).
+//! The Wet Oracle: a Physarum-inspired scent field.
 //!
-//! A simple Physarum-inspired agent deposits chemoattractant and follows
-//! gradients between food crumbs (Tero 2010 vibe).
+//! Moving particles deposit a diffusing scent field and steer toward nearby
+//! concentrations. Food sources replenish scent. This visual model does not
+//! extract or optimize routes.
 //! See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
@@ -166,7 +167,6 @@ impl WetOracle {
 }
 
 impl Room for WetOracle {
-
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let steps = 8 + (phase_unit(t) * STEPS as f64) as usize;
         let (field, _) = simulate(self.seed, steps, &[]);
@@ -183,7 +183,7 @@ impl Room for WetOracle {
             root: 174.61,
             tempo: 90,
             line: &[0, 2, 5, 7, 5, 2, 0, 5],
-            encodes: "scent trails condensing into a short wet path",
+            encodes: "scent deposits gathering around food",
         })
     }
 
@@ -220,9 +220,11 @@ impl Room for WetOracle {
     }
 
     fn reveal(&self) -> &'static str {
-        "Physarum polycephalum builds efficient networks between food sources \
-         without a brain. Tero and colleagues (2010) showed a slime mold can redraw \
-         the Tokyo rail map: wet computation as a shortest-path oracle."
+        "Physarum polycephalum forms transport networks between food sources. \
+         Tero and colleagues (2010) compared their cost, efficiency, and fault \
+         tolerance with Tokyo's rail network. This room shows particles \
+         following and depositing scent; it does not compute or certify a \
+         shortest route."
     }
 }
 
