@@ -89,8 +89,9 @@ cargo run --release --locked -p numinous-gpu --features gpu-post --example surfa
 This selects direct `wgpu` surface output as the production candidate for the
 full Sensory Lift. The disabled App `gpu-post` feature now feeds its real room
 rasters through that renderer, while explicit recovery retains the default
-software path on failure. The next gate is Windows, macOS, and Linux correctness
-and pacing evidence before promotion. The receipt stops when the queue
+software path on failure. The next gate is still a closed Windows, macOS, and Linux physical set before
+promotion. The Windows pair on the reference laptop now exists as a named
+candidate; macOS and Linux remain. The receipt stops when the queue
 presentation request returns and does not include compositor work, display
 scanout, input latency, human perception, or room aesthetics. The 1440p client
 area was exact but extended beyond the reference machine's 2256 x 1504 desktop.
@@ -135,6 +136,27 @@ Each passing physical receipt is still a candidate for one named reference,
 not a universal performance result. Promotion needs a reviewed physical set at
 both target sizes for Windows, macOS, and Linux. Compositor completion, scanout,
 input latency, and perceptual quality remain outside both classes.
+
+**Windows pair, 2026-09-02, named reference only.** On the Framework 13 AMD
+Radeon 780M laptop (Windows 11 Pro 10.0.26200, AC, Vulkan, FIFO sRGB), the
+production App presenter passed both declared sizes at revision
+`17262777d65f5d1b7d29d9a544534febe7850ba1`. Combined
+acquire-through-present-request p95 was 17.842 ms at 1080p against 33 ms and
+17.830 ms at 1440p against 50 ms. Both runs kept the exact requested client
+area, 30 warmups, 120 retained samples, and zero skipped or suboptimal frames.
+The 1440p window again extended beyond the 2256 by 1504 desktop. Receipts:
+`docs/evidence/sensory-app-windows-1080p-2026-09-02.json` and
+`docs/evidence/sensory-app-windows-1440p-2026-09-02.json`. This does not
+replace macOS or Linux, and it does not promote the feature.
+
+**WSL2 is not a Linux physical reference.** Ubuntu 24.04 on this same laptop
+can open a WSLg window, and Vulkan can name the 780M as
+`Microsoft Direct3D12 (AMD Radeon(TM) 780M)` through Mesa Dozen. wgpu 30 hides
+that adapter because Dozen reports Vulkan conformance 0.0.0.0, and the
+production presenter then falls back to software. Even if Dozen were forced
+on, it is a D3D12 translation of the Windows GPU, not native Linux `amdgpu`.
+A Linux cell in the closed set still needs a real Linux Vulkan/Metal-class
+surface stack.
 
 After recording both sizes on each operating system, build the closed set with
 the six explicit receipt paths:

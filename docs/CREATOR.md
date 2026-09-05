@@ -41,22 +41,28 @@ The manifest's first growth ring is built too: version 2 carries a capped
 title, author, Era, and a validated `descends` parent link, written only when
 present so plain shares stay version 1. Version 3 adds the first bounded
 multi-expression form, one atomic `x(t), y(t)` pair, plus a stored pitch map.
-Existing version 1 and 2 documents remain unchanged. Named sliders and general
-multi-expression programs remain open.
+Existing version 1 and 2 documents remain unchanged. Version 4 adds editable
+prose credit. Named sliders and general multi-expression programs remain open.
+The sung melody can leave as WAV or as a Standard MIDI File on all three faces:
+CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` with `midi: true`, and the App
+F4 share as `melody.mid`.
 
 **2. The one-button share bundle.** On any Studio state, one action emits the
-trio: the `.num` file, the `numinous://` link, and the PNG postcard. The link
-opens into a paused preview until confirmed (the hostile-input rule from
-`EXTENSIBILITY.md`). The PNG is the viral object that escapes the app; the `.num`
-reopens it exactly; the link is the frictionless handoff. This is PICO-8's growth
-property: the cart is simultaneously the screenshot, the playable, and the source.
-Built for expression creations: F4 in the Studio opens a naming step (title
-and signature, in the instrument itself), then Enter writes `creation.num`,
-`postcard.png` (title as headline, author in the corner), and a README
-carrying the link into one fresh folder, refusing an unparsed formula, and
-both link and file open into the paused preview. The terminal has the same
-loop: `numinous fork` remixes any capsule or link with lineage recorded, and
-`numinous sing` accepts a `.num` or link so a creation's voice travels too.
+bundle: the `.num` file, the `numinous://` link, the PNG postcard, and the
+sung melody as MIDI. The link opens into a paused preview until confirmed (the
+hostile-input rule from `EXTENSIBILITY.md`). The PNG is the viral object that
+escapes the app; the `.num` reopens it exactly; the link is the frictionless
+handoff; the MIDI uses 12-TET keys plus pitch bend and opens in a DAW. This is
+PICO-8's growth property: the cart is simultaneously the screenshot, the
+playable, and the source. Built for expression creations: F4 in the Studio
+opens a naming step (title and signature, in the instrument itself), then
+Enter writes `creation.num`, `postcard.png` (title as headline, author in the
+corner), `melody.mid`, and a README carrying the link and naming the MIDI
+loss into one fresh folder, refusing an unparsed formula, and both link and
+file open into the paused preview. The terminal has the same loop:
+`numinous fork` remixes any capsule or link with lineage recorded, and
+`numinous sing` accepts a `.num` or link so a creation's voice travels as
+WAV or MIDI.
 
 **3. The local Gallery plus Fork.** A wall of creations you can play in place and
 fork with one keystroke. Fork opens a copy in the Studio with lineage recorded.
@@ -80,7 +86,10 @@ parent link, validated by reopening it, and the bundle README names the
 parent. The local tree is visible too: the Gallery wall resolves recorded
 links against its own capsules, a parent's tile wears a REMIXED count, the
 selected fork names its parent, and D walks one step up. Editable prose
-credit remains open, waiting on its own capsule field.
+credit is built: a fork offers `After {title} by {author}` from the parent,
+the forker can rewrite or clear it, and version 4 capsules carry that sentence
+through the App F4 naming step, CLI `--credit`, MCP `credit`, the share README,
+and native links.
 
 That is the loop: reopen, share-bundle, gallery, fork, lineage. A non-programmer
 types `y = sin(a*x)`, drags `a` until it is beautiful, picks the 8-bit Era, names

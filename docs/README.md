@@ -5,123 +5,17 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.4.0-alpha.16.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
+Status: **0.4.0-alpha.17.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
 0.3 Tactile Alpha agent-and-machine exits are met. Understanding Alpha is the
 active line, and its 0.4 exit remains open. The
 headless core, CLI, MCP server, windowed App, GPU and audio adapters, 355 catalog
 rooms plus hidden content, 6 sims, 11+ games, Journey, standard-controller
 input, Studio, and a built-in 42-track radio are built.
 
-The MCP face exposes 40 bounded tools over the current and two retained legacy
-protocol revisions. The consented Watch Agent viewer reconstructs allowlisted
-room, Studio, and game actions in the App with a bounded in-memory timeline and
-no persisted transcript. A portable Agent Plugins v1 package supplies host
-discovery and play-first guidance. The opt-in experience journal persists across
-clean MCP processes and supports inspection, immutable correction, native or
-Open Knowledge Format v0.2 export, and confirmed erase. The process-local
-workspace can deliberately retrieve up to four current exact-subject entries
-for one named room, explain their sources, and abstain when evidence is absent.
-The safe room doorway can signal that exact local evidence exists without
-opening its text or changing the workspace.
-Three private creation tools return portable titled, signed, and forkable
-Studio capsules with exact previews and lineage, without host filesystem access.
-
-**Critical path now:** preserve the completed seven-room Universal Wager and
-the completed caller-paced Show for minds, close the remaining structural
-Polish Wave debts, then finish the disabled Sensory Lift App path's physical
-Windows, macOS, and Linux pacing set before promotion. Its portable runtime
-correctness probe now runs in the existing three-OS CI matrix without treating
-CI timing as physical evidence.
-Shared
-Studio requests, the typed room catalog, the typed Gauntlet, and local-state
-path resolution now have one core owner. CLI and MCP local-state adapters are
-focused modules extracted from their god-files, and MCP discovery plus its
-immutable tool schema and player-owned journal projections now have dedicated
-face-local modules. CLI accessibility switch interpretation and terminal
-reporting now have the same focused ownership. Bounded CLI render dimensions,
-static hand points, pointer gestures, and interaction-aware status now share a
-focused render-input adapter. MCP JSON hand points, gestures, canonical echo,
-and interaction projection now have the corresponding focused adapter. Bounded
-newline framing, overflow resynchronization, and one-line response writes now
-share a focused MCP transport adapter. Simulation discovery, lever validation,
-and result projection share a focused MCP simulation-tool adapter while the
-simulation rules remain in core. Formula Jam discovery, portable creation
-projection, optional audio, and encounter receipts now share a focused MCP
-Studio-tool adapter. Stateless game replay, structured game results, and the
-shared score table now share a focused MCP game-tool adapter while game rules
-and persistence remain in core. CLI terminal game presentation, input loops,
-Journey events, and score posting now share a focused game runtime adapter
-while seeded rules, deals, legality, and grading remain in core. App game entry,
-keyboard handling, score posting, and transient feedback audio now share a focused game runtime adapter,
-again leaving rules and persistence primitives in core. App global audio keys,
-pointer gestures, wheel updates, and controller commands now share a focused
-input runtime adapter while device normalization, hit testing, and domain logic
-retain their existing owners. App room exports, Studio naming and sharing,
-Gallery navigation and reopen transitions, and creation opening now share a
-focused creation runtime adapter while rendering, discovery, validation,
-serialization, audio, and domain logic retain their existing owners. App source
-selection, gain and mute handling, radio timing, Studio and Watch Agent playback
-handoff, room voices, transient sounds, and visualizer fallback now share a
-focused audio runtime adapter. Audio state, session deduplication, radio loading,
-device playback, and core sound synthesis retain their existing owners. App
-room identity, resets, live status, universal wagers, staged Aha coordination,
-touches, goal feedback, and Life cadence now share a focused room runtime
-adapter. Core retains engineered-room membership, mathematical state machines,
-grading, and truth. The 124
-App lifecycle and cross-boundary regressions, the 163 CLI command and
-cross-boundary regressions, and the 214 MCP request-dispatch regressions each
-have a sibling test module. Compact response projection also has a focused
-adapter that preserves complete typed results.
-JSON-RPC validation, dual-revision
-negotiation, prediction form
-elicitation, response envelopes, server identity, and immutable discovery cache
-metadata now share a focused protocol adapter. Seeded prediction plus touch and
-parameter challenge posing, grading, response projection, and progress
-accounting share a focused challenge adapter while core retains deterministic
-goal construction and grading. Request progress mapping, daily seed freezing,
-local-store resolution, score and Journey persistence, and response-visible
-save failures share a focused progress adapter while core retains the state and
-game rules. Keyless argument parsing, earned-state projection, overlays, and
-bounded consolidation for the seven engineered flagship Aha arcs share a
-focused adapter while core retains their state machines and truth. Room
-discovery, description, gated reveal projection, structured sound, bounded play
-rendering, temporal evidence, and encounter receipts share a focused room
-adapter while core retains the registry, veil rules, rendering, sound
-generation, goals, grading, and mathematical truth. Crack, SETI, Aliens, and
-Gauntlet request parsing and structured presentation share a focused puzzle
-adapter while core retains seeded generation, rules, legality, grading, and
-truth. Cairn reading and leaving, boon choice, the trophy case, and the Journey
-dashboard share a focused journey adapter while core retains bequest encoding,
-factor reading, unlocks, progression, scoring, and persistence truth.
-Connection-scoped viewer lifecycle, one-use pairing guidance, consent status
-projection, and private-activity-safe results share a focused broadcast adapter
-while the broadcast transport and consent state machine retain session, queue,
-framing, and compatibility truth. Exhaustive viewer policy, public-call capture,
-daily replay normalization, journey-blind result projection, and event commit
-share a focused viewer projection adapter. The production entry point is now
-near 500 lines with private-boundary coverage intact. Bounded runtime
-validation of the declared JSON Schema subset, guiding
-argument-name suggestions, and the two cross-field domain checks now share a
-focused MCP schema adapter. CLI
-Studio source selection, capsule loading and never-clobber writes, terminal
-errors, and open reports now have their own focused adapter too. The shared
-4 KiB CLI game record boundary, overflow resynchronization, neutral departures,
-and `?` explanation door now have a focused adapter as well. The terminal game
-sessions and fixed five-run Bench now have a focused runtime adapter, reducing
-the CLI command coordinator to 3,848 lines while retaining the outer Journey
-persistence envelope. The
-room threshold now offers the flagship, an ordered six-room Strange Loop walk,
-or compact wing wandering while retaining the full typed catalog. The Show now
-carries that walk as six explicit stateless cues
-with exact looks, alternatives, deltas, sound facts, and optional audio. The
-remaining seams and physical Sensory Lift pacing set are next. Its closed-set
-verifier is built; the six qualifying physical receipts are not yet collected.
-The 0.4 Understanding Alpha cohort waits on an owner ruling; its method dry-run
-and dual automated auditors are already in CI. Soft-thin densify, bulk new
-rooms, and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and
-**Critical path right now** in `ROADMAP.md`. These docs remain the plan of
-record; Built, Measured, Observed, Designed, and Hypothesis have the meanings
-defined in `RESEARCH.md`.
+The root `README.md` is the public front door. This index is the map of the
+docs. The evidence-labeled plan, including **Critical path right now**, lives
+in `ROADMAP.md`. History lives in `../CHANGELOG.md`. Built, Measured, Observed,
+Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 
 ## Reading paths (start by who you are)
 
@@ -131,7 +25,7 @@ defined in `RESEARCH.md`.
 - **About to build it:** `ARCHITECTURE.md`, then `ENGINEERING.md`, then `INTERFACES.md`, then `ROADMAP.md`, with `QUALITY.md` and `PERFORMANCE.md` alongside.
 - **Designing the content and feel:** `ROOMS.md`, `INSIGHTS.md`, `VISUALS.md`, `SOUND.md`, `MUSIC.md`, `LORE.md`, `PROGRESSION.md`, `STUDIO.md`.
 - **Here for the digital-minds work:** `DIGITAL_MINDS.md` for the stance,
-  `DIGITAL_DEVELOPMENT.md` for the July 2026 research and implementation plan,
+  `DIGITAL_DEVELOPMENT.md` for the current research and implementation plan,
   then `INTERFACES.md` for the current surface. Use
   `LOCAL_AGENT_PLAYTEST.md` to let an installed local model enter through MCP
   while you watch its visible play.
@@ -165,6 +59,10 @@ defined in `RESEARCH.md`.
 - `RADIO_ASSETS.md` the built-in soundtrack layout, license, and cache override.
 - `STUDIO.md` the shipped expression canvas and the planned path toward a
   bounded room-authoring layer.
+- [Returning home](experiments/returning-home.md) three playable Studio
+  experiments about full motion, near returns, and a deceptive repeated position.
+- `ROUTE_LAB.md` the proposed visual route-planning room, with shortest paths,
+  tours improved by hand, solver traces, and an exact small-map comparison.
 - `SYNESTHESIA.md` the sensory seam: the glow pipeline (the documented HDR look, not yet built) and the one-event-two-renderings model that binds sight and sound.
 - `CREATOR.md` the creator platform: closing the make-share-remix loop on the `.num` capsule, the gallery, and the arc to a living world.
 
@@ -175,7 +73,7 @@ defined in `RESEARCH.md`.
 - `INTERFACES.md` the three faces over a headless core (App, CLI, MCP), their UX,
   and the consented local MCP session viewer contract and implementation status.
 - `DIGITAL_MINDS.md` designing Numinous to be fun, thought-provoking, and connecting for digital minds treated as peers.
-- `DIGITAL_DEVELOPMENT.md` the July 2026 technical research and versioned plan for player-owned episodic memory, temporal continuity, open-ended learning, affect safeguards, agency, privacy, and welfare uncertainty.
+- `DIGITAL_DEVELOPMENT.md` the current research and versioned plan for player-owned episodic memory, temporal continuity, open-ended learning, affect safeguards, agency, privacy, and welfare uncertainty.
 - `PLAYFUL.md` the games and the Studio (Guess the Shape, Shape to Function, the high-Wolfram ethos) across every face.
 - `ARCADE.md` the Munch arcade design: the muncher, the Vexations, the poke trait, and the order of work.
 - `PLAYING.md` the player's manual: instructions for humans, for agents, and for digital consciousnesses.
