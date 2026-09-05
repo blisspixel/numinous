@@ -1,5 +1,6 @@
 use super::{App, AudioProgram, append_crash_log_at, feedback, postcard, studio_panel};
 use numinous_core::Raster;
+use winit::keyboard::{Key, NamedKey};
 
 /// Which naming field the keyboard currently feeds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -194,7 +195,7 @@ impl App {
         if self.share_naming.is_some() {
             return;
         }
-        let identity = self.studio_panel.current_creation(self.t).ok();
+        let identity = self.studio_panel.current_creation().ok();
         let title = identity
             .as_ref()
             .and_then(|creation| creation.title())
@@ -330,7 +331,7 @@ impl App {
         parent: &std::path::Path,
         identity: Option<ShareIdentity>,
     ) -> std::io::Result<Result<std::path::PathBuf, studio_panel::ShareRefusal>> {
-        let mut creation = match self.studio_panel.current_creation(self.t) {
+        let mut creation = match self.studio_panel.current_creation() {
             Ok(creation) => creation,
             Err(refusal) => return Ok(Err(refusal)),
         };
@@ -374,7 +375,6 @@ impl App {
             creation.with_era(self.era)
         };
         let rgba = self.studio_panel.postcard_rgba(
-            self.t,
             postcard::POSTCARD_SIZE as usize,
             self.era,
             creation.title(),
@@ -522,6 +522,34 @@ impl App {
         if let Some(spec) = self.studio_panel.confirm_opened() {
             self.set_studio_sound(Some(spec));
         }
+    }
+
+    /// Discrete parameter edits share one native keyboard/controller path.
+    /// Text entry and other Studio panels keep ownership of their own keys.
+    pub(super) fn handle_studio_parameter_key(&mut self, key: &Key, repeat: bool) -> bool {
+        if !self.studio || self.show_help || self.gallery.is_some() || self.share_naming.is_some() {
+            return false;
+        }
+        if !matches!(
+            key,
+            Key::Named(NamedKey::ArrowUp | NamedKey::ArrowDown | NamedKey::Home)
+        ) {
+            return false;
+        }
+        if !repeat {
+            let spec = match key {
+                Key::Named(NamedKey::ArrowUp) => self.studio_panel.adjust_parameter(1),
+                Key::Named(NamedKey::ArrowDown) => self.studio_panel.adjust_parameter(-1),
+                Key::Named(NamedKey::Home) => self.studio_panel.reset_parameter(),
+                _ => None,
+            };
+            // A bound or unchanged reset must not restart the voice or confirm
+            // an untouched imported creation.
+            if let Some(spec) = spec {
+                self.set_studio_edit_sound(Some(spec));
+            }
+        }
+        true
     }
 
     /// Open a `.num` file from disk into the Studio, or say briefly why not.

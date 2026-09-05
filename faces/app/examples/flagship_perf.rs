@@ -434,7 +434,6 @@ fn studio_measurements(config: Config) -> Result<[Measurement; 2], String> {
             ControllerFace::Generic.into(),
             config.width,
             config.height,
-            0.45,
         );
         raster
     };

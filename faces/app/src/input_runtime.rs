@@ -796,6 +796,21 @@ impl App {
             }
             return;
         }
+        if self.studio
+            && matches!(
+                command,
+                gamepad::Command::Up | gamepad::Command::Down | gamepad::Command::Reset
+            )
+        {
+            self.input_mode = input_legend::InputMode::Controller;
+            let key = match command {
+                gamepad::Command::Up => NamedKey::ArrowUp,
+                gamepad::Command::Down => NamedKey::ArrowDown,
+                _ => NamedKey::Home,
+            };
+            self.handle_studio_parameter_key(&Key::Named(key), false);
+            return;
+        }
         if self.paused
             && !matches!(
                 command,

@@ -1356,7 +1356,6 @@ fn studio_screen_with_mode(
         input_legend::ControllerFace::Generic.into(),
         width,
         height,
-        0.35,
     );
     raster
 }
@@ -1373,7 +1372,6 @@ fn studio_morph_screen(width: usize, height: usize) -> Raster {
         input_legend::ControllerFace::Generic.into(),
         width,
         height,
-        0.35,
     );
     raster
 }
@@ -1528,7 +1526,6 @@ fn write_readme_screens(output: &Path) {
         input_legend::ControllerFace::Generic.into(),
         DEFAULT_SIZE.0,
         DEFAULT_SIZE.1,
-        0.35,
     );
     write_png(
         &present_readme_plate(&studio, "studio.png"),

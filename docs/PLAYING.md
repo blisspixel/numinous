@@ -110,10 +110,11 @@ Settings also carries a full-size Skip Track row. It advances the current
 station without hiding the action in the small footer legend.
 Radio stations appear only when compatible local tracks are present. Visible
 controller legends infer Xbox or PlayStation face names from known product
-names and use generic compass names for unknown pads. Those legends describe
-the default layout; custom button routing is documented in `../PLAY.md` and
-does not rewrite the on-screen copy. The Studio can be entered and left with a controller,
-but formula entry requires a keyboard and the footer states that boundary.
+names and use generic compass names for unknown pads. They reflect the effective
+button routing, including remapped and unbound actions; custom routing is
+documented in `../PLAY.md`. The Studio can be entered, tuned, and left with a
+controller, but formula entry requires a keyboard and the footer states that
+boundary.
 The reverse boundary holds too, stated rather than implied: the keyboard
 reaches every menu, game, quiz, and formula, but the hand verbs inside App
 rooms (drag, click, hold) need a mouse or a controller today, with one
@@ -125,7 +126,11 @@ A saved creation reopens exactly. Launch the App with a `.num` path or a
 `numinous://studio` link, or drop a `.num` file on the window, and the Studio
 opens with the saved formula, window, and knob pinned, paused: the exact curve
 is drawn, and Enter starts it singing. The first edit begins a remix while
-keeping the saved window and knob. F6 changes only the pitch map. Leaving and
+keeping the saved window and knob. In alpha 18, Up/Down tune `a` by 0.25 per
+press and Home restores 1; controller Up/Down and Reset use the same actions.
+Fresh formulas start at `a = 1`, and drawing, melody, and exports use the value
+shown. A deliberate parameter change keeps the formula and its window.
+F6 changes only the pitch map. Leaving and
 returning keeps an untouched preview and its identity; choosing an F2 or F3
 recipe starts a new experiment. Your next edited share records the creation
 you opened as its parent. Save one from the terminal
