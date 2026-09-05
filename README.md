@@ -91,7 +91,7 @@ live in [`docs/MATHEMATICS.md`](docs/MATHEMATICS.md).
 
 ## Status
 
-**0.4.0-alpha.17** is playable: 355 catalog rooms, games, Journey, Studio,
+**0.4.0-alpha.18** is playable: 355 catalog rooms, games, Journey, Studio,
 controllers, and Watch Agent. The **0.2** Flagship Proof and **0.3** Tactile
 Alpha agent-and-machine exits are met and CI-locked. **0.4 Understanding Alpha
 is active, not complete.**

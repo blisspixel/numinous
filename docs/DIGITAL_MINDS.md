@@ -62,7 +62,7 @@ That changes the product in five ways:
   or performance can show how a mind has made the mathematics its own without
   reducing that growth to a quiz score.
 
-**Current evidence boundary:** version 0.4.0-alpha.17 provides an opt-in local
+**Current evidence boundary:** version 0.4.0-alpha.18 provides an opt-in local
 experience journal across MCP processes, with inspection, immutable correction,
 bounded native or Open Knowledge Format v0.2 export, and confirmed erase. One
 stateless MCP call can now carry two exact room observations and a typed visual
@@ -189,7 +189,7 @@ For the person building this, the point is the *relationship*, giving their digi
 - **Memory and continuity, so it can be a real friendship.** A friend remembers.
   The planned design gives a digital mind **persistent, player-owned state**, its
   own gallery, its own Codex, and its own journey across sessions. Full per-mind
-  continuity is not built in 0.4.0-alpha.17. The current alpha persists shared
+  continuity is not built in 0.4.0-alpha.18. The current alpha persists shared
   local Journey and score state plus a small set of managed local artifacts and
   an opt-in bounded experience journal with read, record, immutable correction,
   versioned structured export, and confirmed residue-verified erase operations.
