@@ -1,9 +1,9 @@
 //! The Lorenz attractor: the butterfly that made "chaos" a science.
 //!
-//! Three simple equations for a toy weather model, and the trajectory never
-//! settles and never repeats, yet never leaves a butterfly-shaped set. Two starts
-//! a millionth apart diverge completely: the butterfly effect. `t` raises the
-//! parameter through the onset of chaos. See `docs/ROOMS.md`.
+//! Three equations for a simplified convection model can exhibit chaotic
+//! motion and rapid separation of nearby starts. The room approximates the
+//! flow numerically. `t` sweeps the background parameter while advancing the
+//! classic rho=28 twin experiment. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
 use crate::room::{MAX_ROOM_POKES, Room};
@@ -23,7 +23,7 @@ const CLASSIC_RHO: f64 = 28.0;
 const TWIN_OFFSET: f64 = 1e-4;
 /// Draw a subset of the integrated twin states to keep the overlay light.
 const TWIN_DRAW_STRIDE: usize = 4;
-/// Steps to discard so the path is on the attractor before drawing.
+/// Early transient steps to discard before drawing the background path.
 const TRANSIENT: usize = 800;
 /// Shadow trajectories are user-seeded, so keep each one short enough for many pokes.
 const SHADOW_STEPS: usize = 2_400;
@@ -99,11 +99,15 @@ fn integrate_for(mut state: (f64, f64, f64), rho: f64, steps: usize) -> Vec<(f64
     points
 }
 
-fn lorenz_step((x, y, z): (f64, f64, f64), rho: f64) -> (f64, f64, f64) {
-    let dx = SIGMA * (y - x);
-    let dy = x * (rho - z) - y;
-    let dz = x * y - BETA * z;
-    (x + dx * DT, y + dy * DT, z + dz * DT)
+fn lorenz_step(state: (f64, f64, f64), rho: f64) -> (f64, f64, f64) {
+    lorenz_step_with_dt(state, rho, DT)
+}
+
+fn lorenz_step_with_dt((x, y, z): (f64, f64, f64), rho: f64, dt: f64) -> (f64, f64, f64) {
+    let [x, y, z] = crate::numerics::rk4([x, y, z], dt, |[x, y, z]| {
+        [SIGMA * (y - x), x * (rho - z) - y, x * y - BETA * z]
+    });
+    (x, y, z)
 }
 
 fn state_distance(a: (f64, f64, f64), b: (f64, f64, f64)) -> f64 {
@@ -118,8 +122,8 @@ fn twin_steps(t: f64) -> usize {
 /// Advance two nearby classic Lorenz runs and return their peak separation.
 ///
 /// Instantaneous separation can shrink when the attractor folds. A running
-/// maximum preserves that real motion while giving the player an honest,
-/// monotonic record of how much predictability has already been lost.
+/// maximum preserves that real motion while recording the largest separation
+/// observed in this particular twin experiment.
 fn run_twins(
     t: f64,
     seed: u64,
@@ -197,7 +201,7 @@ impl Room for Lorenz {
             previous = Some((sx, sy));
         }
 
-        // The full attractor remains the stage while the two classic-rho
+        // The background path remains the stage while the two classic-rho
         // forecasts traced by the status instrument grow across it. Their
         // instantaneous separation may shrink when the attractor folds; the
         // status reports the largest separation this visible run has reached.
@@ -229,13 +233,17 @@ impl Room for Lorenz {
 
     fn status(&self, t: f64) -> Option<String> {
         let peak = divergence_peak(t, self.seed);
-        Some(format!("STORM PEAK {peak:.4} AT RHO {CLASSIC_RHO:.0}"))
+        let rho = Self::rho_for(t);
+        Some(format!("STORM PEAK {peak:.4}  TWIN RHO {CLASSIC_RHO:.0}  FIELD {rho:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
-        "Lorenz found this by rounding 0.506127 to 0.506 in a weather run and \
-         watching the forecast diverge completely. That is the butterfly effect: \
-         perfectly determined, and still impossible to predict."
+        "Lorenz's weather computations showed how rounding a starting state can \
+         produce a very different forecast: the butterfly effect. The equations are deterministic; \
+         uncertainty in initial measurements limits long-range prediction. \
+         These curves are finite numerical approximations. The twin experiment \
+         keeps rho=28; the background and clicked shadows use the phase's field \
+         rho. The fixed x-z window clips some initial excursions."
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -259,8 +267,9 @@ impl Room for Lorenz {
             return self.status(t);
         }
         let peak = divergence_peak(t, self.seed);
+        let rho = Self::rho_for(t);
         Some(format!(
-            "{storms} SHADOW STORM{}   MAIN PEAK {peak:.4}   RHO {CLASSIC_RHO:.0}",
+            "{storms} SHADOW{} RHO {rho:.2}  TWIN PEAK {peak:.4} RHO {CLASSIC_RHO:.0}",
             if storms == 1 { "" } else { "S" }
         ))
     }
@@ -298,9 +307,12 @@ impl Room for Lorenz {
              does the flap of a butterfly's wings in Brazil set off a tornado in \
              Texas? A colleague picked the title for him. The butterfly is the most \
              famous thing a session chair ever wrote.",
-            "The attractor's fractal dimension is about 2.06: more than a surface, \
-             less than a volume. The trajectory needs just a hair more than two \
-             dimensions to never cross itself, and that hair is where chaos lives.",
+            "The classical attractor's estimated Lyapunov dimension is about \
+             2.06: between a surface and a volume. That describes the limiting \
+             attractor, not the dimension of one finite, smooth trajectory.",
+            "This x-z projection shows x from -25 to 25 and z from 0 to 55. \
+             Some clicked starts leave that window before returning. Leaving \
+             the picture does not stop the integration or mean a state vanished.",
         ]
     }
 }
@@ -309,7 +321,7 @@ impl Room for Lorenz {
 mod tests {
     use super::{
         Lorenz, TWIN_OFFSET, X_MAX, X_MIN, Z_MAX, Z_MIN, bounded_shadow_starts, integrate, project,
-        run_twins, shadow_start, trajectory,
+        run_twins, shadow_start, trajectory, lorenz_step, lorenz_step_with_dt, state_distance, BETA, DT,
     };
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
@@ -326,7 +338,10 @@ mod tests {
             t: 0.0,
         }];
         let status = room.status_input(0.5, &inputs).expect("storm");
-        assert!(status.contains("1 SHADOW STORM"), "{status}");
+        assert!(status.contains("1 SHADOW RHO 27.00"), "{status}");
+        assert!(status.contains("TWIN PEAK") && status.ends_with("RHO 28"), "{status}");
+        assert!(open.contains("TWIN RHO 28  FIELD 27.00"), "{open}");
+        assert!(status.len() <= 56, "{status}");
         assert_ne!(status, open);
     }
 
@@ -374,11 +389,63 @@ mod tests {
     }
 
     #[test]
-    fn the_path_stays_on_the_attractor() {
-        // After the transient the trajectory is bounded inside a known box.
+    fn the_default_classic_path_remains_bounded_after_the_transient() {
+        // A finite run inside this box is not a proof of attractor membership.
         for &(x, y, z) in trajectory(28.0, 0).iter().skip(800) {
             assert!(x.abs() < 40.0 && y.abs() < 60.0, "escaped: {x}, {y}");
             assert!((-5.0..80.0).contains(&z), "z escaped: {z}");
+        }
+    }
+
+    #[test]
+    fn the_invariant_axis_matches_its_exact_exponential_decay() {
+        let mut state = (0.0, 0.0, 20.0);
+        for _ in 0..200 {
+            state = lorenz_step(state, 28.0);
+        }
+        assert_eq!((state.0, state.1), (0.0, 0.0));
+        let exact_z = 20.0 * (-BETA).exp();
+        assert!((state.2 - exact_z).abs() < 1e-8, "z={}, exact={exact_z}", state.2);
+    }
+
+    #[test]
+    fn short_time_trajectories_converge_under_step_refinement() {
+        // Long chaotic paths need not agree point by point. At one time unit,
+        // refinement must still recover a common trajectory. Endpoint error
+        // cancellation can make the improvement exceed the asymptotic factor
+        // of sixteen; the analytic axis and shared-method tests check order.
+        let integrate = |rho, steps| {
+            let mut state = (1.0, 1.0, 1.0);
+            for _ in 0..steps {
+                state = lorenz_step_with_dt(state, rho, 1.0 / steps as f64);
+            }
+            state
+        };
+        for rho in [24.0, 28.0, 30.0] {
+            let coarse = integrate(rho, 100);
+            let fine = integrate(rho, 200);
+            let reference = integrate(rho, 400);
+            let fine_error = state_distance(fine, reference);
+            let improvement = state_distance(coarse, fine) / fine_error;
+            assert!(improvement.is_finite() && improvement > 12.0, "rho={rho}: refinement ratio={improvement}");
+            assert!(fine_error < 1e-5, "rho={rho}: short-time refinement error={fine_error}");
+        }
+    }
+
+    #[test]
+    fn equilibria_and_half_turn_symmetry_follow_the_equations() {
+        for rho in [24.0, 28.0, 30.0] {
+            let x = (BETA * (rho - 1.0)).sqrt();
+            for start in [(0.0, 0.0, 0.0), (x, x, rho - 1.0), (-x, -x, rho - 1.0)] {
+                assert!(state_distance(lorenz_step(start, rho), start) < 1e-12);
+            }
+            let mut a = (1.0, 2.0, 3.0);
+            let mut b = (-1.0, -2.0, 3.0);
+            for _ in 0..200 {
+                a = lorenz_step_with_dt(a, rho, DT);
+                b = lorenz_step_with_dt(b, rho, DT);
+                assert!(state_distance(a, (-b.0, -b.1, b.2)) < 1e-12);
+            }
         }
     }
 
@@ -438,7 +505,7 @@ mod tests {
         assert_eq!(room.status(-1.0), room.status(0.0));
         assert_eq!(room.status(9.0), room.status(1.0));
         assert!(
-            room.status(0.5).unwrap().len() <= 40,
+            room.status(0.5).unwrap().len() <= 56,
             "the live instrument must stay one short line"
         );
         // A moving readout means Lorenz now poses predictions on the peak,

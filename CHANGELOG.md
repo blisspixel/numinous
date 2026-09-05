@@ -5,6 +5,33 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- Kepler Areas now puts the sun at the focus used by its orbital clock, draws
+  equal-time sectors with orbital arcs, and preserves circular geometry on pixel
+  and terminal surfaces. Geometric swept-area and apsidal-speed tests catch the
+  old reversed lesson. Every nonzero eccentricity now grades FASTER near the sun;
+  the old visual tolerance incorrectly accepted SAME for small ellipses.
+  Graded text preserves small positive differences that rounding could conceal.
+- Lotka-Volterra uses RK4 in logarithmic populations instead of Euler steps and
+  a population clamp. Its 144-path conservation test bounds first-integral drift
+  below `1e-6` over the full 48-unit run. All paths share axes, repeated tuning
+  leaves unrelated rates unchanged, and the equilibrium readout uses the exact
+  simulated parameters.
+- Lorenz uses the shared RK4 step and now checks an exact exponential
+  solution, equilibria, symmetry, and short-time refinement. Its reveal describes
+  finite numerical trajectories and limited long-range predictability. Readouts
+  distinguish the twin experiment's parameter from the background and clicked
+  paths, and the fixed projection's clipping is disclosed. Double
+  Pendulum reuses the shared step while retaining its physical and release tests.
+- Spherical Harmonics corrects the half-amplitude error in the two `l=3, |m|=2`
+  modes. Sphere integration now checks all 256 inner products of the 16 exposed
+  modes, plus the addition theorem. Unsupported modes are refused, and room text
+  distinguishes angular amplitude from a full orbital or probability density.
+
+### Changed
+- Prediction bands are documented as closeness for one answer, without claiming
+  mastery, compression progress, learning, or enjoyment from that observation.
+
 ## [0.4.0-alpha.16] - 2026-09-01
 
 - Formula Jam now accepts one atomic parametric path, written in the App as
