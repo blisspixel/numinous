@@ -81,6 +81,7 @@ pub mod persistence;
 pub mod photosensitivity;
 pub mod predict;
 pub mod preferences;
+mod projection;
 pub mod quiz;
 pub mod radio;
 pub mod raster;
@@ -191,6 +192,7 @@ pub use predict::{
 pub use preferences::{
     AppPreferences, PREFERENCES_SCHEMA_VERSION, PreferencesError, WindowModePreference,
 };
+pub use projection::PlanarProjection;
 pub use quiz::{ICONIC, QuizChoice, QuizRound, build_round, build_round_pool, build_round_sized};
 pub use radio::{STATIONS, Station, brief_for, length_for, station};
 pub use raster::Raster;

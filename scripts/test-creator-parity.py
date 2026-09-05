@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib.util
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 SPEC = importlib.util.spec_from_file_location(
@@ -45,6 +46,42 @@ class PlotBodyTests(unittest.TestCase):
 
     def test_an_empty_render_collapses_to_nothing(self) -> None:
         self.assertEqual(MODULE.plot_body("y = a\nDiscovery: manual\n\n"), "")
+
+
+class GeometryTests(unittest.TestCase):
+    def response(self, width: object = 12, height: object = 4) -> dict:
+        return {
+            "content": [{"text": "x(t) = cos(t)    y(t) = sin(t)\n\n\n    ##\n    ##\n\n"}],
+            "structuredContent": {"width": width, "height": height},
+        }
+
+    def test_blank_margins_do_not_resize_the_other_faces_request(self) -> None:
+        response = self.response()
+        cli = response["content"][0]["text"] + "LEVEL UP\n"
+        with mock.patch.object(MODULE, "mcp_plot", return_value=response), mock.patch.object(
+            MODULE, "cli_plot", return_value=cli
+        ) as call:
+            result = MODULE.check("cli", "mcp", "centered", {}, [], {})
+        self.assertTrue(result["passed"], result)
+        call.assert_called_once_with("cli", [], 12, 4, {})
+
+    def test_a_declared_canvas_does_not_excuse_different_ink(self) -> None:
+        response = self.response()
+        cli = response["content"][0]["text"].replace("    ##", "   ##", 1)
+        with mock.patch.object(MODULE, "mcp_plot", return_value=response), mock.patch.object(
+            MODULE, "cli_plot", return_value=cli
+        ):
+            result = MODULE.check("cli", "mcp", "shifted", {}, [], {})
+        self.assertFalse(result["passed"])
+
+    def test_missing_invalid_or_inconsistent_geometry_fails_before_cli(self) -> None:
+        for width, height in [(None, 4), (True, 4), (0, 4), (12, -1), (12, 5), (5, 4)]:
+            with self.subTest(width=width, height=height), mock.patch.object(
+                MODULE, "mcp_plot", return_value=self.response(width, height)
+            ), mock.patch.object(MODULE, "cli_plot") as call:
+                result = MODULE.check("cli", "mcp", "invalid", {}, [], {})
+            self.assertFalse(result["passed"], result)
+            call.assert_not_called()
 
 
 class CaseTableTests(unittest.TestCase):

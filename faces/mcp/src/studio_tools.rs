@@ -117,6 +117,8 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
                 "xmax": result.xmax,
                 "ymin": result.ymin,
                 "ymax": result.ymax,
+                "width": numinous_core::DEFAULT_PLOT_WIDTH,
+                "height": numinous_core::DEFAULT_PLOT_HEIGHT,
                 "valid": true,
                 "plot": result.text
             }),
@@ -184,6 +186,8 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
                     "xmax": xmax,
                     "ymin": result.ymin,
                     "ymax": result.ymax,
+                    "width": request.width(),
+                    "height": request.height(),
                     "valid": true,
                     "plot": result.text
                 }),

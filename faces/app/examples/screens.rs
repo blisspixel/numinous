@@ -1516,7 +1516,7 @@ fn write_readme_screens(output: &Path) {
         );
     }
 
-    let mut panel = studio_panel::StudioPanel::new("x(t)=cos(3*t); y(t)=sin(2*t)")
+    let mut panel = studio_panel::StudioPanel::new("x(t)=a*cos(3*t); y(t)=sin(2*t)")
         .expect("parametric Formula Jam source");
     panel.toggle_help();
     let mut studio = Raster::with_accent(DEFAULT_SIZE.0, DEFAULT_SIZE.1, [120, 220, 190]);
