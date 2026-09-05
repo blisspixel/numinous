@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 
 $patterns = @(
     "*.rs", "*.md", "*.toml", "*.wgsl", "*.sh", "*.ps1",
-    "*.yml", "*.yaml", "*.py", "*.txt", "*.json"
+    "*.yml", "*.yaml", "*.py", "*.txt", "*.json", "*.mjs", "*.svg"
 )
 $files = @()
 foreach ($pattern in $patterns) {
