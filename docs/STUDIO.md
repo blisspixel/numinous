@@ -170,8 +170,14 @@ Formula Jam grows the expression surface already in the app. It keeps manual
 entry, then adds two discovery controls for players who do not know what to type:
 
 The shipped editor accepts one graph or one exact `x(t)=...; y(t)=...` pair.
-The graph uses its saved x window. The pair uses a saved t window and auto-scales
-its complete finite path across both visible axes. F6 cycles the same five pitch
+The graph uses its saved x window and independently fits its sampled y range.
+The pair uses a saved t window and fits its finite sampled path with equal
+coordinate units on both axes. It stays centered within the available view;
+circles stay round and a `4*cos(t), sin(t)` ellipse keeps its 4:1 ratio. Terminal
+plots account for the assumed cell proportions. This is a fit to the view, so
+uniformly enlarging a whole path can produce the same picture. CLI and MCP
+also report the sampled coordinate ranges. Undefined samples leave gaps, and
+an isolated finite sample remains a visible point. F6 cycles the same five pitch
 maps the CLI and MCP expose. A saved pair reopens paused with its exact source,
 window, knob, pitch map, era, and lineage. The first edit begins a remix while
 retaining its chosen window and knob, just as for a graph. A return to an

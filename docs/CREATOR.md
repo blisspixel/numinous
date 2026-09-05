@@ -74,7 +74,7 @@ Start local-first (a folder of `.num` files rendered as live thumbnails) so it
 ships before any server exists. Fork must be as cheap as play; the remixers are
 the engine of a creative community (the Scratch research is explicit on this).
 The local wall is built for graph and parametric capsules: F5 in the Studio
-discovers the folder the share keys write into, draws each creation's exact path
+discovers the folder the share keys write into, draws each creation's sampled path
 newest first, and Enter opens one paused. F forks the chosen creation:
 editable and singing at once, in the creation's own era, with the parent's
 link remembered so the next share records the descent.

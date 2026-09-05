@@ -33,6 +33,45 @@ current model and create useful feedback. It cannot guarantee understanding.
 A learning claim needs transfer and retention evidence; a player need not earn
 the right to enjoy the room by supplying that evidence.
 
+## Play first, depth by choice
+
+**Direction set September 2026; the unrestricted study door is not built.**
+The default room is free play. A player may stay, experiment, watch, or create
+without taking a quiz or reading an explanation. Two optional doors serve
+curiosity when it arrives:
+
+- **A short explanation:** name what the player can notice and offer a useful
+  next experiment. It can be opened immediately and dismissed without losing
+  the experiment.
+- **Rigorous study:** definitions, model assumptions, derivations or proofs,
+  numerical methods and error limits, counterexamples, and primary references.
+  Aim for material a doctoral researcher can interrogate. Deliberately requested
+  study has no level, visit, wager, or consolidation requirement. A citation or
+  a few advanced facts alone does not meet this depth standard.
+
+Current behavior is narrower. App Inspect shows concept plus reveal in ordinary
+rooms; the seven engineered rooms require consolidation. CLI `reveal` and MCP
+`reveal_room` require an ordinary visit or engineered consolidation, then unlock
+deep cuts at levels 5, 12, and 24 or through their boons, and citations with
+the first cut.
+The App does not display those cuts or citations and has no scrollable study
+reader. These are implementation gaps, not prerequisites the target experience
+should preserve. Source: `faces/app/src/room_runtime.rs`, `faces/app/src/hud.rs`,
+`faces/cli/src/main.rs`, `faces/mcp/src/room_tools.rs`, and
+`crates/core/src/journey.rs`.
+
+The staged discovery path below remains an optional experience, with its own
+wagers and rewards. It must not control access to requested explanation or
+study. Opening either door is not evidence of understanding and must not reset
+the player's tuning or substitute for an earned challenge result. The Show is
+a separately selected presentation: it currently displays reveal text near
+the end of a room without Inspect.
+
+The same choice should reach readers of Japanese, Hawaiian, Klingon, and other
+languages. Runtime support and reviewed translations are planned, not shipped;
+[ROSETTA.md](ROSETTA.md) separates those two bodies of work. A translated
+explanation needs both fluent-language review and mathematical review.
+
 ## The keystone: the prediction wager
 
 Before a toy resolves or a reveal fires, invite a single-gesture guess: drag a
@@ -61,34 +100,34 @@ actual model or coding criterion would be needed to claim compression.
 concerns improvement in a defined predictor, not one error value. A player can
 also choose familiar beauty, performance, company, or creation.
 
-## The reveal, re-specced as an engineered aha
+## The optional engineered aha
 
-The current reveal is a delayed, well-written fact card: good copy delivering a
-*conclusion*. But an aha is not a conclusion received; it is a representation the
-learner *restructures*, and that restructuring is what makes it stick and what
-feels like awe (Kounios and Beeman, *The Eureka Factor*; insight-solved problems
-are better remembered and more often correct than analytically-solved ones). So
-the reveal becomes a **five-beat staged event**. Keep it one screen, keep it
-summoned not pushed, keep the great copy, but wrap it in structure:
+A short explanation and a staged discovery serve different choices. The latter
+aims to help a player restructure a representation through their own experiment.
+Insight research motivates testing this aim (Kounios and Beeman,
+*The Eureka Factor*); shipping the sequence does not establish learning or awe.
+The **five-beat staged event** is one optional route, not the required form of
+every explanation. Keep each beat legible on one screen:
 
 1. **Prime the gap.** Surface what the player implicitly expects, via a
    prediction wager or an anomaly beat ("this floor has no circles"). No gap, no
    aha, only a fact.
-2. **Withhold and earn.** The reveal is summoned when the player is ready, and
-   only after at least one generation act, so it lands on a prepared mind.
+2. **Build suspense within the chosen experiment.** A generation or observation
+   act can prepare the staged reveal. This sequencing belongs to that path;
+   a deliberately requested explanation or rigorous treatment remains available.
 3. **Restructure by showing, not telling.** The bridge is *animated*, not
    asserted: the player watches their own object become the other object. This is
    compression made visible, two models collapsing into one.
 4. **Confirm by the player's own hand.** Hand control back: let them wiggle the
-   parameter and watch both sides move together. Re-deriving it themselves is the
-   generation act that converts watching into knowing.
+   parameter and watch both sides move together. A new case can test whether
+   they can use the relationship; repeating a gesture alone cannot establish it.
 5. **Consolidate and leave the door open.** The Constellation edge lights (spaced
    re-encounter fuel), the copy delivers the punchline and the open mystery, the
    audio resolves to consonance on the exact frame.
 
-The rule for writers: **the copy is the punchline, not the payload.** The payload
-is beats 1, 3, and 4, the gap, the morph, and the player's own hand. The words
-arrive last and confirm what the player already felt.
+For this staged path, the gap, morph, and player's own hand carry the event;
+the closing words name the relationship. The independent study door can begin
+with the relationship and its proof when that is what the player wants.
 
 ### Canonical engineered ahas
 
@@ -301,9 +340,9 @@ an experiment the product is unusually well placed to run first and properly.
    that delight metrics cannot fake.
 
 **The guard rail.** Bake the Deslauriers finding in as an explicit anti-pattern:
-reveal-open-rate and dwell measure delight, never understanding. Any claim that a
-room "teaches" must be backed by transfer-probe or caption-structure data, the
-same way `QUALITY.md` already forbids the AI judge from clearing math
+reveal-open-rate and dwell measure behavior, not delight or understanding. Any
+claim that a room "teaches" must be backed by transfer-probe or caption-structure
+data, the same way `QUALITY.md` already forbids the AI judge from clearing math
 correctness. Delight informs; a generation-based measure decides. The 0.4
 agent-and-machine comparison, active control, sample, pass rule, and limits are
 predeclared in `UNDERSTANDING_STUDY.md`. Its primary outcome is immediate novel
@@ -318,11 +357,12 @@ New rubric row for the Fun and Awe table:
 
 ## Anti-patterns
 
-- No fact-card reveals. Every reveal is the five-beat engineered aha.
-- No crediting delight as understanding. Nothing is "collected" without a
-  generation act.
+- No required staged aha, quiz, or level grind before deliberately requested
+  explanation, rigorous study, or citations.
+- No crediting delight or opening a text panel as understanding. A challenge
+  result and access to knowledge are separate things.
 - No unguided discovery in the Puzzle without fading hints.
-- No reveal without a prior gap (a prediction or an anomaly).
+- No automatic study panel interrupting ordinary free play.
 - No open problem stated without a live door (see `OPEN_DOORS.md`, planned).
 
 ## Sources
