@@ -2,6 +2,7 @@
 //!
 //! DRAG: SET MODE. See `docs/ROOMS.md`.
 
+use crate::readout::{DisplayNumber, NumericReadout, ReadoutId};
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
@@ -11,6 +12,13 @@ fn phase_unit(t: f64) -> f64 {
     } else {
         0.0
     }
+}
+
+fn displayed_phase(t: f64) -> DisplayNumber {
+    // Preserve the instrument's existing round-away-from-zero integer step
+    // before formatting, rather than replacing it with decimal tie rounding.
+    let percent = (phase_unit(t) * 100.0).round() as i32;
+    DisplayNumber::fixed(f64::from(percent), 0).expect("phase percent is bounded")
 }
 
 fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
@@ -160,8 +168,12 @@ impl Room for StandingWave {
 
     fn status(&self, t: f64) -> Option<String> {
         let n = mode(None, self.seed);
-        let p = (phase_unit(t) * 100.0).round() as i32;
+        let p = displayed_phase(t);
         Some(format!("n={n}  phase={p}%  DRAG:MODE"))
+    }
+
+    fn numeric_readouts(&self, t: f64) -> Option<Vec<NumericReadout>> {
+        Some(vec![displayed_phase(t).readout(ReadoutId::new(1), "PHASE PERCENT")])
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {

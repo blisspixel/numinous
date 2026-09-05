@@ -7,6 +7,7 @@
 
 use std::f64::consts::{FRAC_PI_2, TAU};
 
+use crate::readout::{DisplayNumber, NumericReadout, ReadoutId};
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::sound::{ParametricSound, SoundSpec};
 use crate::surface::Surface;
@@ -124,11 +125,16 @@ impl TimesTables {
         };
         // Lead with the dial invite so first contact is not ambient-only K/TARGET.
         // Drop the prefix once the four-lobe goal is earned (FOUND).
+        let k = Self::displayed_multiplier(k);
         if target == "FOUND" {
-            format!("K {k:.2}  {state}  {target}")
+            format!("K {k}  {state}  {target}")
         } else {
-            format!("DRAG:DIAL  K {k:.2}  {state}  {target}")
+            format!("DRAG:DIAL  K {k}  {state}  {target}")
         }
+    }
+
+    fn displayed_multiplier(k: f64) -> DisplayNumber {
+        DisplayNumber::fixed(k, 2).expect("the resolved multiplier is finite")
     }
 
     fn voice(k: f64) -> ParametricSound {
@@ -206,11 +212,16 @@ impl Room for TimesTables {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let multiplier = K_MIN + K_SWEEP * self.phase_for(t);
+        let multiplier = self.multiplier(t, &[]);
         Some(Self::status_for_multiplier(
             multiplier,
             (multiplier - TARGET_K).abs() < 1e-9,
         ))
+    }
+
+    fn numeric_readouts(&self, t: f64) -> Option<Vec<NumericReadout>> {
+        Some(vec![Self::displayed_multiplier(self.multiplier(t, &[]))
+            .readout(ReadoutId::new(0), "K")])
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -221,7 +232,7 @@ impl Room for TimesTables {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        Self::render_multiplier(canvas, K_MIN + K_SWEEP * self.phase_for(t));
+        Self::render_multiplier(canvas, self.multiplier(t, &[]));
     }
 
     // Provenance: geometry and modular arithmetic (standard curriculum);

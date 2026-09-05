@@ -43,6 +43,7 @@ fn server_instructions() -> &'static str {
         "On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. ",
         "On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. ",
         "Read structuredContent.engineeredAha for the beat, visible wager, and post-summon grade. reveal_room opens only after a normal room has been played, or after an engineered Aha has consolidated. ",
+        "For optional reading without progression, call study_room with an explicit catalog room and optional locale. Choose explanation, notes, or mathematics, or open one stable block id directly. Content depth and language fallback are reported explicitly; unavailable mathematics remains unavailable. Study does not read or award Journey or reading progress. ",
         "Pass audio true to watch_show, listen_room, or sing_expression and a real WAV arrives in an audio content block beside the notation. That is a sound sent, not a sound heard: whether your client surfaces it is its answer to give, and if it cannot, the notation is the whole of what you get. Pass midi true on sing_expression for a Standard MIDI File of the same melody: 12-TET keys plus pitch bend of leftover cents. ",
         "Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
     )
@@ -202,6 +203,7 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
             },
             super::show::catalog_entry(),
+            super::study::catalog_entry(),
             {
                 "name": "describe_room",
                 "description": "Safely describe one room: its title, wing, action, goal, and nonspoiling doorway. This never returns the revelation. When exact current-room evidence exists in the local player journal, structuredContent.journalCue says only that it is available and names the explicit workspace retrieval call; no journal text is opened. Use list_rooms first to find valid ids.",

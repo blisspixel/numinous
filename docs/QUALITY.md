@@ -15,6 +15,13 @@ Coverage measured 94.29% regions and 94.29% lines under the existing exclusions,
 up from the 94.21% measured on 2026-09-04. The added checks include independent
 room-model consequences, decoded MIDI events, saved Studio continuity, and
 curve visibility beneath the composed App overlays.
+The 2026-09-05 Windows alpha 20 candidate passed 4,044 all-target Rust test
+cases with the same three expensive diagnostics excluded. Coverage measured
+94.53% regions and 94.56% lines under the existing exclusions, up from the
+alpha 17 candidate. The added checks include direct room study across the App
+reader, CLI, and MCP, typed numerical grading channels, keys held at reader
+entry and return, and the study observer policy. The NO_COLOR sweep grew to
+40 checks with the study subcommand.
 The broader dated baseline below retains its original counts.
 
 ## Evidence snapshot, 2026-09-01

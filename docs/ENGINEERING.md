@@ -6,7 +6,7 @@ perfection. This document separates gates enforced today from hardening work
 that still has to earn its place. The automated enforcement that exists lives
 in `QUALITY.md` and `.github/workflows/ci.yml`.
 
-## Toolchain and versions (verified 2026-08-25)
+## Toolchain and versions (study renderer updated 2026-09-05)
 
 The current baseline is deliberate and green. A newer major release is a review
 candidate, not an automatic upgrade. Compatible patch and minor lockfile
@@ -17,12 +17,13 @@ automatic merges.
 | Component | Enforced baseline | Notes |
 | --- | --- | --- |
 | Rust edition | **2024** | The current edition; use it from the first commit. |
-| Rust toolchain | **1.97.1** | Exact developer and CI toolchain (`rust-toolchain.toml`). CI separately checks the verified 1.88 MSRV. |
+| Rust toolchain | **1.97.1** | Exact developer and CI toolchain (`rust-toolchain.toml`). CI separately checks Rust 1.89, required by the App study renderer. |
 | `wgpu` | **30.0.1** | Current GPU stack. The migration preserves unbucketed adapter limits and handles mapped-range failures as typed errors. This patch removes a per-frame Vulkan validation failure and resolves Metal color-space constants dynamically. |
 | `winit`, `softbuffer` | **0.30.x, 0.4.x** | Current native window and software presentation path. |
 | `cpal` | **0.18.2** | Current native audio I/O. Every PCM format is converted from the shared float mix; DSD remains explicitly unsupported. |
 | `png`, `pollster`, `ureq` | **0.18.1, 1.0.1, 3.3.0** | Current image, blocking-future, and synchronous HTTP baselines. HTTP redirects remain disabled for the credentialed music request and error bodies remain bounded. |
 | `gilrs` | **0.11.2** | Current cross-platform gamepad input. Linux CI installs `libudev-dev`. |
+| Study text | **cosmic-text 0.19.0**, **unicode-script 0.5.8**, **unicode-segmentation 1.13.3** | App-only shaping and grapheme handling, with explicit bundled Noto fonts. [Decision 1](decisions/0001-study-text.md) records costs and limits. |
 | Test runner | **cargo test** | Enforced today. `cargo-nextest` is a possible speed improvement, not a current dependency. |
 | Supply chain | **cargo-deny**, **cargo-audit**, and SPDX 2.3 | Deny and audit are enforced in CI. Tagged releases add a locked all-feature Rust graph plus exact packaged executable hashes and header-declared PE, ELF, and Mach-O imports, with a separate keyless attestation. Embedded per-binary Rust reachability remains planned hardening. |
 | Coverage | **cargo-llvm-cov** | Tracked, not fetishized (see Testing). |
@@ -40,7 +41,7 @@ weekly (`.github/dependabot.yml`) without migration-era ignore rules.
 `actions/attest` v4.2.2, `taiki-e/install-action` v2.87.0,
 `actions/dependency-review-action` v5.0.0, `github/codeql-action` v4.37.9,
 `EmbarkStudios/cargo-deny-action` v2.1.1, and `dtolnay/rust-toolchain` pinned
-to the 1.97.1 and 1.88.0 channel commits named in the workflows.
+to the 1.97.1 and 1.89.0 channel commits named in the workflows.
 Bump pins through review when Dependabot or a manual check shows a newer
 release.
 
@@ -177,10 +178,14 @@ change to this topology must update and pass
 - **`cargo-audit`** is a second, independent RustSec advisory check. CI runs it
   on every PR. Local `scripts/verify` runs it when `cargo-audit` is installed.
   Project ignores live in `.cargo/audit.toml` and must stay aligned with the
-  advisory ignores in `deny.toml` (currently **none**; add only with a temporary
-  reason and a named exit condition, then remove when the dependency catches
-  up). **`cargo-auditable`** release binaries remain planned hardening, not a
-  current gate.
+  advisory ignores in `deny.toml`. Add one only with a temporary reason and a
+  named exit condition, then remove it when the dependency catches up. There is
+  currently **one**: RUSTSEC-2026-0192, `ttf-parser` unmaintained, reached only
+  through `cosmic-text` 0.19 and `fontdb` 0.23, which the App points at its
+  three embedded Noto files and never at a system font. `fontdb` 0.24 dropped
+  the crate, so the exception leaves with the first `cosmic-text` release that
+  requires `fontdb` 0.24 or later. **`cargo-auditable`** release binaries
+  remain planned hardening, not a current gate.
 - **Dependency review** compares every pull request dependency diff against the
   dependency graph and rejects newly introduced moderate or higher known
   vulnerabilities in runtime, development, or unknown scopes. It does not post
@@ -195,8 +200,9 @@ change to this topology must update and pass
   (`.github/dependabot.yml`, limit five open PRs per ecosystem). Compatible
   updates merge after the full CI gate. Breaking major bumps stay deliberate
   reviews, not automatic landings.
-- **Current posture (2026-08-01):** public `main` is green on deny and audit
-  with empty ignore lists. The release audit creates and verifies a deterministic
+- **Current posture (2026-09-05):** public `main` is green on deny and audit
+  with the single documented `ttf-parser` exception above and no other ignores.
+  The release audit creates and verifies a deterministic
   SPDX 2.3 inventory from exact `Cargo.lock` and `cargo metadata --locked
   --all-features`; a separate keyless statement binds it to every tagged archive.
   The inventory is source-derived and does not claim binary-native analysis.
@@ -239,7 +245,7 @@ Nothing merges red. On every PR, blocking:
 10. CodeQL analysis for Rust and GitHub Actions completes and uploads its
     results. Alert presence is reviewed separately and is not an automatic
     action failure.
-11. `cargo +1.88.0 check --workspace --all-targets --locked`
+11. `cargo +1.89.0 check --workspace --all-targets --locked`
 12. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
 13. `cargo test --workspace --all-targets --locked` and
    `cargo build --workspace --locked` on macOS, Linux, and Windows

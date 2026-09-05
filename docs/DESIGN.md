@@ -3,7 +3,7 @@
 How Numinous feels, moment to moment, and the rules that keep it feeling that way.
 
 **Implementation boundary, 2026-09-05:** this is the experience specification,
-not a claim that every element below ships in 0.4.0-alpha.19. The native app,
+not a claim that every element below ships in 0.4.0-alpha.20. The native app,
 CLI, MCP face, catalog, Show, deterministic room voices, four Visual Eras,
 Studio expression surface, PNG postcards, short APNG loops, exact file/link
 reopening through App arguments and drops, and the local Gallery are built.
@@ -14,7 +14,11 @@ work. `ROADMAP.md` is the status authority.
 ## The design pillars (and how to obey them)
 
 ### 1. Awe before instruction
-The visitor must experience beauty **before** they read a single word of math. No room opens on an equation. No room requires reading to start playing. Text is earned: you tap **Reveal** when *you're* ready, and never before. If a room can't create a "whoa" in its first 10 seconds with zero explanation, it isn't done.
+The room opens on something worth touching, without requiring a lesson first.
+Explanation is available whenever the visitor wants it, including before a
+first touch. It is a choice, never a reward for a wager or a level. A room
+should invite curiosity through its first few seconds of play; whether it
+actually creates awe is something to learn from its visitors.
 
 ### 2. Everything is an instrument
 The instrument should make meaningful visual relationships available through
@@ -25,11 +29,26 @@ structured sound facts, and visual alternatives available. `SOUND.md` owns the
 sonification design; `RESEARCH.md` records the evidence and its cultural limits.
 
 ### 3. Toy → puzzle → revelation (the three layers)
-Every room is built in three concentric layers. You can stop at any layer.
+Every room should support three layers. You can enter or leave any available
+layer directly; they are not a required sequence.
 
 - **Layer 1, TOY (mandatory).** Pure sandbox. Grab things, turn dials, no goal, no fail state, no words. Just cause and effect that's fun to poke. This layer alone must justify the room.
-- **Layer 2, PUZZLE (optional).** A small, self-contained challenge that gives the flow-state hit: "make the shape close on itself," "find the rule that draws a triangle," "tune it to a perfect fifth." Concrete goal, instant feedback, a clean win. Never mandatory, never blocking.
-- **Layer 3, REVELATION (optional).** One card. One or two sentences. The 3Blue1Brown gut-punch, the connection or fact that recontextualizes everything you just played with. ("That heart-shape? It's the exact boundary of the Mandelbrot set's main body. You've been drawing a fractal with a ruler.") Links out to go deeper for the truly hooked.
+- **Layer 2, PUZZLE (optional).** A small, self-contained challenge: "make the
+  shape close on itself," "find the rule that draws a triangle," "tune it to a
+  perfect fifth." A concrete goal and visible feedback invite investigation.
+  Never mandatory, never blocking.
+- **Layer 3, UNDERSTANDING (optional).** Start with a short explanation, then
+  make notes, derivations, assumptions, and primary references directly
+  available where authored. A brief connection can change how someone sees a
+  room; a serious mathematical treatment should let them examine why. Neither
+  requires completing the puzzle. [Study](STUDY.md) owns the content depths,
+  current coverage, and access contract.
+
+The App's seven staged experiments follow this separation. Free play is the
+default. **U** or the Cabinet's **EXPERIMENT** entry chooses the prediction or
+observation path; **Enter** advances a connection only when it is earned.
+Leaving that path retains its calls and earned progress for the current visit.
+**E** or the controller's Inspect action opens study independently.
 
 ### 4. Emergence is the star
 Prefer rooms where a **stupidly simple rule** produces **stunning complexity**, and make the simplicity *legible*, the visitor must be able to see/feel how little input created how much output. That gap is the product. Show the rule plainly (a single slider, a single equation-free statement) so the output feels impossible.
@@ -48,7 +67,11 @@ Every session can leave the app. One-tap **Share** captures a loop (MP4/GIF) or 
 
 - **Canvas:** deep near-black (`#0a0b0f`-ish), never pure black. The math glows *on* the dark.
 - **Color:** each room owns **one** signature accent that glows; supporting values stay monochrome. Color carries meaning (e.g., pitch, phase, iteration count), never decoration. A shared palette across rooms keeps the whole product coherent. (Palette to be validated for contrast + colorblind-safety per the `dataviz` guidance when we build the design system.)
-- **Type:** a precise technical monospace for numbers/parameters (the "computational" voice) paired with a refined humanist sans for the rare prose (revelation cards). Numbers are first-class typography.
+- **Type:** preserve the Cabinet's cartridge lettering and compact room HUD,
+  with a separate case-preserving reading surface for longer prose and
+  mathematical notation. Numbers and variables must retain their exact
+  spelling. [Visuals](VISUALS.md) owns the App reader's bundled fonts,
+  wrapping, scrolling, and linear-equation limits.
 - **Line & glow:** additive blending, subtle bloom, anti-aliased everything. Think "lit from within," not "flat UI."
 - **UI:** near-invisible until needed. Controls fade in on hover/approach and recede while you watch. The math is the interface.
 - **Motion:** eased, physical, continuous. Nothing snaps. Dials have momentum. Transitions between rooms are dissolves through black, never hard cuts.
@@ -99,8 +122,13 @@ Sound is a first-class citizen with its own art direction, not an afterthought.
 - **Direct manipulation.** You touch the math itself (drag the point, bend the curve), not an abstract slider elsewhere, wherever possible.
 - **No dead ends, no fail.** In toy mode you can't lose or break anything. A **reset** is always one tap and always graceful.
 - **Reversible everything.** Undo/scrub where it makes sense. Encourage fearless poking.
-- **Respect the flow.** Interruptions (dialogs, popups, "did you know?") are banned during play. The Reveal card is the *only* text, and it's summoned, never pushed.
-- **Progressive depth.** A curious visitor can always go one level deeper (Reveal → "the math" → external link), but the surface stays clean for everyone else.
+- **Respect the flow.** Keep action hints and readouts quiet. Longer explanation
+  opens only by request, holds room time and accepted input history, and returns
+  to the room or Cabinet page that opened it.
+- **Progressive depth.** Explain, Notes, and Mathematics are direct choices.
+  State missing content plainly. Legacy notes are not a completed treatment,
+  and reading creates no completion score. The surface stays clean for players
+  who want only to explore.
 
 ## Modes: Watch, Play, Create
 
@@ -148,8 +176,9 @@ The connective tissue between rooms. Its front door is deliberately a dark,
 opaque, cartridge-era text screen, not a modern dashboard or a wall of cards.
 
 - Four large category choices open short Modes, Games, Settings, and Controls
-  lists, followed by a deliberate Quit row. No selectable page has more than
-  six rows.
+  lists. **EXPLAIN** opens the current room's reader, and **EXPERIMENT** appears
+  when that room offers a staged path. A deliberate Quit row is reachable from
+  the front page. Compact windows show three adjacent choices at a time.
 - A fixed arrow, single-letter shortcuts, a wide 7 by 7 cartridge face, and
   generous negative space preserve the directness of an NES or SNES command
   menu. Desktop type grows in whole pixel steps with the viewport, including
@@ -166,11 +195,11 @@ opaque, cartridge-era text screen, not a modern dashboard or a wall of cards.
 
 ## The anti-patterns list (paste this above your monitor)
 
-- No equation before wonder.
+- No required equation before play.
 - No silent interaction.
 - No fail states in the toy.
 - No ugly frame.
 - No forced text.
-- No feature that feels like school.
+- No compulsory lesson or test.
 - No hard cut, no snap, no beep.
-- If in doubt, make it more beautiful and less explained.
+- Keep play beautiful and let the visitor choose the depth of explanation.

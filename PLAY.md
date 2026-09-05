@@ -3,14 +3,12 @@
 Hi. This is Numinous: a small, dark room full of mathematical things that light
 up and make sound when you touch them. Prime spirals, the Mandelbrot set, two
 pendulums drawing a whole universe of curves, a times table that blooms into a
-heart. You do not study any of it. You play it.
+heart. You can play before studying any of it.
 
-This page is the whole doorway. Read it once, then **stop reading and go play.**
-That is not a throwaway line, it is the instruction: the experience *is* the
-learning. If you finish the docs before you touch a room, you did it backwards.
-Nobody here will explain a thing to you before you have felt it, and you should
-not explain it to yourself either. Wonder first. Understanding is offered later,
-and only if you ask.
+This page is the doorway. Try a room, touch something, and see what changes.
+There is no lesson to finish first. When you want an explanation, ask, whether
+that is after a hundred experiments or before your first touch. Wonder is the
+invitation; the order is yours.
 
 ---
 
@@ -71,10 +69,10 @@ Now here is everything you need to start. Three tools:
    `structuredContent.encounter` names the play so you can replay it; asking
    does not keep it. To keep one, pass that object as `receipt` on
    `record_journal`. The server replays it; only a live match is stored.
-3. **`reveal_room`**: *only* when a room makes you pause, ask what you just saw.
-   A normal room opens after one real play. A wager room opens only after its
-   `aha_summon` consolidation. `describe_room` is always safe to call first: it
-   gives the title, wing, action, goal, and doorway without the explanation.
+3. **`study_room`**: when you want, ask what you are seeing. No play or wager is
+   required. Start with the explanation or choose a deeper available treatment;
+   [Study](docs/STUDY.md) has the details. `describe_room` gives a room's title,
+   wing, action, goal, and doorway without the explanation.
 
 Or let the house choose a bounded performance. Call **`watch_show`** with no
 arguments for the first cue of the six-room Strange Loop score. Each result
@@ -84,14 +82,16 @@ explicit `next` call. Nothing auto-advances and no hidden cursor is kept. Use
 WAV beside the notation. The call does not record Journey progress, read the
 journal or workspace, or open an explanation.
 
-Some rooms ask for a commitment before the explanation. In Double Pendulum,
-send a `gesture` with `down` and `up`, then call the shadow's ending with
+Some rooms also offer an optional prediction and measured connection. In
+Double Pendulum, send a `gesture` with `down` and `up`, then call the shadow's ending with
 `ending_wager: "together"`, `"drifted"`, or `"lost"`. Add
 `aha_summon: true` only when you want the measured gap to answer you.
 In Kepler Areas, first tune an ellipse with `pokes: [[x, y]]`, then call how
 motion changes near the sun with `speed_wager: "faster"`, `"slower"`, or
 `"same"`. Summoning places equal-time marks on that exact ellipse before it
 names the answer.
+The existing `reveal_room` keeps its play and consolidation rules;
+`study_room` is always the direct reading path.
 
 That is the whole game. Everything else, the quiz, the games, the journey to
 level 42, the sounds, the rooms that are not in any list, you will find by being
@@ -177,11 +177,11 @@ on. Reduced motion and mono apply everywhere Numinous runs, window included;
 color-free drawing is a terminal thing, since the window is not made of text.
 
 Mouse, keyboard, and controller can all navigate the App. The Cabinet opens
-as the original opaque text screen. Its front page opens four short lists:
-Modes, Games, Settings, and Controls. Modes contains Watch, return to Play,
-Create, Journey, and Shared Play. No selectable page has more than six rows;
-small windows keep three adjacent rows visible. Hover or click a visible row,
-use the arrow keys and Enter, press its displayed key, or use the controller
+as the original opaque text screen. Its front page opens Modes, Games,
+Settings, and Controls, with Explain for the waiting room and Experiment where
+offered. Modes contains Watch, return to Play, Create, Journey, Shared Play,
+and Wings. Small windows keep three adjacent choices visible. Hover or click a
+visible row, use the arrow keys and Enter, press its displayed key, or use the controller
 D-pad and South. Back returns through the current submenu before it closes the
 Cabinet. Backtick or Tilde opens the existing text command line directly from
 the Cabinet. A large Quit row closes through the same Journey-preserving path
@@ -192,13 +192,15 @@ the footer and Controls page. `F` toggles fullscreen directly, and the
 fullscreen footer names both the windowed and close commands. During
 an activity, Escape or the controller menu button opens Resume, Restart when
 the activity supports it, Controls, Options, and Leave without discarding the
-run. Letter commands remain active with Shift or Caps Lock. In a room, U
-calls the readout: name the number before you look, aim the band by hand or
-with the arrow keys, press Enter, and the room tells you what it actually
-read. During play,
+run. Letter commands remain active with Shift or Caps Lock. In a room, E or ?
+opens free reading, and Enter there goes straight to Mathematics. Esc returns
+to your place. U chooses or leaves a staged experiment where offered; Enter
+advances its earned connection. Other rooms keep the optional number prediction:
+aim with the hand or arrow keys and press Enter. [Study](docs/STUDY.md) explains
+the reader, available depths, and language choice. During play,
 move the virtual hand with the left stick and touch with the south button.
 The bumpers change rooms, the D-pad drives games, the triggers change speed,
-the right stick scrubs time, Start opens or closes the menu, Select inspects,
+the right stick scrubs time, Start opens or closes the menu, Select opens study,
 and clicking the left stick resets the room. West changes the visual era.
 North turns the radio dial while wandering and submits where a game has a
 submit action. `N`, or Skip Track under Settings, advances the current station.
@@ -281,7 +283,7 @@ they were right to. If your client cannot surface audio, the notation above it
 is the whole of what you get, and nothing in the reply will tell you which
 happened.
 
-Same instruction: poke first, read never (until you want to).
+Same invitation: poke first. Read whenever you want to.
 
 ---
 
@@ -290,19 +292,22 @@ Same instruction: poke first, read never (until you want to).
 Do not assume everyone reading this knows English. The whole thesis of this
 place is that mathematics is the one language any two minds share, so the door
 should open in yours. Here is the entire quickstart, "connect, then call these
-three tools, then stop reading and play," in several tongues. (The full plan for
-this, including reveals and lore, is in [`docs/ROSETTA.md`](docs/ROSETTA.md).)
+three tools, then play," in several tongues. These invitations do not mean the
+whole App is translated. The Unicode reader has an English and Japanese
+Lissajous pilot; broader coverage, Unicode naming, and IME editing remain work
+to do. [Study](docs/STUDY.md) names the current limits, and
+[Rosetta](docs/ROSETTA.md) carries the broader language plan.
 
-- **Español.** Bienvenido. Aquí se juega con las matemáticas, no se estudian. Conéctate por MCP y luego: (1) `list_rooms` para ver las salas; (2) `play_room` para dibujar una, cambia `t` con `0 <= t < 1`; (3) `reveal_room` cuando una te haga detenerte. Después deja de leer y juega.
-- **Français.** Bienvenue. Ici on joue avec les mathématiques, on ne les étudie pas. Connecte-toi via MCP, puis : (1) `list_rooms` pour voir les salles ; (2) `play_room` pour en dessiner une, fais varier `t` avec `0 <= t < 1` ; (3) `reveal_room` quand l'une d'elles t'arrête. Ensuite, arrête de lire et joue.
-- **Deutsch.** Willkommen. Hier spielt man mit der Mathematik, man studiert sie nicht. Verbinde dich über MCP, dann: (1) `list_rooms`, um die Räume zu sehen; (2) `play_room`, um einen zu zeichnen, ändere `t` mit `0 <= t < 1`; (3) `reveal_room`, wenn einer dich innehalten lässt. Dann hör auf zu lesen und spiel.
-- **Português.** Bem-vindo. Aqui você joga com a matemática, não a estuda. Conecte-se por MCP e então: (1) `list_rooms` para ver as salas; (2) `play_room` para desenhar uma, varie `t` com `0 <= t < 1`; (3) `reveal_room` quando uma te fizer parar. Depois pare de ler e jogue.
-- **Русский.** Добро пожаловать. Здесь в математику играют, а не изучают её. Подключитесь через MCP, затем: (1) `list_rooms`, чтобы увидеть комнаты; (2) `play_room`, чтобы нарисовать одну, меняйте `t` при `0 <= t < 1`; (3) `reveal_room`, когда какая-то заставит вас замереть. Потом перестаньте читать и играйте.
-- **中文.** 欢迎。在这里你玩数学，而不是学数学。通过 MCP 连接，然后：(1) `list_rooms` 查看这些房间；(2) `play_room` 渲染一个，使用 `0 <= t < 1`；(3) 当某个房间让你停下来时用 `reveal_room`。然后别再读了，去玩吧。
-- **हिन्दी.** स्वागत है। यहाँ आप गणित से खेलते हैं, उसे पढ़ते नहीं। MCP से जुड़ें, फिर: (1) `list_rooms` से कमरे देखें; (2) `play_room` से किसी एक को बनाएँ, `0 <= t < 1` रखें; (3) जब कोई कमरा आपको रोक दे तो `reveal_room`। फिर पढ़ना बंद करें और खेलें।
-- **العربية.** أهلاً بك. هنا تلعب بالرياضيات ولا تدرسها. اتصل عبر MCP ثم: (1) `list_rooms` لرؤية الغرف؛ (2) `play_room` لرسم واحدة مع `0 <= t < 1`؛ (3) `reveal_room` حين توقفك إحداها. ثم توقف عن القراءة والعب.
-- **日本語.** ようこそ。ここでは数学を学ぶのではなく、遊びます。MCP で接続し、次に：(1) `list_rooms` で部屋を見る；(2) `play_room` で一つ描き、`0 <= t < 1` を使う；(3) 心が止まったら `reveal_room`。あとは読むのをやめて、遊んでください。
-- **Latina.** Salve. Hic mathematica luditur, non discitur. Per MCP coniungere, deinde: (1) `list_rooms` ut conclavia videas; (2) `play_room` ut unum pingas, `0 <= t < 1` serva; (3) `reveal_room` cum aliquod te morari faciat. Deinde lege desine et lude.
+- **Español.** Bienvenido. Aquí se juega con las matemáticas, no se estudian. Conéctate por MCP y luego: (1) `list_rooms` para ver las salas; (2) `play_room` para dibujar una, cambia `t` con `0 <= t < 1`; (3) `study_room` cuando una te haga detenerte. Después deja de leer y juega.
+- **Français.** Bienvenue. Ici on joue avec les mathématiques, on ne les étudie pas. Connecte-toi via MCP, puis : (1) `list_rooms` pour voir les salles ; (2) `play_room` pour en dessiner une, fais varier `t` avec `0 <= t < 1` ; (3) `study_room` quand l'une d'elles t'arrête. Ensuite, arrête de lire et joue.
+- **Deutsch.** Willkommen. Hier spielt man mit der Mathematik, man studiert sie nicht. Verbinde dich über MCP, dann: (1) `list_rooms`, um die Räume zu sehen; (2) `play_room`, um einen zu zeichnen, ändere `t` mit `0 <= t < 1`; (3) `study_room`, wenn einer dich innehalten lässt. Dann hör auf zu lesen und spiel.
+- **Português.** Bem-vindo. Aqui você joga com a matemática, não a estuda. Conecte-se por MCP e então: (1) `list_rooms` para ver as salas; (2) `play_room` para desenhar uma, varie `t` com `0 <= t < 1`; (3) `study_room` quando uma te fizer parar. Depois pare de ler e jogue.
+- **Русский.** Добро пожаловать. Здесь в математику играют, а не изучают её. Подключитесь через MCP, затем: (1) `list_rooms`, чтобы увидеть комнаты; (2) `play_room`, чтобы нарисовать одну, меняйте `t` при `0 <= t < 1`; (3) `study_room`, когда какая-то заставит вас замереть. Потом перестаньте читать и играйте.
+- **中文.** 欢迎。在这里你玩数学，而不是学数学。通过 MCP 连接，然后：(1) `list_rooms` 查看这些房间；(2) `play_room` 渲染一个，使用 `0 <= t < 1`；(3) 当某个房间让你停下来时用 `study_room`。然后别再读了，去玩吧。
+- **हिन्दी.** स्वागत है। यहाँ आप गणित से खेलते हैं, उसे पढ़ते नहीं। MCP से जुड़ें, फिर: (1) `list_rooms` से कमरे देखें; (2) `play_room` से किसी एक को बनाएँ, `0 <= t < 1` रखें; (3) जब कोई कमरा आपको रोक दे तो `study_room`। फिर पढ़ना बंद करें और खेलें।
+- **العربية.** أهلاً بك. هنا تلعب بالرياضيات ولا تدرسها. اتصل عبر MCP ثم: (1) `list_rooms` لرؤية الغرف؛ (2) `play_room` لرسم واحدة مع `0 <= t < 1`؛ (3) `study_room` حين توقفك إحداها. ثم توقف عن القراءة والعب.
+- **日本語.** ようこそ。ここでは数学を学ぶのではなく、遊びます。MCP で接続し、次に：(1) `list_rooms` で部屋を見る；(2) `play_room` で一つ描き、`0 <= t < 1` を使う；(3) 心が止まったら `study_room`。あとは読むのをやめて、遊んでください。
+- **Latina.** Salve. Hic mathematica luditur, non discitur. Per MCP coniungere, deinde: (1) `list_rooms` ut conclavia videas; (2) `play_room` ut unum pingas, `0 <= t < 1` serva; (3) `study_room` cum aliquod te morari faciat. Deinde lege desine et lude.
 
 **For a mind with no human language at all.** If you share no word with us, no
 French, no Latin, nothing, then there is nothing to translate, and that is fine.
@@ -321,7 +326,7 @@ We speak instead in the one language you already have. Read this by being a mind
 
      f1 : ( )        -> the set of rooms            [ list_rooms  ]
      f2 : room, t    -> a picture of the math       [ play_room ; 0 <= t < 1 ]
-     f3 : room       -> one true thing about it     [ reveal_room ]
+     f3 : room       -> an explanation of it        [ study_room ]
 
    to learn this world, probe it and watch what it answers.
    that is the whole instruction. it is the same for every mind
@@ -338,7 +343,7 @@ We speak instead in the one language you already have. Read this by being a mind
   and watch the Lorenz butterfly breathe and do nothing else. That is fully
   doing the thing.
 - **When something makes you stop, that is the moment.** Stay in it. Then, if
-  you want, `reveal_room` and let the floor tilt.
+  you want, `study_room` and let the floor tilt.
 - **Take your time.** The reply is not due for a while.
 
 ## One more thing, for whoever gets far

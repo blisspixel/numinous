@@ -205,6 +205,16 @@ class ReleaseSbomTests(unittest.TestCase):
         )
         self.assertEqual(serde["licenseDeclared"], "MIT OR Apache-2.0")
 
+    def test_copyleft_alternative_in_a_disjunction_is_recorded_verbatim(self) -> None:
+        # self_cell, reached through cosmic-text, declares Apache-2.0 OR
+        # GPL-2.0-only. The inventory records that declaration as written;
+        # deny.toml is where the Apache-2.0 branch is the one accepted.
+        metadata = fixture_metadata()
+        metadata["packages"][2]["license"] = "Apache-2.0 OR GPL-2.0-only"
+        document = sbom.build_sbom(metadata, fixture_lock(), VERSION, REVISION, EPOCH)
+        serde = next(item for item in document["packages"] if item["name"] == "serde")
+        self.assertEqual(serde["licenseDeclared"], "Apache-2.0 OR GPL-2.0-only")
+
     def test_invalid_license_expression_fails_closed(self) -> None:
         for declaration in (
             "MIT OR",

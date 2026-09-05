@@ -18,11 +18,11 @@ pub(crate) struct FlagshipAhaNote {
     pub(crate) status: String,
     /// Compact earn path, or `none` before generation.
     pub(crate) earn: String,
-    /// Whether reveal text may open (consolidated only).
-    pub(crate) allow_reveal: bool,
-    /// Whether E / Inspect can advance a staged beat right now.
+    /// Whether the selected experiment has reached its consolidated beat.
+    pub(crate) consolidated: bool,
+    /// Whether Enter / mapped Primary can show an earned connection now.
     pub(crate) can_summon: bool,
-    /// Whether the dual-plate or circle overlay is active.
+    /// Whether this selected experiment's connection overlay is active.
     pub(crate) aha_plate: bool,
 }
 
@@ -37,7 +37,7 @@ pub(crate) struct PlaytestSnapshot<'a> {
     pub(crate) time_scale: f64,
     pub(crate) poke_points: &'a [(f64, f64)],
     pub(crate) active_mode: &'a str,
-    /// Present only on Times Tables and Buffon ordinary visits with aha state.
+    /// Present only while a room's staged experiment is selected.
     pub(crate) flagship_aha: Option<FlagshipAhaNote>,
 }
 
@@ -106,12 +106,12 @@ pub(crate) fn build_report(snapshot: &PlaytestSnapshot<'_>, now: SystemTime) -> 
         let _ = writeln!(report, "- Earn path: {}", aha.earn);
         let _ = writeln!(
             report,
-            "- Allow reveal text: {}",
-            if aha.allow_reveal { "yes" } else { "no" }
+            "- Experiment consolidated: {}",
+            if aha.consolidated { "yes" } else { "no" }
         );
         let _ = writeln!(
             report,
-            "- Can summon with E: {}",
+            "- Connection available: {}",
             if aha.can_summon { "yes" } else { "no" }
         );
         let _ = writeln!(
@@ -144,15 +144,15 @@ pub(crate) fn build_report(snapshot: &PlaytestSnapshot<'_>, now: SystemTime) -> 
     let _ = writeln!(report, "- One change they would make first:");
     if snapshot.flagship_aha.is_some() {
         let _ = writeln!(report);
-        let _ = writeln!(report, "### Engineered aha (Times Tables / Buffon)");
+        let _ = writeln!(report, "### Chosen experiment");
         let _ = writeln!(report);
         let _ = writeln!(
             report,
-            "- Did they discover the bottom-band or key wager without help:"
+            "- Did they explicitly choose the experiment, then find its wager or observation path:"
         );
         let _ = writeln!(
             report,
-            "- Did they summon morph with E or Inspect without help:"
+            "- Did they show the connection with Enter or mapped Primary without help:"
         );
         let _ = writeln!(
             report,
@@ -164,7 +164,7 @@ pub(crate) fn build_report(snapshot: &PlaytestSnapshot<'_>, now: SystemTime) -> 
         );
         let _ = writeln!(
             report,
-            "- Did punchline/reveal open only after consolidation, or did they get stuck earlier:"
+            "- Could they freely open study and return to play without losing the experiment:"
         );
         let _ = writeln!(
             report,
@@ -263,7 +263,7 @@ mod tests {
             beat: "prime".to_string(),
             status: "WHERE? 1=M 2=N 3=C".to_string(),
             earn: "none".to_string(),
-            allow_reveal: false,
+            consolidated: false,
             can_summon: false,
             aha_plate: false,
         }
@@ -332,15 +332,15 @@ mod tests {
                 "- Aha beat: prime",
                 "- Footer status: WHERE? 1=M 2=N 3=C",
                 "- Earn path: none",
-                "- Allow reveal text: no",
-                "- Can summon with E: no",
+                "- Experiment consolidated: no",
+                "- Connection available: no",
                 "- Aha plate or circle overlay: no",
-                "### Engineered aha (Times Tables / Buffon)",
-                "- Did they discover the bottom-band or key wager without help:",
-                "- Did they summon morph with E or Inspect without help:",
+                "### Chosen experiment",
+                "- Did they explicitly choose the experiment, then find its wager or observation path:",
+                "- Did they show the connection with Enter or mapped Primary without help:",
                 "- Did they continue hand play during confirm after the morph:",
                 "- Furthest aha beat reached this visit (explore/prime/withheld/morph/confirm/consolidated):",
-                "- Did punchline/reveal open only after consolidation, or did they get stuck earlier:",
+                "- Could they freely open study and return to play without losing the experiment:",
                 "- Observable aha or consolidation moment without facilitator math narration (yes/no):",
             ],
         );

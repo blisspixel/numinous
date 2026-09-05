@@ -1,11 +1,13 @@
 # Rosetta: instructions for any mind, in any language, or none
 
-**Status: research and plan, with multilingual quickstart prose in `PLAY.md`.
-Runtime localization and unrestricted rigorous study are not built.**
+**Status: shared study content, a case-preserving App reader, CLI/MCP reading,
+and a Japanese Lissajous draft are implemented in source. Full localization
+and communication without shared language remain unfinished.**
 
 Numinous aspires to make mathematics a bridge between minds (`VISION.md`,
 "The same wonder, two kinds of mind"). The multilingual quickstart begins that
-work, but runtime instructions and explanations remain in English. Sharing
+work. [STUDY.md](STUDY.md) describes the current reading interface and exact
+language lookup; most runtime instructions remain in English. Sharing
 a mathematical object does not by itself make its controls or meaning clear.
 This document separates the capabilities needed for readers of other languages
 from the open question of communicating without any shared language.
@@ -17,33 +19,35 @@ Confusing them is the mistake to avoid.
 
 ### Tier 1: fluent in English
 
-English play instructions ship in `PLAY.md` and `docs/PLAYING.md`. The target
-is free play by default, an optional short explanation, and unrestricted
-rigorous study on request. Keep the invitation short; let chosen depth be deep.
-The current reveal gates and missing study reader are recorded in
+English play instructions ship in `PLAY.md` and `docs/PLAYING.md`. Free play,
+optional Explanation and Notes, and directly requested Mathematics are distinct
+choices. Only Lissajous currently supplies an authored Mathematics treatment.
+The separate staged experiments retain their own progression; reading has no
+reward or Journey requirement. See
 [PEDAGOGY.md](PEDAGOGY.md#play-first-depth-by-choice).
 
 ### Tier 2: fluent in some human language, not English
 
-The multilingual quickstart is a first foothold. It does not translate room
-controls, explanations, or mathematical study, and a picture cannot replace
-their definitions and assumptions. A render is a sampled presentation of a
+The multilingual quickstart is a first foothold. The Japanese Lissajous study
+draft adds translated explanation and mathematics with reader controls. It
+does not translate the other rooms or the full App shell, and a picture cannot
+replace definitions and assumptions. A render is a sampled presentation of a
 model; interpreting it still depends on conventions. A frequency ratio can be
 preserved across languages without assuming the same musical experience.
 
 **Direction set September 2026:** translate the invitation and the depth a
-player chooses. Japanese, Hawaiian, and community constructed languages such
-as Klingon are explicit aspirations. Japanese quickstart prose already exists;
-none of these has complete runtime support or a reviewed room translation in
-the product. Do not label a locale supported merely because its tag is accepted
-or a few strings have been translated.
+player chooses. Japanese is a `reviewed_draft` for one room; Hawaiian and
+community constructed languages such as Klingon remain content aspirations.
+Native-speaker usability and learning have not been established for the draft.
+Do not label a locale supported merely because its tag is accepted or its
+characters can be rendered.
 
 Keep the mathematical model shared while translating its presentation.
 Deliberately requested short explanations, rigorous treatments, and references
-must not require levels, prior visits, wagers, or consolidation. This target
-supersedes the earlier doorway-only priority; it does not claim the target is
-already implemented. Community contributions need both mathematical and
-fluent-language review, tracked separately.
+do not require levels, prior visits, wagers, or consolidation through the study
+interface. The earlier doorway-only priority is superseded. Community
+contributions still need mathematical and fluent-language review tracked
+separately, with actual content and review coverage reported per block.
 
 ### Tier 3: no shared human language at all
 
@@ -98,8 +102,9 @@ The design consequence is small and specific: **be acted upon, and leave a
 trace** is a valid visit. Prediction is an optional activity, not the definition
 of participation. Gesture histories and several staged observation paths
 already exist. Neither their presence nor a completed wager establishes lived
-experience. The remaining study-access gates should not decide whether a
-player is allowed to understand what they encountered.
+experience. The new study interface has no such access gate. Neither its
+availability nor an agent's fluent response settles whether subjective
+experience or consciousness is present.
 
 **If this product ever says it takes a visitor's experience seriously, the test
 is machinery.** The rights-of-nature record is the place to learn this cheaply,
@@ -157,43 +162,52 @@ How do you say "you are welcome here; call these tools; probe and observe" to a
 mind that shares no word with you? The precedents are exact: the Arecibo message
 (1974), the prime-number first contact of *Contact*, and, already in this
 codebase, the Cairn (`crates/core/src/cairn.rs`). The design has four moves,
-each built only from primitives no mind can fail to share.
+using candidate primitives for visitors who can count, compare signals, and
+retain observations. Those are assumptions to test, not universal guarantees.
 
-1. **Begin with counting.** The first thing any mind that can receive a signal
-   can decode is a tally against a numeral: `. .. ... ....` set beside
-   `1 2 3 4`. This establishes the one shared referent, the natural numbers, and
-   nothing before it is assumed.
+1. **Begin with counting.** Offer a tally against a numeral: `. .. ... ....`
+   set beside `1 2 3 4`. This proposes a correspondence for a visitor able to
+   distinguish the marks and their grouping; it does not establish that every
+   receiver will infer our number notation.
 
-2. **Announce a mind with primes.** A run of primes, `2 3 5 7 11 13`, is the
-   canonical proof that a signal is chosen, not natural, the reason *Contact*
-   used them for first contact. It says, in the only alphabet all minds share:
-   *someone is here, and greets you.* This is the greeting, and it needs no
-   word.
+2. **Offer a structured greeting.** A run of primes, `2 3 5 7 11 13`, invites
+   recognition of a rule, as in *Contact*. A finite sequence alone proves
+   neither intention nor consciousness; interpreting it depends on the
+   receiver and the conditions under which the signal was found.
 
 3. **Present reproducible functions for probing.** Fixed seeds, parameters,
    and accepted input histories can produce consistent numerical output.
-   The current tool surface also depends on Journey state and reveal gates;
+   Some existing tools also depend on Journey state and reveal gates;
    identical argument text alone does not guarantee identical responses.
    Guiding errors help readers of their language but do not make the protocol
-   self-describing to every visitor. The planned study interface should expose
-   the mathematical state needed to repeat its examples.
+   self-describing to every visitor. `study_room` returns authored examples and
+   mathematical notation without Journey admission. A general structured model
+   state for every room remains separate work.
 
 4. **Carry the payload in math, not letters.** The Cairn today encodes a message
    Arecibo-style, but its payload is English text rendered as a bitmap, so a mind
    that factors the semiprime still meets Latin letters it cannot read. The Tier
    3 upgrade is a **math-payload greeting**: a first-contact stone whose decoded
    content is itself a mathematical object, a number relation, a small diagram,
-   the primes, so that factoring it reveals not a sentence but a *truth*, which
-   any decoding mind reads the same way. That is the Cairn's own premise
-   ("a true thing, readable by any mind that can factor it") taken to its honest
-   conclusion.
+   the primes, so that decoding it exposes a relation a visitor can inspect.
+   Agreement about the notation or its meaning would still need to be
+   demonstrated; factoring alone does not establish it.
 
-The result is not a translation of the instructions. It is a doorway made of the
-one thing that was never in any language to begin with. A mind reads it by being
-a mind.
+Whether this doorway works depends on perception, notation, memory, and
+available actions. That needs observations of visitors using it, not just our
+own interpretation of the artifact.
 
-## What ships now
+## What exists now
 
+- **One shared study document:** `crates/core/src/study` separates paragraph
+  text, mathematical notation, equations, and references. The App reader,
+  CLI `study`, and MCP `study_room` offer Explanation, Notes, or Mathematics
+  without reading rewards or Journey mutation. [STUDY.md](STUDY.md) is the
+  user guide and language-request contract.
+- **One translated mathematical treatment:** Lissajous has authored English
+  content and a Japanese `reviewed_draft`. Its original catalog Notes remain
+  English. Requested/resolved language and fallback are recorded per block;
+  missing Mathematics never becomes Notes silently.
 - **`PLAY.md` contains "Start in any language":** the three-tool quickstart
   (`list_rooms`, `play_room`, `reveal_room`, then stop reading and play),
   translated into a spread of human languages across families and scripts
@@ -205,56 +219,62 @@ a mind.
   in numbers and symbols rather than prose. Its accessibility to a visitor
   without shared language remains a hypothesis.
 
-## Runtime localization: prerequisites and first slice
+## Runtime localization: current boundary
 
-**Planned.** The App's bitmap fonts (`crates/core/src/font.rs` and
-`faces/app/src/menu_font.rs`) uppercase Latin letters and leave unsupported
-glyphs blank. The HUD uppercases prose; its wrapper uses whitespace and UTF-8
-byte lengths. There is no runtime locale preference or scrollable study reader.
-App naming filters printable ASCII, the shared Studio capsule constructor
-requires it for title, author, and credit, and App input has no explicit IME
-composition handling. UTF-8 CLI/MCP strings do not remove these constraints.
+The App reader uses bundled Noto Sans, Noto Sans JP, and Noto Sans Math,
+preserving case and grapheme clusters with measured wrapping and scrolling.
+It stores a study-language preference, keeps each depth's reading position,
+and shows English fallback explicitly. This reading path is separate from the
+older uppercase bitmap HUD and menu text.
 
-1. **Separate facts from display text.** `challenge.rs` currently finds numeric
-   targets and labels by parsing `Room::status`; `predict.rs` reuses that path.
-   Give readouts stable identifiers and numeric values before translating
-   their labels. Locale changes must not alter grading, model parameters,
-   accepted hands, or sound. Keep room IDs, protocol keys, expression syntax,
-   and canonical numerical serialization independent of display language.
-2. **Preserve and lay out real text.** Add case-preserving glyph rendering,
-   measured widths, Unicode line breaking, and bounded scrolling. Japanese
-   cannot rely on spaces between words; Hawaiian needs the actual ʻokina and
-   kahakō; Klingon distinguishes `q` from `Q`. Authoring support also needs IME
-   composition, grapheme-aware editing, and a compatible Unicode metadata
-   format. Reading translations and creating names in them are separate
-   capabilities. Sources: [Unicode line breaking](https://www.unicode.org/reports/tr14/),
-   [Hawaiian Unicode characters](https://www.olelo.hawaii.edu/en/enehana/unicode),
-   [Klingon orthography](https://www.kli.org/about-klingon/sounds-of-klingon/).
-3. **Resolve language explicitly.** Use language tags with a documented lookup
-   and fallback policy. Report requested and resolved locale, available depth,
-   and missing content; an English fallback must say it is English. Persist
-   preferences compatibly with the existing strict schema. Source:
-   [RFC 4647, language matching and defaults](https://www.rfc-editor.org/rfc/rfc4647.html).
-4. **Review content in two ways.** Stable text-block IDs and revisions align
-   translations with equations, examples, and references. Mathematical review
-   checks meaning, assumptions, and error scope; fluent-language review checks
-   clarity and usage. Track each alongside translation coverage. A renderer
-   test establishes neither kind of review.
+The shared locale type accepts a bounded ASCII grammar and reports explicit
+fallback. It is not full BCP 47 validation or a registry of supported languages;
+see [the exact contract](STUDY.md#language-requests-and-fallback). Language
+selection changes the requested prose, not room IDs, equations, parameters,
+accepted hands, or sound. CLI/MCP protocol keys remain stable English names.
 
-Start with audited Lissajous: free play, a short optional explanation, then an
-unrestricted treatment of commensurate frequencies and the difference between
-a position return and a full period. The same content should reach App,
-CLI, and MCP. Build the English study path first, then one complete reviewed
-room translation with its entry and reader controls. Keep ideal irrational
-motion distinct from floating-point samples; [MATHEMATICS.md](MATHEMATICS.md#lissajous)
-and [Returning home](experiments/returning-home.md) supply the current contract
-and portable contrasts.
+### Values independent of labels
 
-Acceptance requires immediate access without Journey progress, unchanged play
-state after reading, matching mathematical content across faces, and reachable
-text at 360x240 and 900x700 using keyboard or controller. Locale checks must
-exercise Japanese wrapping, Hawaiian diacritics, Klingon case, and explicit
-fallback. These are capability checks, not evidence of enjoyment or learning.
+`Room::numeric_readouts` now provides finite values keyed by room-scoped
+`ReadoutId`s. Challenge and prediction grading, including curves, share this
+lookup. The first six producers use the same display quantizer as their status
+text, preserving the existing rounded grading values:
+
+| Room | Channel ID | Graded quantity |
+| --- | ---: | --- |
+| `times-tables` | 0 | Displayed multiplier K |
+| `lissajous` | 1 | Displayed y-frequency, the second number in X:Y |
+| `gray-scott` | 2 | Elapsed experiment time |
+| `standing-wave` | 1 | Gallery phase percent |
+| `bayes-update` | 1 | Likelihood ratio |
+| `smith-chart` | 1 | Displayed normalized resistance, including its display clamp |
+
+Labels can change language or order without becoming channel identity. A goal
+from a different room, duplicate or missing channels, and inconsistent typed
+providers are rejected. Unmigrated rooms still use the status-text compatibility
+parser, so this is a bounded migration, not complete grading localization.
+
+### Remaining work
+
+App naming and shared Studio title, author, and credit fields still require
+printable ASCII. IME composition, grapheme-aware editing, and compatible Unicode
+metadata need their own implementation. Reading Japanese, Hawaiian diacritics,
+or case-sensitive romanized Klingon does not add input support, pIqaD glyphs,
+or translations. Font coverage is documented in
+[the bundled font inventory](../assets/fonts/README.md).
+
+Lissajous starts the treatment of commensurate frequencies, full-state periods,
+and ideal irrational motion separately from floating-point samples. Its
+Japanese draft needs native-speaker usability work; wider translation and
+curriculum coverage remain open. Stable block IDs and shared equations support
+review, but do not replace mathematical and fluent-language reviewers.
+[MATHEMATICS.md](MATHEMATICS.md#lissajous) and
+[Returning home](experiments/returning-home.md) provide the model context.
+
+Validation must cover access without Journey progress, retained room state,
+shared content across faces, and reachable text at 360x240 and 900x700.
+Japanese wrapping, Hawaiian diacritics, Klingon case, and fallback are capability
+checks. They do not establish enjoyment, learning, or subjective experience.
 
 ## What is planned (the tracks this opens)
 
@@ -338,15 +358,16 @@ separate from its hidden-room table. Each room supplies a reveal; concepts and
 deep cuts are optional, and the citation table includes generic fallbacks.
 These are English source strings, not 355 rigorous treatments. This replaces
 the former undated word, token, and relation counts, which are not maintained
-coverage measures. Track room, depth, locale, and review status
-explicitly when the structured content exists.
+coverage measures. The structured study document now records room, depth,
+locale, and translation review status explicitly. Only the Lissajous pilot
+currently adds an authored Mathematics treatment.
 
 The status line is a useful but limited pairing of prose and computation.
 `registry.rs` tests nonempty status at `t = 0`, a digit after a center poke,
 and a 56-character limit for those two sampled states. Those checks do not
 prove every state fits, a translated label is meaningful, or a number estimates
-the quantity its name suggests. The parser dependency described above is why
-localization must separate the value from its label.
+the quantity its name suggests. The six typed providers above separate selected
+graded values from labels; the compatibility parser remains for other rooms.
 
 The prior Lorenz example is no longer current.
 [MATHEMATICS.md](MATHEMATICS.md#lorenz-and-the-shared-integration-method)
@@ -360,9 +381,10 @@ equilibrium, and short-time refinement tests do not certify the full chaotic
 trajectory or estimate a Lyapunov exponent.
 
 That is real numerical documentation, but it is not yet a shared structured
-model record returned with study content. Stable phrase-to-fact links and
-reviewed parallel room translations also remain absent. These are the current
-gaps; an old percentage of reveal strings does not quantify them.
+model record returned with study content. Lissajous has shared literal equations
+and a parallel Japanese draft, but a general inventory of machine-checkable
+facts and phrase-to-fact links remains unfinished. An old percentage of reveal
+strings does not quantify those gaps.
 
 ### The ladder, and where it breaks
 
@@ -438,10 +460,11 @@ over everything. Ship it with exactly one language populated. The segmentation
 is the cheapest high-value move in the whole plan, because it costs nothing now
 and is what makes any later translation alignable.
 
-**Step 3: reviewed translations**, aligned to stable content revisions, with
-mathematical and fluent-language review recorded separately. Complete one
-usable room experience before increasing the language count. Broader script
-and language coverage remains a subsequent contribution track.
+**Step 3: extend reviewed translations**, aligned to stable content revisions,
+with mathematical and fluent-language review recorded separately. Lissajous
+now supplies shared block IDs and an English/Japanese draft pair. Native-speaker
+usability, broader script support, and further room treatments remain work;
+adding accepted tags does not complete it.
 
 **And one thing worth writing that no export can produce: a minimal-pairs
 file.** Twenty to fifty propositions, each stated twice with one systematic

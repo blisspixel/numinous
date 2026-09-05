@@ -86,6 +86,12 @@ Step "workflow action policy" { python scripts/test-workflow-pins.py }
 Step "dependency migration performance contract" { python scripts/test-dependency-migration-performance.py }
 Step "dependency migration performance receipt" { python scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json }
 Step "build"  { cargo build --workspace --locked }
+Step "study parity" {
+    $studyMetadata = cargo metadata --no-deps --format-version 1 --locked | ConvertFrom-Json
+    if ($LASTEXITCODE -ne 0) { throw "study binary paths failed" }
+    $studyDebug = Join-Path $studyMetadata.target_directory "debug"
+    python scripts/study-parity.py --cli (Join-Path $studyDebug "numinous.exe") --mcp (Join-Path $studyDebug "numinous-mcp.exe")
+}
 
 if ($null -ne (Get-Command cargo-llvm-cov -ErrorAction SilentlyContinue)) {
     Step "coverage" {
@@ -110,6 +116,7 @@ if ($null -ne (Get-Command cargo-audit -ErrorAction SilentlyContinue)) {
 Step "house-style" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1 }
 Step "Windows installer safety" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTest }
 
+Step "regenerate study reader plates" { cargo run -q -p numinous-app --example study_screens --locked }
 Step "regenerate 2,945-screen app QA matrix" { cargo run -q -p numinous-app --example screens }
 Step "regenerate gallery into renders\" { cargo run -q --bin numinous -- gallery --dir renders --width 600 --height 600 }
 Step "regenerate contact sheet" { cargo run -q --bin numinous -- contact-sheet --out renders\contact.png --cols 3 --tile 360 }

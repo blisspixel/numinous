@@ -10,6 +10,9 @@
 //! minds, exactly like the daily games.
 
 use crate::canvas::Canvas;
+#[cfg(test)]
+pub(crate) use crate::readout::{PARAMETER_SAMPLES, status_label, status_numbers};
+use crate::readout::{ReadoutLookup, find_readout};
 use crate::rng::SplitMix64;
 use crate::room::{MAX_ROOM_POKES, Room};
 use crate::surface::Surface;
@@ -54,19 +57,19 @@ pub struct ChallengeGrade {
 /// A posed parameter goal: sweep the room until its own readout lands on a
 /// target number. Ruling 13's deeper half: "find the stall angle to one
 /// decimal" style, where the metric is the phenomenon's own parameter. The
-/// readout is taken from [`Room::status`], the same line the player sees, so
-/// the goal and the instrument can never disagree.
+/// room supplies a typed measurement at its display precision when available;
+/// rooms without that provider retain the legacy [`Room::status`] parser.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParameterGoal {
     /// The room this goal is posed for.
     pub room: String,
     /// The seed the target was drawn from.
     pub seed: u64,
-    /// Which number in the status line is the readout: the first one that
-    /// moves across the sweep. Lissajous reads "X:Y = 3:2.00" where the 3 is
-    /// a constant tuning, so position matters, not just presence.
+    /// The room-scoped stable numeric ID, retaining its historical field name.
+    /// For status-only rooms this is the zero-based numeric column. Migrated
+    /// rooms keep that integer even if the displayed fields are reordered.
     pub index: usize,
-    /// The readout's label, straight from the status line (e.g. "TILT").
+    /// The readout's display label, which does not determine typed identity.
     pub label: String,
     /// The value to land on.
     pub target: f64,
@@ -89,79 +92,6 @@ pub struct ParameterGrade {
     pub within: bool,
     /// A graded 0-100 score: closeness across the observed span.
     pub score: u32,
-}
-
-/// How many phases the sweep is sampled at while posing a parameter goal.
-pub(crate) const PARAMETER_SAMPLES: usize = 64;
-
-/// Every number in a status line, as (byte offset of its first character,
-/// parsed value), left to right. A sign counts as part of a number only when
-/// a digit follows it, so "X:Y = 3:2.00" yields the 3 and the 2.00 and a
-/// hyphen in prose never starts a phantom number.
-pub(crate) fn status_numbers(status: &str) -> Vec<(usize, f64)> {
-    let bytes = status.as_bytes();
-    let mut numbers = Vec::new();
-    let mut start = 0;
-    while start < bytes.len() {
-        let c = bytes[start] as char;
-        if c.is_ascii_digit()
-            || ((c == '-' || c == '+')
-                && bytes
-                    .get(start + 1)
-                    .is_some_and(|next| (*next as char).is_ascii_digit()))
-        {
-            let mut end = start + 1;
-            while end < bytes.len() && ((bytes[end] as char).is_ascii_digit() || bytes[end] == b'.')
-            {
-                end += 1;
-            }
-            if let Ok(value) = status[start..end].parse() {
-                numbers.push((start, value));
-            }
-            start = end;
-        } else {
-            start += 1;
-        }
-    }
-    numbers
-}
-
-/// First-contact chrome: leading `VERB:OBJECT` tokens (all-caps, both sides
-/// at least two characters) such as `DRAG:DIAL` or `CLICK:GLIDER`. Stripped
-/// from readout labels so the instrument name stays clean (`K`, not
-/// `DRAG:DIAL  K`). Single-letter ratios like `X:Y` are not chrome.
-fn strip_leading_invite_tokens(prefix: &str) -> &str {
-    let mut s = prefix.trim();
-    while let Some(token) = s.split_whitespace().next() {
-        let invite = token.split_once(':').is_some_and(|(verb, object)| {
-            !verb.is_empty()
-                && !object.is_empty()
-                && verb.len() >= 2
-                && object.len() >= 2
-                && token
-                    .chars()
-                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == ':' || c == '-')
-        });
-        if !invite {
-            break;
-        }
-        s = s[token.len()..].trim_start();
-    }
-    s
-}
-
-/// The readout's label: the status text before the number at byte offset
-/// `cut`, trimmed of separators and leading first-contact invite tokens.
-/// Falls back to "READOUT" for label-less lines.
-fn status_label(status: &str, cut: usize) -> String {
-    let label = strip_leading_invite_tokens(status[..cut].trim())
-        .trim_end_matches(['=', ':', ' '])
-        .trim();
-    if label.is_empty() {
-        "READOUT".to_string()
-    } else {
-        label.to_string()
-    }
 }
 
 /// A number with three significant digits, so tiny values read at their true
@@ -188,77 +118,6 @@ fn sig_decimals(x: f64) -> usize {
     }
     let magnitude = x.abs().log10().floor() as i32;
     (2 - magnitude).max(0) as usize
-}
-
-/// The readout's spoken name at a chosen column: the label immediately before
-/// it, unless that prefix swallowed an earlier number (Lissajous's "X:Y = 3:"
-/// before the moving second component), in which case fall back to the line's
-/// name, the text before its first number. Keeps the goal string clean
-/// ("X:Y", not "X:Y = 3") without hardcoding any room.
-fn readout_label(status: &str, numbers: &[(usize, f64)], index: usize) -> String {
-    let precise = status_label(status, numbers[index].0);
-    if precise.chars().any(|c| c.is_ascii_digit()) {
-        status_label(status, numbers[0].0)
-    } else {
-        precise
-    }
-}
-
-/// A room's readout: the first status-line number that is present and
-/// label-stable across the whole sweep and actually varies. This is the single
-/// thing both parameter goals and predictions target, so the column-finding
-/// lives here once rather than in each feature.
-pub(crate) struct Readout {
-    /// Which number in the status line the readout is.
-    pub index: usize,
-    /// Its spoken name (TILT, K, X:Y), never a swallowed tuning digit.
-    pub label: String,
-    /// The lowest and highest values it takes across the sampled sweep.
-    pub span: (f64, f64),
-    /// Its value at each of the [`PARAMETER_SAMPLES`] sampled phases.
-    pub samples: Vec<f64>,
-}
-
-/// Find the room's readout, or `None` if it has no status line, no numeric
-/// column stable across the sweep, or none that moves. The readout is the
-/// first column that is present and label-stable across every sample and that
-/// varies (constant numbers are labels or tunings, not readouts). Times
-/// Tables' status carries a trailing note whose own number comes and goes
-/// ("CLOSED: 5 LOBES" vs "OPEN, WANDERING"), so only the leading, aligned
-/// columns count.
-pub(crate) fn find_readout(room: &dyn Room) -> Option<Readout> {
-    let mut statuses = Vec::with_capacity(PARAMETER_SAMPLES);
-    for i in 0..PARAMETER_SAMPLES {
-        let t = i as f64 / PARAMETER_SAMPLES as f64;
-        let status = room.status(t)?;
-        let numbers = status_numbers(&status);
-        statuses.push((status, numbers));
-    }
-    let min_columns = statuses.iter().map(|(_, n)| n.len()).min().unwrap_or(0);
-    let (index, lo, hi) = (0..min_columns).find_map(|index| {
-        // Alignment guard: column `index` must carry the same label in every
-        // sample, so it is provably the same readout across the sweep.
-        let name = readout_label(&statuses[0].0, &statuses[0].1, index);
-        let aligned = statuses
-            .iter()
-            .all(|(s, n)| readout_label(s, n, index) == name);
-        if !aligned {
-            return None;
-        }
-        let column = statuses.iter().map(|(_, n)| n[index].1);
-        let lo = column.clone().fold(f64::INFINITY, f64::min);
-        let hi = column.fold(f64::NEG_INFINITY, f64::max);
-        let moving = lo.is_finite() && hi.is_finite() && hi - lo >= 1e-9;
-        moving.then_some((index, lo, hi))
-    })?;
-    let label = readout_label(&statuses[0].0, &statuses[0].1, index);
-    let samples = statuses.iter().map(|(_, n)| n[index].1).collect();
-    Some(Readout {
-        index,
-        label,
-        span: (lo, hi),
-        samples,
-    })
 }
 
 /// Pose the deterministic parameter goal for a room and seed, or `None` for
@@ -293,12 +152,14 @@ pub fn pose_parameter_goal(room: &dyn Room, seed: u64) -> Option<ParameterGoal> 
 }
 
 /// Grade a parameter attempt at phase `t`: read the room's own readout and
-/// measure the distance. Returns `None` only if the room's status vanished
-/// or its readout column went missing, which no catalog room does.
+/// measure the distance. Returns `None` for a different room, an unavailable
+/// readout, or an invalid or inconsistent typed provider.
 #[must_use]
 pub fn grade_parameter(room: &dyn Room, goal: &ParameterGoal, t: f64) -> Option<ParameterGrade> {
-    let status = room.status(t)?;
-    let value = status_numbers(&status).get(goal.index)?.1;
+    if goal.room != room.meta().id {
+        return None;
+    }
+    let value = ReadoutLookup::new(room)?.value(goal.index, t)?;
     let distance = (value - goal.target).abs();
     let span = (goal.span.1 - goal.span.0).max(1e-9);
     let score = (100.0 * (1.0 - (distance / span).min(1.0))).round() as u32;

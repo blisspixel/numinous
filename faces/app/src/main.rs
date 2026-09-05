@@ -45,6 +45,7 @@ mod room_runtime;
 mod save_gate;
 mod session_audio;
 mod studio_panel;
+mod study_runtime;
 mod wager;
 
 use crate::audio_state::Program as AudioProgram;
@@ -315,9 +316,13 @@ struct App {
     mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera,
     life_session: numinous_core::rooms::game_of_life::LifeSession,
     life_accumulator: f64,
-    /// Times Tables five-beat engineered aha for the ordinary App visit.
+    /// Whether the player has selected this room's staged experiment.
+    chosen_experiment: bool,
+    /// A controller press used to show a connection owns its matching release.
+    experiment_primary_consumed: bool,
+    /// Times Tables five-beat experiment for the current App visit.
     times_tables_aha: numinous_core::rooms::times_tables_aha::TimesTablesAha,
-    /// Buffon five-beat engineered aha for the ordinary App visit.
+    /// Buffon five-beat experiment for the current App visit.
     buffon_aha: numinous_core::rooms::buffon_aha::BuffonAha,
     /// Staged Galton aha (third flagship): wager the pile's peak bin.
     galton_aha: numinous_core::rooms::galton_aha::GaltonAha,
@@ -377,6 +382,13 @@ struct App {
     volume: f32,
     /// Window presentation saved for the next launch.
     preferred_window_mode: numinous_core::WindowModePreference,
+    /// Player-selected study language, independent of room state and shell copy.
+    study_locale: numinous_core::study::StudyLocale,
+    study: Option<study_runtime::ActiveStudy>,
+    /// Command-key identities currently down, including presses before study.
+    pressed_keys: std::collections::HashSet<Key>,
+    study_keys: std::collections::HashSet<Key>,
+    study_pointer_needs_press: bool,
     /// The program that owns the player source, independent of focus and gain.
     audio_program: AudioProgram,
     /// Whether menu or contextual help chrome is visible.
@@ -571,7 +583,7 @@ impl App {
                 &format!("App preference load failed: {error}\n"),
             );
         }
-        Self {
+        let mut app = Self {
             window: None,
             presenter: None,
             presentation_warned: false,
@@ -590,6 +602,8 @@ impl App {
             mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
             life_session: numinous_core::rooms::game_of_life::LifeSession::new(0),
             life_accumulator: 0.0,
+            chosen_experiment: false,
+            experiment_primary_consumed: false,
             times_tables_aha: numinous_core::rooms::times_tables_aha::TimesTablesAha::new(),
             buffon_aha: numinous_core::rooms::buffon_aha::BuffonAha::new(),
             galton_aha: numinous_core::rooms::galton_aha::GaltonAha::new(),
@@ -621,6 +635,11 @@ impl App {
             muted: preferences.muted,
             volume: f32::from(preferences.volume_percent) / 100.0,
             preferred_window_mode: preferences.window_mode,
+            study_locale: preferences.study_locale,
+            study: None,
+            pressed_keys: std::collections::HashSet::new(),
+            study_keys: std::collections::HashSet::new(),
+            study_pointer_needs_press: false,
             audio_program: AudioProgram::RoomScore,
             show_help: true,
             menu: menu::MenuState::launch(),
@@ -672,7 +691,10 @@ impl App {
             scores_file,
             preferences_file,
             console: console::Console::default(),
-        }
+        };
+        app.menu
+            .set_experiment_available(app.current_room_has_experiment());
+        app
     }
 
     /// Say once, on screen and in the crash log, that a local save is
@@ -789,16 +811,16 @@ impl App {
 
     /// Capture room-owned aha state for hallway F9 notes.
     fn flagship_aha_playtest_note(&self) -> Option<playtest::FlagshipAhaNote> {
-        if self.the_show {
+        if !self.chosen_experiment_active() {
             return None;
         }
         if self.current_room_is_times_tables() {
             let aha = &self.times_tables_aha;
             return Some(playtest::FlagshipAhaNote {
                 beat: aha.beat_label().to_string(),
-                status: aha.status(None),
+                status: self.chosen_experiment_status(aha.status(None)),
                 earn: aha.earn_label().unwrap_or("none").to_string(),
-                allow_reveal: aha.allow_reveal_text(),
+                consolidated: aha.allow_reveal_text(),
                 can_summon: aha.can_summon(),
                 aha_plate: aha.uses_aha_plate(),
             });
@@ -807,9 +829,9 @@ impl App {
             let aha = &self.buffon_aha;
             return Some(playtest::FlagshipAhaNote {
                 beat: aha.beat_label().to_string(),
-                status: aha.status(None),
+                status: self.chosen_experiment_status(aha.status(None)),
                 earn: aha.earn_label().unwrap_or_else(|| "none".to_string()),
-                allow_reveal: aha.allow_reveal_text(),
+                consolidated: aha.allow_reveal_text(),
                 can_summon: aha.can_summon(),
                 aha_plate: aha.uses_circle_overlay(),
             });
@@ -818,9 +840,9 @@ impl App {
             let aha = &self.galton_aha;
             return Some(playtest::FlagshipAhaNote {
                 beat: aha.beat_label().to_string(),
-                status: aha.status(None),
+                status: self.chosen_experiment_status(aha.status(None)),
                 earn: aha.earn_label().unwrap_or_else(|| "none".to_string()),
-                allow_reveal: aha.allow_reveal_text(),
+                consolidated: aha.allow_reveal_text(),
                 can_summon: aha.can_summon(),
                 aha_plate: aha.uses_outline_overlay(),
             });
@@ -829,9 +851,9 @@ impl App {
             let aha = &self.pendulum_aha;
             return Some(playtest::FlagshipAhaNote {
                 beat: aha.beat_label().to_string(),
-                status: aha.status(None),
+                status: self.chosen_experiment_status(aha.status(None)),
                 earn: aha.earn_label().unwrap_or_else(|| "none".to_string()),
-                allow_reveal: aha.allow_reveal_text(),
+                consolidated: aha.allow_reveal_text(),
                 can_summon: aha.can_summon(),
                 aha_plate: aha.uses_curve_overlay(),
             });
@@ -840,9 +862,9 @@ impl App {
             let aha = &self.kepler_aha;
             return Some(playtest::FlagshipAhaNote {
                 beat: aha.beat_label().to_string(),
-                status: aha.status(None),
+                status: self.chosen_experiment_status(aha.status(None)),
                 earn: aha.earn_label().unwrap_or_else(|| "none".to_string()),
-                allow_reveal: aha.allow_reveal_text(),
+                consolidated: aha.allow_reveal_text(),
                 can_summon: aha.can_summon(),
                 aha_plate: aha.uses_time_overlay(),
             });
@@ -851,9 +873,9 @@ impl App {
             let aha = &self.parrondo_aha;
             return Some(playtest::FlagshipAhaNote {
                 beat: aha.beat_label().to_string(),
-                status: aha.status(None),
+                status: self.chosen_experiment_status(aha.status(None)),
                 earn: aha.earn_label().unwrap_or_else(|| "none".to_string()),
-                allow_reveal: aha.allow_reveal_text(),
+                consolidated: aha.allow_reveal_text(),
                 can_summon: aha.can_summon(),
                 aha_plate: aha.uses_expectation_overlay(),
             });
@@ -862,9 +884,9 @@ impl App {
             let aha = &self.nontransitive_aha;
             return Some(playtest::FlagshipAhaNote {
                 beat: aha.beat_label().to_string(),
-                status: aha.status(None),
+                status: self.chosen_experiment_status(aha.status(None)),
                 earn: aha.earn_label().unwrap_or_else(|| "none".to_string()),
-                allow_reveal: aha.allow_reveal_text(),
+                consolidated: aha.allow_reveal_text(),
                 can_summon: aha.can_summon(),
                 aha_plate: aha.uses_outcome_grid(),
             });
@@ -966,7 +988,8 @@ impl App {
     }
 
     fn modal_mode_active(&self) -> bool {
-        self.session_viewer.is_open()
+        self.study.is_some()
+            || self.session_viewer.is_open()
             || self.studio
             || self.quiz.is_some()
             || self.munch.is_some()
@@ -1006,6 +1029,8 @@ impl App {
     fn open_home_menu(&mut self) {
         self.show_help = true;
         self.menu.open_home(menu::MenuOrigin::Room);
+        self.menu
+            .set_experiment_available(self.current_room_has_experiment() && !self.the_show);
     }
 
     fn open_activity_menu(&mut self, kind: menu::ActivityKind) {
@@ -1112,6 +1137,13 @@ impl App {
     fn apply_menu_intent(&mut self, intent: menu::MenuIntent) {
         match intent {
             menu::MenuIntent::None => {}
+            menu::MenuIntent::ExplainRoom => {
+                self.open_room_study();
+            }
+            menu::MenuIntent::ChooseExperiment => {
+                self.close_menu();
+                self.toggle_chosen_experiment();
+            }
             menu::MenuIntent::Close | menu::MenuIntent::ResumeActivity => self.close_menu(),
             menu::MenuIntent::Choose(choice) => self.activate_menu_choice(choice),
             menu::MenuIntent::EnterWing(index) => {
@@ -1350,6 +1382,7 @@ impl App {
             muted: self.muted,
             era: self.era,
             window_mode: self.preferred_window_mode,
+            study_locale: self.study_locale.clone(),
         }
     }
 
@@ -1790,6 +1823,87 @@ impl App {
         }
     }
 
+    /// Advance the live room after input, holding every reading-owned tick.
+    fn advance_room_tick(&mut self, elapsed: f64, presentation_elapsed: f64, study_captured: bool) {
+        if study_captured || self.study.is_some() {
+            return;
+        }
+        self.advance_presentation_time(presentation_elapsed);
+        self.refresh_pointer_state();
+        let first_contact_obscured = self.banner.is_some() && self.room_card > 0;
+        let ambient = ambient_tick_seconds(elapsed, self.motion);
+        let menu_open = self.show_help && self.menu.is_open();
+        if !first_contact_obscured && !menu_open {
+            self.advance_life_if_active(ambient);
+            self.advance_times_tables_morph(elapsed);
+            self.advance_buffon_morph(elapsed);
+            self.advance_galton_morph(elapsed);
+            self.advance_pendulum_morph(elapsed);
+            self.advance_kepler_morph(elapsed);
+            self.advance_parrondo_morph(elapsed);
+            self.advance_nontransitive_morph(elapsed);
+        }
+        if !(self.paused || self.dragging || menu_open) {
+            let motion = self.time_scale * self.visualizer_scale;
+            if !first_contact_obscured && self.rooms[self.current].meta().id == "mandelbrot" {
+                self.mandelbrot_camera.advance(ambient * motion);
+            }
+            let show_active = self.show_mode_active();
+            // When the visualizer is driving, mid energy quickens The Show's
+            // phase rate so denser mixes move the gallery a little faster.
+            let rate = if show_active {
+                SHOW_T_RATE * (0.72 + self.visualizer_scale.clamp(0.55, 1.55) * 0.28)
+            } else {
+                T_RATE
+            };
+            let (next_phase, wrapped) =
+                advance_gallery_phase(self.t, ambient, motion, rate, first_contact_obscured);
+            self.t = next_phase;
+            if wrapped {
+                // In The Show, a finished sweep drifts into the next room.
+                if show_active {
+                    self.switch(1);
+                }
+            }
+            if show_active {
+                // The picture and its mathematical voice share this phase.
+                // Updating the smoothed target does not restart the room bed.
+                self.sync_room_parameter_voice();
+            }
+            self.frame += 1;
+            room_input::tick_room_card(&mut self.room_card, self.banner.is_some());
+            // The arcade's heartbeat: the spirits step on the beat, faster
+            // each level; the flash counts itself down.
+            if let Some(play) = &mut self.arcade {
+                if let Some((_, frames)) = &mut play.flash {
+                    *frames -= 1;
+                    if *frames == 0 {
+                        play.flash = None;
+                    }
+                }
+                let interval = 48u64.saturating_sub(play.run.level * 4).max(16);
+                if !play.over && self.frame.is_multiple_of(interval) {
+                    self.arcade_beat();
+                }
+            }
+            if let Some(play) = &mut self.munch {
+                let _ = play.tick_bite_flash();
+            }
+            if let Some(run) = &mut self.gauntlet {
+                let _ = run.munch.tick_bite_flash();
+            }
+            if self.studio {
+                // Auto advances after dwell and a presentation-clock edge.
+                if let Some(spec) = self.studio_panel.tick_auto(elapsed, self.t) {
+                    self.set_studio_recipe_sound(Some(spec));
+                }
+            }
+            if self.banner.as_mut().is_some_and(|banner| !banner.tick()) {
+                self.banner = None;
+            }
+        }
+    }
+
     fn draw(&mut self) {
         let Some(window) = self.window.as_ref() else {
             return;
@@ -1799,6 +1913,11 @@ impl App {
             return;
         };
         let (width, height) = (w.get() as usize, h.get() as usize);
+
+        if let Some(rgba) = self.study_frame(width, height) {
+            self.blit(&rgba, width, height, width, height);
+            return;
+        }
 
         // Render the frame fully before borrowing the window surface. Fractal
         // rooms take the GPU path when one exists; their frames rejoin the same
@@ -1852,196 +1971,14 @@ impl App {
                 self.mandelbrot_camera.render(&mut raster);
             } else if room.meta().id == "game-of-life" {
                 self.life_session.render(&mut raster);
-            } else if room.meta().id == "times-tables"
-                && !self.the_show
-                && self.times_tables_aha.uses_aha_plate()
-            {
-                let phase =
-                    effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
-                let k = numinous_core::rooms::times_tables::TimesTables::new_with(self.variation)
-                    .live_multiplier(phase, room_inputs);
-                numinous_core::rooms::times_tables_aha::render_aha_plate(
-                    &mut raster,
-                    self.times_tables_aha.beat(),
-                    k,
-                );
-            } else {
+            } else if !self.draw_chosen_experiment(&mut raster) {
                 let phase =
                     effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
                 room.render_input(&mut raster, phase, room_inputs);
-                if room.meta().id == "times-tables"
-                    && !self.the_show
-                    && matches!(
-                        self.times_tables_aha.beat(),
-                        numinous_core::rooms::times_tables_aha::AhaBeat::Prime
-                    )
-                {
-                    numinous_core::rooms::times_tables_aha::render_wager_options(
-                        &mut raster,
-                        self.times_tables_aha.hover(),
-                    );
-                }
-                if room.meta().id == "buffon-needle" && !self.the_show {
-                    if matches!(
-                        self.buffon_aha.beat(),
-                        numinous_core::rooms::buffon_aha::AhaBeat::Prime
-                    ) {
-                        numinous_core::rooms::buffon_aha::render_guess_band(
-                            &mut raster,
-                            self.buffon_aha.hover(),
-                        );
-                    }
-                    if self.buffon_aha.uses_circle_overlay() {
-                        let progress = match self.buffon_aha.beat() {
-                            numinous_core::rooms::buffon_aha::AhaBeat::Morph { progress } => {
-                                progress
-                            }
-                            _ => 1.0,
-                        };
-                        numinous_core::rooms::buffon_aha::render_circle_overlay(
-                            &mut raster,
-                            progress,
-                        );
-                    }
-                }
-                if room.meta().id == "double-pendulum" && !self.the_show {
-                    if matches!(
-                        self.pendulum_aha.beat(),
-                        numinous_core::rooms::pendulum_aha::AhaBeat::Prime
-                    ) {
-                        numinous_core::rooms::pendulum_aha::render_ending_band(
-                            &mut raster,
-                            self.pendulum_aha.hover(),
-                        );
-                    }
-                    if self.pendulum_aha.uses_curve_overlay() {
-                        let progress = match self.pendulum_aha.beat() {
-                            numinous_core::rooms::pendulum_aha::AhaBeat::Morph { progress } => {
-                                progress
-                            }
-                            _ => 1.0,
-                        };
-                        numinous_core::rooms::pendulum_aha::render_gap_curve_for_inputs(
-                            &mut raster,
-                            progress,
-                            self.variation,
-                            &self.inputs,
-                        );
-                    }
-                }
-                if room.meta().id == "kepler-laws" && !self.the_show {
-                    if matches!(
-                        self.kepler_aha.beat(),
-                        numinous_core::rooms::kepler_aha::AhaBeat::Prime
-                    ) {
-                        numinous_core::rooms::kepler_aha::render_speed_band(
-                            &mut raster,
-                            self.kepler_aha.hover(),
-                        );
-                    }
-                    if self.kepler_aha.uses_time_overlay() {
-                        let progress = match self.kepler_aha.beat() {
-                            numinous_core::rooms::kepler_aha::AhaBeat::Morph { progress } => {
-                                progress
-                            }
-                            _ => 1.0,
-                        };
-                        numinous_core::rooms::kepler_aha::render_equal_time_overlay(
-                            &mut raster,
-                            progress,
-                            self.kepler_aha.eccentricity(),
-                        );
-                    }
-                }
-                if room.meta().id == "parrondo" && !self.the_show {
-                    if matches!(
-                        self.parrondo_aha.beat(),
-                        numinous_core::rooms::parrondo_aha::AhaBeat::Prime
-                    ) {
-                        numinous_core::rooms::parrondo_aha::render_policy_band(
-                            &mut raster,
-                            self.parrondo_aha.hover(),
-                        );
-                    }
-                    if self.parrondo_aha.uses_expectation_overlay() {
-                        let progress = match self.parrondo_aha.beat() {
-                            numinous_core::rooms::parrondo_aha::AhaBeat::Morph { progress } => {
-                                progress
-                            }
-                            _ => 1.0,
-                        };
-                        numinous_core::rooms::parrondo_aha::render_expectation_overlay(
-                            &mut raster,
-                            progress,
-                        );
-                    }
-                }
-                if room.meta().id == "nontransitive" && !self.the_show {
-                    if matches!(
-                        self.nontransitive_aha.beat(),
-                        numinous_core::rooms::nontransitive_aha::AhaBeat::Prime
-                    ) {
-                        numinous_core::rooms::nontransitive_aha::render_counter_band(
-                            &mut raster,
-                            self.nontransitive_aha.hover(),
-                        );
-                    }
-                    if self.nontransitive_aha.uses_outcome_grid()
-                        && let Some(chosen) = self.nontransitive_aha.chosen()
-                    {
-                        let progress = match self.nontransitive_aha.beat() {
-                            numinous_core::rooms::nontransitive_aha::AhaBeat::Morph {
-                                progress,
-                            } => progress,
-                            _ => 1.0,
-                        };
-                        numinous_core::rooms::nontransitive_aha::render_outcome_grid(
-                            &mut raster,
-                            progress,
-                            chosen,
-                        );
-                    }
-                }
                 if !self.the_show
                     && let Some(posed) = &self.room_wager
                 {
                     posed.draw(&mut raster);
-                }
-                if room.meta().id == "galton-board" && !self.the_show {
-                    if matches!(
-                        self.galton_aha.beat(),
-                        numinous_core::rooms::galton_aha::AhaBeat::Prime
-                    ) {
-                        numinous_core::rooms::galton_aha::render_bin_band(
-                            &mut raster,
-                            self.galton_aha.hover(),
-                        );
-                    }
-                    // The curve answers the call, so it is the called
-                    // coin's curve, and it is drawn only while the pile
-                    // underneath is that same experiment. A player who
-                    // wanders to another coin gets no curve over the wrong
-                    // pile; the footer says which pile the call was about,
-                    // and the curve returns when they do.
-                    let live_coin =
-                        numinous_core::rooms::galton_board::selected_coin_from_inputs(&self.inputs)
-                            .unwrap_or(2);
-                    if self.galton_aha.uses_outline_overlay()
-                        && self.galton_aha.answers_pile(live_coin)
-                    {
-                        let progress = match self.galton_aha.beat() {
-                            numinous_core::rooms::galton_aha::AhaBeat::Morph { progress } => {
-                                progress
-                            }
-                            _ => 1.0,
-                        };
-                        let coin = self.galton_aha.coin().unwrap_or(live_coin);
-                        numinous_core::rooms::galton_aha::render_outline_overlay(
-                            &mut raster,
-                            progress,
-                            coin,
-                        );
-                    }
                 }
             }
             input_feedback::draw(&mut raster, room_inputs);
@@ -2068,25 +2005,7 @@ impl App {
         let status_override = self.current_status_override(width);
         let phase = effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
         let inputs = effective_room_inputs(&self.inputs, self.the_show);
-        // Flagship ahas gate the text reveal until the morph consolidates.
-        let show_info = self.show_info
-            && (self.the_show
-                || (!self.current_room_is_times_tables()
-                    && !self.current_room_is_buffon()
-                    && !self.current_room_is_galton()
-                    && !self.current_room_is_pendulum()
-                    && !self.current_room_is_kepler()
-                    && !self.current_room_is_parrondo()
-                    && !self.current_room_is_nontransitive())
-                || (self.current_room_is_times_tables()
-                    && self.times_tables_aha.allow_reveal_text())
-                || (self.current_room_is_buffon() && self.buffon_aha.allow_reveal_text())
-                || (self.current_room_is_galton() && self.galton_aha.allow_reveal_text())
-                || (self.current_room_is_pendulum() && self.pendulum_aha.allow_reveal_text())
-                || (self.current_room_is_kepler() && self.kepler_aha.allow_reveal_text())
-                || (self.current_room_is_parrondo() && self.parrondo_aha.allow_reveal_text())
-                || (self.current_room_is_nontransitive()
-                    && self.nontransitive_aha.allow_reveal_text()));
+        let show_info = self.show_info;
         hud::draw_room_chrome(
             raster,
             room,
@@ -2395,7 +2314,9 @@ impl ApplicationHandler for App {
 
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
         self.suspend_presentation_clock(Instant::now());
-        self.clear_pointer_state();
+        if !self.clear_study_pointer() {
+            self.clear_pointer_state();
+        }
         if let Some(command) = self.gamepad.deactivate() {
             self.handle_gamepad_command(command);
         }
@@ -2413,6 +2334,15 @@ impl ApplicationHandler for App {
             WindowEvent::KeyboardInput {
                 event:
                     KeyEvent {
+                        state: ElementState::Released,
+                        logical_key,
+                        ..
+                    },
+                ..
+            } => self.release_study_key(&logical_key),
+            WindowEvent::KeyboardInput {
+                event:
+                    KeyEvent {
                         state: ElementState::Pressed,
                         logical_key,
                         repeat,
@@ -2420,6 +2350,12 @@ impl ApplicationHandler for App {
                     },
                 ..
             } => {
+                if self.handle_study_key(&logical_key, repeat) {
+                    return;
+                }
+                if self.handle_chosen_experiment_key(&logical_key, repeat) {
+                    return;
+                }
                 self.clear_pointer_state();
                 if self.handle_quit_key(&logical_key, repeat) {
                     return;
@@ -2682,7 +2618,8 @@ impl ApplicationHandler for App {
                         {
                             self.commit_room_wager();
                         }
-                        // U calls the readout: the universal wager.
+                        // Staged U is handled before pointer cancellation above.
+                        // Ordinary rooms retain their readout wager.
                         Key::Character(c) if c.as_str() == "u" => {
                             self.toggle_room_wager();
                         }
@@ -2721,16 +2658,11 @@ impl ApplicationHandler for App {
                             self.time_scale = (self.time_scale / 2.0).max(0.25);
                         }
                         Key::Named(NamedKey::Space) => self.toggle_pause(),
-                        // E / ? opens the optional concept + reveal door.
-                        // On Times Tables it summons the staged aha first.
-                        Key::Character(c) if c.as_str() == "e" || c.as_str() == "?" => {
-                            self.toggle_inspect();
-                        }
                         // Times Tables place wager: 1 Mandelbrot, 2 Nephroid, 3 Circle.
                         Key::Character(c)
                             if matches!(c.as_str(), "1" | "2" | "3")
                                 && self.current_room_is_times_tables()
-                                && !self.the_show =>
+                                && self.chosen_experiment_active() =>
                         {
                             let digit = c.as_str().as_bytes()[0].saturating_sub(b'0');
                             if let Some(place) =
@@ -2745,7 +2677,7 @@ impl ApplicationHandler for App {
                         Key::Character(c)
                             if matches!(c.as_str(), "1" | "2" | "3" | "4")
                                 && self.current_room_is_buffon()
-                                && !self.the_show =>
+                                && self.chosen_experiment_active() =>
                         {
                             let digit = c.as_str().as_bytes()[0].saturating_sub(b'0');
                             if let Some(guess) =
@@ -2758,7 +2690,7 @@ impl ApplicationHandler for App {
                         Key::Character(c)
                             if matches!(c.as_str(), "1" | "2" | "3")
                                 && self.current_room_is_pendulum()
-                                && !self.the_show =>
+                                && self.chosen_experiment_active() =>
                         {
                             let digit = c.as_str().as_bytes()[0].saturating_sub(b'0');
                             if let Some(ending) =
@@ -2771,7 +2703,7 @@ impl ApplicationHandler for App {
                         Key::Character(c)
                             if matches!(c.as_str(), "1" | "2" | "3")
                                 && self.current_room_is_kepler()
-                                && !self.the_show =>
+                                && self.chosen_experiment_active() =>
                         {
                             let digit = c.as_str().as_bytes()[0].saturating_sub(b'0');
                             if let Some(relation) =
@@ -2786,7 +2718,7 @@ impl ApplicationHandler for App {
                         Key::Character(c)
                             if matches!(c.as_str(), "1" | "2" | "3")
                                 && self.current_room_is_parrondo()
-                                && !self.the_show =>
+                                && self.chosen_experiment_active() =>
                         {
                             let digit = c.as_str().as_bytes()[0].saturating_sub(b'0');
                             if let Some(policy) =
@@ -2799,7 +2731,7 @@ impl ApplicationHandler for App {
                         Key::Character(c)
                             if matches!(c.as_str(), "1" | "2" | "3")
                                 && self.current_room_is_nontransitive()
-                                && !self.the_show =>
+                                && self.chosen_experiment_active() =>
                         {
                             let digit = c.as_str().as_bytes()[0].saturating_sub(b'0');
                             if let Some(die) =
@@ -2939,6 +2871,9 @@ impl ApplicationHandler for App {
                 button: MouseButton::Left,
                 ..
             } => {
+                if self.handle_study_window_pointer(state) {
+                    return;
+                }
                 let point = self.normalized_mouse_point();
                 if self.show_help && self.menu.is_open() {
                     self.clear_pointer_state();
@@ -2976,11 +2911,17 @@ impl ApplicationHandler for App {
                 }
             }
             WindowEvent::DroppedFile(path) => {
-                self.open_dropped_file(&path);
+                if let Some(study) = &mut self.study {
+                    study.reader.show_file_drop_notice();
+                } else {
+                    self.open_dropped_file(&path);
+                }
             }
             WindowEvent::Focused(false) => {
                 self.suspend_presentation_clock(Instant::now());
-                self.clear_pointer_state();
+                if !self.clear_study_pointer() {
+                    self.clear_pointer_state();
+                }
                 self.menu.clear_pointer();
                 if let Some(command) = self.gamepad.deactivate() {
                     self.handle_gamepad_command(command);
@@ -3014,6 +2955,9 @@ impl ApplicationHandler for App {
             }
             WindowEvent::CursorMoved { position, .. } => {
                 self.mouse = (position.x, position.y);
+                if self.study.is_some() {
+                    return;
+                }
                 if self.show_help && self.menu.is_open() {
                     let layout = self.menu_layout();
                     let hovered = self
@@ -3053,7 +2997,9 @@ impl ApplicationHandler for App {
             }
             WindowEvent::CursorLeft { .. } => {
                 self.menu.clear_pointer();
-                self.clear_pointer_state();
+                if !self.clear_study_pointer() {
+                    self.clear_pointer_state();
+                }
                 if let Some(window) = &self.window {
                     window.request_redraw();
                 }
@@ -3078,84 +3024,9 @@ impl ApplicationHandler for App {
         if !self.window_active {
             return;
         }
-        self.advance_presentation_time(since_last_tick.as_secs_f64());
         let commands = self.gamepad.poll(now);
-        for command in commands {
-            self.handle_gamepad_command(command);
-        }
-        self.refresh_pointer_state();
-        let first_contact_obscured = self.banner.is_some() && self.room_card > 0;
-        let ambient = ambient_tick_seconds(elapsed, self.motion);
-        let menu_open = self.show_help && self.menu.is_open();
-        if !first_contact_obscured && !menu_open {
-            self.advance_life_if_active(ambient);
-            self.advance_times_tables_morph(elapsed);
-            self.advance_buffon_morph(elapsed);
-            self.advance_galton_morph(elapsed);
-            self.advance_pendulum_morph(elapsed);
-            self.advance_kepler_morph(elapsed);
-            self.advance_parrondo_morph(elapsed);
-            self.advance_nontransitive_morph(elapsed);
-        }
-        if !(self.paused || self.dragging || menu_open) {
-            let motion = self.time_scale * self.visualizer_scale;
-            if !first_contact_obscured && self.rooms[self.current].meta().id == "mandelbrot" {
-                self.mandelbrot_camera.advance(ambient * motion);
-            }
-            let show_active = self.show_mode_active();
-            // When the visualizer is driving, mid energy quickens The Show's
-            // phase rate so denser mixes move the gallery a little faster.
-            let rate = if show_active {
-                SHOW_T_RATE * (0.72 + self.visualizer_scale.clamp(0.55, 1.55) * 0.28)
-            } else {
-                T_RATE
-            };
-            let (next_phase, wrapped) =
-                advance_gallery_phase(self.t, ambient, motion, rate, first_contact_obscured);
-            self.t = next_phase;
-            if wrapped {
-                // In The Show, a finished sweep drifts into the next room.
-                if show_active {
-                    self.switch(1);
-                }
-            }
-            if show_active {
-                // The picture and its mathematical voice share this phase.
-                // Updating the smoothed target does not restart the room bed.
-                self.sync_room_parameter_voice();
-            }
-            self.frame += 1;
-            room_input::tick_room_card(&mut self.room_card, self.banner.is_some());
-            // The arcade's heartbeat: the spirits step on the beat, faster
-            // each level; the flash counts itself down.
-            if let Some(play) = &mut self.arcade {
-                if let Some((_, frames)) = &mut play.flash {
-                    *frames -= 1;
-                    if *frames == 0 {
-                        play.flash = None;
-                    }
-                }
-                let interval = 48u64.saturating_sub(play.run.level * 4).max(16);
-                if !play.over && self.frame.is_multiple_of(interval) {
-                    self.arcade_beat();
-                }
-            }
-            if let Some(play) = &mut self.munch {
-                let _ = play.tick_bite_flash();
-            }
-            if let Some(run) = &mut self.gauntlet {
-                let _ = run.munch.tick_bite_flash();
-            }
-            if self.studio {
-                // Auto advances after dwell and a presentation-clock edge.
-                if let Some(spec) = self.studio_panel.tick_auto(elapsed, self.t) {
-                    self.set_studio_recipe_sound(Some(spec));
-                }
-            }
-            if self.banner.as_mut().is_some_and(|banner| !banner.tick()) {
-                self.banner = None;
-            }
-        }
+        let study_captured = self.handle_gamepad_batch(commands);
+        self.advance_room_tick(elapsed, since_last_tick.as_secs_f64(), study_captured);
         // A station is a wall-clock broadcast, independent of room pause or a
         // modal menu. Rejoin the exact live position at every track boundary.
         if self.radio.is_some()
@@ -3334,3 +3205,6 @@ fn main() {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod study_runtime_tests;

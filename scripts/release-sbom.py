@@ -38,6 +38,11 @@ RELEASE_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?")
 PACKAGE_NAME = re.compile(r"[0-9A-Za-z_-]+")
 LICENSE_TOKEN = re.compile(r"[0-9A-Za-z.+-]+(?::[0-9A-Za-z.+-]+)?")
 CRATES_IO_SOURCE = "registry+https://github.com/rust-lang/crates.io-index"
+# SPDX identifiers the inventory may record. This is a vocabulary, not a policy:
+# the document must name what each crate declares, including a copyleft
+# alternative in a disjunction that the workspace never exercises. Which
+# alternative is acceptable is decided by deny.toml, where cargo-deny accepts a
+# disjunction when any one branch is allowed.
 SUPPORTED_LICENSE_IDS = frozenset(
     {
         "0BSD",
@@ -46,6 +51,7 @@ SUPPORTED_LICENSE_IDS = frozenset(
         "BSD-3-Clause",
         "CC0-1.0",
         "CDLA-Permissive-2.0",
+        "GPL-2.0-only",
         "ISC",
         "LGPL-2.1-or-later",
         "MIT",

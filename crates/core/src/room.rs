@@ -5,6 +5,7 @@
 //! specifications in the core while windows, protocols, and persistence remain
 //! responsibilities of the faces.
 
+use crate::readout::NumericReadout;
 use crate::sound::{ParametricSound, SoundSpec};
 use crate::surface::Surface;
 
@@ -93,6 +94,22 @@ pub trait Room: RoomMetadata {
     /// ALMOST CLOSING"). The math answering back as you scrub. None stays
     /// silent; keep it one short line.
     fn status(&self, t: f64) -> Option<String> {
+        let _ = t;
+        None
+    }
+
+    /// Optional finite measurements for phase-only parameter and prediction
+    /// studies, independent of status wording, ordering, and localization.
+    ///
+    /// `None` means this instance does not implement typed measurements at any
+    /// phase, retaining legacy status parsing. `Some`, including an empty
+    /// vector, opts in at every phase; unavailable channels are omitted and
+    /// never cause fallback to status text. Duplicate IDs are invalid. Each
+    /// ID keeps the same quantity, units, and display precision across phases,
+    /// variations, and compatible releases. Labels are presentation only.
+    /// Discovery checks a fixed finite grid; it does not prove these promises
+    /// at unsampled phases. Grading checks availability again at its phases.
+    fn numeric_readouts(&self, t: f64) -> Option<Vec<NumericReadout>> {
         let _ = t;
         None
     }

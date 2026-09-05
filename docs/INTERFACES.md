@@ -11,7 +11,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
 **Implementation boundary, 2026-09-05:** all three faces are shipped from the
-same headless core in 0.4.0-alpha.19. Descriptions below mix current behavior
+same headless core in 0.4.0-alpha.20. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -48,6 +48,20 @@ notes decide what is built.
 
 ---
 
+## Reading at a chosen depth
+
+The App's Explain reader, CLI `study`, and MCP `study_room` consume the same
+core room study document. All support immediate access to available depths,
+including Mathematics, without a visit or progress requirement. CLI and MCP
+share structured and plain-text content; locale fallback is explicit for the
+whole document and for each block. Their requests do not load or save Journey.
+
+The App captures reading input and preserves the suspended room or Cabinet.
+Changing its study language is an explicit preference action. It does not
+change the CLI or MCP default language. The existing `reveal` and `reveal_room`
+commands retain their progression contracts. [Study](STUDY.md) owns examples,
+controls, locale grammar, block selection, and current translation limits.
+
 ## Face 1: The App (GUI)
 
 **The user:** a human with eyes, ears, and hands. **The UX we are going for, in one line:** *an instrument you fall into, not an app you operate.*
@@ -74,8 +88,9 @@ The full interactive audiovisual experience. The UX is specified in depth across
   radio station, while Y keeps station selection.
   Input-aware legends cover rooms, all games, The Show, the Journey, and the
   Studio. The Cabinet retains its opaque text screen and divides its old flat
-  index into Modes, Games, Settings, and Controls lists of no more than six
-  selectable rows. The controller opens every visible row and every contextual
+  index into Modes, Games, Settings, and Controls, with Explain and a
+  room-dependent Experiment entry. Compact windows show a three-choice viewport
+  around the selection. The controller opens every visible row and contextual
   pause action; Studio
   formula entry remains honestly keyboard-required.
   Focus loss or disconnect cancels a held gesture. Controller bindings load
@@ -201,7 +216,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Current protocol surface:** modern clients use `server/discover`,
   `tools/list`, and `tools/call` over stdio with version and client capability
   metadata on every request. Legacy 2025-11-25 and 2025-06-18 clients retain
-  `initialize`, `tools/list`, `tools/call`, and `ping`. The 40 tools include
+  `initialize`, `tools/list`, `tools/call`, and `ping`. The 41 tools include
   `list_rooms`, `watch_show`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
   `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
   `sing_expression`, `save_creation`, `open_creation`, `fork_creation`,
@@ -508,10 +523,10 @@ is deliberately absent.
 The shared `numinous-broadcast` foundation implements the pairing,
 compatibility, framing, consent, sequence, control-marker, typed public-event,
 and bounded-queue contracts below. The MCP face now connects that foundation
-through `broadcast_session`, a complete fail-closed policy for all 40 declared
+through `broadcast_session`, a complete fail-closed policy for all 41 declared
 tools, replay-safe daily seed normalization, and separate nonblocking writer
 and disconnect-monitor workers. Twenty-four tools are explicitly public,
-fifteen progression, journal, creation, or visit-workspace tools are private,
+sixteen progression, journal, creation, visit-workspace, or study tools are private,
 and the consent control broadcasts
 neither itself nor progress. The native App now ships the human Watch Agent
 surface. X or the identity-neutral Shared Play item in the Cabinet opens the ephemeral

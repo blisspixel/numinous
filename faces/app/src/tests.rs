@@ -14,7 +14,7 @@ use std::time::{Duration, Instant, UNIX_EPOCH};
 use winit::keyboard::{Key, NamedKey};
 
 /// An app pointed at scratch files, with no window, player, or GPU.
-fn headless(name: &str) -> App {
+pub(super) fn headless(name: &str) -> App {
     let mut app = App::new();
     app.journey = numinous_core::Journey::default();
     app.journey_saved = app.journey.clone();
@@ -295,8 +295,287 @@ fn times_tables_holds_its_cardioid_until_input_but_the_show_keeps_sweeping() {
     );
 }
 
+fn experiment_snapshot(app: &App) -> String {
+    format!(
+        "{:?}",
+        (
+            &app.times_tables_aha,
+            &app.buffon_aha,
+            &app.galton_aha,
+            &app.pendulum_aha,
+            &app.kepler_aha,
+            &app.parrondo_aha,
+            &app.nontransitive_aha,
+        )
+    )
+}
+
+fn commit_test_experiment_call(app: &mut App) -> bool {
+    match app.rooms[app.current].meta().id {
+        "times-tables" => app.commit_times_tables_wager(
+            numinous_core::rooms::times_tables_aha::CardioidHome::Circle,
+        ),
+        "buffon-needle" => app.commit_buffon_wager(2.0),
+        "galton-board" => app.commit_galton_wager(8),
+        "double-pendulum" => {
+            app.commit_pendulum_call(numinous_core::rooms::pendulum_aha::Ending::Lost)
+        }
+        "kepler-laws" => {
+            app.commit_kepler_call(numinous_core::rooms::kepler_aha::SpeedRelation::Faster)
+        }
+        "parrondo" => app.commit_parrondo_call(numinous_core::rooms::parrondo::Policy::CycleAbb),
+        "nontransitive" => {
+            app.commit_nontransitive_call(numinous_core::rooms::nontransitive::Die::C)
+        }
+        id => panic!("no experiment fixture for {id}"),
+    }
+}
+
 #[test]
-fn times_tables_aha_gates_reveal_until_generation_and_morph() {
+fn staged_rooms_start_in_free_play_and_select_their_bands_explicitly() {
+    let mut app = headless("chosen-experiment-free-play");
+    app.close_menu();
+    assert!(!app.chosen_experiment);
+
+    for id in numinous_core::ENGINEERED_AHA_ROOM_IDS {
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == id)
+            .unwrap();
+        app.reset_current_room();
+        let initial = experiment_snapshot(&app);
+        assert!(!app.chosen_experiment);
+        assert!(app.current_status_override(360).is_none(), "{id}");
+        assert!(
+            !commit_test_experiment_call(&mut app),
+            "{id} refuses an unchosen call"
+        );
+        assert!(!app.advance_chosen_experiment());
+
+        // This exact bottom press used to commit an unsolicited Times Tables
+        // or Buffon wager. In free play it is an ordinary accepted gesture.
+        app.begin_pointer_at((0.0, 0.95));
+        app.end_pointer_at((0.0, 0.95));
+        assert!(!app.inputs.is_empty(), "{id} receives the hand");
+        assert_eq!(experiment_snapshot(&app), initial, "{id} remains unstaged");
+        let inputs = app.inputs.clone();
+        let pokes = app.pokes.clone();
+        let phase = app.t;
+
+        for (width, height) in [(360, 240), (900, 700)] {
+            let room = &app.rooms[app.current];
+            let mut base = numinous_core::Raster::with_accent(width, height, room.meta().accent);
+            let effective = effective_room_phase(id, app.t, &app.inputs, false);
+            room.render_input(&mut base, effective, &app.inputs);
+            let pixels = base.to_rgba();
+            assert!(!app.draw_chosen_experiment(&mut base));
+            assert_eq!(
+                base.to_rgba(),
+                pixels,
+                "{id}: free play adds no experiment plate"
+            );
+
+            app.toggle_room_wager();
+            assert!(app.chosen_experiment);
+            assert!(app.room_wager.is_none());
+            let mut chosen = numinous_core::Raster::with_accent(
+                width,
+                height,
+                app.rooms[app.current].meta().accent,
+            );
+            assert!(app.draw_chosen_experiment(&mut chosen));
+            assert_ne!(
+                chosen.to_rgba(),
+                pixels,
+                "{id}: the selected question has a visible band"
+            );
+            assert!(app.current_status_override(width).is_some());
+            let progress = experiment_snapshot(&app);
+            app.toggle_room_wager();
+            app.move_pointer_to((0.8, 0.95), false);
+            assert_eq!(
+                experiment_snapshot(&app),
+                progress,
+                "{id}: an unchosen band has no hover"
+            );
+            assert!(!app.draw_chosen_experiment(&mut base));
+            assert_eq!(base.to_rgba(), pixels);
+            assert!(!commit_test_experiment_call(&mut app));
+        }
+        assert_eq!(app.inputs, inputs);
+        assert_eq!(app.pokes, pokes);
+        assert_eq!(app.t, phase);
+        assert!(app.journey.consolidated.is_empty());
+    }
+    let _ = std::fs::remove_file(&app.journey_file);
+    let _ = std::fs::remove_file(&app.scores_file);
+}
+
+#[test]
+fn leaving_an_experiment_retains_its_hand_sound_and_earned_progress() {
+    use numinous_core::rooms::times_tables_aha::AhaBeat;
+
+    let mut app = headless("chosen-experiment-continuity");
+    select_times_tables(&mut app);
+    app.reset_current_room();
+    let choose = Key::Character("U".into());
+    let enter = Key::Named(NamedKey::Enter);
+    let back = Key::Named(NamedKey::Escape);
+    assert!(app.handle_chosen_experiment_key(&choose, false));
+    assert!(app.chosen_experiment);
+    assert!(app.handle_chosen_experiment_key(&enter, false));
+    assert_eq!(app.times_tables_aha.beat(), AhaBeat::Explore);
+    assert!(!app.the_show);
+
+    app.begin_pointer_at((0.0, 0.5));
+    assert!(app.poking);
+    assert!(commit_test_experiment_call(&mut app));
+    assert!(app.handle_chosen_experiment_key(&enter, false));
+    app.advance_times_tables_morph(super::TIMES_TABLES_MORPH_SECONDS / 2.0);
+    let progress = app.times_tables_aha.clone();
+    let inputs = app.inputs.clone();
+    let pokes = app.pokes.clone();
+    let phase = app.t;
+    let audio = (app.audio_program, app.muted, app.volume);
+    let sound = selected_parameter_sound(
+        AudioProgram::RoomScore,
+        false,
+        app.rooms[app.current].as_ref(),
+        phase,
+        &inputs,
+        false,
+    );
+    assert!(sound.is_some());
+
+    app.paused = true;
+    assert!(app.handle_chosen_experiment_key(&back, false));
+    assert!(!app.chosen_experiment);
+    assert!(
+        app.poking,
+        "leaving the path does not cancel a held room gesture"
+    );
+    app.paused = false;
+    app.advance_times_tables_morph(20.0);
+    assert_eq!(app.times_tables_aha, progress);
+    assert!(app.handle_chosen_experiment_key(&choose, true));
+    assert!(!app.chosen_experiment, "key repeat cannot choose a path");
+    assert!(app.handle_chosen_experiment_key(&choose, false));
+    assert_eq!(app.times_tables_aha, progress);
+    assert_eq!(app.inputs, inputs);
+    assert_eq!(app.pokes, pokes);
+    assert_eq!(app.t, phase);
+    assert_eq!((app.audio_program, app.muted, app.volume), audio);
+    assert_eq!(
+        selected_parameter_sound(
+            AudioProgram::RoomScore,
+            false,
+            app.rooms[app.current].as_ref(),
+            app.t,
+            &app.inputs,
+            false
+        ),
+        sound
+    );
+    assert!(app.journey.consolidated.is_empty());
+
+    app.advance_times_tables_morph(super::TIMES_TABLES_MORPH_SECONDS / 2.0);
+    assert_eq!(app.times_tables_aha.beat(), AhaBeat::Confirm);
+    assert!(app.handle_chosen_experiment_key(&enter, true));
+    assert_eq!(app.times_tables_aha.beat(), AhaBeat::Confirm);
+    assert!(app.journey.consolidated.is_empty());
+    assert!(app.handle_chosen_experiment_key(&enter, false));
+    assert_eq!(app.times_tables_aha.beat(), AhaBeat::Consolidated);
+    assert!(app.journey.has_consolidated("times-tables"));
+    assert_eq!(app.inputs, inputs, "confirmation is not a room input");
+
+    app.reset_current_room();
+    assert!(!app.chosen_experiment);
+    assert_eq!(app.times_tables_aha.beat(), AhaBeat::Explore);
+    let _ = std::fs::remove_file(&app.journey_file);
+    let _ = std::fs::remove_file(&app.scores_file);
+}
+
+#[test]
+fn controller_connection_actions_do_not_create_room_gestures() {
+    use crate::gamepad::Command;
+    use crate::input_legend::ControllerAction;
+
+    let mut app = headless("chosen-experiment-controller");
+    app.close_menu();
+    for id in numinous_core::ENGINEERED_AHA_ROOM_IDS {
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == id)
+            .unwrap();
+        app.reset_current_room();
+        app.begin_pointer_at((0.0, 0.5));
+        app.end_pointer_at((0.0, 0.5));
+        app.toggle_chosen_experiment();
+        assert!(commit_test_experiment_call(&mut app));
+        assert!(app.can_advance_chosen_experiment());
+        app.input_mode = InputMode::KeyboardMouse;
+        let status = app.current_status_override(900).unwrap();
+        assert!(status.contains("ENTER"), "{id}: {status}");
+        assert!(
+            !status.split_whitespace().any(|word| word == "E"),
+            "{status}"
+        );
+
+        let inputs = app.inputs.clone();
+        let pokes = app.pokes.clone();
+        app.gamepad.set_cursor_for_test((0.8, 0.6));
+        app.handle_gamepad_command(Command::PrimaryDown);
+        assert!(app.experiment_primary_consumed);
+        assert!(!app.can_advance_chosen_experiment());
+        app.handle_gamepad_command(Command::PointerMoved {
+            point: (0.7, 0.95),
+            held: true,
+        });
+        app.handle_gamepad_command(Command::PrimaryDown);
+        app.handle_gamepad_command(Command::PrimaryUp);
+        assert!(!app.experiment_primary_consumed);
+        assert_eq!(app.inputs, inputs);
+        assert_eq!(app.pokes, pokes);
+
+        app.advance_times_tables_morph(super::TIMES_TABLES_MORPH_SECONDS);
+        app.advance_buffon_morph(super::BUFFON_MORPH_SECONDS);
+        app.advance_galton_morph(super::GALTON_MORPH_SECONDS);
+        app.advance_pendulum_morph(super::PENDULUM_MORPH_SECONDS);
+        app.advance_kepler_morph(super::KEPLER_MORPH_SECONDS);
+        app.advance_parrondo_morph(super::PARRONDO_MORPH_SECONDS);
+        app.advance_nontransitive_morph(super::NONTRANSITIVE_MORPH_SECONDS);
+        assert!(app.can_advance_chosen_experiment());
+        let primary = app
+            .gamepad
+            .controller_copy()
+            .action_token(ControllerAction::Primary);
+        let status = app.current_status_override(900).unwrap();
+        assert!(status.contains(&primary), "{id}: {status}");
+        assert!(
+            !status.split_whitespace().any(|word| word == "E"),
+            "{status}"
+        );
+        assert!(!app.journey.has_consolidated(id));
+
+        app.handle_gamepad_command(Command::PrimaryDown);
+        app.handle_gamepad_command(Command::PrimaryUp);
+        assert!(app.journey.has_consolidated(id));
+        assert_eq!(app.inputs, inputs);
+        assert_eq!(app.pokes, pokes);
+        app.paused = true;
+        app.handle_gamepad_command(Command::Back);
+        assert!(!app.chosen_experiment);
+        assert!(!app.show_help, "Back leaves the path before opening a menu");
+        app.paused = false;
+    }
+    let _ = std::fs::remove_file(&app.journey_file);
+    let _ = std::fs::remove_file(&app.scores_file);
+}
+
+#[test]
+fn times_tables_chosen_experiment_requires_observation_and_confirmation() {
     use numinous_core::rooms::times_tables_aha::{AhaBeat, CardioidHome};
 
     let mut app = headless("numinous_app_test_times_tables_aha.txt");
@@ -308,9 +587,10 @@ fn times_tables_aha_gates_reveal_until_generation_and_morph() {
     app.reset_times_tables_aha();
     app.show_help = false;
     app.show_info = false;
+    app.toggle_chosen_experiment();
 
-    // Inspect before generation must not open the reveal card.
-    app.toggle_inspect();
+    // Choosing a path cannot create an earned connection.
+    app.advance_chosen_experiment();
     assert!(!app.show_info);
     assert_eq!(app.times_tables_aha.beat(), AhaBeat::Explore);
 
@@ -324,8 +604,8 @@ fn times_tables_aha_gates_reveal_until_generation_and_morph() {
     assert_eq!(app.times_tables_aha.beat(), AhaBeat::Withheld);
     assert!(!app.times_tables_aha.allow_reveal_text());
 
-    // Summon starts the morph; reveal stays closed.
-    app.toggle_inspect();
+    // An earned connection starts the morph without opening study.
+    app.advance_chosen_experiment();
     assert!(matches!(app.times_tables_aha.beat(), AhaBeat::Morph { .. }));
     assert!(!app.show_info);
 
@@ -333,8 +613,8 @@ fn times_tables_aha_gates_reveal_until_generation_and_morph() {
     assert_eq!(app.times_tables_aha.beat(), AhaBeat::Confirm);
     assert!(!app.times_tables_aha.allow_reveal_text());
 
-    // Confirm -> consolidated punchline; only then may E open text.
-    app.toggle_inspect();
+    // Confirming the completed morph records the actual consolidation.
+    app.advance_chosen_experiment();
     assert_eq!(app.times_tables_aha.beat(), AhaBeat::Consolidated);
     assert!(app.times_tables_aha.allow_reveal_text());
     assert!(app.journey.has_consolidated("times-tables"));
@@ -347,8 +627,8 @@ fn times_tables_aha_gates_reveal_until_generation_and_morph() {
         persisted_once,
         "repeated consolidation is an idempotent no-op"
     );
-    app.toggle_inspect();
-    assert!(app.show_info);
+    assert!(!app.advance_chosen_experiment());
+    assert!(!app.show_info);
 
     // Reset clears the visit state.
     app.reset_current_room();
@@ -371,6 +651,7 @@ fn times_tables_four_lobes_earns_without_place_wager() {
         .expect("times-tables in catalog");
     app.reset_times_tables_aha();
     app.show_help = false;
+    app.toggle_chosen_experiment();
 
     // x ~ 0.375 snaps to K=5 under the room dial contract.
     app.begin_pointer_at((0.374, 0.5));
@@ -398,6 +679,7 @@ fn the_show_does_not_auto_earn_times_tables_aha() {
         .position(|room| room.meta().id == "times-tables")
         .expect("times-tables in catalog");
     app.reset_times_tables_aha();
+    app.chosen_experiment = true;
     app.the_show = true;
     app.t = 0.375;
     app.sync_times_tables_aha();
@@ -409,7 +691,7 @@ fn the_show_does_not_auto_earn_times_tables_aha() {
 }
 
 #[test]
-fn buffon_aha_gates_reveal_until_generation_and_morph() {
+fn buffon_chosen_experiment_requires_observation_and_confirmation() {
     use numinous_core::rooms::buffon_aha::AhaBeat;
 
     let mut app = headless("numinous_app_test_buffon_aha.txt");
@@ -421,8 +703,9 @@ fn buffon_aha_gates_reveal_until_generation_and_morph() {
     app.reset_buffon_aha();
     app.show_help = false;
     app.show_info = false;
+    app.toggle_chosen_experiment();
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert!(!app.show_info);
     assert_eq!(app.buffon_aha.beat(), AhaBeat::Explore);
 
@@ -436,7 +719,7 @@ fn buffon_aha_gates_reveal_until_generation_and_morph() {
     assert_eq!(app.buffon_aha.beat(), AhaBeat::Withheld);
     assert!(!app.buffon_aha.allow_reveal_text());
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert!(matches!(app.buffon_aha.beat(), AhaBeat::Morph { .. }));
     assert!(!app.show_info);
 
@@ -444,11 +727,11 @@ fn buffon_aha_gates_reveal_until_generation_and_morph() {
     assert_eq!(app.buffon_aha.beat(), AhaBeat::Confirm);
     assert!(!app.buffon_aha.allow_reveal_text());
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert_eq!(app.buffon_aha.beat(), AhaBeat::Consolidated);
     assert!(app.buffon_aha.allow_reveal_text());
-    app.toggle_inspect();
-    assert!(app.show_info);
+    assert!(!app.advance_chosen_experiment());
+    assert!(!app.show_info);
 
     app.reset_current_room();
     assert_eq!(app.buffon_aha.beat(), AhaBeat::Explore);
@@ -464,9 +747,10 @@ fn pendulum_aha_calls_the_twin_then_opens_the_measured_gap() {
 
     let mut app = headless("numinous_app_test_pendulum_aha.txt");
     select_pendulum(&mut app);
+    app.toggle_chosen_experiment();
     app.show_info = false;
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert!(!app.show_info, "no punchline before a release");
     assert_eq!(app.pendulum_aha.beat(), AhaBeat::Explore);
 
@@ -493,17 +777,17 @@ fn pendulum_aha_calls_the_twin_then_opens_the_measured_gap() {
         "the call band must not add another release"
     );
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert!(matches!(app.pendulum_aha.beat(), AhaBeat::Morph { .. }));
     app.advance_pendulum_morph(super::PENDULUM_MORPH_SECONDS);
     assert_eq!(app.pendulum_aha.beat(), AhaBeat::Confirm);
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert_eq!(app.pendulum_aha.beat(), AhaBeat::Consolidated);
     let grade = app.pendulum_aha.graded().expect("the call is answered");
     assert!(grade.contains("You called LOST"), "{grade}");
     assert!(grade.contains("Nailed"), "{grade}");
-    app.toggle_inspect();
-    assert!(app.show_info);
+    assert!(!app.advance_chosen_experiment());
+    assert!(!app.show_info);
 
     app.reset_current_room();
     assert_eq!(app.pendulum_aha.beat(), AhaBeat::Explore);
@@ -514,13 +798,14 @@ fn pendulum_aha_calls_the_twin_then_opens_the_measured_gap() {
 }
 
 #[test]
-fn kepler_aha_calls_speed_on_the_chosen_orbit_before_reveal() {
+fn kepler_experiment_calls_speed_on_the_chosen_orbit_before_confirmation() {
     use numinous_core::rooms::kepler_aha::{AhaBeat, SpeedRelation};
 
     let mut app = headless("numinous_app_test_kepler_aha.txt");
     select_kepler(&mut app);
+    app.toggle_chosen_experiment();
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert!(!app.show_info, "no answer before choosing an orbit");
     assert_eq!(app.kepler_aha.beat(), AhaBeat::Explore);
 
@@ -539,17 +824,17 @@ fn kepler_aha_calls_speed_on_the_chosen_orbit_before_reveal() {
         "the call band must not retune the ellipse"
     );
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert!(matches!(app.kepler_aha.beat(), AhaBeat::Morph { .. }));
     app.advance_kepler_morph(super::KEPLER_MORPH_SECONDS);
     assert_eq!(app.kepler_aha.beat(), AhaBeat::Confirm);
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert_eq!(app.kepler_aha.beat(), AhaBeat::Consolidated);
     let grade = app.kepler_aha.graded().expect("the call is answered");
     assert!(grade.contains("called FASTER"), "{grade}");
     assert!(grade.contains("Nailed"), "{grade}");
-    app.toggle_inspect();
-    assert!(app.show_info);
+    assert!(!app.advance_chosen_experiment());
+    assert!(!app.show_info);
 
     app.reset_current_room();
     assert_eq!(app.kepler_aha.beat(), AhaBeat::Explore);
@@ -566,8 +851,9 @@ fn parrondo_aha_calls_the_policy_then_opens_exact_expectations() {
 
     let mut app = headless("numinous_app_test_parrondo_aha.txt");
     select_parrondo(&mut app);
+    app.toggle_chosen_experiment();
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert!(!app.show_info, "no answer before trying a policy");
     assert_eq!(app.parrondo_aha.beat(), AhaBeat::Explore);
 
@@ -585,17 +871,17 @@ fn parrondo_aha_calls_the_policy_then_opens_exact_expectations() {
         "the call band must not select another sampled policy"
     );
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert!(matches!(app.parrondo_aha.beat(), AhaBeat::Morph { .. }));
     app.advance_parrondo_morph(super::PARRONDO_MORPH_SECONDS);
     assert_eq!(app.parrondo_aha.beat(), AhaBeat::Confirm);
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert_eq!(app.parrondo_aha.beat(), AhaBeat::Consolidated);
     let grade = app.parrondo_aha.graded().expect("the call is answered");
     assert!(grade.contains("winner is ABB"), "{grade}");
     assert!(grade.contains("Nailed"), "{grade}");
-    app.toggle_inspect();
-    assert!(app.show_info);
+    assert!(!app.advance_chosen_experiment());
+    assert!(!app.show_info);
 
     app.reset_current_room();
     assert_eq!(app.parrondo_aha.beat(), AhaBeat::Explore);
@@ -612,9 +898,10 @@ fn nontransitive_aha_turns_first_choice_into_an_exact_counter() {
 
     let mut app = headless("numinous_app_test_nontransitive_aha.txt");
     select_nontransitive(&mut app);
+    app.toggle_chosen_experiment();
 
-    app.toggle_inspect();
-    assert!(!app.show_info, "no answer before choosing a die");
+    app.advance_chosen_experiment();
+    assert!(!app.show_info, "no connection before choosing a die");
     assert_eq!(app.nontransitive_aha.beat(), AhaBeat::Explore);
 
     app.begin_pointer_at((0.5, 0.18));
@@ -632,14 +919,14 @@ fn nontransitive_aha_turns_first_choice_into_an_exact_counter() {
         "the call band must not choose another die"
     );
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert!(matches!(
         app.nontransitive_aha.beat(),
         AhaBeat::Morph { .. }
     ));
     app.advance_nontransitive_morph(super::NONTRANSITIVE_MORPH_SECONDS);
     assert_eq!(app.nontransitive_aha.beat(), AhaBeat::Confirm);
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert_eq!(app.nontransitive_aha.beat(), AhaBeat::Consolidated);
     let grade = app
         .nontransitive_aha
@@ -648,8 +935,8 @@ fn nontransitive_aha_turns_first_choice_into_an_exact_counter() {
     assert!(grade.contains("counter is C"), "{grade}");
     assert!(grade.contains("20/36"), "{grade}");
     assert!(grade.contains("Nailed"), "{grade}");
-    app.toggle_inspect();
-    assert!(app.show_info);
+    assert!(!app.advance_chosen_experiment());
+    assert!(!app.show_info);
 
     app.reset_current_room();
     assert_eq!(app.nontransitive_aha.beat(), AhaBeat::Explore);
@@ -683,6 +970,7 @@ fn engineered_aha_morphs_reject_invalid_time_and_inactive_contexts() {
                 .position(|room| room.meta().id == $room)
                 .expect("engineered aha room in catalog");
             app.current = selected;
+            app.chosen_experiment = true;
             $stage
             assert!(app.$field.summon(), "{} enters its morph", $room);
             let before = format!("{:?}", app.$field.beat());
@@ -702,6 +990,11 @@ fn engineered_aha_morphs_reject_invalid_time_and_inactive_contexts() {
                     $room
                 );
             }
+
+            app.chosen_experiment = false;
+            app.$advance($duration);
+            assert_eq!(format!("{:?}", app.$field.beat()), before);
+            app.chosen_experiment = true;
 
             app.paused = true;
             app.$advance($duration);
@@ -875,7 +1168,7 @@ fn the_universal_wager_reaches_an_ordinary_room_and_meets_its_truth() {
 
 #[test]
 fn a_flagship_room_keeps_its_own_staged_wager() {
-    // The generic call must not shadow the hand-built five-beat arcs.
+    // One explicit U choice selects the room's own staged experiment.
     let mut app = headless("numinous_app_test_wager_flagship.txt");
     app.show_help = false;
     for id in numinous_core::ENGINEERED_AHA_ROOM_IDS {
@@ -889,7 +1182,9 @@ fn a_flagship_room_keeps_its_own_staged_wager() {
             app.room_wager.is_none(),
             "{id} stages its own wager instead"
         );
-        assert!(app.banner.is_some(), "{id} says so");
+        assert!(app.chosen_experiment, "{id} is selected");
+        app.toggle_room_wager();
+        assert!(!app.chosen_experiment, "{id} returns to free play");
     }
 
     let _ = std::fs::remove_file(&app.journey_file);
@@ -910,15 +1205,16 @@ fn the_curve_is_never_drawn_over_a_pile_it_does_not_explain() {
         .expect("galton-board in catalog");
     app.reset_galton_aha();
     app.show_help = false;
+    app.toggle_chosen_experiment();
 
     // A wave on the fair coin, then the call, then the truth.
     app.begin_pointer_at((0.5, 0.4));
     app.end_pointer_at((0.5, 0.4));
     app.sync_galton_aha();
     app.begin_pointer_at((0.5, 0.95));
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     app.advance_galton_morph(super::GALTON_MORPH_SECONDS);
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert_eq!(app.galton_aha.coin(), Some(2));
     assert!(app.galton_aha.answers_pile(2), "its own pile");
 
@@ -944,7 +1240,7 @@ fn the_curve_is_never_drawn_over_a_pile_it_does_not_explain() {
 }
 
 #[test]
-fn galton_aha_gates_reveal_and_grades_the_peak_wager() {
+fn galton_chosen_experiment_grades_the_peak_wager() {
     use numinous_core::rooms::galton_aha::AhaBeat;
 
     let mut app = headless("numinous_app_test_galton_aha.txt");
@@ -956,9 +1252,10 @@ fn galton_aha_gates_reveal_and_grades_the_peak_wager() {
     app.reset_galton_aha();
     app.show_help = false;
     app.show_info = false;
+    app.toggle_chosen_experiment();
 
-    app.toggle_inspect();
-    assert!(!app.show_info, "no punchline before generation");
+    app.advance_chosen_experiment();
+    assert!(!app.show_info, "no connection before an observation");
     assert_eq!(app.galton_aha.beat(), AhaBeat::Explore);
 
     // One wave on the fair coin (x=0.5) primes the peak invite.
@@ -982,12 +1279,12 @@ fn galton_aha_gates_reveal_and_grades_the_peak_wager() {
     assert_eq!(band, numinous_core::rooms::galton_aha::GuessBand::Nailed);
     assert!(!app.galton_aha.allow_reveal_text());
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert!(matches!(app.galton_aha.beat(), AhaBeat::Morph { .. }));
     app.advance_galton_morph(super::GALTON_MORPH_SECONDS);
     assert_eq!(app.galton_aha.beat(), AhaBeat::Confirm);
 
-    app.toggle_inspect();
+    app.advance_chosen_experiment();
     assert_eq!(app.galton_aha.beat(), AhaBeat::Consolidated);
     assert!(app.galton_aha.allow_reveal_text());
     let graded = app.galton_aha.graded().expect("graded sentence");
@@ -1012,6 +1309,7 @@ fn buffon_eight_throws_earn_without_number_wager() {
         .expect("buffon-needle in catalog");
     app.reset_buffon_aha();
     app.show_help = false;
+    app.toggle_chosen_experiment();
 
     for i in 0..8 {
         let y = 0.15 + (i as f64) * 0.08;
@@ -1038,6 +1336,7 @@ fn the_show_does_not_auto_earn_buffon_aha() {
         .position(|room| room.meta().id == "buffon-needle")
         .expect("buffon-needle in catalog");
     app.reset_buffon_aha();
+    app.chosen_experiment = true;
     app.the_show = true;
     app.sync_buffon_aha();
     assert_eq!(app.buffon_aha.beat(), AhaBeat::Explore);
@@ -2771,6 +3070,7 @@ fn playtest_note_captures_times_tables_aha_beat() {
         .position(|room| room.meta().id == "times-tables")
         .expect("times-tables in catalog");
     app.reset_room_runtime();
+    app.toggle_chosen_experiment();
     app.times_tables_aha.note_hand_multiplier(2.0);
     assert_eq!(app.times_tables_aha.beat_label(), "prime");
     let dir = std::env::temp_dir().join("numinous_app_playtest_aha");
@@ -2784,8 +3084,13 @@ fn playtest_note_captures_times_tables_aha_beat() {
     assert!(report.contains("## Flagship Aha Snapshot"));
     assert!(report.contains("- Aha beat: prime"));
     assert!(report.contains("- Earn path: none"));
-    assert!(report.contains("### Engineered aha (Times Tables / Buffon)"));
+    assert!(report.contains("### Chosen experiment"));
     assert!(report.contains("Observable aha or consolidation moment"));
+
+    app.leave_chosen_experiment();
+    assert!(app.flagship_aha_playtest_note().is_none());
+    assert_eq!(app.times_tables_aha.beat_label(), "prime");
+    app.toggle_chosen_experiment();
 
     // The Show must not claim ordinary-visit aha state.
     app.the_show = true;
@@ -2808,6 +3113,7 @@ fn playtest_note_captures_buffon_aha_beat() {
         .position(|room| room.meta().id == "buffon-needle")
         .expect("buffon-needle in catalog");
     app.reset_room_runtime();
+    app.toggle_chosen_experiment();
     app.buffon_aha.note_throws(1);
     assert!(app.buffon_aha.commit_wager(3.0));
     assert_eq!(app.buffon_aha.beat_label(), "withheld");
@@ -2822,8 +3128,9 @@ fn playtest_note_captures_buffon_aha_beat() {
     assert!(report.contains("## Flagship Aha Snapshot"));
     assert!(report.contains("- Aha beat: withheld"));
     assert!(report.contains("- Earn path: wager:3.000:close"));
-    assert!(report.contains("- Can summon with E: yes"));
-    assert!(report.contains("### Engineered aha (Times Tables / Buffon)"));
+    assert!(report.contains("- Connection available: yes"));
+    assert!(report.contains("PRESS ENTER"));
+    assert!(report.contains("### Chosen experiment"));
 
     let _ = std::fs::remove_dir_all(dir);
     let _ = std::fs::remove_file(&app.journey_file);
@@ -2955,6 +3262,7 @@ fn app_options_persist_one_versioned_preference_snapshot() {
             muted: true,
             era: numinous_core::Era::Phosphor,
             window_mode: numinous_core::WindowModePreference::Windowed,
+            study_locale: numinous_core::study::StudyLocale::default(),
         }
     );
     let _ = std::fs::remove_file(path);

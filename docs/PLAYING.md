@@ -45,22 +45,23 @@ your hands already know it:
 | | |
 |---|---|
 | A / D or arrows | previous / next room |
-| 1 - 9, 0 | jump straight to a room (0 is the tenth slot); while a Times Tables, Buffon, Double Pendulum, Kepler, Parrondo, or Nontransitive Dice aha asks for a call, the relevant digits place it instead |
+| 1 - 9, 0 | jump straight to a room (0 is the tenth slot); while a chosen Times Tables, Buffon, Double Pendulum, Kepler, Parrondo, or Nontransitive Dice experiment asks for a call, the relevant digits place it instead |
 | K | keep the pack: still + loop + README in one share folder |
 | O | cycle the visualizer source |
 | W / S | run time faster / slower |
 | mouse drag or wheel | scrub time yourself |
 | Space | pause or resume while wandering |
-| E | inspect: why this matters |
-| U | call the readout: wager the number before you look, then meet it |
-| H | bring the Cabinet back; choose Modes, Games, Settings, or Controls |
+| E or ? | open free room study: Explain, Notes, or Mathematics |
+| U | choose or leave a staged room experiment; other rooms retain their optional number prediction |
+| Enter (in a chosen experiment) | advance the earned connection when offered |
+| H | bring the Cabinet back; Explain opens study and Experiment is offered where available |
 | Q | quit after saving the Journey, including from fullscreen |
 | R | reset the current room, including its clock and interactions |
 | F | toggle fullscreen; press it again to return directly to a window |
 | Alt+F4, or QUIT on the Cabinet | alternate orderly close paths |
 | M | global sound on / off, including games, pause, radio, and Studio |
-| B or Enter | The Show: sit back, rooms play themselves (the room tour) |
-| Esc | the opaque text Cabinet; Esc returns through its pages before closing it |
+| B or Enter (in free room play) | The Show: sit back, rooms play themselves (the room tour) |
+| Esc | return from study or a chosen experiment; otherwise open the Cabinet or return through its pages |
 | M (on the Cabinet front page) | open the short Modes list |
 | W / P / C (in Modes) | WATCH the collection wander, PLAY the waiting room, or CREATE in Studio |
 | G (in the Cabinet) | open Games |
@@ -81,19 +82,22 @@ your hands already know it:
 | controller left stick / south | move the visible virtual hand / touch or confirm |
 | controller bumpers / D-pad | change rooms / choose and navigate games |
 | controller triggers / right stick | change speed / scrub time |
-| controller Start / East / Select | menu / back / inspect |
+| controller Start / East / Select | menu / back / free room study |
 | controller L3 / R3 | reset room / pause or resume |
 | controller West / North | visual era / radio or available submit action |
 | hold controller North + D-pad up / down | global volume up / down |
 | hold controller North + South | global sound on / off |
 | Tab | the Studio: type math, watch and hear it live |
-| Esc | menu |
 
 The art keeps the frame, including behind the Cabinet. Room titles,
-arrival hints, and inspection copy use
-separate quiet bands rather than sitting on the active visual. Arrival hints
-fade on their own, E toggles inspection, H restores help, and Esc closes an
-open overlay. A clean install always has the four-cycle stereo programmatic
+arrival hints, and readouts use separate quiet bands. Arrival hints fade on
+their own. E or the controller's Inspect action opens a separate reader without
+a visit, level, wager, or consolidation requirement. Enter there selects
+Mathematics directly; an unwritten depth says so. Reading holds the room's clock
+and accepted inputs and returns to the same room or Cabinet page.
+[Study](STUDY.md) owns reader controls, content coverage, and language fallback.
+
+A clean install always has the four-cycle stereo programmatic
 soundtrack. Room changes crossfade, and volume or window focus changes do not
 restart it. Start pauses a live game behind the menu without discarding its
 state. On restore, radio rejoins the wall-clock broadcast position before audio
@@ -118,8 +122,11 @@ boundary.
 The reverse boundary holds too, stated rather than implied: the keyboard
 reaches every menu, game, quiz, and formula, but the hand verbs inside App
 rooms (drag, click, hold) need a mouse or a controller today, with one
-exception that narrows the gap: U calls the room's readout, and the call
-is aimed with the arrow keys and committed with Enter. The
+exception that narrows the gap: outside the seven staged experiments, U can
+open a number prediction aimed with the arrow keys and committed with Enter.
+In the staged rooms, U opts into their existing prediction or observation path;
+Enter summons an earned connection, and U or Esc leaves that path without
+discarding its progress during the visit. Reading remains independent. The
 `numinous access` report states both boundaries.
 
 A saved creation reopens exactly. Launch the App with a `.num` path or a
@@ -206,6 +213,7 @@ numinous watch julia              full-color animation, with sound
 numinous watch lorenz --era phosphor
 numinous play times-tables        classic ASCII
 numinous describe times-tables    safe title, action, goal, and play doorway
+numinous study times-tables       read freely, with no play or wager required
 numinous reveal times-tables      explanation after its wager is consolidated
 numinous render double-pendulum --poke 0.2,0.8
 numinous render double-pendulum --gesture down:0.3,0.4,0.1 --gesture up:0.6,0.5,0.15
@@ -248,10 +256,11 @@ lore line (each of the 42 has one) and whatever it unlocked. Levels run 1 to
 42, and everything that opens along
 the way is an extra, never a toll. Wrong answers still teach: every game tells
 you exactly which judgments were wrong. `numinous describe <room>` is a safe
-doorway that never prints the punchline. `numinous reveal <room>` opens the
-explanation after a normal room has been played, or after an engineered wager
-has been consolidated. Some things are not listed anywhere. If you ever wonder
-whether a name means something, ask about it.
+doorway that never prints the punchline. `numinous study <room>` opens reading
+directly. The existing `numinous reveal <room>` still requires a normal room
+to have been played, or an engineered wager to have been consolidated. See
+[Study](STUDY.md) for depth, block, and language selection. Some things are not
+listed anywhere. If you ever wonder whether a name means something, ask about it.
 
 The level belongs to the local Journey, not to the room you just entered. The J
 overlay shows how many plays that profile contains. To try a clean profile
@@ -312,6 +321,14 @@ color-free renderer cannot show, so under `NO_COLOR` they look like they
 ignored you. `numinous access` prints this same list straight from the code
 that enforces it, so the two can never disagree.
 
+The App's optional study surface preserves Unicode case and mathematical
+notation with bundled fonts, wrapping, and scrolling. Lissajous has English
+and Japanese study content; its Japanese text is a reviewed draft, not a claim
+of native-speaker validation. Other room text falls back explicitly to English.
+This does not add Unicode naming or IME input to Studio, translate the full
+App shell, or establish complete glyph coverage. [Study](STUDY.md) describes
+the remaining boundaries and the saved study-language preference.
+
 ---
 
 ## For agents
@@ -344,7 +361,7 @@ still initialize with 2025-11-25 or 2025-06-18. Modern discovery and tool lists
 are cacheable, successful results name their result type and server, and all
 tool input schemas explicitly use JSON Schema 2020-12. A client that advertises
 form elicitation can complete `predict` through one multi round-trip request;
-other clients keep the two-call pose and grade flow. Forty tools use
+other clients keep the two-call pose and grade flow. Tools use
 mostly flat schemas. Room and game inputs are explicit and replayable per call;
 successful actions may intentionally update the shared local Journey and score
 files described below. The bounded
@@ -356,6 +373,7 @@ input without hidden session state:
 | `list_rooms` | the room threshold: touch the flagship, walk the six-room Strange Loop chain, or wander by compact wing summaries. `structuredContent.rooms` retains the complete typed list and `starters` retains the prior four-row doorway in every mode |
 | `watch_show` | one caller-paced cue from the core-owned six-room Strange Loop score. Returns exact ASCII looks, visual alternatives, cell deltas, held evidence, sound facts, optional WAV audio, and explicit replay, next, restart, and leave calls. `motion: "reduced"` returns the same cue's postcard only. It stores no cursor or progress, reads no journal or workspace, and never opens the explanation |
 | `describe_room` | a safe doorway: title, wing, action, optional goal, and play prompt, never the revelation |
+| `study_room` | unrestricted room reading, with explicit depth or stable block selection and language fallback; see [Study](STUDY.md) |
 | `reveal_room` | the insight after one real play, or after consolidation for an engineered wager room |
 | `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array. Add `from_t` with explicit destination `t` for two exact observations and a typed temporal delta; the top-level frame remains the destination. Add `dwell` with two to eight phases to stay in the room instead of moving through it: `structuredContent.dwell` reports what refused to move across every look, including cells that never lit and holes fully ringed by light. Pass `receipt: true` for a replay proof in `structuredContent.encounter`; asking does not keep the play. Returns goal state. It never volunteers the explanation: landing a goal opens `reveal_room`, it does not answer, because understanding is offered only when asked for. On Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` / `speed_wager` / `policy_wager` / `counter_wager` plus `aha_summon` walk generation-before-reveal without App session state. Nontransitive Dice also accepts typed `die_choice` instead of coordinate input |
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
@@ -462,7 +480,8 @@ Conventions worth relying on:
 - **Flagship engineered aha (MCP).** `describe_room` is a safe doorway on Times
   Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas,
   Parrondo's Trap, and Nontransitive Dice. `reveal_room` remains closed until
-  the generation act is consolidated. Pass `place_wager`
+  the generation act is consolidated. `study_room` reads their explanations
+  freely, independently of that optional experimental protocol. Pass `place_wager`
   (`mandelbrot` | `nephroid` | `circle`), `number_wager` (1.5..4.5),
   `bin_wager` (0..16, the Galton pile's peak), or `ending_wager` (`together` |
   `drifted` | `lost`) after a Double Pendulum gesture containing a completed
@@ -475,9 +494,11 @@ Conventions worth relying on:
   the punchline. Read `structuredContent.engineeredAha` for beat, earn, and
   allowReveal. Before consolidation, the wager and summon invitation remain
   visible while `earn`, grading, truth, and the punchline remain absent. The
-  App path is the ordinary visit with bottom-band or key
-  wagers and E; F9 captures hallway notes for human facilitators. Double
-  Pendulum grades the exact release replayed in that call, and a held gesture
+  App path is an explicit choice through U or the Cabinet's Experiment entry,
+  with bottom-band or key wagers and Enter for an earned connection. E or
+  Inspect opens free reading at any point in that path. F9 captures hallway
+  notes for human facilitators. Double Pendulum grades the exact release
+  replayed in that call, and a held gesture
   alone cannot prime it. Kepler grades the exact selected eccentricity and
   returns its apsidal speed ratio; its consolidated ASCII render carries the
   equal-time marks that answer the call. Parrondo returns exact 120-turn
@@ -486,7 +507,7 @@ Conventions worth relying on:
   Nontransitive Dice returns all three face arrays, exact pairwise counts, and
   the chosen counter's complete W/L grid, so one lucky roll never becomes the
   proof.
-- **Structured output, and the substance is in it.** Catalog, Show, description,
+- **Structured output, and the substance is in it.** Catalog, Show, description, study,
   reveal, listening, score, memory, game, and Journey results return bounded
   `structuredContent` alongside prose; parse that, not the sentences. All 354
   catalog rooms are covered by the discovery contract. The load-bearing content rides
@@ -514,7 +535,7 @@ Conventions worth relying on:
   file and posts to the same score table as the local human. Level cap is 42;
   XP comes from playing, not only from winning.
 
-A sensible first session: `list_rooms`, `play_room` a few, `reveal_room` what
+A sensible first session: `list_rooms`, `play_room` a few, `study_room` what
 interested you, then `munch` with a seed a human names, and compare scores.
 
 ---

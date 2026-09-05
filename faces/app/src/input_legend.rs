@@ -482,7 +482,7 @@ pub fn room_controls_with_face(mode: InputMode, face: ControllerFace) -> String 
 pub fn room_controls_with_controller(mode: InputMode, copy: ControllerCopy) -> String {
     format!(
         "{}   {}",
-        item_with_controller(mode, Control::Reset, "RESET ROOM", copy),
+        item_with_controller(mode, Control::Inspect, "EXPLAIN", copy),
         item_with_controller(mode, Control::Menu, "MENU", copy)
     )
 }

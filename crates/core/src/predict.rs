@@ -16,7 +16,8 @@
 //! It reuses the readout machinery the parameter challenge established, so a
 //! room poses a prediction exactly when it carries a moving numeric readout.
 
-use crate::challenge::{PARAMETER_SAMPLES, find_readout, fmt_sig, fnv1a, status_numbers};
+use crate::challenge::{fmt_sig, fnv1a};
+use crate::readout::{PARAMETER_SAMPLES, ReadoutLookup, find_readout};
 use crate::rng::SplitMix64;
 use crate::room::Room;
 
@@ -37,7 +38,8 @@ pub struct Prediction {
     pub room: String,
     /// The seed the hidden moment was drawn from.
     pub seed: u64,
-    /// Which number in the status line the readout is.
+    /// The stable room-scoped numeric ID, retaining its historical field name.
+    /// Status-only rooms use their zero-based numeric column as before.
     pub index: usize,
     /// The readout's spoken name (TILT, K, X:Y).
     pub label: String,
@@ -120,7 +122,8 @@ pub struct PredictionCurveGrade {
 /// Why a rate-and-residual model could not be graded.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PredictionCurveError {
-    /// The room did not provide the posed numeric readout at every sample.
+    /// The room identity differs, or the posed numeric readout is unavailable
+    /// at a required sample.
     ReadoutUnavailable,
     /// Model inputs were non-finite or overflowed while constructing values.
     NonFiniteModel,
@@ -172,6 +175,14 @@ pub fn pose_prediction(room: &dyn Room, seed: u64) -> Option<Prediction> {
     // the grader uses; a display/grade mismatch of a few thousandths would shift
     // the answer under sensitive dependence.
     let phase = ((index as f64 / count as f64) * 1000.0).round() / 1000.0;
+    // Rounding can move the center off the discovery grid. A typed channel
+    // may be unavailable there, so admit the exact phase the grader will use.
+    if !ReadoutLookup::new(room)?
+        .value(readout.index, phase)?
+        .is_finite()
+    {
+        return None;
+    }
     let rate_window = rate_window_for_phase(phase);
     let prompt = format!(
         "PREDICT what {} reads at phase {phase:.3} in {}, and optionally commit its rate in readout units per phase. Across the sweep it ranges {} to {}. A rate reveals your signed residual shape from phase {:.3} to {:.3}. The score is a mirror of your model, not a leaderboard, so guess before you look.",
@@ -194,8 +205,8 @@ pub fn pose_prediction(room: &dyn Room, seed: u64) -> Option<Prediction> {
 }
 
 /// Grade a guess against the truth at the prediction's hidden moment. Returns
-/// `None` only if the room's status vanished or its readout column went
-/// missing there, which no catalog room does. A non-finite guess scores 0 and
+/// `None` for a different room, an unavailable readout, or an invalid or
+/// inconsistent typed provider. A non-finite guess scores 0 and
 /// bands as `Wild`, never panicking.
 #[must_use]
 pub fn grade_prediction(
@@ -203,8 +214,10 @@ pub fn grade_prediction(
     prediction: &Prediction,
     guess: f64,
 ) -> Option<PredictionGrade> {
-    let status = room.status(prediction.phase)?;
-    let actual = status_numbers(&status).get(prediction.index)?.1;
+    if prediction.room != room.meta().id {
+        return None;
+    }
+    let actual = ReadoutLookup::new(room)?.value(prediction.index, prediction.phase)?;
     let span = (prediction.span.1 - prediction.span.0).max(1e-9);
     let error = (guess - actual).abs();
     let score = (100.0 * (1.0 - (error / span).min(1.0))).round() as u32;
@@ -238,6 +251,9 @@ pub fn grade_prediction_curve(
     guess: f64,
     rate_guess: f64,
 ) -> Result<PredictionCurveGrade, PredictionCurveError> {
+    if prediction.room != room.meta().id {
+        return Err(PredictionCurveError::ReadoutUnavailable);
+    }
     if !guess.is_finite() || !rate_guess.is_finite() {
         return Err(PredictionCurveError::NonFiniteModel);
     }
@@ -249,15 +265,12 @@ pub fn grade_prediction_curve(
     {
         return Err(PredictionCurveError::InvalidWindow);
     }
+    let readout = ReadoutLookup::new(room).ok_or(PredictionCurveError::ReadoutUnavailable)?;
     let mut samples = Vec::with_capacity(rate_window.len());
     for phase in rate_window {
-        let status = room
-            .status(phase)
+        let actual = readout
+            .value(prediction.index, phase)
             .ok_or(PredictionCurveError::ReadoutUnavailable)?;
-        let actual = status_numbers(&status)
-            .get(prediction.index)
-            .ok_or(PredictionCurveError::ReadoutUnavailable)?
-            .1;
         let predicted = guess + rate_guess * (phase - prediction.phase);
         let residual = actual - predicted;
         if !actual.is_finite() {

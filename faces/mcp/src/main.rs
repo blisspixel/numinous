@@ -33,6 +33,9 @@ mod schema;
 mod show;
 mod sim_tools;
 mod studio_tools;
+mod study;
+#[path = "../../shared/study_json.rs"]
+mod study_json;
 mod temporal;
 mod transport;
 mod viewer_projection;
@@ -350,6 +353,7 @@ fn call_tool(
         "watch_show" => show::tool(&domain_args),
         "describe_room" => describe_room_tool(&domain_args, journey_file),
         "reveal_room" => reveal_room_tool(&domain_args, journey_file),
+        "study_room" => study::tool(&domain_args),
         "play_room" => play_room_tool(&domain_args, journey_file),
         "challenge" => challenge_tool(&domain_args),
         "predict" => predict_tool(&domain_args),

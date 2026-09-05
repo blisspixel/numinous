@@ -26,7 +26,7 @@ Distilled from what the benchmark and MCP-game ecosystems reward:
    vision. Ours: ASCII renders, sound as notation, sims as plain-language
    readouts.
 2. **Flat, self-describing tools.** Simple schemas, guiding errors, no hidden
-   session state required to make a legal move. Ours: forty mostly flat
+   session state required to make a legal move. Ours: forty-one mostly flat
    tools; the two exception shapes are bounded and self-describing (the
    `pokes` tuple-array on `play_room` and `challenge`, and `play_room`'s
    `gesture` event objects), and every error names the valid options.

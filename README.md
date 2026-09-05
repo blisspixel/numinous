@@ -47,6 +47,12 @@ From a clone: `cargo run --release --bin numinous-app`.
 Digital minds enter through the MCP path in [`PLAY.md`](PLAY.md). The full
 manual is [`docs/PLAYING.md`](docs/PLAYING.md).
 
+Explore first. When curiosity asks for more, press **E** or **?** in a room
+and choose Explain, Notes, or Mathematics. Reading has no level requirement.
+Lissajous is the first full mathematical treatment, with English and a Japanese
+translation draft shared by the App, CLI, and MCP. See [Study](docs/STUDY.md)
+for controls and language availability.
+
 ## A look
 
 These frames are the current App, composed through the same HUD and Cabinet
@@ -99,7 +105,7 @@ a circle you can stretch, name, and give someone else.
 
 ## Status
 
-**0.4.0-alpha.19** is playable: 355 catalog rooms, games, Journey, Studio,
+**0.4.0-alpha.20** is playable: 355 catalog rooms, games, Journey, Studio,
 controllers, and Watch Agent. The **0.2** Flagship Proof and **0.3** Tactile
 Alpha agent-and-machine exits are met and CI-locked. **0.4 Understanding Alpha
 is active, not complete.**
@@ -131,6 +137,7 @@ Full map: [`docs/README.md`](docs/README.md).
 |---|---|
 | [`PLAY.md`](PLAY.md) | First session |
 | [`docs/PLAYING.md`](docs/PLAYING.md) | Full player's manual |
+| [`docs/STUDY.md`](docs/STUDY.md) | Explanations, mathematical depth, and languages |
 | [`docs/ROOMS.md`](docs/ROOMS.md) | Catalog and room design |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Core and three faces |
 | [`docs/ENGINEERING.md`](docs/ENGINEERING.md) | Quality and contribution |

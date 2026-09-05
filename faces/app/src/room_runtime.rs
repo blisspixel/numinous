@@ -1,17 +1,22 @@
 //! Face-level live room coordination.
 
 use numinous_core::Room;
+use winit::keyboard::{Key, NamedKey};
 
 use super::{
     App, BUFFON_MORPH_SECONDS, GALTON_MORPH_SECONDS, KEPLER_MORPH_SECONDS, LIFE_STEP_SECONDS,
     MAX_LIFE_STEPS_PER_TICK, NONTRANSITIVE_MORPH_SECONDS, PARRONDO_MORPH_SECONDS,
-    PENDULUM_MORPH_SECONDS, TIMES_TABLES_MORPH_SECONDS, effective_room_phase, feedback,
-    has_finite_parameter_input, room_input, wager,
+    PENDULUM_MORPH_SECONDS, TIMES_TABLES_MORPH_SECONDS, controls, effective_room_phase, feedback,
+    has_finite_parameter_input, input_legend, room_input, wager,
 };
 
 impl App {
     pub(super) fn reset_room_runtime(&mut self) {
         self.clear_pointer_state();
+        self.chosen_experiment = false;
+        self.experiment_primary_consumed = false;
+        self.menu
+            .set_experiment_available(self.current_room_has_experiment() && !self.the_show);
         if self.goal_announced {
             self.banner = None;
         }
@@ -74,6 +79,101 @@ impl App {
         self.rooms[self.current].meta().id == "nontransitive"
     }
 
+    pub(super) fn current_room_has_experiment(&self) -> bool {
+        numinous_core::is_engineered_aha_room(self.rooms[self.current].meta().id)
+    }
+
+    pub(super) fn chosen_experiment_active(&self) -> bool {
+        self.chosen_experiment
+            && self.current_room_has_experiment()
+            && !self.the_show
+            && !self.modal_mode_active()
+            && !self.console.is_open()
+            && !self.show_journey
+    }
+
+    /// Choose or leave a staged path without changing the accepted room history.
+    pub(super) fn toggle_chosen_experiment(&mut self) {
+        if !self.current_room_has_experiment()
+            || self.the_show
+            || self.modal_mode_active()
+            || self.console.is_open()
+            || self.show_journey
+        {
+            return;
+        }
+        if self.leave_chosen_experiment() {
+            return;
+        }
+        self.chosen_experiment = true;
+        // Existing observations may prime or earn a connection. Selection alone
+        // supplies no wager, observation, or consolidation.
+        self.sync_times_tables_aha();
+        self.sync_buffon_aha();
+        self.sync_galton_aha();
+        self.sync_pendulum_aha();
+        self.sync_kepler_aha();
+        self.sync_parrondo_aha();
+        self.sync_nontransitive_aha();
+    }
+
+    /// Return to free play while retaining calls and earned experiment progress.
+    pub(super) fn leave_chosen_experiment(&mut self) -> bool {
+        std::mem::take(&mut self.chosen_experiment)
+    }
+
+    /// Route path selection before ordinary key handling can cancel a gesture.
+    pub(super) fn handle_chosen_experiment_key(&mut self, key: &Key, repeat: bool) -> bool {
+        if !self.current_room_has_experiment()
+            || self.the_show
+            || self.show_help
+            || self.modal_mode_active()
+            || self.console.is_open()
+            || self.show_journey
+        {
+            return false;
+        }
+        match controls::normalized_command_key(key) {
+            Key::Character(text) if text.as_str() == "u" => {
+                if !repeat {
+                    self.toggle_chosen_experiment();
+                }
+                true
+            }
+            Key::Named(NamedKey::Escape) if self.chosen_experiment => {
+                if !repeat {
+                    self.leave_chosen_experiment();
+                }
+                true
+            }
+            Key::Named(NamedKey::Enter) if self.chosen_experiment => {
+                if !repeat {
+                    self.advance_chosen_experiment();
+                }
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Keep core status contracts intact while naming the App's actual action.
+    pub(super) fn chosen_experiment_status(&self, status: String) -> String {
+        if !self.can_advance_chosen_experiment() {
+            return status;
+        }
+        let primary = match self.input_mode {
+            input_legend::InputMode::KeyboardMouse => "ENTER".to_string(),
+            input_legend::InputMode::Controller => self
+                .gamepad
+                .controller_copy()
+                .action_token(input_legend::ControllerAction::Primary),
+        };
+        status
+            .replace("PRESS E", &format!("PRESS {primary}"))
+            .replace("BOTH E ", &format!("BOTH {primary} "))
+            .replace("PI HIDES E ", &format!("PI HIDES {primary} "))
+    }
+
     pub(super) fn current_status_override(&self, width: usize) -> Option<String> {
         if self.current_room_is_life() {
             return Some(if width <= 400 {
@@ -82,60 +182,240 @@ impl App {
                 self.life_session.status()
             });
         }
-        if self.current_room_is_times_tables() && !self.the_show {
+        if self.current_room_is_times_tables() && self.chosen_experiment_active() {
             let phase = effective_room_phase("times-tables", self.t, &self.inputs, self.the_show);
             let dial = self.rooms[self.current]
                 .status_input(phase, &self.inputs)
                 .or_else(|| self.rooms[self.current].status(phase));
-            return Some(self.times_tables_aha.status(dial.as_deref()));
+            return Some(
+                self.chosen_experiment_status(self.times_tables_aha.status(dial.as_deref())),
+            );
         }
-        if self.current_room_is_buffon() && !self.the_show {
+        if self.current_room_is_buffon() && self.chosen_experiment_active() {
             let phase = effective_room_phase("buffon-needle", self.t, &self.inputs, self.the_show);
             let throws = self.rooms[self.current]
                 .status_input(phase, &self.inputs)
                 .or_else(|| self.rooms[self.current].status(phase));
-            return Some(self.buffon_aha.status(throws.as_deref()));
+            return Some(self.chosen_experiment_status(self.buffon_aha.status(throws.as_deref())));
         }
-        if self.current_room_is_pendulum() && !self.the_show {
+        if self.current_room_is_pendulum() && self.chosen_experiment_active() {
             let phase =
                 effective_room_phase("double-pendulum", self.t, &self.inputs, self.the_show);
             let readout = self.rooms[self.current]
                 .status_input(phase, &self.inputs)
                 .or_else(|| self.rooms[self.current].status(phase));
-            return Some(self.pendulum_aha.status(readout.as_deref()));
+            return Some(
+                self.chosen_experiment_status(self.pendulum_aha.status(readout.as_deref())),
+            );
         }
-        if self.current_room_is_kepler() && !self.the_show {
+        if self.current_room_is_kepler() && self.chosen_experiment_active() {
             let phase = effective_room_phase("kepler-laws", self.t, &self.inputs, self.the_show);
             let readout = self.rooms[self.current]
                 .status_input(phase, &self.inputs)
                 .or_else(|| self.rooms[self.current].status(phase));
-            return Some(self.kepler_aha.status(readout.as_deref()));
+            return Some(self.chosen_experiment_status(self.kepler_aha.status(readout.as_deref())));
         }
-        if self.current_room_is_parrondo() && !self.the_show {
+        if self.current_room_is_parrondo() && self.chosen_experiment_active() {
             let phase = effective_room_phase("parrondo", self.t, &self.inputs, self.the_show);
             let readout = self.rooms[self.current]
                 .status_input(phase, &self.inputs)
                 .or_else(|| self.rooms[self.current].status(phase));
-            return Some(self.parrondo_aha.status(readout.as_deref()));
+            return Some(
+                self.chosen_experiment_status(self.parrondo_aha.status(readout.as_deref())),
+            );
         }
-        if self.current_room_is_nontransitive() && !self.the_show {
+        if self.current_room_is_nontransitive() && self.chosen_experiment_active() {
             let phase = effective_room_phase("nontransitive", self.t, &self.inputs, self.the_show);
             let readout = self.rooms[self.current]
                 .status_input(phase, &self.inputs)
                 .or_else(|| self.rooms[self.current].status(phase));
-            return Some(self.nontransitive_aha.status(readout.as_deref()));
+            return Some(
+                self.chosen_experiment_status(self.nontransitive_aha.status(readout.as_deref())),
+            );
         }
         if let Some(posed) = &self.room_wager {
             return Some(posed.status());
         }
-        if self.current_room_is_galton() && !self.the_show {
+        if self.current_room_is_galton() && self.chosen_experiment_active() {
             let phase = effective_room_phase("galton-board", self.t, &self.inputs, self.the_show);
             let pile = self.rooms[self.current]
                 .status_input(phase, &self.inputs)
                 .or_else(|| self.rooms[self.current].status(phase));
-            return Some(self.galton_aha.status(pile.as_deref()));
+            return Some(self.chosen_experiment_status(self.galton_aha.status(pile.as_deref())));
         }
         None
+    }
+
+    /// Draw the selected experiment; false leaves the ordinary room surface intact.
+    pub(super) fn draw_chosen_experiment(&self, surface: &mut dyn numinous_core::Surface) -> bool {
+        if !self.chosen_experiment_active() {
+            return false;
+        }
+        let room = &self.rooms[self.current];
+        let room_inputs = &self.inputs;
+        if room.meta().id == "times-tables" && self.times_tables_aha.uses_aha_plate() {
+            let phase = effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
+            let k = numinous_core::rooms::times_tables::TimesTables::new_with(self.variation)
+                .live_multiplier(phase, room_inputs);
+            numinous_core::rooms::times_tables_aha::render_aha_plate(
+                surface,
+                self.times_tables_aha.beat(),
+                k,
+            );
+        } else {
+            let phase = effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
+            room.render_input(surface, phase, room_inputs);
+            if room.meta().id == "times-tables"
+                && matches!(
+                    self.times_tables_aha.beat(),
+                    numinous_core::rooms::times_tables_aha::AhaBeat::Prime
+                )
+            {
+                numinous_core::rooms::times_tables_aha::render_wager_options(
+                    surface,
+                    self.times_tables_aha.hover(),
+                );
+            }
+            if room.meta().id == "buffon-needle" {
+                if matches!(
+                    self.buffon_aha.beat(),
+                    numinous_core::rooms::buffon_aha::AhaBeat::Prime
+                ) {
+                    numinous_core::rooms::buffon_aha::render_guess_band(
+                        surface,
+                        self.buffon_aha.hover(),
+                    );
+                }
+                if self.buffon_aha.uses_circle_overlay() {
+                    let progress = match self.buffon_aha.beat() {
+                        numinous_core::rooms::buffon_aha::AhaBeat::Morph { progress } => progress,
+                        _ => 1.0,
+                    };
+                    numinous_core::rooms::buffon_aha::render_circle_overlay(surface, progress);
+                }
+            }
+            if room.meta().id == "double-pendulum" {
+                if matches!(
+                    self.pendulum_aha.beat(),
+                    numinous_core::rooms::pendulum_aha::AhaBeat::Prime
+                ) {
+                    numinous_core::rooms::pendulum_aha::render_ending_band(
+                        surface,
+                        self.pendulum_aha.hover(),
+                    );
+                }
+                if self.pendulum_aha.uses_curve_overlay() {
+                    let progress = match self.pendulum_aha.beat() {
+                        numinous_core::rooms::pendulum_aha::AhaBeat::Morph { progress } => progress,
+                        _ => 1.0,
+                    };
+                    numinous_core::rooms::pendulum_aha::render_gap_curve_for_inputs(
+                        surface,
+                        progress,
+                        self.variation,
+                        &self.inputs,
+                    );
+                }
+            }
+            if room.meta().id == "kepler-laws" {
+                if matches!(
+                    self.kepler_aha.beat(),
+                    numinous_core::rooms::kepler_aha::AhaBeat::Prime
+                ) {
+                    numinous_core::rooms::kepler_aha::render_speed_band(
+                        surface,
+                        self.kepler_aha.hover(),
+                    );
+                }
+                if self.kepler_aha.uses_time_overlay() {
+                    let progress = match self.kepler_aha.beat() {
+                        numinous_core::rooms::kepler_aha::AhaBeat::Morph { progress } => progress,
+                        _ => 1.0,
+                    };
+                    numinous_core::rooms::kepler_aha::render_equal_time_overlay(
+                        surface,
+                        progress,
+                        self.kepler_aha.eccentricity(),
+                    );
+                }
+            }
+            if room.meta().id == "parrondo" {
+                if matches!(
+                    self.parrondo_aha.beat(),
+                    numinous_core::rooms::parrondo_aha::AhaBeat::Prime
+                ) {
+                    numinous_core::rooms::parrondo_aha::render_policy_band(
+                        surface,
+                        self.parrondo_aha.hover(),
+                    );
+                }
+                if self.parrondo_aha.uses_expectation_overlay() {
+                    let progress = match self.parrondo_aha.beat() {
+                        numinous_core::rooms::parrondo_aha::AhaBeat::Morph { progress } => progress,
+                        _ => 1.0,
+                    };
+                    numinous_core::rooms::parrondo_aha::render_expectation_overlay(
+                        surface, progress,
+                    );
+                }
+            }
+            if room.meta().id == "nontransitive" {
+                if matches!(
+                    self.nontransitive_aha.beat(),
+                    numinous_core::rooms::nontransitive_aha::AhaBeat::Prime
+                ) {
+                    numinous_core::rooms::nontransitive_aha::render_counter_band(
+                        surface,
+                        self.nontransitive_aha.hover(),
+                    );
+                }
+                if self.nontransitive_aha.uses_outcome_grid()
+                    && let Some(chosen) = self.nontransitive_aha.chosen()
+                {
+                    let progress = match self.nontransitive_aha.beat() {
+                        numinous_core::rooms::nontransitive_aha::AhaBeat::Morph { progress } => {
+                            progress
+                        }
+                        _ => 1.0,
+                    };
+                    numinous_core::rooms::nontransitive_aha::render_outcome_grid(
+                        surface, progress, chosen,
+                    );
+                }
+            }
+            if room.meta().id == "galton-board" {
+                if matches!(
+                    self.galton_aha.beat(),
+                    numinous_core::rooms::galton_aha::AhaBeat::Prime
+                ) {
+                    numinous_core::rooms::galton_aha::render_bin_band(
+                        surface,
+                        self.galton_aha.hover(),
+                    );
+                }
+                // The curve answers the call, so it is the called
+                // coin's curve, and it is drawn only while the pile
+                // underneath is that same experiment. A player who
+                // wanders to another coin gets no curve over the wrong
+                // pile; the footer says which pile the call was about,
+                // and the curve returns when they do.
+                let live_coin =
+                    numinous_core::rooms::galton_board::selected_coin_from_inputs(&self.inputs)
+                        .unwrap_or(2);
+                if self.galton_aha.uses_outline_overlay() && self.galton_aha.answers_pile(live_coin)
+                {
+                    let progress = match self.galton_aha.beat() {
+                        numinous_core::rooms::galton_aha::AhaBeat::Morph { progress } => progress,
+                        _ => 1.0,
+                    };
+                    let coin = self.galton_aha.coin().unwrap_or(live_coin);
+                    numinous_core::rooms::galton_aha::render_outline_overlay(
+                        surface, progress, coin,
+                    );
+                }
+            }
+        }
+        true
     }
 
     pub(super) fn reset_life_session(&mut self) {
@@ -191,12 +471,7 @@ impl App {
         }
     }
 
-    /// U poses the room's own prediction, or closes an open one.
-    ///
-    /// Every room with a moving numeric readout can be called, which is
-    /// most of the catalog; the flagship rooms keep their hand-staged
-    /// ahas instead, because a bespoke five-beat arc outranks the generic
-    /// one where it exists.
+    /// U chooses a staged experiment or toggles an ordinary room's readout wager.
     pub(super) fn toggle_room_wager(&mut self) {
         if self.the_show || self.studio || self.arcade.is_some() {
             return;
@@ -204,11 +479,8 @@ impl App {
         if self.room_wager.take().is_some() {
             return;
         }
-        if numinous_core::is_engineered_aha_room(self.rooms[self.current].meta().id) {
-            self.banner = Some(feedback::Banner::status(
-                "THIS ROOM STAGES ITS OWN WAGER",
-                feedback::REFUSAL_FRAMES,
-            ));
+        if self.current_room_has_experiment() {
+            self.toggle_chosen_experiment();
             return;
         }
         let room = self.rooms[self.current].as_ref();
@@ -252,7 +524,7 @@ impl App {
 
     /// Keep the Times Tables aha in step with hand dial and the four-lobe goal.
     pub(super) fn sync_times_tables_aha(&mut self) {
-        if !self.current_room_is_times_tables() || self.the_show {
+        if !self.current_room_is_times_tables() || !self.chosen_experiment_active() {
             return;
         }
         let phase = effective_room_phase("times-tables", self.t, &self.inputs, false);
@@ -268,7 +540,7 @@ impl App {
 
     /// Keep the Buffon aha in step with player throws.
     pub(super) fn sync_buffon_aha(&mut self) {
-        if !self.current_room_is_buffon() || self.the_show {
+        if !self.current_room_is_buffon() || !self.chosen_experiment_active() {
             return;
         }
         let throws = numinous_core::rooms::buffon_needle::BuffonNeedle::throw_count(&self.inputs);
@@ -277,7 +549,7 @@ impl App {
 
     /// Keep the Galton aha in step with the waves the pile is built from.
     pub(super) fn sync_galton_aha(&mut self) {
-        if !self.current_room_is_galton() || self.the_show {
+        if !self.current_room_is_galton() || !self.chosen_experiment_active() {
             return;
         }
         let waves = numinous_core::rooms::galton_board::wave_count_from_inputs(&self.inputs);
@@ -288,7 +560,7 @@ impl App {
 
     /// Keep the Double Pendulum aha in step with completed releases.
     pub(super) fn sync_pendulum_aha(&mut self) {
-        if !self.current_room_is_pendulum() || self.the_show {
+        if !self.current_room_is_pendulum() || !self.chosen_experiment_active() {
             return;
         }
         let room = numinous_core::rooms::double_pendulum::DoublePendulum::new_with(self.variation);
@@ -305,7 +577,7 @@ impl App {
 
     /// Keep the Kepler aha bound to the ellipse chosen by completed drags.
     pub(super) fn sync_kepler_aha(&mut self) {
-        if !self.current_room_is_kepler() || self.the_show {
+        if !self.current_room_is_kepler() || !self.chosen_experiment_active() {
             return;
         }
         let eccentricity = numinous_core::rooms::kepler_laws::eccentricity_for_inputs(
@@ -324,7 +596,7 @@ impl App {
 
     /// Keep the Parrondo aha in step with completed policy selections.
     pub(super) fn sync_parrondo_aha(&mut self) {
-        if !self.current_room_is_parrondo() || self.the_show {
+        if !self.current_room_is_parrondo() || !self.chosen_experiment_active() {
             return;
         }
         let selections = self
@@ -337,7 +609,7 @@ impl App {
 
     /// Keep the dice aha bound to the newest completed die choice.
     pub(super) fn sync_nontransitive_aha(&mut self) {
-        if !self.current_room_is_nontransitive() || self.the_show {
+        if !self.current_room_is_nontransitive() || !self.chosen_experiment_active() {
             return;
         }
         let choices = self
@@ -350,6 +622,9 @@ impl App {
     }
 
     pub(super) fn record_current_aha_consolidation(&mut self) {
+        if !self.chosen_experiment_active() {
+            return;
+        }
         let room_id = self.rooms[self.current].meta().id;
         let consolidated = match room_id {
             "times-tables" => self.times_tables_aha.allow_reveal_text(),
@@ -366,146 +641,49 @@ impl App {
         }
     }
 
-    /// E / Inspect: summon staged aha on flagship rooms; elsewhere toggle reveal.
-    pub(super) fn toggle_inspect(&mut self) {
-        if self.the_show || self.studio {
-            return;
+    /// Whether the selected experiment has an earned connection to show.
+    pub(super) fn can_advance_chosen_experiment(&self) -> bool {
+        if !self.chosen_experiment_active() {
+            return false;
         }
-        if self.current_room_is_times_tables() {
-            use numinous_core::rooms::times_tables_aha::AhaBeat;
-            if self.times_tables_aha.allow_reveal_text() {
-                self.show_info = !self.show_info;
-                return;
-            }
-            if self.times_tables_aha.can_summon()
-                || matches!(self.times_tables_aha.beat(), AhaBeat::Morph { .. })
-            {
-                if self.times_tables_aha.summon() {
-                    self.show_info = false;
-                    self.record_current_aha_consolidation();
-                }
-                return;
-            }
-            // Generation first: do not open the punchline card early.
-            self.show_info = false;
-            return;
+        match self.rooms[self.current].meta().id {
+            "times-tables" => self.times_tables_aha.can_summon(),
+            "buffon-needle" => self.buffon_aha.can_summon(),
+            "galton-board" => self.galton_aha.can_summon(),
+            "double-pendulum" => self.pendulum_aha.can_summon(),
+            "kepler-laws" => self.kepler_aha.can_summon(),
+            "parrondo" => self.parrondo_aha.can_summon(),
+            "nontransitive" => self.nontransitive_aha.can_summon(),
+            _ => false,
         }
-        if self.current_room_is_buffon() {
-            use numinous_core::rooms::buffon_aha::AhaBeat;
-            if self.buffon_aha.allow_reveal_text() {
-                self.show_info = !self.show_info;
-                return;
-            }
-            if self.buffon_aha.can_summon()
-                || matches!(self.buffon_aha.beat(), AhaBeat::Morph { .. })
-            {
-                if self.buffon_aha.summon() {
-                    self.show_info = false;
-                    self.record_current_aha_consolidation();
-                }
-                return;
-            }
-            self.show_info = false;
-            return;
+    }
+
+    /// Show or confirm an earned connection, without opening or gating study.
+    pub(super) fn advance_chosen_experiment(&mut self) -> bool {
+        if !self.can_advance_chosen_experiment() {
+            return false;
         }
-        if self.current_room_is_galton() {
-            use numinous_core::rooms::galton_aha::AhaBeat;
-            if self.galton_aha.allow_reveal_text() {
-                self.show_info = !self.show_info;
-                return;
-            }
-            if self.galton_aha.can_summon()
-                || matches!(self.galton_aha.beat(), AhaBeat::Morph { .. })
-            {
-                if self.galton_aha.summon() {
-                    self.show_info = false;
-                    self.record_current_aha_consolidation();
-                }
-                return;
-            }
-            self.show_info = false;
-            return;
+        let advanced = match self.rooms[self.current].meta().id {
+            "times-tables" => self.times_tables_aha.summon(),
+            "buffon-needle" => self.buffon_aha.summon(),
+            "galton-board" => self.galton_aha.summon(),
+            "double-pendulum" => self.pendulum_aha.summon(),
+            "kepler-laws" => self.kepler_aha.summon(),
+            "parrondo" => self.parrondo_aha.summon(),
+            "nontransitive" => self.nontransitive_aha.summon(),
+            _ => false,
+        };
+        if advanced {
+            self.record_current_aha_consolidation();
         }
-        if self.current_room_is_pendulum() {
-            use numinous_core::rooms::pendulum_aha::AhaBeat;
-            if self.pendulum_aha.allow_reveal_text() {
-                self.show_info = !self.show_info;
-                return;
-            }
-            if self.pendulum_aha.can_summon()
-                || matches!(self.pendulum_aha.beat(), AhaBeat::Morph { .. })
-            {
-                if self.pendulum_aha.summon() {
-                    self.show_info = false;
-                    self.record_current_aha_consolidation();
-                }
-                return;
-            }
-            self.show_info = false;
-            return;
-        }
-        if self.current_room_is_kepler() {
-            use numinous_core::rooms::kepler_aha::AhaBeat;
-            if self.kepler_aha.allow_reveal_text() {
-                self.show_info = !self.show_info;
-                return;
-            }
-            if self.kepler_aha.can_summon()
-                || matches!(self.kepler_aha.beat(), AhaBeat::Morph { .. })
-            {
-                if self.kepler_aha.summon() {
-                    self.show_info = false;
-                    self.record_current_aha_consolidation();
-                }
-                return;
-            }
-            self.show_info = false;
-            return;
-        }
-        if self.current_room_is_parrondo() {
-            use numinous_core::rooms::parrondo_aha::AhaBeat;
-            if self.parrondo_aha.allow_reveal_text() {
-                self.show_info = !self.show_info;
-                return;
-            }
-            if self.parrondo_aha.can_summon()
-                || matches!(self.parrondo_aha.beat(), AhaBeat::Morph { .. })
-            {
-                if self.parrondo_aha.summon() {
-                    self.show_info = false;
-                    self.record_current_aha_consolidation();
-                }
-                return;
-            }
-            self.show_info = false;
-            return;
-        }
-        if self.current_room_is_nontransitive() {
-            use numinous_core::rooms::nontransitive_aha::AhaBeat;
-            if self.nontransitive_aha.allow_reveal_text() {
-                self.show_info = !self.show_info;
-                return;
-            }
-            if self.nontransitive_aha.can_summon()
-                || matches!(self.nontransitive_aha.beat(), AhaBeat::Morph { .. })
-            {
-                if self.nontransitive_aha.summon() {
-                    self.show_info = false;
-                    self.record_current_aha_consolidation();
-                }
-                return;
-            }
-            self.show_info = false;
-            return;
-        }
-        self.show_info = !self.show_info;
+        advanced
     }
 
     pub(super) fn commit_times_tables_wager(
         &mut self,
         place: numinous_core::rooms::times_tables_aha::CardioidHome,
     ) -> bool {
-        if !self.current_room_is_times_tables() || self.the_show {
+        if !self.current_room_is_times_tables() || !self.chosen_experiment_active() {
             return false;
         }
         if self.times_tables_aha.commit_wager(place) {
@@ -521,7 +699,7 @@ impl App {
     }
 
     pub(super) fn advance_times_tables_morph(&mut self, elapsed: f64) {
-        if !self.current_room_is_times_tables() || self.the_show || self.paused {
+        if !self.current_room_is_times_tables() || !self.chosen_experiment_active() || self.paused {
             return;
         }
         if !matches!(
@@ -538,7 +716,7 @@ impl App {
     }
 
     pub(super) fn commit_buffon_wager(&mut self, guess: f64) -> bool {
-        if !self.current_room_is_buffon() || self.the_show {
+        if !self.current_room_is_buffon() || !self.chosen_experiment_active() {
             return false;
         }
         if self.buffon_aha.commit_wager(guess) {
@@ -551,7 +729,7 @@ impl App {
     }
 
     pub(super) fn advance_buffon_morph(&mut self, elapsed: f64) {
-        if !self.current_room_is_buffon() || self.the_show || self.paused {
+        if !self.current_room_is_buffon() || !self.chosen_experiment_active() || self.paused {
             return;
         }
         if !matches!(
@@ -568,7 +746,7 @@ impl App {
     }
 
     pub(super) fn commit_galton_wager(&mut self, bin: usize) -> bool {
-        if !self.current_room_is_galton() || self.the_show {
+        if !self.current_room_is_galton() || !self.chosen_experiment_active() {
             return false;
         }
         let coin = numinous_core::rooms::galton_board::selected_coin_from_inputs(&self.inputs)
@@ -583,7 +761,7 @@ impl App {
     }
 
     pub(super) fn advance_galton_morph(&mut self, elapsed: f64) {
-        if !self.current_room_is_galton() || self.the_show || self.paused {
+        if !self.current_room_is_galton() || !self.chosen_experiment_active() || self.paused {
             return;
         }
         if !matches!(
@@ -603,7 +781,7 @@ impl App {
         &mut self,
         ending: numinous_core::rooms::pendulum_aha::Ending,
     ) -> bool {
-        if !self.current_room_is_pendulum() || self.the_show {
+        if !self.current_room_is_pendulum() || !self.chosen_experiment_active() {
             return false;
         }
         if self.pendulum_aha.commit_call(ending) {
@@ -619,7 +797,7 @@ impl App {
     }
 
     pub(super) fn advance_pendulum_morph(&mut self, elapsed: f64) {
-        if !self.current_room_is_pendulum() || self.the_show || self.paused {
+        if !self.current_room_is_pendulum() || !self.chosen_experiment_active() || self.paused {
             return;
         }
         if !matches!(
@@ -639,7 +817,7 @@ impl App {
         &mut self,
         relation: numinous_core::rooms::kepler_aha::SpeedRelation,
     ) -> bool {
-        if !self.current_room_is_kepler() || self.the_show {
+        if !self.current_room_is_kepler() || !self.chosen_experiment_active() {
             return false;
         }
         if self.kepler_aha.commit_call(relation) {
@@ -655,7 +833,7 @@ impl App {
     }
 
     pub(super) fn advance_kepler_morph(&mut self, elapsed: f64) {
-        if !self.current_room_is_kepler() || self.the_show || self.paused {
+        if !self.current_room_is_kepler() || !self.chosen_experiment_active() || self.paused {
             return;
         }
         if !matches!(
@@ -675,7 +853,7 @@ impl App {
         &mut self,
         policy: numinous_core::rooms::parrondo::Policy,
     ) -> bool {
-        if !self.current_room_is_parrondo() || self.the_show {
+        if !self.current_room_is_parrondo() || !self.chosen_experiment_active() {
             return false;
         }
         if self.parrondo_aha.commit_call(policy) {
@@ -691,7 +869,7 @@ impl App {
     }
 
     pub(super) fn advance_parrondo_morph(&mut self, elapsed: f64) {
-        if !self.current_room_is_parrondo() || self.the_show || self.paused {
+        if !self.current_room_is_parrondo() || !self.chosen_experiment_active() || self.paused {
             return;
         }
         if !matches!(
@@ -711,7 +889,7 @@ impl App {
         &mut self,
         die: numinous_core::rooms::nontransitive::Die,
     ) -> bool {
-        if !self.current_room_is_nontransitive() || self.the_show {
+        if !self.current_room_is_nontransitive() || !self.chosen_experiment_active() {
             return false;
         }
         if self.nontransitive_aha.commit_call(die) {
@@ -727,7 +905,8 @@ impl App {
     }
 
     pub(super) fn advance_nontransitive_morph(&mut self, elapsed: f64) {
-        if !self.current_room_is_nontransitive() || self.the_show || self.paused {
+        if !self.current_room_is_nontransitive() || !self.chosen_experiment_active() || self.paused
+        {
             return;
         }
         if !matches!(

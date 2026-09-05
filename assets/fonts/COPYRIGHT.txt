@@ -1,0 +1,24 @@
+Bundled study font copyright notices
+
+The App embeds three unmodified font files. Native release archives include
+this notice, the source and SHA-256 inventory in README.md, and the original
+license texts listed below. The font files are not duplicated as external
+assets in those archives.
+
+The following are the exact copyright strings in each font's OpenType name
+table (name ID 0). The original license files retain their own notices too.
+
+noto-sans/NotoSans-Regular.ttf
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)
+Original license: noto-sans/OFL.txt
+
+noto-sans-jp/NotoSansJP-Regular.otf
+© 2014-2021 Adobe (http://www.adobe.com/).
+Original license: noto-sans-jp/LICENSE
+
+noto-sans-math/NotoSansMath-Regular.ttf
+Copyright 2022 Google LLC. All Rights Reserved.
+Original license: noto-sans-math/OFL.txt
+
+These fonts use the SIL Open Font License, Version 1.1. Their license is
+separate from the Numinous source license at the archive root.
