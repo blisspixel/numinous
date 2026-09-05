@@ -1,8 +1,8 @@
 # Pedagogy: the understanding layer
 
-How Numinous turns "cool" into "I actually understand this now," grounded in
-learning science and the psychology of wonder. This doc owns the science of how
-understanding and awe are produced and verified. It supersedes the thin "Layer 3"
+How Numinous aims to connect exploration with understanding, informed by
+learning science and the psychology of wonder. This document separates design
+hypotheses from evidence needed to claim learning or awe. It supersedes the thin "Layer 3"
 notes in `DESIGN.md` and the delivery notes in `INSIGHTS.md`, and it is the home
 of the keystone mechanic named in `NORTH_STAR.md`. See `RESEARCH.md` for the
 broader evidence base and `QUALITY.md` for the measurement loops.
@@ -35,42 +35,38 @@ the right to enjoy the room by supplying that evidence.
 
 ## Play first, depth by choice
 
-**Direction set September 2026; the unrestricted study door is not built.**
 The default room is free play. A player may stay, experiment, watch, or create
-without taking a quiz or reading an explanation. Two optional doors serve
-curiosity when it arrives:
+without taking a quiz or reading an explanation. The current source provides
+the same optional study content through the App reader, CLI `study`, and MCP
+`study_room`. [STUDY.md](STUDY.md) gives commands, controls, and availability.
 
-- **A short explanation:** name what the player can notice and offer a useful
-  next experiment. It can be opened immediately and dismissed without losing
-  the experiment.
-- **Rigorous study:** definitions, model assumptions, derivations or proofs,
-  numerical methods and error limits, counterexamples, and primary references.
-  Aim for material a doctoral researcher can interrogate. Deliberately requested
-  study has no level, visit, wager, or consolidation requirement. A citation or
-  a few advanced facts alone does not meet this depth standard.
+- **Explanation** offers a short account or the pilot's experiment and intuition.
+- **Notes** carries existing room prose, advanced notes, and citations.
+- **Mathematics** requires an authored treatment: assumptions, derivations,
+  examples, limits, and primary references. Lissajous is the first treatment;
+  an unavailable depth is named explicitly. A citation alone does not meet it.
 
-Current behavior is narrower. App Inspect shows concept plus reveal in ordinary
-rooms; the seven engineered rooms require consolidation. CLI `reveal` and MCP
-`reveal_room` require an ordinary visit or engineered consolidation, then unlock
-deep cuts at levels 5, 12, and 24 or through their boons, and citations with
-the first cut.
-The App does not display those cuts or citations and has no scrollable study
-reader. These are implementation gaps, not prerequisites the target experience
-should preserve. Source: `faces/app/src/room_runtime.rs`, `faces/app/src/hud.rs`,
-`faces/cli/src/main.rs`, `faces/mcp/src/room_tools.rs`, and
-`crates/core/src/journey.rs`.
+All three depths are directly selectable. Reading has no level, visit, wager,
+consolidation, or prior-reading requirement, awards no reward, and does not
+mutate Journey. App **E** / **?** or Cabinet **EXPLAIN** opens the reader with
+room state retained. The CLI and MCP study requests do not need a player profile.
+The older CLI `reveal` and MCP `reveal_room` preserve their existing visit,
+consolidation, and deep-cut progression rules; experimental collectors continue
+to use their declared protocols.
 
-The staged discovery path below remains an optional experience, with its own
-wagers and rewards. It must not control access to requested explanation or
-study. Opening either door is not evidence of understanding and must not reset
-the player's tuning or substitute for an earned challenge result. The Show is
-a separately selected presentation: it currently displays reveal text near
-the end of a room without Inspect.
+The seven staged App paths now require a separate choice through **U** or
+Cabinet **EXPERIMENT**. Their predictions, observation alternatives, earned
+connections, and rewards belong to that path. **Enter** advances an earned
+connection when offered; **U** or **Esc** returns to free play while retaining
+calls and earned progress. **E** opens study without completing the experiment.
+The Show remains a separately selected presentation that can display reveal
+text near the end of a room. None of these choices establishes understanding.
 
-The same choice should reach readers of Japanese, Hawaiian, Klingon, and other
-languages. Runtime support and reviewed translations are planned, not shipped;
-[ROSETTA.md](ROSETTA.md) separates those two bodies of work. A translated
-explanation needs both fluent-language review and mathematical review.
+Lissajous's English treatment has a Japanese `reviewed_draft`; its original
+catalog notes remain explicitly English. Mathematical and text review of that
+draft do not establish native-speaker usability or learning. Hawaiian and
+Klingon content, broader room coverage, and full App localization remain
+unfinished; [ROSETTA.md](ROSETTA.md) distinguishes rendering from translation.
 
 ## The keystone: the prediction wager
 
@@ -134,11 +130,12 @@ with the relationship and its proof when that is what the player wants.
 - **Times Tables to Mandelbrot (the flagship).** *0.2 exit met on App + MCP
   agent-and-machine evidence. Human stranger hallway deferred to 0.8 / 1.0.*
   Technical Toy remains (K=2 hold, integer snap, earned K=5, three-face
-  agreement). The ordinary App visit stages the five-beat engineered aha.
+   agreement). Choosing EXPERIMENT stages the five-beat App path.
   Prime: after a hand-held K=2 heart, status and bottom marks invite
   1=Mandelbrot / 2=Nephroid / 3=Circle (keys or bottom-band click; MCP
-  `place_wager`). Withhold: reveal text stays closed until a generation act.
-  Restructure: E / `aha_summon` morphs cardioid to Mandelbrot. Confirm and
+   `place_wager`). The chosen path earns its connection through its own rules;
+   unrestricted study stays available. Restructure: Enter / `aha_summon` morphs
+   cardioid to Mandelbrot. Confirm and
   consolidate follow. The Show does not auto-earn. Core:
   `rooms/times_tables_aha.rs`. Agent cohort: `scripts/agent-hallway.py`.
 - **Buffon's Needle to pi.** *0.2 exit met on the same agent-and-machine bar.
@@ -207,14 +204,14 @@ with the relationship and its proof when that is what the player wants.
 - **Every other room, through one shared engine.** The seven staged ahas are
   hand-built beat by beat, and they should be: a bespoke arc outranks a
   generic one where it exists. But the commitment mechanic itself is not
-  bespoke. `predict` poses a deterministic question for any room with a
-  moving numeric readout and grades the answer in the same bands, which is
-  nearly the whole catalog. The App's U key poses that question in the
+   bespoke. `predict` poses a deterministic question for any room with a
+   moving numeric readout and grades the answer in the same bands. Eligibility
+   depends on the sampled channel. The App's U key poses that question in the
   flagships' own gesture, a band along the bottom aimed by hand or by arrow
   key and committed with Enter, and speaks one sentence naming what the room
   actually read. The truth is named whichever way the call went. The
-  flagship rooms refuse the generic call and say so. This is how the wager
-  arc stops being a few rooms and becomes the product's grammar.
+   flagship rooms refuse the generic call and say so. This is how the wager
+   can extend beyond the seven authored experiments while remaining optional.
 
 ## The mechanic library
 
@@ -267,9 +264,21 @@ reference.
 
 ## Measuring understanding and awe
 
-`QUALITY.md` is strong on "does it work" and on flow and awe proxies, but it has
-no measure of genuine understanding, and its awe measure is the hallway "whoa"
-count. Two additions, both bolting onto existing loops.
+Reading access and mathematically correct content are capabilities, not learning
+outcomes. The new reader and Japanese draft carry no participant-study result.
+The agent-and-machine comparison in `UNDERSTANDING_STUDY.md` has its own
+predeclared transfer tasks and limits; its outcomes must not be inferred from
+these interface changes. Human retention and native-speaker usability need
+their own participants and protocols.
+
+Agent performance, fluent self-report, and retained interaction records do not
+settle whether consciousness, pleasure, or lived memory is present. The design
+can respect voluntary participation without pretending to resolve those
+questions. A human learning measure also needs justification before it becomes
+an agent learning or experience measure.
+
+The following instruments and activities are evaluation proposals. Their
+presence in this document does not mean they have been administered in Numinous.
 
 **Awe (extend the playtest loop).** Add one instrument alongside GEQ/FSS-2: the
 Awe Experience Scale (AWE-S, Yaden et al., 2019), the twelve-item short form,
@@ -294,16 +303,11 @@ vastness ratings. It carries about eighteen percent of the awe-prosociality path
 in the largest meta-analysis, it has never been directly replicated, and the best
 current test found awe did not significantly move self-size at all.
 
-**What this project may claim, and it is stronger than what it was reaching
-for.** Awe inductions reliably work, at effect sizes from d = 0.91 upward across
-labs, and every failed replication in this literature confirms the induction
-succeeded and only the downstream outcome failed. **Numinous is in the
-production business, not the lever business.** It does not need awe to make
-anyone kinder, more patient, or more interested in mathematics. It needs awe to
-happen. The fragile half of this literature is the half the product does not
-need, and the robust half is the half it does.
-
-So: claim production, on a named build and sample, measured by AWE-S subscales.
+**What this project may claim depends on its own evidence.** Awe is a design
+aim. Correct mathematics, a polished rendering, and access to explanation do
+not show that it occurred. Report experience measures on a named build and
+sample, with the instrument and its limits, rather than assuming an effect
+from the literature transfers to this game or to another kind of participant.
 Never claim consequences. Never say the product induces the numinous, the
 mystical, the transcendent, an altered state, ego dissolution, oneness, or
 anything therapeutic, and never compare the experience here to psychedelic,
@@ -318,9 +322,9 @@ a failure: that same paper names it the enlightening variety of awe, as against
 the terrifying variety where accommodation fails, so a room that violates a
 committed prediction and then resolves it legibly is aimed correctly. The real
 risk is the other half of the definition, because surprise without vastness is
-not awe on their account, it is just surprise. And nobody has ever induced awe
-with mathematical content and measured anything, in any study, which makes this
-an experiment the product is unusually well placed to run first and properly.
+not awe on their account, it is just surprise. Whether this mathematical
+experience produces those reported qualities is a question for a study here;
+the implementation does not establish it or a claim of research priority.
 
 **Understanding without tests (the gap).** Three layers, none school-like:
 
@@ -331,13 +335,16 @@ an experiment the product is unusually well placed to run first and properly.
    configuration and ask the player to predict its behavior. Transfer, not
    recall, is the field's gold standard for conceptual understanding (Kapur).
    Prediction accuracy on an unseen case is the "did this teach anything" number,
-   administered as play. This is also what the optional Puzzle already is.
+   administered as optional play. A single scored prediction does not show
+   improvement caused by the experience; prior knowledge and task familiarity
+   remain alternatives a study must address.
 3. **Caption analysis (at scale).** Run optional Share captions through the
    LLM-as-judge harness with a new rubric dimension: does the self-explanation
    name the deep structure or only restate the surface? "Random dots made a
    triangle" is surface; "the pattern was in the rule, not the randomness" is
-   structure (Chi's ICAP distinction). A continuous, opt-in understanding signal
-   that delight metrics cannot fake.
+   structure (Chi's ICAP distinction). This is a proposed secondary measure;
+   rubric agreement and transfer evidence are still needed before interpreting
+   a caption as a changed model.
 
 **The guard rail.** Bake the Deslauriers finding in as an explicit anti-pattern:
 reveal-open-rate and dwell measure behavior, not delight or understanding. Any

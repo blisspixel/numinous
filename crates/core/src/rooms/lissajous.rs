@@ -9,6 +9,7 @@
 use std::f64::consts::{FRAC_PI_2, TAU};
 
 use super::variation_unit;
+use crate::readout::{DisplayNumber, NumericReadout, ReadoutId};
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, pokes_from_inputs};
 use crate::sound::{ParametricSound, SoundSpec};
 use crate::surface::Surface;
@@ -37,6 +38,10 @@ struct OscillatorPair {
 }
 
 impl OscillatorPair {
+    fn displayed_frequency_y(self) -> DisplayNumber {
+        DisplayNumber::fixed(self.frequency_y, 2).expect("resolved oscillator frequency is finite")
+    }
+
     fn point(self, theta: f64) -> (f64, f64) {
         (
             (self.frequency_x * theta + FRAC_PI_2 + self.phase_x).sin(),
@@ -224,9 +229,18 @@ impl Room for Lissajous {
     fn status(&self, t: f64) -> Option<String> {
         let pair = self.oscillators(t, None);
         Some(format!(
-            "X:Y = {:.0}:{:.2}  CLICK:TUNE",
-            pair.frequency_x, pair.frequency_y
+            "X:Y = {:.0}:{}  CLICK:TUNE",
+            pair.frequency_x,
+            pair.displayed_frequency_y()
         ))
+    }
+
+    fn numeric_readouts(&self, t: f64) -> Option<Vec<NumericReadout>> {
+        Some(vec![
+            self.oscillators(t, None)
+                .displayed_frequency_y()
+                .readout(ReadoutId::new(1), "X:Y"),
+        ])
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

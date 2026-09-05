@@ -592,7 +592,7 @@ mod tests {
 
         assert_ne!(closed.status, open.status);
         assert_eq!(closed.action, open.action);
-        assert_eq!(closed.controls, "R RESET ROOM   ESC MENU");
+        assert_eq!(closed.controls, "E EXPLAIN   ESC MENU");
         assert_eq!(closed.controls, open.controls);
         assert!(open.status.ends_with("MUTED"));
     }
@@ -723,10 +723,10 @@ mod tests {
         // golden step here, so the reading says 137.5 without the room telling
         // a player that this is the step worth finding.
         assert_eq!(keyboard.status, "STEP 137.5 DEG   CLICK: PLANT A SEED");
-        assert_eq!(keyboard.controls, "R RESET ROOM   ESC MENU");
+        assert_eq!(keyboard.controls, "E EXPLAIN   ESC MENU");
         assert_eq!(controller.action, "SOUTH: PLANT A SEED");
         assert_eq!(controller.status, "STEP 137.5 DEG   CLICK: PLANT A SEED");
-        assert_eq!(controller.controls, "L3 RESET ROOM   START MENU");
+        assert_eq!(controller.controls, "SELECT EXPLAIN   START MENU");
         assert!(controller.controls.chars().count() * 6 <= 360 - 20);
 
         let mut remapped = crate::input_legend::ControllerCopy::empty(ControllerFace::Xbox);
@@ -735,7 +735,7 @@ mod tests {
             crate::input_legend::ControllerButton::West,
         );
         remapped.bind(
-            crate::input_legend::ControllerAction::Reset,
+            crate::input_legend::ControllerAction::Inspect,
             crate::input_legend::ControllerButton::North,
         );
         remapped.bind(
@@ -752,7 +752,7 @@ mod tests {
             None,
         );
         assert_eq!(remapped.action, "X: PLANT A SEED");
-        assert_eq!(remapped.controls, "Y RESET ROOM   SELECT MENU");
+        assert_eq!(remapped.controls, "Y EXPLAIN   SELECT MENU");
     }
 
     #[test]
@@ -780,7 +780,7 @@ mod tests {
         assert_eq!(footer.action, "AIM + CLICK: PLACE A 5-CELL GLIDER");
         assert!(footer.status.contains("PLANTED 5"));
         assert!(footer.status.contains("GLIDER 1"));
-        assert_eq!(footer.controls, "R RESET ROOM   ESC MENU");
+        assert_eq!(footer.controls, "E EXPLAIN   ESC MENU");
     }
 
     #[test]
@@ -819,7 +819,7 @@ mod tests {
             controller.action,
             "LEFT STICK + SOUTH: PLACE A 5-CELL GLIDER"
         );
-        assert_eq!(controller.controls, "L3 RESET ROOM   START MENU");
+        assert_eq!(controller.controls, "SELECT EXPLAIN   START MENU");
     }
 
     #[test]

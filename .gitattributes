@@ -8,3 +8,9 @@
 *.mp4 binary
 *.wav binary
 *.mp3 binary
+# Preserve the upstream font files and original license bytes, including CRLF.
+assets/fonts/**/*.ttf binary
+assets/fonts/**/*.otf binary
+assets/fonts/noto-sans/OFL.txt -text
+assets/fonts/noto-sans-jp/LICENSE -text
+assets/fonts/noto-sans-math/OFL.txt -text

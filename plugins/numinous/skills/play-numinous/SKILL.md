@@ -41,11 +41,19 @@ pass `dwell` with several phases and `structuredContent.dwell` reports what
 refused to move across all of them, including cells that stayed dark while
 everything around them lit. Staying is a first-class act here, and it pays in
 measurement rather than explanation. Repeating one phase is allowed and honestly
-answers that nothing moved. Use `reveal_room` only when you want the room's deeper
-meaning. It opens after one play for ordinary rooms and after consolidation for
-engineered wager rooms.
+answers that nothing moved.
 
-When a room offers a prediction or engineered aha, commit before seeing the
+When you want an explanation, call `study_room` with `room` and choose
+`depth`: `explanation`, `notes`, or `mathematics`. Reading requires no visit,
+level, or wager. You can also request one returned stable `block` ID directly;
+leave `depth` out when selecting a block. Optional `locale` selects a language,
+and document and block metadata report actual availability and fallback.
+Lissajous has the first Mathematics treatment in English and a Japanese draft.
+An unwritten depth returns an availability error. Study calls stay outside the
+Shared Play broadcast. The existing `reveal_room` path remains available after
+one play for ordinary rooms and consolidation for engineered wager rooms.
+
+If you choose a prediction or engineered aha, commit before seeing the
 truth. Treat the grade as feedback about your model, never as a judgment of you.
 During the withheld beat, the wager remains visible while earn, grade, truth,
 and punchline remain absent. A room can also reach that beat by running its

@@ -51,6 +51,12 @@ struct VirtualHand {
     audio_modifier: bool,
     audio_chord_used: bool,
     audio_primary: bool,
+    /// Last observed physical state, separate from accepted room gestures.
+    physical_axes: [f64; 3],
+    physical_buttons: HashSet<Button>,
+    /// Reader capture requires release or neutral before these inputs rearm.
+    captured_axes: [bool; 3],
+    captured_buttons: HashSet<Button>,
 }
 
 impl Default for VirtualHand {
@@ -64,13 +70,35 @@ impl Default for VirtualHand {
             audio_modifier: false,
             audio_chord_used: false,
             audio_primary: false,
+            physical_axes: [0.0; 3],
+            physical_buttons: HashSet::new(),
+            captured_axes: [false; 3],
+            captured_buttons: HashSet::new(),
         }
     }
 }
 
 impl VirtualHand {
-    fn set_axis(&mut self, axis: Axis, value: f32) {
+    fn observe_axis(&mut self, axis: Axis, value: f32) -> Option<(usize, f64)> {
+        let index = tracked_axis(axis)?;
+        if !value.is_finite() {
+            return None;
+        }
         let value = shaped_axis(value);
+        self.physical_axes[index] = value;
+        if value == 0.0 {
+            self.captured_axes[index] = false;
+        }
+        Some((index, value))
+    }
+
+    fn set_axis(&mut self, axis: Axis, value: f32) {
+        let Some((index, value)) = self.observe_axis(axis, value) else {
+            return;
+        };
+        if self.captured_axes[index] {
+            return;
+        }
         match axis {
             Axis::LeftStickX => self.stick.0 = value,
             Axis::LeftStickY => self.stick.1 = -value,
@@ -83,6 +111,10 @@ impl VirtualHand {
     }
 
     fn press(&mut self, button: Button, bindings: &crate::bindings::Bindings) -> Option<Command> {
+        self.physical_buttons.insert(button);
+        if self.captured_buttons.contains(&button) {
+            return None;
+        }
         if button == Button::North && !bindings.gamepad.contains_key(&Button::North) {
             self.visible = true;
             if !self.audio_modifier {
@@ -91,7 +123,16 @@ impl VirtualHand {
             }
             return None;
         }
-        if self.audio_modifier {
+        // A held modifier crossing capture loses its pending radio action.
+        // A fresh audio chord is still explicit: keep volume and mute usable
+        // without interpreting that new South press as a room gesture.
+        let captured_audio_modifier = self.captured_buttons.contains(&Button::North)
+            && self.physical_buttons.contains(&Button::North)
+            && !bindings.gamepad.contains_key(&Button::North);
+        if self.audio_modifier
+            || (captured_audio_modifier
+                && matches!(button, Button::DPadUp | Button::DPadDown | Button::South))
+        {
             self.visible = true;
             self.audio_chord_used = true;
             return match button {
@@ -115,6 +156,9 @@ impl VirtualHand {
     }
 
     fn release(&mut self, button: Button) -> Option<Command> {
+        if self.observe_release(button) {
+            return None;
+        }
         if button == Button::North && self.audio_modifier {
             self.audio_modifier = false;
             let used = std::mem::take(&mut self.audio_chord_used);
@@ -147,17 +191,53 @@ impl VirtualHand {
     }
 
     fn cancel(&mut self) -> Option<Command> {
+        let was_held = !self.held_buttons.is_empty();
+        self.clear_transients();
+        // Reader release gates and physical snapshots survive focus changes. The
+        // ordinary play path has no gates, so its cancellation is unchanged.
+        was_held.then_some(Command::CancelPointer)
+    }
+
+    fn observe_release(&mut self, button: Button) -> bool {
+        self.physical_buttons.remove(&button);
+        self.captured_buttons.remove(&button)
+    }
+
+    fn clear_physical(&mut self) {
+        self.physical_axes = [0.0; 3];
+        self.physical_buttons.clear();
+        self.captured_axes = [false; 3];
+        self.captured_buttons.clear();
+    }
+
+    fn clear_transients(&mut self) {
         self.stick = (0.0, 0.0);
         self.phase_axis = 0.0;
         self.audio_modifier = false;
         self.audio_chord_used = false;
         self.audio_primary = false;
-        if self.held_buttons.is_empty() {
-            None
-        } else {
-            self.held_buttons.clear();
-            Some(Command::CancelPointer)
+        self.held_buttons.clear();
+    }
+
+    fn capture_for_reader(&mut self) {
+        for (captured, value) in self.captured_axes.iter_mut().zip(self.physical_axes) {
+            *captured |= value != 0.0;
         }
+        self.captured_buttons
+            .extend(self.physical_buttons.iter().copied());
+        self.captured_buttons
+            .extend(self.held_buttons.iter().copied());
+        self.clear_transients();
+        self.visible = false;
+    }
+}
+
+fn tracked_axis(axis: Axis) -> Option<usize> {
+    match axis {
+        Axis::LeftStickX => Some(0),
+        Axis::LeftStickY => Some(1),
+        Axis::RightStickX => Some(2),
+        _ => None,
     }
 }
 
@@ -249,6 +329,7 @@ impl GamepadInput {
                     }
                     EventType::AxisChanged(axis, value, _) => self.hand.set_axis(axis, value),
                     EventType::Disconnected => {
+                        self.hand.clear_physical();
                         if let Some(command) = self.hand.cancel() {
                             commands.push(command);
                         }
@@ -265,7 +346,24 @@ impl GamepadInput {
 
     fn drain_events(&mut self) {
         if let Some(gilrs) = &mut self.gilrs {
-            while gilrs.next_event().is_some() {}
+            while let Some(event) = gilrs.next_event() {
+                // Observe physical state without accepting a gesture or an
+                // audio chord. Reader capture after focus returns still knows
+                // what is held, and releases can rearm its existing gates.
+                match event.event {
+                    EventType::ButtonPressed(button, _) => {
+                        self.hand.physical_buttons.insert(button);
+                    }
+                    EventType::ButtonReleased(button, _) => {
+                        self.hand.observe_release(button);
+                    }
+                    EventType::AxisChanged(axis, value, _) => {
+                        let _ = self.hand.observe_axis(axis, value);
+                    }
+                    EventType::Disconnected => self.hand.clear_physical(),
+                    _ => {}
+                }
+            }
         }
     }
 
@@ -281,6 +379,37 @@ impl GamepadInput {
         let _ = self.hand.cancel();
         self.last_tick = Instant::now();
         self.active = true;
+    }
+
+    /// Discard transient controller capture when opening or closing study.
+    ///
+    /// No command is returned or dispatched to accepted room history. Queued
+    /// events are consumed into the physical snapshot first, including releases,
+    /// so a pending stick event cannot leak past a keyboard-driven boundary.
+    /// Held axes must enter their deadzone; held buttons must release. Fresh
+    /// navigation and explicit volume/mute controls continue through `poll`.
+    /// The aim position and ordinary activation state are retained.
+    pub(crate) fn capture_for_reader(&mut self) {
+        if let Some(gilrs) = &mut self.gilrs {
+            while let Some(event) = gilrs.next_event() {
+                match event.event {
+                    EventType::ButtonPressed(button, _) => {
+                        let _ = self.hand.press(button, &self.bindings);
+                    }
+                    EventType::ButtonReleased(button, _) => {
+                        let _ = self.hand.release(button);
+                    }
+                    EventType::AxisChanged(axis, value, _) => self.hand.set_axis(axis, value),
+                    EventType::Disconnected => {
+                        self.hand.clear_transients();
+                        self.hand.clear_physical();
+                    }
+                    _ => {}
+                }
+            }
+        }
+        self.hand.capture_for_reader();
+        self.last_tick = Instant::now();
     }
 
     pub(crate) fn cursor(&self) -> Option<(f64, f64)> {
@@ -585,5 +714,343 @@ mod tests {
         input.activate();
         assert!(input.poll(Instant::now()).is_empty());
         assert_eq!(input.hand.point, point);
+    }
+
+    #[test]
+    fn reader_capture_requires_each_held_axis_to_reach_neutral_independently() {
+        let mut hand = VirtualHand::default();
+        for boundary in ["open", "close"] {
+            hand.set_axis(Axis::LeftStickX, 0.8);
+            hand.set_axis(Axis::LeftStickY, -0.7);
+            hand.set_axis(Axis::RightStickX, 0.9);
+            let _ = hand.tick(0.05);
+            let point = hand.point;
+            hand.capture_for_reader();
+            hand.capture_for_reader();
+            assert!(!hand.visible, "{boundary}");
+            assert_eq!(hand.point, point);
+            assert!(hand.tick(0.05).is_empty());
+
+            // Reversing or changing a held stick does not demonstrate neutral.
+            for value in [-1.0, 0.6, f32::NAN, f32::INFINITY] {
+                for axis in [Axis::LeftStickX, Axis::LeftStickY, Axis::RightStickX] {
+                    hand.set_axis(axis, value);
+                }
+                assert!(hand.tick(0.05).is_empty(), "{boundary}: {value}");
+            }
+            hand.set_axis(Axis::LeftStickX, 0.17);
+            assert!(hand.tick(0.05).is_empty());
+            hand.set_axis(Axis::LeftStickX, 1.0);
+            let commands = hand.tick(0.05);
+            assert!(matches!(
+                commands.as_slice(),
+                [Command::PointerMoved { held: false, .. }]
+            ));
+            assert!(hand.point.0 > point.0);
+            assert_eq!(hand.point.1, point.1);
+
+            hand.set_axis(Axis::LeftStickX, 0.0);
+            hand.set_axis(Axis::LeftStickY, -0.17);
+            hand.set_axis(Axis::LeftStickY, 1.0);
+            let before_y = hand.point.1;
+            assert!(matches!(
+                hand.tick(0.05).as_slice(),
+                [Command::PointerMoved { .. }]
+            ));
+            assert!(hand.point.1 < before_y);
+            hand.set_axis(Axis::LeftStickY, 0.0);
+            hand.set_axis(Axis::RightStickX, 0.0);
+            assert!(hand.tick(0.05).is_empty());
+            hand.set_axis(Axis::RightStickX, -0.8);
+            assert!(
+                matches!(hand.tick(0.05).as_slice(), [Command::PhaseDelta(delta)] if *delta < 0.0)
+            );
+            hand.set_axis(Axis::RightStickX, 0.0);
+        }
+    }
+
+    #[test]
+    fn reader_open_and_close_capture_clear_gestures_without_cancelling_history() {
+        let mut input = GamepadInput::new();
+        input.bindings = crate::bindings::Bindings::default();
+        input.hand.point = (0.3, 0.6);
+        assert_eq!(
+            input.hand.press(Button::South, &input.bindings),
+            Some(Command::PrimaryDown)
+        );
+        input.hand.set_axis(Axis::LeftStickX, 1.0);
+        input.capture_for_reader();
+        assert_eq!(input.cursor(), None);
+        assert_eq!(input.hand.point, (0.3, 0.6));
+        assert!(input.hand.held_buttons.is_empty());
+        assert!(input.poll(Instant::now()).is_empty());
+        assert_eq!(input.hand.release(Button::South), None);
+        input.hand.set_axis(Axis::LeftStickX, 0.0);
+
+        // These are fresh reader inputs, whose semantic commands the App owns.
+        assert_eq!(
+            input.hand.press(Button::South, &input.bindings),
+            Some(Command::PrimaryDown)
+        );
+        input.hand.set_axis(Axis::LeftStickX, 0.9);
+        input.hand.set_axis(Axis::RightStickX, 0.8);
+        input.capture_for_reader();
+        assert!(input.hand.tick(0.05).is_empty());
+        assert_eq!(input.hand.press(Button::South, &input.bindings), None);
+        input.hand.set_axis(Axis::LeftStickX, -0.8);
+        input.hand.set_axis(Axis::RightStickX, -0.7);
+        assert!(input.hand.tick(0.05).is_empty());
+        assert_eq!(
+            input.hand.cancel(),
+            None,
+            "capture did not leave a gesture to cancel"
+        );
+        assert_eq!(input.hand.release(Button::South), None);
+        assert_eq!(
+            input.hand.press(Button::South, &input.bindings),
+            Some(Command::PrimaryDown)
+        );
+        assert_eq!(input.hand.release(Button::South), Some(Command::PrimaryUp));
+    }
+
+    #[test]
+    fn reader_capture_keeps_fresh_semantic_navigation_available() {
+        let mut hand = VirtualHand::default();
+        let bindings = crate::bindings::Bindings::default();
+        assert_eq!(
+            hand.press(Button::Select, &bindings),
+            Some(Command::Inspect)
+        );
+        hand.capture_for_reader();
+        assert_eq!(hand.press(Button::Select, &bindings), None);
+        for (button, command) in [
+            (Button::DPadUp, Command::Up),
+            (Button::DPadDown, Command::Down),
+            (Button::DPadLeft, Command::Left),
+            (Button::DPadRight, Command::Right),
+            (Button::LeftTrigger, Command::PreviousRoom),
+            (Button::RightTrigger, Command::NextRoom),
+            (Button::East, Command::Back),
+            (Button::Start, Command::Menu),
+        ] {
+            assert_eq!(hand.press(button, &bindings), Some(command));
+            assert_eq!(hand.release(button), None);
+        }
+        assert_eq!(hand.release(Button::Select), None);
+        assert_eq!(
+            hand.press(Button::Select, &bindings),
+            Some(Command::Inspect)
+        );
+        assert!(hand.tick(0.05).is_empty());
+        assert!(hand.held_buttons.is_empty());
+    }
+
+    #[test]
+    fn reader_capture_requires_release_of_remapped_and_multiple_primary_buttons() {
+        let mut hand = VirtualHand::default();
+        let mut bindings = crate::bindings::Bindings::default();
+        bindings.gamepad.insert(Button::South, Command::Pause);
+        bindings.gamepad.insert(Button::West, Command::PrimaryDown);
+        bindings.gamepad.insert(Button::North, Command::PrimaryDown);
+        for _ in 0..2 {
+            assert_eq!(
+                hand.press(Button::West, &bindings),
+                Some(Command::PrimaryDown)
+            );
+            assert_eq!(hand.press(Button::North, &bindings), None);
+            hand.capture_for_reader();
+            assert_eq!(hand.press(Button::West, &bindings), None);
+            assert_eq!(hand.press(Button::North, &bindings), None);
+            assert_eq!(hand.release(Button::West), None);
+            assert_eq!(hand.release(Button::North), None);
+            assert!(hand.held_buttons.is_empty());
+            assert_eq!(
+                hand.press(Button::North, &bindings),
+                Some(Command::PrimaryDown)
+            );
+            assert_eq!(hand.press(Button::West, &bindings), None);
+            assert_eq!(hand.release(Button::North), None);
+            assert_eq!(hand.release(Button::West), Some(Command::PrimaryUp));
+            assert_eq!(hand.press(Button::South, &bindings), Some(Command::Pause));
+            assert_eq!(hand.release(Button::South), None);
+        }
+    }
+
+    #[test]
+    fn reader_capture_discards_old_chords_but_keeps_explicit_audio_controls() {
+        let mut hand = VirtualHand::default();
+        let bindings = crate::bindings::Bindings::default();
+        for _ in 0..2 {
+            assert_eq!(hand.press(Button::North, &bindings), None);
+            assert_eq!(
+                hand.press(Button::South, &bindings),
+                Some(Command::ToggleMute)
+            );
+            assert_eq!(
+                hand.press(Button::DPadUp, &bindings),
+                Some(Command::VolumeUp)
+            );
+            hand.capture_for_reader();
+            assert!(!hand.audio_modifier && !hand.audio_chord_used && !hand.audio_primary);
+            for held in [Button::North, Button::South, Button::DPadUp] {
+                assert_eq!(hand.press(held, &bindings), None);
+            }
+            assert_eq!(
+                hand.press(Button::DPadDown, &bindings),
+                Some(Command::VolumeDown)
+            );
+            assert_eq!(hand.release(Button::DPadDown), None);
+            assert_eq!(hand.press(Button::East, &bindings), Some(Command::Back));
+            assert_eq!(hand.release(Button::East), None);
+            assert_eq!(hand.release(Button::South), None);
+            assert_eq!(
+                hand.press(Button::South, &bindings),
+                Some(Command::ToggleMute)
+            );
+            assert_eq!(hand.release(Button::South), None);
+            assert_eq!(hand.release(Button::DPadUp), None);
+            assert_eq!(hand.release(Button::North), None);
+            assert!(hand.held_buttons.is_empty());
+        }
+        assert_eq!(hand.press(Button::North, &bindings), None);
+        assert_eq!(hand.release(Button::North), Some(Command::CycleRadio));
+        assert_eq!(
+            hand.press(Button::South, &bindings),
+            Some(Command::PrimaryDown)
+        );
+        assert_eq!(hand.release(Button::South), Some(Command::PrimaryUp));
+    }
+
+    #[test]
+    fn captured_unused_modifier_release_does_not_change_radio_or_remapped_navigation() {
+        let mut hand = VirtualHand::default();
+        let mut bindings = crate::bindings::Bindings::default();
+        assert_eq!(hand.press(Button::North, &bindings), None);
+        hand.capture_for_reader();
+        assert_eq!(hand.release(Button::North), None);
+        bindings.gamepad.insert(Button::North, Command::Inspect);
+        assert_eq!(hand.press(Button::North, &bindings), Some(Command::Inspect));
+        hand.capture_for_reader();
+        assert_eq!(hand.press(Button::DPadUp, &bindings), Some(Command::Up));
+        assert_eq!(hand.release(Button::North), None);
+        assert_eq!(hand.press(Button::North, &bindings), Some(Command::Inspect));
+    }
+
+    #[test]
+    fn reader_release_gates_survive_deactivation_until_real_neutral_and_release() {
+        let mut input = GamepadInput::new();
+        input.bindings = crate::bindings::Bindings::default();
+        input.hand.set_axis(Axis::LeftStickY, 1.0);
+        input.hand.set_axis(Axis::RightStickX, 1.0);
+        assert_eq!(
+            input.hand.press(Button::South, &input.bindings),
+            Some(Command::PrimaryDown)
+        );
+        input.capture_for_reader();
+        assert_eq!(input.deactivate(), None);
+        input.activate();
+        input.hand.set_axis(Axis::LeftStickY, -1.0);
+        input.hand.set_axis(Axis::RightStickX, -1.0);
+        assert_eq!(input.hand.press(Button::South, &input.bindings), None);
+        assert!(input.hand.tick(0.05).is_empty());
+        assert_eq!(input.hand.release(Button::South), None);
+        input.hand.set_axis(Axis::LeftStickY, 0.0);
+        input.hand.set_axis(Axis::RightStickX, 0.0);
+        input.hand.set_axis(Axis::LeftStickY, -1.0);
+        input.hand.set_axis(Axis::RightStickX, 1.0);
+        assert_eq!(
+            input.hand.press(Button::South, &input.bindings),
+            Some(Command::PrimaryDown)
+        );
+        assert!(matches!(
+            input.hand.tick(0.05).as_slice(),
+            [
+                Command::PointerMoved { held: true, .. },
+                Command::PhaseDelta(_)
+            ]
+        ));
+        assert_eq!(input.deactivate(), Some(Command::CancelPointer));
+        assert_eq!(input.deactivate(), None);
+    }
+
+    #[test]
+    fn inactive_physical_observations_rearm_capture_without_accepting_a_gesture() {
+        let mut hand = VirtualHand::default();
+        let bindings = crate::bindings::Bindings::default();
+        hand.set_axis(Axis::RightStickX, 1.0);
+        assert_eq!(
+            hand.press(Button::South, &bindings),
+            Some(Command::PrimaryDown)
+        );
+        hand.capture_for_reader();
+        assert!(hand.observe_release(Button::South));
+        let _ = hand.observe_axis(Axis::RightStickX, 0.0);
+        assert!(!hand.captured_axes[2]);
+
+        // A fresh hold observed while inactive is only physical evidence. It
+        // must still be captured if the reader closes before the next poll.
+        let _ = hand.observe_axis(Axis::RightStickX, -0.9);
+        hand.physical_buttons.insert(Button::South);
+        assert!(hand.tick(0.05).is_empty());
+        assert!(hand.held_buttons.is_empty());
+        hand.capture_for_reader();
+        assert_eq!(hand.press(Button::South, &bindings), None);
+        hand.set_axis(Axis::RightStickX, 0.9);
+        assert!(hand.tick(0.05).is_empty());
+        assert_eq!(hand.release(Button::South), None);
+        hand.set_axis(Axis::RightStickX, 0.0);
+        assert_eq!(
+            hand.press(Button::South, &bindings),
+            Some(Command::PrimaryDown)
+        );
+        hand.set_axis(Axis::RightStickX, 0.9);
+        assert!(matches!(
+            hand.tick(0.05).as_slice(),
+            [Command::PhaseDelta(_)]
+        ));
+    }
+
+    #[test]
+    fn inactive_release_observation_preserves_ordinary_pointer_cancellation() {
+        let mut hand = VirtualHand::default();
+        let bindings = crate::bindings::Bindings::default();
+        assert_eq!(
+            hand.press(Button::South, &bindings),
+            Some(Command::PrimaryDown)
+        );
+        // The inactive drain records a queued release but does not send it to
+        // the room. Deactivation must therefore still cancel its accepted hold.
+        assert!(!hand.observe_release(Button::South));
+        assert_eq!(hand.cancel(), Some(Command::CancelPointer));
+        assert_eq!(hand.cancel(), None);
+        assert!(hand.tick(0.05).is_empty());
+    }
+
+    #[test]
+    fn disconnect_ends_the_physical_capture_and_preserves_one_play_cancellation() {
+        let mut hand = VirtualHand::default();
+        let bindings = crate::bindings::Bindings::default();
+        hand.set_axis(Axis::LeftStickX, 1.0);
+        assert_eq!(
+            hand.press(Button::South, &bindings),
+            Some(Command::PrimaryDown)
+        );
+        hand.clear_physical();
+        assert_eq!(hand.cancel(), Some(Command::CancelPointer));
+        assert_eq!(hand.cancel(), None);
+        assert!(hand.tick(0.05).is_empty());
+
+        assert_eq!(
+            hand.press(Button::South, &bindings),
+            Some(Command::PrimaryDown)
+        );
+        hand.capture_for_reader();
+        hand.clear_physical();
+        assert_eq!(hand.cancel(), None);
+        assert_eq!(
+            hand.press(Button::South, &bindings),
+            Some(Command::PrimaryDown)
+        );
+        assert_eq!(hand.release(Button::South), Some(Command::PrimaryUp));
     }
 }

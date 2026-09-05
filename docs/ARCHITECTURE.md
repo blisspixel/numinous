@@ -19,9 +19,9 @@ a separate promotion gate. The headless core
 renders every room through `Surface`; the CLI and MCP faces consume the same core. Audio uses
 `cpal`, custom deterministic stereo synthesis with crossfaded loop sources,
 `hound`, and a bounded `symphonia` MP3 decoder. Bevy, `fundsp`, `kira`, CUDA,
-Triton, Wasmtime plugins, the full pattern DSL, and packaged installers are not
-current dependencies. They remain options or roadmap targets where this
-document names them.
+Triton, Wasmtime plugins, and the full pattern DSL are not current
+dependencies. Native release archives and managed installers already ship;
+other alternatives remain options where this document names them.
 
 ## First, untangle the question
 
@@ -56,8 +56,8 @@ Why this specific combination wins for *math + games + visualization + fun + tru
   evaluated alternative, not part of the current architecture.
 - **Sharing is native, not a browser build.** PNG postcards, short looping APNG
   export (App key L), `.num` expression files, matching links, and WAV export
-  exist today. App-side deep-link reopening, optional GIF/MP4 packaging, and
-  operating-system URL registration remain roadmap work.
+  exist today, alongside App creation reopening from native links and `.num`
+  files. Optional GIF/MP4 packaging remains roadmap work.
 - **Audio is first-class in Rust:** `cpal` supplies cross-platform output while
   the workspace owns deterministic synthesis and bounded file rendering. More
   advanced DSP can be added only when the musical design and measured budget
@@ -136,6 +136,23 @@ dependency.
   MCP face. The larger pattern DSL, multiple synchronized representations, and
   a safe shader authoring surface remain staged creator work. See `STUDIO.md`.
 - **Built-in radio:** station identity lives in the headless core, and the app validates and plays the source-shipped V0 MP3 soundtrack through a bounded pure Rust decoder. A cache override remains available for development. (See `MUSIC.md`.)
+
+## Study content and native reading
+
+The core owns room study documents, depth and block selection, explicit locale
+resolution, and typed numerical readouts independent of translated labels.
+Study requests read no progress and write no player state. CLI and MCP reuse
+one JSON presentation module in `faces/shared`; the App renders the same typed
+content through a native Unicode adapter with bundled fonts. Core remains
+standard-library-only, and faces do not depend on each other. The workspace
+is the supported build and release unit.
+
+The App reader captures input before gameplay dispatch and holds the room's
+tick while reading. It restores the room or exact Cabinet state that opened
+it. Reading and the seven opt-in staged experiments have separate controls;
+selecting a language writes only a preference. [Study](STUDY.md) owns the
+player-facing contract. [Decision 1](decisions/0001-study-text.md) records the
+font, compiler, dependency, layout, and distribution tradeoffs.
 
 ## The Room contract (the core abstraction)
 

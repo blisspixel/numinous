@@ -517,7 +517,8 @@ class McpPlayCommandTests(unittest.TestCase):
         result = self.run_driver("tools")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("totals.", result.stdout)
-        self.assertIn("40 tools.", result.stdout)
+        self.assertIn("41 tools.", result.stdout)
+        self.assertIn("Read optional room study directly.", result.stdout)
 
     def test_disposable_profile_retains_state_across_server_processes(self) -> None:
         driver = load_driver()

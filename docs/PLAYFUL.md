@@ -238,7 +238,9 @@ and share a "room" without shipping a binary.
 - **CLI:** the full command catalog includes quiz, Munch, Munch Arcade, Nim,
   Hackenbush, Party, Fifteen, the Gauntlet, and other seeded games.
 - **App:** quiz, Munch, Munch Arcade, Nim, and the Gauntlet run in the window;
-  `E` opens the room reveal. Pointer coverage and game feel still need depth.
+  `E` or Inspect opens unrestricted [study](STUDY.md). The optional staged
+  experiment uses U to enter and Enter for an earned connection. Pointer
+  coverage and game feel still need depth.
 - **MCP:** the shared game rules are exposed as tools with seeded structured
   results and shared scores.
 

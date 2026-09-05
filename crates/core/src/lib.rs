@@ -85,6 +85,7 @@ mod projection;
 pub mod quiz;
 pub mod radio;
 pub mod raster;
+pub mod readout;
 pub mod registry;
 pub mod resonance;
 pub mod rng;
@@ -103,6 +104,7 @@ pub mod sound;
 pub mod spectrum;
 pub mod studio;
 pub mod studio_request;
+pub mod study;
 pub mod surface;
 pub mod temporal;
 pub mod trophies;
@@ -196,6 +198,7 @@ pub use projection::PlanarProjection;
 pub use quiz::{ICONIC, QuizChoice, QuizRound, build_round, build_round_pool, build_round_sized};
 pub use radio::{STATIONS, Station, brief_for, length_for, station};
 pub use raster::Raster;
+pub use readout::{DisplayNumber, NumericReadout, ReadoutId};
 pub use registry::Wing;
 pub use registry::{
     KNOWN_OVER_FLASH_BUDGET, MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, RESPONSE_INVISIBLE_WITHOUT_COLOR,
@@ -248,6 +251,12 @@ pub use studio_request::{
     DEFAULT_MELODY_NOTES, DEFAULT_PLOT_HEIGHT, DEFAULT_PLOT_WIDTH, DEFAULT_STUDIO_PARAMETER,
     DEFAULT_STUDIO_XMAX, DEFAULT_STUDIO_XMIN, PlotDiscovery, PlotRequest, PlotResult, PlotSource,
     SingRequest, StudioRequestError,
+};
+pub use study::{
+    MAX_STUDY_BLOCK_ID_BYTES, MAX_STUDY_LOCALE_BYTES, RoomStudy, StudyBlock, StudyDepth,
+    StudyDepthError, StudyFallback, StudyInline, StudyLocale, StudyLocaleError,
+    StudyLocaleResolution, StudyPart, StudyRequest, StudyRequestError, StudyResponse,
+    StudySelection, StudySource, StudyTranslationStatus, room_study, room_study_for_locale,
 };
 pub use surface::Surface;
 pub use temporal::{DwellWindow, MAX_DWELL_LOOKS, MIN_DWELL_LOOKS, TemporalPair};

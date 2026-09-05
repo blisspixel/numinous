@@ -43,7 +43,7 @@ should link here rather than restating the board.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.4.0-alpha.19, Understanding Alpha active with its exit
+**Current release state: 0.4.0-alpha.20, Understanding Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are complete. Human stranger sessions sit with 0.8
 Closed Beta and 1.0 First Light.
@@ -119,20 +119,28 @@ mastery, exploration, and company also remain complete reasons to play.
   one explicitly kept and previewed project that resumes the selected question,
   evidence, creation, and next action (`DIGITAL_DEVELOPMENT.md`). These are small
   testable slices before a general quest engine or semantic memory system.
-- **Next, depth by choice (founder direction, 2026-09-05):** enter rooms through
-  play, then choose a short explanation or a rigorous mathematical treatment
-  without a visit or level requirement. Start with Lissajous and one shared
-  content model across App, CLI, and MCP. The App needs a scrollable reader;
-  the deeper layer needs derivations, examples, primary references, and explicit
-  numerical limits. Existing reveal and Journey gates do not yet meet this
-  direction. `PEDAGOGY.md` separates optional staged discovery from free study.
-- **Next, languages through the complete experience:** separate canonical
-  numeric readouts from English status strings before translating grading
-  inputs. Add explicit locale resolution and fallback, case-preserving Unicode
-  text and layout, and complete translated entry and reader controls for the
-  first room. Japanese, Hawaiian, and Klingon need their actual characters,
-  casing, input, and reviewed content. `ROSETTA.md` tracks those requirements;
-  translated documentation alone does not establish localized play.
+- **Built in alpha 20, depth by choice:** room play is the default. E, ?, or
+  Cabinet Explain opens a scrollable reader with immediately selectable
+  Explanation, Notes, and Mathematics. Lissajous has the first authored
+  treatment, including derivations, worked examples, primary references, and
+  numerical limits. App, CLI `study`, and MCP `study_room` share core content
+  and request semantics. Other rooms retain existing explanations and notes;
+  an unwritten Mathematics treatment is explicitly unavailable.
+- **Built in alpha 20, voluntary experiments:** the seven staged App paths
+  require an explicit U or Cabinet Experiment choice. Enter advances an earned
+  connection; E always opens study. Runtime regressions cover reading before
+  a wager and during a morph, exact return, input capture, retained audio
+  buffers, and unchanged Journey. This is state-preservation evidence, not a
+  measurement of live audio-device playback cursor continuity.
+- **Built in alpha 20, language foundation:** typed numeric grading channels
+  now serve six rooms without depending on English label positions. Explicit
+  locale and per-block fallback, bundled Unicode text, and English/Japanese
+  Lissajous content work across the three study faces. Real CLI/MCP parity and
+  native reader plates exercise this boundary. Japanese remains a translation
+  draft; Hawaiian and Klingon requests currently fall back to English.
+  [Study](STUDY.md) owns controls and limitations. Full shell translation,
+  Unicode input/IME, the remaining numeric channels, and more reviewed
+  mathematical treatments remain open in `ROSETTA.md` and `PEDAGOGY.md`.
 - **Standing evidence rule:** prediction closeness is not mastery or enjoyment.
   Keep correctness, usable capability, player reports, autonomy, and voluntary
   continuation separate. The existing agent-and-machine release policy remains
@@ -1128,7 +1136,7 @@ Detail below and in the version sections.
   prediction, unfinished action or creation, recent notes, and a few journal
   handles. The player inspects, edits, defers, or clears every field. Play
   does not write it. It is not a memory, not the journal, and not Watch Agent
-  state. A new process starts empty. The current inventory is 40 tools.
+  state. A new process starts empty. The current inventory is 41 tools, including unrestricted `study_room`.
 - **Done (Mind's Seat remembered-room retrieval, August 22, 2026):** one
   explicit `workspace` operation names a listed room and selects no more than
   four current exact-subject journal entries, newest first. The workspace
@@ -1214,9 +1222,10 @@ Detail below and in the version sections.
   compatible patch and minor bumps (including wayland-scanner / quick-xml
   0.41); temporary RUSTSEC-2026-0194/0195 ignores removed; CI pins
   `actions/checkout` v7.0.1 and `taiki-e/install-action` v2.85.0; toolchain
-  stays Rust 1.97.1 with MSRV 1.88.0; `cargo deny` and `cargo audit` run with
-  empty advisory ignore lists; Dependabot remains weekly on Cargo and GitHub
-  Actions. See `ENGINEERING.md`.
+  stays Rust 1.97.1 with MSRV 1.89.0; `cargo deny` and `cargo audit` run with
+  one documented advisory exception since alpha 20 (RUSTSEC-2026-0192,
+  `ttf-parser` unmaintained behind `cosmic-text`, exit condition named in
+  `ENGINEERING.md`); Dependabot remains weekly on Cargo and GitHub Actions.
 - **Done (App `.num` reopen, the 0.7 creator floor):** the App now reopens a
   saved expression capsule exactly. A `.num` path or `numinous://` link as a
   launch argument, or a `.num` file dropped on the window, opens the Studio
@@ -1668,7 +1677,7 @@ licensed source.
 capsule data, not arbitrary paths. `open_creation` accepts canonical `.num`
 text or a native link, and `fork_creation` continues it with exact lineage.
 The caller decides whether to read a file and pass its contents. The pinned
-inventory is now 40 tools.
+inventory is now 41 tools.
 
 **8. Should the App footer stop showing less of the status as the window
 grows?** Measured: 720 pixels shows the whole status, 900 truncates it, and 900
@@ -2436,7 +2445,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-08-18)
 
-The package is **0.4.0-alpha.19**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.20**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -2464,7 +2473,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally, and the MCP face can send a player a room's sound as a real audio file beside the notation, with the last hop the client's to make | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio graphs and paired parametric paths, continuous and named-scale voices, versioned `.num` serialization with title, author, era, lineage, and editable prose credit, links, plotting, animation, singing, WAV and Standard MIDI File export of the sung melody on CLI, MCP, and the App F4 share, exact paused App reopen, the one-key share bundle, the local Gallery wall, and fork with recorded descent exist | Named sliders, general multi-expression programs, MusicXML, safe share preview for incoming links, and clean-install round trip |
-| Rigor and care are provable | Dated full-gate and coverage evidence in `QUALITY.md`, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a native SPDX Rust plus packaged-native SBOM attested from the exact audited release set | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
+| Rigor and care are provable | Dated full-gate and coverage evidence in `QUALITY.md`, Rust 1.89 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a native SPDX Rust plus packaged-native SBOM attested from the exact audited release set | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,945-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
@@ -2481,7 +2490,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.4.0-alpha.19** because Understanding Alpha is the active
+Package label is **0.4.0-alpha.20** because Understanding Alpha is the active
 milestone. The alpha suffix says its exit remains open. External registration,
 calibration, fresh independent review, allocation freeze, and the qualifying
 cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active

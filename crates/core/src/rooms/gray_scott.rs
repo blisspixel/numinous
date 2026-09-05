@@ -8,6 +8,7 @@
 
 use super::phase_plane::PhasePlane;
 use super::{latest_hand, phase_unit};
+use crate::readout::{DisplayNumber, NumericReadout, ReadoutId};
 use crate::room::{Room, RoomInput};
 use crate::surface::Surface;
 
@@ -57,8 +58,14 @@ impl Experiment {
             "DRAG:F/K f~{:.3} k~{:.3} T={} Vmax~{max_v:.3}",
             self.feed,
             self.kill,
-            self.steps as f64 * DT,
+            self.displayed_elapsed_time(),
         )
+    }
+
+    fn displayed_elapsed_time(self) -> DisplayNumber {
+        // DT is one: the existing T token is an integer number of model units.
+        DisplayNumber::fixed(self.steps as f64 * DT, 0)
+            .expect("the finite experiment has bounded elapsed time")
     }
 }
 
@@ -234,6 +241,15 @@ impl Room for GrayScott {
 
     fn status(&self, t: f64) -> Option<String> {
         Some(Experiment::new(t, None, self.seed).readout())
+    }
+
+    fn numeric_readouts(&self, t: f64) -> Option<Vec<NumericReadout>> {
+        // This channel measures the experiment horizon, not feed or Vmax.
+        Some(vec![
+            Experiment::new(t, None, self.seed)
+                .displayed_elapsed_time()
+                .readout(ReadoutId::new(2), "ELAPSED TIME"),
+        ])
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {

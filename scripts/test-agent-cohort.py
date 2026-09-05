@@ -249,7 +249,7 @@ class AgentFirstContactTests(unittest.TestCase):
             self.assertIn(required, ids)
 
     def test_expected_tool_count_matches_public_surface(self) -> None:
-        self.assertEqual(first_contact.EXPECTED_TOOL_COUNT, 40)
+        self.assertEqual(first_contact.EXPECTED_TOOL_COUNT, 41)
 
     def test_status_of_reads_structured_status(self) -> None:
         status = first_contact.status_of(

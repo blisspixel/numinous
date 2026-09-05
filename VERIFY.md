@@ -1,8 +1,9 @@
 # How to verify Numinous
 
-Everything below has been built and checked on the dev laptop; this is how you
-confirm it yourself efficiently. Nothing here needs a GPU or the internet after
-the first dependency fetch.
+Use these commands to check the source and regenerate its evidence. Most
+focused core tests need no device. The full gate also runs the feature-gated
+presentation checks and fetches current dependency advisories when the audit
+tools are installed.
 
 ## 0. Prerequisites
 
@@ -12,7 +13,7 @@ manifest. They do not need Rust or native build dependencies. What follows is
 the from-source verification path for contributors and the curious.
 
 - **Rust** (edition 2024; pinned to 1.97.1 in `rust-toolchain.toml`, with a
-  verified 1.88 MSRV). Install from
+  1.89 MSRV checked separately in CI). Install from
   <https://rustup.rs>. On Windows, cargo lands in `%USERPROFILE%\.cargo\bin`; if a
   fresh shell does not see `cargo`, add that to `PATH`.
 - Optional, for the local coverage gate: `cargo install cargo-llvm-cov`.
@@ -40,7 +41,8 @@ It runs format, clippy and rustdoc with warnings denied, Rust, 0.4 study runner
 and collector, portable Agent Plugins, and deterministic release-packaging tests, locked build,
 coverage (if `cargo-llvm-cov` is present), supply-chain policy (if `cargo-deny`
 is present), the house-style guard, and the native installer safety self-test,
-then writes images and audio into `renders/`.
+then compares the compiled CLI and MCP study contracts and writes images and
+audio into `renders/`, including English and Japanese reader plates.
 If it prints "All checks passed" and exits 0, everything is green.
 
 GitHub exposes one protected result named `main CI`. It is an aggregate, not a
@@ -51,6 +53,13 @@ audit. The release packages are artifacts of the same CI run. A cancelled,
 skipped, timed-out, or failed dependency makes `main CI` fail. CodeQL findings
 are published for review; alert presence does not itself fail the analysis
 action.
+
+The study parity harness requires paths to both freshly built binaries:
+`python scripts/study-parity.py --cli target/debug/numinous.exe --mcp target/debug/numinous-mcp.exe`
+on Windows; omit `.exe` and use `python3` on macOS or Linux. Use the actual
+Cargo target directory if overridden. `cargo run -p numinous-app --example study_screens --locked` writes the reader's first and final pages for both
+supported sizes to `renders/study/`. These are deterministic native renderer
+plates, not a substitute for window, input-device, or participant testing.
 
 ## 2. Or run the gates individually
 
@@ -96,7 +105,7 @@ python3 scripts/test-release-workflow.py            # macOS / Linux
 python scripts/test-workflow-pins.py                 # Windows
 python3 scripts/test-workflow-pins.py                # macOS / Linux
 cargo build --workspace --locked
-cargo +1.88.0 check --workspace --all-targets --locked
+cargo +1.89.0 check --workspace --all-targets --locked
 cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
 cargo deny check                         # if cargo-deny is installed; CI always runs it
 cargo audit                              # if cargo-audit is installed; CI always runs it
@@ -394,19 +403,14 @@ installing, `numinous <anything>` is equivalent.
 ```
 cargo run --bin numinous-app
 ```
-Opens a real window showing a room animating in full color, scored by the
-chiptune (Music Engine A: each room gets its own seeded tune, with the room's
-sonification riding on top), and a menu explaining itself (Esc brings it
-back). Game-native controls: A/D or arrows change rooms, 1-9 jump straight to
-one, W/S run time faster or slower, drag or mouse-wheel scrubs, E inspects the
-math, Q swaps the visual era (phosphor, 8-bit, vector, modern), R restarts the
-sweep, P saves the current room frame as a PNG postcard, L saves a short looping APNG of the visit, F goes fullscreen, M mutes, [ and ] change global volume, B starts The Show (lean back), G deals the
-quiz (name the math, right in the window), C plays today's Munch board with a
-cursor (WASD moves, Space eats, Enter grades), N plays Nim against the Order
-(aim with W/S and A/D, Enter takes; win and the xor secret shows), T runs the
-Gauntlet (all four stages in sequence, combo and total at the end), J opens
-your journey (level, rank, trophies, resonances), Tab opens the Studio (type math, watch and hear it
-live). The app plays the same Journey the CLI does: entering rooms records
+The window opens the Cabinet with a room waiting to play. Use Modes for
+Watch, Play, and Create, and Games for the available game modes. The current
+controls live in [Playing](docs/PLAYING.md); [Study](docs/STUDY.md) covers E,
+?, and the optional mathematical reader. Q requests an orderly quit. Visual
+Era is selected through Settings. Check the live window and input devices
+alongside the generated headless plates.
+
+The app plays the same Journey the CLI does: entering rooms records
 visits, quiz rounds record plays and wins, your accumulated local-profile
 progress rides in the corner as `JOURNEY LV`, and
 LEVEL UP banners rise with the level's lore. Set `NUMINOUS_MUTE=1` to launch

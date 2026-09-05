@@ -348,7 +348,7 @@ fn modern_tool_catalog_is_cacheable_deterministic_and_explicitly_2020_12() {
     assert_eq!(result["ttlMs"], super::TOOLS_CACHE_TTL_MS);
     assert_eq!(result["cacheScope"], "public");
     let tools = result["tools"].as_array().expect("tool array");
-    assert_eq!(tools.len(), 40);
+    assert_eq!(tools.len(), 41);
     assert!(
         tools
             .iter()
@@ -697,7 +697,7 @@ fn tools_list_has_the_expected_tools() {
     let tools = resp["result"]["tools"]
         .as_array()
         .expect("tools is an array");
-    assert_eq!(tools.len(), 40);
+    assert_eq!(tools.len(), 41);
     assert!(
         tools
             .iter()
@@ -709,6 +709,7 @@ fn tools_list_has_the_expected_tools() {
     assert!(names.contains(&"predict"));
     assert!(names.contains(&"cairn"));
     assert!(names.contains(&"reveal_room"));
+    assert!(names.contains(&"study_room"));
     assert!(names.contains(&"run_sim"));
     assert!(names.contains(&"quiz"));
     assert!(names.contains(&"listen_room"));
@@ -1021,7 +1022,11 @@ fn every_declared_tool_has_one_exhaustive_viewer_policy() {
         }
     }
     assert_eq!(public, numinous_broadcast::ALL_PUBLIC_TOOLS.len());
-    assert_eq!(private, 15);
+    assert_eq!(private, 16);
+    assert_eq!(
+        super::viewer_policy("study_room"),
+        Some(super::ViewerPolicy::Private)
+    );
     assert_eq!(control, 1);
     assert_eq!(public + private + control, tools.len());
     assert!(super::viewer_policy("future_unreviewed_tool").is_none());

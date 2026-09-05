@@ -5,7 +5,7 @@ screenshot-worthy.** If you pause at a random instant and it is not beautiful,
 that is a bug. This document owns both the current rendering boundary and the
 target visual system.
 
-**Implementation boundary:** 0.4.0-alpha.19 renders every room
+**Implementation boundary:** 0.4.0-alpha.20 renders every room
 deterministically through CPU `Surface` implementations and presents app frames
 with `softbuffer`. Mandelbrot and Julia alone have targeted `wgpu` paths. Four
 CPU-styled Eras ship: phosphor, 8-bit, vector, and modern. PNG room renders,
@@ -42,6 +42,9 @@ visual surface against these invariants:
 - Use the Cabinet's wide 7 by 7 cartridge face for its title, choices,
   descriptions, values, Controls reference, and legend. The compact 5 by 7 HUD
   face remains appropriate where room chrome must leave the art primary.
+- Use the shared Unicode reader for study prose and mathematical notation.
+  Preserve case, combining characters, and scientific symbols; do not squeeze
+  a derivation into the uppercase HUD or place it over the active room art.
 - Make motion causal, continuous, and restrained. A quieter reduced-motion
   treatment must preserve the same information and visual hierarchy.
 - Check the default frame, compact frame, and at least one consequential
@@ -72,6 +75,21 @@ The README's deterministic Mandelbrot plate uses the CPU glyph-density image,
 whose filled interior differs from the dark-interior GPU treatment described
 above. That plate establishes the CPU appearance; it is not evidence of GPU
 presentation or display pacing.
+
+The App study reader is a separate, opaque reading surface on the same
+near-black stage. Bundled Noto Sans, Noto Sans JP, and Noto Sans Math supply
+case-preserving prose and linear mathematical notation. Measured text wraps
+inside a clipped, scrollable body; depth, language, and return controls stay
+fixed. Source positions anchor resizing, and the room's clock and accepted
+input history are held while reading. Cabinet and room HUD lettering keep
+their existing pixel faces.
+
+This reading boundary does not add Unicode naming or IME editing to Studio,
+translate the full App shell, or provide complete Unicode glyph coverage. It
+does not typeset stacked fractions or other two-dimensional equations. Bundled
+glyph coverage and authored translation coverage are separate limits.
+[Study](STUDY.md) owns supported content, fallback, controls, and translation
+review status.
 
 The target systemic GPU post-stack has five stages:
 

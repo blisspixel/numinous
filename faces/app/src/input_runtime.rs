@@ -188,6 +188,9 @@ impl App {
     }
 
     pub(super) fn begin_pointer_at(&mut self, point: (f64, f64)) {
+        if self.handle_study_pointer_down(point) {
+            return;
+        }
         if self.paused {
             return;
         }
@@ -201,7 +204,7 @@ impl App {
                 // turning the dial (y is ignored by the dial, but a clean
                 // commit beat keeps the generation act distinct).
                 if self.current_room_is_times_tables()
-                    && !self.the_show
+                    && self.chosen_experiment_active()
                     && point.1 >= numinous_core::rooms::times_tables_aha::WAGER_BAND_Y
                     && matches!(
                         self.times_tables_aha.beat(),
@@ -218,7 +221,7 @@ impl App {
                 }
                 // Buffon bottom band: commit the number wager without a throw.
                 if self.current_room_is_buffon()
-                    && !self.the_show
+                    && self.chosen_experiment_active()
                     && point.1 >= numinous_core::rooms::buffon_aha::WAGER_BAND_Y
                     && matches!(
                         self.buffon_aha.beat(),
@@ -235,7 +238,7 @@ impl App {
                 // Double Pendulum bottom band: call the twin's ending without
                 // adding another release to the experiment.
                 if self.current_room_is_pendulum()
-                    && !self.the_show
+                    && self.chosen_experiment_active()
                     && point.1 >= numinous_core::rooms::pendulum_aha::WAGER_BAND_Y
                     && matches!(
                         self.pendulum_aha.beat(),
@@ -251,7 +254,7 @@ impl App {
                 // Kepler bottom band: call the near-sun speed relation without
                 // changing the ellipse underneath the commitment.
                 if self.current_room_is_kepler()
-                    && !self.the_show
+                    && self.chosen_experiment_active()
                     && point.1 >= numinous_core::rooms::kepler_aha::WAGER_BAND_Y
                     && matches!(
                         self.kepler_aha.beat(),
@@ -268,7 +271,7 @@ impl App {
                 // Parrondo bottom band: call the winning policy without
                 // changing the sampled walk underneath the commitment.
                 if self.current_room_is_parrondo()
-                    && !self.the_show
+                    && self.chosen_experiment_active()
                     && point.1 >= numinous_core::rooms::parrondo_aha::WAGER_BAND_Y
                     && matches!(
                         self.parrondo_aha.beat(),
@@ -284,7 +287,7 @@ impl App {
                 // Nontransitive Dice bottom band: call the counter without
                 // choosing a different die underneath the commitment.
                 if self.current_room_is_nontransitive()
-                    && !self.the_show
+                    && self.chosen_experiment_active()
                     && point.1 >= numinous_core::rooms::nontransitive_aha::WAGER_BAND_Y
                     && matches!(
                         self.nontransitive_aha.beat(),
@@ -312,7 +315,7 @@ impl App {
                 }
                 // Galton bottom band: commit the peak wager without a drop.
                 if self.current_room_is_galton()
-                    && !self.the_show
+                    && self.chosen_experiment_active()
                     && point.1 >= numinous_core::rooms::galton_aha::WAGER_BAND_Y
                     && matches!(
                         self.galton_aha.beat(),
@@ -351,12 +354,15 @@ impl App {
     }
 
     pub(super) fn move_pointer_to(&mut self, point: (f64, f64), held: bool) {
+        if self.handle_study_pointer_move(point) {
+            return;
+        }
         if self.paused {
             return;
         }
         self.set_mouse_from_normalized(point);
         if self.current_room_is_times_tables()
-            && !self.the_show
+            && self.chosen_experiment_active()
             && matches!(
                 self.times_tables_aha.beat(),
                 numinous_core::rooms::times_tables_aha::AhaBeat::Prime
@@ -371,7 +377,7 @@ impl App {
             }
         }
         if self.current_room_is_buffon()
-            && !self.the_show
+            && self.chosen_experiment_active()
             && matches!(
                 self.buffon_aha.beat(),
                 numinous_core::rooms::buffon_aha::AhaBeat::Prime
@@ -386,7 +392,7 @@ impl App {
             }
         }
         if self.current_room_is_pendulum()
-            && !self.the_show
+            && self.chosen_experiment_active()
             && matches!(
                 self.pendulum_aha.beat(),
                 numinous_core::rooms::pendulum_aha::AhaBeat::Prime
@@ -401,7 +407,7 @@ impl App {
             }
         }
         if self.current_room_is_kepler()
-            && !self.the_show
+            && self.chosen_experiment_active()
             && matches!(
                 self.kepler_aha.beat(),
                 numinous_core::rooms::kepler_aha::AhaBeat::Prime
@@ -416,7 +422,7 @@ impl App {
             }
         }
         if self.current_room_is_parrondo()
-            && !self.the_show
+            && self.chosen_experiment_active()
             && matches!(
                 self.parrondo_aha.beat(),
                 numinous_core::rooms::parrondo_aha::AhaBeat::Prime
@@ -431,7 +437,7 @@ impl App {
             }
         }
         if self.current_room_is_nontransitive()
-            && !self.the_show
+            && self.chosen_experiment_active()
             && matches!(
                 self.nontransitive_aha.beat(),
                 numinous_core::rooms::nontransitive_aha::AhaBeat::Prime
@@ -453,7 +459,7 @@ impl App {
             posed.aim_at(point.0);
         }
         if self.current_room_is_galton()
-            && !self.the_show
+            && self.chosen_experiment_active()
             && matches!(
                 self.galton_aha.beat(),
                 numinous_core::rooms::galton_aha::AhaBeat::Prime
@@ -483,6 +489,9 @@ impl App {
     }
 
     pub(super) fn end_pointer_at(&mut self, point: (f64, f64)) {
+        if self.handle_study_pointer_up(point) {
+            return;
+        }
         self.set_mouse_from_normalized(point);
         let room = &self.rooms[self.current];
         let room_id = room.meta().id;
@@ -510,6 +519,9 @@ impl App {
     }
 
     pub(super) fn apply_wheel_delta(&mut self, lines: f64) -> bool {
+        if self.handle_study_wheel(lines) {
+            return true;
+        }
         if self.studio
             || self.paused
             || self.show_help && self.menu.is_open()
@@ -675,6 +687,8 @@ impl App {
             self.quiz_next();
         } else if self.quiz.is_some() {
             self.quiz_answer('A');
+        } else if self.can_advance_chosen_experiment() {
+            self.experiment_primary_consumed = self.advance_chosen_experiment();
         } else if let Some(point) = self.gamepad.cursor() {
             self.begin_pointer_at(point);
         }
@@ -702,6 +716,8 @@ impl App {
             self.toggle_show();
         } else if self.show_journey {
             self.show_journey = false;
+        } else if self.chosen_experiment_active() {
+            self.leave_chosen_experiment();
         } else if let Some(kind) = self.activity_kind() {
             self.open_activity_menu(kind);
         } else {
@@ -762,6 +778,25 @@ impl App {
             }
             _ => {}
         }
+        let experiment_release =
+            command == gamepad::Command::PrimaryUp && self.experiment_primary_consumed;
+        if experiment_release {
+            self.experiment_primary_consumed = false;
+        }
+        if self.handle_study_gamepad(command) || experiment_release {
+            return;
+        }
+        if self.experiment_primary_consumed
+            && matches!(
+                command,
+                gamepad::Command::PrimaryDown | gamepad::Command::PointerMoved { .. }
+            )
+        {
+            return;
+        }
+        if command == gamepad::Command::CancelPointer {
+            self.experiment_primary_consumed = false;
+        }
         if self.show_help {
             self.input_mode = input_legend::InputMode::Controller;
             match command {
@@ -812,6 +847,8 @@ impl App {
             return;
         }
         if self.paused
+            && !(command == gamepad::Command::Back && self.chosen_experiment_active())
+            && !(command == gamepad::Command::PrimaryDown && self.can_advance_chosen_experiment())
             && !matches!(
                 command,
                 gamepad::Command::Pause
@@ -846,7 +883,7 @@ impl App {
             }
             gamepad::Command::Back => self.gamepad_back(),
             gamepad::Command::Menu => self.gamepad_menu(),
-            gamepad::Command::Inspect => self.toggle_inspect(),
+            gamepad::Command::Inspect => {}
             gamepad::Command::Reset => self.reset_current_room(),
             gamepad::Command::PreviousRoom if !self.modal_mode_active() => self.switch(-1),
             gamepad::Command::NextRoom if !self.modal_mode_active() => self.switch(1),

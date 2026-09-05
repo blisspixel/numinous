@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import gzip
+import hashlib
 import io
 import os
 from pathlib import Path
@@ -120,6 +121,163 @@ def pe_fixture() -> bytes:
     struct.pack_into("<IIIIIIII", data, 0x280, 1, 0x10C0, 0, 0, 0, 0, 0, 0)
     data[0x2C0:0x2CC] = b"VERSION.dll\0"
     return bytes(data)
+
+
+FONT_NOTICES = {
+    "assets/fonts/README.md": b"Fixture source and SHA-256 inventory\n",
+    "assets/fonts/COPYRIGHT.txt": "Fixture copyright notice: © 2026\n".encode(),
+    "assets/fonts/noto-sans/OFL.txt": b"Fixture original Sans license\n",
+    "assets/fonts/noto-sans-jp/LICENSE": b"Fixture original JP license\r\n",
+    "assets/fonts/noto-sans-math/OFL.txt": b"Fixture original Math license\r\n",
+}
+FONT_BINARIES = (
+    "assets/fonts/noto-sans/NotoSans-Regular.ttf",
+    "assets/fonts/noto-sans-jp/NotoSansJP-Regular.otf",
+    "assets/fonts/noto-sans-math/NotoSansMath-Regular.ttf",
+)
+
+
+class FontArchiveTests(unittest.TestCase):
+    """Exercise archives with inert native-header fixtures and no subprocesses."""
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.temp = Path(temporary.name)
+        self.root = self.temp / "source"
+        self.binaries = self.temp / "binaries"
+        self.binaries.mkdir()
+        for relative in set(PACKAGE.RELEASE_FILES) | set(FONT_NOTICES):
+            source = self.root / relative
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_bytes(FONT_NOTICES.get(relative, f"fixture:{relative}\n".encode()))
+        for relative in FONT_BINARIES:
+            (self.root / relative).write_bytes(b"unmodified font byte fixture")
+        revision = mock.patch.object(PACKAGE, "commit_sha", return_value="a" * 40)
+        revision.start()
+        self.addCleanup(revision.stop)
+        processes = mock.patch.object(
+            PACKAGE.subprocess,
+            "run",
+            side_effect=AssertionError("font archive fixtures must not run subprocesses"),
+        )
+        processes.start()
+        self.addCleanup(processes.stop)
+
+    def build(self, target: str) -> tuple[Path, Path, dict[str, bytes]]:
+        native = {
+            "x86_64-pc-windows-msvc": pe_fixture(),
+            "x86_64-unknown-linux-gnu": elf_fixture(),
+            "x86_64-apple-darwin": mach_fixture(),
+            "aarch64-apple-darwin": mach_fixture(0x0100000C),
+        }[target]
+        suffix = PACKAGE.TARGETS[target][0]
+        for name in PACKAGE.BINARIES:
+            (self.binaries / f"{name}{suffix}").write_bytes(native)
+        archive, checksum = PACKAGE.build_archive(
+            "1.2.3", target, "binaries", self.binaries,
+            self.root / "assets" / "radio", self.temp / "dist", self.root,
+        )
+        files = PACKAGE.verify_archive(archive, checksum, "1.2.3", "a" * 40)
+        payload = {name.split("/", 1)[1]: data for name, data in files.items()}
+        return archive, checksum, payload
+
+    @staticmethod
+    def rewrite(
+        target: str, archive: Path, checksum: Path, payload: dict[str, bytes],
+    ) -> None:
+        writer = PACKAGE.write_zip if archive.suffix == ".zip" else PACKAGE.write_tar_gz
+        writer(archive, PACKAGE.archive_root("1.2.3", target, "binaries"), payload)
+        checksum.write_text(
+            f"{hashlib.sha256(archive.read_bytes()).hexdigest()}  {archive.name}\n",
+            encoding="ascii",
+        )
+
+    def test_every_native_archive_preserves_notices_without_external_fonts(self) -> None:
+        for target in PACKAGE.TARGETS:
+            with self.subTest(target=target):
+                archive, checksum, payload = self.build(target)
+                self.assertEqual(
+                    {name for name in payload if name.startswith("assets/fonts/")},
+                    set(FONT_NOTICES),
+                )
+                manifest = PACKAGE.parse_manifest(payload["MANIFEST.sha256"])
+                for name, original in FONT_NOTICES.items():
+                    self.assertEqual(payload[name], original)
+                    self.assertEqual(manifest[name], hashlib.sha256(original).hexdigest())
+                self.assertFalse(set(FONT_BINARIES) & set(payload))
+                native = PACKAGE.native_archive_inventory(archive, checksum)
+                self.assertEqual(len(native), 3)
+                self.assertEqual({item["target"] for item in native}, {target})
+                before = archive.read_bytes()
+                repeated, _, _ = self.build(target)
+                self.assertEqual(repeated.read_bytes(), before)
+
+    def test_each_font_notice_is_required_even_with_a_rebuilt_manifest(self) -> None:
+        for target in PACKAGE.TARGETS:
+            archive, checksum, original = self.build(target)
+            original.pop("MANIFEST.sha256")
+            for missing in FONT_NOTICES:
+                with self.subTest(target=target, missing=missing):
+                    payload = dict(original)
+                    payload.pop(missing)
+                    self.rewrite(target, archive, checksum, PACKAGE.add_manifest(payload))
+                    with self.assertRaisesRegex(ValueError, "binary payload inventory is not exact"):
+                        PACKAGE.verify_archive(archive, checksum)
+            for extra in FONT_BINARIES:
+                with self.subTest(target=target, external_font=extra):
+                    payload = {**original, extra: b"unnecessary external font"}
+                    self.rewrite(target, archive, checksum, PACKAGE.add_manifest(payload))
+                    with self.assertRaisesRegex(ValueError, "binary payload inventory is not exact"):
+                        PACKAGE.verify_archive(archive, checksum)
+
+    def test_notice_changes_are_bound_by_the_payload_manifest(self) -> None:
+        for target in PACKAGE.TARGETS:
+            archive, checksum, original = self.build(target)
+            for changed in FONT_NOTICES:
+                with self.subTest(target=target, changed=changed):
+                    payload = {**original, changed: b"changed notice\n"}
+                    self.rewrite(target, archive, checksum, payload)
+                    with self.assertRaisesRegex(ValueError, "payload checksum mismatch"):
+                        PACKAGE.verify_archive(archive, checksum)
+
+    def test_packaging_refuses_missing_notice_sources(self) -> None:
+        self.build("x86_64-pc-windows-msvc")
+        for missing, original in FONT_NOTICES.items():
+            with self.subTest(missing=missing):
+                source = self.root / missing
+                source.unlink()
+                try:
+                    with self.assertRaisesRegex(ValueError, "missing ordinary release file"):
+                        PACKAGE.release_payload(
+                            "1.2.3", "x86_64-pc-windows-msvc", self.binaries, self.root,
+                        )
+                finally:
+                    source.write_bytes(original)
+
+
+class FontNoticeInventoryTests(unittest.TestCase):
+    def test_original_license_bytes_and_copyright_notices_match_the_inventory(self) -> None:
+        fonts = ROOT / "assets" / "fonts"
+        inventory = (fonts / "README.md").read_text(encoding="utf-8")
+        attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
+        originals = {
+            "noto-sans/OFL.txt": "cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a",
+            "noto-sans-jp/LICENSE": "88f117575237307bdd86a17ef15e21790fc9a662fe4dfb103ca1ca077f0d9982",
+            "noto-sans-math/OFL.txt": "a1857fdbc5c15797a65c89dbde06ec8158e7bfbe04fad95ea6885bd69388ad82",
+        }
+        for name, expected in originals.items():
+            with self.subTest(license=name):
+                self.assertEqual(hashlib.sha256((fonts / name).read_bytes()).hexdigest(), expected)
+                self.assertIn(f"`{name}` | `{expected}`", inventory)
+                self.assertIn(f"assets/fonts/{name} -text", attributes)
+        copyright_text = (fonts / "COPYRIGHT.txt").read_text(encoding="utf-8")
+        for original in (
+            "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)",
+            "© 2014-2021 Adobe (http://www.adobe.com/).",
+            "Copyright 2022 Google LLC. All Rights Reserved.",
+        ):
+            self.assertIn(original, copyright_text)
 
 
 class ReleasePackageTests(unittest.TestCase):

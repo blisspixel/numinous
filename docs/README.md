@@ -5,7 +5,7 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.4.0-alpha.19.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
+Status: **0.4.0-alpha.20.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
 0.3 Tactile Alpha agent-and-machine exits are met. Understanding Alpha is the
 active line, and its 0.4 exit remains open. The
 headless core, CLI, MCP server, windowed App, GPU and audio adapters, 355 catalog
@@ -44,6 +44,8 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 
 **Experience design**
 - `DESIGN.md` the design bible: the three-layer room model, the Watch/Play/Create modes and Benchmark, the Cabinet, Visual Eras, aesthetic and audio direction, UX principles.
+- `STUDY.md` the available room explanations, mathematical depths, language
+  fallback, and read-only App, CLI, and MCP controls.
 - `PEDAGOGY.md` the understanding layer: explore-then-tell, the fluency-illusion risk, the predict-then-reveal keystone, the engineered aha, and how understanding and awe are measured.
 - `PROGRESSION.md` levels and insights: the knowledge-gated "metroidbrainia" structure, insight-gating, the Constellation Map, session shapes.
 - `CONSTRUCTIONS.md` the game spine: the puzzle layer with a par, an elegance histogram, and a ghost of your past self.
@@ -101,6 +103,8 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 - `REVIEW.md` the July 2026 external review: the grades, the three-products insight (instrument, Studio, progression), and the near-term stack it set.
 - `PANEL.md` a working review session: composed minds (plus a real cold-start-AI seat) reading the build as it stood for what is missing, not what it has.
 - `ENGINEERING.md` code-quality standards: pinned toolchain and dependency versions, lint/test/unsafe/doc policy, CI gates.
+- [Shared study content and text rendering](decisions/0001-study-text.md), the
+  decision behind bundled fonts, explicit language selection, and native reflow.
 
 ## Single source of truth (the anti-redundancy map)
 
@@ -111,6 +115,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | The synthesis: the path to exceptional, the keystone, the priority order | `NORTH_STAR.md` |
 | Vision, tone, maker ethos, the name | `VISION.md` |
 | The three-layer model, modes, Benchmark, Cabinet, Visual Eras concept, aesthetic/audio direction, UX principles | `DESIGN.md` |
+| Reading room explanations, depths, and locale fallback | `STUDY.md` |
 | The science of understanding and awe, the predict-then-reveal keystone, the engineered aha | `PEDAGOGY.md` |
 | Progression, levels, insight-gating philosophy | `PROGRESSION.md` |
 | The Constellation meta-map spec (node states, edges, the daily route) | `CONSTELLATION.md` |

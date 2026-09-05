@@ -1932,13 +1932,14 @@ mod tests {
             muted: true,
             era: Era::EightBit,
             window_mode: WindowModePreference::Borderless,
+            study_locale: "haw".parse().unwrap(),
         };
 
         assert_eq!(
             read_app_preferences_file(&path).expect("missing preferences use defaults"),
             AppPreferences::default()
         );
-        persist_app_preferences_file(&path, preferences).expect("persist preferences");
+        persist_app_preferences_file(&path, preferences.clone()).expect("persist preferences");
         assert_eq!(
             read_app_preferences_file(&path).expect("read preferences"),
             preferences
