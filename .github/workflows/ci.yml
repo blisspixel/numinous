@@ -97,18 +97,18 @@ jobs:
           python3 scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
 
   msrv:
-    name: MSRV 1.88
+    name: MSRV 1.89
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@39b0b3842c7e8bbf6904c0bfc3d9006fdd4dc4e0 # 1.88.0
+      - uses: dtolnay/rust-toolchain@b4f984c1e7daae8e175614de3e73a8411a20333c # 1.89.0
       - name: Install Linux audio and input development libraries
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
       - name: Minimum supported Rust check
-        run: cargo +1.88.0 check --workspace --all-targets --locked
+        run: cargo +1.89.0 check --workspace --all-targets --locked
 
   house-style:
     name: house style
@@ -291,6 +291,21 @@ jobs:
         run: bash scripts/install.sh --self-test
       - name: Locked build
         run: cargo build --workspace --locked
+      - name: Windows study parity
+        if: runner.os == 'Windows'
+        run: python scripts/study-parity.py --cli target/debug/numinous.exe --mcp target/debug/numinous-mcp.exe
+      - name: POSIX study parity
+        if: runner.os != 'Windows'
+        run: python3 scripts/study-parity.py --cli target/debug/numinous --mcp target/debug/numinous-mcp
+      - name: Render study reader plates
+        run: cargo run --locked -p numinous-app --example study_screens
+      - name: Retain study reader plates
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: study-reader-${{ runner.os }}
+          path: renders/study/
+          if-no-files-found: error
+          retention-days: 14
 
   release-artifacts:
     name: release artifacts

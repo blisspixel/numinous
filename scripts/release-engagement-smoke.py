@@ -56,6 +56,7 @@ EXPECTED_TOOL_NAMES = frozenset(
         "scores",
         "seti",
         "sing_expression",
+        "study_room",
         "trophies",
         "workspace",
         "watch_show",

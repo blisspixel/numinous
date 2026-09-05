@@ -1461,8 +1461,11 @@ fn write_readme_screens(output: &Path) {
     let rooms = all_rooms();
     let times = room_by_id(&rooms, "times-tables");
     let mut menu = Raster::with_accent(DEFAULT_SIZE.0, DEFAULT_SIZE.1, times.meta().accent);
-    draw_cabinet_menu(
+    let mut state = numinous_app::menu::MenuState::launch();
+    state.set_experiment_available(numinous_core::is_engineered_aha_room(times.meta().id));
+    draw_cabinet_menu_state(
         &mut menu,
+        &state,
         numinous_app::input_legend::InputMode::KeyboardMouse,
     );
     write_png(

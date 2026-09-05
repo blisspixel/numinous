@@ -88,6 +88,9 @@ echo "== dependency migration performance receipt =="
 python3 scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
 echo "== build =="
 cargo build --workspace --locked
+echo "== study parity =="
+study_target=$(cargo metadata --no-deps --format-version 1 --locked | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])')
+python3 scripts/study-parity.py --cli "$study_target/debug/numinous" --mcp "$study_target/debug/numinous-mcp"
 
 if command -v cargo-llvm-cov >/dev/null 2>&1; then
     echo "== coverage =="
@@ -115,6 +118,8 @@ bash scripts/check-style.sh
 echo "== POSIX installer safety =="
 bash scripts/install.sh --self-test
 
+echo "== regenerate study reader plates =="
+cargo run -q -p numinous-app --example study_screens --locked
 echo "== regenerate 2,945-screen app QA matrix =="
 cargo run -q -p numinous-app --example screens
 echo "== regenerate remaining artifacts into renders/ =="

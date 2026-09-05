@@ -2,6 +2,7 @@
 //!
 //! DRAG: TUNE L. See `docs/ROOMS.md`.
 
+use crate::readout::{DisplayNumber, NumericReadout, ReadoutId};
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
@@ -36,6 +37,10 @@ fn likelihood(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
         0.4 + phase_unit(t) * 3.5 + s
     }
     .clamp(0.15, 6.0)
+}
+
+fn displayed_likelihood(lr: f64) -> DisplayNumber {
+    DisplayNumber::fixed(lr, 1).expect("the resolved likelihood ratio is finite")
 }
 
 fn prior(seed: u64) -> f64 {
@@ -127,7 +132,13 @@ impl Room for BayesUpdate {
         let pr = prior(self.seed);
         let lr = likelihood(t, None, self.seed);
         let po = posterior(pr, lr);
-        Some(format!("pri={pr:.2}  L={lr:.1}  post={po:.2}  DRAG:L"))
+        let lr = displayed_likelihood(lr);
+        Some(format!("pri={pr:.2}  L={lr}  post={po:.2}  DRAG:L"))
+    }
+
+    fn numeric_readouts(&self, t: f64) -> Option<Vec<NumericReadout>> {
+        Some(vec![displayed_likelihood(likelihood(t, None, self.seed))
+            .readout(ReadoutId::new(1), "LIKELIHOOD RATIO")])
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {

@@ -154,6 +154,198 @@ fn reply_by_id(replies: &[Value], id: u64) -> &Value {
 }
 
 #[test]
+fn direct_study_over_stdio_needs_no_journey_and_keeps_reveal_protocol_unchanged() {
+    let serial = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous-mcp-study-{}-{serial}",
+        std::process::id()
+    ));
+    assert!(!root.exists());
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc": "2.0", "id": id, "method": "tools/call",
+            "params": { "name": name, "arguments": arguments }
+        })
+    };
+    let replies = run_session_with_state(
+        &[
+            json!({
+                "jsonrpc": "2.0", "id": 0, "method": "initialize",
+                "params": { "protocolVersion": "2025-06-18", "capabilities": {},
+                    "clientInfo": { "name": "study-test", "version": "1" } }
+            }),
+            json!({ "jsonrpc": "2.0", "method": "notifications/initialized" }),
+            json!({ "jsonrpc": "2.0", "id": 1, "method": "tools/list" }),
+            call(
+                2,
+                "study_room",
+                json!({ "room": "lissajous", "locale": "ja" }),
+            ),
+            call(
+                3,
+                "study_room",
+                json!({ "room": "lissajous", "locale": "ja-JP", "block": "lissajous.recurrence" }),
+            ),
+            call(
+                4,
+                "study_room",
+                json!({ "room": "times-tables", "locale": "ja" }),
+            ),
+            call(
+                5,
+                "study_room",
+                json!({ "room": "lissajous", "locale": "en", "depth": "mathematics" }),
+            ),
+            call(
+                6,
+                "study_room",
+                json!({ "room": "lissajous", "locale": "ja", "depth": "notes" }),
+            ),
+            call(7, "reveal_room", json!({ "id": "lissajous" })),
+        ],
+        &root.join("journey"),
+        &root.join("journal"),
+    );
+
+    let tool = reply_by_id(&replies, 1)["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|tool| tool["name"] == "study_room")
+        .expect("registered study tool");
+    assert_eq!(tool["annotations"]["readOnlyHint"], true);
+    assert_eq!(tool["inputSchema"]["required"], json!(["room"]));
+    assert_eq!(tool["inputSchema"]["additionalProperties"], false);
+    assert_eq!(
+        tool["inputSchema"]["not"]["required"],
+        json!(["depth", "block"])
+    );
+    for id in 2..=6 {
+        assert_eq!(reply_by_id(&replies, id)["result"]["isError"], false);
+    }
+    let japanese = &reply_by_id(&replies, 2)["result"]["structuredContent"];
+    assert_eq!(japanese["selection"]["depth"], "explanation");
+    assert_eq!(japanese["locale"]["resolved"], "ja");
+    assert!(
+        japanese["blocks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|block| block["translation"] == "reviewed_draft")
+    );
+    let direct = &reply_by_id(&replies, 3)["result"]["structuredContent"];
+    assert_eq!(direct["selection"]["block"], "lissajous.recurrence");
+    assert_eq!(direct["blocks"].as_array().unwrap().len(), 1);
+    assert_eq!(direct["locale"]["requested"], "ja-jp");
+    assert_eq!(direct["locale"]["fallback"], "parent_language");
+    assert_eq!(direct["blocks"][0]["depth"], "mathematics");
+    let fallback = &reply_by_id(&replies, 4)["result"]["structuredContent"];
+    assert_eq!(fallback["locale"]["requested"], "ja");
+    assert_eq!(fallback["locale"]["resolved"], "en");
+    assert_eq!(fallback["locale"]["fallback"], "translation_unavailable");
+    assert!(
+        !fallback["availableDepths"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|depth| depth == "mathematics")
+    );
+    let english = &reply_by_id(&replies, 5)["result"]["structuredContent"];
+    let counterpart = english["blocks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|block| block["id"] == "lissajous.recurrence")
+        .unwrap();
+    let equations = |block: &Value| {
+        block["parts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|part| part["kind"] == "equation")
+            .map(|part| part["notation"].clone())
+            .collect::<Vec<_>>()
+    };
+    assert!(!equations(counterpart).is_empty());
+    assert_eq!(equations(&direct["blocks"][0]), equations(counterpart));
+    let notes = &reply_by_id(&replies, 6)["result"]["structuredContent"];
+    assert!(notes["blocks"].as_array().unwrap().iter().all(|block| {
+        block["depth"] == "notes"
+            && block["locale"]["resolved"] == "en"
+            && block["locale"]["fallback"] == "translation_unavailable"
+    }));
+    assert_eq!(
+        reply_by_id(&replies, 7)["result"]["isError"],
+        true,
+        "study does not award a visit or alter the earned reveal protocol"
+    );
+    assert!(
+        !root.exists(),
+        "the session must not create Journey or journal state"
+    );
+}
+
+#[test]
+fn direct_study_over_stdio_rejects_invalid_requests_and_preserves_state_bytes() {
+    let serial = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous-mcp-study-state-{}-{serial}",
+        std::process::id()
+    ));
+    std::fs::create_dir(&root).expect("isolated study fixture");
+    let journey = root.join("journey");
+    let journal = root.join("journal");
+    let before_journey = b"visited lorenz\nplays 1\n";
+    let before_journal = b"NUMINOUS_JOURNAL\t2\n";
+    std::fs::write(&journey, before_journey).unwrap();
+    std::fs::write(&journal, before_journal).unwrap();
+    let mut requests = vec![
+        json!({
+            "jsonrpc": "2.0", "id": 0, "method": "initialize",
+            "params": { "protocolVersion": "2025-06-18", "capabilities": {},
+                "clientInfo": { "name": "study-test", "version": "1" } }
+        }),
+        json!({ "jsonrpc": "2.0", "method": "notifications/initialized" }),
+        json!({ "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": { "name": "study_room", "arguments": { "room": "lissajous", "block": "lissajous.recurrence" } } }),
+    ];
+    let invalid = [
+        json!({}),
+        json!({ "room": false }),
+        json!({ "room": "missing-room" }),
+        json!({ "room": "lissajous", "locale": null }),
+        json!({ "room": "lissajous", "locale": "ja_JP" }),
+        json!({ "room": "lissajous", "depth": "deep" }),
+        json!({ "room": "times-tables", "depth": "mathematics" }),
+        json!({ "room": "lissajous", "block": "lissajous.missing" }),
+        json!({ "room": "times-tables", "block": "lissajous.recurrence" }),
+        json!({ "room": "lissajous", "block": "../recurrence" }),
+        json!({ "room": "lissajous", "block": "lissajous.recurrence", "depth": "mathematics" }),
+        json!({ "room": "lissajous", "visits": 100 }),
+    ];
+    for (index, arguments) in invalid.iter().enumerate() {
+        requests.push(
+            json!({ "jsonrpc": "2.0", "id": index + 2, "method": "tools/call",
+            "params": { "name": "study_room", "arguments": arguments } }),
+        );
+    }
+    let replies = run_session_with_state(&requests, &journey, &journal);
+    assert_eq!(reply_by_id(&replies, 1)["result"]["isError"], false);
+    for index in 0..invalid.len() {
+        let result = &reply_by_id(&replies, index as u64 + 2)["result"];
+        assert_eq!(result["isError"], true, "invalid request {index}: {result}");
+        assert!(
+            result.get("structuredContent").is_none(),
+            "no substitute content on failure"
+        );
+    }
+    assert_eq!(std::fs::read(&journey).unwrap(), before_journey.as_slice());
+    assert_eq!(std::fs::read(&journal).unwrap(), before_journal.as_slice());
+    assert_eq!(std::fs::read_dir(&root).unwrap().count(), 2);
+    std::fs::remove_dir_all(root).expect("study fixture cleanup");
+}
+
+#[test]
 fn compact_mode_is_discoverable_and_compatible_over_real_stdio() {
     let call = |id: u64, mode: Option<&str>| {
         let mut arguments = json!({"id":"times-tables","t":0.25});
@@ -900,7 +1092,7 @@ fn modern_stateless_discovery_tools_and_prediction_work_over_real_stdio() {
     assert_eq!(by_id(2)["result"]["resultType"], "complete");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(40)
+        Some(41)
     );
     assert_eq!(by_id(3)["result"]["resultType"], "input_required");
     assert_eq!(
@@ -1138,6 +1330,11 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
             ),
             call(2, "journey", json!({})),
             call(
+                11,
+                "study_room",
+                json!({"room":"lissajous","locale":"ja","depth":"mathematics"}),
+            ),
+            call(
                 3,
                 "play_room",
                 json!({
@@ -1189,6 +1386,11 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
             .unwrap_or_else(|| panic!("no reply with id {id}"))
     };
     assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
+    assert_eq!(by_id(11)["result"]["isError"], false);
+    assert_eq!(
+        by_id(11)["result"]["structuredContent"]["locale"]["resolved"],
+        "ja"
+    );
     assert_eq!(
         by_id(3)["result"]["structuredContent"]["temporal"]["fromT"],
         0.1
@@ -2076,7 +2278,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(40)
+        Some(41)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));
@@ -2417,7 +2619,7 @@ fn creation_capsules_cross_real_stdio_with_lineage_and_v2_journal_migration() {
         reply_by_id(&replies, 2)["result"]["tools"]
             .as_array()
             .map(Vec::len),
-        Some(40)
+        Some(41)
     );
     let saved = &reply_by_id(&replies, 3)["result"]["structuredContent"];
     assert_eq!(saved["numFile"], parent.to_num_file());

@@ -534,6 +534,33 @@ common absolute magnification across separate creations, certify a continuous
 curve from finite samples, or make the audio map invertible. Ordinary
 `y=f(x)` graph autoscaling remains a separate presentation contract.
 
+## Study depth and numerical readouts
+
+The authored Lissajous treatment in `crates/core/src/study/lissajous.rs` is
+shared by the App, CLI, and MCP. Its equations and reference identities are
+single-sourced across English and the Japanese draft. The treatment separates
+ideal continuous oscillators, their binary64 implementation, the finite drawn
+trace, and the audio mapping. Worked examples distinguish a repeated position
+from a full-state period, and explain rational closure, an irrational torus
+orbit, occupation measure, and approximate recurrence. [Study](STUDY.md)
+describes direct access; mathematical depth is not a reward for prior visits.
+
+The source regressions check the stated numerical examples and translation
+identity, including equations and reference targets. They do not constitute
+formal verification or independent scholarly review of the entire treatment.
+Other rooms retain their existing explanation and notes until a comparable
+Mathematics treatment is authored.
+
+Six rooms now expose finite, room-scoped numerical channels through
+`NumericReadout`: Times Tables, Lissajous, Gray-Scott, Standing Wave, Bayes
+Update, and Smith Chart. Grading uses channel identity rather than an English
+label's position. Their existing decimal quantization, sampled challenge
+ranges, seeds, tolerances, and scores are retained, including Standing Wave's
+half-percent rounding. A missing or duplicate channel refuses instead of
+silently selecting another number. A challenge also checks its room identity.
+The compatibility parser remains for other rooms; [Rosetta](ROSETTA.md) owns
+that migration boundary.
+
 ## What remains open
 
 Independent mathematical review before 1.0 remains unstaffed. The rest of the

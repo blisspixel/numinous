@@ -5,6 +5,62 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.20] - 2026-09-05
+
+### Added
+- Room study is freely accessible through App E, ?, or Cabinet Explain, CLI
+  `study`, and MCP `study_room`. One core document supplies explicit depths,
+  stable block IDs, typed mathematical notation, references, and per-block
+  locale fallback. Reading has no visit or progress requirement and writes no
+  Journey history. Missing depths refuse instead of substituting other text.
+- Lissajous has the first authored Mathematics treatment, with assumptions,
+  derivations, worked recurrence and phase examples, primary references, and
+  limits of finite drawing and audio. English and a labeled Japanese draft
+  share equation and reference identities. Other rooms retain their existing
+  explanation and notes; Hawaiian and Klingon requests report English fallback.
+- A native Unicode reader preserves case, wraps prose and linear equations,
+  and retains per-depth reading positions and text anchors across resizing.
+  Three bundled Noto faces supply Latin, Japanese, and mathematical glyphs.
+  Original font licenses and notices ship in every native package. The reader
+  does not add full-shell translation or Unicode editing to Studio.
+- CLI/MCP study parity checks real compiled processes against fresh and existing
+  disposable profiles. Native first and final reader plates cover both sizes,
+  all depths, the English/Japanese pilot, and explicit content fallback.
+
+### Changed
+- The seven staged App experiments now require U or Cabinet Experiment.
+  Enter advances an earned connection; returning to free play retains accepted
+  progress. Reading remains independently available before a wager and during
+  a morph. Existing CLI/MCP reveal and progression contracts are retained.
+- Study captures keyboard, pointer, and controller input before gameplay and
+  holds the room tick. Returning restores the room or exact Cabinet state,
+  tuning, accepted input history, and retained audio buffers. A deliberate
+  language choice writes only the versioned App preference; old preferences
+  load with English as the default.
+- The App study renderer pins cosmic-text 0.19.0 and Unicode support crates,
+  raising the workspace MSRV to Rust 1.89 while keeping the developer toolchain
+  at 1.97.1. The architecture decision records dependency, font, and layout
+  costs and the remaining translation and equation-typesetting limits.
+- The NO_COLOR sweep drives the new `study` subcommand like every other
+  terminal surface. The release SBOM records a dependency's dual license as
+  declared, including a copyleft alternative the workspace does not exercise;
+  which alternative is accepted stays with the cargo-deny policy. The advisory
+  gates carry one documented temporary exception, RUSTSEC-2026-0192 for the
+  unmaintained `ttf-parser` behind `cosmic-text` 0.19, with its exit condition
+  recorded in `ENGINEERING.md`.
+
+### Fixed
+- Times Tables, Lissajous, Gray-Scott, Standing Wave, Bayes Update, and Smith
+  Chart grade typed numerical channels independently of English label order.
+  Existing quantization, seeds, tolerances, and scores are preserved. Missing,
+  duplicate, or incompatible channels and mismatched challenge rooms refuse.
+- The reader captures keys already held on entry and disarms stale experiment
+  button consumption. Closing cannot spill an old key repeat into room
+  navigation or suppress the next fresh controller press.
+- Prediction posing checks the exact rounded phase it offers. A channel
+  available during discovery but unavailable at that phase no longer creates
+  an ungradable prediction or falls back to parsing status text.
+
 ## [0.4.0-alpha.19] - 2026-09-05
 
 ### Added

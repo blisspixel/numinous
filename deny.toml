@@ -2,9 +2,17 @@
 # Run: cargo deny check
 
 [advisories]
-# Fail on any known RustSec advisory in the dependency tree.
+# Fail on any known RustSec advisory in the dependency tree. An ignore is a
+# temporary, documented exception with a named exit condition; mirror it in
+# .cargo/audit.toml so the two gates agree.
 yanked = "deny"
-ignore = []
+ignore = [
+    # ttf-parser is unmaintained. It reaches the App only through cosmic-text's
+    # font database, which here reads the three embedded Noto files and never
+    # a system font. fontdb 0.24 dropped the crate; the exception leaves when a
+    # cosmic-text release requires fontdb 0.24 or later.
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained; only cosmic-text 0.19 through fontdb 0.23 on embedded fonts; exit when cosmic-text requires fontdb 0.24 or later" },
+]
 
 [licenses]
 # Allow compatible, well-understood licenses. Symphonia's MPL-2.0 is file-level

@@ -7,6 +7,7 @@
 //! electrical length (one full chart lap equals half a wavelength). See
 //! `docs/ROOMS.md`.
 
+use crate::readout::{DisplayNumber, NumericReadout, ReadoutId};
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
@@ -123,6 +124,11 @@ fn working_point(hand: Option<(f64, f64)>, t: f64, seed: u64) -> (f64, f64, f64,
     (gr, gi, r, x)
 }
 
+fn displayed_resistance(r: f64) -> DisplayNumber {
+    // The instrument shows clipped normalized resistance, not |Gamma|.
+    DisplayNumber::fixed(r.clamp(-9.9, 9.9), 2).expect("the resolved chart resistance is finite")
+}
+
 /// Compact status line: |Gamma|, normalized z, electrical angle, and a tag.
 fn format_status(hand: Option<(f64, f64)>, t: f64, seed: u64, invite: bool) -> String {
     let (gr, gi, r, x) = working_point(hand, t, seed);
@@ -137,9 +143,9 @@ fn format_status(hand: Option<(f64, f64)>, t: f64, seed: u64, invite: bool) -> S
     } else {
         "MISMATCH"
     };
-    let r = r.clamp(-9.9, 9.9);
+    let r = displayed_resistance(r);
     let x = x.clamp(-9.9, 9.9);
-    format!("|G|={g:.2}  z={r:.2}{x:+.2}j  l={deg}  {tag}")
+    format!("|G|={g:.2}  z={r}{x:+.2}j  l={deg}  {tag}")
 }
 
 fn plot_uv(canvas: &mut dyn Surface, u: f64, v: f64, ch: char) {
@@ -326,6 +332,13 @@ impl Room for SmithChart {
         // Ambient: phase is the line length. Tag the unit-R landing so the
         // invite is honest when the bead already sits on the goal ring.
         Some(format_status(None, t, self.seed, true))
+    }
+
+    fn numeric_readouts(&self, t: f64) -> Option<Vec<NumericReadout>> {
+        let (_, _, resistance, _) = working_point(None, t, self.seed);
+        Some(vec![
+            displayed_resistance(resistance).readout(ReadoutId::new(1), "RESISTANCE"),
+        ])
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {

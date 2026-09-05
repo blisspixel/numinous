@@ -26,6 +26,9 @@ mod game_runtime;
 mod local_state;
 mod render_input;
 mod studio;
+mod study;
+#[path = "../../shared/study_json.rs"]
+mod study_json;
 
 #[cfg(test)]
 use access::color_allowed_for;
@@ -103,6 +106,23 @@ enum Command {
         /// Room id, e.g. "times-tables".
         id: String,
         /// Emit machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Read room study directly, without visits, levels, or reading progress.
+    Study {
+        /// Catalog room id, e.g. "lissajous".
+        room: String,
+        /// Explicit study language, e.g. en or ja-JP (default en).
+        #[arg(long)]
+        locale: Option<String>,
+        /// Content depth: explanation (default), notes, or mathematics.
+        #[arg(long, conflicts_with = "block")]
+        depth: Option<String>,
+        /// Open one stable block id directly, e.g. lissajous.recurrence.
+        #[arg(long, conflicts_with = "depth")]
+        block: Option<String>,
+        /// Emit typed content, availability, and language metadata as JSON.
         #[arg(long)]
         json: bool,
     },
@@ -722,10 +742,30 @@ fn cli_main() -> ExitCode {
         Ok(cli) => cli,
         Err(error) => return report_cli_parse_error(error),
     };
+    // Direct study has no progression dependency, including reading the
+    // profile. Keep this route ahead of Journey and score loading.
+    let command = match cli.command {
+        Some(Command::Study {
+            room,
+            locale,
+            depth,
+            block,
+            json,
+        }) => {
+            return emit(study::report(
+                &room,
+                locale.as_deref(),
+                depth.as_deref(),
+                block.as_deref(),
+                json,
+            ));
+        }
+        command => command,
+    };
     let (mut journey, readable) = load_journey();
     let before = journey.clone();
     let earned_before = earned_names(&before, &load_scores());
-    let code = match cli.command {
+    let code = match command {
         Some(command) => run(command, &mut journey),
         None => home(&journey),
     };
@@ -1405,6 +1445,19 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             emit(report)
         }
         Command::Reveal { id, json } => emit(reveal_report(&id, json, allow_hidden, journey)),
+        Command::Study {
+            room,
+            locale,
+            depth,
+            block,
+            json,
+        } => emit(study::report(
+            &room,
+            locale.as_deref(),
+            depth.as_deref(),
+            block.as_deref(),
+            json,
+        )),
         Command::Render {
             id,
             width,

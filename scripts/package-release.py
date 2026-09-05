@@ -40,6 +40,13 @@ RELEASE_FILES = (
     "PLAY.md",
     "README.md",
     "VERIFY.md",
+    # The App embeds the font bytes. Ship their notices and source inventory,
+    # without duplicating those fonts as external runtime assets.
+    "assets/fonts/README.md",
+    "assets/fonts/COPYRIGHT.txt",
+    "assets/fonts/noto-sans/OFL.txt",
+    "assets/fonts/noto-sans-jp/LICENSE",
+    "assets/fonts/noto-sans-math/OFL.txt",
     "assets/logo.icns",
     "assets/logo.png",
     "plugins/numinous/plugin.json",
