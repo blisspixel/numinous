@@ -165,8 +165,9 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
    ASCII render plus structured parameters, input, and change metrics. Catalog,
    description, reveal, listening, scores, and forget responses carry bounded
    typed `structuredContent`; every catalog room is covered by the discovery
-   contract. Inline image and audio media are future sensory-substitution work,
-   not a current four-part response contract. Every tool also advertises an
+   contract. Optional audio content is built for supported listening,
+   expression, and Show calls. Delivery does not establish client playback or
+   hearing. Inline room images remain a separate capability. Every tool also advertises an
    optional `response_mode`. `full` is the exact default. On eight eligible
    structured result families, `compact` replaces only duplicated prose with a
    shorter actionable pointer while leaving the complete typed result intact.
@@ -364,7 +365,9 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   `scripts/agent-hallway.py` exercise the same five-beat story for human
   facilitators and agent cohorts; agent notes are not a human stranger gate.
   Kepler requires a chosen ellipse, answers the circular limit as same, and
-  otherwise returns faster plus the exact perihelion-to-aphelion speed ratio.
+  otherwise returns faster plus the perihelion-to-aphelion speed ratio from
+  `(1+e)/(1-e)`. Graded prose labels numerical rounding and preserves small
+  positive differences rather than displaying an apparently circular orbit.
   Parrondo requires a tried policy and returns exact 120-turn expectations for
   A, B, and ABB. Those typed values, not the sampled room walk, grade the call.
   Nontransitive Dice requires a chosen die and returns all face values, the
@@ -432,8 +435,11 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   to it, newest first. The result explains the selection and declared source,
   retains correction status, and explicitly abstains when there is no match.
   It never searches entry text or opaque receipt digests. Manual handles use
-  the same resolution path and become visibly missing after journal erasure;
-  the workspace keeps no hidden copy. Play does not write it. It is not a
+  the same resolution path. Active and deferred handles bind the immutable
+  record selected and become visibly missing after erasure or replacement,
+  even when a local entry ID is reused. A missing-at-selection handle needs a
+  new explicit selection before it can open a later record. The workspace
+  retains only an opaque content digest, not a hidden record copy. Play does not write it. It is not a
   memory, not the journal, and not Watch Agent state. A new process starts
   empty. The workspace projection is schema version 2; the retrieval result is
   `numinous.remembered-room-retrieval` schema version 1.

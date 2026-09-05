@@ -142,7 +142,9 @@ defined in `RESEARCH.md`.
 ## The docs, grouped
 
 **Foundation and vision**
-- `NORTH_STAR.md` the synthesis: the July 2026 "make it exceptional" fan-out distilled into one architecture, the keystone mechanic, the honest gaps, and the prioritized path. Start here for where the product is going.
+- `NORTH_STAR.md` the direction: understanding becomes usable possibility,
+  continuity serves a chosen inquiry, and the project remains a gift future
+  players can extend. The roadmap owns priorities and release state.
 - `VISION.md` the soul: the origin, the maker ethos, tone, what we are and are not, the name.
 - `RESEARCH.md` the evidence base: what makes it fun, prior art, and sources.
 
@@ -186,6 +188,8 @@ defined in `RESEARCH.md`.
 - `SCOPE.md` the definition of no: the three-products hierarchy, the daily "more math or more progression?" test, the justification filter, and why the fan-out docs are a menu to prune, not a build list.
 - `ROADMAP.md` the evidence-labeled plan (0.x, 1.0, 2.0+), defined by quality bars, not dates.
 - `QUALITY.md` testing and fun-evals: the six quality loops, the fun/awe rubric, QoL, "the math is the oracle."
+- `MATHEMATICS.md` room model contracts, equations, numerical evidence,
+  corrected mathematical defects, and the limits of the current review.
 - `PERFORMANCE.md` measured performance evidence: exact workload boundaries,
   raw receipts, migration comparisons, limits, and the standing update rule.
 - `UNDERSTANDING_STUDY.md` the 0.4 study contract: active control, frozen
@@ -228,6 +232,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | Running and interpreting local-model play sessions | `LOCAL_AGENT_PLAYTEST.md` |
 | How to play (humans, agents, digital consciousnesses) | `PLAYING.md` |
 | Testing, evals, QoL, the fun/awe rubric | `QUALITY.md` |
+| Mathematical model review and numerical evidence | `MATHEMATICS.md` |
 | Performance workloads, measurements, migration receipts, and evidence limits | `PERFORMANCE.md` |
 | The 0.4 comprehension study method, sample, outcomes, and evidence contract | `UNDERSTANDING_STUDY.md` |
 | Simulated persona-review ideation and its evidence limits | `PLAYTESTS.md` |

@@ -45,6 +45,34 @@ later gates, not Understanding Alpha blockers.
 
 ### Critical path right now (read this first)
 
+**Truth, capability, and continuity (founder direction, 2026-09-04).** Aim for a
+gift future minds can keep discovering and extending. Mathematical understanding
+should expand what a player can see, predict, and create. Beauty, familiar
+mastery, exploration, and company also remain complete reasons to play.
+`NORTH_STAR.md` owns this direction; research cannot certify that it has landed.
+
+- **Built in the current review:** corrected Kepler's focus, equal-area geometry,
+  circular-limit grading, and aspect mapping; replaced false Lotka-Volterra
+  spirals with bounded, conservation-tested trajectories and one shared phase
+  plane; added Lorenz analytic-limit and refinement checks with RK4; corrected
+  the two misnormalized degree-three spherical harmonics. `MATHEMATICS.md`
+  records equations, sources, numerical budgets, and the remaining catalog scope.
+  Double Pendulum reuses the shared step with its existing physical checks.
+- **Built:** journal handles bind the selected record, so erase/recreate cannot
+  silently substitute an unrelated encounter, including deferred and previously
+  missing handles. Core session and MCP workspace regressions cover the failure.
+  This repairs the existing Mind's Seat increment; it does not implement identity
+  continuity or portable memory import.
+- **Designed next:** one capability quest that carries a law into a new
+  construction, with a contrasting-case and transfer gate (`PROGRESSION.md`);
+  one explicitly kept and previewed project that resumes the selected question,
+  evidence, creation, and next action (`DIGITAL_DEVELOPMENT.md`). These are small
+  testable slices before a general quest engine or semantic memory system.
+- **Standing evidence rule:** prediction closeness is not mastery or enjoyment.
+  Keep correctness, usable capability, player reports, autonomy, and voluntary
+  continuation separate. The existing agent-and-machine release policy remains
+  in force; no new human-panel blocker is introduced.
+
 **Agent-and-machine track to 1.0 (founder policy, 2026-08-02).** Product
 milestones advance on automated and agent evidence only. Humans may play, but
 no human is required to test or validate for the **1.0 Agent-and-Machine First
@@ -531,10 +559,10 @@ access.
     room-owned wave; the three
    dexterity goals become mathematical predictions; one persisted line per aha
    (room, wager, band) gives the
-   second session a memory, grind-free. The reveal-leak policy (describe
-   and reveal print every punchline ungated, asserted by test) is a named
-   product decision: a spoilers flag defaulting to closed, entered in the
-   decisions section when ruled.
+   second session a memory, grind-free. Descriptions now withhold the
+   explanation; ordinary reveal opens after a visit, and the seven staged
+   rooms require consolidation. A deliberate explanation-first bypass remains
+   a product choice for review, not a claim that learning science forbids it.
 3. **The edges pass rides with time-and-company (rock 2).** The fifteen
    verified missing edges land as reveal lines and deep cuts (the
    Mandelbrot reveal pattern as a per-wing quota); Resonance learns to
@@ -756,7 +784,7 @@ Detail below and in the version sections.
   signing remain separate policy gates.
 - **Done (persistence hardening slice):** malformed Journey and score files now parse defensively: counters saturate, constellation dimensions are capped, `visited` plus `chosen` token sets are bounded and token-sane, duplicate Journey tokens do not consume the unique-token cap, score keys are length-bounded, and score tables cap unique entries. The maintenance posture remains that progress and score files are user-editable local text, so loaders must repair or ignore malformed data rather than panic or allocate without bound.
 - **Done (shared persistence writes):** App, CLI, and MCP now route Journey and score writes through shared core persistence helpers. Writes use a token-owned local lock, PID-aware stale-lock recovery, stale recovery-marker cleanup, merge-before-write behavior, bounded read-before-repair semantics, same-directory temp files with error-path cleanup, flush before commit, atomic Windows replacement retries that never move the destination aside, and a pre-opened parent-directory metadata sync after replace or explicit forget on Unix. The rename remains the commit point: a later sync failure cannot report an uncommitted delta and cause counters to be applied twice. This is an operating-system best-effort durability barrier, not a claim of hardware power-loss immunity. Tests cover concurrent Journey deltas, concurrent score records, a real Windows sharing violation with continuous readers, injected postcommit sync failure, temp and lock cleanup, short held-lock waits under instrumentation, stale deltas after explicit forget, oversized and invalid UTF-8 persistence files preserving the original bytes on write attempts, stale, malformed, and dead-process lock recovery, stale recovery-marker cleanup, current-process lock preservation, and lock drop ownership.
-- **Done (the keystone, the Cairn, and the chaos readouts):** the predict-then-reveal verb (MCP `predict`, Phase A of the Exceptional Path): commit a guess of a room's own status readout at a hidden moment, then meet the truth graded as a gap with a learning-progress band, a self-owned mirror that never posts a score. The graded `challenge` tool in two kinds (touch a target box, or land the readout on a number). The Cairn (MCP `cairn` plus the core `cairn` module and the repo-tracked `data/cairn.txt`): at level 42 a mind leaves one true thing, encoded Arecibo-style into a semiprime a future mind must factor to read. And tactile status readouts across the Chaos & Order flagships (Double Pendulum and Lorenz report the divergence of two nearby starts; the Logistic Map reports its Lyapunov exponent crossing from order into chaos), so eight rooms now pose predictions. See `CHANGELOG.md` for the full detail.
+- **Done (the keystone, the Cairn, and the chaos readouts):** the predict-then-reveal verb (MCP `predict`, Phase A of the Exceptional Path): commit a guess of a room's own status readout at a hidden moment, then meet the truth reported as an error with a closeness band, a self-owned mirror that never posts a score. The graded `challenge` tool in two kinds (touch a target box, or land the readout on a number). The Cairn (MCP `cairn` plus the core `cairn` module and the repo-tracked `data/cairn.txt`): at level 42 a mind leaves one true thing, encoded Arecibo-style into a semiprime a future mind must factor to read. And tactile status readouts across the Chaos & Order flagships (Double Pendulum and Lorenz report the divergence of two nearby starts; the Logistic Map reports its Lyapunov exponent crossing from order into chaos), with additional numeric rooms eligible through the shared prediction contract. See `CHANGELOG.md` for the full detail.
 - **Done (the release front door):** `scripts/install.sh` and `scripts/install.ps1` make setup a single copied command on macOS, Linux, and Windows. The default path selects the latest non-draft GitHub release, downloads a platform archive plus the shared soundtrack, verifies external SHA-256 sidecars and a closed per-file payload manifest, installs the three binaries, and wires `PATH` without requiring Rust or native build tools. `numinous update` stages the same installer, waits for the running CLI to exit, and replaces the managed release while preserving play history. A stable content checksum derived from the verified licensed radio manifest retains an unchanged soundtrack across binary-only releases without another 267 MB download. `--source` remains an explicit current-main fallback. Deterministic archive tests, hostile installer self-tests, four-platform CI packaging, packaged-install smoke and repeat-update checks, and a local full Windows payload with all 42 tracks cover the automation. Every four-target packaged install also renders Times Tables through the installed CLI and completes modern MCP discovery, the exact 40-tool inventory, and one real `play_room` call from an isolated temporary profile. User-bound install-root identity and link-aware deletion keep uninstall inside the dedicated root; only an exact legacy default-root shape, with or without the old marker and with explicit adoption consent, migrates. The 0.6 portable gate still owns clean physical-machine, App, device, and signing evidence.
 - **Done (Cycle 98 boundary hardening):** a standard repository-wide security review closed with zero reportable findings under the local single-user threat model, then every reproduced robustness defect was fixed rather than dismissed. MCP request framing and challenge phases, bounded CLI input and plot dimensions, origin-bound music requests and terminal diagnostics, Cairn growth, extreme surface clipping, App save repeats, Studio source growth, radio discovery and resampling, GPU dimensions and readback failures, and installer provenance and deletion boundaries now fail closed through shared enforcement points. Focused regressions, installer self-tests, the exact App matrix, and the complete release gate cover the changes. This is engineering evidence, not a claim that a standard single-pass review proves the absence of vulnerabilities.
 - **Done (Cycle 105 security hardening):** a maintenance security pass under the same local single-user threat model closed residual MCP string-boundary gaps and dual supply-chain coverage. The MCP schema validator enforces JSON Schema `maxLength`; catalog ids, Studio expressions, and Cairn leave/author fields declare matching bounds; `play_room` rejects oversize canvases at the tool body; `sing_expression` notes are schema-capped. CI and local verify now run `cargo-audit` with ignores in `.cargo/audit.toml` aligned to `deny.toml`. ENGINEERING names the local threat model and the deny-plus-audit path. This is not a claim of absence of vulnerabilities.
@@ -951,7 +979,7 @@ Detail below and in the version sections.
   the call to the exact chosen ellipse. Equal-time positions solve Kepler's
   equation rather than approximate equal area with equal eccentric anomaly.
   The circular limit answers same; every noncircular ellipse answers faster
-  with its exact apsidal speed ratio. Four tunings earn the observation path
+  with its model-derived apsidal speed ratio. Four tunings earn the observation path
   without forcing a call. Core, App, MCP, keyless-prompt, and visual-evidence
   regressions are green.
 - **Done (source-blind packaged playtest correction, August 15, 2026):** an
@@ -1498,22 +1526,24 @@ rather than brightness. A fourth room, `magnet-fractal`, is in the same list for
 a different reason: it moves both-lit cells by about 22 luminance inside the
 widest band.
 
-**4. Eighteen rooms lose one of their two drawn brightness levels without
+**4. Seventeen rooms lose one of their two drawn brightness levels without
 color.** `'#'` is the accent at 1.7 and every other ordinary mark is the accent
 itself, so a room drawing both is drawing two levels, and rooms use that as
 depth: in `burning-ship` `'#'` is the interior of the set. In 39 of 354 accents
-the two collapse to one glyph, and 18 of those rooms draw both marks:
+the two collapse to one glyph, and 17 of those rooms draw both marks:
 `attention`, `burning-ship`, `dla-frost`, `gamblers-ruin`, `goldbach`,
-`henon-heiles`, `hofstadter-q`, `josephus`, `kepler-laws`, `liouville`,
+`henon-heiles`, `hofstadter-q`, `josephus`, `liouville`,
 `magnet-fractal`, `moser-debruijn`, `rabi`, `ruler-function`, `seifert`,
 `sinai-billiard`, `twin-primes`, `zipf`. The two causes pull opposite ways: a
 bright accent times 1.7 clamps, a dark one stays dark. So there is no single
 fix, and changing either the ink scale or the shade thresholds changes what all
-354 rooms look like.
+354 rooms look like. Kepler left this list during the September mathematical
+review: its sectors now use orbital arcs instead of chords and no longer rely
+on the colliding pair of marks.
 
 Seven more rooms lose the same two levels through a different eye, and the two
 sets do not overlap at all: `buddhabrot`, `julia`, `kaprekar`, `landauer`,
-`logistic-cobweb`, `phantom-jam`, `van-der-pol`. Those eighteen are what a
+`logistic-cobweb`, `phantom-jam`, `van-der-pol`. Those seventeen are what a
 player with no color loses; these seven are what a player who has color and
 fewer distinctions loses, measured with the same dichromacy simulation as
 entries 11 and 12. Neither list stands in for the other, so a fix aimed at one

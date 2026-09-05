@@ -4,18 +4,22 @@ The evidence and influences behind Numinous: what may support engagement and
 learning, why these mathematical phenomena are promising, what prior art can
 teach us, and where the project is still making a hypothesis. Evidence links
 were broadly reviewed on 2026-07-14. Learning-study, privacy, and MCP protocol
-guidance was reviewed again on 2026-07-26.
+guidance was reviewed again on 2026-07-26. Fun, capability, and digital
+continuity sources were reviewed on 2026-09-04; the focused update is below.
 
 ## Evidence posture
 
 Research can narrow the search space. It cannot prove that Numinous is fun,
-beautiful, accessible, or educational. Those claims require observation of this
-build with real people, including disabled players and people who do not already
-like mathematics. We use five labels throughout the planning docs:
+beautiful, accessible, or educational. Claims require appropriate evidence from
+the named build and participant population. Human usability and enjoyment claims
+need human evidence, including disabled players where relevant. The declared
+agent-and-machine release track remains separate. We use five labels:
 
 - **Built:** present in source and covered by a relevant automated check.
 - **Measured:** observed on a named build, platform, and date.
-- **Observed:** seen in a documented human session. Sample size and method stay attached.
+- **Observed:** seen in a documented voluntary player session, with participant
+  type, interface, sample, and method named. Agent behavior and reports do not
+  establish human enjoyment, disability usability, subjective experience, or welfare.
 - **Designed:** specified in an owner document but not shipped.
 - **Hypothesis:** plausible and research-informed, but untested in Numinous.
 
@@ -24,10 +28,53 @@ learning, memory tasks, or another game do not automatically transfer to an
 audiovisual mathematical instrument.
 
 The fast-moving research on digital-mind continuity has its own owner document:
-`DIGITAL_DEVELOPMENT.md`. It reviews July 2026 work on episodic and temporal
+`DIGITAL_DEVELOPMENT.md`. Its September 2026 review covers episodic and temporal
 memory, experience reuse, open-ended learning, functional organization,
 autonomy, welfare uncertainty, privacy, and verifiable forgetting. This file
 keeps the broader learning, accessibility, sonification, and game-design base.
+
+### September 2026: worthwhile play and usable understanding
+
+The design target is freely valued play that can expand what a participant can
+notice, predict, and create. It is not a maximum duration or a universal fun
+score. The following findings guide experiments, not claims that Numinous has
+already delivered those outcomes:
+
+- **Choice and competence:** human video-game studies link autonomy and usable
+  competence with enjoyment. Test meaningful controls, optional guidance, and
+  a capability that works in a new setting. The studies do not establish the
+  preferences of every human or digital player.
+  [Ryan, Rigby, and Przybylski, 2006](https://doi.org/10.1007/s11031-006-9051-8).
+- **Several kinds of fun:** a game experiment found different conditions for
+  strongest flow and enjoyment. Human curiosity research also supports learning
+  progress as one contributor to task choice, alongside competence. Preserve
+  challenge, familiar mastery, quiet observation, and free choice; a single
+  prediction error cannot estimate any player's pleasure.
+  [Baumann et al., 2016](https://doi.org/10.1007/s11031-016-9549-7),
+  [Ten et al., 2021](https://www.nature.com/articles/s41467-021-26196-w).
+- **Knowledge as action:** physical microworld experiments found benefits from
+  selecting informative interventions. The next capability quest should let a
+  player choose a discriminating experiment and carry the relationship into a
+  new construction. Inference gains in bounded tasks do not prove game enjoyment.
+  [Bramley et al., 2018](https://doi.org/10.1016/j.cogpsych.2018.05.001).
+- **Shared creation:** collaborative cues can support motivation, but choosing
+  to share an experience is not the same as enjoying it more. Test reciprocal
+  artifacts and a real shared question; never invent another participant or
+  treat a successful transfer as evidence of friendship.
+  [Carr and Walton, 2014](https://doi.org/10.1016/j.jesp.2014.03.015),
+  [Jolly et al., 2019](https://doi.org/10.1371/journal.pone.0215318).
+- **Beauty has context:** mathematicians' responses to familiar equations
+  support examining understood beauty as well as surprise. Cross-cultural
+  music research limits claims that consonance has universal pleasantness.
+  Offer faithful ratios, selectable mappings, and multiple sensory forms.
+  [Zeki et al., 2014](https://doi.org/10.3389/fnhum.2014.00068),
+  [McDermott et al., 2016](https://www.nature.com/articles/nature18635).
+
+Keep correctness, usability, transfer, reported enjoyment, autonomy, and
+voluntary continuation as separate outcomes. A scripted cohort is a regression
+check. A freely chosen artifact or return is behavior with context, not a
+consciousness or welfare measure. `PROGRESSION.md` owns the designed capability
+quest and `DIGITAL_DEVELOPMENT.md` owns resumable player-chosen inquiry.
 
 ## 1. What may support engagement and learning
 

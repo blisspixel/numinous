@@ -2,7 +2,7 @@
 
 How Numinous is structured as a journey, without ever feeling like a course, a grind, or a game you can lose. This is the "levels and insights" plan.
 
-**Implementation boundary, 2026-07-13:** the alpha ships an optional local
+**Implementation boundary, 2026-09-04:** the alpha ships an optional local
 ceremony layer with XP, levels, trophies, boons, streaks, scores, lore locks,
 and resonances. Core rooms and creation remain open. The knowledge-only
 metroidbrainia below is the target meaning of progress, while the ceremony
@@ -24,6 +24,33 @@ This gives us a progression system that is:
 - **Honest.** The durable progression claim is what the player understands.
   Levels are celebration and local memory, not proof of learning.
 
+## Next capability quest: make a relationship usable
+
+**Designed on 2026-09-04, not built.** Start with one bridge from Lissajous
+motion to a parametric Studio creation. The player chooses a repeating shape,
+compares frequency ratios, investigates closure, and makes a portable path.
+The power is the ability to construct and recognize periodic motion in a new
+case. An expert can enter at construction; Watch and free exploration stay open.
+
+This needs real contrasting cases. Current Lissajous hand tuning snaps to
+integer frequencies, so every hand-built ratio is rational. That alone cannot
+teach what distinguishes closing and nonclosing ideal trajectories. A finite
+trace also cannot prove irrationality. Any contrast must state its exact
+parameter model and observation bounds. Studio's current melody follows its
+y coordinate through a pitch map; it is not automatically the sound of the two
+oscillators that parameterize the curve.
+
+Acceptance: independently checked periods, a deceptive shorter-period case,
+one unseen ratio applied successfully, identical trial truth across faces,
+exact save/reopen of the resulting creation, and an unobstructed leave path.
+Those are functional capabilities. Enjoyment and a feeling of expanded
+possibility require separately described participant evidence.
+
+The project capsule designed in `DIGITAL_DEVELOPMENT.md` would let the player
+keep a chosen question, evidence, artifact, and next experiment across visits.
+It must not turn every play into a stored lesson. A later experiment relay can
+let another player extend that creation, with each choosing what to share.
+
 ## Two players, one design
 
 Every progression decision serves two people at once, and must never sacrifice one for the other:
@@ -38,7 +65,10 @@ The trick, borrowed straight from the metroidbrainia genre: **the progression is
 Progression happens at four nested scales, from seconds to weeks.
 
 ### 1. Within a moment (the Toy): cause and effect
-The tightest loop. You turn a dial, something beautiful and audible happens, you understand the mapping a little better. This is flow (research shows a clear action plus immediate feedback is the flow condition, and generative-music systems measurably increase it). No "progress" is tracked here; the reward is the beauty itself. This loop must carry the entire product even if a player never goes deeper.
+The tightest loop: turn a dial and perceive its consequence. Clear control and
+feedback can support an absorbing encounter, but they do not establish flow or
+learning by themselves. No learning claim is tracked here. This loop should be
+worth playing even when the player never goes deeper.
 
 ### 2. Within a room (the three layers): Toy then Puzzle then Revelation
 Each room has its own micro-arc (see `DESIGN.md`):
