@@ -118,12 +118,14 @@ impl ShareBundleMeta {
     }
 }
 
-/// A Studio share bundle: the creation, its link, and a postcard, together.
+/// A Studio share bundle: the creation, its link, a postcard, and the sung
+/// melody as MIDI, together.
 ///
-/// The trio exists because each piece does a different job: the PNG is the
-/// object that escapes the app, the `.num` reopens the creation exactly, and
-/// the link is the frictionless handoff. One README names all three so a
-/// stranger holding the folder knows what they have and how to open it.
+/// Each piece does a different job: the PNG is the object that escapes the
+/// app, the `.num` reopens the creation exactly, the link is the frictionless
+/// handoff, and the MIDI is a 12-TET projection of the voice a stranger can
+/// open in a DAW. One README names all four so a stranger holding the folder
+/// knows what they have, how to open it, and what the MIDI file cannot keep.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StudioShareMeta {
     /// The shared expression source, exactly as saved.
@@ -136,6 +138,8 @@ pub struct StudioShareMeta {
     pub title: Option<String>,
     /// The creation's author, when recorded.
     pub author: Option<String>,
+    /// The prose credit the forker wrote, when present.
+    pub credit: Option<String>,
     /// The parent creation's link, when this one is a fork.
     pub descends: Option<String>,
 }
@@ -151,6 +155,9 @@ impl StudioShareMeta {
         if let Some(author) = &self.author {
             lines.push(format!("author {author}"));
         }
+        if let Some(credit) = &self.credit {
+            lines.push(format!("credit {credit}"));
+        }
         lines.push(format!("expression {}", self.expression));
         lines.push(format!("version {}", self.version));
         lines.extend([
@@ -158,6 +165,7 @@ impl StudioShareMeta {
             "Contents:".to_string(),
             "- creation.num      the creation itself; reopens exactly".to_string(),
             "- postcard.png      still frame of the curve".to_string(),
+            "- melody.mid        the sung melody as a Standard MIDI File".to_string(),
             "- README.share.txt  this note".to_string(),
             String::new(),
             "Reopen it: drop creation.num on the Numinous window, pass it as a".to_string(),
@@ -166,6 +174,16 @@ impl StudioShareMeta {
             "or run numinous fork creation.num --out my-remix.num.".to_string(),
             "This link reopens the same creation, paused until confirmed:".to_string(),
             self.link.clone(),
+            String::new(),
+            "The MIDI file is a 12-TET projection of the sung melody: nearest".to_string(),
+            "key, leftover cents as pitch bend over plus or minus two".to_string(),
+            "semitones. Large intervals between notes are preserved; pitches".to_string(),
+            "outside the available keys and bend range are clamped. Notes".to_string(),
+            "become one voice, rounded to 960 ticks per second. When starts".to_string(),
+            "share a tick, the last valid source note wins. The declared".to_string(),
+            "duration and trailing silence remain; the native waveform and".to_string(),
+            "overlapping envelopes do not. Open it in a DAW or player that".to_string(),
+            "reads Standard MIDI Files.".to_string(),
         ]);
         if let Some(descends) = &self.descends {
             lines.push(String::new());
@@ -341,22 +359,29 @@ mod tests {
     }
 
     #[test]
-    fn studio_readme_names_the_trio_and_the_link() {
+    fn studio_readme_names_the_bundle_the_link_and_the_midi_loss() {
         let meta = super::StudioShareMeta {
             expression: "sin(a*x)".into(),
             link: "numinous://studio?expr=sin%28a%2Ax%29&xmin=-2&xmax=2&a=0.5".into(),
             version: "0.2.0-alpha.5".into(),
             title: Some("Slow Waves".into()),
             author: None,
+            credit: Some("After Quiet Orbit by First Hand".into()),
             descends: Some("numinous://studio?expr=x&xmin=-1&xmax=1&a=0".into()),
         };
         let text = meta.readme_text();
+        assert!(text.starts_with("numinous-studio-share 1\n"));
         assert!(text.contains("creation.num"));
         assert!(text.contains("postcard.png"));
+        assert!(text.contains("melody.mid"));
+        assert!(text.contains("12-TET"));
+        assert!(text.contains("plus or minus two"));
+        assert!(text.contains("clamped"));
         assert!(text.contains("expression sin(a*x)"));
         assert!(text.contains("numinous://studio?"));
         assert!(text.contains("paused until confirmed"));
         assert!(text.contains("title Slow Waves"));
+        assert!(text.contains("credit After Quiet Orbit by First Hand"));
         assert!(!text.contains("author "), "an absent author writes no line");
         assert!(text.contains("It descends from this creation:"));
 

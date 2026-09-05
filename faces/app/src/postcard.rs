@@ -186,12 +186,13 @@ pub(crate) fn write_room_share_bundle(
     })
 }
 
-/// Studio share bundle: the trio from one action. `creation.num` reopens the
-/// creation exactly, the README carries the `numinous://` link, and the
-/// postcard is the object that escapes the app.
+/// Studio share bundle from one action. `creation.num` reopens the creation
+/// exactly, the README carries the `numinous://` link, the postcard is the
+/// object that escapes the app, and `melody.mid` is the sung melody as a
+/// Standard MIDI File, the same projection CLI and MCP already write.
 ///
 /// All or nothing: a failure part way through discards the fresh bundle
-/// folder rather than leaving a half-written trio that looks shareable.
+/// folder rather than leaving a half-written share that looks complete.
 pub(crate) fn write_studio_share_bundle(
     creation: &numinous_core::StudioCreation,
     postcard_rgba: &[u8],
@@ -242,6 +243,21 @@ fn fill_studio_share_bundle(
     let encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, postcard_rgba)?;
     write_png_file(&postcard_path, &encoded)?;
 
+    // After the postcard so a picture that cannot encode still discards the
+    // folder before a melody lands next to an incomplete share. The MIDI
+    // bytes are the same SoundSpec projection CLI `sing --out song.mid` and
+    // MCP `midi: true` already write.
+    let midi_path = dir.join("melody.mid");
+    let mut midi_file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&midi_path)?;
+    midi_file.write_all(
+        &creation
+            .to_melody(numinous_core::DEFAULT_MELODY_NOTES)
+            .midi(),
+    )?;
+
     numinous_core::write_studio_share_readme(
         dir,
         &numinous_core::StudioShareMeta {
@@ -250,6 +266,7 @@ fn fill_studio_share_bundle(
             version: env!("CARGO_PKG_VERSION").to_string(),
             title: creation.title().map(str::to_string),
             author: creation.author().map(str::to_string),
+            credit: creation.credit().map(str::to_string),
             descends: creation.descends().map(str::to_string),
         },
     )?;
@@ -541,9 +558,10 @@ mod tests {
 
     #[test]
     fn a_failed_studio_bundle_discards_its_own_folder() {
-        // A half-written trio looks shareable and is not. The bad postcard
-        // buffer fails after creation.num has landed, which is exactly the
-        // partial state the cleanup exists to remove.
+        // A half-written bundle looks shareable and is not. The bad postcard
+        // buffer fails after creation.num has landed and before melody.mid
+        // is written, which is exactly the partial state the cleanup exists
+        // to remove.
         let parent = std::env::temp_dir().join(format!(
             "numinous-studio-bundle-cleanup-{}",
             std::process::id()
@@ -562,6 +580,84 @@ mod tests {
             leftovers.is_empty(),
             "a failed bundle must not leave a folder behind: {leftovers:?}"
         );
+        let _ = std::fs::remove_dir_all(&parent);
+    }
+
+    #[test]
+    fn a_studio_bundle_writes_the_sung_melody_as_midi() {
+        let parent = std::env::temp_dir().join(format!(
+            "numinous-studio-bundle-midi-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&parent);
+        let graph = numinous_core::StudioCreation::new("sin(x)", -1.0, 1.0, 0.0)
+            .expect("graph")
+            .with_scale(numinous_core::StudioScale::Pentatonic);
+        let rgba = vec![0_u8; (POSTCARD_SIZE as usize).pow(2) * 4];
+        let dir = write_studio_share_bundle(&graph, &rgba, &parent).expect("graph bundle");
+        let midi = std::fs::read(dir.join("melody.mid")).expect("melody.mid");
+        assert_eq!(&midi[0..4], b"MThd");
+        assert_eq!(
+            midi,
+            graph.to_melody(numinous_core::DEFAULT_MELODY_NOTES).midi(),
+            "the share must sing the stored scale, not a silent default"
+        );
+        assert_ne!(
+            midi,
+            graph
+                .clone()
+                .with_scale(numinous_core::StudioScale::Continuous)
+                .to_melody(numinous_core::DEFAULT_MELODY_NOTES)
+                .midi(),
+            "a pentatonic share must not write the continuous voice"
+        );
+        let readme = std::fs::read_to_string(dir.join("README.share.txt")).expect("readme");
+        assert!(readme.contains("melody.mid"), "{readme}");
+        assert!(readme.contains("12-TET"), "{readme}");
+
+        let parametric = numinous_core::StudioCreation::new_parametric(
+            "cos(3*t)",
+            "sin(2*t)",
+            0.0,
+            std::f64::consts::TAU,
+            1.0,
+        )
+        .expect("parametric");
+        let parametric_dir =
+            write_studio_share_bundle(&parametric, &rgba, &parent).expect("parametric bundle");
+        let parametric_midi =
+            std::fs::read(parametric_dir.join("melody.mid")).expect("parametric midi");
+        assert_eq!(
+            parametric_midi,
+            parametric
+                .to_melody(numinous_core::DEFAULT_MELODY_NOTES)
+                .midi()
+        );
+        let y_voice = numinous_core::to_melody(
+            &numinous_core::parse("sin(2*t)").expect("y(t)"),
+            0.0,
+            std::f64::consts::TAU,
+            numinous_core::DEFAULT_MELODY_NOTES,
+            1.0,
+        )
+        .midi();
+        let x_voice = numinous_core::to_melody(
+            &numinous_core::parse("cos(3*t)").expect("x(t)"),
+            0.0,
+            std::f64::consts::TAU,
+            numinous_core::DEFAULT_MELODY_NOTES,
+            1.0,
+        )
+        .midi();
+        assert_eq!(
+            parametric_midi, y_voice,
+            "a parametric share sings y(t), the same voice the Studio plays"
+        );
+        assert_ne!(
+            parametric_midi, x_voice,
+            "a parametric share must not sing the x(t) path as if it were the voice"
+        );
+
         let _ = std::fs::remove_dir_all(&parent);
     }
 

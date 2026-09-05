@@ -538,9 +538,12 @@ enum Command {
         /// With --save: name the creation (printable ASCII, 64 characters).
         #[arg(long)]
         title: Option<String>,
-        /// With --save: credit the creation (printable ASCII, 64 characters).
+        /// With --save: sign the creation (printable ASCII, 64 characters).
         #[arg(long)]
         author: Option<String>,
+        /// With --save: prose credit (printable ASCII, 160 characters). Empty or whitespace clears it.
+        #[arg(long)]
+        credit: Option<String>,
         /// Portable pitch map stored with a saved creation.
         #[arg(long, value_enum, default_value_t)]
         scale: StudioScaleArg,
@@ -600,7 +603,7 @@ enum Command {
         #[arg(long)]
         seed: Option<u64>,
     },
-    /// Sing a function: turn y = f(x) into a melody and write a WAV.
+    /// Sing a function: turn y = f(x) into a melody and write WAV or MIDI.
     Sing {
         /// The same Studio expression grammar, a .num file path, or a numinous:// link.
         expr: String,
@@ -620,7 +623,7 @@ enum Command {
         /// Override the capsule pitch map, or quantize a raw expression.
         #[arg(long, value_enum)]
         scale: Option<StudioScaleArg>,
-        /// Write a WAV audio file to this path.
+        /// Write a WAV (.wav) or Standard MIDI File (.mid) here.
         #[arg(long)]
         out: PathBuf,
     },
@@ -646,9 +649,12 @@ enum Command {
         /// Title for the fork.
         #[arg(long)]
         title: Option<String>,
-        /// Author credit for the fork.
+        /// Author signature for the fork.
         #[arg(long)]
         author: Option<String>,
+        /// Prose credit for the fork. Omit to keep the parent's identity suggestion; empty or whitespace clears it.
+        #[arg(long)]
+        credit: Option<String>,
     },
 }
 
@@ -1816,6 +1822,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             save,
             title,
             author,
+            credit,
             scale,
         } => {
             if list_recipes {
@@ -1835,9 +1842,9 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                         .to_string(),
                 ));
             }
-            if save.is_none() && (title.is_some() || author.is_some()) {
+            if save.is_none() && (title.is_some() || author.is_some() || credit.is_some()) {
                 return emit(Err(
-                    "a title or author names a saved creation; add --save\n".to_string(),
+                    "a title, author, or credit names a saved creation; add --save\n".to_string(),
                 ));
             }
             let scale = numinous_core::StudioScale::from(scale);
@@ -1927,6 +1934,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                         CreationIdentity {
                             title: title.as_deref(),
                             author: author.as_deref(),
+                            credit: credit.as_deref(),
                         },
                         path,
                     ) {
@@ -1987,6 +1995,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                         CreationIdentity {
                             title: title.as_deref(),
                             author: author.as_deref(),
+                            credit: credit.as_deref(),
                         },
                         path,
                     ) {
@@ -2071,7 +2080,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             journey.play();
             emit(resolve_sing_input(&expr, xmin, xmax, a).and_then(
                 |(source, xmin, xmax, a, stored_scale)| {
-                    sing_wav_with_scale(
+                    sing_to_path(
                         &source,
                         xmin,
                         xmax,
@@ -2092,6 +2101,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             scale,
             title,
             author,
+            credit,
         } => {
             journey.play();
             emit(fork_studio_creation_extended(
@@ -2104,6 +2114,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                     identity: CreationIdentity {
                         title: title.as_deref(),
                         author: author.as_deref(),
+                        credit: credit.as_deref(),
                     },
                 },
                 &out,
@@ -2506,7 +2517,7 @@ fn sing_wav(
     a: f64,
     path: &Path,
 ) -> Result<String, String> {
-    sing_wav_with_scale(
+    sing_to_path(
         source,
         xmin,
         xmax,
@@ -2517,8 +2528,8 @@ fn sing_wav(
     )
 }
 
-/// Turn `source` into a melody through one portable scale and write it as WAV.
-fn sing_wav_with_scale(
+/// Turn `source` into a melody and write WAV (.wav) or MIDI (.mid/.midi).
+fn sing_to_path(
     source: &str,
     xmin: f64,
     xmax: f64,
@@ -2529,11 +2540,27 @@ fn sing_wav_with_scale(
 ) -> Result<String, String> {
     let request = SingRequest::new(source, Some(xmin), Some(xmax), Some(a), Some(notes))
         .map_err(sing_request_error)?;
-    let sample_rate = 44_100u32;
     let spec = request
         .execute_with_scale(scale)
         .map_err(sing_request_error)?;
-    write_wav(path, &spec.render(sample_rate), sample_rate, 1)?;
+    let ext = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("wav")
+        .to_ascii_lowercase();
+    match ext.as_str() {
+        "wav" => {
+            write_wav(path, &spec.render(44_100), 44_100, 1)?;
+        }
+        "mid" | "midi" => {
+            std::fs::write(path, spec.midi()).map_err(|error| {
+                format!("could not create {}: {error}", terminal_safe_path(path))
+            })?;
+        }
+        other => {
+            return Err(format!("sing writes .wav or .mid, not .{other}\n"));
+        }
+    }
     Ok(format!(
         "wrote {} ({:.1}s, {} notes) from y = {} on the {} scale\n",
         terminal_safe_path(path),

@@ -743,6 +743,10 @@ fn tools_list_has_the_expected_tools() {
         save_creation["inputSchema"]["properties"]["author"]["maxLength"],
         numinous_core::MAX_META_TEXT_CHARS
     );
+    assert_eq!(
+        save_creation["inputSchema"]["properties"]["credit"]["maxLength"],
+        numinous_core::MAX_CREDIT_CHARS
+    );
     let open_creation = tools
         .iter()
         .find(|tool| tool["name"] == "open_creation")
@@ -759,6 +763,13 @@ fn tools_list_has_the_expected_tools() {
         fork_creation["inputSchema"]["properties"]["parent"]["maxLength"],
         numinous_core::MAX_SHARE_INPUT_BYTES
     );
+    for tool in [save_creation, fork_creation] {
+        assert_eq!(
+            tool["inputSchema"]["properties"]["credit"]["type"],
+            "string"
+        );
+        assert_eq!(tool["inputSchema"]["properties"]["credit"]["minLength"], 0);
+    }
     let workspace = tools
         .iter()
         .find(|tool| tool["name"] == "workspace")
@@ -888,6 +899,7 @@ fn tools_list_has_the_expected_tools() {
         sing["inputSchema"]["properties"]["receipt"]["type"],
         "boolean"
     );
+    assert_eq!(sing["inputSchema"]["properties"]["midi"]["type"], "boolean");
     let gesture_variants = play_properties["gesture"]["items"]["oneOf"]
         .as_array()
         .expect("gesture event variants");
@@ -1682,6 +1694,11 @@ fn declared_tool_schemas_are_enforced_at_runtime() {
         ),
         (
             "save_creation",
+            json!({"expr":"x","credit":"x".repeat(numinous_core::MAX_CREDIT_CHARS + 1)}),
+            "at most 160 characters",
+        ),
+        (
+            "save_creation",
             json!({"expr":"x","era":"future"}),
             "must be one of",
         ),
@@ -2393,6 +2410,9 @@ fn creations_save_open_fork_and_enter_the_journal_without_host_files() {
     assert_eq!(child.source(), "sin(a*x)+0.1");
     assert_eq!(child.title(), Some("Second Wave"));
     assert_eq!(child.author(), Some("Next Hand"));
+    let expected_credit = format!("After {title} by {author}");
+    assert_eq!(child.credit(), Some(expected_credit.as_str()));
+    assert_eq!(child_data["capsuleFormatVersion"], 4);
     assert_eq!(child.era(), Some(numinous_core::Era::Vector));
     assert_eq!(child.descends(), Some(parent.to_link().as_str()));
 
@@ -2430,6 +2450,104 @@ fn creations_save_open_fork_and_enter_the_journal_without_host_files() {
         tool_error_text(&path_shaped).contains("not a Numinous Studio .num file"),
         "a path stays inert data: {path_shaped}"
     );
+}
+
+#[test]
+fn studio_credit_edits_round_trip_through_capsules_and_links() {
+    for source in [
+        json!({"expr":"sin(x)"}),
+        json!({"x_expr":"cos(t)","y_expr":"sin(t)"}),
+    ] {
+        let mut parent_args = source.clone();
+        parent_args["title"] = json!("First Wave");
+        parent_args["author"] = json!("First Hand");
+        parent_args["credit"] = json!("An earlier source");
+        let saved = call("save_creation", parent_args);
+        assert_eq!(saved["result"]["isError"], false, "{saved}");
+        let parent = &saved["result"]["structuredContent"];
+        assert_eq!(parent["credit"], "An earlier source");
+        for (edit, expected) in [
+            (None, Some("After First Wave by First Hand")),
+            (Some(""), None),
+            (Some(" \t "), None),
+            (Some("  A different source  "), Some("A different source")),
+        ] {
+            let mut arguments = json!({"parent":parent["numFile"]});
+            if let Some(edit) = edit {
+                arguments["credit"] = json!(edit);
+            }
+            let forked = call("fork_creation", arguments);
+            assert_eq!(forked["result"]["isError"], false, "{forked}");
+            let data = &forked["result"]["structuredContent"];
+            assert_eq!(data["credit"], json!(expected));
+            assert_eq!(data["descends"], parent["link"]);
+            for field in ["numFile", "link"] {
+                let child = numinous_core::StudioCreation::from_capsule(
+                    data[field].as_str().expect("portable capsule"),
+                )
+                .expect("reopen child");
+                assert_eq!(child.credit(), expected);
+                assert_eq!(child.to_link(), data["link"].as_str().expect("child link"));
+                if field == "numFile" {
+                    assert_eq!(child.descends(), parent["link"].as_str());
+                }
+            }
+        }
+        for edit in [None, Some(""), Some(" \t ")] {
+            let mut arguments = source.clone();
+            if let Some(edit) = edit {
+                arguments["credit"] = json!(edit);
+            }
+            let saved = call("save_creation", arguments);
+            assert_eq!(saved["result"]["isError"], false, "{saved}");
+            let data = &saved["result"]["structuredContent"];
+            assert_eq!(data["credit"], Value::Null);
+            for field in ["numFile", "link"] {
+                let creation = numinous_core::StudioCreation::from_capsule(
+                    data[field].as_str().expect("portable capsule"),
+                )
+                .expect("reopen save without credit");
+                assert_eq!(creation.credit(), None);
+            }
+        }
+    }
+}
+
+#[test]
+fn studio_credit_refuses_malformed_text_and_wrong_argument_types() {
+    let parent = numinous_core::StudioCreation::new("x", -1.0, 1.0, 0.0)
+        .expect("parent")
+        .with_title("First Wave")
+        .expect("title")
+        .to_link();
+    for credit in [
+        Value::Null,
+        json!(42),
+        json!(false),
+        json!(["credit"]),
+        json!({"text":"credit"}),
+        json!("bad\ncredit"),
+        json!("x".repeat(numinous_core::MAX_CREDIT_CHARS + 1)),
+    ] {
+        for (tool, mut arguments) in [
+            ("save_creation", json!({"expr":"x"})),
+            ("fork_creation", json!({"parent":parent})),
+        ] {
+            arguments["credit"] = credit.clone();
+            let response = call(tool, arguments.clone());
+            assert!(tool_error_text(&response).contains("credit"), "{response}");
+            assert!(response["result"]["structuredContent"].is_null());
+            // The face boundary also refuses a wrong type when invoked directly.
+            if !credit.is_string() {
+                let direct = if tool == "save_creation" {
+                    super::studio_tools::save_creation_tool(&arguments)
+                } else {
+                    super::studio_tools::fork_creation_tool(&arguments)
+                };
+                assert_eq!(direct["isError"], true, "{direct}");
+            }
+        }
+    }
 }
 
 #[test]
@@ -2696,6 +2814,37 @@ fn a_melody_can_arrive_as_sound_and_not_only_as_notation() {
     assert!(
         (seconds - claimed).abs() < 0.1,
         "the file is {seconds:.2}s but the reply claims {claimed:.2}s"
+    );
+}
+
+#[test]
+fn a_melody_can_leave_as_midi_without_replacing_the_notation() {
+    let resp = handle_request(&json!({
+        "jsonrpc":"2.0","id":47,"method":"tools/call",
+        "params":{"name":"sing_expression","arguments":{
+            "expr":"sin(x)","notes":8,"midi":true
+        }}
+    }))
+    .expect("tools/call must respond");
+    let content = resp["result"]["content"].as_array().expect("content");
+    assert_eq!(content[0]["type"], "text");
+    let midi = content
+        .iter()
+        .find(|block| block["type"] == "resource")
+        .expect("a MIDI resource");
+    assert_eq!(midi["resource"]["mimeType"], "audio/midi");
+    let payload = midi["resource"]["blob"].as_str().expect("payload");
+    assert!(
+        payload.starts_with("TVRoZA"),
+        "the payload does not begin where a Standard MIDI File begins"
+    );
+    let described = &resp["result"]["structuredContent"]["midi"];
+    assert_eq!(described["mimeType"], "audio/midi");
+    assert_eq!(described["format"], "smf-type-0");
+    assert_eq!(described["pitchBendRangeSemitones"], 2.0);
+    assert_eq!(
+        described["encodedBytes"].as_u64(),
+        Some(payload.len() as u64)
     );
 }
 

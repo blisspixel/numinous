@@ -34,10 +34,19 @@ pub(super) const MAX_WIRE_AUDIO_BYTES: usize = 1_500_000;
 /// Absent means no, because a caller that cannot use audio should not be made
 /// to pay for it on every request.
 pub(super) fn requested(arguments: &Value) -> Result<bool, String> {
-    match arguments.get("audio") {
+    flag(arguments, "audio")
+}
+
+/// Whether this call asked for a Standard MIDI File of the same melody.
+pub(super) fn midi_requested(arguments: &Value) -> Result<bool, String> {
+    flag(arguments, "midi")
+}
+
+fn flag(arguments: &Value, name: &'static str) -> Result<bool, String> {
+    match arguments.get(name) {
         None | Some(Value::Null) => Ok(false),
         Some(Value::Bool(wanted)) => Ok(*wanted),
-        Some(_) => Err("Argument 'audio' must be true or false.".to_string()),
+        Some(_) => Err(format!("Argument '{name}' must be true or false.")),
     }
 }
 
@@ -67,6 +76,39 @@ pub(super) fn block(spec: &SoundSpec) -> Result<(Value, Value), String> {
     });
     Ok((
         json!({ "type": "audio", "data": encoded, "mimeType": "audio/wav" }),
+        described,
+    ))
+}
+
+/// Wrap a melody as a MIDI resource block, or say why it will not fit.
+pub(super) fn midi_block(spec: &SoundSpec) -> Result<(Value, Value), String> {
+    let midi = spec.midi();
+    let encoded_len = base64_len(midi.len());
+    if encoded_len > MAX_WIRE_AUDIO_BYTES {
+        return Err(format!(
+            "One reply carries at most {MAX_WIRE_AUDIO_BYTES} bytes of encoded MIDI. This file would encode to {encoded_len} bytes. Leave 'midi' off and read the notes."
+        ));
+    }
+    let encoded = base64(&midi);
+    let described = json!({
+        "mimeType": "audio/midi",
+        "format": "smf-type-0",
+        "ticksPerQuarter": numinous_core::MIDI_TICKS_PER_QUARTER,
+        "tempoMicroseconds": numinous_core::MIDI_TEMPO_MICROSECONDS,
+        "pitchBendRangeSemitones": numinous_core::MIDI_PITCH_BEND_RANGE_SEMITONES,
+        "sourceNoteCount": spec.notes.len(),
+        "encodedBytes": encoded.len(),
+        "loss": "nearest 12-TET keys plus 14-bit pitch bend; large note intervals are preserved; one voice at 960 ticks per second, last valid source note wins shared starts; declared duration retained, native waveform and overlapping envelopes omitted",
+    });
+    Ok((
+        json!({
+            "type": "resource",
+            "resource": {
+                "uri": "numinous://studio-melody.mid",
+                "mimeType": "audio/midi",
+                "blob": encoded
+            }
+        }),
         described,
     ))
 }
@@ -114,7 +156,10 @@ fn base64(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{MAX_WIRE_AUDIO_BYTES, WIRE_SAMPLE_RATE, attach, base64, block, requested};
+    use super::{
+        MAX_WIRE_AUDIO_BYTES, WIRE_SAMPLE_RATE, attach, base64, block, midi_block, midi_requested,
+        requested,
+    };
     use numinous_core::SoundSpec;
     use serde_json::json;
 
@@ -180,6 +225,29 @@ mod tests {
         assert_eq!(requested(&json!({"audio": true})), Ok(true));
         assert!(requested(&json!({"audio": "yes"})).is_err());
         assert!(requested(&json!({"audio": 1})).is_err());
+    }
+
+    #[test]
+    fn a_melody_leaves_as_a_standard_midi_file() {
+        let spec = SoundSpec::tone(440.0, 0.5, 0.5);
+        let (block, described) = midi_block(&spec).expect("a short melody fits");
+        assert_eq!(block["type"], "resource");
+        assert_eq!(block["resource"]["mimeType"], "audio/midi");
+        assert_eq!(described["format"], "smf-type-0");
+        let data = block["resource"]["blob"].as_str().expect("payload");
+        assert!(
+            data.starts_with("TVRoZA"),
+            "not an MThd header: {}",
+            &data[..8]
+        );
+        assert_eq!(described["encodedBytes"], data.len());
+    }
+
+    #[test]
+    fn asking_for_midi_is_opt_in_and_typed() {
+        assert_eq!(midi_requested(&json!({})), Ok(false));
+        assert_eq!(midi_requested(&json!({"midi": true})), Ok(true));
+        assert!(midi_requested(&json!({"midi": "yes"})).is_err());
     }
 
     #[test]

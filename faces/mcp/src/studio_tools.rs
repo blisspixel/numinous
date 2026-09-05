@@ -199,6 +199,10 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
 /// Build a portable Studio capsule without granting the MCP face filesystem
 /// access. The complete `.num` document and native link travel in the result.
 pub(super) fn save_creation_tool(args: &Value) -> Value {
+    let credit = match studio_credit(args) {
+        Ok(credit) => credit,
+        Err(error) => return tool_error(error),
+    };
     let source = args.get("expr").and_then(Value::as_str);
     let x_source = args.get("x_expr").and_then(Value::as_str);
     let y_source = args.get("y_expr").and_then(Value::as_str);
@@ -268,6 +272,10 @@ pub(super) fn save_creation_tool(args: &Value) -> Value {
             Err(error) => return tool_error(&error),
         };
     }
+    creation = match creation.with_credit_override(credit) {
+        Ok(creation) => creation,
+        Err(error) => return tool_error(&error),
+    };
     if let Some(raw_era) = args.get("era").and_then(Value::as_str) {
         let Some(era) = numinous_core::Era::parse(raw_era) else {
             return tool_error("Argument 'era' must be phosphor, 8-bit, vector, or modern.");
@@ -292,6 +300,10 @@ pub(super) fn open_creation_tool(args: &Value) -> Value {
 
 /// Make one child through the same core fork constructor the CLI uses.
 pub(super) fn fork_creation_tool(args: &Value) -> Value {
+    let credit = match studio_credit(args) {
+        Ok(credit) => credit,
+        Err(error) => return tool_error(error),
+    };
     let Some(capsule) = args.get("parent").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'parent'.");
     };
@@ -339,7 +351,17 @@ pub(super) fn fork_creation_tool(args: &Value) -> Value {
             Err(error) => return tool_error(&error),
         };
     }
+    child = match child.with_credit_override(credit) {
+        Ok(creation) => creation,
+        Err(error) => return tool_error(&error),
+    };
     studio_creation_result("fork", &child, Some(&parent_link), args)
+}
+
+fn studio_credit(args: &Value) -> Result<Option<&str>, &'static str> {
+    args.get("credit")
+        .map(|value| value.as_str().ok_or("Argument 'credit' must be a string."))
+        .transpose()
 }
 
 fn studio_scale(value: Option<&str>) -> Result<numinous_core::StudioScale, String> {
@@ -407,13 +429,12 @@ fn studio_creation_result(
     if link.chars().count() > numinous_core::MAX_JOURNAL_SUBJECT_CHARS {
         return tool_error("The canonical Studio link exceeds the journal subject bound.");
     }
-    let capsule_format_version = if num_file.starts_with("NUMINOUS_STUDIO 3\n") {
-        3
-    } else if num_file.starts_with("NUMINOUS_STUDIO 2\n") {
-        2
-    } else {
-        1
-    };
+    let capsule_format_version = num_file
+        .lines()
+        .next()
+        .and_then(|header| header.strip_prefix("NUMINOUS_STUDIO "))
+        .and_then(|version| version.parse::<u32>().ok())
+        .unwrap_or(1);
     let verb = match action {
         "save" => "Saved",
         "open" => "Opened",
@@ -437,6 +458,7 @@ fn studio_creation_result(
         "scale": creation.scale().name(),
         "title": creation.title(),
         "author": creation.author(),
+        "credit": creation.credit(),
         "era": creation.era().map(numinous_core::Era::name),
         "descends": creation.descends(),
         "numFile": num_file,
@@ -545,12 +567,28 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         Ok(false) => None,
         Err(message) => return tool_error(&message),
     };
+    let midi = match audible::midi_requested(args) {
+        Ok(true) => match audible::midi_block(&spec) {
+            Ok(rendered) => Some(rendered),
+            Err(message) => return tool_error(&message),
+        },
+        Ok(false) => None,
+        Err(message) => return tool_error(&message),
+    };
     if audible.is_some() {
         lines.push(
             "A WAV of this melody follows as an audio attachment. It is \
              the only part of this reply that is not a description of the \
              melody, and it is a sound sent rather than a sound heard: \
              whether your client can surface it is its answer to give."
+                .to_string(),
+        );
+    }
+    if midi.is_some() {
+        lines.push(
+            "A Standard MIDI File of this melody follows as a resource. It \
+             is 12-TET keys plus pitch bend of leftover cents, not the native \
+             frequencies."
                 .to_string(),
         );
     }
@@ -568,6 +606,7 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         })).collect::<Vec<_>>(),
         "steps": steps,
         "audio": audible.as_ref().map(|(_, described)| described.clone()),
+        "midi": midi.as_ref().map(|(_, described)| described.clone()),
     });
     if want_receipt {
         let audio_asked = args.get("audio").and_then(Value::as_bool).unwrap_or(false);
@@ -608,7 +647,11 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         lines.push("Encounter receipt attached.".to_string());
     }
     let result = tool_structured(&lines.join("\n"), structured);
-    match audible {
+    let result = match audible {
+        Some((block, _)) => audible::attach(result, block),
+        None => result,
+    };
+    match midi {
         Some((block, _)) => audible::attach(result, block),
         None => result,
     }
