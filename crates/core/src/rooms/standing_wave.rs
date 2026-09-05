@@ -25,11 +25,22 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 
 fn mode(hand: Option<(f64, f64)>, seed: u64) -> usize {
     if let Some((x, _)) = hand {
-        (1 + (x * 7.0) as usize).clamp(1, 8)
+        1 + ((x * 8.0) as usize).min(7)
     } else {
         // Ambient keeps a fixed mode and oscillates time; hand picks mode.
         2 + if seed == 0 { 1 } else { (seed % 3) as usize }
     }
+}
+
+fn temporal_factor(n: usize, time: f64, seed: u64) -> f64 {
+    // Unit length and dimensionless wave speed 2 give omega_n = 2*pi*n.
+    // The gallery spans one fundamental period, shared by every mode.
+    let phase = if seed == 0 {
+        0.0
+    } else {
+        (seed % 8) as f64 * 0.2
+    };
+    (time * std::f64::consts::TAU * n as f64 + phase).cos()
 }
 
 fn draw(canvas: &mut dyn Surface, n: usize, time: f64, seed: u64) {
@@ -40,14 +51,7 @@ fn draw(canvas: &mut dyn Surface, n: usize, time: f64, seed: u64) {
     let cy = (height.saturating_sub(1) / 2) as f64;
     let amp = height as f64 * 0.42;
     let n = n.clamp(1, 8);
-    // Real standing-wave time: the string breathes; seed only nudges the clock.
-    let clock = time * std::f64::consts::TAU * 2.0
-        + if seed == 0 {
-            0.0
-        } else {
-            (seed % 8) as f64 * 0.2
-        };
-    let cos_p = clock.cos();
+    let cos_p = temporal_factor(n, time, seed);
     // Envelope always visible.
     let mut prev_e: Option<(i32, i32)> = None;
     for col in 0..width {
@@ -132,7 +136,6 @@ impl StandingWave {
 }
 
 impl Room for StandingWave {
-
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         draw(canvas, mode(None, self.seed), phase_unit(t), self.seed);
     }
@@ -164,7 +167,7 @@ impl Room for StandingWave {
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let n = mode(hands.last().copied(), self.seed);
-        draw(canvas, n, phase_unit(t), self.seed ^ hands.len() as u64);
+        draw(canvas, n, phase_unit(t), self.seed);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -181,17 +184,79 @@ impl Room for StandingWave {
     }
 
     fn reveal(&self) -> &'static str {
-        "A standing wave is two traveling waves of equal frequency and opposite \
-         direction. On a fixed string, mode n has n+1 nodes including the ends: \
-         the harmonics of music."
+        "A standing wave is two traveling waves of equal amplitude and frequency \
+         moving in opposite directions. On a fixed string, mode n has n+1 \
+         nodes including the ends: the harmonics of music. With the same \
+         string and tension, mode n \
+         oscillates n times as fast as the fundamental. The picture uses \
+         common dimensionless time, not elapsed wall-clock seconds."
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::StandingWave;
+    use super::{StandingWave, mode, temporal_factor};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn every_mode_has_an_equal_width_selection_interval() {
+        for n in 1..=8 {
+            let center = (n as f64 - 0.5) / 8.0;
+            assert_eq!(mode(Some((center, 0.5)), 0), n);
+            if n < 8 {
+                let boundary = n as f64 / 8.0;
+                assert_eq!(mode(Some((boundary.next_down(), 0.5)), 0), n);
+                assert_eq!(mode(Some((boundary, 0.5)), 0), n + 1);
+                assert_eq!(mode(Some((boundary.next_up(), 0.5)), 0), n + 1);
+            }
+        }
+        assert_eq!(mode(Some((0.0, 0.5)), 0), 1);
+        assert_eq!(mode(Some((1.0, 0.5)), 0), 8);
+    }
+
+    #[test]
+    fn every_mode_satisfies_one_common_wave_equation() {
+        // For length 1 and speed 2, u_tt = 4*u_xx, independent of mode.
+        let h = 0.0001;
+        for n in 1..=8 {
+            for seed in [0, 3, 7] {
+                let u = |x: f64, t: f64| {
+                    (n as f64 * std::f64::consts::PI * x).sin() * temporal_factor(n, t, seed)
+                };
+                for (x, t) in [(0.27, 0.13), (0.61, 0.37)] {
+                    let uxx = (u(x + h, t) - 2.0 * u(x, t) + u(x - h, t)) / (h * h);
+                    let utt = (u(x, t + h) - 2.0 * u(x, t) + u(x, t - h)) / (h * h);
+                    assert!(
+                        (utt - 4.0 * uxx).abs() < 1e-5 * (1.0 + utt.abs()),
+                        "mode {n}, seed {seed}: u_tt={utt}, 4*u_xx={}",
+                        4.0 * uxx
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn modal_periods_scale_inversely_with_mode_number() {
+        for n in 1..=8 {
+            for seed in [0, 3, 7] {
+                let start = temporal_factor(n, 0.13, seed);
+                assert!((temporal_factor(n, 0.13 + 1.0 / n as f64, seed) - start).abs() < 1e-12);
+                assert!((temporal_factor(n, 0.13 + 0.5 / n as f64, seed) + start).abs() < 1e-12);
+            }
+        }
+    }
+
+    #[test]
+    fn repeating_a_mode_selection_does_not_move_its_clock() {
+        let room = StandingWave::new_with(3);
+        let mut once = Canvas::new(96, 48);
+        let mut repeated = Canvas::new(96, 48);
+        room.render_poked(&mut once, 0.17, &[(0.8, 0.4)]);
+        room.render_poked(&mut repeated, 0.17, &[(0.8, 0.4), (0.8, 0.4)]);
+        assert_eq!(once.to_text(), repeated.to_text());
+    }
 
     #[test]
     fn status_invites() {

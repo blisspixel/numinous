@@ -72,7 +72,8 @@ impl OscillatorPair {
         let aspect = canvas.safe_char_aspect();
         // Both coordinates have unit amplitude in the same spatial units.
         // Text cells need aspect correction before those units reach pixels.
-        let radius_x = cx.min(cy / aspect);
+        // A common margin keeps turning points clear of the App room chrome.
+        let radius_x = cx.min(cy / aspect) * 0.75;
         let radius_y = radius_x * aspect;
         let to_pixel = |theta| {
             let (x, y) = self.point(theta);
@@ -141,11 +142,16 @@ impl Lissajous {
     }
 
     /// The whole-number frequencies a hand point tunes: x picks the y-axis
-    /// count, y picks the x-axis count, both 1 through 8. Every hand tuning
-    /// therefore has a common oscillator period.
+    /// count, y picks the x-axis count, both 1 through 8 in equal-width bins.
+    /// Every hand tuning therefore has a common oscillator period.
     fn tuned_freqs(x: f64, y: f64) -> (f64, f64) {
-        let fy = 1.0 + (x.clamp(0.0, 1.0) * (MAX_TUNE - 1.0)).round();
-        let fx = 1.0 + (y.clamp(0.0, 1.0) * (MAX_TUNE - 1.0)).round();
+        let tuning = |value: f64| {
+            1.0 + (value.clamp(0.0, 1.0) * MAX_TUNE)
+                .floor()
+                .min(MAX_TUNE - 1.0)
+        };
+        let fy = tuning(x);
+        let fx = tuning(y);
         (fx, fy)
     }
 
@@ -376,7 +382,10 @@ mod tests {
             let mut pairs: Vec<_> = (1..=8)
                 .flat_map(|fx| (1..=8).map(move |fy| (fx, fy)))
                 .map(|(fx, fy)| {
-                    room.oscillators(0.37, Some(((fy - 1) as f64 / 7.0, (fx - 1) as f64 / 7.0)))
+                    room.oscillators(
+                        0.37,
+                        Some(((fy as f64 - 0.5) / 8.0, (fx as f64 - 0.5) / 8.0)),
+                    )
                 })
                 .collect();
             pairs.extend([0.0, 0.2, 0.5, 1.0].map(|t| room.oscillators(t, None)));
@@ -448,7 +457,7 @@ mod tests {
         let room = Lissajous::new_with(2);
         for fx in 1..=8 {
             for fy in 1..=8 {
-                let hand = ((fy - 1) as f64 / 7.0, (fx - 1) as f64 / 7.0);
+                let hand = ((fy as f64 - 0.5) / 8.0, (fx as f64 - 0.5) / 8.0);
                 let inputs = crate::room::inputs_from_pokes(&[hand], 0.2);
                 let mut surface = SampledSurface::new(2049, 2049, 1.0);
                 room.render_input(&mut surface, 0.2, &inputs);
@@ -571,6 +580,28 @@ mod tests {
     }
 
     #[test]
+    fn every_frequency_has_an_equal_width_selection_interval_on_both_axes() {
+        for frequency in 1..=8 {
+            let center = (frequency as f64 - 0.5) / 8.0;
+            assert_eq!(
+                Lissajous::tuned_freqs(center, center),
+                (frequency as f64, frequency as f64)
+            );
+            if frequency < 8 {
+                let boundary = frequency as f64 / 8.0;
+                for (position, expected) in [
+                    (boundary.next_down(), frequency as f64),
+                    (boundary, (frequency + 1) as f64),
+                    (boundary.next_up(), (frequency + 1) as f64),
+                ] {
+                    assert_eq!(Lissajous::tuned_freqs(position, 0.0), (1.0, expected));
+                    assert_eq!(Lissajous::tuned_freqs(0.0, position), (expected, 1.0));
+                }
+            }
+        }
+    }
+
+    #[test]
     fn interaction_status_reports_the_persistent_tuning() {
         let room = Lissajous::new();
         let inputs = crate::room::inputs_from_pokes(&[(0.72, 0.35)], 0.2);
@@ -618,7 +649,7 @@ mod tests {
     #[test]
     fn tuned_phase_control_loops_at_the_gallery_boundary() {
         let room = Lissajous::new();
-        let click = [(0.73, 0.36)];
+        let click = [(5.5 / 8.0, 3.5 / 8.0)];
         let mut start = Canvas::new(64, 40);
         room.render_poked(&mut start, 0.0, &click);
         let mut end = Canvas::new(64, 40);
@@ -758,7 +789,12 @@ mod tests {
     fn surface_coordinates_and_segment_work_stay_bounded() {
         let room = Lissajous::new_with(2);
         let pokes: Vec<_> = (0..MAX_ROOM_POKES * 4)
-            .map(|i| ((i % 8) as f64 / 7.0, (i / 8 % 8) as f64 / 7.0))
+            .map(|i| {
+                (
+                    ((i % 8) as f64 + 0.5) / 8.0,
+                    ((i / 8 % 8) as f64 + 0.5) / 8.0,
+                )
+            })
             .collect();
         for (width, height) in [(usize::MAX, usize::MAX), (1, 1), (0, 8), (8, 0)] {
             for aspect in [

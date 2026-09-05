@@ -322,8 +322,8 @@ macro_rules! catalog_rooms {
                 id: "wet-oracle",
                 title: "The Wet Oracle",
                 wing: "Emergence",
-                blurb: "A slime of agents deposits scent and climbs gradients between foods. Race it \
-                        to the shortest path and lose (Tero 2010 Physarum). t grows the network.",
+                blurb: "Particles deposit scent and turn toward stronger signals around food. Add \
+                        food to a Physarum-inspired field. t advances the bounded simulation.",
                 accent: [120, 180, 90],
             }
         ),
@@ -4229,7 +4229,9 @@ pub(crate) fn construct_hidden_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::*;
 
-    const ALPHA5_ORDERED_METADATA_CHECKSUM: u64 = 0x692b_e58d_54d5_ac81;
+    // Alpha 17 corrects the Wet Oracle blurb's unsupported shortest-path
+    // claim. The catalog order, ids, titles, wings and accents stay fixed.
+    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0xcfb1_60cd_30ca_7a3f;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {
@@ -4312,10 +4314,10 @@ mod tests {
     }
 
     #[test]
-    fn ordered_metadata_matches_the_alpha5_migration_receipt() {
+    fn ordered_metadata_matches_the_reviewed_catalog_snapshot() {
         assert_eq!(
             ordered_metadata_checksum(),
-            ALPHA5_ORDERED_METADATA_CHECKSUM
+            REVIEWED_ORDERED_METADATA_CHECKSUM
         );
     }
 

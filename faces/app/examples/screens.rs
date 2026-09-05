@@ -4,6 +4,10 @@
 //! app game state, overlays, progression, reset flow, and small viewports using
 //! the same room, HUD, overlay, and game drawing modules as the live app.
 //! Run: `cargo run -p numinous-app --example screens`.
+//!
+//! The public README gallery is a separate, small set of those same frames:
+//! `cargo run -p numinous-app --example screens -- --readme` writes
+//! `assets/screens/`.
 
 use std::collections::{BTreeSet, VecDeque};
 use std::fs::{File, OpenOptions};
@@ -84,7 +88,18 @@ mod play;
 mod studio_panel;
 
 const OUTPUT: &str = "renders/qa-app";
+const README_SCREENS: &str = "assets/screens";
 const DEFAULT_SIZE: (usize, usize) = (900, 700);
+const README_PLATES: [&str; 8] = [
+    "menu.png",
+    "times-tables.png",
+    "golden-angle.png",
+    "mandelbrot.png",
+    "double-pendulum.png",
+    "studio.png",
+    "kepler-laws.png",
+    "lissajous.png",
+];
 const FULLSCREEN_SIZE: (usize, usize) = (1920, 1080);
 const ROOM_SIZE: (usize, usize) = DEFAULT_SIZE;
 const SMALL_SIZE: (usize, usize) = (360, 240);
@@ -1363,6 +1378,164 @@ fn studio_morph_screen(width: usize, height: usize) -> Raster {
     raster
 }
 
+fn write_png(raster: &Raster, path: &Path) {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).expect("create screenshot directory");
+    }
+    let file = File::create(path).expect("create png");
+    let mut encoder = png::Encoder::new(
+        BufWriter::new(file),
+        raster.width() as u32,
+        raster.height() as u32,
+    );
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder.write_header().expect("png header");
+    writer
+        .write_image_data(&raster.to_rgba())
+        .expect("png data");
+    println!("wrote {}", path.display());
+}
+
+fn readme_room_screen(room: &dyn Room, t: f64, inputs: &[RoomInput]) -> Raster {
+    let (width, height) = DEFAULT_SIZE;
+    let mut raster = room_content(room, t, inputs, DEFAULT_SIZE);
+    hud::draw_room_chrome(
+        &mut raster,
+        room,
+        &hud::RoomChrome {
+            t,
+            room_card: 0,
+            show_info: false,
+            show_help: false,
+            show_journey: false,
+            banner_active: false,
+            the_show: false,
+            studio: false,
+            muted: false,
+            level: 1,
+            input_mode: input_legend::InputMode::KeyboardMouse,
+            controller_face: input_legend::ControllerFace::Generic.into(),
+        },
+        inputs,
+        None,
+        width,
+        height,
+    );
+    raster
+}
+
+fn present_readme_plate(raster: &Raster, name: &str) -> Raster {
+    assert_eq!(
+        (raster.width(), raster.height()),
+        DEFAULT_SIZE,
+        "{name} uses the public App window size"
+    );
+    assert!(raster.lit_count() > 20, "{name} is not a blank screen");
+    let mut presented = raster.clone();
+    if name != "menu.png" {
+        let program = if name == "studio.png" {
+            audio_state::Program::Studio
+        } else {
+            audio_state::Program::RoomScore
+        };
+        let state = audio_state::describe(program, None, 0.45, false, true, true);
+        hud::draw_audio_state(&mut presented, &state, raster.width());
+    }
+    presented
+}
+
+fn write_readme_screens(output: &Path) {
+    std::fs::create_dir_all(output).expect("create README screenshot directory");
+    if let Ok(entries) = std::fs::read_dir(output) {
+        for entry in entries {
+            let path = entry.expect("readme screen directory entry").path();
+            let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            if path.extension().is_some_and(|ext| ext == "png") && !README_PLATES.contains(&name) {
+                std::fs::remove_file(&path)
+                    .unwrap_or_else(|error| panic!("remove stale {name}: {error}"));
+            }
+        }
+    }
+
+    let rooms = all_rooms();
+    let times = room_by_id(&rooms, "times-tables");
+    let mut menu = Raster::with_accent(DEFAULT_SIZE.0, DEFAULT_SIZE.1, times.meta().accent);
+    draw_cabinet_menu(
+        &mut menu,
+        numinous_app::input_legend::InputMode::KeyboardMouse,
+    );
+    write_png(
+        &present_readme_plate(&menu, "menu.png"),
+        &output.join("menu.png"),
+    );
+
+    write_png(
+        &present_readme_plate(&readme_room_screen(times, 0.0, &[]), "times-tables.png"),
+        &output.join("times-tables.png"),
+    );
+
+    let golden = room_by_id(&rooms, "golden-angle");
+    write_png(
+        &present_readme_plate(&readme_room_screen(golden, 0.28, &[]), "golden-angle.png"),
+        &output.join("golden-angle.png"),
+    );
+
+    let mandelbrot = room_by_id(&rooms, "mandelbrot");
+    write_png(
+        &present_readme_plate(&readme_room_screen(mandelbrot, 0.22, &[]), "mandelbrot.png"),
+        &output.join("mandelbrot.png"),
+    );
+
+    let pendulum = room_by_id(&rooms, "double-pendulum");
+    write_png(
+        &present_readme_plate(
+            &readme_room_screen(pendulum, 0.86, &[]),
+            "double-pendulum.png",
+        ),
+        &output.join("double-pendulum.png"),
+    );
+
+    for (room_id, phase, inputs) in [
+        ("kepler-laws", 0.6, Vec::new()),
+        (
+            "lissajous",
+            0.15,
+            vec![RoomInput::PointerDown {
+                x: 0.5625,
+                y: 0.1875,
+                t: 0.15,
+            }],
+        ),
+    ] {
+        let name = format!("{room_id}.png");
+        let room = room_by_id(&rooms, room_id);
+        write_png(
+            &present_readme_plate(&readme_room_screen(room, phase, &inputs), &name),
+            &output.join(name),
+        );
+    }
+
+    let mut panel = studio_panel::StudioPanel::new("x(t)=cos(3*t); y(t)=sin(2*t)")
+        .expect("parametric Formula Jam source");
+    panel.toggle_help();
+    let mut studio = Raster::with_accent(DEFAULT_SIZE.0, DEFAULT_SIZE.1, [120, 220, 190]);
+    panel.draw_with_controller(
+        &mut studio,
+        input_legend::InputMode::KeyboardMouse,
+        input_legend::ControllerFace::Generic.into(),
+        DEFAULT_SIZE.0,
+        DEFAULT_SIZE.1,
+        0.35,
+    );
+    write_png(
+        &present_readme_plate(&studio, "studio.png"),
+        &output.join("studio.png"),
+    );
+}
+
 fn gauntlet(seed: u64) -> play::GauntletPlay {
     let puzzle = numinous_core::GauntletPuzzle::new(seed);
     let secret = puzzle.bomb_code().to_vec();
@@ -1395,6 +1568,11 @@ fn gauntlet(seed: u64) -> play::GauntletPlay {
 fn main() {
     let _generation_lock = GenerationLock::acquire(Path::new("renders/.qa-app.lock"))
         .expect("another App screenshot generator is already writing renders");
+    if std::env::args().any(|argument| argument == "--readme") {
+        write_readme_screens(Path::new(README_SCREENS));
+        println!("wrote {} README plates", README_PLATES.len());
+        return;
+    }
     let output = Path::new(OUTPUT);
     if output.exists() {
         std::fs::remove_dir_all(output).expect("remove stale screenshot matrix");
@@ -2417,14 +2595,18 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        DEFAULT_MIN_CHANGED_PIXELS, GenerationLock, MIN_CHANGED_SUPPORT_PERMILLE,
-        MIN_COHERENT_TILES, MIN_MEAN_CHANNEL_DELTA, MIN_SUPPORT_DENSITY_PERMILLE, ROOM_SIZE,
-        SHARED_SCREEN_COUNT, SMALL_SIZE, apply_input_feedback, assert_hold_release_contract,
-        assert_scenario_matches_verb, assert_scenario_shape, assert_semantics, difference,
-        domain_response_error, expected_paths, feedback_chrome_error, feedback_hold_inputs,
-        life_cause_error, room_by_id, room_content, room_scenario,
+        DEFAULT_MIN_CHANGED_PIXELS, DEFAULT_SIZE, GenerationLock, MIN_CHANGED_SUPPORT_PERMILLE,
+        MIN_COHERENT_TILES, MIN_MEAN_CHANNEL_DELTA, MIN_SUPPORT_DENSITY_PERMILLE, README_PLATES,
+        ROOM_SIZE, SHARED_SCREEN_COUNT, SMALL_SIZE, apply_input_feedback,
+        assert_hold_release_contract, assert_scenario_matches_verb, assert_scenario_shape,
+        assert_semantics, difference, domain_response_error, expected_paths, feedback_chrome_error,
+        feedback_hold_inputs, life_cause_error, room_by_id, room_content, room_scenario,
+        room_screen, write_readme_screens,
     };
-    use numinous_core::{Raster, Surface, all_rooms};
+    use numinous_core::{Raster, RoomInput, Surface, all_rooms};
+    use std::fs::File;
+    use std::io::BufReader;
+    use std::path::Path;
 
     #[test]
     fn scenario_and_inventory_contracts_track_the_catalog() {
@@ -2683,5 +2865,107 @@ mod tests {
                 panic!("{id} must retain a perceptible domain consequence: {err}");
             }
         }
+    }
+
+    #[test]
+    fn lissajous_curve_survives_composed_app_chrome_at_both_window_sizes() {
+        let rooms = all_rooms();
+        let room = room_by_id(&rooms, "lissajous");
+        let readme_tuning = [RoomInput::PointerDown {
+            x: 0.5625,
+            y: 0.1875,
+            t: 0.15,
+        }];
+        // Untouched traces isolate the oscillator from clicked-cell markers.
+        // The tuned case uses the public README plate's interior hand point.
+        let cases: [(&str, f64, &[RoomInput]); 3] = [
+            ("equal-frequency circle", 1.0 / 3.0, &[]),
+            ("untuned sweep", 0.5, &[]),
+            ("README 2:5 tuning", 0.15, &readme_tuning),
+        ];
+        for size in [DEFAULT_SIZE, SMALL_SIZE] {
+            let background = Raster::with_accent(size.0, size.1, room.meta().accent).to_rgba();
+            for (name, t, inputs) in cases {
+                let source = room_content(room, t, inputs, size);
+                assert!(
+                    source.lit_count() > size.1,
+                    "{name} at {size:?} must contain a visible oscillator trace"
+                );
+                let mut composed = room_screen(room, t, inputs, size, 0, false, 1);
+                let audio = super::audio_state::describe(
+                    super::audio_state::Program::RoomScore,
+                    None,
+                    0.45,
+                    false,
+                    true,
+                    true,
+                );
+                super::hud::draw_audio_state(&mut composed, &audio, size.0);
+                let source = source.to_rgba();
+                let composed = composed.to_rgba();
+                assert_ne!(source, composed, "the App chrome must actually be drawn");
+                for (index, ((source_pixel, composed_pixel), background_pixel)) in source
+                    .chunks_exact(4)
+                    .zip(composed.chunks_exact(4))
+                    .zip(background.chunks_exact(4))
+                    .enumerate()
+                {
+                    if source_pixel != background_pixel {
+                        assert_eq!(
+                            composed_pixel,
+                            source_pixel,
+                            "{name} at {size:?}: chrome changed curve pixel ({}, {})",
+                            index % size.0,
+                            index / size.0
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    fn png_size(path: &Path) -> (u32, u32) {
+        let decoder =
+            png::Decoder::new(BufReader::new(File::open(path).expect("open README plate")));
+        let reader = decoder.read_info().expect("decode README plate");
+        let info = reader.info();
+        (info.width, info.height)
+    }
+
+    #[test]
+    fn readme_gallery_writes_current_cabinet_and_play_chrome() {
+        let output =
+            std::env::temp_dir().join(format!("numinous-readme-screens-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&output);
+        write_readme_screens(&output);
+
+        for name in README_PLATES {
+            let path = output.join(name);
+            assert!(path.is_file(), "{name} is written");
+            assert_eq!(
+                png_size(&path),
+                (DEFAULT_SIZE.0 as u32, DEFAULT_SIZE.1 as u32),
+                "{name} matches the public App window"
+            );
+            let bytes = std::fs::metadata(&path)
+                .expect("readme plate metadata")
+                .len();
+            assert!(
+                bytes > 5_000,
+                "{name} is a real plate, not a stub ({bytes} B)"
+            );
+        }
+
+        let rooms = all_rooms();
+        let golden = room_by_id(&rooms, "golden-angle");
+        let play = room_screen(golden, 0.28, &[], DEFAULT_SIZE, 0, false, 1);
+        let inspect = room_screen(golden, 0.28, &[], DEFAULT_SIZE, 0, true, 1);
+        assert_ne!(
+            play.to_rgba(),
+            inspect.to_rgba(),
+            "the public Golden Angle plate is play, not the inspect overlay"
+        );
+
+        std::fs::remove_dir_all(&output).expect("clean README plate temp dir");
     }
 }
