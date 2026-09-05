@@ -639,11 +639,13 @@ MCP_RESULT_FIELDS = {
             "a",
             "discovery",
             "expression",
+            "height",
             "kind",
             "plot",
             "recipeCount",
             "recipeIndex",
             "valid",
+            "width",
             "xmax",
             "xmin",
             "ymax",
@@ -779,6 +781,19 @@ def project_mcp_result(
             raise CollectorError("MCP plot_expression kind must be graph")
         for field in ("expression", "plot"):
             bounded_string(field)
+        # Validate the complete canvas contract without expanding the study's
+        # public material. Blank margins still count toward these dimensions.
+        width, height = structured["width"], structured["height"]
+        if type(width) is not int or type(height) is not int or min(width, height) <= 0:
+            raise CollectorError("MCP plot_expression dimensions must be positive integers")
+        plot = projection["plot"]
+        rows = plot.split("\n")[:-1]
+        if (
+            not plot.endswith("\n")
+            or len(rows) != height
+            or any(len(row) > width for row in rows)
+        ):
+            raise CollectorError("MCP plot_expression rows disagree with its dimensions")
         if projection["expression"] != arguments.get("expr"):
             raise CollectorError("MCP plot_expression result identity differs")
         if projection["valid"] is not True:

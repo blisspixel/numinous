@@ -188,8 +188,8 @@ def plot_rows(text: str, expected: int) -> str:
     return "\n".join(plot_body(text).split("\n")[:expected])
 
 
-def mcp_plot(mcp: str, arguments: dict[str, Any], env: dict[str, str]) -> str:
-    return mcp_tool(mcp, "plot_expression", arguments, env)
+def mcp_plot(mcp: str, arguments: dict[str, Any], env: dict[str, str]) -> dict[str, Any]:
+    return mcp_result(mcp, "plot_expression", arguments, env)
 
 
 def mcp_tool(
@@ -200,6 +200,13 @@ def mcp_tool(
     The plumbing lives here rather than in each caller so a second tool cannot
     end up with its own slightly different idea of what an error looks like.
     """
+    return mcp_result(mcp, tool, arguments, env)["content"][0]["text"]
+
+
+def mcp_result(
+    mcp: str, tool: str, arguments: dict[str, Any], env: dict[str, str]
+) -> dict[str, Any]:
+    """Call a tool once and retain both its text and structured result."""
     request = {
         "jsonrpc": "2.0",
         "id": 1,
@@ -227,7 +234,7 @@ def mcp_tool(
             raise ParityError(
                 f"MCP rejected {arguments}: {payload['content'][0]['text']}"
             )
-        return payload["content"][0]["text"]
+        return payload
     raise ParityError(f"MCP produced no reply for {arguments}: {result.stderr[-400:]}")
 
 
@@ -421,14 +428,19 @@ def check(
     env: dict[str, str],
 ) -> dict[str, Any]:
     try:
-        drawn = plot_body(mcp_plot(mcp, mcp_args, env))
+        response = mcp_plot(mcp, mcp_args, env)
+        geometry = response.get("structuredContent", {})
+        width, height = geometry.get("width"), geometry.get("height")
+        if type(width) is not int or type(height) is not int or min(width, height) <= 0:
+            raise ParityError("MCP did not declare positive integer plot dimensions")
+        drawn = plot_body(response["content"][0]["text"])
         if not drawn:
             return {"name": label, "passed": False, "detail": "MCP drew nothing to compare"}
         rows = drawn.split("\n")
-        # Drive the CLI at whatever geometry MCP chose, since MCP takes no
-        # width or height of its own.
-        height = len(rows)
-        width = max(len(row) for row in rows)
+        if len(rows) != height or any(len(row) > width for row in rows):
+            raise ParityError("MCP plot rows disagree with its declared geometry")
+        # Blank margins belong to the canvas. Ink extent cannot tell us the
+        # width of a centered circle, ellipse, line, or isolated point.
         # Read back exactly the geometry that was asked for, so anything the
         # face prints under the drawing cannot enter the comparison.
         mirrored = plot_rows(cli_plot(cli, cli_args, width, height, env), height)

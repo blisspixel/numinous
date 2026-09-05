@@ -518,7 +518,9 @@ pub fn studio_controls_with_face(mode: InputMode, face: ControllerFace) -> Strin
 
 pub fn studio_controls_with_controller(mode: InputMode, copy: ControllerCopy) -> String {
     match mode {
-        InputMode::KeyboardMouse => "TYPE  F1 HELP  F2 RANDOM  F3 AUTO  TAB/ESC CLOSE".to_string(),
+        InputMode::KeyboardMouse => {
+            "TYPE  F1 HELP  F2 RANDOM  F3 AUTO  F4 SHARE  ESC CLOSE".to_string()
+        }
         InputMode::Controller => format!(
             "{} A+  {} A-  {} A=1  {} MENU  KEYBOARD TYPES",
             copy.action_token(ControllerAction::Up),

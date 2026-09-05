@@ -72,7 +72,7 @@ pub(crate) const STUDIO_RECIPES: &[&str] = numinous_core::STUDIO_RECIPES;
 pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "FORMULA JAM",
     "TYPE: BUILD A CURVE  (Y = ...)",
-    "PAIR: X(T)=...; Y(T)=...",
+    "PAIR: X(T)=...; Y(T)=...  FIT, EQUAL UNITS",
     "ONE: SIN COS TAN EXP LN ABS SQRT FLOOR",
     "TWO: MOD(V,V) MIN(V,V) MAX(V,V)",
     "F2: RANDOM RECIPE FROM THE BANK",
@@ -1690,6 +1690,83 @@ mod tests {
     }
 
     #[test]
+    fn saved_planar_shapes_keep_their_proportions_in_panels_and_postcards() {
+        let assert_shape = |rgba: &[u8], width: usize, top: usize, bottom: usize, ratio: usize| {
+            let blank = Raster::new(width, rgba.len() / (width * 4)).to_rgba();
+            let pixels: Vec<_> = rgba
+                .chunks_exact(4)
+                .zip(blank.chunks_exact(4))
+                .enumerate()
+                .filter_map(|(index, (pixel, empty))| {
+                    let y = index / width;
+                    (pixel != empty && (top..bottom).contains(&y)).then_some((index % width, y))
+                })
+                .collect();
+            assert!(pixels.len() > 30, "the saved path is visible");
+            let dx = pixels.iter().map(|p| p.0).max().expect("ink")
+                - pixels.iter().map(|p| p.0).min().expect("ink");
+            let dy = pixels.iter().map(|p| p.1).max().expect("ink")
+                - pixels.iter().map(|p| p.1).min().expect("ink");
+            assert!(
+                dx.abs_diff(ratio * dy) <= ratio + 1,
+                "ratio {ratio}, width {width}, band {top}..{bottom}: {dx}x{dy}"
+            );
+        };
+        for ratio in [1, 4] {
+            let saved = numinous_core::StudioCreation::new_parametric(
+                format!("{ratio}*cos(t)"),
+                "sin(t)",
+                0.0,
+                std::f64::consts::TAU,
+                0.75,
+            )
+            .expect("planar creation");
+            let capsule = saved.to_num_file();
+            let mut panel = StudioPanel::default();
+            panel.open_creation(&saved);
+            for (width, height) in [(360, 240), (240, 360), (900, 700)] {
+                for mode in [InputMode::KeyboardMouse, InputMode::Controller] {
+                    let mut raster = Raster::new(width, height);
+                    panel.draw(&mut raster, mode, width, height);
+                    let scale = studio_scale(width) as usize;
+                    // Stay inside the reserved curve band for either footer.
+                    // Its full extents must remain visible after composition.
+                    assert_shape(
+                        &raster.to_rgba(),
+                        width,
+                        10 + 56 * scale,
+                        height - 24 * scale,
+                        ratio,
+                    );
+                }
+            }
+            for size in [300, 900] {
+                for title in [None, Some("A saved orbit")] {
+                    let rgba = panel.postcard_rgba(
+                        size,
+                        numinous_core::Era::Modern,
+                        title,
+                        Some("A Curious Mind"),
+                    );
+                    let scale = studio_scale(size).max(2) as usize;
+                    assert_shape(&rgba, size, 60 * scale, size - 24 * scale, ratio);
+                }
+            }
+            assert_eq!(
+                panel
+                    .current_creation()
+                    .expect("unchanged creation")
+                    .to_num_file(),
+                capsule
+            );
+            assert!(
+                panel.opened_paused(),
+                "drawing keeps the saved preview paused"
+            );
+        }
+    }
+
+    #[test]
     fn the_postcard_carries_title_and_author_when_the_capsule_has_them() {
         // The postcard is the object built to escape the app; identity must
         // ride the pixels, not only the capsule. Title changes the headline,
@@ -1880,6 +1957,23 @@ mod tests {
             if (1..20).contains(&columns) {
                 assert!(lines.last().expect("bounded footer").ends_with('.'));
             }
+        }
+    }
+
+    #[test]
+    fn keyboard_footer_keeps_share_visible_beside_the_creation() {
+        for (width, height) in [(360, 240), (900, 700)] {
+            let panel = StudioPanel::default();
+            let mut raster = Raster::new(width, height);
+            panel.draw(&mut raster, InputMode::KeyboardMouse, width, height);
+            let scale = studio_scale(width);
+            assert_composed_text_line(
+                &raster,
+                "TYPE F1 HELP F2 RANDOM F3 AUTO F4 SHARE ESC CLOSE",
+                height as i32 - 11 * scale,
+                scale,
+                '#',
+            );
         }
     }
 

@@ -2551,6 +2551,29 @@ fn studio_credit_refuses_malformed_text_and_wrong_argument_types() {
 }
 
 #[test]
+fn studio_plot_geometry_includes_the_blank_margins() {
+    for arguments in [
+        json!({"expr": "sin(x)"}),
+        json!({"x_expr": "cos(t)", "y_expr": "sin(t)"}),
+    ] {
+        let response = call("plot_expression", arguments.clone());
+        assert_eq!(response["result"]["isError"], false, "{response}");
+        let plot = &response["result"]["structuredContent"];
+        let width = plot["width"].as_u64().unwrap() as usize;
+        let height = plot["height"].as_u64().unwrap() as usize;
+        assert_eq!(width, numinous_core::DEFAULT_PLOT_WIDTH);
+        assert_eq!(height, numinous_core::DEFAULT_PLOT_HEIGHT);
+        let rows: Vec<_> = plot["plot"].as_str().unwrap().lines().collect();
+        assert_eq!(rows.len(), height);
+        let ink_extent = rows.iter().map(|row| row.len()).max().unwrap();
+        assert!(ink_extent <= width);
+        if arguments.get("x_expr").is_some() {
+            assert!(ink_extent < width, "the circle leaves horizontal margins");
+        }
+    }
+}
+
+#[test]
 fn parametric_creations_plot_save_open_and_fork_as_atomic_pairs() {
     let plotted = call(
         "plot_expression",

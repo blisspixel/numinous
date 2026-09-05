@@ -418,9 +418,8 @@ fn tile_label(entry: &GalleryEntry, inner_width: usize) -> String {
 }
 
 /// One thumbnail: the creation's own curve over its own saved window at its
-/// own saved knob, auto-scaled to the tile band. This is a preview surface;
-/// the parity-pinned framing lives in `studio_render` where the full panel
-/// draws.
+/// own saved knob. Parametric paths preserve equal coordinate units within
+/// the tile band through the same fit the full Studio panel uses.
 fn draw_tile_curve(
     raster: &mut Raster,
     x0: i32,
@@ -553,6 +552,68 @@ mod tests {
         let mut wall = Raster::new(600, 400);
         panel.draw(&mut wall, 600, 400);
         assert!(wall.lit_count() > 100, "the pair has a gallery preview");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn saved_circles_and_ellipses_remain_distinct_on_the_composed_wall() {
+        let dir = scratch("planar-proportions");
+        for ratio in [1, 4] {
+            let creation = StudioCreation::new_parametric(
+                format!("{ratio}*cos(t)"),
+                "sin(t)",
+                0.0,
+                std::f64::consts::TAU,
+                1.0,
+            )
+            .expect("ellipse");
+            std::fs::write(
+                dir.join(format!("ellipse-{ratio}.num")),
+                creation.to_num_file(),
+            )
+            .expect("save");
+        }
+        let panel = GalleryPanel::open(&dir);
+        assert_eq!(panel.len(), 2);
+        // These are the actual first-row curve bands after the selected
+        // border, captions, title, lineage row and footer are composed.
+        for (width, height, top, band_width, band_height) in
+            [(360, 240, 38, 78, 156), (900, 700, 62, 213, 564)]
+        {
+            let mut wall = Raster::new(width, height);
+            panel.draw(&mut wall, width, height);
+            let rgba = wall.to_rgba();
+            let blank = Raster::new(width, height).to_rgba();
+            for (index, entry) in panel.entries.iter().enumerate() {
+                let ratio = if entry.creation.source().starts_with('4') {
+                    4
+                } else {
+                    1
+                };
+                let left = 6 + index * (width / 4);
+                let pixels: Vec<_> = rgba
+                    .chunks_exact(4)
+                    .zip(blank.chunks_exact(4))
+                    .enumerate()
+                    .filter_map(|(at, (pixel, empty))| {
+                        let (x, y) = (at % width, at / width);
+                        (pixel != empty
+                            && (left..left + band_width).contains(&x)
+                            && (top..top + band_height).contains(&y))
+                        .then_some((x, y))
+                    })
+                    .collect();
+                assert!(pixels.len() > 50, "the stored path reaches its thumbnail");
+                let dx = pixels.iter().map(|p| p.0).max().expect("ink")
+                    - pixels.iter().map(|p| p.0).min().expect("ink");
+                let dy = pixels.iter().map(|p| p.1).max().expect("ink")
+                    - pixels.iter().map(|p| p.1).min().expect("ink");
+                assert!(
+                    dx.abs_diff(ratio * dy) <= ratio + 1,
+                    "ratio {ratio} at {width}x{height}: thumbnail diameters {dx}x{dy}"
+                );
+            }
+        }
         let _ = std::fs::remove_dir_all(&dir);
     }
 

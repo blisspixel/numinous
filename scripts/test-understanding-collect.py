@@ -120,11 +120,13 @@ def fake_tool_call(
             "a": 1.0,
             "discovery": "manual",
             "expression": arguments["expr"],
+            "height": 1,
             "kind": "graph",
-            "plot": visible,
+            "plot": visible + "\n",
             "recipeCount": 1,
             "recipeIndex": None,
             "valid": True,
+            "width": len(visible),
             "xmax": 1.0,
             "xmin": -1.0,
             "ymax": 1.0,
@@ -1812,6 +1814,43 @@ class CollectorTests(unittest.TestCase):
                 arguments,
                 initialization["serverInfo"],
             )
+
+    def test_plot_dimensions_preserve_margins_without_expanding_study_material(self) -> None:
+        arguments = {"expr": "sin(2*x)"}
+        initialization, result = fake_tool_call("plot_expression", arguments)
+        result["structuredContent"].update(width=8, height=3, plot="\n  **\n\n")
+        projection = collector.project_mcp_result(
+            "plot_expression", result, arguments, initialization["serverInfo"]
+        )
+        self.assertEqual(projection["plot"], "\n  **\n\n")
+        self.assertEqual(
+            set(projection), {"expression", "plot", "valid", "xmax", "xmin", "ymax", "ymin"}
+        )
+
+    def test_plot_projection_rejects_missing_invalid_or_inconsistent_dimensions(self) -> None:
+        arguments = {"expr": "sin(2*x)"}
+        mutations = [
+            {field: value}
+            for field in ("width", "height")
+            for value in (None, True, 0, -1, 1.5, "72")
+        ]
+        mutations += [{"height": 2}, {"width": 1}, {"plot": "missing row terminator"}]
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                initialization, result = fake_tool_call("plot_expression", arguments)
+                result["structuredContent"].update(mutation)
+                with self.assertRaisesRegex(collector.CollectorError, "dimensions"):
+                    collector.project_mcp_result(
+                        "plot_expression", result, arguments, initialization["serverInfo"]
+                    )
+        for field in ("width", "height"):
+            with self.subTest(missing=field):
+                initialization, result = fake_tool_call("plot_expression", arguments)
+                del result["structuredContent"][field]
+                with self.assertRaisesRegex(collector.CollectorError, "schema differs"):
+                    collector.project_mcp_result(
+                        "plot_expression", result, arguments, initialization["serverInfo"]
+                    )
 
     def test_mcp_result_projection_rejects_type_and_identity_drift(self) -> None:
         cases = []
