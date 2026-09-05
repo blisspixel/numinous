@@ -100,7 +100,11 @@ pub fn for_room(id: &str) -> &'static str {
         "bifurcation" | "feigenbaum" => {
             "See also: Feigenbaum, Universal behavior in nonlinear systems; period doubling."
         }
-        "henon" | "henon-heiles" => "See also: Henon map; classical dissipative chaos surveys.",
+        "henon" => "See also: Henon map; classical dissipative chaos surveys.",
+        "henon-heiles" => {
+            "See also: Henon and Heiles (1964), Astronomical Journal 69:73, \
+             doi:10.1086/109234 (Hamiltonian galactic model)."
+        }
         "rossler" => "See also: Rossler attractor; continuous chaos beyond Lorenz.",
         "chua" => "See also: Chua's circuit; electronic chaos realization papers.",
         "sierpinski-tri" | "sierpinski-carpet" | "sierpinski-arrowhead" => {
@@ -173,8 +177,18 @@ pub fn for_room(id: &str) -> &'static str {
         "sir" => "See also: SIR epidemic models; Kermack & McKendrick.",
         "lotka-volterra" => "See also: Lotka-Volterra equations; classical population dynamics.",
         "kuramoto" => "See also: Kuramoto model; synchronization surveys.",
-        "van-der-pol" => "See also: van der Pol oscillator; nonlinear oscillations.",
-        "duffing" => "See also: Duffing equation; forced nonlinear oscillators.",
+        "van-der-pol" => {
+            "See also: van der Pol (1926), On relaxation-oscillations; \
+             doi:10.1080/14786442608564127."
+        }
+        "duffing" => {
+            "See also: Moon and Holmes (1979), A magnetoelastic strange attractor; \
+             doi:10.1016/0022-460X(79)90520-0 (forced double-well model)."
+        }
+        "gray-scott" => {
+            "See also: Pearson (1993), Complex Patterns in a Simple System; \
+             arXiv:patt-sol/9304003, equation 2 (reaction-diffusion model)."
+        }
         "standard-map" | "circle-map" => {
             "See also: Chirikov standard map; circle maps and mode locking."
         }
