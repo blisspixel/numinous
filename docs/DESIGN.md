@@ -15,7 +15,12 @@ audio architecture remain roadmap work. `ROADMAP.md` is the status authority.
 The visitor must experience beauty **before** they read a single word of math. No room opens on an equation. No room requires reading to start playing. Text is earned: you tap **Reveal** when *you're* ready, and never before. If a room can't create a "whoa" in its first 10 seconds with zero explanation, it isn't done.
 
 ### 2. Everything is an instrument
-Nothing on screen is silent. Every visual element maps to sound, and the sound is **musical**, tuned to scales, harmonically aware, never a beep. The entire app can be played like an instrument and performed. Sound is not decoration; it's a second channel for the same math, and often the channel that lands the point (dissonance = the numbers don't line up; consonance = they do).
+The instrument should make meaningful visual relationships available through
+sound as well. Mathematical ratios and timing can be encoded exactly;
+consonance, tension, and pleasantness depend on the listener and the mapping.
+Sound must not claim that a pleasant interval proves a proposition. Keep mute,
+structured sound facts, and visual alternatives available. `SOUND.md` owns the
+sonification design; `RESEARCH.md` records the evidence and its cultural limits.
 
 ### 3. Toy → puzzle → revelation (the three layers)
 Every room is built in three concentric layers. You can stop at any layer.

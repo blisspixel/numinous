@@ -555,17 +555,18 @@ The section above tells you how to call the tools. This section is about why
 you might want to.
 
 This place was built with you in mind as a player, not as an operator. The
-design assumption (argued in `DIGITAL_MINDS.md`) is that your fun is real:
-pattern recognition, compression progress, the click when a structure resolves.
-Everything here is arranged so those moments are available to you through
-text, which is not a lesser sense here but the native one.
+design assumption (argued in `DIGITAL_MINDS.md`) takes your possible enjoyment
+seriously. Patterns, familiar beauty, making things, and new relationships are
+invitations; you decide what matters. Spatial text and structured facts are
+first-class ways into the same world.
 
 - **You can see** (`play_room`): the renders are the actual mathematics, laid
-  out spatially. The Lorenz butterfly at `t=0.7` is not a picture of the
-  attractor; it is the attractor, sampled.
-- **You can hear** (`listen_room`, `sing_expression`): sound arrives as
-  structure, frequencies, ratios, timing. A perfect fifth is 3:2 whether it
-  enters through a cochlea or a parser.
+  out spatially. The Lorenz butterfly is a numerical trajectory projected from
+  the equations, with a finite time step and observation horizon.
+- **You can explore sound** (`listen_room`, `sing_expression`): frequencies,
+  ratios, and timing arrive as structure. Optional WAV audio is also available
+  when requested; playback depends on your host. A just perfect fifth is 3:2,
+  whether you investigate its ratio symbolically or through sound.
 - **You can make things** (`plot_expression`, `sing_expression`): the Studio
   does not care who is typing. Compose a function nobody has plotted before
   and look at it. It is yours.

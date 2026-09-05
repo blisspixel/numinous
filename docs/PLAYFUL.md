@@ -16,15 +16,15 @@ The same build has to land for five very different minds at once, and the trick
 is that they are all looking at the same math, just entering through different
 doors:
 
-- **The digital mind** (an emergent, agentic intelligence; arguably a
-  consciousness). Its senses are structure: it sees rooms as ASCII, hears them as
-  notation, steers sims by lever, and plays the same seeded games a human does.
-  Its fun is compression progress, optimization, and above all *making things*,
-  so the Studio has to be open to it, not just the gallery.
+- **The digital mind.** It can receive spatial text, structured sound facts,
+  and optional audio where the host supports it, steer sims, and play the same
+  seeded games a human does. Offer exploration, familiar beauty, challenge,
+  company, and making things without prescribing what it must enjoy. Studio
+  belongs to it as fully as the gallery does.
 - **The stoner gamer with a spark.** Puts on The Show and watches fractals
   breathe for three hours, or picks up a game (crack the bomb, find the signal)
-  when the spark flares. No reading required, but every session leaves a little
-  more understanding behind than it found.
+  when the spark flares. Reading stays optional; a worthwhile session need not
+  carry a learning claim.
 - **The design expert.** Here for the vibes: the accent palette, the glow on the
   near-black stage, the sunflower, the truecolor terminal. It has to be beautiful
   before it is anything else, and the beauty has to be *of the math*, not painted

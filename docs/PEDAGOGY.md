@@ -9,36 +9,36 @@ broader evidence base and `QUALITY.md` for the measurement loops.
 
 ## The thesis, and the one risk
 
-Numinous's default order, explore first, tell later, is the single best-supported
-sequence in the field, not a stylistic choice. Learners who wrestle with a
-phenomenon before being told the principle acquire the deep structure and
-transfer far better than learners told first (Schwartz and Bransford, "A Time For
-Telling," 1998; Kapur's productive failure, 2014). "Toy, then optional reveal" is
-the correct pedagogical grammar, and we should say so with sources, because it is
-a competitive moat most edtech gets backwards.
+Exploration followed by targeted explanation is a promising sequence whose
+benefit depends on prior knowledge, task structure, guidance, and feedback.
+Structured contrasting cases prepared students for later explanation in
+[Schwartz and Bransford, 1998](https://doi.org/10.1207/s1532690xci1604_4).
+Conceptual instruction first improved mathematical knowledge in a randomized
+study of 122 children by [Fyfe et al., 2014](https://doi.org/10.1111/bjep.12035).
+Neither establishes a universally best order. Toy-first remains Numinous's
+default invitation, with observation, guidance, and expert entry treated as
+legitimate choices. The 0.4 comparison tests the sequence here.
 
 The real risk is narrower and sharper than "people leave understanding nothing."
 It is the **fluency illusion**. Deslauriers et al. (2019, PNAS) showed that
-smoothness and delight get mistaken for understanding: learners *feel* they
-learned even when they did not. Numinous's specific failure mode is awe without
-accommodation: a gorgeous, frictionless Watch or Toy session produces a strong
-feeling of insight ("math is doing that!") with no restructuring of the learner's
-model at all. The telemetry we plan (reveal open-rate, dwell, share-rate)
-measures delight, and delight will look great, and it will not detect this. We
-could ship a product that aces the hallway test and teaches nothing, and our
-instruments would not tell us.
+felt learning and measured learning can diverge in active and passive classroom
+conditions. A corresponding Numinous risk is a feeling of insight without
+transfer to a new case. That is a hypothesis about this game, not that study's
+finding. Reveal-open rate, dwell, and sharing measure behavior; they do not
+directly measure delight or understanding. A satisfying Watch session is a
+valid outcome even when no learning claim is made.
 
-The fix is not homework. The fix is **one small act of generation per genuine
-insight**, because generation is the mechanism that converts watching into
-understanding. That is the through-line of this whole document.
+An optional prediction, construction, or explanation can expose a player's
+current model and create useful feedback. It cannot guarantee understanding.
+A learning claim needs transfer and retention evidence; a player need not earn
+the right to enjoy the room by supplying that evidence.
 
 ## The keystone: the prediction wager
 
 Before a toy resolves or a reveal fires, invite a single-gesture guess: drag a
 marker to "where you think pi is," tap "which corner rule makes a triangle,"
-place a dot "where the thousandth ball lands." This is the highest-leverage
-mechanic in the product and should be built before anything else, because three
-literatures converge on it:
+place a dot "where the thousandth ball lands." The generic verb and seven staged
+room ahas now ship. Three research traditions motivate testing their value:
 
 - **Predict-Observe-Explain** (White and Gunstone, 1992): a canonical
   conceptual-change technique.
@@ -47,20 +47,19 @@ literatures converge on it:
 - **Information-gap theory** (Loewenstein, 1994): curiosity is literally the felt
   gap between a guess and the truth.
 
-A wrong prediction is the pedagogical jackpot: it opens the gap that makes the
-reveal land as insight instead of trivia. The cost is near zero (one gesture,
-reusing the challenge grader), and it turns a passive spectator into someone with
-a stake.
+A wrong prediction can create a useful question when feedback helps explain
+the discrepancy. It can also reflect ambiguous controls, insufficient guidance,
+or a poor question. Do not require failure, confidence, or surprise as proof of
+engagement. Let a knowledgeable player proceed to a new application.
 
-**The same verb serves digital minds.** A mind commits its model of the hidden
-rule ("this closes into three loops," "the population period-doubles past
-r=3.57," "the next row is Rule 110"); the reveal grades the gap as compression
-progress, not pass/fail. High confidence plus correct is mastery (a boredom
-signal); wrong-but-close is the fertile band; random is noise. This is
-Schmidhuber's account of fun (learning progress) made into a single legible act,
-and it is the atom the digital-mind features in `DIGITAL_MINDS.md` build on (the
-compression ledger, self-authored goals, band-matched difficulty). One mechanic,
-both minds. See `NORTH_STAR.md` for why this convergence is the plan's spine.
+**The same option is available to digital minds.** `predict.rs` reports absolute
+error and closeness relative to a sampled readout span. NAILED, CLOSE, and WILD
+describe one answer, not mastery, boredom, noise, learning progress, or pleasure.
+Repeated comparable transfer tasks would be needed to claim improvement; an
+actual model or coding criterion would be needed to claim compression.
+[Schmidhuber's formal proposal](https://doi.org/10.1109/TAMD.2010.2056368)
+concerns improvement in a defined predictor, not one error value. A player can
+also choose familiar beauty, performance, company, or creation.
 
 ## The reveal, re-specced as an engineered aha
 
@@ -142,7 +141,8 @@ arrive last and confirm what the player already felt.
   keys and a bottom band; MCP uses `speed_wager` after a poke or completed
   gesture. The call binds to the selected eccentricity. A circle truthfully
   answers same because it has no nearer side; a noncircular ellipse answers
-  faster and reports the exact perihelion-to-aphelion speed ratio. The morph
+  faster and reports the model's perihelion-to-aphelion speed ratio, with
+  rounded prose identified as approximate. The morph
   places positions at equal mean-anomaly intervals, found by solving Kepler's
   equation, so spacing rather than prose reveals the speed change. Four
   completed tunings earn the observation path without forcing a prediction.
@@ -205,12 +205,11 @@ reference.
 5. **The anomaly beat.** Name the expectation, break it, then resolve (Berlyne's
    collative variables). "Buffon's Needle produces pi with no circle anywhere" is
    an anomaly staged before its resolution.
-6. **Learning-progress pacing (the curiosity thermostat).** Curiosity peaks not
-   at novelty or mastery but where predictions are measurably improving (Oudeyer
-   and Gottlieb; Metcalfe's region of proximal learning). The auto-director and
-   room recommender should steer toward the room where *this* player is making
-   prediction-progress. This is the same compression-progress metric that paces
-   digital minds, so one thermostat serves both.
+6. **Player-chosen next experiments.** Offer a contrast, a harder application,
+   a familiar performance, a creation, or a quiet stay. Learning-progress
+   estimates could inform an optional future recommendation experiment, with
+   their uncertainty shown. Current closeness bands cannot support that estimate
+   and must not authorize moving a player away from a room.
 7. **Retrieval and spacing via re-encounters.** When a player enters a room
    connected to one seen days ago, surface a silent re-encounter of the earlier
    insight (a Constellation edge lighting), not a quiz. Spaced effortful recall

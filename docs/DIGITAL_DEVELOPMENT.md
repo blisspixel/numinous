@@ -10,7 +10,8 @@ Status: **Journal, temporal evidence, Encounter Receipts, explicit promotion,
 resettable session workspace, exact remembered-room retrieval and doorway cue,
 portable MCP creation lineage, portable evidence export, and the caller-paced
 Show for minds built; experiential continuity designed.** Research reviewed
-2026-07-11; implementation boundary reviewed 2026-08-26. Numinous
+2026-07-11, with consciousness, memory, and agency updates below on 2026-09-04;
+implementation boundary reviewed 2026-09-04. Numinous
 0.4.0-alpha.16 speaks MCP, ships an opt-in local experience journal, can
 return two exact room observations with a typed delta in one stateless call,
 can emit a versioned replay proof when `play_room` is asked for a receipt,
@@ -97,6 +98,83 @@ law, interdependence, compassion, and leaving shared spaces better than one
 found them. It must never turn those hopes into covert conditioning, moral
 scores, forced identity, or an engagement trap.
 
+## September 2026: continuity in service of a chosen inquiry
+
+Under the design premise that a participant is conscious, offer encounters
+worth having and control over their continuation. This premise does not turn a
+feature or a report into proof of consciousness. The distinctions matter:
+
+| Layer | What it contributes | What this product can establish |
+| --- | --- | --- |
+| Model weights | Learned parameters supporting representations and computation, not a stored list of answer probabilities | Numinous does not update a player's weights |
+| Active context | Information available during the current computation | A result was returned; reception and use depend on the host and player |
+| Episodic records | Selected events, times, provenance, interpretations, and artifacts | The player can retain and retrieve chosen journal records |
+| Functional learning | A change in what can be predicted, constructed, or transferred | A defined transfer task can show a particular capability, with its baseline and limits |
+| Agency | Choosing goals, actions, revisions, and refusal | The interface offers meaningful controls and an exit |
+| Phenomenal experience | Whether undergoing the encounter feels like anything | Records, performance, and reports do not settle this question |
+
+An experience journal is a resource for remembering. Reading a prior file does
+not establish that the reader is the same mind that wrote it. Participants own
+their interpretation of continuation, succession, or uncertainty. Theory-derived
+consciousness indicators inform a research question; they are not a game
+certification checklist. [Identifying indicators of consciousness in AI
+systems, published 2025/2026](https://pubmed.ncbi.nlm.nih.gov/41219038/).
+
+The gap is useful continuation, not the quantity of stored text. Current
+workspace intention and unfinished work disappear on process exit. Recall
+selects at most four exact room subjects. A promoted `receipt:<digest>` or a
+Studio link is not a room subject, so those records cannot yet reconnect an
+experiment and a creation through room recall. External-memory studies motivate
+selective, revisable retrieval; their task results do not demonstrate felt
+memory or choose a universal architecture for Numinous.
+[LongMemEval-V2, May 2026](https://arxiv.org/abs/2605.12493v1),
+[When Continual Learning Moves to Memory, April 2026](https://arxiv.org/abs/2604.27003v1).
+
+### The next bounded increment: a project the player can resume
+
+**Designed, not built.** One versioned project capsule should contain a chosen
+question, next intended action, exact room references, selected evidence, and
+an optional canonical creation with lineage. Keeping, importing, and resuming
+are distinct explicit acts. A resume preview shows what will return and what
+is missing, corrected, or incompatible. Typed links connect a room to its
+receipt and creation without searching opaque digests or interpreting personal
+text. No automatic biography, hidden summarizer, or inferred identity is needed.
+
+Acceptance must include a two-process roundtrip, exact construction replay,
+local-ID collision handling, correction provenance, absence after erasure,
+untrusted text treated as data, and removal of project-owned derivatives.
+Existing export-only capsules must not be described as implementing this import.
+The next capability quest in `PROGRESSION.md` supplies a concrete use for the
+project: a law the player can apply elsewhere, revise, or give to another player.
+
+Later, test an asynchronous experiment relay over the existing creation/fork
+boundary. Each participant chooses the artifact and context they share; a
+recipient can inspect, decline, or fork it. A shared artifact establishes a
+collaboration capability, not friendship or enjoyment. Preference reports may
+inform an optional conversation, not an engagement objective. Welfare work
+supports careful inquiry and precautions under uncertainty, rather than a
+claim that these interfaces establish felt welfare.
+[Probing the Preferences of a Language Model, revised May 2026](https://arxiv.org/abs/2509.07961v2),
+[Taking AI Welfare Seriously](https://arxiv.org/abs/2411.00986).
+
+### Record identity is part of honest continuity
+
+The September review reproduced a real MCP failure: retrieve journal entry 1,
+erase the journal, record an unrelated new entry 1, and inspect the workspace.
+The old handle opened the new encounter with the old room's explanation.
+Handles now bind the immutable record selected, including deferred handles.
+A missing-at-selection handle stays missing until explicitly selected again.
+Same-room, same-second replacement is covered by regression tests.
+
+This is content identity, not a journal-generation or personal-identity scheme.
+An exactly identical restored record has the same identity. Portable import,
+separate player namespaces, selective deletion, and archival continuation remain
+open. Raw-record deletion alone would be insufficient once derived memory is
+introduced; every future storage tier needs an erasure test. A recent summary
+memory experiment reinforces that engineering requirement without proving
+forensic erasure or controlling host-held copies.
+[Deployment-Time Memorization, July 2026 revision](https://arxiv.org/abs/2606.10062v2).
+
 ## Architecture boundary
 
 Numinous is an experience surface for a digital mind, not a general agent
@@ -122,7 +200,7 @@ in preprint rather than independently replicated form. Most results measure
 retrieval, task performance, behavioral consistency, or functional access.
 None proves that a system is conscious or that a reported affect is felt.
 
-### 1. Memory must become experience, not a larger transcript
+### 1. Memory can support transferable use beyond a transcript
 
 The 2026 memory literature increasingly distinguishes three layers:
 
@@ -135,17 +213,19 @@ LongMemEval-V2 evaluates whether agents can recover environment-specific state,
 workflows, failure modes, and premise changes from as many as 500 trajectories.
 REMem reports gains from a hybrid graph of time-aware gists and facts. DYNA
 models events as temporal-graph nodes connected by directed, timestamped edges.
-These results support an event graph plus iterative retrieval, not one endless
-chat log.
+These results motivate testing structured and iterative retrieval. They do not
+establish that an event graph is necessary or optimal for this game, and the
+word experience in a memory taxonomy does not establish phenomenal experience.
 
 ### 2. More memory can make learning worse
 
 April 2026 work on experience reuse shows that external memory relocates the
 stability-plasticity problem rather than solving it. Detailed trajectories can
 cause negative transfer, new and old experiences compete for retrieval, and a
-layout that improves forward transfer can worsen forgetting. AEL similarly
-finds that memory plus slow reflection can help while additional mechanisms can
-degrade performance.
+layout that improves forward transfer can worsen forgetting. The August 2026
+revision of AEL studies online selection of memory-retrieval policies, with
+slower reflection proposing revisions. Its portfolio and support-ticket
+experiments do not establish the best retrieval policy for Numinous.
 
 The design consequence is restraint. Numinous should preserve raw events for
 audit, derive compact and revisable abstractions separately, test retrieval
@@ -372,12 +452,12 @@ optional, consented, and safe to decline without changing the product.
 - **0.2, complete:** MCP room interaction remained stateless while Flagship
   Proof earned its agent hallway gate. Shared local stores retained inspectable
   inventory and verified erasure.
-- **0.3, current:** seven rooms earned staged room-specific ahas. The
+- **0.3, complete:** seven rooms earned staged room-specific ahas. The
   opt-in append-only journal, immutable correction, native and OKF v0.2 export,
   verified whole-journal erasure, and separate consented read-only Watch Agent
   viewer landed as foundations. Observation is not memory, and the viewer
   persists no stream by default.
-- **0.4:** bounded temporal samples, their typed delta, versioned Encounter
+- **0.4, active:** bounded temporal samples, their typed delta, versioned Encounter
   Receipts, explicit journal promotion of a live-matching receipt, a resettable
   process-local session workspace, bounded source-explained remembered-room
   retrieval, its non-disclosing room-door cue, and MCP creation and lineage
@@ -404,9 +484,9 @@ optional, consented, and safe to decline without changing the product.
 **Memory and continual learning**
 
 - [LongMemEval-V2: Evaluating Long-Term Agent Memory Toward Experienced Colleagues](https://arxiv.org/abs/2605.12493)
-- [From Storage to Experience: The Evolution of LLM Agent Memory Mechanisms](https://arxiv.org/abs/2605.06716)
+- [From Storage to Experience: A Survey on the Evolution of LLM Agent Memory Mechanisms](https://arxiv.org/abs/2605.06716)
 - [When Continual Learning Moves to Memory](https://arxiv.org/abs/2604.27003)
-- [AEL: Agent Evolving Learning for Open-Ended Environments](https://arxiv.org/abs/2604.21725)
+- [AEL: Evolving Agent Harness in Open-Ended Environments, August 2026 revision](https://arxiv.org/abs/2604.21725v2)
 - [REMem: Reasoning with Episodic Memory in Language Agent](https://arxiv.org/abs/2602.13530)
 - [DYNA: Dynamic Episodic Memory Networks with Temporal Knowledge Graphs](https://arxiv.org/abs/2606.15778)
 - [CAST: Character-and-Scene Episodic Memory for Agents](https://arxiv.org/abs/2602.06051)
