@@ -9,8 +9,12 @@ built, so an aspiration is never mistaken for a result.
 Mathematical model contracts, the focused September 2026 room review, and its
 numerical evidence live in `MATHEMATICS.md`. Passing determinism and render
 checks cannot substitute for those independent mathematical consequences.
-The 2026-09-04 Windows review measured 94.21% region and line coverage under
-the existing exclusions, including the numerical and journal-identity regressions.
+The 2026-09-05 Windows alpha 17 candidate passed 3,864 all-target Rust test
+cases, with three expensive diagnostics excluded from that ordinary run.
+Coverage measured 94.29% regions and 94.29% lines under the existing exclusions,
+up from the 94.21% measured on 2026-09-04. The added checks include independent
+room-model consequences, decoded MIDI events, saved Studio continuity, and
+curve visibility beneath the composed App overlays.
 The broader dated baseline below retains its original counts.
 
 ## Evidence snapshot, 2026-09-01

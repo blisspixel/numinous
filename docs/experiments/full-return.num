@@ -1,0 +1,9 @@
+NUMINOUS_STUDIO 3
+kind=parametric
+xexpr=cos(2*pi*t)
+yexpr=sin(2*pi*(17/12)*t)
+tmin=0
+tmax=12
+a=1
+scale=continuous
+title=A full return

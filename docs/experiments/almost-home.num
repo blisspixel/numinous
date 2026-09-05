@@ -1,0 +1,10 @@
+NUMINOUS_STUDIO 3
+kind=parametric
+xexpr=cos(2*pi*t)
+yexpr=sin(2*pi*sqrt(2)*t)
+tmin=0
+tmax=12
+a=1
+scale=continuous
+title=Almost home
+descends=numinous://studio?kind=parametric&xexpr=cos%282%2Api%2At%29&yexpr=sin%282%2Api%2A%2817%2F12%29%2At%29&tmin=0&tmax=12&a=1&scale=continuous&title=A%20full%20return

@@ -1,0 +1,9 @@
+NUMINOUS_STUDIO 3
+kind=parametric
+xexpr=cos(4*pi*t)
+yexpr=sin(6*pi*t)
+tmin=0
+tmax=1
+a=1
+scale=continuous
+title=Same place, another direction

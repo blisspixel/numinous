@@ -169,7 +169,9 @@ event stream. The app, CLI, and MCP use one core composer and renderer. MCP
 returns bounded artifacts through a host-approved resource or export capability,
 not an unrestricted path write. MIDI and appropriate MusicXML are derived event
 exports, while `.num` remains the only lossless editable source for the full
-audiovisual piece.
+audiovisual piece. The sung Studio melody can already leave as a Standard MIDI
+File type 0 through the CLI, MCP, and the App F4 share; MIDI-in and MusicXML
+remain unbuilt.
 
 ---
 

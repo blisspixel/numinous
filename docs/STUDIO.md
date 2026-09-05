@@ -5,17 +5,27 @@ instrument and a shader toy. You type a little math, and it instantly *draws*
 and *sings*. This is the "Create" posture (see `DESIGN.md`), and it is a core
 part of the experience rather than a bonus feature.
 
-**Implementation boundary, 2026-09-01:** 0.4.0-alpha.16 ships a bounded
+**Implementation boundary, 2026-09-05:** the current source includes a bounded
 expression parser and evaluator, graph and paired parametric plots,
 deterministic continuous or scale-quantized melody mapping, an editable app
 panel, CLI and MCP operations, `.num` plus link round trips on all three faces,
 exact app reopen (launch argument, dropped file, or link), the F5
 Gallery wall with its remix tree, fork with recorded lineage on the App and
-the terminal, the F4 naming step, and F6 pitch-map selection. Parse diagnostics
-use one-based source columns and name the expected expression input across every
-face. General multi-expression programs, named sliders, pattern algebra,
-tracker, step grid, piano roll, MIDI, raw shader authoring, and community rooms
-are design targets. `ROADMAP.md` is the status authority.
+the terminal, the F4 naming step with title, signature, and prose credit, and F6
+pitch-map selection. The same melody
+can leave as WAV or as a Standard MIDI File type 0: CLI `numinous sing 'sin(t)' --out song.mid`,
+MCP `sing_expression` with `midi: true`, and the App F4 share as `melody.mid`.
+MIDI is 12-TET keys plus pitch bend of leftover cents over plus or minus two
+semitones; the file declares that range as Registered Parameter Number 0;
+overlapping envelopes become one voice at a time. Large note-to-note intervals
+are preserved. Absolute note times round to 960 ticks per second; the last
+valid source note wins when starts share a tick. Declared duration and trailing
+silence remain, while the native waveform does not. The share README names
+these limits. Parse diagnostics use one-based source columns and name
+the expected expression input across every face. Named sliders, general
+multi-expression programs, pattern algebra, tracker, step grid, piano roll,
+MIDI-in, MusicXML, raw shader authoring, and community rooms are design
+targets. `ROADMAP.md` is the status authority.
 
 CLI and MCP plot and melody calls resolve through core `PlotRequest` and
 `SingRequest` types. Those types own curated discovery, expression parsing,
@@ -23,6 +33,12 @@ the default `[-tau, tau]` window, the default `a = 1` knob, bounds, and the
 undefined-function refusal. All three faces use a 32-note default melody. A
 face still owns transport parsing and presentation, but it does not resample or
 reinterpret the formula.
+
+Opened creations keep their window and `a` across edits, invalid-draft repair,
+pitch-map changes, and leave/return. A fresh unsaved App expression still has a
+known synchronization gap: the drawing can vary `a` with gallery phase while
+the live melody uses `a = 1`. A shared transport-aware update is needed before
+claiming that animated knob is one experiment across both senses.
 
 ## Shipped formula vocabulary
 
@@ -75,7 +91,7 @@ listening tests, not claimed from the design alone.
   rooms are native Rust today. A bounded pattern language can become a second
   authoring path only after it satisfies the safety and compatibility contracts
   in `EXTENSIBILITY.md`.
-- It is **infinitely replayable and endlessly shareable**: every creation is text plus deterministic parameters, so it exports as a clip and a `.num` file / `numinous://` link (native, no browser, see `ARCHITECTURE.md`). All three faces speak the portable loop today: the CLI saves, opens, sings, and forks capsules (`plot --save`, `open-studio`, `sing`, `fork`, lineage recorded); MCP saves, opens, and forks the same data without host filesystem access; and the App reopens a saved capsule exactly (launch argument, dropped file, or link, paused until confirmed), walls it in the F5 Gallery with its remix tree, forks it with one keystroke, and names and signs shares in the F4 naming step.
+- It is **infinitely replayable and endlessly shareable**: every creation is text plus deterministic parameters, so it exports as a clip and a `.num` file / `numinous://` link (native, no browser, see `ARCHITECTURE.md`). All three faces speak the portable loop today: the CLI saves, opens, sings, and forks capsules (`plot --save`, `open-studio`, `sing`, `fork`, lineage recorded); MCP saves, opens, and forks the same data without host filesystem access; and the App reopens a saved capsule exactly (launch argument, dropped file, or link, paused until confirmed), walls it in the F5 Gallery with its remix tree, forks it with one keystroke, and names and signs shares in the F4 naming step, including the sung melody as `melody.mid`.
 
 ## The core idea: one program, two senses
 
@@ -144,8 +160,11 @@ The shipped editor accepts one graph or one exact `x(t)=...; y(t)=...` pair.
 The graph uses its saved x window. The pair uses a saved t window and auto-scales
 its complete finite path across both visible axes. F6 cycles the same five pitch
 maps the CLI and MCP expose. A saved pair reopens paused with its exact source,
-window, knob, pitch map, era, and lineage, and the first edit hands it to the
-player through the same takeover rule as a graph.
+window, knob, pitch map, era, and lineage. The first edit begins a remix while
+retaining its chosen window and knob, just as for a graph. A return to an
+untouched creation keeps its preview and identity. The optional
+[Returning home](experiments/returning-home.md) capsules offer a repeating path,
+an ideal irrational contrast, and a deceptive shorter return to investigate.
 
 - **Random** chooses a complete expression from a curated, tested recipe bank.
   It varies a seed and safe parameters, rather than assembling arbitrary syntax

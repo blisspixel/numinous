@@ -107,18 +107,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 3,774 passing all-target Rust test cases,
-agent hallway, tactile, and first-contact live MCP cohorts PASS as CI gates,
-flagship visual and room-bed audio goldens PASS, agent cohort contract unit
-tests pass, 106 study runner and collector regressions, and 15
-physical input contract regressions plus twenty release-package, sixteen SBOM,
-nineteen release workflow, and nine workflow action-policy regressions pass,
-three expensive diagnostics are
-ignored by the ordinary all-target run, 94.17% region coverage, and 94.17% line
-coverage**. The `gpu` and
-`audio` crates plus the app event
-loop are excluded from the coverage gate and have dev-machine integration
-evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Physical
+**Every gate must pass.** Formatting, Clippy and rustdoc stay warning-free;
+the all-target Rust suite, live MCP cohorts, flagship visual and room-bed audio
+goldens, study contracts, and packaging and provenance contracts must pass.
+Three expensive diagnostics are excluded from the ordinary run. The nightly
+workflow runs them, and the full local gate also runs the photosensitivity
+sweep. Coverage must meet the 80% line floor without
+regression; the latest dated counts and measured percentages live in
+[`docs/QUALITY.md`](docs/QUALITY.md).
+The `gpu` and `audio` crates plus the App event loop are excluded from the
+coverage gate and have separate integration evidence there. Controller routing
+is pure-tested. Physical
 controller feel remains optional bonus evidence on the agent-and-machine track;
 contract tests and mapping-aware legends remain the CI authority.
 
