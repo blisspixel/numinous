@@ -1069,7 +1069,7 @@ mod tests {
     /// what all 354 rooms look like, so it is a decision about the product
     /// rather than a defect to patch. Tracked in `docs/ROADMAP.md` under 0.5
     /// Sensory.
-    const MARK_LEVELS_COLLAPSE_WITHOUT_COLOR: [&str; 18] = [
+    const MARK_LEVELS_COLLAPSE_WITHOUT_COLOR: [&str; 17] = [
         "attention",
         "burning-ship",
         "dla-frost",
@@ -1078,7 +1078,6 @@ mod tests {
         "henon-heiles",
         "hofstadter-q",
         "josephus",
-        "kepler-laws",
         "liouville",
         "magnet-fractal",
         "moser-debruijn",
@@ -1092,7 +1091,7 @@ mod tests {
 
     #[test]
     fn the_rooms_that_lose_a_level_are_named_where_the_owner_reads() {
-        // The companion of the check in `registry.rs`. Eighteen room names are
+        // The companion of the check in `registry.rs`. Seventeen room names are
         // a decision about the ink scale or the shade thresholds, and a
         // decision nobody can see is not waiting on anyone.
         // Matched inside backticks: a bare substring would accept `zipff`.

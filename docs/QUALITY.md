@@ -6,13 +6,20 @@ comfort, and voluntary return play. Only part of that system is automated today.
 This document names both the enforced checks and the quality loops still to be
 built, so an aspiration is never mistaken for a result.
 
+Mathematical model contracts, the focused September 2026 room review, and its
+numerical evidence live in `MATHEMATICS.md`. Passing determinism and render
+checks cannot substitute for those independent mathematical consequences.
+The 2026-09-04 Windows review measured 94.21% region and line coverage under
+the existing exclusions, including the numerical and journal-identity regressions.
+The broader dated baseline below retains its original counts.
+
 ## Evidence snapshot, 2026-09-01
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
   doctests, 3,774 passing all-target test cases plus three expensive ignored
   diagnostics, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 94.17%
+  three-OS test-and-build matrix. Coverage measured on that date was 94.17%
   regions and 94.17% lines under the documented exclusions. Each of the four
   packaged release targets installs into a disposable root, renders Times
   Tables through the installed CLI, and completes modern MCP discovery, the

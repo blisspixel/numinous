@@ -82,27 +82,33 @@ pub(super) struct OrbitGeometry {
     pub(super) focus_x: f64,
 }
 
-pub(super) fn orbit_geometry(width: usize, height: usize, e: f64) -> OrbitGeometry {
+pub(super) fn orbit_geometry(width: usize, height: usize, e: f64, aspect: f64) -> OrbitGeometry {
     let e = e.clamp(0.0, MAX_ECCENTRICITY);
-    let cx = (width.saturating_sub(1) / 2) as f64;
-    let cy = (height.saturating_sub(1) / 2) as f64;
-    let a = (width.min(height) as f64) * 0.4;
-    let b = a * (1.0 - e * e).sqrt();
+    let cx = width.saturating_sub(1) as f64 * 0.5;
+    let cy = height.saturating_sub(1) as f64 * 0.5;
+    let a = (width as f64).min(height as f64 / aspect) * 0.4;
+    let b = a * (1.0 - e * e).sqrt() * aspect;
     OrbitGeometry {
         cx,
         cy,
         a,
         b,
-        focus_x: cx - a * e,
+        // M = E - e sin(E) measures time from the positive-x perihelion.
+        focus_x: cx + a * e,
     }
 }
 
 pub(super) fn point_at_mean(geometry: OrbitGeometry, e: f64, mean: f64) -> (i32, i32) {
-    let anomaly = eccentric_anomaly(mean, e);
-    (
-        (geometry.cx + geometry.a * anomaly.cos()).round() as i32,
-        (geometry.cy - geometry.b * anomaly.sin() * 0.55).round() as i32,
-    )
+    point_at_anomaly(geometry, eccentric_anomaly(mean, e))
+}
+
+fn point_at_anomaly(geometry: OrbitGeometry, anomaly: f64) -> (i32, i32) {
+    let (x, y) = position_at_anomaly(geometry, anomaly);
+    (x.round() as i32, y.round() as i32)
+}
+
+fn position_at_anomaly(geometry: OrbitGeometry, anomaly: f64) -> (f64, f64) {
+    (geometry.cx + geometry.a * anomaly.cos(), geometry.cy - geometry.b * anomaly.sin())
 }
 
 fn draw(canvas: &mut dyn Surface, e: f64, seed: u64) {
@@ -111,36 +117,32 @@ fn draw(canvas: &mut dyn Surface, e: f64, seed: u64) {
         return;
     }
     let e = e.clamp(0.0, MAX_ECCENTRICITY);
-    let geometry = orbit_geometry(width, height, e);
-    // ellipse
-    let mut prev: Option<(i32, i32)> = None;
-    for i in 0..=ORBIT_SAMPLES {
-        let th = std::f64::consts::TAU * (i as f64 / ORBIT_SAMPLES as f64);
-        let px = (geometry.cx + geometry.a * th.cos()).round() as i32;
-        let py = (geometry.cy - geometry.b * th.sin() * 0.55).round() as i32;
-        if let Some((ox, oy)) = prev {
-            canvas.line(ox, oy, px, py, '#');
-        }
-        prev = Some((px, py));
-    }
-    // sun at focus
+    let geometry = orbit_geometry(width, height, e, canvas.safe_char_aspect());
     let fxi = geometry.focus_x.round() as i32;
     let fyi = geometry.cy.round() as i32;
-    canvas.line(fxi - 1, fyi, fxi + 1, fyi, 'o');
-    canvas.line(fxi, fyi - 1, fxi, fyi + 1, 'o');
     // Equal mean-anomaly intervals are equal time intervals. Solving Kepler's
     // equation places their boundaries at exactly equal swept-area phases.
     let n_sec = AREA_SECTORS + if seed == 0 { 0 } else { (seed % 2) as usize };
     for s in 0..n_sec {
         let m1 = std::f64::consts::TAU * (s as f64) / n_sec as f64;
         let m2 = std::f64::consts::TAU * ((s + 1) as f64) / n_sec as f64;
-        let (x1, y1) = point_at_mean(geometry, e, m1);
-        let (x2, y2) = point_at_mean(geometry, e, m2);
-        canvas.line(fxi, fyi, x1, y1, '.');
-        canvas.line(fxi, fyi, x2, y2, '.');
-        // chord of sector
-        canvas.line(x1, y1, x2, y2, if s % 2 == 0 { '*' } else { '+' });
+        let e1 = eccentric_anomaly(m1, e);
+        let e2 = eccentric_anomaly(m2, e);
+        let mut previous = point_at_anomaly(geometry, e1);
+        canvas.line(fxi, fyi, previous.0, previous.1, '.');
+        // The equal area is bounded by the orbit's arc, not its chord.
+        let samples = ((e2 - e1) * ORBIT_SAMPLES as f64 / std::f64::consts::TAU)
+            .ceil()
+            .max(1.0) as usize;
+        for index in 1..=samples {
+            let anomaly = e1 + (e2 - e1) * index as f64 / samples as f64;
+            let next = point_at_anomaly(geometry, anomaly);
+            canvas.line(previous.0, previous.1, next.0, next.1, if s % 2 == 0 { '*' } else { '+' });
+            previous = next;
+        }
     }
+    canvas.line(fxi - 1, fyi, fxi + 1, fyi, 'o');
+    canvas.line(fxi, fyi - 1, fxi, fyi + 1, 'o');
 }
 
 /// Kepler equal-area room.
@@ -235,7 +237,7 @@ impl Room for KeplerLaws {
 
 #[cfg(test)]
 mod tests {
-    use super::{KeplerLaws, eccentric_anomaly, eccentricity_for_inputs};
+    use super::{KeplerLaws, eccentric_anomaly, eccentricity_for_inputs, orbit_geometry, position_at_anomaly};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
@@ -281,6 +283,67 @@ mod tests {
                 (recovered - mean).abs() < 1.0e-12,
                 "{index}: {recovered} != {mean}"
             );
+        }
+    }
+
+    #[test]
+    fn equal_times_sweep_equal_areas_about_the_drawn_sun() {
+        // Triangulate the renderer's positions before pixel rounding about
+        // the actual focus. A solver residual alone cannot detect a sun drawn
+        // at the opposite focus.
+        for eccentricity in [0.0, 0.2, 0.6, 0.9] {
+            let geometry = orbit_geometry(2048, 2048, eccentricity, 1.0);
+            let position = |mean| position_at_anomaly(geometry, eccentric_anomaly(mean, eccentricity));
+            let mut areas = [0.0; 6];
+            for (sector, area) in areas.iter_mut().enumerate() {
+                let start = std::f64::consts::TAU * sector as f64 / 6.0;
+                let mut previous = position(start);
+                for step in 1..=2048 {
+                    let mean = start + std::f64::consts::TAU * step as f64 / (6.0 * 2048.0);
+                    let next = position(mean);
+                    let p = (previous.0 - geometry.focus_x, previous.1 - geometry.cy);
+                    let q = (next.0 - geometry.focus_x, next.1 - geometry.cy);
+                    *area += (p.0 * q.1 - p.1 * q.0) * 0.5;
+                    previous = next;
+                }
+            }
+            let expected = -std::f64::consts::PI * geometry.a * geometry.b / 6.0;
+            for area in areas {
+                let relative_error = ((area - expected) / expected).abs();
+                assert!(relative_error < 1e-5, "e={eccentricity}: relative area error {relative_error}");
+            }
+        }
+    }
+
+    #[test]
+    fn equal_time_marks_move_faster_at_the_nearer_apsis() {
+        let e = 0.7;
+        let geometry = orbit_geometry(2048, 2048, e, 1.0);
+        let position = |mean| position_at_anomaly(geometry, eccentric_anomaly(mean, e));
+        let perihelion = position(0.0);
+        let aphelion = position(std::f64::consts::PI);
+        let distance_to_sun = |p: (f64, f64)| {
+            (p.0 - geometry.focus_x).hypot(p.1 - geometry.cy)
+        };
+        assert!(distance_to_sun(perihelion) < distance_to_sun(aphelion));
+        let advance = |p: (f64, f64), mean| {
+            let next = position(mean + 1e-5);
+            (next.0 - p.0).hypot(next.1 - p.1)
+        };
+        let ratio = advance(perihelion, 0.0) / advance(aphelion, std::f64::consts::PI);
+        assert!((ratio - (1.0 + e) / (1.0 - e)).abs() < 1e-7, "ratio={ratio}");
+    }
+
+    #[test]
+    fn a_circle_stays_round_in_pixels_and_terminal_cells() {
+        for aspect in [1.0, 0.5] {
+            let geometry = orbit_geometry(120, 80, 0.0, aspect);
+            let right = position_at_anomaly(geometry, 0.0);
+            let top = position_at_anomaly(geometry, std::f64::consts::FRAC_PI_2);
+            let horizontal = right.0 - geometry.cx;
+            let vertical = (geometry.cy - top.1) / aspect;
+            assert!((horizontal - vertical).abs() < 1e-12);
+            assert_eq!(geometry.focus_x, geometry.cx);
         }
     }
 
