@@ -12,7 +12,7 @@ portable MCP creation lineage, portable evidence export, and the caller-paced
 Show for minds built; experiential continuity designed.** Research reviewed
 2026-07-11, with consciousness, memory, and agency updates below on 2026-09-04;
 implementation boundary reviewed 2026-09-04. Numinous
-0.4.0-alpha.17 speaks MCP, ships an opt-in local experience journal, can
+0.4.0-alpha.18 speaks MCP, ships an opt-in local experience journal, can
 return two exact room observations with a typed delta in one stateless call,
 can emit a versioned replay proof when `play_room` is asked for a receipt,
 can keep that proof only when the player hands it back and a live replay
