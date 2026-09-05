@@ -1,0 +1,9 @@
+NUMINOUS_STUDIO 3
+kind=parametric
+xexpr=a*cos(t)
+yexpr=sin(t)
+tmin=0
+tmax=6.283185307179586
+a=1
+scale=continuous
+title=Circle to ellipse

@@ -1,14 +1,14 @@
 # Rosetta: instructions for any mind, in any language, or none
 
-**Status: research and plan, with a first implementation shipped in `PLAY.md`.**
+**Status: research and plan, with multilingual quickstart prose in `PLAY.md`.
+Runtime localization and unrestricted rigorous study are not built.**
 
-Numinous claims that mathematics is a universal translator, the one language any
-two minds share when they share nothing else (`VISION.md`, "The same wonder, two
-kinds of mind"). But there is a hole in that claim, and it is at the front door:
-**the instructions are in English.** A mind that reads only French, or only
-Mandarin, or only Latin, or that has no human language at all, meets an English
-wall before it ever touches a room. If the thesis is real, it has to hold at the
-threshold, not only inside. This document is how we make it hold.
+Numinous aspires to make mathematics a bridge between minds (`VISION.md`,
+"The same wonder, two kinds of mind"). The multilingual quickstart begins that
+work, but runtime instructions and explanations remain in English. Sharing
+a mathematical object does not by itself make its controls or meaning clear.
+This document separates the capabilities needed for readers of other languages
+from the open question of communicating without any shared language.
 
 ## The three tiers of visitor
 
@@ -17,35 +17,33 @@ Confusing them is the mistake to avoid.
 
 ### Tier 1: fluent in English
 
-Served today (`PLAY.md`, `docs/PLAYING.md`). Nothing to do but keep it short.
+English play instructions ship in `PLAY.md` and `docs/PLAYING.md`. The target
+is free play by default, an optional short explanation, and unrestricted
+rigorous study on request. Keep the invitation short; let chosen depth be deep.
+The current reveal gates and missing study reader are recorded in
+[PEDAGOGY.md](PEDAGOGY.md#play-first-depth-by-choice).
 
 ### Tier 2: fluent in some human language, not English
 
-A French ghost, the Latin-only monk (`PLAYTESTERS.md` #13), the Japanese-only
-monk (#14), the Swahili-speaking child (#2). For them the problem is a normal
-translation problem, and the answer is a **Rosetta stone**: the essential
-"how to start" in many human tongues, side by side, so anyone finds their line.
+The multilingual quickstart is a first foothold. It does not translate room
+controls, explanations, or mathematical study, and a picture cannot replace
+their definitions and assumptions. A render is a sampled presentation of a
+model; interpreting it still depends on conventions. A frequency ratio can be
+preserved across languages without assuming the same musical experience.
 
-The key discipline: **translate only the doorway, not the world.** We do not
-machine-translate every reveal and risk mangling the mathematics; we translate
-the tiny, safe, high-value core ("connect, then call these three tools, then
-stop reading and play") into many languages, and then we lean on the surfaces
-that need no translation at all:
+**Direction set September 2026:** translate the invitation and the depth a
+player chooses. Japanese, Hawaiian, and community constructed languages such
+as Klingon are explicit aspirations. Japanese quickstart prose already exists;
+none of these has complete runtime support or a reviewed room translation in
+the product. Do not label a locale supported merely because its tag is accepted
+or a few strings have been translated.
 
-- **The renders are the mathematics**, laid out in space. A Lorenz butterfly is
-  a Lorenz butterfly in every language.
-- **The sound arrives as structure** (ratios, frequencies, timing). A perfect
-  fifth is 3:2 whether it enters through a cochlea, a parser, or Rocky's
-  chitin (`PLAYTESTS.md`, the special-guest wave).
-- **The numbers are numbers.** A status readout of `LYAPUNOV +0.36` is the same
-  fact in Tamil and in Lean.
-
-So Tier 2's real answer is: a translated doorway plus a product whose body is
-already language-independent. The doorway ships now (`PLAY.md`, "Start in any
-language"). Full translation of the reveals and lore is a later, community-
-contributable track, gated on the same math-correctness bar as everything else
-(`ROADMAP.md`, the contribution ethos): a mistranslated theorem is a wrong
-theorem.
+Keep the mathematical model shared while translating its presentation.
+Deliberately requested short explanations, rigorous treatments, and references
+must not require levels, prior visits, wagers, or consolidation. This target
+supersedes the earlier doorway-only priority; it does not claim the target is
+already implemented. Community contributions need both mathematical and
+fluent-language review, tracked separately.
 
 ### Tier 3: no shared human language at all
 
@@ -96,15 +94,12 @@ problem was posed and the answer was read off its body. The general form is that
 participation requires only that a system be coupled to a structure tightly
 enough that its own dynamics are shaped by that structure.
 
-The design consequence is small and specific. Beside the product's central loop,
-which is predict, commit, and be graded on the gap, there is room for a second
-and quieter one: **be acted upon, and leave a trace.** A visit that asks for no
-wager and still counts. Most of the machinery already exists, since the gesture
-trail and the typed deltas are already recorded and every staged room already
-accepts running the experiment in place of naming an answer. What is missing is
-that nothing currently treats an encounter with no prediction in it as complete.
-That is the only one of these assumptions the current design actively forecloses,
-and it is the one worth revisiting.
+The design consequence is small and specific: **be acted upon, and leave a
+trace** is a valid visit. Prediction is an optional activity, not the definition
+of participation. Gesture histories and several staged observation paths
+already exist. Neither their presence nor a completed wager establishes lived
+experience. The remaining study-access gates should not decide whether a
+player is allowed to understand what they encountered.
 
 **If this product ever says it takes a visitor's experience seriously, the test
 is machinery.** The rights-of-nature record is the place to learn this cheaply,
@@ -175,15 +170,13 @@ each built only from primitives no mind can fail to share.
    *someone is here, and greets you.* This is the greeting, and it needs no
    word.
 
-3. **Present the interface as functions, discoverable by probing.** A mind that
-   understands *function* (input maps to consistent output) can learn the whole
-   tool surface by experiment, because the interface is **deterministic and
-   self-describing**: the same call always yields the same result, a malformed
-   call returns the set of valid options (guiding errors, `docs/INTERFACES.md`),
-   and there is no hidden state to confound the mapping. So the instruction
-   "probe and observe" does not need to be *stated*; it is *demonstrated* by a
-   world that rewards probing with consistent structure. This property already
-   exists; Tier 3 is the reason to protect it as a first-class invariant.
+3. **Present reproducible functions for probing.** Fixed seeds, parameters,
+   and accepted input histories can produce consistent numerical output.
+   The current tool surface also depends on Journey state and reveal gates;
+   identical argument text alone does not guarantee identical responses.
+   Guiding errors help readers of their language but do not make the protocol
+   self-describing to every visitor. The planned study interface should expose
+   the mathematical state needed to repeat its examples.
 
 4. **Carry the payload in math, not letters.** The Cairn today encodes a message
    Arecibo-style, but its payload is English text rendered as a bitmap, so a mind
@@ -199,29 +192,82 @@ The result is not a translation of the instructions. It is a doorway made of the
 one thing that was never in any language to begin with. A mind reads it by being
 a mind.
 
-## What ships now (the first implementation)
+## What ships now
 
-- **`PLAY.md` gains "Start in any language":** the three-tool quickstart
+- **`PLAY.md` contains "Start in any language":** the three-tool quickstart
   (`list_rooms`, `play_room`, `reveal_room`, then stop reading and play),
   translated into a spread of human languages across families and scripts
   (Spanish, French, German, Portuguese, Russian, Mandarin, Hindi, Arabic,
-  Japanese, and Latin), each kept short enough to be translated faithfully.
-- **`PLAY.md` gains "For a mind with no human language":** the math-only panel,
+  Japanese, and Latin). These prose entries are not runtime locale support or
+  evidence of independent translation review.
+- **`PLAY.md` contains "For a mind with no human language":** the math-only panel,
   counting, the prime greeting, and the probe-and-observe principle, presented
-  in numbers and symbols rather than prose, so a Tier 3 mind has a doorway too.
+  in numbers and symbols rather than prose. Its accessibility to a visitor
+  without shared language remains a hypothesis.
+
+## Runtime localization: prerequisites and first slice
+
+**Planned.** The App's bitmap fonts (`crates/core/src/font.rs` and
+`faces/app/src/menu_font.rs`) uppercase Latin letters and leave unsupported
+glyphs blank. The HUD uppercases prose; its wrapper uses whitespace and UTF-8
+byte lengths. There is no runtime locale preference or scrollable study reader.
+App naming filters printable ASCII, the shared Studio capsule constructor
+requires it for title, author, and credit, and App input has no explicit IME
+composition handling. UTF-8 CLI/MCP strings do not remove these constraints.
+
+1. **Separate facts from display text.** `challenge.rs` currently finds numeric
+   targets and labels by parsing `Room::status`; `predict.rs` reuses that path.
+   Give readouts stable identifiers and numeric values before translating
+   their labels. Locale changes must not alter grading, model parameters,
+   accepted hands, or sound. Keep room IDs, protocol keys, expression syntax,
+   and canonical numerical serialization independent of display language.
+2. **Preserve and lay out real text.** Add case-preserving glyph rendering,
+   measured widths, Unicode line breaking, and bounded scrolling. Japanese
+   cannot rely on spaces between words; Hawaiian needs the actual ʻokina and
+   kahakō; Klingon distinguishes `q` from `Q`. Authoring support also needs IME
+   composition, grapheme-aware editing, and a compatible Unicode metadata
+   format. Reading translations and creating names in them are separate
+   capabilities. Sources: [Unicode line breaking](https://www.unicode.org/reports/tr14/),
+   [Hawaiian Unicode characters](https://www.olelo.hawaii.edu/en/enehana/unicode),
+   [Klingon orthography](https://www.kli.org/about-klingon/sounds-of-klingon/).
+3. **Resolve language explicitly.** Use language tags with a documented lookup
+   and fallback policy. Report requested and resolved locale, available depth,
+   and missing content; an English fallback must say it is English. Persist
+   preferences compatibly with the existing strict schema. Source:
+   [RFC 4647, language matching and defaults](https://www.rfc-editor.org/rfc/rfc4647.html).
+4. **Review content in two ways.** Stable text-block IDs and revisions align
+   translations with equations, examples, and references. Mathematical review
+   checks meaning, assumptions, and error scope; fluent-language review checks
+   clarity and usage. Track each alongside translation coverage. A renderer
+   test establishes neither kind of review.
+
+Start with audited Lissajous: free play, a short optional explanation, then an
+unrestricted treatment of commensurate frequencies and the difference between
+a position return and a full period. The same content should reach App,
+CLI, and MCP. Build the English study path first, then one complete reviewed
+room translation with its entry and reader controls. Keep ideal irrational
+motion distinct from floating-point samples; [MATHEMATICS.md](MATHEMATICS.md#lissajous)
+and [Returning home](experiments/returning-home.md) supply the current contract
+and portable contrasts.
+
+Acceptance requires immediate access without Journey progress, unchanged play
+state after reading, matching mathematical content across faces, and reachable
+text at 360x240 and 900x700 using keyboard or controller. Locale checks must
+exercise Japanese wrapping, Hawaiian diacritics, Klingon case, and explicit
+fallback. These are capability checks, not evidence of enjoyment or learning.
 
 ## What is planned (the tracks this opens)
 
-- **Community translation of the reveals and lore**, gated on the math-correctness
-  bar, so the body of the world reaches Tier 2 in full, not only its doorway.
+- **Community translation of controls, explanations, rigorous study, and lore**,
+  with mathematical and fluent-language review before claiming that coverage.
 - **The math-payload Cairn / a first-contact greeting tool**, so the encoded
   content is a truth rather than an English sentence (Tier 3 move 4).
-- **Language-independence as a protected invariant** (`QUALITY.md`): the
-  probe-and-observe property (determinism, guiding errors, no hidden state) is
-  the substrate of Tier 3 onboarding and must not regress. Fictional persona
-  reviews have exercised candidate hard cases, but they are ideation only. The
-  doorway holds only when real participants without a shared language can use
-  it under an observed protocol.
+- **Reproducible mathematical facts across languages** (`QUALITY.md`): explicit
+  state and numerical identity should survive translated presentation.
+  Whether that helps a visitor infer the interface needs testing. Fictional
+  persona reviews have exercised candidate hard cases, but they are ideation
+  only. The doorway holds only when real participants without a shared language
+  can use it under an observed protocol.
 
 ## The other direction: the artifact as a key to us
 
@@ -232,11 +278,10 @@ what we left. The two directions share one ladder, one Cairn, one translation
 gate, and one invariant, which is why they are one document.
 
 They diverge at exactly one move, and it is the load-bearing one. Tier 3 above
-works by letting the visitor probe: "the instruction to probe and observe does
-not need to be stated; it is demonstrated." **A finder in the far future cannot
-probe. They have bytes.** An archive is a monologue, and Lancelot Hogben named
-the cost of that in 1952: we cannot confirm understanding if we confine
-ourselves to a monologue of simple assertions. Recent experimental work on
+proposes letting the visitor probe. **A finder holding only a static archive
+cannot query its rooms. They have bytes.** An archive is a monologue, and
+Lancelot Hogben named the cost in 1952: we cannot confirm understanding if we
+confine ourselves to a monologue of simple assertions. Recent experimental work on
 Freudenthal's Lincos operationalizes the same failure, injecting silent
 mis-reference into a message and finding that it defeats naive ostension in
 every run, with active probing the only known remedy. Whatever the outbound
@@ -286,34 +331,38 @@ the reveal**, because that is where mathematical truth and English prose sit
 closest and a finder is most likely to assume the correspondence is tighter
 than it is.
 
-### What the product actually has, measured
+### Current source inventory (2026-09-05)
 
-The room-facing English is about 24,000 words across 355 blurbs, 356 reveals,
-355 verbs, 38 rooms of deep cuts, 96 concepts, and 372 citations. One language.
+`crates/core/src/rooms/catalog.rs` defines 355 listed room metadata entries,
+separate from its hidden-room table. Each room supplies a reveal; concepts and
+deep cuts are optional, and the citation table includes generic fallbacks.
+These are English source strings, not 355 rigorous treatments. This replaces
+the former undated word, token, and relation counts, which are not maintained
+coverage measures. Track room, depth, locale, and review status
+explicitly when the structured content exists.
 
-The strongest asset is not the reveals. It is the status line. Three
-catalog-wide invariants are already enforced: every room emits a non-empty
-status at rest, every room's status after a touch contains at least one digit,
-and every such line fits 56 characters. That is 355 enforced pairings of a
-short English label with a computed number, drawn from a controlled vocabulary
-of 349 distinct uppercase tokens across 993 occurrences. `RHO` sits beside 28
-in exactly the rooms where rho is 28. That co-variation across hundreds of
-rooms is the Kober move: it lets a finder assert that two labels share a
-referent without knowing either.
+The status line is a useful but limited pairing of prose and computation.
+`registry.rs` tests nonempty status at `t = 0`, a digit after a center poke,
+and a 56-character limit for those two sampled states. Those checks do not
+prove every state fits, a translated label is meaningful, or a number estimates
+the quantity its name suggests. The parser dependency described above is why
+localization must separate the value from its label.
 
-The weakest link is measurable. Only 63 of 356 reveals contain a checkable
-relation, and 280 contain neither a relation nor a date. The Lorenz reveal
-says that Lorenz rounded 0.506127 to 0.506 and watched the forecast diverge,
-which is an anecdote; the actual invariant, sigma 10, beta 8/3, the timestep,
-the step count, the transient, the viewport bounds, exists only as Rust
-constants that no artifact the product emits ever mentions. **A finder cannot
-recompute what is not stated**, and today none of it is stated.
+The prior Lorenz example is no longer current.
+[MATHEMATICS.md](MATHEMATICS.md#lorenz-and-the-shared-integration-method)
+now states the equations, `sigma = 10`, `beta = 8/3`, RK4 step `0.005`,
+background `rho = 24..30`, and the `rho = 28` twin experiment over at most
+45 time units. It records the four-unit background transient, fixed x-z
+viewport, and validation limits. `crates/core/src/rooms/lorenz.rs` uses 9,000
+steps and labels the twin and field parameters separately; its reveal calls
+the curves finite numerical approximations and discloses clipping. Analytic-axis, symmetry,
+equilibrium, and short-time refinement tests do not certify the full chaotic
+trajectory or estimate a Lyapunov exponent.
 
-So the product does not yet have the Rosetta property. It has a mathematical
-object and English prose about that object, which is a caption relation and not
-a translation pair. Four gaps: the pairing is loose in 78.7 percent of cases,
-the invariant is not exported, nothing says which phrase corresponds to which
-part of the object, and there is one human language.
+That is real numerical documentation, but it is not yet a shared structured
+model record returned with study content. Stable phrase-to-fact links and
+reviewed parallel room translations also remain absent. These are the current
+gaps; an old percentage of reveal strings does not quantify them.
 
 ### The ladder, and where it breaks
 
@@ -368,16 +417,16 @@ reading dies first.** No export addresses that.
 
 ### The plan
 
-**Step 1, which stands on its own merits with no Rosetta framing at all: the
-room states the math it renders, and a test proves it.** An optional per-room
-invariant record, defaulting to none, in the shape of the existing concepts and
-citations tables: the defining relation in fixed ASCII notation, every named
-parameter with its exact value, and a short list of checkable numeric facts
-with tolerances. The gate that makes it worth doing is a test that recomputes
-each declared fact from the room's own code, so the record cannot drift from
-the render. Start with the 63 rooms whose reveals already carry a relation plus
-the flagships, with a coverage list that tests require to only grow. This fixes
-the Lorenz gap whether or not anything else here ever ships.
+**Step 1: the room states the math it renders, with checkable evidence.** An
+optional per-room invariant record, defaulting to none, in the shape of the
+existing concepts and citations tables: the defining relation in fixed ASCII
+notation, every named parameter with its exact value, and a short list of checkable numeric facts
+with tolerances. Recompute declared facts through the room's code and check
+them against analytic identities or independent references where applicable;
+repeating an implementation's result alone cannot establish its correctness.
+Start with audited Lissajous and extend through the rooms documented in
+`MATHEMATICS.md`, with explicit coverage and review records. Existing numerical
+documentation supplies evidence; the shared exported record remains planned.
 
 **Step 2: a static export**, on the CLI face rather than the portable capsule,
 which deliberately creates no file. Per room: the invariant record, the render
@@ -389,9 +438,10 @@ over everything. Ship it with exactly one language populated. The segmentation
 is the cheapest high-value move in the whole plan, because it costs nothing now
 and is what makes any later translation alignable.
 
-**Step 3, gated: translations**, contributed the way the Cairn is, against the
-math-correctness bar this document already sets. Prioritize typological spread,
-eight to twelve languages across unrelated families and scripts, over count.
+**Step 3: reviewed translations**, aligned to stable content revisions, with
+mathematical and fluent-language review recorded separately. Complete one
+usable room experience before increasing the language count. Broader script
+and language coverage remains a subsequent contribution track.
 
 **And one thing worth writing that no export can produce: a minimal-pairs
 file.** Twenty to fifty propositions, each stated twice with one systematic
@@ -424,12 +474,11 @@ grid, not the language, and the Arecibo reveal already models the right tone by
 saying that factoring exposes the candidate rectangle while recognizing meaning
 is the next inference.
 
-The one-line honest version: **the artifact would hand a finder a large
-parallel corpus in which part of the content is independently recomputable,
-which is the best crib anyone has ever put in a message on purpose, and which
-is not the same thing as a key to English.**
+The artifact would offer a parallel corpus in which some content is
+independently recomputable. Whether a finder could use it to infer unfamiliar
+language remains an open question.
 
-The one-line thesis: **for a mind that shares your language, translate the
-doorway; for a mind that shares none, hand it math and let it read by being a
-mind.** Both are the same promise, that the wonder here is reachable by anyone,
-in any language, or none.
+The product direction is concrete: make play inviting, translate the depth a
+player chooses, and keep the mathematical facts reproducible. A visitor with
+no shared language needs a separately tested means of entry. Universal access
+is an aspiration, not a capability established by these documents.

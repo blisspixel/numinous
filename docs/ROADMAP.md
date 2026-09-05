@@ -43,7 +43,7 @@ should link here rather than restating the board.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.4.0-alpha.18, Understanding Alpha active with its exit
+**Current release state: 0.4.0-alpha.19, Understanding Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are complete. Human stranger sessions sit with 0.8
 Closed Beta and 1.0 First Light.
@@ -94,11 +94,19 @@ mastery, exploration, and company also remain complete reasons to play.
   numerical references, balance laws, refinement checks, and counterexamples
   bound the claims in `MATHEMATICS.md`; this is a focused correction, not
   mathematical certification of the full catalog.
-- **Next geometry correction:** parametric Studio independently fits its x and
-  y ranges, which can erase a circle-versus-ellipse distinction. Share one
-  aspect-aware planar fit across text, live App, postcards, and Gallery,
-  preserving the existing capsule and graph contracts. `MATHEMATICS.md` records
-  the source-review counterexample and required visible-shape checks.
+- **Built in alpha 19:** parametric Studio shares one planar fit across text,
+  live App, postcards, and Gallery. Circles remain round and ellipses retain
+  their proportions; actual-pixel and character checks cover composed exports,
+  translated paths, constant coordinates, and undefined-sample gaps.
+  `MATHEMATICS.md` records the correction and the limits of a fitted, sampled
+  view. The [Shape and scale experiment](experiments/shape-and-scale.md) turns
+  this distinction into two portable creations to play with, keep, and remix.
+- **Built in alpha 19:** the Cabinet leads the refreshed README screenshots,
+  Studio exposes Share beside its creation, and Kepler's ordinary raster text
+  rises from 2.70:1 to 4.97:1 contrast on the shared stage. The cyan identity
+  mark has one SVG source and reproducible native icon assets. `VISUALS.md`
+  owns its construction; the updated color evidence remains a bounded palette
+  check, not a complete accessibility assessment.
 - **Playable now:** [Returning home](experiments/returning-home.md) has three
   portable Studio contrasts with exact formulas and retained fork lineage.
   These are current-tool experiments; the proposed in-app quest stays open.
@@ -111,6 +119,20 @@ mastery, exploration, and company also remain complete reasons to play.
   one explicitly kept and previewed project that resumes the selected question,
   evidence, creation, and next action (`DIGITAL_DEVELOPMENT.md`). These are small
   testable slices before a general quest engine or semantic memory system.
+- **Next, depth by choice (founder direction, 2026-09-05):** enter rooms through
+  play, then choose a short explanation or a rigorous mathematical treatment
+  without a visit or level requirement. Start with Lissajous and one shared
+  content model across App, CLI, and MCP. The App needs a scrollable reader;
+  the deeper layer needs derivations, examples, primary references, and explicit
+  numerical limits. Existing reveal and Journey gates do not yet meet this
+  direction. `PEDAGOGY.md` separates optional staged discovery from free study.
+- **Next, languages through the complete experience:** separate canonical
+  numeric readouts from English status strings before translating grading
+  inputs. Add explicit locale resolution and fallback, case-preserving Unicode
+  text and layout, and complete translated entry and reader controls for the
+  first room. Japanese, Hawaiian, and Klingon need their actual characters,
+  casing, input, and reviewed content. `ROSETTA.md` tracks those requirements;
+  translated documentation alone does not establish localized play.
 - **Standing evidence rule:** prediction closeness is not mastery or enjoyment.
   Keep correctness, usable capability, player reports, autonomy, and voluntary
   continuation separate. The existing agent-and-machine release policy remains
@@ -2414,7 +2436,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-08-18)
 
-The package is **0.4.0-alpha.18**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.19**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -2459,7 +2481,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.4.0-alpha.18** because Understanding Alpha is the active
+Package label is **0.4.0-alpha.19** because Understanding Alpha is the active
 milestone. The alpha suffix says its exit remains open. External registration,
 calibration, fresh independent review, allocation freeze, and the qualifying
 cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active

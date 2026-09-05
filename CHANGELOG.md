@@ -5,6 +5,51 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.19] - 2026-09-05
+
+### Added
+- Two portable Studio creations and the optional Shape and scale experiment
+  invite players to stretch a circle, compare uniform scaling, and keep a
+  named remix. The guide distinguishes visible proportions from absolute size
+  and offers a deeper area question without requiring a score or explanation.
+- A simple cyan circle with an open horizontal band is the identity mark.
+  One SVG source supplies reproducible PNG, eight-size ICO, and ICNS assets;
+  `scripts/render-logo.mjs --check` checks agreement with the source.
+  Both house-style guards include the new source formats.
+
+### Changed
+- The Cabinet is the first README screenshot, with Formula Jam given a full
+  view after the room pairs. Current App plates include the corrected geometry
+  and Kepler palette. Studio's keyboard footer exposes F4 Share, and its
+  showcased formula responds visibly to the `a` control.
+- The pedagogy and localization plans now distinguish play-first entry from
+  freely requested mathematical depth. They name the shared-content reader,
+  typed numeric facts, Unicode rendering and input, and reviewed translations
+  still needed to make that experience available across all three faces.
+
+### Fixed
+- Parametric Studio preserves equal physical coordinate units across terminal
+  plots, the App, saved postcards, and Gallery thumbnails. A circle remains
+  round and a 4:1 ellipse retains its proportions instead of stretching both
+  into the same shape. One shared projection centers constant coordinates,
+  handles finite extreme ranges, and respects the available viewport. Isolated
+  finite samples remain visible without connecting across undefined samples.
+  Actual-pixel and character regressions cover shape and composed exports;
+  saved numerical values, sound, and ordinary graph framing are unchanged.
+- Creator parity uses declared plot dimensions instead of mistaking the
+  rightmost ink for the canvas edge. MCP Studio plots now include their actual
+  width and height, so a centered curve retains its margins in the comparison.
+  The study collector validates those dimensions without changing its recorded
+  public material or accepting unknown fields.
+- Source-study test fixtures isolate their Git environment when run from a
+  commit hook. Temporary repository setup cannot commit the caller's staged
+  files or alter its repository configuration; a disposable-caller regression
+  checks the original revision, index, configuration, and pending work.
+- Kepler's ordinary raster text uses a brighter amber, raising measured
+  contrast against the shared stage from 2.70:1 to 4.97:1. The ordered catalog
+  fingerprint and color-independence evidence include the single palette
+  change. This does not close the broader accessibility review.
+
 ## [0.4.0-alpha.18] - 2026-09-05
 
 ### Fixed
