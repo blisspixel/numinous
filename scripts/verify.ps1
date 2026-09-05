@@ -61,6 +61,7 @@ Step "agent tactile cohort" { python scripts/agent-tactile.py }
 Step "agent first-contact suite" { python scripts/agent-first-contact.py }
 Step "flagship visual and audio goldens" { python scripts/flagship-goldens.py }
 Step "creator roundtrip" { python scripts/creator-roundtrip.py }
+Step "creator parity contract" { python scripts/test-creator-parity.py }
 Step "creator parity" { python scripts/creator-parity.py }
 Step "reduced motion contract" { python scripts/test-reduced-motion.py }
 Step "reduced motion" { python scripts/reduced-motion.py }

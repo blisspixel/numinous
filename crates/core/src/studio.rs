@@ -533,6 +533,8 @@ impl StudioCreation {
 
     /// Render this exact creation as text, including a parametric path when
     /// the capsule carries two coordinate expressions.
+    /// Graphs auto-scale y; parametric paths fit both coordinates with equal
+    /// physical units, including the terminal character aspect.
     ///
     /// # Errors
     /// Returns a parser, geometry, or all-undefined diagnostic.
@@ -1623,6 +1625,23 @@ pub(crate) enum PlotTextError {
     Undefined,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ProgramPlotError {
+    Sampling(PlotTextError),
+    UnrepresentablePlanarRange,
+}
+
+impl ProgramPlotError {
+    const fn message(self) -> &'static str {
+        match self {
+            Self::Sampling(error) => error.message(),
+            Self::UnrepresentablePlanarRange => {
+                "the planar coordinate range cannot be represented faithfully"
+            }
+        }
+    }
+}
+
 fn plot_program_text(
     program: &StudioProgram,
     input_min: f64,
@@ -1630,21 +1649,22 @@ fn plot_program_text(
     a: f64,
     width: usize,
     height: usize,
-) -> Result<StudioPlot, PlotTextError> {
+) -> Result<StudioPlot, ProgramPlotError> {
     if width < 2 || height < 2 || input_max <= input_min {
-        return Err(PlotTextError::InvalidGeometry);
+        return Err(ProgramPlotError::Sampling(PlotTextError::InvalidGeometry));
     }
     match program {
-        StudioProgram::Graph { expression, .. } => plot_parsed_text(
-            expression, input_min, input_max, a, width, height,
-        )
-        .map(|(text, ymin, ymax)| StudioPlot {
-            text,
-            xmin: input_min,
-            xmax: input_max,
-            ymin,
-            ymax,
-        }),
+        StudioProgram::Graph { expression, .. } => {
+            plot_parsed_text(expression, input_min, input_max, a, width, height)
+                .map(|(text, ymin, ymax)| StudioPlot {
+                    text,
+                    xmin: input_min,
+                    xmax: input_max,
+                    ymin,
+                    ymax,
+                })
+                .map_err(ProgramPlotError::Sampling)
+        }
         StudioProgram::Parametric { .. } => {
             let sample_count = width.saturating_mul(4).clamp(64, 16_384);
             let denom = (sample_count - 1) as f64;
@@ -1656,7 +1676,7 @@ fn plot_program_text(
                 .collect();
             let finite: Vec<(f64, f64)> = points.iter().flatten().copied().collect();
             if finite.is_empty() {
-                return Err(PlotTextError::Undefined);
+                return Err(ProgramPlotError::Sampling(PlotTextError::Undefined));
             }
             let xmin = finite
                 .iter()
@@ -1674,21 +1694,25 @@ fn plot_program_text(
                 .iter()
                 .map(|point| point.1)
                 .fold(f64::NEG_INFINITY, f64::max);
-            let xspan = (xmax - xmin).max(1e-9);
-            let yspan = (ymax - ymin).max(1e-9);
             let mut canvas = crate::canvas::Canvas::new(width, height);
+            let projection = crate::PlanarProjection::fit(
+                &canvas,
+                (0, 0, width, height),
+                (xmin, xmax),
+                (ymin, ymax),
+            )
+            .ok_or(ProgramPlotError::UnrepresentablePlanarRange)?;
             let mut previous: Option<(i32, i32)> = None;
             for point in points {
-                let Some((x, y)) = point else {
+                let Some((sx, sy)) = point.and_then(|(x, y)| projection.point(x, y)) else {
                     previous = None;
                     continue;
                 };
-                let sx = ((x - xmin) / xspan * (width as f64 - 1.0)).round() as i32;
-                let sy = ((height as f64 - 1.0) - (y - ymin) / yspan * (height as f64 - 1.0))
-                    .round() as i32;
+                use crate::surface::Surface;
                 if let Some((px, py)) = previous {
-                    use crate::surface::Surface;
                     canvas.line(px, py, sx, sy, '#');
+                } else {
+                    canvas.plot(sx, sy, '#');
                 }
                 previous = Some((sx, sy));
             }
@@ -2689,6 +2713,186 @@ mod tests {
         assert_eq!(
             StudioCreation::from_link(&scaled.to_link()).expect("link"),
             scaled
+        );
+    }
+
+    fn parametric_cells(plot: &super::StudioPlot) -> Vec<(usize, usize)> {
+        plot.text
+            .lines()
+            .enumerate()
+            .flat_map(|(y, row)| {
+                row.chars()
+                    .enumerate()
+                    .filter(|(_, mark)| *mark != ' ')
+                    .map(move |(x, _)| (x, y))
+            })
+            .collect()
+    }
+
+    fn cell_bounds(cells: &[(usize, usize)]) -> ((usize, usize), (usize, usize)) {
+        (
+            (
+                cells.iter().map(|p| p.0).min().unwrap(),
+                cells.iter().map(|p| p.1).min().unwrap(),
+            ),
+            (
+                cells.iter().map(|p| p.0).max().unwrap(),
+                cells.iter().map(|p| p.1).max().unwrap(),
+            ),
+        )
+    }
+
+    #[test]
+    fn parametric_canvas_keeps_circles_round_and_ellipses_distinct() {
+        let circle =
+            StudioCreation::new_parametric("cos(t)", "sin(t)", 0.0, std::f64::consts::TAU, 0.0)
+                .unwrap();
+        let ellipse =
+            StudioCreation::new_parametric("4*cos(t)", "sin(t)", 0.0, std::f64::consts::TAU, 0.0)
+                .unwrap();
+        for (width, height) in [(81, 41), (41, 81), (120, 40), (40, 120)] {
+            let circle_plot = circle.plot_text(width, height).unwrap();
+            let ellipse_plot = ellipse.plot_text(width, height).unwrap();
+            assert_ne!(circle_plot.text, ellipse_plot.text);
+            for (plot, ratio) in [(&circle_plot, 1.0), (&ellipse_plot, 4.0)] {
+                let (lower, upper) = cell_bounds(&parametric_cells(plot));
+                let dx = (upper.0 - lower.0) as f64;
+                let dy = 2.0 * (upper.1 - lower.1) as f64;
+                // A terminal cell is twice as tall as wide. One-cell endpoint
+                // rounding permits one column plus one scaled row of error.
+                assert!((dx - ratio * dy).abs() <= 1.0 + 2.0 * ratio);
+                assert!((lower.0 + upper.0).abs_diff(width - 1) <= 1);
+                assert!((lower.1 + upper.1).abs_diff(height - 1) <= 1);
+            }
+        }
+    }
+
+    #[test]
+    fn translated_parametric_paths_keep_their_centered_geometry_and_values() {
+        let circle =
+            StudioCreation::new_parametric("cos(t)", "sin(t)", 0.0, std::f64::consts::TAU, 0.0)
+                .unwrap();
+        let translated = StudioCreation::new_parametric(
+            "cos(t)+17",
+            "sin(t)-11",
+            0.0,
+            std::f64::consts::TAU,
+            0.0,
+        )
+        .unwrap();
+        let capsule = translated.to_num_file();
+        for (width, height) in [(81, 41), (41, 81)] {
+            let base = circle.plot_text(width, height).unwrap();
+            let shifted = translated.plot_text(width, height).unwrap();
+            assert!((shifted.xmin - base.xmin - 17.0).abs() < 1e-12);
+            assert!((shifted.xmax - base.xmax - 17.0).abs() < 1e-12);
+            assert!((shifted.ymin - base.ymin + 11.0).abs() < 1e-12);
+            assert!((shifted.ymax - base.ymax + 11.0).abs() < 1e-12);
+            let base_cells = parametric_cells(&base);
+            let shifted_cells = parametric_cells(&shifted);
+            for (left, right) in [(&base_cells, &shifted_cells), (&shifted_cells, &base_cells)] {
+                for p in left {
+                    assert!(
+                        right
+                            .iter()
+                            .any(|q| p.0.abs_diff(q.0) <= 1 && p.1.abs_diff(q.1) <= 1)
+                    );
+                }
+            }
+        }
+        assert_eq!(translated.to_num_file(), capsule);
+        assert_eq!(StudioCreation::from_num_file(&capsule).unwrap(), translated);
+    }
+
+    #[test]
+    fn parametric_lines_and_points_remain_centered_and_visible() {
+        for (width, height) in [(81, 41), (41, 81)] {
+            for (x, y, expected) in [
+                (
+                    "t",
+                    "7",
+                    ((0, (height - 1) / 2), (width - 1, (height - 1) / 2)),
+                ),
+                (
+                    "2",
+                    "t",
+                    (((width - 1) / 2, 0), ((width - 1) / 2, height - 1)),
+                ),
+                (
+                    "7",
+                    "-3",
+                    (
+                        ((width - 1) / 2, (height - 1) / 2),
+                        ((width - 1) / 2, (height - 1) / 2),
+                    ),
+                ),
+            ] {
+                let creation = StudioCreation::new_parametric(x, y, -1.0, 1.0, 0.0).unwrap();
+                let cells = parametric_cells(&creation.plot_text(width, height).unwrap());
+                assert_eq!(cell_bounds(&cells), expected);
+                if x == "7" {
+                    assert_eq!(cells.len(), 1);
+                }
+            }
+        }
+        // Only t=0 is finite, so no segment exists to make this point visible.
+        let isolated = StudioCreation::new_parametric("7", "sqrt(-t)", 0.0, 1.0, 0.0).unwrap();
+        assert_eq!(
+            parametric_cells(&isolated.plot_text(81, 41).unwrap()),
+            [(40, 20)]
+        );
+    }
+
+    #[test]
+    fn parametric_undefined_intervals_remain_gaps() {
+        let creation =
+            StudioCreation::new_parametric("t", "sqrt(t^2-0.25)", -1.0, 1.0, 0.0).unwrap();
+        let cells = parametric_cells(&creation.plot_text(81, 41).unwrap());
+        assert!(cells.iter().any(|p| p.0 < 20));
+        assert!(cells.iter().any(|p| p.0 > 60));
+        // Finite samples next to x=+/-0.5 can round onto the boundary columns.
+        assert!(cells.iter().all(|p| p.0 <= 20 || p.0 >= 60));
+        let undefined = StudioCreation::new_parametric("sqrt(-1)", "t", -1.0, 1.0, 0.0).unwrap();
+        assert!(undefined.plot_text(81, 41).is_err());
+    }
+
+    #[test]
+    fn parametric_finite_extreme_curves_and_hostile_sizes_stay_bounded() {
+        for exponent in [-700, 700] {
+            let creation = StudioCreation::new_parametric(
+                format!("exp({exponent})*cos(t)"),
+                format!("exp({exponent})*sin(t)"),
+                0.0,
+                std::f64::consts::TAU,
+                0.0,
+            )
+            .unwrap();
+            let plot = creation.plot_text(81, 41).unwrap();
+            let (lower, upper) = cell_bounds(&parametric_cells(&plot));
+            assert!((upper.0 - lower.0).abs_diff(2 * (upper.1 - lower.1)) <= 2);
+            assert!(plot.xmin < 0.0 && plot.xmax > 0.0);
+        }
+        let creation = StudioCreation::new_parametric("t", "t", -1.0, 1.0, 0.0).unwrap();
+        let plot = creation.plot_text(usize::MAX, 18).unwrap();
+        assert_eq!(plot.text.lines().count(), 18);
+        assert!(
+            plot.text
+                .lines()
+                .all(|line| line.len() <= crate::surface::MAX_DIM)
+        );
+        let (lower, upper) = cell_bounds(&parametric_cells(&plot));
+        assert!((upper.0 - lower.0).abs_diff(2 * (upper.1 - lower.1)) <= 2);
+        assert!(creation.plot_text(1, 18).is_err());
+        let unresolved =
+            StudioCreation::new_parametric("exp(-700)*t", "exp(700)*t", -1.0, 1.0, 0.0).unwrap();
+        assert_eq!(
+            unresolved.plot_text(81, 41).unwrap_err(),
+            "the planar coordinate range cannot be represented faithfully"
+        );
+        let graph = StudioCreation::new("t", -1.0, 1.0, 0.0).unwrap();
+        assert_eq!(
+            graph.plot_text(1, 41).unwrap_err(),
+            "need width >= 2, height >= 2, and xmax > xmin"
         );
     }
 

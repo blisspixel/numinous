@@ -1,6 +1,6 @@
 //! Shared deterministic curve sampling and rasterization for Studio surfaces.
 
-use numinous_core::{Raster, Surface};
+use numinous_core::{PlanarProjection, Raster, Surface};
 
 struct CurveSamples {
     points: Vec<(usize, f64)>,
@@ -120,7 +120,7 @@ pub fn draw_curve(
     Some((samples.ymin, samples.ymax))
 }
 
-/// Draw one auto-scaled parametric path into the same bounded vertical band.
+/// Fit one parametric path with equal physical coordinate units into the band.
 /// Sampling is denser than the pixel width so closed curves do not become a
 /// sparse polygon at small windows, but stays capped independently of input.
 pub fn draw_parametric(
@@ -204,7 +204,7 @@ fn sample_parametric(
     })
 }
 
-/// Draw one auto-scaled parametric path inside an explicit raster rectangle.
+/// Fit one parametric path inside a rectangle without changing its proportions.
 /// This is the gallery form of [`draw_parametric`], with the same sampling
 /// and finite-value behavior but no dependence on full-surface chrome.
 pub fn draw_parametric_rect(
@@ -227,19 +227,22 @@ pub fn draw_parametric_rect(
         ymin,
         ymax,
     } = samples;
-    let xspan = (xmax - xmin).max(1e-9);
-    let yspan = (ymax - ymin).max(1e-9);
+    let projection = PlanarProjection::fit(
+        raster,
+        (rect.left, rect.top, width, height),
+        (xmin, xmax),
+        (ymin, ymax),
+    )?;
     let mut previous = None;
     for point in points {
-        let Some((x, y)) = point else {
+        let Some((px, py)) = point.and_then(|(x, y)| projection.point(x, y)) else {
             previous = None;
             continue;
         };
-        let px = rect.left as i32 + ((x - xmin) / xspan * (width as f64 - 1.0)).round() as i32;
-        let py =
-            rect.top as i32 + ((1.0 - (y - ymin) / yspan) * (height as f64 - 1.0)).round() as i32;
         if let Some((previous_x, previous_y)) = previous {
             raster.line(previous_x, previous_y, px, py, '#');
+        } else {
+            raster.plot(px, py, '#');
         }
         previous = Some((px, py));
     }
@@ -508,5 +511,180 @@ mod tests {
         assert!((bounds.2 + 1.0).abs() < 0.01);
         assert!((bounds.3 - 1.0).abs() < 0.01);
         assert!(raster.lit_count() > 100);
+    }
+
+    fn lit_points(raster: &Raster) -> Vec<(usize, usize)> {
+        let blank = Raster::new(raster.width(), raster.height()).to_rgba();
+        raster
+            .to_rgba()
+            .chunks_exact(4)
+            .zip(blank.chunks_exact(4))
+            .enumerate()
+            .filter_map(|(index, (actual, empty))| {
+                (actual != empty).then_some((index % raster.width(), index / raster.width()))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn parametric_pixels_preserve_circle_and_ellipse_geometry_inside_each_viewport() {
+        for (width, height, rect) in [
+            (
+                80,
+                80,
+                CurveRect {
+                    left: 0,
+                    top: 8,
+                    width: 80,
+                    height: 64,
+                },
+            ),
+            (
+                360,
+                240,
+                CurveRect {
+                    left: 13,
+                    top: 66,
+                    width: 332,
+                    height: 150,
+                },
+            ),
+            (
+                240,
+                360,
+                CurveRect {
+                    left: 13,
+                    top: 66,
+                    width: 214,
+                    height: 270,
+                },
+            ),
+            (
+                900,
+                900,
+                CurveRect {
+                    left: 0,
+                    top: 120,
+                    width: 900,
+                    height: 732,
+                },
+            ),
+            (
+                120,
+                80,
+                CurveRect {
+                    left: 100,
+                    top: 60,
+                    width: 100,
+                    height: 100,
+                },
+            ),
+        ] {
+            let right = (rect.left + rect.width).min(width) - 1;
+            let bottom = (rect.top + rect.height).min(height) - 1;
+            for ratio in [1.0, 4.0] {
+                for (offset_x, offset_y) in [(0.0, 0.0), (25.0, -17.0)] {
+                    let mut raster = Raster::new(width, height);
+                    let bounds =
+                        draw_parametric_rect(&mut raster, rect, 0.0, std::f64::consts::TAU, |t| {
+                            Some((offset_x + ratio * t.cos(), offset_y + t.sin()))
+                        })
+                        .expect("finite ellipse");
+                    assert!((bounds.0 - (offset_x - ratio)).abs() < 0.01);
+                    assert!((bounds.1 - (offset_x + ratio)).abs() < 0.01);
+                    assert!((bounds.2 - (offset_y - 1.0)).abs() < 0.01);
+                    assert!((bounds.3 - (offset_y + 1.0)).abs() < 0.01);
+                    let pixels = lit_points(&raster);
+                    assert!(pixels.len() > 10);
+                    let min_x = pixels.iter().map(|p| p.0).min().expect("ink") as f64;
+                    let max_x = pixels.iter().map(|p| p.0).max().expect("ink") as f64;
+                    let min_y = pixels.iter().map(|p| p.1).min().expect("ink") as f64;
+                    let max_y = pixels.iter().map(|p| p.1).max().expect("ink") as f64;
+                    let dx = max_x - min_x;
+                    let dy = max_y - min_y;
+                    assert!(
+                        (dx - ratio * dy).abs() <= ratio + 1.0,
+                        "{width}x{height}, ratio {ratio}: diameters {dx}x{dy}"
+                    );
+                    assert!((min_x + max_x - (rect.left + right) as f64).abs() <= 1.0);
+                    assert!((min_y + max_y - (rect.top + bottom) as f64).abs() <= 1.0);
+                    let center = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
+                    let radius = dy / 2.0;
+                    for (x, y) in pixels {
+                        assert!((rect.left..=right).contains(&x));
+                        assert!((rect.top..=bottom).contains(&y));
+                        // Undo only the requested ellipse ratio. The observed
+                        // path must lie within rasterization error of a circle.
+                        let distance = ((x as f64 - center.0) / ratio).hypot(y as f64 - center.1);
+                        assert!((distance - radius).abs() <= 1.5);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn parametric_finite_islands_stay_visible_without_bridging_undefined_samples() {
+        let rect = CurveRect {
+            left: 4,
+            top: 7,
+            width: 65,
+            height: 41,
+        };
+        let mut raster = Raster::new(80, 60);
+        let mut index = 0;
+        let bounds = draw_parametric_rect(&mut raster, rect, 0.0, 1.0, |_| {
+            let point = match index {
+                0 => Some((-1.0, 0.0)),
+                130 => Some((1.0, 0.0)),
+                _ => None,
+            };
+            index += 1;
+            point
+        })
+        .expect("two isolated finite samples");
+        assert_eq!(bounds, (-1.0, 1.0, 0.0, 0.0));
+        assert_eq!(lit_points(&raster), [(4, 27), (68, 27)]);
+
+        let mut point = Raster::new(80, 60);
+        draw_parametric_rect(&mut point, rect, 0.0, 1.0, |_| Some((3.0, -9.0)))
+            .expect("constant point");
+        assert_eq!(lit_points(&point), [(36, 27)]);
+    }
+
+    #[test]
+    fn parametric_rectangles_reject_empty_and_outside_destinations() {
+        for rect in [
+            CurveRect {
+                left: 0,
+                top: 0,
+                width: 0,
+                height: 20,
+            },
+            CurveRect {
+                left: 0,
+                top: 0,
+                width: 20,
+                height: 0,
+            },
+            CurveRect {
+                left: usize::MAX,
+                top: 0,
+                width: 20,
+                height: 20,
+            },
+            CurveRect {
+                left: 0,
+                top: usize::MAX,
+                width: 20,
+                height: 20,
+            },
+        ] {
+            let mut raster = Raster::new(40, 40);
+            assert!(
+                draw_parametric_rect(&mut raster, rect, 0.0, 1.0, |_| Some((1.0, 1.0))).is_none()
+            );
+            assert_eq!(raster.lit_count(), 0);
+        }
     }
 }
