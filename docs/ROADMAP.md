@@ -43,7 +43,7 @@ should link here rather than restating the board.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.4.0-alpha.17, Understanding Alpha active with its exit
+**Current release state: 0.4.0-alpha.18, Understanding Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are complete. Human stranger sessions sit with 0.8
 Closed Beta and 1.0 First Light.
@@ -58,7 +58,7 @@ should expand what a player can see, predict, and create. Beauty, familiar
 mastery, exploration, and company also remain complete reasons to play.
 `NORTH_STAR.md` owns this direction; research cannot certify that it has landed.
 
-- **Built in the current review:** corrected Kepler's focus, equal-area geometry,
+- **Built in alpha 17:** corrected Kepler's focus, equal-area geometry,
   circular-limit grading, and aspect mapping; replaced false Lotka-Volterra
   spirals with bounded, conservation-tested trajectories and one shared phase
   plane; added Lorenz analytic-limit and refinement checks with RK4; corrected
@@ -70,7 +70,7 @@ mastery, exploration, and company also remain complete reasons to play.
   missing handles. Core session and MCP workspace regressions cover the failure.
   This repairs the existing Mind's Seat increment; it does not implement identity
   continuity or portable memory import.
-- **Built in the next review:** Lissajous uses true unit-amplitude oscillators
+- **Built in alpha 17:** Lissajous uses true unit-amplitude oscillators
   and one frequency pair for its picture, readout, and sound. Live oscillator
   glides preserve each absolute target frequency. Studio edits and leave/return
   preserve the selected creation's window, knob, and untouched identity.
@@ -80,6 +80,25 @@ mastery, exploration, and company also remain complete reasons to play.
   the equilibrium appropriate to demand. Wet Oracle's copy now describes its
   simulated field without claiming a route solution. Their mathematical
   contracts and evidence are in `MATHEMATICS.md`.
+- **Built in alpha 18:** Henon-Heiles starts at the selected Hamiltonian
+  energy, preserves shape through aspect-correct drawing, and reports the
+  finite trajectory's stopping reason without guessing chaos. Its 171-energy
+  grid and refinement checks bound the sampled numerical error. Fresh Studio
+  now uses one explicit parameter for picture, sound, and portable exports,
+  with keyboard/controller edits and exact imported values. Source and App
+  regressions are linked from `MATHEMATICS.md` and `STUDIO.md`.
+- **Built in alpha 18:** Van der Pol, Duffing, and Gray-Scott use declared
+  finite experiments and tested RK4 evolution. Their readouts measure the
+  plotted observation windows, recognize the exact resting state where
+  applicable, and remove unsupported chaos or pattern diagnoses. Independent
+  numerical references, balance laws, refinement checks, and counterexamples
+  bound the claims in `MATHEMATICS.md`; this is a focused correction, not
+  mathematical certification of the full catalog.
+- **Next geometry correction:** parametric Studio independently fits its x and
+  y ranges, which can erase a circle-versus-ellipse distinction. Share one
+  aspect-aware planar fit across text, live App, postcards, and Gallery,
+  preserving the existing capsule and graph contracts. `MATHEMATICS.md` records
+  the source-review counterexample and required visible-shape checks.
 - **Playable now:** [Returning home](experiments/returning-home.md) has three
   portable Studio contrasts with exact formulas and retained fork lineage.
   These are current-tool experiments; the proposed in-app quest stays open.
@@ -1189,13 +1208,14 @@ Detail below and in the version sections.
   progress, non-capsule files are refused with a reason, and panel, App,
   core, and CLI regressions cover the pin lifecycle, the paused preview, both
   entry doors, and the cap refusals. The share bundle, gallery, fork,
-  lineage, and manifest growth remain open 0.7 work.
-- **Done (Studio share trio, 0.7 item 2):** F4 in the App Studio emits the
-  whole share bundle in one press: `creation.num`, `postcard.png`, and a
+  lineage, and gallery increments are built below; general manifest growth
+  remains open 0.7 work.
+- **Done (Studio share trio, 0.7 item 2):** confirming F4's naming step in the
+  App Studio emits the share bundle: `creation.num`, `postcard.png`, and a
   README carrying the `numinous://` link, in one fresh exclusively created
   folder. What is shared is the exact curve on screen: a reopened pin shares
-  its saved window and knob, the ambient Studio freezes the knob at the
-  moment of the press, and the postcard draws the same window the capsule
+  its selected window and knob, fresh Studio uses its explicit parameter, and
+  the postcard draws the same window the capsule
   promises to reopen, proven by a test that compares postcard pixels across
   two saved windows. An unparsed formula is refused with a reason rather
   than shared as the last-good curve, a refusal writes nothing, and the
@@ -1208,7 +1228,10 @@ Detail below and in the version sections.
   12-TET key, leftover cents as pitch bend over plus or minus two semitones,
   overlapping envelopes one voice, range declared as Registered Parameter
   Number 0. A parametric share maps `y(t)` to melody at its saved window and knob.
-  The fresh unsaved animated-knob limitation is recorded in `STUDIO.md`.
+  Alpha 18 closes the fresh App's parameter mismatch with a visible `a` and
+  explicit keyboard/controller edits, using the same value as its live melody.
+  Native parameter actions, gallery-phase independence, and actual exported
+  MIDI parity have regressions in `faces/app/src/tests.rs`.
   The README stays `numinous-studio-share 1` and names that 12-TET loss. A
   failure still discards the fresh folder rather than leaving a half-written
   share. CLI `numinous sing 'sin(t)' --out song.mid` and MCP `midi: true` keep the same
@@ -1386,7 +1409,7 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   per-cell onset scheduling, participant musical clarity, and a sustained colony
   layer remain open.
 - **Done (Formula Jam synchronized recipe morph, cycle 128):** curated Random
-  and phrase-edge Auto changes now smoothstep between the old and new
+  and presentation-clock Auto changes now smoothstep between the old and new
   mathematical curves for 600 ms while audio requests an equal-power crossfade
   of the same duration. Repeated requests cannot jump an active transition;
   typing and ownership changes interrupt the long fade from its current audible
@@ -1814,8 +1837,9 @@ later risk.
     with a worst p95 of 2.042 ms on Game of Life input; an independent 250
     sample check remained green with a worst p95 of 1.896 ms.
 - Give Formula Jam three legible ways to begin: manual expression entry,
-  curated Random, and an Auto set that changes about every 21 seconds at phrase
-  boundaries. Add a dismissible, recallable help overlay and pause Auto on edit.
+  curated Random, and an Auto set with an approximate 21-second dwell. Add a
+  dismissible, recallable help overlay and pause Auto on edit. Audio-transport
+  phrase alignment remains open; the current App uses presentation-clock edges.
   - **Done (machine path, 2026-07-25):** App keeps F2 Random, F3 Auto, and help.
     Core owns the curated bank. CLI and MCP expose manual, recipe index, seed
     random, and stateless Auto walk (`auto_step` with seed) plus list-recipes,
@@ -2390,7 +2414,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-08-18)
 
-The package is **0.4.0-alpha.17**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.18**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -2435,7 +2459,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.4.0-alpha.17** because Understanding Alpha is the active
+Package label is **0.4.0-alpha.18** because Understanding Alpha is the active
 milestone. The alpha suffix says its exit remains open. External registration,
 calibration, fresh independent review, allocation freeze, and the qualifying
 cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active

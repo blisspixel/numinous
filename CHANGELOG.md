@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.18] - 2026-09-05
+
 ### Fixed
 - Henon-Heiles now starts with the selected Hamiltonian energy and shares one
   trajectory model between its image and readout. RK4 uses a declared 100-unit

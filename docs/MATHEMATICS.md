@@ -29,7 +29,8 @@ of the depicted model. Catalog presence is not mathematical certification.
 Scope: the Kepler Areas, Lotka-Volterra, Lorenz, Spherical Harmonics,
 Lissajous, Standing Wave, Simple Pendulum, and Braess implementations, plus the
 shared numerical step used by Double Pendulum and the claims in Wet Oracle.
-This is a focused source and
+The alpha 18 corrections add Henon-Heiles, Van der Pol, Duffing, and
+Gray-Scott. This is a focused source and
 numerical review, not an independent sign-off of the 355-room catalog.
 
 ### Kepler Areas
@@ -104,8 +105,10 @@ a fixed `x = [-25,25], z = [0,55]` window; legitimate clicked transients can
 leave that window while integration continues. This is a disclosed display
 limit, not evidence of numerical instability or a full-domain bounding proof.
 
-The shared RK4 step also serves Lotka-Volterra and Double Pendulum. Independent
-exponential growth/decay tests check fourth-order convergence; a harmonic
+The shared RK4 step also serves Lotka-Volterra, Double Pendulum, and the
+alpha 18 Henon-Heiles, Van der Pol, Duffing, and Gray-Scott corrections.
+Independent exponential growth/decay tests
+check fourth-order convergence; a harmonic
 oscillator checks return and energy error. Double Pendulum retains its own
 energy, reach, release, and refinement tests and its existing time step.
 
@@ -270,6 +273,219 @@ The correction is a claims review in `wet_oracle.rs` and catalog copy, not a
 validation of biological fidelity. The proposed computational route experience
 has its own explicit contract in [Route Lab](ROUTE_LAB.md).
 
+### Henon-Heiles (alpha 18 correction)
+
+The dimensionless Hamiltonian is
+`H = (px^2 + py^2 + x^2 + y^2)/2 + x^2*y - y^3/3`, giving
+`x' = px`, `y' = py`, `px' = -x - 2*x*y`, and
+`py' = -y - x^2 + y^2`. The hand selects `E = 0.05 + 0.15*x + s`,
+where the seed offset `s = 0.005*(seed % 5)`. Without a hand, bounded gallery
+phase selects `E = 0.08 + 0.08*t + s`; it does not advance physical time.
+The combined hand range is `[0.05,0.22]` and the ambient range is `[0.08,0.18]`.
+
+Every orbit starts at `(x,y) = (0,0.1)` with
+`px = py = sqrt(E - 7/1500)`, so its Hamiltonian equals the selected energy.
+The old initialization instead gave `H = E/2 + 7/1500`: the maximum displayed
+`E = 0.22` actually started at about `H = 0.115`, below the escape barrier.
+One trajectory owner now supplies the samples and termination used by rendering
+and readout. Repeated tuning and equivalent accepted input histories preserve
+the experiment. Independent Hamiltonian evaluations check the initialization
+to `1e-14`; finite differences of H check the force's sign and components.
+
+The three saddles `(0,1)` and `(+/-sqrt(3)/2,-1/2)` all have `H = 1/6` at
+zero momentum. Tests check their stationarity, height and negative Hessian
+determinant. The status says `closed` below this energy, `saddle` at it, and
+`open` above it. Those labels describe the central well's barriers. An open
+barrier neither proves a particular orbit escapes nor classifies it as chaotic.
+The printed energy uses `~` to disclose rounding; classification uses the
+underlying value. The musical phrase is a metaphor, not a sampled trajectory.
+
+Shared RK4 uses step `0.01` for at most 100 time units. The first sample is at
+time zero. A step leaving `|x| <= 3, |y| <= 3`, or producing any nonfinite state
+component, ends the calculation before that step is retained. The status gives
+the last retained sample's time: `end` means the 100-unit horizon, `box` means
+the next numerical step left that spatial domain, and `invalid` means it became
+nonfinite. For example, `E = 0.17` reaches the horizon with open barriers,
+whereas `E = 0.22` retains samples through time 11.37 before the next step
+leaves the box. This is a numerical stopping observation, not a certified escape
+time or proof of permanent escape.
+
+Compiled regressions sample 171 energies from 0.05 to 0.22 in increments of
+0.001. Their maximum retained-sample `abs(H-E)` is about `2.180e-8`, below the
+`1e-7` budget; all sampled sub-barrier orbits reach the full horizon. At
+`E = 0.05, 0.12, 0.16, 0.20`, refining steps `0.02, 0.01, 0.005` over four time
+units gives successive endpoint-difference ratios from 15.873 to 16.170, and
+the final difference is below `1e-9`. Separate full-horizon endpoint checks at
+`E = 0.05, 0.08, 0.12` require a difference below `5e-8` when halving the shipped
+step. RK4 is not symplectic or exactly energy preserving. These finite fixtures
+do not guarantee arbitrary trajectories, parameter values, or long-time
+pointwise accuracy; small energy drift alone cannot establish those claims.
+Endpoint differences use the maximum absolute component difference in
+`(x,y,px,py)`.
+
+The picture fits each retained orbit independently with one physical scale,
+the surface's character aspect, and symmetric margins. A unit square's actual
+painted extents check equal axis units on both Raster and Canvas. Relative
+shape is preserved up to pixel rounding, but different energy settings do not
+share a fixed zoom. Surface and input tests check bounded work and coordinates.
+
+Sources: [Henon and Heiles, The applicability of the third integral of motion](https://doi.org/10.1086/109234),
+and [Hernandez and Bertschinger, Time-symmetric integration in astrophysics](https://academic.oup.com/mnras/article/475/4/5570/4823139),
+section 4.2, equation 56, for the Hamiltonian and examples of distinct regular
+and chaotic orbits. The room's error budgets above come from its own numerical
+regressions, not a validation of this solver by those papers.
+Implementation and regressions: `crates/core/src/rooms/henon_heiles.rs`.
+
+### Van der Pol (alpha 18 correction)
+
+The dimensionless equation is `x' = v`, `v' = mu*(1-x^2)*v-x`.
+For `E = (x^2+v^2)/2`, differentiation gives
+`E' = mu*(1-x^2)*v^2`: damping supplies energy inside `|x|<1` and removes it
+outside. For positive mu, nonzero trajectories approach an attracting orbit;
+the exact origin remains an unstable equilibrium. Approaching the same orbit
+does not imply synchronization of phase.
+
+The hand selects `mu = 0.2+4.5*x+s` and initial state
+`(4*(x-0.5),4*(0.5-y))`, with `s = 0.15*(seed % 6)`, so
+`0.2 <= mu <= 5.45`. Horizontal input therefore changes both mu and initial x;
+the verb and reveal now disclose that coupling. Without a hand, gallery phase
+selects `mu = 0.5+3*t+s` and the start is `(0.1,0)`. The reference always starts
+at `(2.5,0)` with the same mu. Both paths share one coordinate frame, with
+equal axis units and a zoom fitted to their combined extents. The selected
+endpoint remains visible even when that path is the exact equilibrium.
+
+RK4 with step `0.005` replaces Euler. Both paths include time zero and evolve
+for at most 100 time units. A nonfinite next state or component magnitude above
+50 stops before retaining that step. The status identifies a finite `trace`,
+the exact `equilibrium`, or a numerical `limit`/`invalid` stop; its time belongs
+to the last retained sample. `A` is half the entire retained x range, including
+transients, rather than a certified asymptotic cycle amplitude.
+
+At 70 hand settings, using seeds 0 and 5, seven x values, and five y values,
+the largest final energy-balance residual is `4.026e-5` against a `1e-4` budget.
+This compares endpoint energy change with composite Simpson quadrature of the
+power law. Halving the step gives maximum endpoint component difference
+`2.846e-5` against `5e-5`, and half-range difference `5.124e-6` against `1e-4`.
+The largest retained component is about 8.222, below the numerical cutoff.
+These are sampled endpoint and range checks, not uniform trajectory-error bounds.
+
+Other regressions check the analytic undamped limit, equilibrium, short-time
+fourth-order refinement, and five independently computed DOP853 endpoints at
+time 100. Those reference calculations agree within `7e-13` when their maximum
+step is halved, and a separate degree-16 Taylor solver agrees within `1e-12`.
+At mu 0.2, the final 25 units give sampled half-range 2.000413600 and
+crossing period 6.298876662. These reject the previous Euler-inflated motion;
+they remain finite numerical observations, not exact cycle constants.
+
+Source: [Tedrake, Underactuated Robotics, Van der Pol example and limit cycles](https://underactuated.csail.mit.edu/simple_legs.html),
+for the equation, equilibrium exception, and orbital stability distinction.
+Implementation and regressions: `crates/core/src/rooms/van_der_pol.rs`.
+
+### Duffing (alpha 18 correction)
+
+The dimensionless model is `x' = v`,
+`v' = x-x^3-0.3*v+g*cos(1.2*tau)`, starting at `(0.1,0)`.
+Here `tau` is physical model time. Gallery phase selects drive strength, not
+elapsed time: without a hand `g = 0.2+0.5*t+s`; with a hand
+`g = 0.1+0.8*x+s`, where `s = 0.02*(seed % 7)`.
+The combined admitted drive range is `[0.1,1.02]`.
+
+The spring potential `V = -x^2/2+x^4/4` has minima at x = +/-1 and a barrier
+of height 1/4 above them at x = 0. For `E = v^2/2+V`, the power balance is
+`E' = -0.3*v^2+g*v*cos(1.2*tau)`. Force-gradient and power-law tests independently
+check these relationships. Shared RK4 includes a clock coordinate, so each
+stage samples the drive at its own physical time. It uses step `0.01` over
+120 units, retaining time zero and stopping before a nonfinite next state.
+
+The previous readout evolved only 18 units while the picture evolved 120, and
+large motion was labeled `chaos?`. Rendering and readout now use the same
+trajectory model. The status reports sampled maximum absolute x and v over
+the full retained trace and its last sample's time. At `g = 0.79`, a regression
+requires the late position excursion to exceed the first 18 units' maximum by
+more than 0.5; an independent calculation gives about 2.004 versus 1.353.
+The portrait fits its own extent with equal axis units, so different drive
+settings do not share a fixed zoom.
+
+Amplitude is not a chaos diagnostic. At the admitted `g = 0.9`, the room has
+`max|x| > 1.5`, while longer calculations approach a response repeating at the
+drive period `2*pi/1.2`. Tests sample periods 98, 99, and 100 at 512 and 1,024
+steps per period, requiring successive state differences below `1e-8` and
+refinement difference below `1e-7`. Independent DOP853 samples also close to
+within `1e-10`. This finite counterexample rejects amplitude-based labeling;
+it does not prove a global attractor or classify every selected drive.
+
+Across 93 drives spaced by 0.01, all retained states reach the full horizon;
+the largest sampled `|x|` and `|v|` are 2.156018 and 2.432530. At five drives,
+the largest running energy-versus-work residual is `6.070e-7`, below `2e-6`.
+The work uses Simpson quadrature of physical power with a half-step midpoint.
+Independent four-unit DOP853 endpoint fixtures give shipped-step errors below
+`1.8e-9`; steps `0.02,0.01,0.005` give successive difference ratios
+16.141 through 16.422. Long-time pointwise accuracy is not inferred from these
+short-time checks, especially where nearby trajectories separate.
+
+Source: [Moon and Holmes, A magnetoelastic strange attractor](https://doi.org/10.1016/0022-460X(79)90520-0),
+for the forced double-well model context. That paper does not validate this
+room's coefficients, finite numerical paths, or error budgets.
+Implementation and regressions: `crates/core/src/rooms/duffing.rs`.
+
+### Gray-Scott (alpha 18 correction)
+
+The reactions `U+2V -> 3V` and decay of V give the model
+`U' = Du*lap(U)-U*V^2+F*(1-U)`,
+`V' = Dv*lap(V)+U*V^2-(F+k)*V`. The room uses a periodic 48 by 28 lattice,
+unit spacing, and the five-point Laplacian, with `Du = 0.16`, `Dv = 0.08`.
+Background `(U,V)=(1,0)` surrounds a disk initialized to `(0.5,0.25)`;
+variation selects disk radius `4+(seed % 3)`.
+
+The latest hand tunes only feed `F = 0.01+0.08*x` and kill `k = 0.04+0.04*y`.
+Repeated tuning and returning to the same rates preserve that initial patch.
+Previously the number of hand points changed the seed, so a repeated choice
+silently selected a different experiment. Default rates are now fixed at
+`F = 0.04`, `k = 0.06`; bounded gallery phase selects observation time
+`T = floor(120*t)` for both untouched and tuned fields. Each look replays the
+same start at those rates and time.
+
+RK4 with step 1 replaces clipped Euler updates. Tests check reaction
+stoichiometry, uniform equilibria, conservation of periodic diffusion's total,
+and exact discrete Fourier eigenvalues. An isolated diffusion mode checks
+fourth-order temporal convergence against its analytic exponential decay.
+Smooth-wave stencil refinement checks second-order spatial accuracy; it is not
+nonlinear pattern convergence for the discontinuous seeded patch.
+
+Four nonlinear fixtures at T = 120 require maximum field difference below
+`2e-4` when comparing the shipped step with step 0.25, and below `1e-5` for
+step 0.5 against 0.25. A separate 75-case probe, five feed values, five kill
+values, and all three radii, found maximum terminal difference 0.0001644762.
+All saved states in that probe were finite and nonnegative, with observed U
+and V in `[0,1]`. These samples neither prove positivity for every admitted
+setting nor validate a continuum solution or a long-time pattern class.
+
+The readout measures V's maximum in the same evolved lattice, before display
+averaging. One physical scale preserves its unit cell spacing on pixels and
+text cells. Each display footprint averages the piecewise constant field by
+covered area, then applies the glyph thresholds; averages below 0.08 are hidden.
+Each destination is painted once. This removes the previous aspect stretching
+and false brightness from overlapping source cells when downsampling. Uniform
+fields remain uniform even at exact glyph thresholds, and actual painted seed
+extents check physical shape on Raster and Canvas. A visually empty snapshot
+can still contain small positive concentrations. Pattern names and a claimed
+bifurcation diagnostic are removed.
+The small finite lattice illustrates seeded reaction-diffusion; it does not
+reproduce a published pattern survey. The musical phrase is a metaphor.
+
+Source: [Pearson, Complex Patterns in a Simple System](https://arxiv.org/pdf/patt-sol/9304003),
+equation 2 and its periodic-boundary numerical experiment. Its finite-amplitude
+seeded patterns should not be conflated with a demonstrated Turing instability
+in this room. Implementation and regressions: `crates/core/src/rooms/gray_scott.rs`.
+
+The four corrected rooms share their fitted coordinate mapping. Its vertical
+margin leaves room for App chrome while preserving one scale for numerical
+coordinates. A Duffing turning point previously fell at raster row 19 inside
+the compact title band. A composed-frame regression now compares every source
+curve pixel with the final App frame for six Henon-Heiles, Van der Pol, and
+Duffing settings at both supported sizes. `phase_plane.rs` also checks inverse
+mapping of fractional display footprints used by Gray-Scott.
+
 ## What remains open
 
 Independent mathematical review before 1.0 remains unstaffed. The rest of the
@@ -279,18 +495,33 @@ physical-time versus normalized-phase displays, and geometry with hardcoded
 aspect factors. New quests should use audited relationships and adversarial
 contrast cases. Neither the test count nor line coverage closes this review.
 
-The next concrete queue follows a read-only source and equation review. These
-issues remain in alpha 17 and still need corrections and compiled regressions:
+The concrete alpha 17 queue, Henon-Heiles, Gray-Scott, Van der Pol, and
+Duffing, is addressed by the alpha 18 corrections above. These reviewed
+examples still need independent mathematical review before 1.0, and the wider
+catalog remains open. Better time integration alone cannot validate a room's
+control design, visible geometry, sound mapping, or learning claim.
 
-| Room | Next correction and evidence to require |
-| --- | --- |
-| [Henon-Heiles](../crates/core/src/rooms/henon_heiles.rs) | Its initial Hamiltonian is `E/2 + 7/1500`, rather than the displayed `E`. Derive initial momenta from the available energy, share the trajectory with the readout, and distinguish an open escape channel from observed escape or chaos. |
-| [Gray-Scott](../crates/core/src/rooms/gray_scott.rs) | Repeated identical tuning changes an unrelated seed. Make the experiment stable under repeated selection, and replace unsupported pattern and bifurcation labels with observations or justified diagnostics. |
-| [Van der Pol](../crates/core/src/rooms/van_der_pol.rs) | Bound the Euler step's amplitude error against refinement, recognize the exact equilibrium, and make the readout's observation window explicit. |
-| [Duffing](../crates/core/src/rooms/duffing.rs) | Motion amplitude does not establish chaos. Review the suggestion against periodic counterexamples and align the plotted and reported horizons. |
+Studio's alpha 17 synchronization gap is corrected in alpha 18: fresh App
+formulas start with the shared `a = 1`, and explicit quarter-step or reset
+actions change one parameter used by picture, live melody, postcard, capsule,
+and MIDI. Imported non-quarter values and windows remain exact until changed.
+The gallery clock cannot retune the expression. Graph and paired-program App
+regressions compare the live SoundSpec and actual exported MIDI with the saved
+creation across gallery phases, and check edits, no-ops, preview ownership,
+repair, and leave/return. Recipe morphs require identical old and new numerical
+settings, so they cannot display an old formula evaluated in a different domain.
 
-Studio has a separate synchronization gap: a fresh unsaved App expression can
-use a gallery-phase-dependent `a` visually while its live melody uses `a = 1`.
-Saved creations and their edits preserve their chosen window and `a` across
-picture, share, and melody. Closing the fresh-animation gap needs a shared
-transport-aware parameter update, not repeated sample-buffer restarts.
+This is parameter agreement, not an invertible correspondence between music
+and geometry. Parametric audio maps `y(t)`, normalizes a finite sample of its
+range, and retains the MIDI limits in `STUDIO.md`. Auto uses a presentation
+clock and does not establish audio phrase alignment. Continuous parameter
+sweeping remains separate audio-transport work.
+
+The follow-on source review identifies a separate planar-geometry correction.
+Parametric Studio currently fits sampled x and y ranges independently. A circle
+and the path `(4*cos(t),sin(t))` therefore normalize to the same plotted shape.
+CLI and MCP report the coordinate ranges, while the App, postcards, and Gallery
+discard those ranges. Equal coordinate units need one centered scale within
+the available rectangle, with actual circle/ellipse and export regressions.
+Ordinary `y=f(x)` graph autoscaling is a separate presentation choice. This
+preexisting issue remains open in alpha 18; capsule contents need no change.
