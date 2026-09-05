@@ -697,8 +697,7 @@ macro_rules! catalog_rooms {
                 id: "gray-scott",
                 title: "The Chemical Garden",
                 wing: "Emergence",
-                blurb: "Gray-Scott reaction-diffusion: two chemicals paint spots, stripes, and coral. \
-                        t drifts feed/kill.",
+                blurb: "A seeded chemical field: tune feed and kill, then watch it evolve.",
                 accent: [80, 200, 160],
             }
         ),
@@ -1451,7 +1450,7 @@ macro_rules! catalog_rooms {
                 id: "van-der-pol",
                 title: "Van der Pol Cycle",
                 wing: "Motion & Dynamics",
-                blurb: "Nonlinear damping births a stable limit cycle.",
+                blurb: "Nonlinear damping feeds small motion and quiets large swings.",
                 accent: [220, 160, 40],
             }
         ),
@@ -1473,7 +1472,7 @@ macro_rules! catalog_rooms {
                 id: "duffing",
                 title: "The Duffing Well",
                 wing: "Motion & Dynamics",
-                blurb: "Driven cubic oscillator: double-well chaos under strong drive.",
+                blurb: "A driven double-well spring: explore its finite phase portrait.",
                 accent: [180, 80, 40],
             }
         ),
@@ -1825,7 +1824,7 @@ macro_rules! catalog_rooms {
                 id: "henon-heiles",
                 title: "Henon-Heiles",
                 wing: "Motion & Dynamics",
-                blurb: "Galactic potential toy: energy steers order into chaos.",
+                blurb: "Tune a galactic orbit's energy and open its escape barriers.",
                 accent: [80, 40, 180],
             }
         ),
@@ -4229,9 +4228,10 @@ pub(crate) fn construct_hidden_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::*;
 
-    // Alpha 17 corrects the Wet Oracle blurb's unsupported shortest-path
-    // claim. The catalog order, ids, titles, wings and accents stay fixed.
-    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0xcfb1_60cd_30ca_7a3f;
+    // Alpha 18 corrects the Gray-Scott, Van der Pol, Duffing and Henon-Heiles
+    // blurbs. Only those four fields change from alpha 17; order, ids, titles,
+    // wings and accents stay fixed across all 355 entries.
+    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x4875_b8f0_6f48_a89f;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {

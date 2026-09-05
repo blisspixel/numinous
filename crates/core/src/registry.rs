@@ -960,6 +960,25 @@ mod tests {
                 "496",
                 "the perfect number the picture is currently decomposing",
             ),
+            (
+                "henon-heiles",
+                "100.00",
+                "the last retained time of the path actually drawn; default \
+                 ambient paths reach this horizon, while hand-selected paths \
+                 with open barriers can reach the spatial limit earlier",
+            ),
+            (
+                "van-der-pol",
+                "100.00",
+                "the last retained time of the selected path; admitted default \
+                 experiments reach the declared observation horizon",
+            ),
+            (
+                "duffing",
+                "120.00",
+                "the last retained time of the path used for both the portrait \
+                 and its measured extrema, including the initial transient",
+            ),
         ];
 
         /// Every number in a piece of text, as the text that spelled it and

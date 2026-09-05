@@ -5,6 +5,35 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- Henon-Heiles now starts with the selected Hamiltonian energy and shares one
+  trajectory model between its image and readout. RK4 uses a declared 100-unit
+  horizon and step 0.01, with sampled energy and refinement checks. The status
+  distinguishes closed or open escape barriers from reaching the numerical
+  spatial limit, reports the last retained sample's time, and no longer guesses
+  chaos from energy or orbit size. A single scale preserves orbit shapes on
+  pixel and text surfaces. Discovery text and the citation describe the
+  Hamiltonian model consistently.
+- Van der Pol uses RK4 with a shared 100-unit observation horizon and coordinate
+  frame for its selected and reference paths. It recognizes the exact resting
+  equilibrium, discloses coupled control of damping and initial position, and
+  reports half the full sampled position range, including transients. Analytic
+  limits, independent endpoint references, and 70-control balance and refinement
+  checks replace unsupported amplitude confidence from Euler stepping.
+- Duffing's readout measures the same 120-unit trajectory shown in its portrait.
+  RK4 samples the force at each stage's physical time. Drive strength and motion
+  size no longer imply chaos; a large periodic counterexample, independent
+  endpoint fixtures, energy/work balance, and a 93-drive grid bound the checks.
+- Gray-Scott preserves its seeded patch under repeated tuning and uses phase
+  only for elapsed time at the selected rates. RK4 replaces clipped Euler,
+  with reaction, diffusion, equilibrium, and refinement checks. The readout
+  measures the field's V maximum instead of guessing a pattern or bifurcation.
+- The four revised dynamical rooms preserve physical coordinate proportions
+  and leave room for App chrome. Gray-Scott averages concentrations before
+  choosing a glyph and paints each destination once, removing false brightness
+  from downsampling. Actual Raster/Canvas geometry and composed App pixels
+  cover the visual corrections.
+
 ## [0.4.0-alpha.17] - 2026-09-05
 
 ### Added
