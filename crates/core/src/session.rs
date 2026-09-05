@@ -75,12 +75,14 @@ pub struct WorkspaceObservation {
 
 /// A journal handle the player asked to keep at hand.
 ///
-/// The workspace stores only the identifier and optional selection reason.
-/// The owning face may resolve that handle against the player-owned journal.
+/// The workspace stores the identifier, an optional selection reason, and an
+/// opaque digest of the selected record. The owning face resolves the handle
+/// only when that record's immutable content still matches.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceRetrieval {
     entry_id: u64,
     reason: Option<String>,
+    record_digest: Option<[u8; 32]>,
 }
 
 /// Parked copies of fields the player deferred without discarding.
@@ -372,6 +374,15 @@ impl WorkspaceRetrieval {
     pub fn reason(&self) -> Option<&str> {
         self.reason.as_deref()
     }
+
+    /// Digest of the immutable record when explicitly selected.
+    ///
+    /// `None` means the record did not resolve when selected. It is not a
+    /// wildcard permitting a later record to acquire the handle.
+    #[must_use]
+    pub fn record_digest(&self) -> Option<[u8; 32]> {
+        self.record_digest
+    }
 }
 
 impl DeferredWorkspace {
@@ -497,6 +508,11 @@ pub struct WorkspaceRetrievalDraft {
     pub entry_id: u64,
     /// Optional reason for keeping the handle.
     pub reason: Option<String>,
+    /// Owning face's digest of the immutable record at explicit selection.
+    ///
+    /// A missing record has no digest and requires a new explicit selection
+    /// before a later record with that identifier can be opened.
+    pub record_digest: Option<[u8; 32]>,
 }
 
 /// What a clear request may drop.
@@ -683,6 +699,7 @@ fn validated_retrieved(
             }
             Ok(WorkspaceRetrieval {
                 entry_id: draft.entry_id,
+                record_digest: draft.record_digest,
                 reason: match draft.reason {
                     Some(reason) => Some(bounded_text(
                         reason,
@@ -837,11 +854,13 @@ mod tests {
                 retrieved: Some(vec![WorkspaceRetrievalDraft {
                     entry_id: 7,
                     reason: Some("the first pendulum drop".to_string()),
+                    record_digest: Some([7; 32]),
                 }]),
                 ..WorkspaceUpdate::default()
             })
             .unwrap();
         assert_eq!(workspace.retrieved()[0].entry_id(), 7);
+        assert_eq!(workspace.retrieved()[0].record_digest(), Some([7; 32]));
         assert_eq!(
             workspace.retrieved()[0].reason(),
             Some("the first pendulum drop")
@@ -852,6 +871,7 @@ mod tests {
                 retrieved: Some(vec![WorkspaceRetrievalDraft {
                     entry_id: 0,
                     reason: None,
+                    record_digest: None,
                 }]),
                 ..WorkspaceUpdate::default()
             })
