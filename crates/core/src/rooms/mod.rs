@@ -7,6 +7,28 @@ pub const FRACTAL_MAX_ITER: u32 = 160;
 
 #[macro_use]
 mod catalog;
+mod phase_plane;
+
+/// Admit the gallery phase used to select a finite room experiment.
+pub(super) fn phase_unit(t: f64) -> f64 {
+    if t.is_finite() {
+        t.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+/// Resolve the newest finite tuning within the bounded static hand history.
+/// Repeated or older points do not change an unrelated part of the experiment.
+pub(super) fn latest_hand(pokes: &[(f64, f64)]) -> Option<(f64, f64)> {
+    let start = pokes.len().saturating_sub(crate::room::MAX_ROOM_POKES);
+    pokes[start..]
+        .iter()
+        .rev()
+        .copied()
+        .find(|&(x, y)| x.is_finite() && y.is_finite())
+        .map(|(x, y)| (x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+}
 
 macro_rules! declare_room_modules {
     ($(($module:ident, $room:ident, $metadata:expr)),* $(,)?) => {
