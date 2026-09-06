@@ -274,6 +274,25 @@ pub fn display_safe(text: &str) -> String {
     safe
 }
 
+/// A count and a noun that agrees with it, for the readouts a player reads.
+///
+/// Every face writes counts into fixed sentences, and a plural noun written
+/// beside a number looks right for as long as the number stays above one. It
+/// stops being right the first time a wing holds one room or a player finishes
+/// their first game, which is exactly when nobody is rereading the line.
+///
+/// The noun is given in the singular and the plural adds `s`, so this suits
+/// regular nouns only. An irregular plural must be written out by its caller
+/// rather than bent to fit here.
+#[must_use]
+pub fn counted(count: usize, singular: &str) -> String {
+    if count == 1 {
+        format!("{count} {singular}")
+    } else {
+        format!("{count} {singular}s")
+    }
+}
+
 /// A rejected id rendered safe to echo: escaped for display and length
 /// bounded, so untrusted input cannot corrupt a terminal or a client
 /// transcript and cannot inflate the message it appears in.
@@ -307,7 +326,7 @@ pub fn hidden_room_by_id(id: &str) -> Option<Box<dyn Room>> {
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, all_rooms, display_safe, echoable_id,
+        MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, all_rooms, counted, display_safe, echoable_id,
         must_escape_for_display, nearest_names, nearest_room_ids, room_by_id, room_by_id_with,
     };
     use crate::canvas::Canvas;
@@ -331,6 +350,22 @@ mod tests {
             .find(|room| room.meta().id == id)
             .unwrap_or_else(|| panic!("{id} must be registered"));
         render_text(room.as_ref(), t)
+    }
+
+    #[test]
+    fn a_count_of_one_takes_the_singular_noun() {
+        // The rule the readouts kept getting wrong. A plural written beside a
+        // number looks correct until the number is one, which is the first
+        // game won and the wing that holds a single room.
+        assert_eq!(counted(1, "room"), "1 room");
+        assert_eq!(counted(2, "room"), "2 rooms");
+        // Zero is plural in English, so "0 room" would be as wrong as "1 rooms".
+        assert_eq!(counted(0, "room"), "0 rooms");
+        assert_eq!(counted(35, "line"), "35 lines");
+        // Callers that shout uppercase their own result, so the helper must
+        // survive that without a stray lowercase plural.
+        assert_eq!(counted(1, "win").to_uppercase(), "1 WIN");
+        assert_eq!(counted(4, "win").to_uppercase(), "4 WINS");
     }
 
     #[test]
