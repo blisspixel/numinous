@@ -123,7 +123,8 @@ mastery, exploration, and company also remain complete reasons to play.
   Cabinet Explain opens a scrollable reader with immediately selectable
   Explanation, Notes, and Mathematics. Lissajous has the first authored
   treatment, including derivations, worked examples, primary references, and
-  numerical limits. App, CLI `study`, and MCP `study_room` share core content
+  numerical limits. Times Tables is the second, deriving the envelope of its
+  chords and proving its cusp count. App, CLI `study`, and MCP `study_room` share core content
   and request semantics. Other rooms retain existing explanations and notes;
   an unwritten Mathematics treatment is explicitly unavailable.
 - **Built in alpha 20, voluntary experiments:** the seven staged App paths

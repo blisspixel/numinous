@@ -49,9 +49,9 @@ manual is [`docs/PLAYING.md`](docs/PLAYING.md).
 
 Explore first. When curiosity asks for more, press **E** or **?** in a room
 and choose Explain, Notes, or Mathematics. Reading has no level requirement.
-Lissajous is the first full mathematical treatment, with English and a Japanese
-translation draft shared by the App, CLI, and MCP. See [Study](docs/STUDY.md)
-for controls and language availability.
+Lissajous and Times Tables carry full mathematical treatments, shared by the
+App, CLI, and MCP. Lissajous adds a Japanese translation draft. See
+[Study](docs/STUDY.md) for controls and language availability.
 
 ## A look
 
