@@ -936,7 +936,9 @@ mod tests {
 
     #[test]
     fn unavailable_mathematics_and_languages_are_explicit_without_locking_notes() {
-        let mut reader = reader("times-tables", "haw");
+        // A room with no authored treatment, so the reader has to say so. Times
+        // Tables used to be that example and now has one of its own.
+        let mut reader = reader("golden-angle", "haw");
         assert_eq!(reader.document.locale.requested.as_str(), "haw");
         assert_eq!(reader.document.locale.resolved, "en");
         reader.navigate(ReaderCommand::Mathematics);

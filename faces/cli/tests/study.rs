@@ -198,10 +198,10 @@ fn public_study_rejects_invalid_or_unavailable_requests_without_state() {
         &["study", "missing-room"],
         &["study", "lissajous", "--locale", "ja_JP"],
         &["study", "lissajous", "--depth", "deep"],
-        &["study", "times-tables", "--depth", "mathematics"],
+        &["study", "golden-angle", "--depth", "mathematics"],
         &["study", "lissajous", "--block", "lissajous.missing"],
         &["study", "lissajous", "--block", "../recurrence"],
-        &["study", "times-tables", "--block", "lissajous.recurrence"],
+        &["study", "golden-angle", "--block", "lissajous.recurrence"],
         &[
             "study",
             "lissajous",
@@ -239,7 +239,7 @@ fn refusing_a_depth_names_where_it_is_written_and_offers_it_without_a_requiremen
     // way to find a written treatment is to ask again for the next room, and
     // the next, across the whole catalog. It also reads as a broken feature.
     let state = State::new();
-    let refused = state.command(&["study", "times-tables", "--depth", "mathematics"]);
+    let refused = state.command(&["study", "golden-angle", "--depth", "mathematics"]);
     assert!(!refused.status.success());
     let message = String::from_utf8(refused.stderr).unwrap();
     assert!(message.contains("unavailable for this room"));
@@ -266,7 +266,7 @@ fn refusing_a_depth_names_where_it_is_written_and_offers_it_without_a_requiremen
 #[test]
 fn structured_study_reports_catalog_coverage_so_no_client_probes_room_by_room() {
     let state = State::new();
-    let value = successful_json(state.command(&["study", "times-tables", "--json"]));
+    let value = successful_json(state.command(&["study", "golden-angle", "--json"]));
     let coverage = value["authoredDepthRooms"]
         .as_object()
         .expect("coverage must be an object");

@@ -240,9 +240,12 @@ fn fresh_and_paused_rooms_offer_explanation_and_direct_mathematics() {
             assert_eq!(reader_depth(&app), StudyDepth::Mathematics);
             let document = app.study.as_ref().unwrap().reader.document();
             assert_eq!(document.room_id, id);
+            // Bound to the authored registry rather than to one room's name, so
+            // adding a treatment does not silently make this assertion wrong.
             assert_eq!(
                 document.has_depth(StudyDepth::Mathematics),
-                id == "lissajous"
+                numinous_core::AUTHORED_MATHEMATICS_ROOMS.contains(&id),
+                "{id} disagrees with the advertised authored set"
             );
             assert!(document.has_depth(StudyDepth::Notes));
             app.advance_room_tick(0.05, 0.05, false);

@@ -196,7 +196,7 @@ fn fallback_reports_actual_language_per_document_and_block() {
         );
         assert_eq!(block.translation, StudyTranslationStatus::Original);
     }
-    let ordinary = room_by_id("times-tables").expect("existing engineered room");
+    let ordinary = room_by_id("golden-angle").expect("existing ordinary room");
     let untranslated = room_study(ordinary.as_ref(), "ja-JP").unwrap();
     assert_eq!(untranslated.content_locales, &["en"]);
     assert_eq!(untranslated.locale.resolved, "en");
@@ -248,7 +248,8 @@ fn fresh_rooms_expose_all_existing_sources_without_visits_or_consolidation() {
         assert!(document.has_depth(StudyDepth::Notes));
         assert_eq!(
             document.has_depth(StudyDepth::Mathematics),
-            room_id == "lissajous"
+            AUTHORED_MATHEMATICS_ROOMS.contains(&room_id),
+            "{room_id} disagrees with the advertised authored set"
         );
         for block in &document.blocks {
             assert!(
@@ -468,7 +469,7 @@ fn request_defaults_and_direct_selection_never_substitute_another_depth() {
         response
     );
 
-    let ordinary = room_by_id("times-tables").unwrap();
+    let ordinary = room_by_id("golden-angle").unwrap();
     let mathematics = StudyRequest::parse(None, Some("mathematics"), None).unwrap();
     assert_eq!(
         mathematics.read(ordinary.as_ref()),
@@ -668,11 +669,11 @@ fn every_room_always_has_explanation_and_notes_so_neither_is_advertised() {
 
 #[test]
 fn refusing_a_depth_names_where_it_is_written_and_claims_no_requirement() {
-    let room = room_by_id("times-tables").expect("times-tables is in the catalog");
+    let room = room_by_id("golden-angle").expect("golden-angle is in the catalog");
     let request = StudyRequest::parse(None, Some("mathematics"), None).expect("valid request");
     let error = request
         .read(room.as_ref())
-        .expect_err("times-tables has no authored treatment");
+        .expect_err("golden-angle has no authored treatment");
     assert_eq!(
         error,
         StudyRequestError::DepthUnavailable(StudyDepth::Mathematics)
