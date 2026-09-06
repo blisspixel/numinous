@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use numinous_core::{
     Room, RoomStudy, StudyDepth, StudyInline, StudyLocale, StudyPart, StudyTranslationStatus,
+    rooms_with_authored_depth,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -375,6 +376,27 @@ impl StudyReader {
             } else {
                 "This depth has not been written for this room yet. Explanation and notes are freely available when present. Reading has no play or score requirement.".to_string()
             }, TextRole::Prose));
+            // Naming where it is written keeps an unwritten depth from reading
+            // as a broken one, and saves hunting the catalog room by room.
+            let authored = rooms_with_authored_depth(self.depth);
+            if !authored.is_empty() {
+                spans.push((
+                    if ja {
+                        format!(
+                            "この深さが書かれているルーム: {}
+",
+                            authored.join(", ")
+                        )
+                    } else {
+                        format!(
+                            "Written so far for: {}
+",
+                            authored.join(", ")
+                        )
+                    },
+                    TextRole::Prose,
+                ));
+            }
         }
         for (index, block) in self.document.blocks_at(self.depth).enumerate() {
             // Measured line spacing separates parts without blank rows. A blank
@@ -854,6 +876,17 @@ mod tests {
         draw(&mut reader, (360, 240), InputMode::KeyboardMouse);
         assert_eq!(reader.pointer_up(target), ReaderIntent::None);
         assert_eq!(reader.depth(), StudyDepth::Mathematics);
+        draw(&mut reader, (360, 240), InputMode::KeyboardMouse);
+        assert!(
+            !reader
+                .composition
+                .as_ref()
+                .unwrap()
+                .body
+                .source()
+                .contains("Written so far for"),
+            "a room that has the depth must not be told where else to look"
+        );
         draw(&mut reader, (360, 240), InputMode::Controller);
         let target = center(reader.composition.as_ref().unwrap().geometry.back);
         reader.pointer_down(target);
@@ -912,6 +945,12 @@ mod tests {
         assert!(body.contains("unavailable in haw"));
         assert!(body.contains("has not been written"));
         assert!(!body.to_lowercase().contains("unlock"));
+        // An unwritten depth must read as unwritten, not as broken, so the
+        // reader names where the treatment does exist instead of leaving the
+        // player to open every room in the catalog looking for one.
+        for named in numinous_core::AUTHORED_MATHEMATICS_ROOMS {
+            assert!(body.contains(named), "the notice must name {named}: {body}");
+        }
         reader.navigate(ReaderCommand::Select(StudyDepth::Notes));
         draw(&mut reader, (360, 240), InputMode::KeyboardMouse);
         assert!(reader.document.has_depth(StudyDepth::Notes));

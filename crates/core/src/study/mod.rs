@@ -408,6 +408,32 @@ impl RoomStudy {
     }
 }
 
+/// Rooms with an authored [`StudyDepth::Mathematics`] treatment, in catalog order.
+///
+/// This is a content-coverage fact, not a permission list. Reading is never
+/// gated, so every depth a room has is open to every player from the first
+/// moment. What this names is where a treatment has actually been *written*,
+/// which is a much smaller set and grows one authored room at a time.
+///
+/// It exists so an unwritten depth reads as unwritten rather than as broken.
+/// A player who asks for mathematics and is refused can otherwise only find
+/// out where it does exist by asking again, room by room, across the catalog.
+pub const AUTHORED_MATHEMATICS_ROOMS: &[&str] = &["lissajous"];
+
+/// Which rooms carry an authored treatment at this depth, for honest refusals.
+///
+/// [`StudyDepth::Explanation`] and [`StudyDepth::Notes`] return an empty slice
+/// on purpose. Every room reuses its existing concept, reveal, deep cuts, and
+/// citation for those two, so both are always available and naming rooms would
+/// name the entire catalog while telling the reader nothing.
+#[must_use]
+pub fn rooms_with_authored_depth(depth: StudyDepth) -> &'static [&'static str] {
+    match depth {
+        StudyDepth::Mathematics => AUTHORED_MATHEMATICS_ROOMS,
+        StudyDepth::Explanation | StudyDepth::Notes => &[],
+    }
+}
+
 /// Read optional room study using a bounded explicit language request.
 ///
 /// Every room reuses its existing concept and reveal, plus its existing deep
@@ -426,7 +452,10 @@ pub fn room_study(room: &dyn Room, requested_locale: &str) -> Result<RoomStudy, 
 #[must_use]
 pub fn room_study_for_locale(room: &dyn Room, requested: &StudyLocale) -> RoomStudy {
     let room_id = room.meta().id;
-    let has_pilot = room_id == "lissajous";
+    // One source of truth with AUTHORED_MATHEMATICS_ROOMS: a room that supplies
+    // authored blocks and a room that is advertised as having them must be the
+    // same room, or a refusal would name a room that refuses in turn.
+    let has_pilot = AUTHORED_MATHEMATICS_ROOMS.contains(&room_id);
     let resolved = if has_pilot && requested.language() == "ja" {
         "ja"
     } else {
