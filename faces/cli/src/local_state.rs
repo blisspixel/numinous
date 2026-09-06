@@ -98,7 +98,11 @@ fn inventory_report(
         managed_file_line(
             "scores",
             &inventory.scores.file,
-            &format!("{} entries", inventory.scores.entries)
+            &if inventory.scores.entries == 1 {
+                "1 entry".to_string()
+            } else {
+                format!("{} entries", inventory.scores.entries)
+            }
         ),
         managed_file_line(
             "Cairn",

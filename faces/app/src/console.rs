@@ -400,7 +400,7 @@ pub(crate) fn list_rooms(
     } else if total > shown {
         lines.push(format!("... {total} matches, showing {shown}"));
     } else {
-        lines.push(format!("{total} rooms"));
+        lines.push(numinous_core::counted(total, "room"));
     }
     lines
 }
@@ -447,6 +447,28 @@ pub(crate) fn parse_era(name: &str) -> Option<Era> {
 mod tests {
     use super::*;
     use numinous_core::all_rooms;
+
+    #[test]
+    fn a_search_matching_one_room_says_room_not_rooms() {
+        // Same class as the wing doorway an external playtester reported. A
+        // query narrow enough to match a single room is an ordinary search,
+        // and the summary line under it is prose, not a data label.
+        let rooms = all_rooms();
+        let lines = list_rooms(&rooms, Some("times-tables"), 20);
+        let summary = lines.last().expect("a summary line");
+        assert_eq!(summary, "1 room", "{lines:?}");
+
+        let many = list_rooms(&rooms, Some("prime"), 50);
+        let summary = many.last().expect("a summary line");
+        assert!(
+            summary.ends_with(" rooms") && !summary.starts_with("1 "),
+            "{summary}"
+        );
+
+        // The empty case keeps its own wording rather than reading "0 rooms".
+        let none = list_rooms(&rooms, Some("no-such-room-anywhere"), 20);
+        assert_eq!(none, vec!["no matches".to_string()]);
+    }
 
     #[test]
     fn toggle_keys() {

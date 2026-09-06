@@ -104,6 +104,38 @@ and the published crate records for
 - **Architecture Decision Records (ADRs)** for consequential choices (the stack, Bevy-vs-bespoke, the Studio DSL, the sandbox model). A decision without a recorded rationale is a future argument waiting to happen.
 - Comments explain **why**, not what; the code says what.
 
+### Two registers for what a player reads
+
+Numinous writes numbers to players in two different registers, and which one
+you are in decides how the number is worded.
+
+- **Prose** is a sentence a player reads: `Signals & Codes (1 room)`,
+  `Touch changed 1 cell.`, `1 PLAY IN THIS LOCAL JOURNEY`. A sentence has to
+  agree with its number, so route the count through `numinous_core::counted`,
+  which takes a singular noun and adds the plural. Irregular plurals such as
+  `entry` and `entries` are written out by the caller; the helper does not bend
+  to fit them.
+- **Instrument readouts** are the terse room status lines: `n=8  pairs=3`,
+  `o={o}  pts={n}  DRAG:ORDER`. Fields are separated by two spaces, names carry
+  the meaning, and the graders and status parsers depend on the exact shape.
+  These are labels, not sentences. Leave them alone, and do not "correct" a
+  label into a sentence.
+
+This distinction has cost two releases. A count beside a plural noun reads
+correctly until the count is one, and that first moment arrives when nobody is
+rereading the line: the first wing that holds one room, the player's first
+game. Both times a player found it, and the second time the fix was published
+as a class fix after a sweep that covered only one face.
+
+There is no automated gate for this, deliberately. A source scanner cannot tell
+`3 rings` from `s=0.5  rings` without reading the sentence, so it either floods
+the gate with false positives or grows an excuse list long enough that nobody
+reads it. What is enforced instead is per-site: each corrected readout has a
+regression written against live data, walking the real catalog or the real
+rulebooks rather than a count copied down beside the code, because a copied
+count is what let this survive twice. When you add prose with a count, add the
+regression with it.
+
 ## Testing (the enforcement of `QUALITY.md`)
 
 - **Runner:** `cargo test --workspace --all-targets --locked` is the current
