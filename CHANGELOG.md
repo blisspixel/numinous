@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.21] - 2026-09-05
+
 ### Changed
 - An unwritten study depth now names the rooms where that depth is written, in
   the App reader, the CLI, and MCP. An agentic playtester reported that the
