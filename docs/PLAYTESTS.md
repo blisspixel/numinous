@@ -2110,3 +2110,66 @@ confinement, and matrix completeness. They run across all
 three CI operating systems. This proves the evidence procedure is portable. It
 does not replace the unperformed physical sessions, accessibility panels,
 comfort observation, native latency measurement, or judgments of fun.
+
+## September 6 packaged agentic playtest, 0.4.0-alpha.21
+
+This section summarizes a source-blind playtest of the published Linux
+`0.4.0-alpha.21` CLI and MCP binaries. The tester supplied the release tag,
+commit, archive and per-binary digests, isolated state paths, exact calls,
+repeated reproductions, and a sealed stranger pass written before any project
+documentation was opened. It is formative external product evidence. It is not
+a qualifying 0.4 study response and makes no claim about learning or lasting
+value. The windowed App was not played, and the report says so rather than
+inferring it.
+
+The round was asked to attack two corrections rather than confirm them: an
+unwritten study depth that now names where the depth is written, and a
+catalog-wide coverage field that removes the need to probe room by room. Both
+held under attack. The refusal names a room, the named room answers, no wording
+implies a gate, and the coverage map agreed with the catalog across every probe.
+The carried-forward surfaces held too: the Only Move nine-poke win and its waste
+naming, the 720 stone-row twist, the three doors, caller-paced Show, path-free
+capsules, named wagers, Studio's parametric control, and typed numerical
+grading.
+
+## Reproduced findings
+
+- The wing doorway in MCP `list_rooms` read `Signals & Codes (1 rooms)` and
+  `Open Problems (1 rooms)`, reproduced three times in each pass. The alpha 21
+  release notes had claimed the counted-noun class was fixed. The sweep behind
+  that claim covered only the App face, so the App banner was corrected while
+  the protocol and terminal faces were never examined. A guard that covers one
+  face is not a guard against a class.
+- The alpha 21 notes said three single-room wings. There are two. Tetractys is
+  a hidden room, so The Order is not a wing a player can browse.
+- The Journey play count could not be verified over the protocol face. The
+  tester declined to mark it either way rather than guess, which was correct:
+  it is an App overlay and nothing in the documentation said so.
+- The tester named the plural on the doorway as both their first change and the
+  moment they would have stopped if nobody were watching. A grammar break made
+  the house read as less careful than the rest of its voice.
+
+## What changed
+
+Every prose site where a count can reach one now routes through one shared
+counted-noun helper, across all three faces: the wing doorway, the compact play
+summary that reported cells changed, and the App console search. Terse
+instrument readouts such as `pairs=3` are deliberately untouched, because there
+the noun is a field name that the graders and status parsers read. The two false
+claims are corrected, and the player manual now says where the play count lives.
+
+A source-scanning gate for the class was built and rejected rather than shipped.
+It cannot distinguish a counted noun from a labelled value beside a descriptor
+without reading the sentence, so it flagged fifty-five sites of which most were
+labels. An excuse list that long stops being read. `ENGINEERING.md` now names
+the two registers a number can be written in and records why there is no
+automated gate. Enforcement is per-site instead: each corrected readout carries
+a regression written against live data, walking the real catalog or the real
+rulebooks rather than a count copied down beside the code, because a copied
+count is what let this survive two releases.
+
+The round also asked for more authored mathematics, on the grounds that one
+treatment in a catalog of 355 leaves the pointer to it reading as a permanent
+one-room museum. Times Tables now carries the second treatment, deriving the
+envelope of its chord family in closed form and proving it is an epicycloid with
+one cusp fewer than the multiplier.
