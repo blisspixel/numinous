@@ -5,6 +5,35 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- The counted-noun correction in alpha 21 reached the App and missed the other
+  faces. An external playtester found the wing doorway in MCP `list_rooms`
+  still reading `(1 rooms)` for the two single-room wings, on a release whose
+  notes claimed the class was fixed. It now routes through the same helper, and
+  a regression checks the doorway prose against the live catalog rather than a
+  copied count.
+- The same class is fixed in the two other prose sites a player can reach with
+  a count of one: the compact `play_room` summary that reported `1 cells`
+  changed, and the App console search that reported `1 rooms` for a query
+  matching a single room. The sweep behind alpha 21 only covered the App, which
+  is why it missed all three; this one covers every face. Counts written as
+  data labels, such as `cells=1`, are unchanged, and the readouts whose counts
+  cannot reach one were left alone.
+- The alpha 21 notes said three single-room wings. There are two. Tetractys is
+  a hidden room, so The Order is not a wing a player can browse.
+
+### Changed
+- `docs/PLAYING.md` now says the Journey play count is an App overlay. A
+  playtester could not verify it over MCP and correctly declined to mark it
+  either way, because nothing said where that readout lives.
+- `docs/ENGINEERING.md` names the two registers a number can be written in:
+  prose, which must agree with its count and routes through the shared helper,
+  and terse instrument readouts, which are labels the status parsers depend on
+  and are left alone. A source-scanning gate for this was built and rejected: it
+  cannot tell `3 rings` from `s=0.5  rings` without reading the sentence, so it
+  either floods on false positives or grows an unread excuse list. The
+  enforcement is per-site regressions written against live data instead.
+
 ## [0.4.0-alpha.21] - 2026-09-05
 
 ### Changed
@@ -27,7 +56,7 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ### Fixed
 - Readouts no longer print a count beside a fixed plural noun. A player read
-  `1 ROOMS` on entering any of the three single-room wings, `1 PLAYS` on the
+  `1 ROOMS` on entering either of the two single-room wings, `1 PLAYS` on the
   Journey overlay after their first game, and `1 LINE` was `1 LINES` on the
   eight Only Move rulebooks that count a single line. Core now owns one
   counted-noun helper and every readout calls it, so the rule cannot disagree

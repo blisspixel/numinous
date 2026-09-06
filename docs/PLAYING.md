@@ -263,7 +263,10 @@ to have been played, or an engineered wager to have been consolidated. See
 listed anywhere. If you ever wonder whether a name means something, ask about it.
 
 The level belongs to the local Journey, not to the room you just entered. The J
-overlay shows how many plays that profile contains. To try a clean profile
+overlay shows how many plays that profile contains. That play count is an App
+readout. The CLI and MCP `journey` surfaces report the level, the rooms entered,
+and the unlocks, so a play count read over those faces is not the same number
+and should not be checked against this one. To try a clean profile
 without deleting or changing an existing history, point both persistence files
 at new paths before launching. Each override is a file path, not a directory.
 Do not create a folder at either path. In PowerShell:
