@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.22] - 2026-09-06
+
 ### Added
 - Times Tables, the flagship room, has the second authored Mathematics
   treatment. It states the construction exactly, derives the envelope of the

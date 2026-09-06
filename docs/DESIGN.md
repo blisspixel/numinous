@@ -3,7 +3,7 @@
 How Numinous feels, moment to moment, and the rules that keep it feeling that way.
 
 **Implementation boundary, 2026-09-05:** this is the experience specification,
-not a claim that every element below ships in 0.4.0-alpha.21. The native app,
+not a claim that every element below ships in 0.4.0-alpha.22. The native app,
 CLI, MCP face, catalog, Show, deterministic room voices, four Visual Eras,
 Studio expression surface, PNG postcards, short APNG loops, exact file/link
 reopening through App arguments and drops, and the local Gallery are built.
