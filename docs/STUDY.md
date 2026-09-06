@@ -17,6 +17,13 @@ oscillator state, periods and position returns, phase, torus motion, occupation
 measure, recurrence, and the limits of the drawing and sound. A citation or an
 advanced note is not silently presented as that treatment.
 
+You never have to hunt for it. Explanation and notes exist for every room, so
+they are always available. Because an authored treatment is scarce, every study
+response carries the rooms that have one, and asking a room that lacks one names
+them in the refusal. That pointer is coverage, not permission: reading any depth
+that exists has no visit, level, or progress requirement, so a named room opens
+immediately.
+
 Lissajous has English content and a Japanese `reviewed_draft`. Its original
 English room explanation, deep cuts, and catalog citation remain in Notes and
 are labeled English when Japanese was requested. Other rooms reuse their
@@ -85,7 +92,11 @@ Notes in its place.
 
 CLI `--json` and MCP `structuredContent` use `numinous.room-study`, schema
 version 1. They share `selection`, `locale`, `contentLocales`,
-`availableDepths`, `availableBlocks`, and selected `blocks`. Paragraph runs
+`availableDepths`, `availableBlocks`, `authoredDepthRooms`, and selected
+`blocks`. `authoredDepthRooms` is catalog-wide rather than about the requested
+room, and lists only depths whose coverage is a real subset, so explanation and
+notes are absent by design. It was added to schema version 1 additively: a
+reader that ignores it sees exactly the document it saw before. Paragraph runs
 distinguish text from mathematical notation; equations and references are
 separate parts. References retain their source ID, title, URL, and description.
 Plain text preserves the same content and reports availability and fallback.

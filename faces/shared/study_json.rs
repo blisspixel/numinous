@@ -5,7 +5,7 @@
 
 use numinous_core::study::{
     StudyBlock, StudyDepth, StudyFallback, StudyInline, StudyLocaleResolution, StudyPart,
-    StudyResponse, StudySelection, StudyTranslationStatus,
+    StudyResponse, StudySelection, StudyTranslationStatus, rooms_with_authored_depth,
 };
 use serde_json::{Value, json};
 
@@ -102,6 +102,25 @@ pub(crate) fn response_json(response: &StudyResponse) -> Result<Value, String> {
             .filter(|depth| document.has_depth(*depth))
             .map(depth_name).collect::<Vec<_>>(),
         "availableBlocks": document.blocks.iter().map(block_metadata).collect::<Vec<_>>(),
+        "authoredDepthRooms": authored_depth_rooms(),
         "blocks": response.selected_blocks().map(block_json).collect::<Result<Vec<_>, _>>()?,
     }))
+}
+
+/// Catalog-wide coverage, so a caller never probes room by room to find a depth.
+///
+/// Additive to schema version 1: a reader that ignores it sees the same document
+/// it always did. Only depths whose coverage is a real subset appear. Explanation
+/// and notes are available for every room, so listing them would restate the
+/// whole catalog. This reports where a treatment is written, never who may read
+/// one; study has no play, level, or progress requirement.
+fn authored_depth_rooms() -> Value {
+    let mut coverage = serde_json::Map::new();
+    for depth in StudyDepth::ALL {
+        let rooms = rooms_with_authored_depth(depth);
+        if !rooms.is_empty() {
+            coverage.insert(depth_name(depth).to_string(), json!(rooms));
+        }
+    }
+    Value::Object(coverage)
 }

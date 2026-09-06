@@ -260,10 +260,23 @@ impl fmt::Display for StudyRequestError {
                  separated by dots or hyphens, with no empty component",
             ),
             Self::DepthUnavailable(depth) => {
+                // Naming where the depth does exist is the difference between a
+                // refusal that reads as unwritten and one that reads as broken.
+                // Without it the only way to find a written treatment is to ask
+                // again for every room in the catalog.
                 write!(
                     formatter,
                     "study depth {} is unavailable for this room",
                     depth.as_str()
+                )?;
+                let authored = super::rooms_with_authored_depth(*depth);
+                if authored.is_empty() {
+                    return Ok(());
+                }
+                write!(
+                    formatter,
+                    "; it is written for {} so far, and reading it requires nothing",
+                    authored.join(", ")
                 )
             }
             Self::BlockUnavailable(id) => {

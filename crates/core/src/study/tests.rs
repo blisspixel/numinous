@@ -1,10 +1,10 @@
 use std::collections::BTreeSet;
 
 use super::{
-    MAX_STUDY_BLOCK_ID_BYTES, MAX_STUDY_LOCALE_BYTES, RoomStudy, StudyBlock, StudyDepth,
-    StudyDepthError, StudyFallback, StudyInline, StudyLocale, StudyLocaleError, StudyPart,
-    StudyRequest, StudyRequestError, StudySelection, StudyTranslationStatus, room_study,
-    room_study_for_locale,
+    AUTHORED_MATHEMATICS_ROOMS, MAX_STUDY_BLOCK_ID_BYTES, MAX_STUDY_LOCALE_BYTES, RoomStudy,
+    StudyBlock, StudyDepth, StudyDepthError, StudyFallback, StudyInline, StudyLocale,
+    StudyLocaleError, StudyPart, StudyRequest, StudyRequestError, StudySelection,
+    StudyTranslationStatus, room_study, room_study_for_locale, rooms_with_authored_depth,
 };
 use crate::{Room, RoomMeta, RoomMetadata, Surface, all_rooms, room_by_id};
 
@@ -614,4 +614,101 @@ fn shared_text_preserves_math_case_and_makes_partial_translation_explicit() {
         StudyInline::Math("x(t) = cos(a*t)").as_str(),
         "x(t) = cos(a*t)"
     );
+}
+
+#[test]
+fn the_advertised_authored_rooms_are_exactly_the_rooms_that_have_the_depth() {
+    // The whole point of naming rooms in a refusal is that the names are true.
+    // A list maintained by hand beside a separate content check is exactly the
+    // kind of pair that drifts, and the drift is only visible to a player who
+    // follows the advice and is refused again.
+    let advertised: BTreeSet<&str> = AUTHORED_MATHEMATICS_ROOMS.iter().copied().collect();
+    assert_eq!(
+        advertised.len(),
+        AUTHORED_MATHEMATICS_ROOMS.len(),
+        "the advertised list must not repeat a room"
+    );
+    let mut actual = BTreeSet::new();
+    for room in all_rooms() {
+        let document = room_study(room.as_ref(), "en").expect("en is a valid request");
+        if document.has_depth(StudyDepth::Mathematics) {
+            actual.insert(room.meta().id);
+        }
+    }
+    assert_eq!(
+        actual, advertised,
+        "every advertised room must have the depth, and no unadvertised room may"
+    );
+}
+
+#[test]
+fn every_room_always_has_explanation_and_notes_so_neither_is_advertised() {
+    // Explanation and notes are rebuilt from catalog text that every room has,
+    // so listing rooms for them would name the entire catalog. This test is what
+    // makes that empty slice a fact rather than an assumption.
+    for room in all_rooms() {
+        let document = room_study(room.as_ref(), "en").expect("en is a valid request");
+        let id = room.meta().id;
+        assert!(
+            document.has_depth(StudyDepth::Explanation),
+            "{id} has no explanation depth"
+        );
+        assert!(
+            document.has_depth(StudyDepth::Notes),
+            "{id} has no notes depth"
+        );
+    }
+    assert!(rooms_with_authored_depth(StudyDepth::Explanation).is_empty());
+    assert!(rooms_with_authored_depth(StudyDepth::Notes).is_empty());
+    assert_eq!(
+        rooms_with_authored_depth(StudyDepth::Mathematics),
+        AUTHORED_MATHEMATICS_ROOMS
+    );
+}
+
+#[test]
+fn refusing_a_depth_names_where_it_is_written_and_claims_no_requirement() {
+    let room = room_by_id("times-tables").expect("times-tables is in the catalog");
+    let request = StudyRequest::parse(None, Some("mathematics"), None).expect("valid request");
+    let error = request
+        .read(room.as_ref())
+        .expect_err("times-tables has no authored treatment");
+    assert_eq!(
+        error,
+        StudyRequestError::DepthUnavailable(StudyDepth::Mathematics)
+    );
+    let message = error.to_string();
+    assert!(
+        message.contains("study depth mathematics is unavailable for this room"),
+        "the refusal must stay honest about this room: {message}"
+    );
+    for named in AUTHORED_MATHEMATICS_ROOMS {
+        assert!(
+            message.contains(named),
+            "the refusal must name {named}: {message}"
+        );
+    }
+    // A player must not read the pointer as a gate they have to open.
+    assert!(
+        message.contains("requires nothing"),
+        "the refusal must not imply a requirement: {message}"
+    );
+    assert!(!message.to_lowercase().contains("unlock"));
+}
+
+#[test]
+fn a_named_room_actually_answers_the_depth_the_refusal_advertised() {
+    // Following the refusal's own advice must work. This closes the loop the
+    // drift guard opens: the names are real rooms, and they really answer.
+    for named in AUTHORED_MATHEMATICS_ROOMS {
+        let room = room_by_id(named).unwrap_or_else(|| panic!("{named} must be a catalog room"));
+        let request = StudyRequest::parse(None, Some("mathematics"), None).expect("valid request");
+        let response = request
+            .read(room.as_ref())
+            .unwrap_or_else(|error| panic!("{named} was advertised but refused: {error}"));
+        assert!(
+            response.selected_blocks().count() > 0,
+            "{named} was advertised but returned no mathematics blocks"
+        );
+    }
 }

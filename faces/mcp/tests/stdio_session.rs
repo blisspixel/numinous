@@ -214,6 +214,10 @@ fn direct_study_over_stdio_needs_no_journey_and_keeps_reveal_protocol_unchanged(
         .find(|tool| tool["name"] == "study_room")
         .expect("registered study tool");
     assert_eq!(tool["annotations"]["readOnlyHint"], true);
+    // A client that reads the description must learn where the scarce depth is
+    // written, so it never walks the catalog asking each room in turn.
+    let described = tool["description"].as_str().expect("tool description");
+    assert!(described.contains("authoredDepthRooms"));
     assert_eq!(tool["inputSchema"]["required"], json!(["room"]));
     assert_eq!(tool["inputSchema"]["additionalProperties"], false);
     assert_eq!(
@@ -222,6 +226,19 @@ fn direct_study_over_stdio_needs_no_journey_and_keeps_reveal_protocol_unchanged(
     );
     for id in 2..=6 {
         assert_eq!(reply_by_id(&replies, id)["result"]["isError"], false);
+    }
+    // Catalog coverage rides on every response, including from a room that has
+    // no authored treatment, which is exactly where a caller would start hunting.
+    for id in [2, 4] {
+        let coverage =
+            &reply_by_id(&replies, id)["result"]["structuredContent"]["authoredDepthRooms"];
+        assert_eq!(
+            coverage["mathematics"],
+            json!(numinous_core::AUTHORED_MATHEMATICS_ROOMS),
+            "every study response must name where the depth is written"
+        );
+        assert!(coverage.get("explanation").is_none());
+        assert!(coverage.get("notes").is_none());
     }
     let japanese = &reply_by_id(&replies, 2)["result"]["structuredContent"];
     assert_eq!(japanese["selection"]["depth"], "explanation");
