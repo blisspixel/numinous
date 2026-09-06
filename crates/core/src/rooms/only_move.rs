@@ -778,7 +778,10 @@ impl OnlyMove {
             } else {
                 String::new()
             };
-            return format!("{opening}RULES {rules}  {lines} LINES  CLICK A CELL");
+            return format!(
+                "{opening}RULES {rules}  {}  CLICK A CELL",
+                crate::counted(lines as usize, "line").to_uppercase()
+            );
         }
         // A game still in play is reported as the board, not as a row of
         // zeros. A packaged playtest clicked twenty five times, was told
@@ -871,6 +874,31 @@ impl crate::room::Room for OnlyMove {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::room::Room;
+
+    #[test]
+    fn a_rulebook_with_a_single_line_is_read_out_in_the_singular() {
+        // Eight of the 256 rulebooks set exactly one bit, and a player reaches
+        // one by naming it as a variation. Every other rulebook counts more
+        // than one line, which is why a fixed plural noun survived here.
+        for bit in 0..8u32 {
+            let rules = 1u8 << bit;
+            assert_eq!(line_count(rules), 1, "rulebook {rules} should count one line");
+            let room = OnlyMove::new_with(u64::from(rules));
+            let status = room.status(0.0).expect("the room reports a status");
+            assert!(
+                status.contains("1 LINE  ") && !status.contains("1 LINES"),
+                "rulebook {rules} reads: {status}"
+            );
+        }
+        // A rulebook that counts many lines must still be plural.
+        let many = OnlyMove::new_with(u64::from(ALL_RULES));
+        let status = many.status(0.0).expect("the room reports a status");
+        assert!(
+            status.contains(&format!("{} LINES", line_count(ALL_RULES))),
+            "{status}"
+        );
+    }
 
     #[test]
     fn the_ordinary_game_is_a_tie_and_nobody_can_break_it() {

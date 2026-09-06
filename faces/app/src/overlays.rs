@@ -40,12 +40,15 @@ pub(crate) fn journey_lines_with_controller(
             journey.rank().name().to_uppercase()
         ),
         format!(
-            "{} OF {} ROOMS   {} WINS",
+            "{} OF {} ROOMS   {}",
             journey.visited.len(),
             room_count,
-            journey.wins
+            numinous_core::counted(journey.wins as usize, "win").to_uppercase()
         ),
-        format!("{} PLAYS IN THIS LOCAL JOURNEY", journey.plays),
+        format!(
+            "{} IN THIS LOCAL JOURNEY",
+            numinous_core::counted(journey.plays as usize, "play").to_uppercase()
+        ),
     ];
     // A dead chain is a record, not a claim: showing it as alive sets up a
     // small betrayal at the exact moment of the next daily play.
@@ -287,6 +290,38 @@ mod tests {
         assert_eq!(line_step, 9);
         assert_eq!(lines.first().map(String::as_str), Some(""));
         assert!(lines.iter().any(|line| line.contains("BOUNDED")));
+    }
+
+    #[test]
+    fn a_first_play_and_a_first_win_are_counted_in_the_singular() {
+        // The overlay every player opens, in the state every player passes
+        // through: one play, no wins. A fixed plural read "1 PLAYS" here.
+        let mut journey = Journey::default();
+        journey.visit("lissajous");
+        journey.play();
+        let board = Scoreboard::default();
+        let lines = journey_lines(&journey, &board, 30, InputMode::KeyboardMouse);
+        let joined = lines.join(
+            "
+",
+        );
+        assert!(
+            joined.contains("1 PLAY IN THIS LOCAL JOURNEY"),
+            "a single play must not be plural: {joined}"
+        );
+        assert!(!joined.contains("1 PLAYS"), "{joined}");
+        // Zero stays plural, which is the other half of the rule.
+        assert!(joined.contains("0 WINS"), "{joined}");
+
+        let mut played_more = Journey::default();
+        played_more.visit("lissajous");
+        played_more.play();
+        played_more.play();
+        let more = journey_lines(&played_more, &board, 30, InputMode::KeyboardMouse).join(
+            "
+",
+        );
+        assert!(more.contains("2 PLAYS IN THIS LOCAL JOURNEY"), "{more}");
     }
 
     #[test]

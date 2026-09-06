@@ -93,7 +93,11 @@ pub(crate) fn fullscreen(label: &str) -> Banner {
 pub(crate) fn wing_entered(wing: &str, rooms: usize) -> Banner {
     Banner::new(
         vec![
-            format!("{}: {rooms} ROOMS", wing.to_uppercase()),
+            format!(
+                "{}: {}",
+                wing.to_uppercase(),
+                numinous_core::counted(rooms, "room").to_uppercase()
+            ),
             "THE ARROWS STAY IN THIS WING".to_string(),
         ],
         FULLSCREEN_FRAMES,
@@ -106,7 +110,11 @@ pub(crate) fn wing_entered(wing: &str, rooms: usize) -> Banner {
 /// sequence that asks something on the way into each room, and the App has
 /// nowhere else to put that.
 pub(crate) fn walk_entered(title: &str, steps: usize, question: Option<&str>) -> Banner {
-    let mut lines = vec![format!("{}: {steps} ROOMS", title.to_uppercase())];
+    let mut lines = vec![format!(
+        "{}: {}",
+        title.to_uppercase(),
+        numinous_core::counted(steps, "room").to_uppercase()
+    )];
     if let Some(question) = question {
         lines.push(question.to_uppercase());
     }
@@ -318,6 +326,51 @@ mod tests {
             unavailable.lines(),
             ["RADIO: Axiom FM", "NO PLAYABLE CACHED TRACKS"]
         );
+    }
+
+    #[test]
+    fn a_place_holding_one_room_is_not_announced_in_the_plural() {
+        // Three wings hold exactly one room today (Signals & Codes, The Order,
+        // and the deliberate Open Problems), so this is what a player entering
+        // one actually reads, not a hypothetical.
+        assert_eq!(
+            super::wing_entered("Open Problems", 1).lines()[0],
+            "OPEN PROBLEMS: 1 ROOM"
+        );
+        assert_eq!(
+            super::wing_entered("Fractals", 35).lines()[0],
+            "FRACTALS: 35 ROOMS"
+        );
+        // A wing can also be emptied by a catalog edit, and "0 ROOM" would be
+        // as wrong as "1 ROOMS".
+        assert_eq!(super::wing_entered("Empty", 0).lines()[0], "EMPTY: 0 ROOMS");
+        // The walk banner counts the same nouns and must not drift from it.
+        assert_eq!(
+            super::walk_entered("A Walk", 1, None).lines()[0],
+            "A WALK: 1 ROOM"
+        );
+        assert_eq!(
+            super::walk_entered("A Walk", 6, None).lines()[0],
+            "A WALK: 6 ROOMS"
+        );
+    }
+
+    #[test]
+    fn every_real_wing_announces_its_own_size_with_the_right_noun() {
+        // The banner is built from the live catalog, so it says whatever the
+        // catalog holds. This walks the real wings instead of trusting a count
+        // written down beside them, which is how the plural slipped through:
+        // every wing had many rooms when the line was written.
+        for wing in numinous_core::wings() {
+            let rooms = wing.rooms.len();
+            let line = super::wing_entered(wing.name, rooms).lines()[0].clone();
+            let expected = if rooms == 1 {
+                format!("{}: 1 ROOM", wing.name.to_uppercase())
+            } else {
+                format!("{}: {rooms} ROOMS", wing.name.to_uppercase())
+            };
+            assert_eq!(line, expected, "{} is announced wrongly", wing.name);
+        }
     }
 
     #[test]
