@@ -73,6 +73,12 @@ def compare(cli, mcp, arguments, environment):
     return structured
 
 
+# Rooms with an authored mathematics treatment, mirroring the core registry.
+# Kept beside the cases so a new treatment fails here loudly rather than
+# silently weakening what this gate checks.
+AUTHORED_MATHEMATICS_ROOMS = ["lissajous", "times-tables"]
+
+
 def run(cli, mcp):
     cases = [
         {"room": "lissajous"},
@@ -100,13 +106,20 @@ def run(cli, mcp):
         assert all(block["locale"]["resolved"] == "en" for block in outputs[3]["blocks"])
         assert outputs[4]["locale"]["fallback"] == "translation_unavailable"
         assert outputs[5]["locale"]["resolved"] == "en"
-        assert "mathematics" not in outputs[5]["availableDepths"]
+        # Language fallback and depth availability are independent axes. This
+        # room carries an English-only treatment, so a Japanese request resolves
+        # to English and still offers mathematics. A translation that does not
+        # exist must never read as content that does not exist.
+        assert "mathematics" in outputs[5]["availableDepths"]
+        assert outputs[5]["authoredDepthRooms"]["mathematics"] == AUTHORED_MATHEMATICS_ROOMS
         assert any(part["kind"] == "reference" for part in outputs[6]["blocks"][0]["parts"])
 
         invalid = [
             {"room": "missing-room"},
             {"room": "lissajous", "locale": "ja_JP"},
-            {"room": "times-tables", "depth": "mathematics"},
+            # A room with no authored treatment. Times Tables used to be that
+            # example and now carries one of its own.
+            {"room": "golden-angle", "depth": "mathematics"},
             {"room": "lissajous", "block": "lissajous.missing"},
             {"room": "lissajous", "block": "lissajous.recurrence", "depth": "mathematics"},
         ]
