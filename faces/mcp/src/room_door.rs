@@ -154,9 +154,12 @@ fn threshold_text(chain: &Value, wings: &[Value]) -> String {
         .iter()
         .map(|wing| {
             format!(
-                "{} ({} rooms), doorway: {} ({})",
+                "{} ({}), doorway: {} ({})",
                 wing["wing"].as_str().expect("wing name"),
-                wing["count"].as_u64().expect("wing count"),
+                numinous_core::counted(
+                    wing["count"].as_u64().expect("wing count") as usize,
+                    "room"
+                ),
                 wing["doorway"]["title"].as_str().expect("doorway title"),
                 wing["doorway"]["id"].as_str().expect("doorway id")
             )
@@ -301,6 +304,40 @@ mod tests {
             assert_eq!(wing["next"]["tool"], "describe_room");
             assert_eq!(wing["next"]["arguments"]["id"], wing["doorway"]["id"]);
         }
+    }
+
+    #[test]
+    fn every_wing_doorway_counts_its_rooms_in_the_right_number() {
+        // Reported by an external playtester against the published alpha 21
+        // packages: two wings hold exactly one room, and the doorway a player
+        // reads on every list_rooms called them "(1 rooms)". The App banner had
+        // been corrected without this surface, which is why the prose is
+        // checked here against the live catalog rather than a copied count.
+        let result = super::list_tool();
+        let text = result["content"][0]["text"]
+            .as_str()
+            .expect("door text")
+            .to_string();
+        let mut single = 0;
+        for wing in numinous_core::wings() {
+            let rooms = wing.rooms.len();
+            let expected = if rooms == 1 {
+                single += 1;
+                format!("{} (1 room), doorway: ", wing.name)
+            } else {
+                format!("{} ({rooms} rooms), doorway: ", wing.name)
+            };
+            assert!(
+                text.contains(&expected),
+                "the doorway misreports {}: expected {expected:?}",
+                wing.name
+            );
+        }
+        assert!(
+            single > 0,
+            "the catalog no longer has a single-room wing, so this guard proves nothing"
+        );
+        assert!(!text.contains("(1 rooms)"), "{text}");
     }
 
     #[test]

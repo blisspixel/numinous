@@ -95,7 +95,10 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
                 .and_then(|delta| delta.get("cells_changed"))
                 .and_then(Value::as_u64)
             {
-                summary.push_str(&format!(" Touch changed {cells} cells."));
+                summary.push_str(&format!(
+                    " Touch changed {}.",
+                    numinous_core::counted(cells as usize, "cell")
+                ));
             }
             if let Some(temporal) = structured.get("temporal") {
                 summary.push_str(&format!(
@@ -203,5 +206,42 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
         )),
         "workspace" => compact_workspace_summary(structured),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    #[test]
+    fn a_touch_that_answers_one_cell_says_cell_not_cells() {
+        // Same class as the wing doorway an external playtester reported. A
+        // poke that moves a single cell is ordinary play, and this sentence is
+        // prose rather than a data label, so it has to agree with its number.
+        let one = json!({
+            "title": "Times Tables", "room": "times-tables", "t": 0.25,
+            "width": 40, "height": 20, "action": "TURN THE DIAL",
+            "delta": { "cells_changed": 1 }
+        });
+        let summary = super::compact_result_summary("play_room", &one).expect("a summary");
+        assert!(summary.contains("Touch changed 1 cell."), "{summary}");
+        assert!(!summary.contains("1 cells"), "{summary}");
+
+        let many = json!({
+            "title": "Times Tables", "room": "times-tables", "t": 0.25,
+            "width": 40, "height": 20, "action": "TURN THE DIAL",
+            "delta": { "cells_changed": 7 }
+        });
+        let summary = super::compact_result_summary("play_room", &many).expect("a summary");
+        assert!(summary.contains("Touch changed 7 cells."), "{summary}");
+
+        // Zero stays plural, which is the other half of the rule.
+        let none = json!({
+            "title": "Times Tables", "room": "times-tables", "t": 0.25,
+            "width": 40, "height": 20, "action": "TURN THE DIAL",
+            "delta": { "cells_changed": 0 }
+        });
+        let summary = super::compact_result_summary("play_room", &none).expect("a summary");
+        assert!(summary.contains("Touch changed 0 cells."), "{summary}");
     }
 }
