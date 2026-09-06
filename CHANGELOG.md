@@ -5,6 +5,24 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- An unwritten study depth now names the rooms where that depth is written, in
+  the App reader, the CLI, and MCP. An agentic playtester reported that the
+  honest refusal read as a broken feature, and that finding a written treatment
+  meant asking room by room across the catalog. The pointer states that reading
+  requires nothing, because study has never had a visit, level, or progress
+  requirement and a hint must not read as a gate.
+- Study responses carry `authoredDepthRooms`, catalog-wide coverage for the
+  depths whose coverage is a real subset, so a client can enumerate without
+  probing or provoking an error. Added additively to schema version 1 and
+  declared in the MCP output schema. Explanation and notes are omitted on
+  purpose: every room has them, so listing rooms would restate the catalog.
+- Core owns the authored-treatment set, and the same constant both selects the
+  authored blocks and answers what is advertised, so the two cannot drift. A
+  test walks all 355 rooms and requires the advertised set to equal the set that
+  actually has the depth, and a second test follows every advertisement to a
+  real answer.
+
 ## [0.4.0-alpha.20] - 2026-09-05
 
 ### Added

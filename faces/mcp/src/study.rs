@@ -15,7 +15,7 @@ pub(super) fn catalog_entry() -> Value {
     json!({
         "name": "study_room",
         "title": "Study a room",
-        "description": "Read optional room study directly. No visit, level, wager, consolidation, or reading progress is required or awarded. Choose explanation (default), notes, or mathematics, or open one returned stable block id. Unavailable depths and blocks return an error; notes never substitute for mathematics. Text and structured content preserve scientific notation and references. Language and translation availability are explicit for the document and each block; Japanese is a reviewed draft for the Lissajous pilot, with English fallback elsewhere.",
+        "description": "Read optional room study directly. No visit, level, wager, consolidation, or reading progress is required or awarded. Choose explanation (default), notes, or mathematics, or open one returned stable block id. Explanation and notes exist for every room. An authored mathematics treatment is written for only a few rooms so far, so structuredContent.authoredDepthRooms names them on every response and a refusal names them too; do not probe the catalog room by room. Unavailable depths and blocks return an error; notes never substitute for mathematics. Text and structured content preserve scientific notation and references. Language and translation availability are explicit for the document and each block; Japanese is a reviewed draft for the Lissajous pilot, with English fallback elsewhere.",
         "annotations": {
             "readOnlyHint": true,
             "destructiveHint": false,
@@ -191,9 +191,34 @@ fn output_schema() -> Value {
             "contentLocales": { "type": "array", "items": { "type": "string" } },
             "availableDepths": { "type": "array", "items": depth_schema() },
             "availableBlocks": { "type": "array", "items": block_schema(false) },
+            "authoredDepthRooms": authored_depth_rooms_schema(),
             "blocks": { "type": "array", "minItems": 1, "items": block_schema(true) }
         },
-        "required": ["schema", "schemaVersion", "room", "selection", "locale", "contentLocales", "availableDepths", "availableBlocks", "blocks"],
+        "required": ["schema", "schemaVersion", "room", "selection", "locale", "contentLocales", "availableDepths", "availableBlocks", "authoredDepthRooms", "blocks"],
+        "additionalProperties": false
+    })
+}
+
+/// Catalog-wide coverage for the depths whose coverage is a real subset.
+///
+/// Keyed by the same canonical depth names the rest of the protocol uses, so a
+/// new depth cannot appear here under a name nothing else knows. Each key is
+/// optional because a depth every room has is deliberately not listed, and
+/// naming those rooms would restate the catalog.
+fn authored_depth_rooms_schema() -> Value {
+    let properties = StudyDepth::ALL
+        .into_iter()
+        .map(|depth| {
+            (
+                study_json::depth_name(depth).to_string(),
+                json!({ "type": "array", "minItems": 1, "items": { "type": "string" } }),
+            )
+        })
+        .collect::<serde_json::Map<String, Value>>();
+    json!({
+        "description": "Rooms with an authored treatment at each listed depth, so a caller never probes room by room. Coverage, not permission: study has no visit, level, or progress requirement.",
+        "type": "object",
+        "properties": properties,
         "additionalProperties": false
     })
 }

@@ -253,10 +253,11 @@ pub use studio_request::{
     SingRequest, StudioRequestError,
 };
 pub use study::{
-    MAX_STUDY_BLOCK_ID_BYTES, MAX_STUDY_LOCALE_BYTES, RoomStudy, StudyBlock, StudyDepth,
-    StudyDepthError, StudyFallback, StudyInline, StudyLocale, StudyLocaleError,
-    StudyLocaleResolution, StudyPart, StudyRequest, StudyRequestError, StudyResponse,
-    StudySelection, StudySource, StudyTranslationStatus, room_study, room_study_for_locale,
+    AUTHORED_MATHEMATICS_ROOMS, MAX_STUDY_BLOCK_ID_BYTES, MAX_STUDY_LOCALE_BYTES, RoomStudy,
+    StudyBlock, StudyDepth, StudyDepthError, StudyFallback, StudyInline, StudyLocale,
+    StudyLocaleError, StudyLocaleResolution, StudyPart, StudyRequest, StudyRequestError,
+    StudyResponse, StudySelection, StudySource, StudyTranslationStatus, room_study,
+    room_study_for_locale, rooms_with_authored_depth,
 };
 pub use surface::Surface;
 pub use temporal::{DwellWindow, MAX_DWELL_LOOKS, MIN_DWELL_LOOKS, TemporalPair};

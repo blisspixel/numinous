@@ -232,3 +232,60 @@ fn public_study_rejects_invalid_or_unavailable_requests_without_state() {
     }
     assert!(help.contains("mathematics"));
 }
+
+#[test]
+fn refusing_a_depth_names_where_it_is_written_and_offers_it_without_a_requirement() {
+    // The chore this removes: with only "unavailable for this room", the sole
+    // way to find a written treatment is to ask again for the next room, and
+    // the next, across the whole catalog. It also reads as a broken feature.
+    let state = State::new();
+    let refused = state.command(&["study", "times-tables", "--depth", "mathematics"]);
+    assert!(!refused.status.success());
+    let message = String::from_utf8(refused.stderr).unwrap();
+    assert!(message.contains("unavailable for this room"));
+    for named in numinous_core::AUTHORED_MATHEMATICS_ROOMS {
+        assert!(
+            message.contains(named),
+            "refusal must name {named}: {message}"
+        );
+    }
+    assert!(message.contains("requires nothing"));
+    assert!(!message.to_lowercase().contains("unlock"));
+
+    // Following that advice must actually work, from a clean profile.
+    for named in numinous_core::AUTHORED_MATHEMATICS_ROOMS {
+        let followed = state.command(&["study", named, "--depth", "mathematics"]);
+        assert!(
+            followed.status.success(),
+            "the refusal advertised {named}, which then refused too"
+        );
+    }
+    assert!(!state.0.exists(), "a refusal must not create player state");
+}
+
+#[test]
+fn structured_study_reports_catalog_coverage_so_no_client_probes_room_by_room() {
+    let state = State::new();
+    let value = successful_json(state.command(&["study", "times-tables", "--json"]));
+    let coverage = value["authoredDepthRooms"]
+        .as_object()
+        .expect("coverage must be an object");
+    let mathematics = coverage["mathematics"]
+        .as_array()
+        .expect("mathematics coverage must be a list");
+    let named: Vec<&str> = mathematics.iter().map(|v| v.as_str().unwrap()).collect();
+    assert_eq!(named, numinous_core::AUTHORED_MATHEMATICS_ROOMS);
+    // Every room has these two, so listing rooms for them would restate the
+    // catalog and tell a reader nothing.
+    assert!(!coverage.contains_key("explanation"));
+    assert!(!coverage.contains_key("notes"));
+    // Coverage is reported even from a room that lacks the depth, which is the
+    // case where a caller would otherwise start hunting.
+    assert!(
+        !value["availableDepths"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("mathematics"))
+    );
+    assert!(!state.0.exists());
+}
