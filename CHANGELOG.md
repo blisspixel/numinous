@@ -5,6 +5,25 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Times Tables, the flagship room, has the second authored Mathematics
+  treatment. It states the construction exactly, derives the envelope of the
+  chord family in closed form, verifies the derived point lies on its own chord
+  rather than only satisfying the tangency condition, identifies the curve as an
+  epicycloid, and proves it carries one cusp fewer than the multiplier. Two
+  worked cases give the cardioid and the nephroid with numbers. A separate block
+  describes what the screen actually draws, which is not the envelope: indices
+  are rounded, only some chords are drawn, and the closing argument holds for
+  integer multipliers.
+  The derivation is the project's own. The two cited sources are cited for the
+  definition of the epicycloid and its cusp count, not for the envelope result.
+  Four tests check the mathematics rather than the prose: the derived point is
+  on its chord to within a part in ten to the twelfth across five multipliers,
+  the cusp angles are cusps and no others exist, and every number quoted in the
+  worked cases is recomputed from the formula it was quoted from.
+  This treatment is English only. The Japanese pilot was independently reviewed
+  and this text was not, so a Japanese request resolves to English and says so.
+
 ### Fixed
 - The counted-noun correction in alpha 21 reached the App and missed the other
   faces. An external playtester found the wing doorway in MCP `list_rooms`
@@ -33,6 +52,13 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   cannot tell `3 rings` from `s=0.5  rings` without reading the sentence, so it
   either floods on false positives or grows an unread excuse list. The
   enforcement is per-site regressions written against live data instead.
+- Authored treatments are a registry rather than a special case for one room.
+  One table now carries each room's block builder and its content languages, so
+  the set that is advertised and the set that supplies content are the same
+  table and cannot drift. Adding a room is a row and a module. The catalog
+  explanation moves to notes only when a treatment supplies an explanation of
+  its own, so a mathematics-only room keeps its existing explanation where a
+  reader expects it.
 
 ## [0.4.0-alpha.21] - 2026-09-05
 

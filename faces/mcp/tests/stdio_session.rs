@@ -260,12 +260,17 @@ fn direct_study_over_stdio_needs_no_journey_and_keeps_reveal_protocol_unchanged(
     assert_eq!(fallback["locale"]["requested"], "ja");
     assert_eq!(fallback["locale"]["resolved"], "en");
     assert_eq!(fallback["locale"]["fallback"], "translation_unavailable");
+    // Language fallback and depth availability are independent axes. This room
+    // carries an English-only treatment, so a Japanese request resolves to
+    // English and still offers mathematics. A translation that does not exist
+    // must never read as content that does not exist.
     assert!(
-        !fallback["availableDepths"]
+        fallback["availableDepths"]
             .as_array()
             .unwrap()
             .iter()
-            .any(|depth| depth == "mathematics")
+            .any(|depth| depth == "mathematics"),
+        "an English-only treatment must still offer its depth under fallback"
     );
     let english = &reply_by_id(&replies, 5)["result"]["structuredContent"];
     let counterpart = english["blocks"]
@@ -333,9 +338,11 @@ fn direct_study_over_stdio_rejects_invalid_requests_and_preserves_state_bytes() 
         json!({ "room": "lissajous", "locale": null }),
         json!({ "room": "lissajous", "locale": "ja_JP" }),
         json!({ "room": "lissajous", "depth": "deep" }),
-        json!({ "room": "times-tables", "depth": "mathematics" }),
+        // A room with no authored treatment. Times Tables used to be that
+        // example and now carries one of its own.
+        json!({ "room": "golden-angle", "depth": "mathematics" }),
         json!({ "room": "lissajous", "block": "lissajous.missing" }),
-        json!({ "room": "times-tables", "block": "lissajous.recurrence" }),
+        json!({ "room": "golden-angle", "block": "lissajous.recurrence" }),
         json!({ "room": "lissajous", "block": "../recurrence" }),
         json!({ "room": "lissajous", "block": "lissajous.recurrence", "depth": "mathematics" }),
         json!({ "room": "lissajous", "visits": 100 }),

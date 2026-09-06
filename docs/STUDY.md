@@ -12,10 +12,13 @@ It awards no reward, records no reading completion, and does not change Journey.
 | `notes` | Existing room explanations, advanced notes, and citations where present. |
 | `mathematics` | An authored treatment with assumptions, derivations, examples, limits, and references. |
 
-Only Lissajous currently has an authored Mathematics treatment. It covers full
-oscillator state, periods and position returns, phase, torus motion, occupation
-measure, recurrence, and the limits of the drawing and sound. A citation or an
-advanced note is not silently presented as that treatment.
+Two rooms currently have an authored Mathematics treatment. Lissajous covers
+full oscillator state, periods and position returns, phase, torus motion,
+occupation measure, recurrence, and the limits of the drawing and sound. Times
+Tables derives the envelope of its chords in closed form, identifies it as an
+epicycloid, and proves it has one cusp fewer than the multiplier, which is the
+shape a player watches bloom on the dial. A citation or an advanced note is not
+silently presented as that treatment.
 
 You never have to hunt for it. Explanation and notes exist for every room, so
 they are always available. Because an authored treatment is scarce, every study
@@ -23,6 +26,11 @@ response carries the rooms that have one, and asking a room that lacks one names
 them in the refusal. That pointer is coverage, not permission: reading any depth
 that exists has no visit, level, or progress requirement, so a named room opens
 immediately.
+
+The Times Tables treatment is English only. The Lissajous Japanese draft was
+independently reviewed and this text was not, so a Japanese request for Times
+Tables resolves to English and reports `translation_unavailable` rather than
+offering an unchecked translation.
 
 Lissajous has English content and a Japanese `reviewed_draft`. Its original
 English room explanation, deep cuts, and catalog citation remain in Notes and

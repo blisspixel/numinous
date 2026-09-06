@@ -12,6 +12,7 @@ use crate::Room;
 
 mod lissajous;
 mod request;
+mod times_tables;
 
 pub use request::{
     MAX_STUDY_BLOCK_ID_BYTES, StudyRequest, StudyRequestError, StudyResponse, StudySelection,
@@ -418,7 +419,44 @@ impl RoomStudy {
 /// It exists so an unwritten depth reads as unwritten rather than as broken.
 /// A player who asks for mathematics and is refused can otherwise only find
 /// out where it does exist by asking again, room by room, across the catalog.
-pub const AUTHORED_MATHEMATICS_ROOMS: &[&str] = &["lissajous"];
+pub const AUTHORED_MATHEMATICS_ROOMS: &[&str] = &["lissajous", "times-tables"];
+
+/// One room's authored treatment: its content languages and its block builder.
+///
+/// The advertisement and the content come from this one table, so a room cannot
+/// be named as having a treatment it does not supply, nor supply one nobody is
+/// told about. Adding a room is a row here and a module beside it.
+struct Authored {
+    room_id: &'static str,
+    /// Languages with at least one authored block. Not a UI coverage claim.
+    content_locales: &'static [&'static str],
+    /// Languages this room's own text was actually written in, so a request
+    /// resolves to a translation only where one exists.
+    written_locales: &'static [&'static str],
+    blocks: fn(&StudyLocaleResolution) -> Vec<StudyBlock>,
+}
+
+static AUTHORED: &[Authored] = &[
+    Authored {
+        room_id: "lissajous",
+        content_locales: &["en", "ja"],
+        written_locales: &["en", "ja"],
+        blocks: lissajous::blocks,
+    },
+    Authored {
+        // English only: the Japanese pilot was independently reviewed and this
+        // treatment was not, so a Japanese request resolves to English and the
+        // response says so rather than offering an unchecked draft.
+        room_id: "times-tables",
+        content_locales: &["en"],
+        written_locales: &["en"],
+        blocks: times_tables::blocks,
+    },
+];
+
+fn authored_for(room_id: &str) -> Option<&'static Authored> {
+    AUTHORED.iter().find(|entry| entry.room_id == room_id)
+}
 
 /// Which rooms carry an authored treatment at this depth, for honest refusals.
 ///
@@ -437,8 +475,9 @@ pub fn rooms_with_authored_depth(depth: StudyDepth) -> &'static [&'static str] {
 /// Read optional room study using a bounded explicit language request.
 ///
 /// Every room reuses its existing concept and reveal, plus its existing deep
-/// cuts and citation as notes. Only the authored Lissajous pilot currently
-/// supplies [`StudyDepth::Mathematics`], in English and draft Japanese.
+/// cuts and citation as notes. The rooms in [`AUTHORED_MATHEMATICS_ROOMS`]
+/// additionally supply [`StudyDepth::Mathematics`]; Lissajous carries a reviewed
+/// Japanese draft, and the others are English only.
 /// This function does not accept or mutate Journey state.
 ///
 /// # Errors
@@ -452,15 +491,19 @@ pub fn room_study(room: &dyn Room, requested_locale: &str) -> Result<RoomStudy, 
 #[must_use]
 pub fn room_study_for_locale(room: &dyn Room, requested: &StudyLocale) -> RoomStudy {
     let room_id = room.meta().id;
-    // One source of truth with AUTHORED_MATHEMATICS_ROOMS: a room that supplies
-    // authored blocks and a room that is advertised as having them must be the
-    // same room, or a refusal would name a room that refuses in turn.
-    let has_pilot = AUTHORED_MATHEMATICS_ROOMS.contains(&room_id);
-    let resolved = if has_pilot && requested.language() == "ja" {
-        "ja"
-    } else {
-        "en"
-    };
+    let authored = authored_for(room_id);
+    // The resolved name is taken from the registry's own static list rather than
+    // borrowed from the request, so a resolution outlives the call that made it.
+    let language = requested.language();
+    let resolved: &'static str = authored
+        .and_then(|entry| {
+            entry
+                .written_locales
+                .iter()
+                .copied()
+                .find(|written| *written == language)
+        })
+        .unwrap_or("en");
     let locale = StudyLocaleResolution::new(requested, resolved);
     let original = StudyLocaleResolution::new(requested, "en");
     let mut explanation = Vec::new();
@@ -468,19 +511,21 @@ pub fn room_study_for_locale(room: &dyn Room, requested: &StudyLocale) -> RoomSt
         explanation.push(StudyPart::Paragraph(vec![StudyInline::Text(concept)]));
     }
     explanation.push(StudyPart::Paragraph(vec![StudyInline::Text(room.reveal())]));
-    let mut blocks = if has_pilot {
-        lissajous::blocks(&locale)
-    } else {
-        Vec::new()
-    };
+    let mut blocks = authored.map_or_else(Vec::new, |entry| (entry.blocks)(&locale));
+    // The catalog explanation moves to notes only when the authored text already
+    // supplies an explanation of its own. A treatment that writes mathematics
+    // and no explanation must not leave the room without one.
+    let authored_explanation = blocks
+        .iter()
+        .any(|block| block.depth == StudyDepth::Explanation);
     blocks.push(catalog_block(
         format!("{room_id}.explanation"),
-        if has_pilot {
+        if authored_explanation {
             "Existing room explanation"
         } else {
             "Room explanation"
         },
-        if has_pilot {
+        if authored_explanation {
             StudyDepth::Notes
         } else {
             StudyDepth::Explanation
@@ -509,7 +554,7 @@ pub fn room_study_for_locale(room: &dyn Room, requested: &StudyLocale) -> RoomSt
     RoomStudy {
         room_id,
         locale,
-        content_locales: if has_pilot { &["en", "ja"] } else { &["en"] },
+        content_locales: authored.map_or(&["en"], |entry| entry.content_locales),
         blocks,
     }
 }
