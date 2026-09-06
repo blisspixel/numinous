@@ -21,7 +21,8 @@ Confusing them is the mistake to avoid.
 
 English play instructions ship in `PLAY.md` and `docs/PLAYING.md`. Free play,
 optional Explanation and Notes, and directly requested Mathematics are distinct
-choices. Only Lissajous currently supplies an authored Mathematics treatment.
+choices. Lissajous and Times Tables currently supply an authored Mathematics
+treatment; the Times Tables text is English only.
 The separate staged experiments retain their own progression; reading has no
 reward or Journey requirement. See
 [PEDAGOGY.md](PEDAGOGY.md#play-first-depth-by-choice).

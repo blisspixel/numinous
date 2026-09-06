@@ -48,7 +48,9 @@ When you want an explanation, call `study_room` with `room` and choose
 level, or wager. You can also request one returned stable `block` ID directly;
 leave `depth` out when selecting a block. Optional `locale` selects a language,
 and document and block metadata report actual availability and fallback.
-Lissajous has the first Mathematics treatment in English and a Japanese draft.
+Two rooms have an authored Mathematics treatment: Lissajous in English and a
+Japanese draft, and Times Tables in English. Every response carries
+`authoredDepthRooms`, so read that rather than probing the catalog room by room.
 An unwritten depth returns an availability error. Study calls stay outside the
 Shared Play broadcast. The existing `reveal_room` path remains available after
 one play for ordinary rooms and consolidation for engineered wager rooms.
