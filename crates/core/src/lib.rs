@@ -199,12 +199,12 @@ pub use quiz::{ICONIC, QuizChoice, QuizRound, build_round, build_round_pool, bui
 pub use radio::{STATIONS, Station, brief_for, length_for, station};
 pub use raster::Raster;
 pub use readout::{DisplayNumber, NumericReadout, ReadoutId};
-pub use registry::Wing;
 pub use registry::{
     KNOWN_OVER_FLASH_BUDGET, MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, RESPONSE_INVISIBLE_WITHOUT_COLOR,
     THRESHOLD_ROOM_ID, all_rooms, all_rooms_with, display_safe, echoable_id, hidden_room_by_id,
     must_escape_for_display, nearest_names, nearest_room_ids, room_by_id, room_by_id_with, wings,
 };
+pub use registry::{Wing, counted};
 pub use resonance::{Resonance, resonances};
 pub use rng::SplitMix64;
 pub use room::{

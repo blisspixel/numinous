@@ -23,6 +23,17 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   actually has the depth, and a second test follows every advertisement to a
   real answer.
 
+### Fixed
+- Readouts no longer print a count beside a fixed plural noun. A player read
+  `1 ROOMS` on entering any of the three single-room wings, `1 PLAYS` on the
+  Journey overlay after their first game, and `1 LINE` was `1 LINES` on the
+  eight Only Move rulebooks that count a single line. Core now owns one
+  counted-noun helper and every readout calls it, so the rule cannot disagree
+  with itself. Regressions cover each site against live data rather than a
+  written-down count: the wing test walks the real catalog, and the Only Move
+  test walks the eight single-line rulebooks. This is the class, not one case;
+  the counts that can never reach one were checked and left alone.
+
 ## [0.4.0-alpha.20] - 2026-09-05
 
 ### Added
