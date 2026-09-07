@@ -2811,3 +2811,78 @@ fn malformed_input_gets_a_parse_error_and_the_server_keeps_going() {
     );
     let _ = std::fs::remove_file(&journey);
 }
+
+/// A kept creation must name a real way back into play, and that way must work.
+///
+/// The pointer is only worth carrying if a caller can follow it verbatim. This
+/// takes the `next` the server itself returned, passes its arguments through
+/// unchanged except for the remix the caller chooses, and requires the fork to
+/// succeed with lineage intact. A pointer that needs editing before it opens is
+/// not a door.
+#[test]
+fn a_kept_creation_names_a_way_onward_that_actually_opens() {
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous_mcp_creation_next_{}_{}",
+        std::process::id(),
+        session
+    ));
+    std::fs::create_dir(&root).expect("fresh creation-next root");
+    let journey = root.join("journey.txt");
+    let journal = root.join("journal.txt");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{"name":name,"arguments":arguments}
+        })
+    };
+
+    let saved = run_session_with_state(
+        &[call(
+            1,
+            "save_creation",
+            json!({ "expr":"sin(3*x)", "title":"Mine", "author":"Tester" }),
+        )],
+        &journey,
+        &journal,
+    );
+    let structured = &reply_by_id(&saved, 1)["result"]["structuredContent"];
+    let next = &structured["next"];
+    assert_eq!(next["tool"], "fork_creation");
+    // Self-contained: the pointer carries the capsule the caller already holds,
+    // so following it reads no host file and needs nothing remembered.
+    assert_eq!(next["arguments"]["parent"], structured["link"]);
+
+    // Follow it exactly as returned, adding only the caller's own remix.
+    let mut arguments = next["arguments"].clone();
+    arguments["expr"] = json!("sin(5*x)");
+    arguments["title"] = json!("Remix");
+    arguments["author"] = json!("Tester");
+    let followed = run_session_with_state(
+        &[
+            call(
+                1,
+                "save_creation",
+                json!({ "expr":"sin(3*x)", "title":"Mine", "author":"Tester" }),
+            ),
+            call(2, next["tool"].as_str().expect("tool name"), arguments),
+        ],
+        &journey,
+        &journal,
+    );
+    let child = &reply_by_id(&followed, 2)["result"];
+    assert_eq!(child["isError"], false, "the pointer must open: {child}");
+    let child = &child["structuredContent"];
+    assert_eq!(child["action"], "fork");
+    assert_eq!(child["expression"], "sin(5*x)");
+    assert!(
+        child["parentLink"].is_string(),
+        "a followed pointer must keep lineage: {child}"
+    );
+    assert_eq!(child["credit"], "After Mine by Tester");
+    // The loop closes: the child is itself a door, not a leaf.
+    assert_eq!(child["next"]["tool"], "fork_creation");
+    assert_eq!(child["next"]["arguments"]["parent"], child["link"]);
+
+    let _ = std::fs::remove_dir_all(&root);
+}

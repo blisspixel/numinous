@@ -484,6 +484,18 @@ fn studio_creation_result(
     if let Some(parent_link) = parent_link {
         structured["parentLink"] = json!(parent_link);
     }
+    // A kept creation that names no way onward is an archive entry, not a door.
+    // Every other surface that hands a caller something already says what to do
+    // with it: the room doorways name describe_room, the journal cue names
+    // workspace. This says fork_creation, because continuing from a creation is
+    // the one thing a caller can do after keeping it that they could not do
+    // before, and it is what makes the capsule generative rather than stored.
+    // It carries the capsule the caller already holds, so following it needs no
+    // host file and invents no new state.
+    structured["next"] = json!({
+        "tool": "fork_creation",
+        "arguments": { "parent": link },
+    });
     tool_structured(
         &format!(
             "{verb} Studio creation as portable capsule data. No host file was read or created.\nForm: {}\nScale: {}\nLink: {}\n\n{}",
