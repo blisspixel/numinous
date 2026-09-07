@@ -9,7 +9,6 @@ checking nothing, which is the exact disease the gate exists to catch.
 from __future__ import annotations
 
 import importlib.util
-import sys
 import unittest
 from pathlib import Path
 

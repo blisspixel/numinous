@@ -47,6 +47,9 @@ python3 scripts/creator-parity.py
 echo "== reduced motion =="
 python3 scripts/test-reduced-motion.py
 python3 scripts/reduced-motion.py
+echo "== python gate lint and strict-typing ratchet =="
+python3 scripts/python-quality.py
+python3 scripts/test-python-quality.py
 echo "== no color across every terminal surface =="
 python3 scripts/test-no-color.py
 python3 scripts/no-color.py

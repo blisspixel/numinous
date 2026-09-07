@@ -6,6 +6,20 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Python gates are linted and type-checked. They decide whether a release
+  ships and were the least-checked code in the repository: no linter, no type
+  checker. `ruff` now covers all fifty-six, which needed four small fixes to
+  reach. `mypy --strict` covers a declared set that starts at twenty and can
+  only grow, because an undeclared file that already passes fails the gate as
+  loudly as a declared file that stops passing. That second rule is the ratchet:
+  without it the list would freeze on the day it was written. Both rules are
+  decided by running the checker rather than by judgment, so there is nothing to
+  rubber-stamp. Thirty-six scripts are not strict yet and the gate says so in
+  its receipt rather than reporting only its successes.
+  Retrofitting all of them at once was considered and rejected: five hundred
+  hurried annotations would buy the appearance of rigor and none of it.
+  The checkers are pinned by exact version and the new CI job is required by the
+  aggregate result, so this cannot be skipped.
 - A clean-machine release gate, the 0.6 evidence that was missing. The nightly
   install roundtrip packages its archive on the runner that then installs it,
   which cannot be clean-machine evidence: a machine cannot vouch for an artifact

@@ -118,6 +118,32 @@ an external playtester found the mismatch by reading the packaged manual and not
 finding it. When you write a player-facing fact, check which file a player can
 actually open.
 
+### The Python gates are linted, and typed by ratchet
+
+The scripts in `scripts/` decide whether a release ships, and for a long time
+they were the least-checked code in the repository: no linter, no type checker.
+Both now run in the local gate and in CI as `python-quality`.
+
+Linting covers every file, because the whole directory passes and keeping it
+that way costs nothing. Strict typing is a **ratchet** rather than a sweep.
+Thirty-six of the scripts do not pass `mypy --strict`, and retrofitting them in
+one pass would mean hundreds of hurried annotations and ignore comments, which
+buys the appearance of rigor and none of it. So the declared set started with
+every file that already passed and can only grow:
+
+- a declared file that stops passing fails the gate, which is the guarantee;
+- an undeclared file that **already** passes also fails it, which is what stops
+  the set going stale while the directory improves around it.
+
+Both rules are decided by running the checker, not by judgment, so there is
+nothing to rubber-stamp. When you make a script type-clean, the gate tells you
+to declare it and names it. When you write a new one, write it clean.
+
+The checkers are pinned by exact version in `requirements-quality.txt` and
+bumped deliberately, so a checker release cannot change what the gate means
+overnight. That pins behaviour, not provenance: it is version pinning, not a
+hash-verified supply chain, because pip resolves a different wheel per platform.
+
 ### Two registers for what a player reads
 
 Numinous writes numbers to players in two different registers, and which one

@@ -27,6 +27,7 @@ REQUIRED_CI_JOBS = (
     "quality",
     "msrv",
     "house-style",
+    "python-quality",
     "supply-chain",
     "audit",
     "codeql",
@@ -299,6 +300,8 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 "quality": 30,
                 "msrv": 15,
                 "house-style": 10,
+                # Two checkers over fifty-odd small files; a minute in practice.
+                "python-quality": 10,
                 "supply-chain": 10,
                 "audit": 10,
                 "codeql": 20,

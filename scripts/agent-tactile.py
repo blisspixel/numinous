@@ -547,7 +547,7 @@ def main() -> int:
     failed = len(results) - passed
 
     summary_lines = [
-        f"# Tactile agent cohort (0.3 five flagships)",
+        "# Tactile agent cohort (0.3 five flagships)",
         "",
         f"Stamp: {stamp}",
         f"Revision: `{revision}`",
