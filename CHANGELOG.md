@@ -5,6 +5,16 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- The clean-machine gate could not resolve a release tag on its own. Asking for
+  the newest release used `gh release view`, and GitHub excludes prereleases
+  from its idea of the latest release. Every Numinous release so far is a
+  prerelease, so that call answered "release not found" and the gate failed on
+  all three platforms the first time the nightly ran it. Every local run had
+  passed a tag explicitly, which is exactly the path CI does not take. It now
+  lists releases, which includes prereleases and is ordered newest first, and a
+  regression pins that choice.
+
 ### Added
 - The Python gates are linted and type-checked. They decide whether a release
   ships and were the least-checked code in the repository: no linter, no type
