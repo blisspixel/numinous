@@ -1,0 +1,12 @@
+# Checkers for the Python gates, pinned to exact versions.
+#
+# A linter or type checker that moves on its own changes what a gate means
+# without anyone deciding to change it, so these are pinned and bumped
+# deliberately, the same way the CI actions and the Rust toolchain are.
+#
+# Versions rather than hashes: pip resolves a different wheel per platform, and
+# a hash set would have to carry every one of them. Pinning the version fixes
+# the behaviour being relied on here, which is what this gate needs. It is not a
+# supply-chain attestation, and the engineering guide says so.
+mypy==1.17.1
+ruff==0.15.16
