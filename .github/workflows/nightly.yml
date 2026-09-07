@@ -168,3 +168,40 @@ jobs:
           name: uninstall-roundtrip-${{ matrix.os }}
           path: .agent/tester-cohort/uninstall-roundtrip/summary.json
           if-no-files-found: warn
+
+  clean-machine:
+    # 0.6-am asks for a clean machine, and the roundtrip above cannot be one:
+    # it packages the archive on the runner that then installs it, and a machine
+    # cannot vouch for an artifact it produced. This job never builds. It takes
+    # a published release, proves the checksum and the keyless provenance, and
+    # only then installs. That is the difference between convenient and
+    # evidence.
+    name: clean machine, published release (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Deliberately no Rust toolchain and no cargo build. A compiler here would
+      # not fail the gate, but it would invite someone to add a build step and
+      # quietly turn this back into the same-runner smoke it exists to replace.
+      - name: Judgment of the clean-machine gate itself
+        shell: bash
+        run: python3 scripts/test-clean-machine-release.py
+      - name: Install, play, and uninstall the published release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/clean-machine-release.py
+      - name: Keep the per-platform evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: clean-machine-release-${{ matrix.os }}
+          path: .agent/tester-cohort/clean-machine-release/summary.json
+          if-no-files-found: warn

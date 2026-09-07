@@ -2146,6 +2146,19 @@ peak energy.
   discovery, cache override, and checksum evidence without shipping WAV masters.
 - Run the app, CLI, audio path, GPU path, persistence, and MCP stdio session on
   real machines for all three systems, including at least two GPU vendors.
+- **Done (September 7, 2026, clean-machine evidence):** the nightly now installs
+  a **published** release on all three systems from a runner that never built
+  it. The roundtrip beside it packages its archive on the runner that then
+  installs it, which is convenient and is not evidence, because a machine cannot
+  vouch for an artifact it produced. The new gate refuses to run on a machine
+  holding built faces, downloads the published archive and the published
+  soundtrack, proves the SHA-256 sidecar and the keyless build-provenance
+  attestation bound to the tag commit before anything unpacks, and only then
+  installs, plays a room, writes player state, uninstalls, and requires every
+  player-owned file to survive byte-identical. Eleven focused regressions judge
+  the gate itself without a network. This reaches the "otherwise verifiable"
+  half of the exit: verifiable provenance and checksums, not platform signing or
+  notarization, and no window, controller, or audible-sound observation.
 - **Done (July 18, 2026):** enforce the verified Rust 1.88 MSRV in CI while
   pinning the developer and release toolchain to stable 1.97.1. Packaging
   smoke, crash-recovery, and artifact-provenance checks remain.

@@ -321,7 +321,12 @@ def wait_until_removed(paths: tuple[Path, ...], timeout_seconds: float = 30.0) -
         time.sleep(0.1)
 
 
-def roundtrip(archive: Path, checksum: Path, tag: str) -> list[dict[str, Any]]:
+def roundtrip(
+    archive: Path,
+    checksum: Path,
+    tag: str,
+    soundtrack: tuple[Path, Path, Path] | None = None,
+) -> list[dict[str, Any]]:
     checks: list[dict[str, Any]] = []
     workspace = Path(tempfile.mkdtemp(prefix="numinous-uninstall-roundtrip-"))
     install_root = workspace / "install"
@@ -338,7 +343,12 @@ def roundtrip(archive: Path, checksum: Path, tag: str) -> list[dict[str, Any]]:
             / "Start Menu"
             / "Programs"
         ).mkdir(parents=True)
-    soundtrack = build_local_soundtrack(workspace / "soundtrack-src")
+    # A caller testing a published release supplies that release's own
+    # soundtrack, so the install exercises the shipped music rather than a
+    # stand-in. Without one, a single local track is packaged here, which keeps
+    # this gate off the network when it is run from a clone.
+    if soundtrack is None:
+        soundtrack = build_local_soundtrack(workspace / "soundtrack-src")
 
     # Isolate shell launchers, Windows profile caches, and every player-owned
     # file so the roundtrip cannot touch whoever is running it.
@@ -446,6 +456,13 @@ def main(argv: list[str] | None = None) -> int:
         help="defaults to the archive path plus .sha256",
     )
     parser.add_argument("--release-tag", help="defaults to v plus the packaged version")
+    parser.add_argument(
+        "--soundtrack-archive",
+        type=Path,
+        help="published soundtrack archive; omit to package one local track instead",
+    )
+    parser.add_argument("--soundtrack-checksum", type=Path)
+    parser.add_argument("--soundtrack-content-checksum", type=Path)
     args = parser.parse_args(argv)
 
     archive = args.release_archive
@@ -463,7 +480,21 @@ def main(argv: list[str] | None = None) -> int:
                 "read the packaged version",
             ).strip()
             tag = f"v{version}"
-        checks = roundtrip(archive, checksum, tag)
+        supplied = (
+            args.soundtrack_archive,
+            args.soundtrack_checksum,
+            args.soundtrack_content_checksum,
+        )
+        if any(supplied) and not all(supplied):
+            raise RoundtripError(
+                "a supplied soundtrack needs its archive, checksum, and content checksum"
+            )
+        checks = roundtrip(
+            archive,
+            checksum,
+            tag,
+            (supplied[0], supplied[1], supplied[2]) if all(supplied) else None,
+        )
     except RoundtripError as error:
         checks = [{"name": "roundtrip", "passed": False, "detail": str(error)}]
 

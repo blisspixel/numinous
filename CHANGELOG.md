@@ -5,6 +5,22 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- A clean-machine release gate, the 0.6 evidence that was missing. The nightly
+  install roundtrip packages its archive on the runner that then installs it,
+  which cannot be clean-machine evidence: a machine cannot vouch for an artifact
+  it produced, and the roundtrip's own documentation said so. The new gate never
+  builds. It refuses to run on a machine holding built faces, takes a published
+  release, proves the checksum and the keyless provenance bound to the tag
+  commit before anything unpacks, and only then installs, plays, saves,
+  uninstalls, and requires every player-owned file to survive byte-identical.
+  It runs nightly on Linux, macOS, and Windows, and keeps a per-platform
+  receipt that records what it proves and what it does not.
+- `uninstall-roundtrip.py` accepts a supplied soundtrack, so a caller testing a
+  published release exercises that release's own music rather than a locally
+  packaged stand-in. Omitting it keeps the previous behaviour for runs from a
+  clone with no network.
+
 ## [0.4.0-alpha.23] - 2026-09-07
 
 ### Fixed
