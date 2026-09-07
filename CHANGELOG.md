@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.23] - 2026-09-07
+
 ### Fixed
 - `PLAY.md` and the packaged agent skill now explain the two Journey counters.
   Entering a room lights a star; `plays` records rounds, sims, and curves, so
