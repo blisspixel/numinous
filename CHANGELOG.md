@@ -20,6 +20,16 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   published release exercises that release's own music rather than a locally
   packaged stand-in. Omitting it keeps the previous behaviour for runs from a
   clone with no network.
+- A kept Studio creation now names a way back into play. `save_creation`,
+  `open_creation`, and `fork_creation` each return a `next` pointer at
+  `fork_creation`, carrying the capsule the caller already holds, so following
+  it reads no host file and needs nothing remembered. Every other surface that
+  hands a caller something already says what to do with it: the room doorways
+  name `describe_room`, the journal cue names `workspace`. Creations were the
+  exception, which made a kept capsule an archive entry rather than a door.
+  A regression follows the returned pointer verbatim and requires the fork to
+  open with lineage and credit intact, because a pointer that needs editing
+  before it works is not a door.
 
 ## [0.4.0-alpha.23] - 2026-09-07
 
