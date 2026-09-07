@@ -19,7 +19,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   Retrofitting all of them at once was considered and rejected: five hundred
   hurried annotations would buy the appearance of rigor and none of it.
   The checkers are pinned by exact version and the new CI job is required by the
-  aggregate result, so this cannot be skipped.
+  aggregate result, so this cannot be skipped. The ratchet proved itself three
+  times before merging: twice on its own files, and once on the clean-machine
+  gate that landed alongside it, which was strict-clean and would otherwise have
+  gone unprotected.
 - A clean-machine release gate, the 0.6 evidence that was missing. The nightly
   install roundtrip packages its archive on the runner that then installs it,
   which cannot be clean-machine evidence: a machine cannot vouch for an artifact
