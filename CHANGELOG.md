@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.24] - 2026-09-07
+
 ### Fixed
 - The clean-machine gate could not resolve a release tag on its own. Asking for
   the newest release used `gh release view`, and GitHub excludes prereleases
