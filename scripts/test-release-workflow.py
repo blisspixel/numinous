@@ -48,7 +48,7 @@ CODEQL_ANALYZE_ACTION = (
     "cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9"
 )
 INSTALL_ACTION = (
-    "taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d # v2.87.0"
+    "taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4"
 )
 RUST_TOOLCHAIN_ACTION = (
     "dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1"
