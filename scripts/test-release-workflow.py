@@ -322,6 +322,9 @@ class ReleaseWorkflowTests(unittest.TestCase):
             NIGHTLY_WORKFLOW_PATH: {
                 "am-qa": 30,
                 "roundtrip": 45,
+                # Downloads and installs a published release on three systems;
+                # the same budget as the roundtrip it stands beside.
+                "clean-machine": 45,
             },
         }
         for path, timeouts in expected.items():
