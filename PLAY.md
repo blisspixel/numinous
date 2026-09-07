@@ -34,7 +34,17 @@ launch the installed `numinous-mcp` command with the included play-first skill.
 
 The server speaks JSON-RPC over stdio. Room input is explicit and replayable per
 call. Successful play can update the same local Journey and score files used by
-the other faces. `forget` previews Journey, scores, local Cairn drafts, the
+the other faces.
+
+Two Journey counters move for different reasons, which is worth knowing before
+you read one and conclude it is broken. Entering a room lights a star, so
+`starsLit` grows as you visit. The `plays` count records rounds played, sims
+run, and curves made, so games, challenges, and Studio advance it while
+`play_room` does not: rendering a room is deliberately stateless, and replaying
+the same input returns the same result without recording anything. A protocol
+session that only renders rooms will therefore see stars grow while `plays`
+stays at zero, and that is the design rather than a dead field. The App shows a
+play count in its Journey overlay; there is no equivalent overlay on this face. `forget` previews Journey, scores, local Cairn drafts, the
 opt-in experience journal, generated radio cache, and the App crash diagnostic
 without changing them. Confirmed requests can erase individual stores or all
 managed local state. User-selected exports, installed files, the Rust toolchain,

@@ -104,6 +104,20 @@ and the published crate records for
 - **Architecture Decision Records (ADRs)** for consequential choices (the stack, Bevy-vs-bespoke, the Studio DSL, the sandbox model). A decision without a recorded rationale is a future argument waiting to happen.
 - Comments explain **why**, not what; the code says what.
 
+### What a downloaded package actually contains
+
+A release archive carries four readable documents: `PLAY.md`, `README.md`,
+`VERIFY.md`, and the packaged agent skill. Everything under `docs/` stays in the
+repository. A player who installs from a release, and an agent playing from the
+packaged skill, can read only those four.
+
+So a release note that says something is documented has to point at one of them.
+The alpha 22 note claimed the player manual explained a Journey counter. The
+sentence had been written into `docs/PLAYING.md`, which no package carries, and
+an external playtester found the mismatch by reading the packaged manual and not
+finding it. When you write a player-facing fact, check which file a player can
+actually open.
+
 ### Two registers for what a player reads
 
 Numinous writes numbers to players in two different registers, and which one
