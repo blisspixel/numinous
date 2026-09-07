@@ -108,6 +108,18 @@ class TagTests(unittest.TestCase):
                     MODULE.resolve_tag(bad)
 
 
+class ReleaseLookupTests(unittest.TestCase):
+    def test_the_newest_release_is_found_by_listing_not_by_latest(self) -> None:
+        # Every Numinous release so far is a prerelease, and GitHub excludes
+        # prereleases from "latest". `gh release view` with no tag therefore
+        # answers "release not found", which is how this gate shipped unable to
+        # resolve a tag on its own: every local run passed one explicitly. The
+        # nightly caught it on all three platforms the first time it ran.
+        source = (ROOT / "scripts" / "clean-machine-release.py").read_text(encoding="utf-8")
+        self.assertIn('"gh", "release", "list"', source)
+        self.assertNotIn('"gh", "release", "view"', source)
+
+
 class ArtifactNameTests(unittest.TestCase):
     def test_every_published_target_has_an_archive_shape(self) -> None:
         # The four targets the release workflow publishes must each be

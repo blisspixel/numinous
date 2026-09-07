@@ -175,8 +175,19 @@ def resolve_tag(requested: str | None) -> str:
         if not TAG_PATTERN.fullmatch(requested):
             raise GateError(f"{requested!r} is not a release tag")
         return requested
+    # `gh release view` with no tag asks for the *latest* release, and GitHub
+    # excludes prereleases from that. Every Numinous release so far is a
+    # prerelease, so that call answers "release not found" and this gate could
+    # never resolve a tag on its own. Listing includes prereleases and is
+    # ordered newest first.
     latest = run(
-        ["gh", "release", "view", "--repo", REPOSITORY, "--json", "tagName", "--jq", ".tagName"],
+        [
+            "gh", "release", "list",
+            "--repo", REPOSITORY,
+            "--limit", "1",
+            "--json", "tagName",
+            "--jq", ".[0].tagName",
+        ],
         "ask for the newest published release",
     ).strip()
     if not TAG_PATTERN.fullmatch(latest):
