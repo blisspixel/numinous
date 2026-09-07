@@ -96,6 +96,11 @@ first, with source and selection reason. An empty result says it abstained.
 Entry text and opaque receipt digests are not searched. Play does not write the
 workspace. It dies when the process does. It is not a memory. Use
 `forget` to inspect or erase Journey and other Numinous-managed local state.
+
+Do not read `journey.plays` as a count of rooms you have rendered. `play_room`
+is stateless and records nothing, so it lights a star without advancing plays.
+Games, challenges, and Studio advance it. A session that only renders rooms sees
+`starsLit` grow while `plays` stays at zero, by design.
 Your surrounding host may also retain tool traffic under its own policy;
 Numinous erasure cannot remove host-managed transcripts or exports.
 

@@ -5,6 +5,24 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- `PLAY.md` and the packaged agent skill now explain the two Journey counters.
+  Entering a room lights a star; `plays` records rounds, sims, and curves, so
+  games and challenges advance it while `play_room` does not, because rendering
+  a room is deliberately stateless. A playtester on the alpha 22 packages read
+  `plays` stuck at zero and reasonably concluded the field was dead. It is not:
+  a game moves it, which was checked against the shipped binary.
+- The alpha 22 release note claimed the player manual documented that counter.
+  It did not. The sentence was written into `docs/PLAYING.md`, which is not part
+  of a release archive. Only `PLAY.md`, `README.md`, `VERIFY.md`, and the
+  packaged skill reach a player who downloads a package, so a claim about what
+  a player can read has to land in one of those four.
+
+### Changed
+- `docs/ENGINEERING.md` names the four documents that ship inside a release
+  archive, so a note promising that something is documented can be checked
+  against what a package actually carries.
+
 ## [0.4.0-alpha.22] - 2026-09-06
 
 ### Added
