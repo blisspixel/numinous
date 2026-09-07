@@ -110,6 +110,24 @@ jobs:
       - name: Minimum supported Rust check
         run: cargo +1.89.0 check --workspace --all-targets --locked
 
+  python-quality:
+    name: python gates (lint and strict typing)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned checkers
+        # Exact versions, bumped deliberately, so a checker release cannot
+        # change what this gate means overnight. See requirements-quality.txt
+        # for why this pins versions rather than hashes.
+        run: python3 -m pip install -r requirements-quality.txt
+      - name: Judgment of the ratchet itself
+        run: python3 scripts/test-python-quality.py
+      - name: Lint every gate and hold the declared set to strict typing
+        run: python3 scripts/python-quality.py
+
   house-style:
     name: house style
     runs-on: ubuntu-latest
@@ -318,6 +336,7 @@ jobs:
       - quality
       - msrv
       - house-style
+      - python-quality
       - supply-chain
       - audit
       - codeql
@@ -330,6 +349,7 @@ jobs:
       QUALITY_RESULT: ${{ needs.quality.result }}
       MSRV_RESULT: ${{ needs.msrv.result }}
       HOUSE_STYLE_RESULT: ${{ needs.house-style.result }}
+      PYTHON_QUALITY_RESULT: ${{ needs.python-quality.result }}
       SUPPLY_CHAIN_RESULT: ${{ needs.supply-chain.result }}
       AUDIT_RESULT: ${{ needs.audit.result }}
       CODEQL_RESULT: ${{ needs.codeql.result }}
@@ -343,6 +363,7 @@ jobs:
             "$QUALITY_RESULT" \
             "$MSRV_RESULT" \
             "$HOUSE_STYLE_RESULT" \
+            "$PYTHON_QUALITY_RESULT" \
             "$SUPPLY_CHAIN_RESULT" \
             "$AUDIT_RESULT" \
             "$CODEQL_RESULT" \
