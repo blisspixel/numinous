@@ -247,7 +247,10 @@ fn packaged_player_docs_name_creation_next() {
                 && flattened.contains("the-circle")
                 && flattened.contains("named-sliders")
                 && flattened.contains("extra-knob")
-                && flattened.contains("live-ratio"),
+                && flattened.contains("live-ratio")
+                && flattened.contains("overlay")
+                && flattened.contains("the-parts")
+                && flattened.contains("the-sum"),
             "{name} must name the bundled Studio experiments a packaged player can open"
         );
         assert!(
@@ -2581,6 +2584,41 @@ fn named_sliders_plot_save_open_and_fork_follow_next() {
     assert_eq!(
         forked["result"]["structuredContent"]["sliders"][0]["name"],
         "b"
+    );
+}
+
+#[test]
+fn overlay_programs_plot_save_and_open_follow_next() {
+    let plotted = call(
+        "plot_expression",
+        json!({"expr": "sin(x) & cos(x)", "xmin": -1.0, "xmax": 1.0}),
+    );
+    assert_eq!(plotted["result"]["isError"], false, "{plotted}");
+    let next = &plotted["result"]["structuredContent"]["next"];
+    assert_eq!(next["tool"], "save_creation");
+    assert_eq!(next["arguments"]["expr"], "sin(x) & cos(x)");
+    let saved = call("save_creation", next["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let capsule = &saved["result"]["structuredContent"];
+    assert_eq!(capsule["kind"], "program");
+    assert_eq!(capsule["capsuleFormatVersion"], 7);
+    assert_eq!(capsule["next"]["tool"], "fork_creation");
+    let listed = call(
+        "plot_expression",
+        json!({"list_experiments": true, "family": "overlay"}),
+    );
+    let listed = &listed["result"]["structuredContent"];
+    assert_eq!(listed["family"], "overlay");
+    assert_eq!(listed["experimentCount"], 2);
+    let opened = call(
+        "open_creation",
+        listed["experiments"][0]["next"]["arguments"].clone(),
+    );
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert_eq!(opened["result"]["structuredContent"]["title"], "The parts");
+    assert_eq!(
+        opened["result"]["structuredContent"]["capsuleFormatVersion"],
+        7
     );
 }
 

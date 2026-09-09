@@ -3750,6 +3750,43 @@ fn named_sliders_plot_save_and_open_round_trip() {
 }
 
 #[test]
+fn overlay_programs_plot_save_and_open() {
+    let path = std::env::temp_dir().join("numinous_cli_overlay_save_test.num");
+    let _ = std::fs::remove_file(&path);
+    let plot =
+        super::plot_report_with("sin(x) & cos(x)", -1.0, 1.0, 1.0, 32, 10, &[]).expect("plot");
+    assert!(plot.contains('#'), "{plot}");
+    assert!(plot.contains('*'), "{plot}");
+    assert!(plot.contains("# = sin(x)"), "{plot}");
+    let message = super::save_studio_creation_with_sliders(
+        "sin(x) & cos(x)",
+        super::StudioParameters {
+            minimum: -1.0,
+            maximum: 1.0,
+            a: 1.0,
+            scale: numinous_core::StudioScale::Continuous,
+        },
+        super::CreationIdentity {
+            title: Some("The parts"),
+            author: None,
+            credit: None,
+        },
+        &[],
+        &path,
+    )
+    .expect("save");
+    assert!(message.contains("numinous://studio?"));
+    let text = std::fs::read_to_string(&path).expect("saved");
+    assert!(text.starts_with("NUMINOUS_STUDIO 7\n"), "{text}");
+    let opened = super::open_studio_report("the-parts", 32, 10).expect("bundled");
+    assert!(opened.contains("title=The parts"), "{opened}");
+    assert!(opened.contains("kind=program"), "{opened}");
+    let sum = super::open_studio_report("the-sum", 32, 10).expect("sum");
+    assert!(sum.contains("title=The sum"), "{sum}");
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
 fn a_titled_save_round_trips_and_the_report_names_it() {
     let path = std::env::temp_dir().join("numinous_cli_titled_save_test.num");
     let _ = std::fs::remove_file(&path);

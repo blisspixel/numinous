@@ -15,10 +15,16 @@ use crate::sound::{Note, SoundSpec};
 /// Maximum accepted Studio source length for share files and links.
 pub const MAX_STUDIO_SOURCE_CHARS: usize = 512;
 
-/// Maximum editable text for one scalar formula or one labeled parametric
-/// pair. Each expression keeps the per-source cap above; this larger bound
-/// only accounts for the second expression and the `x(t)` / `y(t)` labels.
-pub const MAX_STUDIO_EDITOR_CHARS: usize = MAX_STUDIO_SOURCE_CHARS * 2 + 16;
+/// The most graph expressions one overlay program may hold.
+pub const MAX_PROGRAM_EXPRS: usize = 4;
+
+/// Marks drawn for overlay graphs, in source order.
+pub const PROGRAM_MARKS: [char; MAX_PROGRAM_EXPRS] = ['#', '*', '+', 'o'];
+
+/// Maximum editable text for one scalar formula, one labeled parametric pair,
+/// or one overlay program. Each expression keeps the per-source cap above;
+/// this larger bound accounts for extra expressions and their separators.
+pub const MAX_STUDIO_EDITOR_CHARS: usize = MAX_STUDIO_SOURCE_CHARS * MAX_PROGRAM_EXPRS + 16;
 
 /// Curated Formula Jam recipes shared by App Random/Auto, CLI, and MCP.
 /// Random discovery draws only from this bank, never free assembly.
@@ -180,6 +186,20 @@ pub const STUDIO_EXPERIMENTS: &[StudioExperiment] = &[
         invitation: "Change p or q. When does the path close again?",
         num_file: include_str!("../../../docs/experiments/live-ratio.num"),
     },
+    StudioExperiment {
+        id: "the-parts",
+        family: "overlay",
+        title: "The parts",
+        invitation: "Two curves share one window. Which one oscillates, and which one is shifted?",
+        num_file: include_str!("../../../docs/experiments/the-parts.num"),
+    },
+    StudioExperiment {
+        id: "the-sum",
+        family: "overlay",
+        title: "The sum",
+        invitation: "The third curve is their sum. Where does it sit when they cancel?",
+        num_file: include_str!("../../../docs/experiments/the-sum.num"),
+    },
 ];
 
 /// Look up a bundled experiment by id, or by `experiment:<id>`.
@@ -321,6 +341,8 @@ pub enum StudioKind {
     Parametric,
     /// One field over the plane, `f(x, y)` or `f(z)`.
     Field,
+    /// Several graphs over one window, drawn together. The first sings.
+    Program,
 }
 
 impl StudioKind {
@@ -331,6 +353,7 @@ impl StudioKind {
             Self::Graph => "graph",
             Self::Parametric => "parametric",
             Self::Field => "field",
+            Self::Program => "program",
         }
     }
 
@@ -340,6 +363,7 @@ impl StudioKind {
             "graph" => Some(Self::Graph),
             "parametric" => Some(Self::Parametric),
             "field" => Some(Self::Field),
+            "program" => Some(Self::Program),
             _ => None,
         }
     }
@@ -421,6 +445,7 @@ impl StudioScale {
 pub struct StudioCreation {
     source: String,
     second_source: Option<String>,
+    more_sources: Vec<String>,
     xmin: f64,
     xmax: f64,
     ymin: Option<f64>,
@@ -450,6 +475,7 @@ impl StudioCreation {
         Self {
             source,
             second_source: None,
+            more_sources: Vec::new(),
             xmin,
             xmax,
             ymin: None,
@@ -491,6 +517,7 @@ impl StudioCreation {
         Self {
             source: x_source,
             second_source: Some(y_source),
+            more_sources: Vec::new(),
             xmin: tmin,
             xmax: tmax,
             ymin: None,
@@ -545,6 +572,7 @@ impl StudioCreation {
         Self {
             source,
             second_source: None,
+            more_sources: Vec::new(),
             xmin,
             xmax,
             ymin: Some(ymin),
@@ -553,6 +581,46 @@ impl StudioCreation {
             sliders: Vec::new(),
             scale: StudioScale::Continuous,
             reading: Some(reading),
+            title: None,
+            author: None,
+            credit: None,
+            era: None,
+            descends: None,
+        }
+        .bind_sliders()
+    }
+
+    /// Build an overlay program: two to [`MAX_PROGRAM_EXPRS`] graphs that share
+    /// one window, knob, sliders, and scale. The first expression sings.
+    ///
+    /// # Errors
+    /// Returns a message when the count is out of range, a part is empty or
+    /// not a graph, or the window and parameter are invalid.
+    pub fn new_program(
+        sources: impl IntoIterator<Item = impl Into<String>>,
+        xmin: f64,
+        xmax: f64,
+        a: f64,
+    ) -> Result<Self, String> {
+        let sources: Vec<String> = sources
+            .into_iter()
+            .map(|source| source.into().trim().to_string())
+            .collect();
+        let sources = validate_program_sources(sources)?;
+        validate_share_numbers(xmin, xmax, a)?;
+        let (source, rest) = sources.split_first().expect("validated program length");
+        Self {
+            source: source.clone(),
+            second_source: None,
+            more_sources: rest.to_vec(),
+            xmin,
+            xmax,
+            ymin: None,
+            ymax: None,
+            a,
+            sliders: Vec::new(),
+            scale: StudioScale::Continuous,
+            reading: None,
             title: None,
             author: None,
             credit: None,
@@ -702,16 +770,27 @@ impl StudioCreation {
         if self.kind() == StudioKind::Field {
             return self.fork_field(source, None, title, author);
         }
-        let mut child = match (&self.second_source, source) {
-            (None, source) => {
+        let mut child = match (self.kind(), source) {
+            (StudioKind::Program, None) => {
+                Self::new_program(self.graph_sources(), self.xmin, self.xmax, self.a)?
+            }
+            (StudioKind::Program, Some(source)) => {
+                program_or_graph(source, self.xmin, self.xmax, self.a)?
+            }
+            (StudioKind::Graph, source) => {
                 Self::new(source.unwrap_or(&self.source), self.xmin, self.xmax, self.a)?
             }
-            (Some(y_source), None) => {
-                Self::new_parametric(&self.source, y_source, self.xmin, self.xmax, self.a)?
-            }
-            (Some(_), Some(_)) => {
+            (StudioKind::Parametric, None) => Self::new_parametric(
+                &self.source,
+                self.second_source.as_deref().expect("parametric y"),
+                self.xmin,
+                self.xmax,
+                self.a,
+            )?,
+            (StudioKind::Parametric, Some(_)) => {
                 return Err("a parametric fork needs both x(t) and y(t) replacements".to_string());
             }
+            (StudioKind::Field, _) => unreachable!("field fork uses fork_field"),
         };
         child = child.with_scale(self.scale);
         if let Some(era) = self.era {
@@ -866,13 +945,31 @@ impl StudioCreation {
         self.second_source.as_deref()
     }
 
-    /// Whether this capsule is one graph, one parametric path, or one field.
+    /// Graph expressions in an overlay program, first-seen order. Empty when
+    /// this is not a program.
     #[must_use]
-    pub const fn kind(&self) -> StudioKind {
+    pub fn extra_sources(&self) -> &[String] {
+        &self.more_sources
+    }
+
+    /// Every graph expression this creation draws, first-seen order.
+    #[must_use]
+    pub fn graph_sources(&self) -> Vec<String> {
+        let mut sources = vec![self.source.clone()];
+        sources.extend(self.more_sources.iter().cloned());
+        sources
+    }
+
+    /// Whether this capsule is one graph, one parametric path, one field, or
+    /// an overlay program.
+    #[must_use]
+    pub fn kind(&self) -> StudioKind {
         if self.reading.is_some() {
             StudioKind::Field
         } else if self.second_source.is_some() {
             StudioKind::Parametric
+        } else if !self.more_sources.is_empty() {
+            StudioKind::Program
         } else {
             StudioKind::Graph
         }
@@ -881,6 +978,9 @@ impl StudioCreation {
     /// One canonical editor-facing formula label.
     #[must_use]
     pub fn editor_source(&self) -> String {
+        if !self.more_sources.is_empty() {
+            return self.graph_sources().join(" & ");
+        }
         match &self.second_source {
             Some(y_source) => format!("x(t)={}; y(t)={y_source}", self.source),
             None => self.source.clone(),
@@ -965,6 +1065,13 @@ impl StudioCreation {
         let mut names = crate::slider::collect_slider_names(&first);
         if let Some(second) = &self.second_source {
             for name in crate::slider::collect_slider_names(&parse(second)?) {
+                if !names.iter().any(|existing| existing == &name) {
+                    names.push(name);
+                }
+            }
+        }
+        for extra in &self.more_sources {
+            for name in crate::slider::collect_slider_names(&parse(extra)?) {
                 if !names.iter().any(|existing| existing == &name) {
                     names.push(name);
                 }
@@ -1131,11 +1238,13 @@ impl StudioCreation {
     /// Serialize to a `.num` Studio file, in the lowest format version that
     /// carries the content. Plain graphs stay version 1, identity makes them
     /// version 2, a parametric pair or stored scale uses version 3, prose
-    /// credit uses version 4, a field uses version 5, and named sliders use
-    /// version 6.
+    /// credit uses version 4, a field uses version 5, named sliders use
+    /// version 6, and overlay programs use version 7.
     #[must_use]
     pub fn to_num_file(&self) -> String {
-        let version = if !self.sliders.is_empty() {
+        let version = if self.kind() == StudioKind::Program {
+            7
+        } else if !self.sliders.is_empty() {
             6
         } else if self.kind() == StudioKind::Field {
             5
@@ -1178,13 +1287,18 @@ impl StudioCreation {
                     format_share_number(self.xmax),
                     format_share_number(self.a)
                 )),
-                None => out.push_str(&format!(
-                    "expr={}\nxmin={}\nxmax={}\na={}\n",
-                    self.source,
-                    format_share_number(self.xmin),
-                    format_share_number(self.xmax),
-                    format_share_number(self.a)
-                )),
+                None => {
+                    out.push_str(&format!("expr={}\n", self.source));
+                    for extra in &self.more_sources {
+                        out.push_str(&format!("expr={extra}\n"));
+                    }
+                    out.push_str(&format!(
+                        "xmin={}\nxmax={}\na={}\n",
+                        format_share_number(self.xmin),
+                        format_share_number(self.xmax),
+                        format_share_number(self.a)
+                    ));
+                }
             }
             out.push_str(&format!("scale={}\n", self.scale.name()));
         }
@@ -1209,11 +1323,11 @@ impl StudioCreation {
         out
     }
 
-    /// Parse a `.num` Studio file, version 1 through 6.
+    /// Parse a `.num` Studio file, version 1 through 7.
     ///
     /// Version 1 rejects the metadata fields rather than ignoring them, so a
     /// file cannot claim the old header while smuggling new content. A header
-    /// past version 6 is refused by name: a future capsule is a fact to
+    /// past version 7 is refused by name: a future capsule is a fact to
     /// report, not a guess to parse.
     ///
     /// # Errors
@@ -1229,6 +1343,7 @@ impl StudioCreation {
             Some("NUMINOUS_STUDIO 4") => 4,
             Some("NUMINOUS_STUDIO 5") => 5,
             Some("NUMINOUS_STUDIO 6") => 6,
+            Some("NUMINOUS_STUDIO 7") => 7,
             Some(header) if header.starts_with("NUMINOUS_STUDIO ") => {
                 return Err(
                     "this Studio .num file is from a newer Numinous; update to open it".to_string(),
@@ -1255,6 +1370,7 @@ impl StudioCreation {
         let mut era: Option<crate::era::Era> = None;
         let mut descends: Option<String> = None;
         let mut sliders: Vec<crate::slider::StudioSlider> = Vec::new();
+        let mut extra_exprs: Vec<String> = Vec::new();
         for line in lines {
             if line.trim().is_empty() {
                 continue;
@@ -1278,6 +1394,12 @@ impl StudioCreation {
                         "Studio .num field 'slider' needs a NUMINOUS_STUDIO 6 header".to_string(),
                     );
                 }
+                "kind" if value == "program" && version < 7 => {
+                    return Err(
+                        "Studio .num field 'kind=program' needs a NUMINOUS_STUDIO 7 header"
+                            .to_string(),
+                    );
+                }
                 "kind" if kind.is_none() => {
                     kind = Some(
                         StudioKind::parse(value)
@@ -1285,6 +1407,7 @@ impl StudioCreation {
                     );
                 }
                 "expr" if source.is_none() => source = Some(value.to_string()),
+                "expr" if version >= 7 => extra_exprs.push(value.to_string()),
                 "xexpr" if x_source.is_none() => x_source = Some(value.to_string()),
                 "yexpr" if y_source.is_none() => y_source = Some(value.to_string()),
                 "xmin" if xmin.is_none() => xmin = Some(parse_share_number("xmin", value)?),
@@ -1393,8 +1516,35 @@ impl StudioCreation {
                     {
                         return Err("graph Studio capsule mixes parametric fields".to_string());
                     }
+                    if !extra_exprs.is_empty() {
+                        return Err(
+                            "extra expr lines need kind=program and a NUMINOUS_STUDIO 7 header"
+                                .to_string(),
+                        );
+                    }
                     Self::new(
                         source.ok_or_else(|| "missing Studio expression".to_string())?,
+                        xmin.ok_or_else(|| "missing xmin".to_string())?,
+                        xmax.ok_or_else(|| "missing xmax".to_string())?,
+                        a,
+                    )?
+                }
+                StudioKind::Program => {
+                    if version < 7 {
+                        return Err(
+                            "Studio .num field 'kind=program' needs a NUMINOUS_STUDIO 7 header"
+                                .to_string(),
+                        );
+                    }
+                    if x_source.is_some() || y_source.is_some() || tmin.is_some() || tmax.is_some()
+                    {
+                        return Err("program Studio capsule mixes parametric fields".to_string());
+                    }
+                    let mut sources =
+                        vec![source.ok_or_else(|| "missing Studio expression".to_string())?];
+                    sources.extend(extra_exprs);
+                    Self::new_program(
+                        sources,
                         xmin.ok_or_else(|| "missing xmin".to_string())?,
                         xmax.ok_or_else(|| "missing xmax".to_string())?,
                         a,
@@ -1403,6 +1553,11 @@ impl StudioCreation {
                 StudioKind::Parametric => {
                     if source.is_some() || xmin.is_some() || xmax.is_some() {
                         return Err("parametric Studio capsule mixes graph fields".to_string());
+                    }
+                    if !extra_exprs.is_empty() {
+                        return Err(
+                            "parametric Studio capsule mixes overlay expr lines".to_string()
+                        );
                     }
                     Self::new_parametric(
                         x_source.ok_or_else(|| "missing parametric x expression".to_string())?,
@@ -1526,13 +1681,18 @@ impl StudioCreation {
                     format_share_number(self.xmax),
                     format_share_number(self.a)
                 )),
-                None => link.push_str(&format!(
-                    "&expr={}&xmin={}&xmax={}&a={}",
-                    percent_encode(&self.source),
-                    format_share_number(self.xmin),
-                    format_share_number(self.xmax),
-                    format_share_number(self.a)
-                )),
+                None => {
+                    link.push_str(&format!(
+                        "&expr={}&xmin={}&xmax={}&a={}",
+                        percent_encode(&self.source),
+                        format_share_number(self.xmin),
+                        format_share_number(self.xmax),
+                        format_share_number(self.a)
+                    ));
+                    for extra in &self.more_sources {
+                        link.push_str(&format!("&expr={}", percent_encode(extra)));
+                    }
+                }
             }
             link.push_str(&format!("&scale={}", self.scale.name()));
             link
@@ -1588,6 +1748,7 @@ impl StudioCreation {
         let mut credit: Option<String> = None;
         let mut era: Option<crate::era::Era> = None;
         let mut sliders: Vec<crate::slider::StudioSlider> = Vec::new();
+        let mut extra_exprs: Vec<String> = Vec::new();
         for pair in query.split('&') {
             if pair.is_empty() {
                 continue;
@@ -1604,6 +1765,7 @@ impl StudioCreation {
                     );
                 }
                 "expr" if source.is_none() => source = Some(percent_decode(value)?),
+                "expr" => extra_exprs.push(percent_decode(value)?),
                 "xexpr" if x_source.is_none() => x_source = Some(percent_decode(value)?),
                 "yexpr" if y_source.is_none() => y_source = Some(percent_decode(value)?),
                 "xmin" if xmin.is_none() => xmin = Some(parse_share_number("xmin", value)?),
@@ -1641,15 +1803,17 @@ impl StudioCreation {
                     let decoded = percent_decode(value)?;
                     sliders.push(crate::slider::StudioSlider::from_file_value(&decoded)?);
                 }
-                "kind" | "expr" | "xexpr" | "yexpr" | "xmin" | "xmax" | "ymin" | "ymax"
-                | "tmin" | "tmax" | "a" | "scale" | "reading" | "title" | "author" | "era"
-                | "credit" => {
+                "kind" | "xexpr" | "yexpr" | "xmin" | "xmax" | "ymin" | "ymax" | "tmin"
+                | "tmax" | "a" | "scale" | "reading" | "title" | "author" | "era" | "credit" => {
                     return Err(format!("duplicate Studio link field '{key}'"));
                 }
                 other => return Err(format!("unknown Studio link field '{other}'")),
             }
         }
         let a = a.ok_or_else(|| "missing a".to_string())?;
+        if !extra_exprs.is_empty() && kind != Some(StudioKind::Program) {
+            return Err("extra expr parameters need kind=program".to_string());
+        }
         let mut creation = match kind {
             None => {
                 if x_source.is_some()
@@ -1683,6 +1847,28 @@ impl StudioCreation {
                 }
                 Self::new(
                     source.ok_or_else(|| "missing Studio expression".to_string())?,
+                    xmin.ok_or_else(|| "missing xmin".to_string())?,
+                    xmax.ok_or_else(|| "missing xmax".to_string())?,
+                    a,
+                )?
+                .with_scale(scale.ok_or_else(|| "missing Studio scale".to_string())?)
+            }
+            Some(StudioKind::Program) => {
+                if x_source.is_some()
+                    || y_source.is_some()
+                    || tmin.is_some()
+                    || tmax.is_some()
+                    || ymin.is_some()
+                    || ymax.is_some()
+                    || reading.is_some()
+                {
+                    return Err("program Studio link mixes parametric or field fields".to_string());
+                }
+                let mut sources =
+                    vec![source.ok_or_else(|| "missing Studio expression".to_string())?];
+                sources.extend(extra_exprs);
+                Self::new_program(
+                    sources,
                     xmin.ok_or_else(|| "missing xmin".to_string())?,
                     xmax.ok_or_else(|| "missing xmax".to_string())?,
                     a,
@@ -1785,6 +1971,47 @@ fn reject_oversized_share(text: &str) -> Result<(), String> {
         ));
     }
     Ok(())
+}
+
+fn validate_program_sources(sources: Vec<String>) -> Result<Vec<String>, String> {
+    if !(2..=MAX_PROGRAM_EXPRS).contains(&sources.len()) {
+        return Err(format!(
+            "an overlay program needs 2 to {MAX_PROGRAM_EXPRS} graph expressions"
+        ));
+    }
+    for source in &sources {
+        validate_share_source(source)?;
+        let expression = parse(source)?;
+        if uses_field_vocabulary(&expression) {
+            return Err(
+                "an overlay program is graphs over x, not a field; omit y, z, i, re, im, arg, and conj"
+                    .to_string(),
+            );
+        }
+    }
+    Ok(sources)
+}
+
+fn program_or_graph(source: &str, xmin: f64, xmax: f64, a: f64) -> Result<StudioCreation, String> {
+    if let Some(parts) = split_program_editor(source) {
+        StudioCreation::new_program(parts, xmin, xmax, a)
+    } else {
+        StudioCreation::new(source, xmin, xmax, a)
+    }
+}
+
+/// Split editor text on `&` when it is an overlay program. `None` when the
+/// source has no overlay separator.
+fn split_program_editor(source: &str) -> Option<Vec<String>> {
+    if !source.contains('&') {
+        return None;
+    }
+    Some(
+        source
+            .split('&')
+            .map(|part| part.trim().to_string())
+            .collect(),
+    )
 }
 
 fn validate_share_source(source: &str) -> Result<(), String> {
@@ -1977,6 +2204,13 @@ pub enum StudioProgram {
         /// Parsed field expression.
         expression: Expr,
     },
+    /// Several graphs over one window. The first expression sings.
+    Program {
+        /// Canonical sources, first-seen order.
+        sources: Vec<String>,
+        /// Parsed expressions in the same order.
+        expressions: Vec<Expr>,
+    },
 }
 
 impl StudioProgram {
@@ -1993,6 +2227,14 @@ impl StudioProgram {
             return Err(format!(
                 "Studio editor text is too long; limit is {MAX_STUDIO_EDITOR_CHARS} characters"
             ));
+        }
+        if source.contains('&') && source.contains(';') {
+            return Err(
+                "overlay programs use '&' between graphs; parametric pairs use one ';'".to_string(),
+            );
+        }
+        if let Some(parts) = split_program_editor(source) {
+            return Self::program(parts);
         }
         if !source.contains(';') {
             validate_share_source(source)?;
@@ -2017,6 +2259,27 @@ impl StudioProgram {
         let x_source = strip_coordinate_label(first, 'x')?;
         let y_source = strip_coordinate_label(second, 'y')?;
         Self::parametric(&x_source, &y_source)
+    }
+
+    /// Parse an overlay program of graphs.
+    ///
+    /// # Errors
+    /// Returns a diagnostic when the count or any part is invalid.
+    pub fn program(sources: impl IntoIterator<Item = impl Into<String>>) -> Result<Self, String> {
+        let sources = validate_program_sources(
+            sources
+                .into_iter()
+                .map(|source| source.into().trim().to_string())
+                .collect(),
+        )?;
+        let expressions = sources
+            .iter()
+            .map(|source| parse(source))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self::Program {
+            sources,
+            expressions,
+        })
     }
 
     /// Parse a graph program.
@@ -2073,16 +2336,18 @@ impl StudioProgram {
                     .ok_or_else(|| "parametric creation is missing y(t)".to_string())?,
             ),
             StudioKind::Graph => Self::graph(creation.source()),
+            StudioKind::Program => Self::program(creation.graph_sources()),
         }
     }
 
     /// Mathematical form of this program.
     #[must_use]
-    pub const fn kind(&self) -> StudioKind {
+    pub fn kind(&self) -> StudioKind {
         match self {
             Self::Graph { .. } => StudioKind::Graph,
             Self::Parametric { .. } => StudioKind::Parametric,
             Self::Field { .. } => StudioKind::Field,
+            Self::Program { .. } => StudioKind::Program,
         }
     }
 
@@ -2094,6 +2359,7 @@ impl StudioProgram {
             Self::Parametric {
                 x_source, y_source, ..
             } => format!("x(t)={x_source}; y(t)={y_source}"),
+            Self::Program { sources, .. } => sources.join(" & "),
         }
     }
 
@@ -2105,6 +2371,7 @@ impl StudioProgram {
             Self::Parametric {
                 x_source, y_source, ..
             } => (x_source, Some(y_source)),
+            Self::Program { sources, .. } => (sources[0].as_str(), None),
         }
     }
 
@@ -2133,17 +2400,32 @@ impl StudioProgram {
                 eval_named(y_expression, input, a, sliders),
             ),
             Self::Field { .. } => return None,
+            Self::Program { expressions, .. } => {
+                (input, eval_named(&expressions[0], input, a, sliders))
+            }
         };
         (point.0.is_finite() && point.1.is_finite()).then_some(point)
     }
 
+    /// Overlay graph expressions, in source order. Empty when this is not a
+    /// program of graphs.
+    #[must_use]
+    pub fn overlay_expressions(&self) -> &[Expr] {
+        match self {
+            Self::Program { expressions, .. } => expressions,
+            _ => &[],
+        }
+    }
+
     /// Expression that carries pitch when this program sings. Graphs sing
     /// their y value; parametric paths sing their y coordinate over `t`.
+    /// Overlay programs sing the first graph.
     #[must_use]
     pub fn voice_expression(&self) -> &Expr {
         match self {
             Self::Graph { expression, .. } | Self::Field { expression, .. } => expression,
             Self::Parametric { y_expression, .. } => y_expression,
+            Self::Program { expressions, .. } => &expressions[0],
         }
     }
 
@@ -2163,6 +2445,17 @@ impl StudioProgram {
                 for name in crate::slider::collect_slider_names(y_expression) {
                     if !names.iter().any(|existing| existing == &name) {
                         names.push(name);
+                    }
+                }
+                names
+            }
+            Self::Program { expressions, .. } => {
+                let mut names = Vec::new();
+                for expression in expressions {
+                    for name in crate::slider::collect_slider_names(expression) {
+                        if !names.iter().any(|existing| existing == &name) {
+                            names.push(name);
+                        }
                     }
                 }
                 names
@@ -2666,7 +2959,71 @@ fn plot_program_text(
         StudioProgram::Field { .. } => {
             Err(ProgramPlotError::Sampling(PlotTextError::InvalidGeometry))
         }
+        StudioProgram::Program { expressions, .. } => {
+            plot_overlay_text(expressions, input_min, input_max, a, sliders, width, height)
+                .map_err(ProgramPlotError::Sampling)
+        }
     }
+}
+
+fn plot_overlay_text(
+    expressions: &[Expr],
+    xmin: f64,
+    xmax: f64,
+    a: f64,
+    sliders: &[crate::slider::StudioSlider],
+    width: usize,
+    height: usize,
+) -> Result<StudioPlot, PlotTextError> {
+    if width < 2 || height < 2 || xmax <= xmin {
+        return Err(PlotTextError::InvalidGeometry);
+    }
+    let curves: Vec<Vec<(f64, f64)>> = expressions
+        .iter()
+        .map(|expression| {
+            (0..width)
+                .map(|i| {
+                    let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
+                    (x, eval_named(expression, x, a, sliders))
+                })
+                .filter(|(_, y)| y.is_finite())
+                .collect()
+        })
+        .collect();
+    let finite: Vec<(f64, f64)> = curves.iter().flatten().copied().collect();
+    if finite.is_empty() {
+        return Err(PlotTextError::Undefined);
+    }
+    let ymin = finite
+        .iter()
+        .map(|point| point.1)
+        .fold(f64::INFINITY, f64::min);
+    let ymax = finite
+        .iter()
+        .map(|point| point.1)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let yspan = (ymax - ymin).max(1e-9);
+    let mut canvas = crate::canvas::Canvas::new(width, height);
+    for (index, samples) in curves.iter().enumerate() {
+        let mark = PROGRAM_MARKS[index.min(PROGRAM_MARKS.len() - 1)];
+        let mut previous: Option<(i32, i32)> = None;
+        for &(x, y) in samples {
+            let sx = ((x - xmin) / (xmax - xmin) * (width as f64 - 1.0)) as i32;
+            let sy = ((height as f64 - 1.0) - (y - ymin) / yspan * (height as f64 - 1.0)) as i32;
+            if let Some((px, py)) = previous {
+                use crate::surface::Surface;
+                canvas.line(px, py, sx, sy, mark);
+            }
+            previous = Some((sx, sy));
+        }
+    }
+    Ok(StudioPlot {
+        text: canvas.to_text(),
+        xmin,
+        xmax,
+        ymin,
+        ymax,
+    })
 }
 
 impl PlotTextError {
@@ -3265,7 +3622,7 @@ mod tests {
 
     #[test]
     fn bundled_studio_experiments_parse_keep_lineage_and_open_by_id() {
-        assert_eq!(STUDIO_EXPERIMENTS.len(), 12);
+        assert_eq!(STUDIO_EXPERIMENTS.len(), 14);
         let full = studio_experiment("full-return").expect("full-return");
         assert_eq!(full.title(), Some("A full return"));
         assert_eq!(full.kind(), StudioKind::Parametric);
@@ -3342,6 +3699,18 @@ mod tests {
         assert_eq!(readings.len(), 4);
         let knobs = studio_experiments_in(Some("named-sliders")).expect("slider family");
         assert_eq!(knobs.len(), 2);
+        let overlay = studio_experiments_in(Some("overlay")).expect("overlay family");
+        assert_eq!(overlay.len(), 2);
+        let parts = studio_experiment("the-parts").expect("the-parts");
+        assert_eq!(parts.kind(), StudioKind::Program);
+        assert_eq!(parts.editor_source(), "sin(x) & cos(x)");
+        assert!(parts.to_num_file().starts_with("NUMINOUS_STUDIO 7\n"));
+        let sum = studio_experiment("the-sum").expect("the-sum");
+        assert_eq!(sum.extra_sources().len(), 2);
+        let plot = sum.plot_text(48, 16).expect("sum plot");
+        assert!(plot.text.contains('#'));
+        assert!(plot.text.contains('*'));
+        assert!(plot.text.contains('+'));
         let extra = studio_experiment("extra-knob").expect("extra-knob");
         assert_eq!(extra.title(), Some("An extra knob"));
         assert_eq!(extra.source(), "sin(a*x) + b");
@@ -3952,7 +4321,7 @@ mod tests {
         let err = StudioCreation::from_num_file(smuggled_credit).expect_err("credit needs v4");
         assert!(err.contains("NUMINOUS_STUDIO 4"), "{err}");
         // A future version is a fact to report, not a guess to parse.
-        let future = "NUMINOUS_STUDIO 7\nexpr=x\nxmin=-1\nxmax=1\na=0\n";
+        let future = "NUMINOUS_STUDIO 8\nexpr=x\nxmin=-1\nxmax=1\na=0\n";
         let err = StudioCreation::from_num_file(future).expect_err("future refused");
         assert!(err.contains("newer Numinous"), "{err}");
         let field_on_four = "NUMINOUS_STUDIO 4\nkind=field\nexpr=z\nxmin=-2\nxmax=2\nymin=-2\nymax=2\nreading=phase\na=1\n";
@@ -4112,6 +4481,50 @@ mod tests {
         let child = pair.fork(None, Some("Remix"), None).expect("fork");
         assert_eq!(child.sliders()[0].value(), 3.0);
         assert_eq!(child.sliders()[1].value(), 2.0);
+    }
+
+    #[test]
+    fn overlay_programs_round_trip_as_version_seven() {
+        let creation = StudioCreation::new_program(
+            ["sin(x)", "cos(x)"],
+            -std::f64::consts::TAU,
+            std::f64::consts::TAU,
+            1.0,
+        )
+        .expect("program")
+        .with_title("The parts")
+        .expect("title");
+        assert_eq!(creation.kind(), StudioKind::Program);
+        assert_eq!(creation.extra_sources(), ["cos(x)"]);
+        assert_eq!(creation.editor_source(), "sin(x) & cos(x)");
+        let text = creation.to_num_file();
+        assert!(text.starts_with("NUMINOUS_STUDIO 7\n"), "{text}");
+        assert!(text.contains("kind=program\n"), "{text}");
+        assert!(text.contains("expr=sin(x)\nexpr=cos(x)\n"), "{text}");
+        assert_eq!(
+            StudioCreation::from_num_file(&text).expect("file"),
+            creation
+        );
+        let link = creation.to_link();
+        assert!(link.contains("kind=program"), "{link}");
+        assert_eq!(StudioCreation::from_link(&link).expect("link"), creation);
+        let plot = creation.plot_text(48, 16).expect("plot");
+        assert!(plot.text.contains('#'));
+        assert!(plot.text.contains('*'));
+        assert_eq!(
+            StudioProgram::from_editor("sin(x) & cos(x)")
+                .expect("editor")
+                .kind(),
+            StudioKind::Program
+        );
+        let child = creation.fork(None, Some("Remix"), None).expect("fork");
+        assert_eq!(child.kind(), StudioKind::Program);
+        assert_eq!(child.extra_sources(), ["cos(x)"]);
+        let err = StudioCreation::new_program(["sin(x)"], -1.0, 1.0, 1.0).expect_err("one");
+        assert!(err.contains("2 to"), "{err}");
+        let program_on_six = "NUMINOUS_STUDIO 6\nkind=program\nexpr=sin(x)\nexpr=cos(x)\nxmin=-1\nxmax=1\na=1\nscale=continuous\n";
+        let err = StudioCreation::from_num_file(program_on_six).expect_err("program needs v7");
+        assert!(err.contains("NUMINOUS_STUDIO 7"), "{err}");
     }
 
     #[test]

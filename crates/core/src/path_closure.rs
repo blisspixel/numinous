@@ -79,7 +79,7 @@ impl PathClosure {
     #[must_use]
     pub fn of(creation: &StudioCreation) -> Self {
         match creation.kind() {
-            StudioKind::Graph => Self::Graph,
+            StudioKind::Graph | StudioKind::Program => Self::Graph,
             StudioKind::Field => Self::Field,
             StudioKind::Parametric => analyze_parametric(creation),
         }

@@ -32,8 +32,9 @@ draw a character plate with a stored reading. Fields are seen first; they have
 no melody yet. Named sliders now ship: extra identifiers besides `a` bind a
 value and a declared range, and capsules write version 6 only when they are
 present. App Tab selects a slider, Up/Down steps it, Home restores 1 when
-that is in range. General
-multi-expression programs, pattern algebra, tracker, step grid, piano roll,
+that is in range. Overlay programs now ship: type `sin(x) & cos(x)` for two
+to four graphs on one window; capsules write version 7 only when more than
+one graph is present. The first curve sings. Pattern algebra, tracker, step grid, piano roll,
 MIDI-in, MusicXML, raw shader authoring, and community rooms are design
 targets. `ROADMAP.md` is the status authority.
 

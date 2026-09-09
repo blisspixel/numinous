@@ -14,6 +14,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   a slider, Up/Down steps it, Home restores 1 when that is in range.
   Bundled family `named-sliders`: `extra-knob` and `live-ratio`. `PLAY.md`
   and the skill name the ids.
+- Overlay programs: two to four graphs share one window, knob, sliders, and
+  scale. Type `sin(x) & cos(x)`. The first curve sings. Capsules write
+  `NUMINOUS_STUDIO 7` only when more than one graph is present. CLI, MCP, and
+  the App plot, save, reopen, and fork them. Bundled family `overlay`:
+  `the-parts` and `the-sum`. `PLAY.md` and the skill name the ids.
 
 ## [0.4.0-alpha.25] - 2026-09-09
 

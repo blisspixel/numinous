@@ -343,6 +343,84 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
         return tool_error("tmin and tmax are only valid with x_expr and y_expr.");
     }
 
+    if has_expr
+        && args
+            .get("expr")
+            .and_then(Value::as_str)
+            .is_some_and(|source| source.contains('&'))
+    {
+        let source = args.get("expr").and_then(Value::as_str).expect("expr");
+        let xmin = args
+            .get("xmin")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN);
+        let xmax = args
+            .get("xmax")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX);
+        let a = args
+            .get("a")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER);
+        let parts: Vec<String> = source
+            .split('&')
+            .map(|part| part.trim().to_string())
+            .collect();
+        let mut creation = match numinous_core::StudioCreation::new_program(parts, xmin, xmax, a) {
+            Ok(creation) => creation,
+            Err(error) => return tool_error(&error),
+        };
+        match parse_sliders(args) {
+            Ok(sliders) if sliders.is_empty() => {}
+            Ok(sliders) => match creation.with_sliders(sliders) {
+                Ok(bound) => creation = bound,
+                Err(error) => return tool_error(&error),
+            },
+            Err(error) => return tool_error(&error),
+        }
+        let result = match creation.plot_text(
+            numinous_core::DEFAULT_PLOT_WIDTH,
+            numinous_core::DEFAULT_PLOT_HEIGHT,
+        ) {
+            Ok(result) => result,
+            Err(error) => return tool_error(&error),
+        };
+        let mut structured = json!({
+            "kind": "program",
+            "expression": source,
+            "expressions": creation.graph_sources(),
+            "discovery": "manual",
+            "a": a,
+            "xmin": xmin,
+            "xmax": xmax,
+            "ymin": result.ymin,
+            "ymax": result.ymax,
+            "width": numinous_core::DEFAULT_PLOT_WIDTH,
+            "height": numinous_core::DEFAULT_PLOT_HEIGHT,
+            "valid": true,
+            "plot": result.text
+        });
+        if !creation.sliders().is_empty() {
+            structured["sliders"] = sliders_json(creation.sliders());
+        }
+        structured["next"] = save_creation_next(with_slider_args(
+            json!({
+                "expr": source,
+                "xmin": xmin,
+                "xmax": xmax,
+                "a": a,
+            }),
+            creation.sliders(),
+        ));
+        return tool_structured(
+            &format!(
+                "y = {source}    x in [{xmin:.3}, {xmax:.3}]    y in [{:.3}, {:.3}]\nDiscovery: manual\n\n{}",
+                result.ymin, result.ymax, result.text
+            ),
+            structured,
+        );
+    }
+
     let source = if has_expr {
         numinous_core::PlotSource::Manual(
             args.get("expr")
@@ -514,16 +592,33 @@ pub(super) fn save_creation_tool(args: &Value) -> Value {
             {
                 return tool_error("A graph creation does not take ymin, ymax, or reading.");
             }
-            numinous_core::StudioCreation::new(
-                source,
-                args.get("xmin")
-                    .and_then(Value::as_f64)
-                    .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN),
-                args.get("xmax")
-                    .and_then(Value::as_f64)
-                    .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX),
-                a,
-            )
+            if source.contains('&') {
+                let parts: Vec<String> = source
+                    .split('&')
+                    .map(|part| part.trim().to_string())
+                    .collect();
+                numinous_core::StudioCreation::new_program(
+                    parts,
+                    args.get("xmin")
+                        .and_then(Value::as_f64)
+                        .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN),
+                    args.get("xmax")
+                        .and_then(Value::as_f64)
+                        .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX),
+                    a,
+                )
+            } else {
+                numinous_core::StudioCreation::new(
+                    source,
+                    args.get("xmin")
+                        .and_then(Value::as_f64)
+                        .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN),
+                    args.get("xmax")
+                        .and_then(Value::as_f64)
+                        .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX),
+                    a,
+                )
+            }
         }
         (None, Some(x_source), Some(y_source)) => {
             if args.get("xmin").is_some() || args.get("xmax").is_some() {
@@ -618,7 +713,7 @@ pub(super) fn fork_creation_tool(args: &Value) -> Value {
         return tool_error("A parametric fork replaces both x_expr and y_expr, or neither.");
     }
     let child_result = match parent.kind() {
-        numinous_core::StudioKind::Graph => {
+        numinous_core::StudioKind::Graph | numinous_core::StudioKind::Program => {
             if x_expr.is_some() || y_expr.is_some() {
                 return tool_error("A graph fork accepts expr, not x_expr or y_expr.");
             }
@@ -774,7 +869,15 @@ fn studio_creation_result(
         "action": action,
         "capsuleFormatVersion": capsule_format_version,
         "kind": creation.kind().name(),
-        "expression": (creation.kind() != numinous_core::StudioKind::Parametric).then(|| creation.source()),
+        "expression": (creation.kind() != numinous_core::StudioKind::Parametric).then(|| {
+            if creation.kind() == numinous_core::StudioKind::Program {
+                creation.editor_source()
+            } else {
+                creation.source().to_string()
+            }
+        }),
+        "expressions": (creation.kind() == numinous_core::StudioKind::Program)
+            .then(|| creation.graph_sources()),
         "xExpression": (creation.kind() == numinous_core::StudioKind::Parametric).then(|| creation.source()),
         "yExpression": creation.second_source(),
         "xmin": (creation.kind() != numinous_core::StudioKind::Parametric).then(|| creation.xmin()),

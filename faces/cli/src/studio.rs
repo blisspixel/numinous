@@ -115,6 +115,14 @@ pub(super) fn plot_report_with(
     height: usize,
     sliders: &[StudioSlider],
 ) -> Result<String, String> {
+    if source.contains('&') {
+        let parts: Vec<String> = source
+            .split('&')
+            .map(|part| part.trim().to_string())
+            .collect();
+        let creation = with_sliders(StudioCreation::new_program(parts, xmin, xmax, a)?, sliders)?;
+        return creation_report(&creation, width, height);
+    }
     let mut request = PlotRequest::new(
         PlotSource::Manual(source.to_string()),
         Some(xmin),
@@ -311,7 +319,33 @@ pub(super) fn creation_report(
                 plot.text
             ))
         }
+        StudioKind::Program => {
+            let legend = overlay_legend(&creation.graph_sources());
+            Ok(format!(
+                "y = {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]{}\n{legend}\n\n{}",
+                terminal_safe(&creation.editor_source()),
+                creation.xmin(),
+                creation.xmax(),
+                plot.ymin,
+                plot.ymax,
+                slider_caption(creation.sliders()),
+                plot.text
+            ))
+        }
     }
+}
+
+fn overlay_legend(sources: &[String]) -> String {
+    sources
+        .iter()
+        .enumerate()
+        .map(|(index, source)| {
+            let mark =
+                numinous_core::PROGRAM_MARKS[index.min(numinous_core::PROGRAM_MARKS.len() - 1)];
+            format!("{mark} = {}", terminal_safe(source))
+        })
+        .collect::<Vec<_>>()
+        .join("    ")
 }
 
 pub(super) fn plot_request_error(error: StudioRequestError) -> String {
@@ -393,8 +427,21 @@ pub(super) fn save_studio_creation_with_sliders(
     path: &Path,
 ) -> Result<String, String> {
     let creation = with_sliders(
-        StudioCreation::new(source, parameters.minimum, parameters.maximum, parameters.a)?
-            .with_scale(parameters.scale),
+        if source.contains('&') {
+            let parts: Vec<String> = source
+                .split('&')
+                .map(|part| part.trim().to_string())
+                .collect();
+            StudioCreation::new_program(
+                parts,
+                parameters.minimum,
+                parameters.maximum,
+                parameters.a,
+            )?
+        } else {
+            StudioCreation::new(source, parameters.minimum, parameters.maximum, parameters.a)?
+        }
+        .with_scale(parameters.scale),
         sliders,
     )?;
     save_creation(creation, identity, path)
@@ -516,7 +563,7 @@ pub(super) fn fork_studio_creation_extended(
 ) -> Result<String, String> {
     let parent = load_studio_creation(parent_input)?;
     let mut fork = match parent.kind() {
-        StudioKind::Graph => {
+        StudioKind::Graph | StudioKind::Program => {
             if edits.x_expr.is_some() || edits.y_expr.is_some() {
                 return Err("a graph fork accepts --expr, not --x-expr or --y-expr\n".to_string());
             }
@@ -634,6 +681,14 @@ pub(super) fn open_studio_report(
         }
         StudioKind::Graph => {
             lines.push(format!("expr={}", terminal_safe(creation.source())));
+            lines.push(format!("xmin={}", creation.xmin()));
+            lines.push(format!("xmax={}", creation.xmax()));
+            lines.push(format!("scale={}", creation.scale().name()));
+        }
+        StudioKind::Program => {
+            for source in creation.graph_sources() {
+                lines.push(format!("expr={}", terminal_safe(&source)));
+            }
             lines.push(format!("xmin={}", creation.xmin()));
             lines.push(format!("xmax={}", creation.xmax()));
             lines.push(format!("scale={}", creation.scale().name()));

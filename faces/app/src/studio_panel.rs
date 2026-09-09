@@ -73,6 +73,7 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "FORMULA JAM",
     "TYPE: BUILD A CURVE  (Y = ...)",
     "PAIR: X(T)=...; Y(T)=...  FIT, EQUAL UNITS",
+    "OVERLAY: SIN(X) & COS(X)  SHARED WINDOW",
     "FIELD: Z, Y, I, RE IM ARG CONJ  SEEN FIRST",
     "ONE: SIN COS TAN EXP LN ABS SQRT FLOOR",
     "TWO: MOD(V,V) MIN(V,V) MAX(V,V)",
@@ -685,6 +686,10 @@ impl StudioPanel {
             }
             StudioKind::Graph => StudioCreation::new(program.sources().0, xmin, xmax, a)
                 .map(|creation| creation.with_scale(self.scale)),
+            StudioKind::Program => {
+                StudioCreation::new_program(program.editor_source().split(" & "), xmin, xmax, a)
+                    .map(|creation| creation.with_scale(self.scale))
+            }
         }
         .and_then(|creation| {
             let names: Vec<String> = creation
@@ -853,6 +858,27 @@ impl StudioPanel {
                         ymax,
                         a,
                         &self.sliders,
+                    );
+                }
+                StudioKind::Program => {
+                    let sliders = self.sliders.clone();
+                    let mut curves: Vec<_> = program
+                        .overlay_expressions()
+                        .iter()
+                        .map(|expr| {
+                            let sliders = sliders.clone();
+                            move |x: f64| {
+                                let value = numinous_core::eval_named(expr, x, a, &sliders);
+                                value.is_finite().then_some(value)
+                            }
+                        })
+                        .collect();
+                    let _ = numinous_app::studio_render::draw_overlay(
+                        &mut raster,
+                        layout,
+                        xmin,
+                        xmax,
+                        &mut curves,
                     );
                 }
             }
@@ -1097,6 +1123,27 @@ impl StudioPanel {
                         ymax,
                         a,
                         &self.sliders,
+                    );
+                }
+                StudioKind::Program => {
+                    let sliders = self.sliders.clone();
+                    let mut curves: Vec<_> = program
+                        .overlay_expressions()
+                        .iter()
+                        .map(|expr| {
+                            let sliders = sliders.clone();
+                            move |x: f64| {
+                                let value = numinous_core::eval_named(expr, x, a, &sliders);
+                                value.is_finite().then_some(value)
+                            }
+                        })
+                        .collect();
+                    let _ = numinous_app::studio_render::draw_overlay(
+                        raster,
+                        layout,
+                        xmin,
+                        xmax,
+                        &mut curves,
                     );
                 }
             }
@@ -1635,6 +1682,23 @@ mod tests {
         );
         let ratio = walk.adjacent_experiment(1).expect("ratio");
         assert_eq!(ratio.id, "live-ratio");
+    }
+
+    #[test]
+    fn overlay_programs_draw_and_share_as_version_seven() {
+        let mut panel = StudioPanel::new("sin(x) & cos(x)").expect("panel");
+        let creation = panel.current_creation().expect("creation");
+        assert_eq!(creation.kind(), numinous_core::StudioKind::Program);
+        assert!(creation.to_num_file().starts_with("NUMINOUS_STUDIO 7\n"));
+        assert_eq!(creation.editor_source(), "sin(x) & cos(x)");
+        let parts = numinous_core::studio_experiment("the-parts").expect("parts");
+        panel.open_creation(&parts);
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("The parts")
+        );
+        let sum = panel.adjacent_experiment(1).expect("sum");
+        assert_eq!(sum.id, "the-sum");
     }
 
     #[test]

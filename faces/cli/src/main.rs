@@ -587,7 +587,8 @@ enum Command {
         /// Path to a .num file, a numinous://studio?... link, or a bundled
         /// experiment id (full-return, almost-home, same-place,
         /// another-ratio, circle-to-ellipse, uniform-circle, simple-zero,
-        /// a-pole, the-circle, the-bowl, extra-knob, live-ratio).
+        /// a-pole, the-circle, the-bowl, extra-knob, live-ratio, the-parts,
+        /// the-sum).
         input: String,
         /// Plot width in columns.
         #[arg(long, default_value_t = 72)]
