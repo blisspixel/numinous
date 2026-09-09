@@ -29,8 +29,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   oscillators of Returning home as graphs over the same window.
   `closing-voices` is the 1 and 17/12 pair; `wandering-voices` replaces
   17/12 with `sqrt(2)`. The path capsules stay `full-return` and
-  `almost-home`. The first curve still sings. `PLAY.md` and the skill
-  name the ids.
+  `almost-home`. The first curve still sings. App PageDown after
+  Another ratio opens Closing voices; PageUp returns. `PLAY.md` and the
+  skill name the ids.
 
 ## [0.4.0-alpha.25] - 2026-09-09
 

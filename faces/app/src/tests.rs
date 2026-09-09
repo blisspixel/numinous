@@ -3628,17 +3628,35 @@ fn lissajous_construction_opens_returning_home_and_walks_the_family() {
     );
     assert!(app.walk_studio_experiment(1));
     assert_eq!(
+        app.studio_panel.current_creation().expect("voices").title(),
+        Some("Closing voices")
+    );
+    assert!(app.walk_studio_experiment(1));
+    assert_eq!(
+        app.studio_panel
+            .current_creation()
+            .expect("wandering")
+            .title(),
+        Some("Wandering voices")
+    );
+    assert!(app.walk_studio_experiment(1));
+    assert_eq!(
         app.studio_panel
             .current_creation()
             .expect("no wrap")
             .title(),
-        Some("Another ratio"),
-        "the walk does not wrap past the transfer"
+        Some("Wandering voices"),
+        "the walk does not wrap past Wandering voices"
     );
     assert!(app.walk_studio_experiment(-1));
     assert_eq!(
         app.studio_panel.current_creation().expect("back").title(),
-        Some("Same place, another direction")
+        Some("Closing voices")
+    );
+    assert!(app.walk_studio_experiment(-1));
+    assert_eq!(
+        app.studio_panel.current_creation().expect("home").title(),
+        Some("Another ratio")
     );
 
     app.exit_studio();
