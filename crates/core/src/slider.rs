@@ -230,6 +230,7 @@ pub fn is_reserved_name(name: &str) -> bool {
             | "mod"
             | "min"
             | "max"
+            | "euclid"
     )
 }
 
@@ -408,6 +409,7 @@ mod tests {
         assert!(!is_slider_name("a"));
         assert!(!is_slider_name("x"));
         assert!(!is_slider_name("sin"));
+        assert!(!is_slider_name("euclid"));
         assert!(!is_slider_name("B"));
         assert!(!is_slider_name(""));
     }

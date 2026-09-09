@@ -275,8 +275,9 @@ a proved zero curve. Fields are seen first; they have no melody yet. Choose `con
 `chromatic`, `major`, `minor`, or `pentatonic` with the `scale` field on a graph or pair. The
 bounded expression
 language includes `floor(value)`, Euclidean `mod(value, divisor)`,
-`min(left, right)`, and `max(left, right)`. Try
-`min(max(mod(floor(3*x), 5), 1), 3)`, then change one number.
+`min(left, right)`, `max(left, right)`, and `euclid(hits, steps)`. Try
+`min(max(mod(floor(3*x), 5), 1), 3)`, then change one number. `euclid(3,8)`
+places three onsets as evenly as possible among eight steps.
 
 A successful plot or song also carries `structuredContent.next`: a ready
 `save_creation` call with the expression and window already bound. Follow it
@@ -290,11 +291,13 @@ open it. Pass `family: "returning-home"` for `full-return`, `almost-home`,
 `circle-to-ellipse` and `uniform-circle`, `family: "three-readings"` for
 `simple-zero`, `a-pole`, `the-circle`, and `the-bowl`, or `family: "named-sliders"`
 for `extra-knob` and `live-ratio`, or `family: "overlay"` for `the-parts`
-and `the-sum`. A formula may name extra knobs besides `a`;
+and `the-sum`, or `family: "euclidean"` for `tresillo` and
+`three-against-five`. A formula may name extra knobs besides `a`;
 each is a slider with a value and a declared range, and capsules write
 `NUMINOUS_STUDIO 6` only when those extra sliders exist. Type `sin(x) & cos(x)`
 to overlay graphs; capsules write `NUMINOUS_STUDIO 7` only when more than one
-graph is present. `open_creation` accepts those ids directly. They are Studio
+graph is present. Type `euclid(3,8)` for a Euclidean rhythm. `open_creation`
+accepts those ids directly. They are Studio
 doors after a touch of math, not a lobby in front of the rooms. Lissajous
 names Returning home when you describe it or study it. Opening a
 two-oscillator path reports `closure`: an independently checked period, or

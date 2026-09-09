@@ -1,0 +1,9 @@
+NUMINOUS_STUDIO 7
+kind=program
+expr=euclid(3,8)
+expr=euclid(5,8)
+xmin=0
+xmax=8
+a=1
+scale=continuous
+title=Three against five

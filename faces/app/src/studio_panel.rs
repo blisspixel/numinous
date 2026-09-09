@@ -76,7 +76,7 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "OVERLAY: SIN(X) & COS(X)  SHARED WINDOW",
     "FIELD: Z, Y, I, RE IM ARG CONJ  SEEN FIRST",
     "ONE: SIN COS TAN EXP LN ABS SQRT FLOOR",
-    "TWO: MOD(V,V) MIN(V,V) MAX(V,V)",
+    "TWO: MOD(V,V) MIN(V,V) MAX(V,V) EUCLID(K,N)",
     "F2: RANDOM RECIPE FROM THE BANK",
     "F3: AUTO SET  (~21S)",
     "F4: NAME + SHARE  .NUM + LINK + PNG + MIDI",
@@ -1296,7 +1296,7 @@ mod tests {
     #[test]
     fn help_names_the_complete_scalar_vocabulary() {
         let help = STUDIO_HELP_LINES.join("\n");
-        for name in ["FLOOR", "MOD(V,V)", "MIN(V,V)", "MAX(V,V)"] {
+        for name in ["FLOOR", "MOD(V,V)", "MIN(V,V)", "MAX(V,V)", "EUCLID(K,N)"] {
             assert!(help.contains(name), "help must name {name}");
         }
         assert!(
@@ -1699,6 +1699,22 @@ mod tests {
         );
         let sum = panel.adjacent_experiment(1).expect("sum");
         assert_eq!(sum.id, "the-sum");
+    }
+
+    #[test]
+    fn euclidean_rhythms_draw_and_walk_family() {
+        let mut panel = StudioPanel::new("euclid(3,8)").expect("panel");
+        let creation = panel.current_creation().expect("creation");
+        assert_eq!(creation.source(), "euclid(3,8)");
+        let three = numinous_core::studio_experiment("tresillo").expect("tresillo");
+        panel.open_creation(&three);
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("Tresillo")
+        );
+        let five = panel.adjacent_experiment(1).expect("five");
+        assert_eq!(five.id, "three-against-five");
+        assert_eq!(five.creation().kind(), numinous_core::StudioKind::Program);
     }
 
     #[test]

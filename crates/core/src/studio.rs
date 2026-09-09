@@ -21,6 +21,10 @@ pub const MAX_PROGRAM_EXPRS: usize = 4;
 /// Marks drawn for overlay graphs, in source order.
 pub const PROGRAM_MARKS: [char; MAX_PROGRAM_EXPRS] = ['#', '*', '+', 'o'];
 
+/// Largest step count `euclid(hits, steps)` will realize. A larger request
+/// is undefined rather than silently truncated.
+pub const MAX_EUCLID_STEPS: usize = 64;
+
 /// Maximum editable text for one scalar formula, one labeled parametric pair,
 /// or one overlay program. Each expression keeps the per-source cap above;
 /// this larger bound accounts for extra expressions and their separators.
@@ -45,6 +49,7 @@ pub const STUDIO_RECIPES: &[&str] = &[
     "mod(x + pi, 2*pi) - pi",
     "min(max(x, -2), 2)",
     "max(abs(x) - a, 0)",
+    "euclid(3,8)",
 ];
 
 /// How many curated recipes the bank holds.
@@ -199,6 +204,20 @@ pub const STUDIO_EXPERIMENTS: &[StudioExperiment] = &[
         title: "The sum",
         invitation: "The third curve is their sum. Where does it sit when they cancel?",
         num_file: include_str!("../../../docs/experiments/the-sum.num"),
+    },
+    StudioExperiment {
+        id: "tresillo",
+        family: "euclidean",
+        title: "Tresillo",
+        invitation: "Three hits among eight steps. Are they equally spaced, or only as even as eight allows?",
+        num_file: include_str!("../../../docs/experiments/tresillo.num"),
+    },
+    StudioExperiment {
+        id: "three-against-five",
+        family: "euclidean",
+        title: "Three against five",
+        invitation: "Two patterns share eight steps. Where do three hits and five hits land together?",
+        num_file: include_str!("../../../docs/experiments/three-against-five.num"),
     },
 ];
 
@@ -2550,6 +2569,28 @@ pub enum PairFunc {
     Min,
     /// The greater of two defined values.
     Max,
+    /// Euclidean rhythm: `hits` onsets spread as evenly as possible over `steps`.
+    Euclid,
+}
+
+/// One sample of `euclid(hits, steps)` at `x`.
+///
+/// The step index is `floor(x)` wrapped into `n = floor(steps)` positions.
+/// An onset sits at index `i` when `(i * k) rem n < k`, with `k` the floored
+/// hit count clamped into `[0, n]`. That residue test puts an onset at 0 and
+/// spreads the rest as evenly as an integer placement allows. Nonfinite
+/// input, `n < 1`, or `n` above [`MAX_EUCLID_STEPS`] is undefined.
+pub(crate) fn euclid_pulse(x: f64, hits: f64, steps: f64) -> f64 {
+    if !x.is_finite() || !hits.is_finite() || !steps.is_finite() {
+        return f64::NAN;
+    }
+    let n = steps.floor();
+    if n < 1.0 || n > MAX_EUCLID_STEPS as f64 {
+        return f64::NAN;
+    }
+    let k = hits.floor().clamp(0.0, n);
+    let i = x.floor().rem_euclid(n);
+    if (i * k).rem_euclid(n) < k { 1.0 } else { 0.0 }
 }
 
 /// Evaluate a parsed expression at variable `x` and parameter `a`.
@@ -2623,6 +2664,7 @@ pub fn eval_named(expr: &Expr, x: f64, a: f64, sliders: &[crate::slider::StudioS
                 PairFunc::Mod => lhs.rem_euclid(rhs),
                 PairFunc::Min => lhs.min(rhs),
                 PairFunc::Max => lhs.max(rhs),
+                PairFunc::Euclid => euclid_pulse(x, lhs, rhs),
             }
         }
     }
@@ -2632,7 +2674,7 @@ pub fn eval_named(expr: &Expr, x: f64, a: f64, sliders: &[crate::slider::StudioS
 ///
 /// The parameter stays real: it is one dial, and a dial that could leave the
 /// line would need two. Functions with no meaning off the line, `floor`,
-/// `mod`, `min`, and `max`, refuse a value with an imaginary part rather than
+/// `mod`, `min`, `max`, and `euclid`, refuse a value with an imaginary part rather than
 /// invent an ordering for the plane, and a refusal reaches the renderer as an
 /// undefined sample. `ln`, `sqrt`, and a fractional power take their principal
 /// branch, so a field built on one really does carry the seam that branch has.
@@ -2700,6 +2742,7 @@ pub fn eval_field_named(
                 PairFunc::Mod => lhs.re.rem_euclid(rhs.re),
                 PairFunc::Min => lhs.re.min(rhs.re),
                 PairFunc::Max => lhs.re.max(rhs.re),
+                PairFunc::Euclid => euclid_pulse(z.re, lhs.re, rhs.re),
             })
         }
     }
@@ -3423,6 +3466,7 @@ impl Parser {
                 "mod" => Some(PairFunc::Mod),
                 "min" => Some(PairFunc::Min),
                 "max" => Some(PairFunc::Max),
+                "euclid" => Some(PairFunc::Euclid),
                 _ => None,
             };
             if unary.is_none() && pair.is_none() {
@@ -3561,7 +3605,13 @@ mod tests {
     #[test]
     fn the_functions_the_line_owns_refuse_a_point_off_it() {
         let off_axis = Complex::new(1.5, 0.5);
-        for source in ["floor(z)", "mod(z, 2)", "min(z, 1)", "max(z, 1)"] {
+        for source in [
+            "floor(z)",
+            "mod(z, 2)",
+            "min(z, 1)",
+            "max(z, 1)",
+            "euclid(z, 8)",
+        ] {
             let expr = parse_field(source).expect("parses");
             assert!(
                 eval_field(&expr, off_axis, 0.0).is_nan(),
@@ -3622,7 +3672,7 @@ mod tests {
 
     #[test]
     fn bundled_studio_experiments_parse_keep_lineage_and_open_by_id() {
-        assert_eq!(STUDIO_EXPERIMENTS.len(), 14);
+        assert_eq!(STUDIO_EXPERIMENTS.len(), 16);
         let full = studio_experiment("full-return").expect("full-return");
         assert_eq!(full.title(), Some("A full return"));
         assert_eq!(full.kind(), StudioKind::Parametric);
@@ -3701,6 +3751,19 @@ mod tests {
         assert_eq!(knobs.len(), 2);
         let overlay = studio_experiments_in(Some("overlay")).expect("overlay family");
         assert_eq!(overlay.len(), 2);
+        let euclidean = studio_experiments_in(Some("euclidean")).expect("euclidean family");
+        assert_eq!(euclidean.len(), 2);
+        let tresillo = studio_experiment("tresillo").expect("tresillo");
+        assert_eq!(tresillo.source(), "euclid(3,8)");
+        assert_eq!(tresillo.xmin(), 0.0);
+        assert_eq!(tresillo.xmax(), 8.0);
+        assert_eq!(tresillo.title(), Some("Tresillo"));
+        let against = studio_experiment("three-against-five").expect("three-against-five");
+        assert_eq!(against.kind(), StudioKind::Program);
+        assert_eq!(against.editor_source(), "euclid(3,8) & euclid(5,8)");
+        let child = against.fork(None, Some("Remix"), None).expect("fork");
+        assert_eq!(child.kind(), StudioKind::Program);
+        assert_eq!(child.editor_source(), "euclid(3,8) & euclid(5,8)");
         let parts = studio_experiment("the-parts").expect("the-parts");
         assert_eq!(parts.kind(), StudioKind::Program);
         assert_eq!(parts.editor_source(), "sin(x) & cos(x)");
@@ -3910,10 +3973,49 @@ mod tests {
     }
 
     #[test]
+    fn euclidean_rhythms_place_onsets_evenly() {
+        // Residue test (i * k) rem n < k, which is the Cuban tresillo on 8.
+        let tresillo = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0];
+        for (step, expected) in tresillo.iter().enumerate() {
+            assert!(
+                (at("euclid(3, 8)", step as f64) - expected).abs() < 1e-12,
+                "step {step}"
+            );
+            assert!(
+                (at("euclid(3, 8)", step as f64 + 0.75) - expected).abs() < 1e-12,
+                "interior of step {step}"
+            );
+        }
+        let five = [1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0];
+        for (step, expected) in five.iter().enumerate() {
+            assert!(
+                (at("euclid(5, 8)", step as f64) - expected).abs() < 1e-12,
+                "five step {step}"
+            );
+        }
+        assert!((at("euclid(3, 8)", 8.0) - 1.0).abs() < 1e-12);
+        assert!((at("euclid(3, 8)", -1.0) - 0.0).abs() < 1e-12);
+        assert!((at("euclid(0, 8)", 3.0) - 0.0).abs() < 1e-12);
+        assert!((at("euclid(8, 8)", 3.0) - 1.0).abs() < 1e-12);
+        assert!((at("euclid(10, 8)", 1.0) - 1.0).abs() < 1e-12);
+        assert!(at("euclid(3, 0)", 1.0).is_nan());
+        assert!(at("euclid(3, 65)", 1.0).is_nan());
+        assert!(at("euclid(3, -8)", 1.0).is_nan());
+        let k = parse("euclid(k, 8)").expect("slider hits");
+        let slider = crate::slider::StudioSlider::new("k", 3.0, 0.0, 8.0).expect("k");
+        let bound = [slider];
+        assert!((eval_named(&k, 0.0, 1.0, &bound) - 1.0).abs() < 1e-12);
+        assert!((eval_named(&k, 1.0, 1.0, &bound) - 0.0).abs() < 1e-12);
+        let plot = super::plot_text("euclid(3,8)", 0.0, 8.0, 1.0, 48, 8).expect("plot");
+        assert!(plot.0.contains('#'), "{}", plot.0);
+    }
+
+    #[test]
     fn pair_functions_do_not_hide_undefined_arguments() {
         assert!(at("mod(1, 0)", 0.0).is_nan());
         assert!(at("min(sqrt(-1), 2)", 0.0).is_nan());
         assert!(at("max(2, sqrt(-1))", 0.0).is_nan());
+        assert!(at("euclid(sqrt(-1), 8)", 0.0).is_nan());
     }
 
     #[test]
