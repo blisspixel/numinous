@@ -3787,6 +3787,40 @@ fn overlay_programs_plot_save_and_open() {
 }
 
 #[test]
+fn euclidean_rhythms_plot_save_and_open() {
+    let path = std::env::temp_dir().join("numinous_cli_euclid_save_test.num");
+    let _ = std::fs::remove_file(&path);
+    let plot = super::plot_report_with("euclid(3,8)", 0.0, 8.0, 1.0, 32, 10, &[]).expect("plot");
+    assert!(plot.contains('#'), "{plot}");
+    let message = super::save_studio_creation_with_sliders(
+        "euclid(3,8)",
+        super::StudioParameters {
+            minimum: 0.0,
+            maximum: 8.0,
+            a: 1.0,
+            scale: numinous_core::StudioScale::Continuous,
+        },
+        super::CreationIdentity {
+            title: Some("Tresillo"),
+            author: None,
+            credit: None,
+        },
+        &[],
+        &path,
+    )
+    .expect("save");
+    assert!(message.contains("numinous://studio?"));
+    let text = std::fs::read_to_string(&path).expect("saved");
+    assert!(text.contains("expr=euclid(3,8)"), "{text}");
+    let opened = super::open_studio_report("tresillo", 32, 10).expect("bundled");
+    assert!(opened.contains("title=Tresillo"), "{opened}");
+    let layered = super::open_studio_report("three-against-five", 32, 10).expect("layered");
+    assert!(layered.contains("title=Three against five"), "{layered}");
+    assert!(layered.contains("kind=program"), "{layered}");
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
 fn a_titled_save_round_trips_and_the_report_names_it() {
     let path = std::env::temp_dir().join("numinous_cli_titled_save_test.num");
     let _ = std::fs::remove_file(&path);

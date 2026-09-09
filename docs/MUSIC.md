@@ -94,13 +94,16 @@ leaving the artistic decision to reference listening on representative devices.
 ### A1. Room sonification (the instrument layer)
 Every room turns its own math into tuned, musical sound (detailed per-room in
 `ROOMS.md`). The first three rules describe the shipped motif and sonification
-model. Euclidean rhythm generation is a target for the larger pattern engine.
+model. Euclidean rhythms ship as a Studio function; the larger pattern engine
+is still a target.
 
 - **Quantize to scales / just intonation.** Map continuous math to notes in a chosen scale so exploration always sounds like music. Integer frequency ratios (which is what consonance *is*) come straight out of the math: a 2:3 Lissajous figure *is* a perfect fifth. The ear learns the math.
 - **Consonance carries truth.** When numbers align (closed curves, resonance, integer ratios) it resolves; when they do not, it gently tenses.
 - **Number sequences become melody and rhythm.** Primes, Fibonacci, Collatz orbits, digits of pi, all play themselves. A prime spiral has a prime beat.
-- **Euclidean rhythms, planned.** The Bjorklund algorithm spreads k beats as
-  evenly as possible over n steps. It belongs in the future pattern engine.
+- **Euclidean rhythms, built as a Studio function.** `euclid(hits, steps)`
+  spreads k onsets as evenly as possible over n steps. The graph is 1 on a
+  hit and 0 on a rest. Overlay layers two of them. Pattern Studio's tracker
+  and event graph remain later work.
 
 ### A2. Target: bit-depth voices synchronized to the Visual Eras
 The current chiptune engine supplies one square, triangle, and noise palette.

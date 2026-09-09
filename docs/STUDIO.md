@@ -34,9 +34,11 @@ value and a declared range, and capsules write version 6 only when they are
 present. App Tab selects a slider, Up/Down steps it, Home restores 1 when
 that is in range. Overlay programs now ship: type `sin(x) & cos(x)` for two
 to four graphs on one window; capsules write version 7 only when more than
-one graph is present. The first curve sings. Pattern algebra, tracker, step grid, piano roll,
-MIDI-in, MusicXML, raw shader authoring, and community rooms are design
-targets. `ROADMAP.md` is the status authority.
+one graph is present. The first curve sings. Euclidean rhythms ship as
+`euclid(hits, steps)`: 1 on a hit, 0 on a rest, at most 64 steps. Overlay
+layers them. Tracker, step grid, piano roll, MIDI-in, MusicXML, raw shader
+authoring, and community rooms are design targets. `ROADMAP.md` is the status
+authority.
 
 CLI and MCP plot and melody calls resolve through core `PlotRequest` and
 `SingRequest` types. Those types own curated discovery, expression parsing,
@@ -76,11 +78,15 @@ The current expression language is deliberately small and total:
   and conventional unary minus.
 - One-argument functions: `sin`, `cos`, `tan`, `exp`, `ln` (also `log`), `abs`,
   `sqrt`, and `floor`. A field adds `re`, `im`, `arg`, and `conj`.
-- Two-argument functions: `mod(left, divisor)`, `min(left, right)`, and
-  `max(left, right)`.
+- Two-argument functions: `mod(left, divisor)`, `min(left, right)`,
+  `max(left, right)`, and `euclid(hits, steps)`.
 
 `mod` uses Euclidean remainder, so a finite result is nonnegative even when
-`x` is negative. `min` and `max` do not hide an undefined argument. A comma is
+`x` is negative. `min` and `max` do not hide an undefined argument.
+`euclid(hits, steps)` places `floor(hits)` onsets, clamped to the step
+count, as evenly as possible among `floor(steps)` steps. The sample at `x`
+is 1 when step `floor(x) rem n` is an onset and 0 when it is a rest. A
+request with fewer than one step, or more than 64, is undefined. A comma is
 part of the grammar only where a two-argument function expects it, and wrong
 arity errors name the missing separator or closing parenthesis with a one-based
 source column. The curated bank includes stepped, wrapped, clamped, and
@@ -145,7 +151,7 @@ The Studio is a ramp, not a cliff. Same tool, radically different ceilings.
 
 - **Level 0, the graphing calculator.** `y = sin(x)`. It draws, glowing, and it sings the curve. A curious newcomer is delighted in ten seconds. This is the whole onboarding.
 - **Level 1, draw a path.** `x(t)=cos(3*t); y(t)=sin(2*t)` draws and sings a Lissajous figure. The exact parametric pair, pitch map, and named sliders are built. Draggable numbers, polar, and 3D representations remain planned.
-- **Level 2, mathematical patterns.** `note("c e g")`, `euclid(3, 8)`, layered and transformed live (`rev`, `fast`, `slow`, `every`, `degrade`). The pattern drives sound *and* geometry together. Now it is an instrument and a generative visual at once, algorithmic techno you can see (see `MUSIC.md`).
+- **Level 2, mathematical patterns.** `euclid(3,8)` is built: a graph of onsets, overlayable, and sung as the first curve. `note("c e g")` and live transforms (`rev`, `fast`, `slow`, `every`, `degrade`) remain planned. The pattern should drive sound and geometry together. Now it is an instrument and a generative visual at once, algorithmic techno you can see (see `MUSIC.md`).
 - **Level 3, fields and shaders.** Write an expression over the whole plane for domain coloring and SDFs, or drop into raw **WGSL** for full control (see `VISUALS.md`). Now it is a shader toy with a soundtrack.
 
 A player can stop at any level and have made something real and beautiful.

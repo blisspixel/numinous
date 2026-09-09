@@ -250,7 +250,10 @@ fn packaged_player_docs_name_creation_next() {
                 && flattened.contains("live-ratio")
                 && flattened.contains("overlay")
                 && flattened.contains("the-parts")
-                && flattened.contains("the-sum"),
+                && flattened.contains("the-sum")
+                && flattened.contains("euclidean")
+                && flattened.contains("tresillo")
+                && flattened.contains("three-against-five"),
             "{name} must name the bundled Studio experiments a packaged player can open"
         );
         assert!(
@@ -2620,6 +2623,72 @@ fn overlay_programs_plot_save_and_open_follow_next() {
         opened["result"]["structuredContent"]["capsuleFormatVersion"],
         7
     );
+}
+
+#[test]
+fn euclidean_rhythms_plot_save_and_open_follow_next() {
+    let plotted = call(
+        "plot_expression",
+        json!({"expr": "euclid(3,8)", "xmin": 0.0, "xmax": 8.0}),
+    );
+    assert_eq!(plotted["result"]["isError"], false, "{plotted}");
+    let next = &plotted["result"]["structuredContent"]["next"];
+    assert_eq!(next["tool"], "save_creation");
+    assert_eq!(next["arguments"]["expr"], "euclid(3,8)");
+    let saved = call("save_creation", next["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let layered_plot = call(
+        "plot_expression",
+        json!({"expr": "euclid(3,8) & euclid(5,8)", "xmin": 0.0, "xmax": 8.0}),
+    );
+    assert_eq!(layered_plot["result"]["isError"], false, "{layered_plot}");
+    let overlay_next = &layered_plot["result"]["structuredContent"]["next"];
+    assert_eq!(overlay_next["tool"], "save_creation");
+    assert_eq!(
+        overlay_next["arguments"]["expr"],
+        "euclid(3,8) & euclid(5,8)"
+    );
+    let overlay_saved = call("save_creation", overlay_next["arguments"].clone());
+    assert_eq!(overlay_saved["result"]["isError"], false, "{overlay_saved}");
+    assert_eq!(
+        overlay_saved["result"]["structuredContent"]["kind"],
+        "program"
+    );
+    assert_eq!(
+        overlay_saved["result"]["structuredContent"]["capsuleFormatVersion"],
+        7
+    );
+    let listed = call(
+        "plot_expression",
+        json!({"list_experiments": true, "family": "euclidean"}),
+    );
+    let listed = &listed["result"]["structuredContent"];
+    assert_eq!(listed["family"], "euclidean");
+    assert_eq!(listed["experimentCount"], 2);
+    let opened = call(
+        "open_creation",
+        listed["experiments"][0]["next"]["arguments"].clone(),
+    );
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert_eq!(opened["result"]["structuredContent"]["title"], "Tresillo");
+    let forked = call(
+        "fork_creation",
+        opened["result"]["structuredContent"]["next"]["arguments"].clone(),
+    );
+    assert_eq!(forked["result"]["isError"], false, "{forked}");
+    assert_eq!(
+        forked["result"]["structuredContent"]["expression"],
+        "euclid(3,8)"
+    );
+    let layered = call("open_creation", json!({"capsule": "three-against-five"}));
+    assert_eq!(layered["result"]["isError"], false, "{layered}");
+    assert_eq!(layered["result"]["structuredContent"]["kind"], "program");
+    let remix = call(
+        "fork_creation",
+        layered["result"]["structuredContent"]["next"]["arguments"].clone(),
+    );
+    assert_eq!(remix["result"]["isError"], false, "{remix}");
+    assert_eq!(remix["result"]["structuredContent"]["kind"], "program");
 }
 
 #[test]
