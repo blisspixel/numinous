@@ -52,6 +52,7 @@ pub mod challenge;
 pub mod chiptune;
 pub mod citations;
 pub mod codebreaker;
+pub mod complex;
 pub mod concepts;
 pub mod dichromacy;
 pub mod encounter;
