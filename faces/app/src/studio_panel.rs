@@ -1,8 +1,8 @@
 //! App-local Studio input, parsing, audio, and drawing helpers.
 
 use numinous_core::{
-    Expr, MAX_STUDIO_EDITOR_CHARS, PathClosure, Raster, SoundSpec, StudioCreation, StudioKind,
-    StudioProgram, StudioScale, Surface,
+    Expr, FieldReading, MAX_STUDIO_EDITOR_CHARS, PathClosure, Raster, SoundSpec, StudioCreation,
+    StudioKind, StudioProgram, StudioScale, Surface,
 };
 
 use crate::input_legend::{self, InputMode};
@@ -73,6 +73,7 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "FORMULA JAM",
     "TYPE: BUILD A CURVE  (Y = ...)",
     "PAIR: X(T)=...; Y(T)=...  FIT, EQUAL UNITS",
+    "FIELD: Z, Y, I, RE IM ARG CONJ  SEEN FIRST",
     "ONE: SIN COS TAN EXP LN ABS SQRT FLOOR",
     "TWO: MOD(V,V) MIN(V,V) MAX(V,V)",
     "F2: RANDOM RECIPE FROM THE BANK",
@@ -138,6 +139,10 @@ pub struct StudioPanel {
     program: Option<StudioProgram>,
     error: Option<String>,
     scale: StudioScale,
+    /// Which truth a field plate asserts. Unused for graphs and pairs.
+    reading: FieldReading,
+    /// Once a field, stay on the field grammar until a pair form or a recipe.
+    field_locked: bool,
     /// Explicit parameter shared by the picture, melody, and portable creation.
     parameter: f64,
     /// Recipe index for Random (advances each draw).
@@ -178,6 +183,8 @@ impl StudioPanel {
             program: None,
             error: None,
             scale: StudioScale::Continuous,
+            reading: FieldReading::default(),
+            field_locked: false,
             parameter: numinous_core::DEFAULT_STUDIO_PARAMETER,
             // Start at 1 so the first Random draw is not the default recipe.
             recipe_cursor: 1,
@@ -207,6 +214,8 @@ impl StudioPanel {
         self.fork_of = None;
         self.source = creation.editor_source();
         self.scale = creation.scale();
+        self.reading = creation.reading().unwrap_or_default();
+        self.field_locked = creation.kind() == StudioKind::Field;
         // A validated creation always parses. If this seatbelt branch fires,
         // clear the old program so it cannot draw under the new window.
         match creation.program() {
@@ -315,11 +324,22 @@ impl StudioPanel {
         self.show_help = !self.show_help;
     }
 
-    /// Cycle the portable musical scale and return the new voice.
+    /// Cycle the portable musical scale, or a field's reading, and return the
+    /// new voice. Fields are seen first: cycling a reading remixes the plate
+    /// and returns silence.
     pub fn cycle_scale(&mut self) -> Option<SoundSpec> {
         self.pause_auto();
         self.morph = None;
         self.begin_remix();
+        if self
+            .program
+            .as_ref()
+            .is_some_and(|program| program.kind() == StudioKind::Field)
+            || self.field_locked
+        {
+            self.reading = self.reading.next();
+            return self.current_sound();
+        }
         self.scale = self.scale.next();
         self.current_sound()
     }
@@ -388,6 +408,8 @@ impl StudioPanel {
         // and a still-pinned reopen drops without becoming a parent.
         self.opened = None;
         self.fork_of = None;
+        self.field_locked = false;
+        self.reading = FieldReading::default();
         self.parameter = numinous_core::DEFAULT_STUDIO_PARAMETER;
         self.source = STUDIO_RECIPES[index].to_string();
         self.auto_elapsed = 0.0;
@@ -450,8 +472,17 @@ impl StudioPanel {
     /// Re-parse the Studio text, keeping the last good curve alive on errors.
     fn reparse(&mut self) -> Option<SoundSpec> {
         self.morph = None;
-        match StudioProgram::from_editor(&self.source) {
+        let parsed = if self.field_locked && !self.source.contains(';') {
+            StudioProgram::field(&self.source)
+        } else {
+            StudioProgram::from_editor(&self.source)
+        };
+        match parsed {
             Ok(program) => {
+                self.field_locked = program.kind() == StudioKind::Field;
+                if !self.field_locked {
+                    self.reading = FieldReading::default();
+                }
                 self.expr = Some(program.voice_expression().clone());
                 self.program = Some(program);
                 self.error = None;
@@ -503,6 +534,16 @@ impl StudioPanel {
     /// A reopened creation supplies its saved window; a fresh formula uses the
     /// shared defaults. Gallery playback never changes these numbers.
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
+        if self
+            .program
+            .as_ref()
+            .is_some_and(|program| program.kind() == StudioKind::Field)
+        {
+            return Some(SoundSpec {
+                duration: 0.12,
+                notes: Vec::new(),
+            });
+        }
         let expr = self.expr.as_ref()?;
         let (xmin, xmax, a) = self.window_and_knob();
         Some(numinous_core::to_melody_with_scale(
@@ -542,6 +583,18 @@ impl StudioPanel {
                 opened.creation.xmax(),
                 self.parameter,
             ),
+            None if self
+                .program
+                .as_ref()
+                .is_some_and(|program| program.kind() == StudioKind::Field)
+                || self.field_locked =>
+            {
+                (
+                    numinous_core::DEFAULT_FIELD_MIN,
+                    numinous_core::DEFAULT_FIELD_MAX,
+                    self.parameter,
+                )
+            }
             None => (
                 numinous_core::DEFAULT_STUDIO_XMIN,
                 numinous_core::DEFAULT_STUDIO_XMAX,
@@ -553,13 +606,47 @@ impl StudioPanel {
     fn creation_for_parameter(&self, a: f64) -> Result<StudioCreation, ShareRefusal> {
         let program = self.program.as_ref().ok_or(ShareRefusal::UnparsedFormula)?;
         let (xmin, xmax, _) = self.window_and_knob();
-        let (first, second) = program.sources();
-        match second {
-            Some(second) => StudioCreation::new_parametric(first, second, xmin, xmax, a),
-            None => StudioCreation::new(first, xmin, xmax, a),
+        match program.kind() {
+            StudioKind::Field => {
+                let (ymin, ymax) = self.field_window();
+                StudioCreation::new_field(
+                    program.sources().0,
+                    xmin,
+                    xmax,
+                    ymin,
+                    ymax,
+                    a,
+                    self.reading,
+                )
+            }
+            StudioKind::Parametric => {
+                let (first, second) = program.sources();
+                StudioCreation::new_parametric(first, second.expect("parametric y"), xmin, xmax, a)
+                    .map(|creation| creation.with_scale(self.scale))
+            }
+            StudioKind::Graph => StudioCreation::new(program.sources().0, xmin, xmax, a)
+                .map(|creation| creation.with_scale(self.scale)),
         }
-        .map(|creation| creation.with_scale(self.scale))
         .map_err(|_| ShareRefusal::UnparsedFormula)
+    }
+
+    fn field_window(&self) -> (f64, f64) {
+        match &self.opened {
+            Some(opened) => (
+                opened
+                    .creation
+                    .ymin()
+                    .unwrap_or(numinous_core::DEFAULT_FIELD_MIN),
+                opened
+                    .creation
+                    .ymax()
+                    .unwrap_or(numinous_core::DEFAULT_FIELD_MAX),
+            ),
+            None => (
+                numinous_core::DEFAULT_FIELD_MIN,
+                numinous_core::DEFAULT_FIELD_MAX,
+            ),
+        }
     }
 
     /// The current Studio state as a shareable creation, or `None` while the
@@ -618,6 +705,7 @@ impl StudioPanel {
         let scale = studio_scale(size).max(2);
         let typed = match self.program.as_ref().map(StudioProgram::kind) {
             Some(StudioKind::Parametric) => self.source.to_uppercase(),
+            Some(StudioKind::Field) => format!("F = {}", self.source.to_uppercase()),
             _ => format!("Y = {}", self.source.to_uppercase()),
         };
         if let Some(title) = title {
@@ -667,6 +755,21 @@ impl StudioPanel {
                         xmin,
                         xmax,
                         |input| program.point(input, a),
+                    );
+                }
+                StudioKind::Field => {
+                    let (ymin, ymax) = self.field_window();
+                    let _ = numinous_app::studio_render::draw_field(
+                        &mut raster,
+                        layout,
+                        0,
+                        program.voice_expression(),
+                        self.reading,
+                        xmin,
+                        xmax,
+                        ymin,
+                        ymax,
+                        a,
                     );
                 }
             }
@@ -739,6 +842,12 @@ impl StudioPanel {
                 .is_some_and(|program| program.kind() == StudioKind::Parametric)
             {
                 "T"
+            } else if self
+                .program
+                .as_ref()
+                .is_some_and(|program| program.kind() == StudioKind::Field)
+            {
+                "Z"
             } else {
                 "X"
             };
@@ -822,6 +931,13 @@ impl StudioPanel {
                 .starts_with("x(t)")
         {
             format!("{}_", self.source.to_uppercase())
+        } else if self
+            .program
+            .as_ref()
+            .is_some_and(|program| program.kind() == StudioKind::Field)
+            || self.field_locked
+        {
+            format!("F = {}_", self.source.to_uppercase())
         } else {
             format!("Y = {}_", self.source.to_uppercase())
         };
@@ -859,6 +975,21 @@ impl StudioPanel {
                         xmin,
                         xmax,
                         |input| program.point(input, a),
+                    );
+                }
+                StudioKind::Field => {
+                    let (ymin, ymax) = self.field_window();
+                    let _ = numinous_app::studio_render::draw_field(
+                        raster,
+                        layout,
+                        0,
+                        program.voice_expression(),
+                        self.reading,
+                        xmin,
+                        xmax,
+                        ymin,
+                        ymax,
+                        a,
                     );
                 }
             }

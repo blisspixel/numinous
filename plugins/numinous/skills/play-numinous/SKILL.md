@@ -83,8 +83,11 @@ not a dead picture. Pass `list_experiments: true` on `plot_expression` for
 bundled Studio capsules; each row's `next` is `open_creation` with the
 experiment id already bound, and no host file is read. `family` selects
 `returning-home` (`full-return`, `almost-home`, `same-place`,
-`another-ratio`) or `shape-and-scale` (`circle-to-ellipse`,
-`uniform-circle`). `open_creation`
+`another-ratio`), `shape-and-scale` (`circle-to-ellipse`,
+`uniform-circle`), or `three-readings` (`simple-zero`, `a-pole`,
+`the-circle`, `the-bowl`). A field expression (`z`, `y`, `i`, `re`, `im`,
+`arg`, `conj`) draws a plate rather than a curve; it is seen first and
+has no melody. `open_creation`
 also accepts those ids directly. Opening a two-oscillator parametric path
 returns `structuredContent.closure`: an independently checked period, or
 an explicit aperiodic, including the half-period trap where position

@@ -27,7 +27,9 @@ paths report an independently checked closure when opened: a period, or an
 explicit aperiodic, including the half-period position-only trap. The App
 Studio status names that caption. Lissajous can open the first Returning
 home capsule; PageDown walks the family. That trial is the first Returning
-home capability slice (`PROGRESSION.md`); it does not gate play. Named sliders, general
+home capability slice (`PROGRESSION.md`); it does not gate play. Fields over the plane now ship: `y`, `z`, `i`, `re`, `im`, `arg`, and `conj`
+draw a character plate with a stored reading. Fields are seen first; they have
+no melody yet. Named sliders, general
 multi-expression programs, pattern algebra, tracker, step grid, piano roll,
 MIDI-in, MusicXML, raw shader authoring, and community rooms are design
 targets. `ROADMAP.md` is the status authority.
@@ -63,12 +65,12 @@ a dedicated audio transport before it can be offered as one changing experiment.
 The current expression language is deliberately small and total:
 
 - Values: one input written as `x` for a graph or `t` for a parametric path,
-  the adjustable parameter `a`, and constants `pi` and `e`. The aliases do not
-  create two independent variables.
+  the adjustable parameter `a`, and constants `pi` and `e`. A field adds `y`
+  and `z` for the sampled point and `i` for the imaginary unit.
 - Operators: `+`, `-`, `*`, `/`, and right-associative `^`, with parentheses
   and conventional unary minus.
 - One-argument functions: `sin`, `cos`, `tan`, `exp`, `ln` (also `log`), `abs`,
-  `sqrt`, and `floor`.
+  `sqrt`, and `floor`. A field adds `re`, `im`, `arg`, and `conj`.
 - Two-argument functions: `mod(left, divisor)`, `min(left, right)`, and
   `max(left, right)`.
 
@@ -83,7 +85,12 @@ the CLI and MCP descriptions point at the same core grammar.
 A graph remains one source such as `sin(a*x)`. A parametric path is exactly one
 atomic pair such as `x(t)=cos(3*t); y(t)=sin(2*t)`. The pair shares one bounded
 time window and knob, draws both planar coordinates, and sings `y(t)`. A missing
-coordinate or a graph mixed with a pair is rejected. The named pitch maps are
+coordinate or a graph mixed with a pair is rejected. A field is one source that
+uses `y`, `z`, `i`, `re`, `im`, `arg`, or `conj`, or that is saved with a 2D
+window and a reading. It draws a character plate: phase (where the value
+points), height (how big it is), or zero (where it is nothing, with a third
+answer when the cell cannot be decided). Fields are seen first; they have no
+melody yet. The named pitch maps are
 `continuous`, `chromatic`, `major`, `minor`, and `pentatonic`.
 
 ## The one-liner

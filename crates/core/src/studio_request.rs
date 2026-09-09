@@ -7,10 +7,15 @@
 
 use std::fmt;
 
+use crate::field::{
+    DEFAULT_FIELD_SIZE, FieldError, FieldPlate, FieldReading, MAX_FIELD_HEIGHT, MAX_FIELD_WIDTH,
+    draw as draw_field,
+};
 use crate::sound::SoundSpec;
 use crate::studio::{
     Expr, MAX_MELODY_NOTES, MAX_STUDIO_SOURCE_CHARS, PlotTextError, StudioScale, parse,
-    plot_parsed_text, studio_auto_recipe, studio_recipe, studio_recipe_count, to_melody_with_scale,
+    parse_field, plot_parsed_text, studio_auto_recipe, studio_recipe, studio_recipe_count,
+    to_melody_with_scale,
 };
 
 /// Default left edge of a Studio expression window.
@@ -21,6 +26,12 @@ pub const DEFAULT_STUDIO_XMAX: f64 = std::f64::consts::TAU;
 
 /// Default value of the Studio parameter `a`.
 pub const DEFAULT_STUDIO_PARAMETER: f64 = 1.0;
+
+/// Default lower edge of a Studio field window, on either axis.
+pub const DEFAULT_FIELD_MIN: f64 = -2.0;
+
+/// Default upper edge of a Studio field window, on either axis.
+pub const DEFAULT_FIELD_MAX: f64 = 2.0;
 
 /// Default number of notes in a Studio melody.
 ///
@@ -217,6 +228,167 @@ pub struct PlotResult {
     pub ymax: f64,
 }
 
+/// A validated face-neutral Studio field request.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldRequest {
+    source: String,
+    expression: Expr,
+    reading: FieldReading,
+    xmin: f64,
+    xmax: f64,
+    ymin: f64,
+    ymax: f64,
+    parameter: f64,
+    width: usize,
+    height: usize,
+    char_aspect: f64,
+}
+
+impl FieldRequest {
+    /// Resolve and validate one field request.
+    ///
+    /// Omitted numeric values use the shared field defaults: a square
+    /// `[-2, 2]` window, parameter `a = 1`, phase reading, and the default
+    /// character plate. `char_aspect` is how wide a cell is compared with
+    /// its height: half for a terminal, one for square pixels.
+    ///
+    /// # Errors
+    /// Returns a typed refusal for invalid source, window, parameter, size,
+    /// or a zero reading of a field that leaves the real line.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "a field request is one source plus a rectangle, a reading, a size, and a cell shape"
+    )]
+    pub fn new(
+        source: impl Into<String>,
+        reading: Option<FieldReading>,
+        xmin: Option<f64>,
+        xmax: Option<f64>,
+        ymin: Option<f64>,
+        ymax: Option<f64>,
+        parameter: Option<f64>,
+        width: Option<usize>,
+        height: Option<usize>,
+        char_aspect: Option<f64>,
+    ) -> Result<Self, StudioRequestError> {
+        let source = source.into();
+        if source.trim().is_empty() {
+            return Err(StudioRequestError::InvalidSource(
+                "Studio expression is empty".to_string(),
+            ));
+        }
+        if source.chars().count() > MAX_STUDIO_SOURCE_CHARS {
+            return Err(StudioRequestError::InvalidSource(format!(
+                "Studio expression is too long; limit is {MAX_STUDIO_SOURCE_CHARS} characters"
+            )));
+        }
+        let expression = parse_field(&source).map_err(StudioRequestError::InvalidSource)?;
+        let reading = reading.unwrap_or_default();
+        let (xmin, xmax, parameter) = resolve_field_window(xmin, xmax, parameter)?;
+        let ymin = ymin.unwrap_or(DEFAULT_FIELD_MIN);
+        let ymax = ymax.unwrap_or(DEFAULT_FIELD_MAX);
+        if !ymin.is_finite() || !ymax.is_finite() {
+            return Err(StudioRequestError::NonFiniteWindow);
+        }
+        if ymax <= ymin {
+            return Err(StudioRequestError::InvalidWindow);
+        }
+        let width = width.unwrap_or(DEFAULT_FIELD_SIZE.0);
+        let height = height.unwrap_or(DEFAULT_FIELD_SIZE.1);
+        if width < 2 || height < 2 {
+            return Err(StudioRequestError::InvalidPlotSize { width, height });
+        }
+        if width > MAX_FIELD_WIDTH || height > MAX_FIELD_HEIGHT {
+            return Err(StudioRequestError::PlotTooLarge { width, height });
+        }
+        let char_aspect = char_aspect.unwrap_or(0.5);
+        Ok(Self {
+            source,
+            expression,
+            reading,
+            xmin,
+            xmax,
+            ymin,
+            ymax,
+            parameter,
+            width,
+            height,
+            char_aspect,
+        })
+    }
+
+    /// Execute the validated field request.
+    ///
+    /// # Errors
+    /// Returns a field-shaped refusal when the plate cannot be drawn.
+    pub fn execute(&self) -> Result<FieldPlate, StudioRequestError> {
+        draw_field(
+            &self.expression,
+            self.reading,
+            (self.xmin, self.xmax),
+            (self.ymin, self.ymax),
+            self.parameter,
+            (self.width, self.height),
+            self.char_aspect,
+        )
+        .map_err(StudioRequestError::from_field)
+    }
+
+    /// Resolved expression source.
+    #[must_use]
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+
+    /// Which truth the plate asserts.
+    #[must_use]
+    pub const fn reading(&self) -> FieldReading {
+        self.reading
+    }
+
+    /// Left edge of the requested window.
+    #[must_use]
+    pub const fn xmin(&self) -> f64 {
+        self.xmin
+    }
+
+    /// Right edge of the requested window.
+    #[must_use]
+    pub const fn xmax(&self) -> f64 {
+        self.xmax
+    }
+
+    /// Lower edge of the requested window.
+    #[must_use]
+    pub const fn ymin(&self) -> f64 {
+        self.ymin
+    }
+
+    /// Upper edge of the requested window.
+    #[must_use]
+    pub const fn ymax(&self) -> f64 {
+        self.ymax
+    }
+
+    /// Resolved Studio parameter `a`.
+    #[must_use]
+    pub const fn parameter(&self) -> f64 {
+        self.parameter
+    }
+
+    /// Resolved plate width.
+    #[must_use]
+    pub const fn width(&self) -> usize {
+        self.width
+    }
+
+    /// Resolved plate height.
+    #[must_use]
+    pub const fn height(&self) -> usize {
+        self.height
+    }
+}
+
 /// A validated face-neutral Studio melody request.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SingRequest {
@@ -358,6 +530,8 @@ pub enum StudioRequestError {
     },
     /// No finite function sample existed in the requested window.
     Undefined,
+    /// A field plate refused to draw, with a player-facing reason.
+    Field(String),
 }
 
 impl fmt::Display for StudioRequestError {
@@ -377,7 +551,14 @@ impl fmt::Display for StudioRequestError {
                 "note count {count} must be between 1 and {maximum}"
             ),
             Self::Undefined => formatter.write_str("the function is undefined across this range"),
+            Self::Field(message) => formatter.write_str(message),
         }
+    }
+}
+
+impl StudioRequestError {
+    fn from_field(error: FieldError) -> Self {
+        Self::Field(error.message().to_string())
     }
 }
 
@@ -422,6 +603,26 @@ fn parse_source(source: &str) -> Result<Expr, StudioRequestError> {
         )));
     }
     parse(source).map_err(StudioRequestError::InvalidSource)
+}
+
+fn resolve_field_window(
+    xmin: Option<f64>,
+    xmax: Option<f64>,
+    parameter: Option<f64>,
+) -> Result<(f64, f64, f64), StudioRequestError> {
+    let xmin = xmin.unwrap_or(DEFAULT_FIELD_MIN);
+    let xmax = xmax.unwrap_or(DEFAULT_FIELD_MAX);
+    let parameter = parameter.unwrap_or(DEFAULT_STUDIO_PARAMETER);
+    if !xmin.is_finite() || !xmax.is_finite() {
+        return Err(StudioRequestError::NonFiniteWindow);
+    }
+    if xmax <= xmin {
+        return Err(StudioRequestError::InvalidWindow);
+    }
+    if !parameter.is_finite() {
+        return Err(StudioRequestError::NonFiniteParameter);
+    }
+    Ok((xmin, xmax, parameter))
 }
 
 fn resolve_window(

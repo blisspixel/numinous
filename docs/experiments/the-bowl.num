@@ -1,0 +1,11 @@
+NUMINOUS_STUDIO 5
+kind=field
+expr=x^2 + y^2 - 1
+xmin=-2
+xmax=2
+ymin=-2
+ymax=2
+reading=height
+a=1
+title=The bowl
+descends=numinous://studio?kind=field&expr=x%5E2%20%2B%20y%5E2%20-1&xmin=-2&xmax=2&ymin=-2&ymax=2&reading=zero&a=1&title=The%20circle

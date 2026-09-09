@@ -434,6 +434,35 @@ fn draw_tile_curve(
     let (xmin, xmax) = (entry.creation.xmin(), entry.creation.xmax());
     let a = entry.creation.a();
     let span = xmax - xmin;
+    if entry.program.kind() == StudioKind::Field {
+        let ymin = entry
+            .creation
+            .ymin()
+            .unwrap_or(numinous_core::DEFAULT_FIELD_MIN);
+        let ymax = entry
+            .creation
+            .ymax()
+            .unwrap_or(numinous_core::DEFAULT_FIELD_MAX);
+        let reading = entry.creation.reading().unwrap_or_default();
+        let _ = numinous_app::studio_render::draw_field(
+            raster,
+            numinous_app::studio_render::CurveLayout {
+                width: tile_width,
+                height: tile_height,
+                top: y0.max(0) as f64,
+                bottom_margin: 0.0,
+            },
+            x0,
+            entry.program.voice_expression(),
+            reading,
+            xmin,
+            xmax,
+            ymin,
+            ymax,
+            a,
+        );
+        return;
+    }
     if entry.program.kind() == StudioKind::Parametric {
         let _ = numinous_app::studio_render::draw_parametric_rect(
             raster,

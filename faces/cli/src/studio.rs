@@ -10,8 +10,8 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use numinous_core::{
-    PathClosure, PlotRequest, PlotSource, StudioCreation, StudioKind, StudioRequestError,
-    StudioScale,
+    FieldReading, FieldRequest, PathClosure, PlotRequest, PlotSource, StudioCreation, StudioKind,
+    StudioRequestError, StudioScale,
 };
 
 use crate::render_input::validate_render_dimensions;
@@ -102,6 +102,67 @@ pub(super) fn plot_report(
     ))
 }
 
+/// Plot one field over a requested rectangle of the plane.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a field report is one source plus the rectangle and reading it was asked for"
+)]
+pub(super) fn field_report(
+    source: &str,
+    reading: FieldReading,
+    xmin: f64,
+    xmax: f64,
+    ymin: f64,
+    ymax: f64,
+    a: f64,
+    size: (usize, usize),
+) -> Result<String, String> {
+    let request = FieldRequest::new(
+        source,
+        Some(reading),
+        Some(xmin),
+        Some(xmax),
+        Some(ymin),
+        Some(ymax),
+        Some(a),
+        Some(size.0),
+        Some(size.1),
+        Some(0.5),
+    )
+    .map_err(plot_request_error)?;
+    let plate = request.execute().map_err(plot_request_error)?;
+    Ok(format!(
+        "f = {}    reading {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]\n{}\n\n{}",
+        terminal_safe(source),
+        reading.name(),
+        plate.x_bounds.0,
+        plate.x_bounds.1,
+        plate.y_bounds.0,
+        plate.y_bounds.1,
+        reading.legend(),
+        plate.text
+    ))
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a field save is one source plus the rectangle, reading, and identity"
+)]
+pub(super) fn save_field_creation(
+    source: &str,
+    reading: FieldReading,
+    xmin: f64,
+    xmax: f64,
+    ymin: f64,
+    ymax: f64,
+    a: f64,
+    identity: CreationIdentity<'_>,
+    path: &Path,
+) -> Result<String, String> {
+    let creation = StudioCreation::new_field(source, xmin, xmax, ymin, ymax, a, reading)?;
+    save_creation(creation, identity, path)
+}
+
 /// Plot one parametric pair over `[tmin, tmax]`, auto-scaling both axes.
 pub(super) fn parametric_report(
     x_source: &str,
@@ -157,6 +218,20 @@ pub(super) fn creation_report(
             creation.scale().name(),
             plot.text
         )),
+        StudioKind::Field => {
+            let reading = creation.reading().expect("field reading");
+            Ok(format!(
+                "f = {}    reading {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]\n{}\n\n{}",
+                terminal_safe(creation.source()),
+                reading.name(),
+                plot.xmin,
+                plot.xmax,
+                plot.ymin,
+                plot.ymax,
+                reading.legend(),
+                plot.text
+            ))
+        }
     }
 }
 
@@ -279,6 +354,9 @@ pub(super) fn resolve_sing_input(
 ) -> Result<(String, f64, f64, f64, StudioScale), String> {
     if names_a_studio_creation(input) {
         let creation = load_studio_creation(input)?;
+        if creation.kind() == StudioKind::Field {
+            return Err("a field is seen first; it has no melody yet\n".to_string());
+        }
         return Ok((
             creation
                 .second_source()
@@ -337,6 +415,17 @@ pub(super) fn fork_studio_creation_extended(
                 return Err("a graph fork accepts --expr, not --x-expr or --y-expr\n".to_string());
             }
             parent.fork(edits.expr, edits.identity.title, edits.identity.author)
+        }
+        StudioKind::Field => {
+            if edits.x_expr.is_some() || edits.y_expr.is_some() {
+                return Err("a field fork accepts --expr, not --x-expr or --y-expr\n".to_string());
+            }
+            parent.fork_field(
+                edits.expr,
+                None,
+                edits.identity.title,
+                edits.identity.author,
+            )
         }
         StudioKind::Parametric => {
             if edits.expr.is_some() {
@@ -412,21 +501,36 @@ pub(super) fn open_studio_report(
         lines.push(format!("credit={}", terminal_safe(credit)));
     }
     lines.push(format!("kind={}", creation.kind().name()));
-    match creation.second_source() {
-        Some(y_source) => {
+    match creation.kind() {
+        StudioKind::Parametric => {
             lines.push(format!("xexpr={}", terminal_safe(creation.source())));
-            lines.push(format!("yexpr={}", terminal_safe(y_source)));
+            lines.push(format!(
+                "yexpr={}",
+                terminal_safe(creation.second_source().expect("parametric y source"))
+            ));
             lines.push(format!("tmin={}", creation.xmin()));
             lines.push(format!("tmax={}", creation.xmax()));
+            lines.push(format!("scale={}", creation.scale().name()));
         }
-        None => {
+        StudioKind::Field => {
             lines.push(format!("expr={}", terminal_safe(creation.source())));
             lines.push(format!("xmin={}", creation.xmin()));
             lines.push(format!("xmax={}", creation.xmax()));
+            lines.push(format!("ymin={}", creation.ymin().expect("field ymin")));
+            lines.push(format!("ymax={}", creation.ymax().expect("field ymax")));
+            lines.push(format!(
+                "reading={}",
+                creation.reading().expect("field reading").name()
+            ));
+        }
+        StudioKind::Graph => {
+            lines.push(format!("expr={}", terminal_safe(creation.source())));
+            lines.push(format!("xmin={}", creation.xmin()));
+            lines.push(format!("xmax={}", creation.xmax()));
+            lines.push(format!("scale={}", creation.scale().name()));
         }
     }
     lines.push(format!("a={}", creation.a()));
-    lines.push(format!("scale={}", creation.scale().name()));
     if let Some(era) = creation.era() {
         lines.push(format!("era={}", era.name()));
     }

@@ -242,7 +242,9 @@ fn packaged_player_docs_name_creation_next() {
             flattened.contains("list_experiments")
                 && flattened.contains("full-return")
                 && flattened.contains("another-ratio")
-                && flattened.contains("circle-to-ellipse"),
+                && flattened.contains("circle-to-ellipse")
+                && flattened.contains("three-readings")
+                && flattened.contains("the-circle"),
             "{name} must name the bundled Studio experiments a packaged player can open"
         );
         assert!(
@@ -2752,6 +2754,37 @@ fn studio_plot_geometry_includes_the_blank_margins() {
             assert!(ink_extent < width, "the circle leaves horizontal margins");
         }
     }
+}
+
+#[test]
+fn field_creations_plot_save_open_and_fork() {
+    let plotted = call(
+        "plot_expression",
+        json!({
+            "expr": "x^2 + y^2 - 1",
+            "reading": "zero"
+        }),
+    );
+    assert_eq!(plotted["result"]["isError"], false, "{plotted}");
+    let plot = &plotted["result"]["structuredContent"];
+    assert_eq!(plot["kind"], "field");
+    assert_eq!(plot["reading"], "zero");
+    assert_eq!(plot["next"]["tool"], "save_creation");
+    assert_eq!(plot["next"]["arguments"]["expr"], "x^2 + y^2 - 1");
+    assert_eq!(plot["next"]["arguments"]["reading"], "zero");
+    assert!(
+        plot["field"]["complete"].as_bool().unwrap_or(false) || plot["plot"].as_str().is_some()
+    );
+    let saved = call("save_creation", plot["next"]["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let capsule = &saved["result"]["structuredContent"];
+    assert_eq!(capsule["kind"], "field");
+    assert_eq!(capsule["reading"], "zero");
+    assert_eq!(capsule["next"]["tool"], "fork_creation");
+    let opened = call("open_creation", json!({ "capsule": "the-circle" }));
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert_eq!(opened["result"]["structuredContent"]["kind"], "field");
+    assert_eq!(opened["result"]["structuredContent"]["reading"], "zero");
 }
 
 #[test]

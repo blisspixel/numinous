@@ -5,6 +5,17 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Studio fields: a second independent variable. Type `z^2 - 1` or
+  `x^2 + y^2 - 1` and Formula Jam draws a character plate instead of a
+  curve. Three readings of one expression: phase, height, and a proved
+  zero curve that can also say it does not know. Capsules write
+  `NUMINOUS_STUDIO 5` with the requested window and reading. CLI, MCP, and
+  the App plot, save, reopen, and fork them. Fields are seen first: they
+  have no melody. Bundled family `three-readings`: `simple-zero`,
+  `a-pole`, `the-circle`, and `the-bowl`. `PLAY.md` and the skill name the
+  ids.
+
 ### Changed
 - Lissajous study no longer points at `docs/experiments/returning-home.md`,
   a file no packaged player can open. The treatment names the bundled
