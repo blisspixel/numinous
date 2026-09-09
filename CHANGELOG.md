@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.25] - 2026-09-09
+
 ### Added
 - Studio fields: a second independent variable. Type `z^2 - 1` or
   `x^2 + y^2 - 1` and Formula Jam draws a character plate instead of a
