@@ -96,7 +96,8 @@ stays the first curve. Type
 `euclid(3,8)` for a Euclidean rhythm. Type `x..x..x.` or `pat(x..x..x.)`
 to write tracker marks. An integer 0/1 window reports
 `pattern` as tracker text and `grid` as a numbered step grid: tresillo is
-`x..x..x.` under `12345678`. A field expression (`z`, `y`, `i`, `re`, `im`,
+`x..x..x.` under `12345678`. The sung MIDI voice reports `roll` as a
+piano-roll grid, pitch over time. A field expression (`z`, `y`, `i`, `re`, `im`,
 `arg`, `conj`) draws a plate rather than a curve. Height and phase sing
 that reading along the real axis; the zero reading is a proof and stays
 silent. `open_creation`

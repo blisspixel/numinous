@@ -1015,6 +1015,13 @@ impl StudioPanel {
             if !rows.is_empty() {
                 context = format!("{context}  PATTERN {}", rows.join("  "));
             }
+            if let Some(top) = creation
+                .piano_roll_text()
+                .as_deref()
+                .and_then(|roll| roll.lines().nth(1))
+            {
+                context = format!("{context}  ROLL {top}");
+            }
         }
         [
             (fit_studio_line(&primary, columns), '*'),
@@ -1820,6 +1827,23 @@ mod tests {
                 .pattern_rows(),
             ["x..x..x."]
         );
+        let [_, (context, _)] = typed_panel.status_lines(InputMode::KeyboardMouse, 80);
+        assert!(context.contains("ROLL 24 x..x..x."), "{context}");
+    }
+
+    #[test]
+    fn a_quantized_graph_names_the_piano_roll() {
+        let mut panel = StudioPanel::new("sin(x)").expect("panel");
+        panel.cycle_scale();
+        assert_eq!(panel.scale_name(), "chromatic");
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 80);
+        assert!(context.contains("ROLL"), "{context}");
+        let marks = panel
+            .current_creation()
+            .expect("creation")
+            .piano_roll_marks()
+            .expect("roll");
+        assert!(marks.iter().any(|row| row.contains('x')), "{marks:?}");
     }
 
     #[test]

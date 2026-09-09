@@ -41,7 +41,8 @@ curve. Euclidean rhythms ship as
 layers them. An integer 0/1 graph also has a pattern-text view, `x` on a
 hit and `.` on a rest, and a numbered step-grid reading the App draws as
 cells. Tracker marks are a formula: type `x..x..x.` or `pat(x..x..x.)`.
-Piano roll, MIDI-in, MusicXML, raw shader authoring, and community rooms
+The sung MIDI voice also reads as a piano roll, pitch over time.
+MIDI-in, MusicXML, raw shader authoring, and community rooms
 are design targets. `ROADMAP.md` is the status authority.
 
 CLI and MCP plot and melody calls resolve through core `PlotRequest` and
@@ -95,6 +96,8 @@ is 1 when step `floor(x) rem n` is an onset and 0 when it is a rest. A
 request with fewer than one step, or more than 64, is undefined.
 `pat(x..x..x.)` writes those onsets as tracker marks, `x` a hit and `.` a
 rest. The editor form `x..x..x.` is the same graph, and overlay rows use `&`.
+The sung MIDI voice of that graph also reads as a piano roll: time across,
+pitch up, the same `x` and `.` alphabet.
 A comma is
 part of the grammar only where a two-argument function expects it, and wrong
 arity errors name the missing separator or closing parenthesis with a one-based
@@ -161,7 +164,7 @@ The Studio is a ramp, not a cliff. Same tool, radically different ceilings.
 
 - **Level 0, the graphing calculator.** `y = sin(x)`. It draws, glowing, and it sings the curve. A curious newcomer is delighted in ten seconds. This is the whole onboarding.
 - **Level 1, draw a path.** `x(t)=cos(3*t); y(t)=sin(2*t)` draws and sings a Lissajous figure. The exact parametric pair, pitch map, and named sliders are built. Draggable numbers, polar, and 3D representations remain planned.
-- **Level 2, mathematical patterns.** `euclid(3,8)` is built: a graph of onsets, overlayable, mixed in WAV, with MIDI on the first curve, readable as pattern text `x..x..x.`, and as a numbered step grid the App draws as cells. Type `x..x..x.` or `pat(x..x..x.)` to write those marks as the formula itself. `note("c e g")` and live transforms (`rev`, `fast`, `slow`, `every`, `degrade`) remain planned. The pattern should drive sound and geometry together. Now it is an instrument and a generative visual at once, algorithmic techno you can see (see `MUSIC.md`).
+- **Level 2, mathematical patterns.** `euclid(3,8)` is built: a graph of onsets, overlayable, mixed in WAV, with MIDI on the first curve, readable as pattern text `x..x..x.`, and as a numbered step grid the App draws as cells. Type `x..x..x.` or `pat(x..x..x.)` to write those marks as the formula itself. The sung MIDI voice reads as a piano roll. `note("c e g")` and live transforms (`rev`, `fast`, `slow`, `every`, `degrade`) remain planned. The pattern should drive sound and geometry together. Now it is an instrument and a generative visual at once, algorithmic techno you can see (see `MUSIC.md`).
 - **Level 3, fields and shaders.** Write an expression over the whole plane for domain coloring and SDFs, or drop into raw **WGSL** for full control (see `VISUALS.md`). Now it is a shader toy with a soundtrack.
 
 A player can stop at any level and have made something real and beautiful.

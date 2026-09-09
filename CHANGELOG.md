@@ -47,7 +47,13 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 - Editable tracker: type `x..x..x.` or `pat(x..x..x.)`. That is the same
   0/1 graph that already draws, sings, and reports pattern text and the
   step grid. Overlay rows with `&`. A row may run hits together:
-  `x.x.xx.x` is five. Piano roll remains later.
+  `x.x.xx.x` is five.
+- Piano roll, Pattern Studio's pitch view: the sung MIDI voice as a
+  pitch-over-time grid. Tresillo on eight steps is two rows, hits at 24
+  semitones and rests at the root. CLI `roll=` and MCP
+  `structuredContent.roll` name it. The App names ROLL on the status
+  line. This is a reading of the same notes that sing, not a second
+  document. The curve stays the picture.
 - Overlay quest, first contrast: family `two-voices` draws the two
   oscillators of Returning home as graphs over the same window.
   `closing-voices` is the 1 and 17/12 pair; `wandering-voices` replaces
