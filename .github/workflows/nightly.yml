@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
       - name: Install Linux audio and input development libraries
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
+        run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev
       - name: Build CLI and MCP faces
         run: cargo build --locked --bin numinous --bin numinous-mcp
       - name: Agent cohorts
@@ -127,7 +127,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
       - name: Install Linux audio and input development libraries
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
+        run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev
       - name: Judgment of the roundtrip gate itself
         shell: bash
         run: python3 scripts/test-uninstall-roundtrip.py
