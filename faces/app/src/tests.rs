@@ -4098,6 +4098,33 @@ fn the_naming_step_edits_signs_and_slugs_the_share() {
 }
 
 #[test]
+fn studio_tab_selects_a_named_slider_instead_of_leaving() {
+    let mut app = headless("numinous_app_test_studio_tab_slider.txt");
+    app.enter_studio();
+    assert!(
+        !app.handle_studio_parameter_key(&Key::Named(NamedKey::Tab), false),
+        "Tab is not consumed when a is the only knob, so Esc/Tab still leave"
+    );
+    assert!(app.studio);
+    app.studio_panel = crate::studio_panel::StudioPanel::new("sin(b*x)").expect("formula");
+    assert!(app.studio_panel.has_named_sliders());
+    assert!(app.handle_studio_parameter_key(&Key::Named(NamedKey::Tab), false));
+    assert!(app.studio, "Tab selects the extra knob rather than leaving");
+    assert!(app.handle_studio_parameter_key(&Key::Named(NamedKey::ArrowUp), false));
+    let creation = app.studio_panel.current_creation().expect("tuned");
+    assert_eq!(creation.sliders()[0].value(), 1.25);
+    assert!(app.handle_studio_parameter_key(&Key::Named(NamedKey::Home), false));
+    assert_eq!(
+        app.studio_panel
+            .current_creation()
+            .expect("reset")
+            .sliders()[0]
+            .value(),
+        1.0
+    );
+}
+
+#[test]
 fn studio_parameter_keys_and_controller_buttons_share_one_edit_path() {
     use crate::gamepad::Command;
     for controller in [false, true] {

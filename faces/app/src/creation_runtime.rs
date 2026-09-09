@@ -554,6 +554,19 @@ impl App {
         if !self.studio || self.show_help || self.gallery.is_some() || self.share_naming.is_some() {
             return false;
         }
+        if matches!(key, Key::Named(NamedKey::Tab))
+            || matches!(key, Key::Character(text) if text == "[" || text == "]")
+        {
+            if !repeat {
+                let delta = if matches!(key, Key::Character(text) if text == "[") {
+                    -1
+                } else {
+                    1
+                };
+                return self.studio_panel.cycle_knob(delta);
+            }
+            return self.studio_panel.has_named_sliders();
+        }
         if !matches!(
             key,
             Key::Named(NamedKey::ArrowUp | NamedKey::ArrowDown | NamedKey::Home)

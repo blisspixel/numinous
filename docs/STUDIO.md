@@ -29,7 +29,10 @@ Studio status names that caption. Lissajous can open the first Returning
 home capsule; PageDown walks the family. That trial is the first Returning
 home capability slice (`PROGRESSION.md`); it does not gate play. Fields over the plane now ship: `y`, `z`, `i`, `re`, `im`, `arg`, and `conj`
 draw a character plate with a stored reading. Fields are seen first; they have
-no melody yet. Named sliders, general
+no melody yet. Named sliders now ship: extra identifiers besides `a` bind a
+value and a declared range, and capsules write version 6 only when they are
+present. App Tab selects a slider, Up/Down steps it, Home restores 1 when
+that is in range. General
 multi-expression programs, pattern algebra, tracker, step grid, piano roll,
 MIDI-in, MusicXML, raw shader authoring, and community rooms are design
 targets. `ROADMAP.md` is the status authority.
@@ -65,7 +68,8 @@ a dedicated audio transport before it can be offered as one changing experiment.
 The current expression language is deliberately small and total:
 
 - Values: one input written as `x` for a graph or `t` for a parametric path,
-  the adjustable parameter `a`, and constants `pi` and `e`. A field adds `y`
+  the adjustable parameter `a`, extra named sliders such as `b` or `p`, and
+  constants `pi` and `e`. A field adds `y`
   and `z` for the sampled point and `i` for the imaginary unit.
 - Operators: `+`, `-`, `*`, `/`, and right-associative `^`, with parentheses
   and conventional unary minus.
@@ -139,7 +143,7 @@ So when you write a euclidean rhythm, you *see* the beats land and *hear* them a
 The Studio is a ramp, not a cliff. Same tool, radically different ceilings.
 
 - **Level 0, the graphing calculator.** `y = sin(x)`. It draws, glowing, and it sings the curve. A curious newcomer is delighted in ten seconds. This is the whole onboarding.
-- **Level 1, draw a path.** `x(t)=cos(3*t); y(t)=sin(2*t)` draws and sings a Lissajous figure. The exact parametric pair and pitch map are built. Named sliders, draggable numbers, polar, and 3D representations remain planned.
+- **Level 1, draw a path.** `x(t)=cos(3*t); y(t)=sin(2*t)` draws and sings a Lissajous figure. The exact parametric pair, pitch map, and named sliders are built. Draggable numbers, polar, and 3D representations remain planned.
 - **Level 2, mathematical patterns.** `note("c e g")`, `euclid(3, 8)`, layered and transformed live (`rev`, `fast`, `slow`, `every`, `degrade`). The pattern drives sound *and* geometry together. Now it is an instrument and a generative visual at once, algorithmic techno you can see (see `MUSIC.md`).
 - **Level 3, fields and shaders.** Write an expression over the whole plane for domain coloring and SDFs, or drop into raw **WGSL** for full control (see `VISUALS.md`). Now it is a shader toy with a soundtrack.
 

@@ -43,14 +43,16 @@ present so plain shares stay version 1. Version 3 adds the first bounded
 multi-expression form, one atomic `x(t), y(t)` pair, plus a stored pitch map.
 Existing version 1 and 2 documents remain unchanged. Version 4 adds editable
 prose credit. Version 5 adds a field over the plane with a stored reading.
-Named sliders and general multi-expression programs remain open.
+Named sliders with declared ranges now ship as version 6. General multi-expression programs remain open.
 The sung melody can leave as WAV or as a Standard MIDI File on all three faces:
 CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` with `midi: true`, and the App
 F4 share as `melody.mid`. The existing parameter `a` is now explicit: Up/Down
 adjust it by 0.25 and Home restores 1, with corresponding controller actions.
 Drawing, live melody, capsule, postcard, and MIDI all use that same value and
 window. Reopened values retain their exact precision; the first actual edit
-records the parent. Named sliders with declared ranges remain a later rung.
+records the parent. Named sliders with declared ranges now ship as version 6:
+App `[` and `]` select a slider, Up/Down steps it, Home restores 1 when that
+is in range.
 
 **2. The one-button share bundle.** On any Studio state, one action emits the
 bundle: the `.num` file, the `numinous://` link, the PNG postcard, and the

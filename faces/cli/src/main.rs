@@ -54,10 +54,11 @@ use render_input::{parse_gesture_arg, parse_gestures, parse_poke_arg, parse_poke
 #[cfg(test)]
 use studio::load_studio_creation;
 use studio::{
-    CreationIdentity, ForkEdits, StudioParameters, field_report, fork_studio_creation_extended,
-    open_studio_report, parametric_report, plot_report, plot_request_error, resolve_plot_source,
+    CreationIdentity, ForkEdits, StudioParameters, field_report_with,
+    fork_studio_creation_extended, open_studio_report, parametric_report, parametric_report_with,
+    parse_slider_specs, plot_report, plot_report_with, plot_request_error, resolve_plot_source,
     resolve_sing_input, save_field_creation, save_parametric_creation,
-    save_studio_creation_with_scale, sing_request_error,
+    save_studio_creation_with_sliders, sing_request_error,
 };
 #[cfg(test)]
 use studio::{fork_studio_creation, save_studio_creation};
@@ -546,6 +547,9 @@ enum Command {
         /// Value of the parameter a (constant unless animating).
         #[arg(long, default_value_t = numinous_core::DEFAULT_STUDIO_PARAMETER)]
         a: f64,
+        /// Extra named knob: name=value or name=value:min:max. Repeatable.
+        #[arg(long = "slider", value_name = "SPEC")]
+        slider: Vec<String>,
         /// Animate: sweep a from amin to amax, Ctrl+C to stop.
         #[arg(long)]
         animate: bool,
@@ -583,7 +587,7 @@ enum Command {
         /// Path to a .num file, a numinous://studio?... link, or a bundled
         /// experiment id (full-return, almost-home, same-place,
         /// another-ratio, circle-to-ellipse, uniform-circle, simple-zero,
-        /// a-pole, the-circle, the-bowl).
+        /// a-pole, the-circle, the-bowl, extra-knob, live-ratio).
         input: String,
         /// Plot width in columns.
         #[arg(long, default_value_t = 72)]
@@ -652,6 +656,9 @@ enum Command {
         /// Studio input supplies its own).
         #[arg(long)]
         a: Option<f64>,
+        /// Extra named knob: name=value or name=value:min:max. Repeatable.
+        #[arg(long = "slider", value_name = "SPEC")]
+        slider: Vec<String>,
         /// Override the capsule pitch map, or quantize a raw expression.
         #[arg(long, value_enum)]
         scale: Option<StudioScaleArg>,
@@ -687,6 +694,9 @@ enum Command {
         /// Prose credit for the fork. Omit to keep the parent's identity suggestion; empty or whitespace clears it.
         #[arg(long)]
         credit: Option<String>,
+        /// Extra named knob: name=value or name=value:min:max. Repeatable.
+        #[arg(long = "slider", value_name = "SPEC")]
+        slider: Vec<String>,
     },
 }
 
@@ -1882,6 +1892,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             tmin,
             tmax,
             a,
+            slider,
             animate,
             amin,
             amax,
@@ -1893,6 +1904,10 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             credit,
             scale,
         } => {
+            let sliders = match parse_slider_specs(&slider) {
+                Ok(sliders) => sliders,
+                Err(message) => return emit(Err(message)),
+            };
             if list_recipes {
                 let mut lines = vec![format!(
                     "Formula Jam curated recipes ({}):",
@@ -1981,7 +1996,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                         (width, height),
                     );
                 }
-                let report = match parametric_report(
+                let report = match parametric_report_with(
                     x_expr,
                     y_expr,
                     StudioParameters {
@@ -1991,6 +2006,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                         scale,
                     },
                     (width, height),
+                    &sliders,
                 ) {
                     Ok(report) => report,
                     Err(message) => return emit(Err(message)),
@@ -2010,6 +2026,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                             author: author.as_deref(),
                             credit: credit.as_deref(),
                         },
+                        &sliders,
                         path,
                     ) {
                         Ok(message) => print!("{message}"),
@@ -2067,12 +2084,20 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 let ymin = ymin.unwrap_or(numinous_core::DEFAULT_FIELD_MIN);
                 let ymax = ymax.unwrap_or(numinous_core::DEFAULT_FIELD_MAX);
                 let reading = parsed_reading.unwrap_or_default();
-                let report =
-                    match field_report(source, reading, xmin, xmax, ymin, ymax, a, (width, height))
-                    {
-                        Ok(report) => report,
-                        Err(message) => return emit(Err(message)),
-                    };
+                let report = match field_report_with(
+                    source,
+                    reading,
+                    xmin,
+                    xmax,
+                    ymin,
+                    ymax,
+                    a,
+                    &sliders,
+                    (width, height),
+                ) {
+                    Ok(report) => report,
+                    Err(message) => return emit(Err(message)),
+                };
                 if let Some(path) = save.as_deref() {
                     match save_field_creation(
                         source,
@@ -2087,6 +2112,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                             author: author.as_deref(),
                             credit: credit.as_deref(),
                         },
+                        &sliders,
                         path,
                     ) {
                         Ok(message) => print!("{message}"),
@@ -2107,7 +2133,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             };
             let xmin = xmin.unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN);
             let xmax = xmax.unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX);
-            let request = match PlotRequest::new(
+            let mut request = match PlotRequest::new(
                 source,
                 Some(xmin),
                 Some(xmax),
@@ -2118,6 +2144,12 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 Ok(request) => request,
                 Err(error) => return emit(Err(plot_request_error(error))),
             };
+            if !sliders.is_empty() {
+                request = match request.with_sliders(sliders.clone()) {
+                    Ok(request) => request,
+                    Err(error) => return emit(Err(plot_request_error(error))),
+                };
+            }
             let expr = request.source().to_string();
             if animate {
                 if let Err(message) = plot_report(&expr, xmin, xmax, amin, width, height) {
@@ -2130,12 +2162,12 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 persist_progress_or_warn(&before, journey);
                 plot_animate(&expr, xmin, xmax, amin, amax, width, height)
             } else {
-                let report = match plot_report(&expr, xmin, xmax, a, width, height) {
+                let report = match plot_report_with(&expr, xmin, xmax, a, width, height, &sliders) {
                     Ok(report) => report,
                     Err(message) => return emit(Err(message)),
                 };
                 if let Some(path) = save.as_deref() {
-                    match save_studio_creation_with_scale(
+                    match save_studio_creation_with_sliders(
                         &expr,
                         StudioParameters {
                             minimum: xmin,
@@ -2148,6 +2180,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                             author: author.as_deref(),
                             credit: credit.as_deref(),
                         },
+                        &sliders,
                         path,
                     ) {
                         Ok(message) => print!("{message}"),
@@ -2225,12 +2258,16 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             xmax,
             notes,
             a,
+            slider,
             scale,
             out,
         } => {
             journey.play();
             emit(resolve_sing_input(&expr, xmin, xmax, a).and_then(
-                |(source, xmin, xmax, a, stored_scale)| {
+                |(source, xmin, xmax, a, stored_scale, mut sliders)| {
+                    if !slider.is_empty() {
+                        sliders = parse_slider_specs(&slider)?;
+                    }
                     sing_to_path(
                         &source,
                         xmin,
@@ -2238,6 +2275,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                         notes,
                         a,
                         scale.map(Into::into).unwrap_or(stored_scale),
+                        &sliders,
                         &out,
                     )
                 },
@@ -2253,8 +2291,13 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             title,
             author,
             credit,
+            slider,
         } => {
             journey.play();
+            let sliders = match parse_slider_specs(&slider) {
+                Ok(sliders) => sliders,
+                Err(message) => return emit(Err(message)),
+            };
             emit(fork_studio_creation_extended(
                 &parent,
                 ForkEdits {
@@ -2262,6 +2305,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                     x_expr: x_expr.as_deref(),
                     y_expr: y_expr.as_deref(),
                     scale: scale.map(Into::into),
+                    sliders: &sliders,
                     identity: CreationIdentity {
                         title: title.as_deref(),
                         author: author.as_deref(),
@@ -2675,11 +2719,16 @@ fn sing_wav(
         notes,
         a,
         numinous_core::StudioScale::Continuous,
+        &[],
         path,
     )
 }
 
 /// Turn `source` into a melody and write WAV (.wav) or MIDI (.mid/.midi).
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a melody export is source, window, count, knob, scale, sliders, and path"
+)]
 fn sing_to_path(
     source: &str,
     xmin: f64,
@@ -2687,10 +2736,16 @@ fn sing_to_path(
     notes: usize,
     a: f64,
     scale: numinous_core::StudioScale,
+    sliders: &[numinous_core::StudioSlider],
     path: &Path,
 ) -> Result<String, String> {
-    let request = SingRequest::new(source, Some(xmin), Some(xmax), Some(a), Some(notes))
+    let mut request = SingRequest::new(source, Some(xmin), Some(xmax), Some(a), Some(notes))
         .map_err(sing_request_error)?;
+    if !sliders.is_empty() {
+        request = request
+            .with_sliders(sliders.to_vec())
+            .map_err(sing_request_error)?;
+    }
     let spec = request
         .execute_with_scale(scale)
         .map_err(sing_request_error)?;
