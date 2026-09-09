@@ -260,14 +260,14 @@ pub use spectrum::{
 pub use studio::{
     Expr, MAX_CREDIT_CHARS, MAX_EUCLID_STEPS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS,
     MAX_PROGRAM_EXPRS, MAX_SHARE_INPUT_BYTES, MAX_STUDIO_EDITOR_CHARS, MAX_STUDIO_SOURCE_CHARS,
-    NumFileError, PROGRAM_MARKS, STUDIO_EXPERIMENTS, STUDIO_RECIPES, StudioCreation,
-    StudioExperiment, StudioKind, StudioPlot, StudioProgram, StudioScale,
+    NumFileError, PATTERN_HIT, PATTERN_REST, PROGRAM_MARKS, STUDIO_EXPERIMENTS, STUDIO_RECIPES,
+    StudioCreation, StudioExperiment, StudioKind, StudioPlot, StudioProgram, StudioScale,
     adjacent_construction_creation, adjacent_studio_experiment, eval, eval_field, eval_field_named,
     eval_named, first_studio_construction, is_returning_home_transfer, parse, parse_field,
-    plot_text, returning_home_transfer, studio_auto_recipe, studio_construction_family,
-    studio_experiment, studio_experiment_matching, studio_experiment_meta, studio_experiments_in,
-    studio_recipe, studio_recipe_count, to_melody, to_melody_with_scale,
-    to_melody_with_scale_named, uses_field_vocabulary,
+    pattern_row, plot_text, returning_home_transfer, studio_auto_recipe,
+    studio_construction_family, studio_experiment, studio_experiment_matching,
+    studio_experiment_meta, studio_experiments_in, studio_recipe, studio_recipe_count, to_melody,
+    to_melody_with_scale, to_melody_with_scale_named, uses_field_vocabulary,
 };
 pub use studio_request::{
     DEFAULT_FIELD_MAX, DEFAULT_FIELD_MIN, DEFAULT_MELODY_NOTES, DEFAULT_PLOT_HEIGHT,

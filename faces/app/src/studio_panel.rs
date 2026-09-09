@@ -958,7 +958,7 @@ impl StudioPanel {
         } else {
             format!("{knob_line}  SCALE {}", self.scale_name().to_uppercase())
         };
-        let context = if let Some(error) = &self.error {
+        let mut context = if let Some(error) = &self.error {
             format!("DRAFT: {}", error.to_uppercase())
         } else if let Some(closure) = self.closure_caption() {
             if paused {
@@ -1004,6 +1004,12 @@ impl StudioPanel {
                 InputMode::Controller => "KEYBOARD F1: HELP  F6: SCALE".to_string(),
             }
         };
+        if let Ok(creation) = self.current_creation() {
+            let rows = creation.pattern_rows();
+            if !rows.is_empty() {
+                context = format!("{context}  PATTERN {}", rows.join("  "));
+            }
+        }
         [
             (fit_studio_line(&primary, columns), '*'),
             (
@@ -1715,14 +1721,22 @@ mod tests {
         let creation = panel.current_creation().expect("creation");
         assert_eq!(creation.source(), "euclid(3,8)");
         let three = numinous_core::studio_experiment("tresillo").expect("tresillo");
+        assert_eq!(three.pattern_rows(), ["x..x..x."]);
         panel.open_creation(&three);
         assert_eq!(
             panel.current_creation().expect("opened").title(),
             Some("Tresillo")
         );
+        assert_eq!(
+            panel.current_creation().expect("opened").pattern_rows(),
+            ["x..x..x."]
+        );
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 80);
+        assert!(context.contains("PATTERN x..x..x."), "{context}");
         let five = panel.adjacent_experiment(1).expect("five");
         assert_eq!(five.id, "three-against-five");
         assert_eq!(five.creation().kind(), numinous_core::StudioKind::Program);
+        assert_eq!(five.creation().pattern_rows(), ["x..x..x.", "x.x.xx.x"]);
     }
 
     #[test]

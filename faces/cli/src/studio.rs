@@ -138,8 +138,13 @@ pub(super) fn plot_report_with(
             .map_err(plot_request_error)?;
     }
     let result = request.execute().map_err(plot_request_error)?;
+    let pattern = StudioCreation::new(source, xmin, xmax, a)
+        .ok()
+        .and_then(|creation| with_sliders(creation, sliders).ok())
+        .map(|creation| pattern_caption(&creation))
+        .unwrap_or_default();
     Ok(format!(
-        "y = {}    x in [{xmin:.3}, {xmax:.3}]    y in [{:.3}, {:.3}]{}\n\n{}",
+        "y = {}    x in [{xmin:.3}, {xmax:.3}]    y in [{:.3}, {:.3}]{}{pattern}\n\n{}",
         terminal_safe(source),
         result.ymin,
         result.ymax,
@@ -281,13 +286,14 @@ pub(super) fn creation_report(
     })?;
     match creation.kind() {
         StudioKind::Graph => Ok(format!(
-            "y = {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]{}\n\n{}",
+            "y = {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]{}{}\n\n{}",
             terminal_safe(creation.source()),
             creation.xmin(),
             creation.xmax(),
             plot.ymin,
             plot.ymax,
             slider_caption(creation.sliders()),
+            pattern_caption(creation),
             plot.text
         )),
         StudioKind::Parametric => Ok(format!(
@@ -322,16 +328,39 @@ pub(super) fn creation_report(
         StudioKind::Program => {
             let legend = overlay_legend(&creation.graph_sources());
             Ok(format!(
-                "y = {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]{}\n{legend}\n\n{}",
+                "y = {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]{}{}\n{legend}\n\n{}",
                 terminal_safe(&creation.editor_source()),
                 creation.xmin(),
                 creation.xmax(),
                 plot.ymin,
                 plot.ymax,
                 slider_caption(creation.sliders()),
+                pattern_caption(creation),
                 plot.text
             ))
         }
+    }
+}
+
+fn pattern_caption(creation: &StudioCreation) -> String {
+    let rows = creation.pattern_rows();
+    if rows.is_empty() {
+        return String::new();
+    }
+    if creation.kind() == StudioKind::Program {
+        let body = rows
+            .iter()
+            .enumerate()
+            .map(|(index, row)| {
+                let mark =
+                    numinous_core::PROGRAM_MARKS[index.min(numinous_core::PROGRAM_MARKS.len() - 1)];
+                format!("{mark} {row}")
+            })
+            .collect::<Vec<_>>()
+            .join("    ");
+        format!("\npattern {body}")
+    } else {
+        format!("\npattern {}", rows[0])
     }
 }
 
@@ -757,6 +786,9 @@ pub(super) fn open_studio_report(
         creation.to_link()
     ));
     lines.extend(PathClosure::of(&creation).report_lines());
+    for row in creation.pattern_rows() {
+        lines.push(format!("pattern={}", row));
+    }
     Ok(format!("{}\n\n{}", lines.join("\n"), report))
 }
 

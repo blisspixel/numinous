@@ -256,7 +256,9 @@ fn packaged_player_docs_name_creation_next() {
                 && flattened.contains("three-against-five")
                 && flattened.contains("two-voices")
                 && flattened.contains("closing-voices")
-                && flattened.contains("wandering-voices"),
+                && flattened.contains("wandering-voices")
+                && flattened.contains("pattern")
+                && flattened.contains("x..x..x."),
             "{name} must name the bundled Studio experiments a packaged player can open"
         );
         assert!(
@@ -2699,6 +2701,10 @@ fn euclidean_rhythms_plot_save_and_open_follow_next() {
     let next = &plotted["result"]["structuredContent"]["next"];
     assert_eq!(next["tool"], "save_creation");
     assert_eq!(next["arguments"]["expr"], "euclid(3,8)");
+    assert_eq!(
+        plotted["result"]["structuredContent"]["pattern"],
+        json!(["x..x..x."])
+    );
     let saved = call("save_creation", next["arguments"].clone());
     assert_eq!(saved["result"]["isError"], false, "{saved}");
     let layered_plot = call(
@@ -2722,6 +2728,14 @@ fn euclidean_rhythms_plot_save_and_open_follow_next() {
         overlay_saved["result"]["structuredContent"]["capsuleFormatVersion"],
         7
     );
+    assert_eq!(
+        layered_plot["result"]["structuredContent"]["pattern"],
+        json!(["x..x..x.", "x.x.xx.x"])
+    );
+    assert_eq!(
+        overlay_saved["result"]["structuredContent"]["pattern"],
+        json!(["x..x..x.", "x.x.xx.x"])
+    );
     let listed = call(
         "plot_expression",
         json!({"list_experiments": true, "family": "euclidean"}),
@@ -2735,6 +2749,10 @@ fn euclidean_rhythms_plot_save_and_open_follow_next() {
     );
     assert_eq!(opened["result"]["isError"], false, "{opened}");
     assert_eq!(opened["result"]["structuredContent"]["title"], "Tresillo");
+    assert_eq!(
+        opened["result"]["structuredContent"]["pattern"],
+        json!(["x..x..x."])
+    );
     let forked = call(
         "fork_creation",
         opened["result"]["structuredContent"]["next"]["arguments"].clone(),
