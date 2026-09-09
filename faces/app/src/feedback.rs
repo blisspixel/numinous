@@ -338,8 +338,8 @@ mod tests {
             "OPEN PROBLEMS: 1 ROOM"
         );
         assert_eq!(
-            super::wing_entered("Fractals", 35).lines()[0],
-            "FRACTALS: 35 ROOMS"
+            super::wing_entered("Fractals", 38).lines()[0],
+            "FRACTALS: 38 ROOMS"
         );
         // A wing can also be emptied by a catalog edit, and "0 ROOM" would be
         // as wrong as "1 ROOMS".
