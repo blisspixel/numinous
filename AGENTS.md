@@ -32,11 +32,13 @@ descriptions alike.
    message.
 3. **No emojis.** Anywhere.
 
-The file-level checks are automated: `scripts/check-style.sh` (and
-`scripts/check-style.ps1` on Windows) scan tracked files for dashes, emojis, and
-attribution, and they run in CI and in the pre-commit hook. Commit messages are
-not scanned by that guard, so keeping messages clean of attribution, dashes, and
-emojis is on you: it is a hard project rule, not a nicety.
+These checks are automated, for messages as well as files.
+`scripts/check-style.sh` (and `scripts/check-style.ps1` on Windows) scan tracked
+files for dashes, emojis, and attribution, and they run in CI and in the
+pre-commit hook. The same script in `--text` mode reads a commit message, which
+is how the commit-msg hook and `scripts/check-commit-messages.sh` hold a message
+to the same three rules. See "Enable the local gate" below for why a message is
+the half an ordinary edit cannot reach later.
 
 ## Quality bar (the anti-slop standard)
 
