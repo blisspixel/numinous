@@ -1846,6 +1846,25 @@ class CollectorTests(unittest.TestCase):
             set(projection), {"expression", "plot", "valid", "xmax", "xmin", "ymax", "ymin"}
         )
 
+    def test_plot_expression_accepts_optional_roll_without_expanding_study_material(
+        self,
+    ) -> None:
+        arguments = {"expr": "sin(2*x)"}
+        initialization, result = fake_tool_call("plot_expression", arguments)
+        result["structuredContent"]["roll"] = "24 x.\n 0 .x"
+        projection = collector.project_mcp_result(
+            "plot_expression", result, arguments, initialization["serverInfo"]
+        )
+        self.assertNotIn("roll", projection)
+        result["structuredContent"]["unexpected"] = "value"
+        with self.assertRaisesRegex(collector.CollectorError, "schema differs"):
+            collector.project_mcp_result(
+                "plot_expression",
+                result,
+                arguments,
+                initialization["serverInfo"],
+            )
+
     def test_plot_projection_rejects_missing_invalid_or_inconsistent_dimensions(self) -> None:
         arguments = {"expr": "sin(2*x)"}
         mutations = [

@@ -53,7 +53,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   semitones and rests at the root. CLI `roll=` and MCP
   `structuredContent.roll` name it. The App names ROLL on the status
   line. This is a reading of the same notes that sing, not a second
-  document. The curve stays the picture.
+  document. The curve stays the picture. The understanding collector
+  accepts optional plot `roll` without expanding study material.
 - Overlay quest, first contrast: family `two-voices` draws the two
   oscillators of Returning home as graphs over the same window.
   `closing-voices` is the 1 and 17/12 pair; `wandering-voices` replaces

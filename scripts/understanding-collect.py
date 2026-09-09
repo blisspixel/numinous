@@ -654,6 +654,7 @@ MCP_RESULT_FIELDS = {
         }
     ),
 }
+PLOT_OPTIONAL_FIELDS = frozenset({"grid", "pattern", "roll", "sliders"})
 MCP_PUBLIC_PROJECTION = {
     "play_room": (
         "action",
@@ -723,6 +724,10 @@ def project_mcp_result(
         schema_matches = structured_fields in (
             expected_fields,
             expected_fields - {"concept"},
+        )
+    elif tool == "plot_expression":
+        schema_matches = expected_fields <= structured_fields and structured_fields <= (
+            expected_fields | PLOT_OPTIONAL_FIELDS
         )
     else:
         schema_matches = structured_fields == expected_fields
@@ -795,6 +800,10 @@ def project_mcp_result(
             or any(len(row) > width for row in rows)
         ):
             raise CollectorError("MCP plot_expression rows disagree with its dimensions")
+        if "roll" in structured:
+            roll = structured["roll"]
+            if not isinstance(roll, str) or len(roll.encode("utf-8")) > 65_536:
+                raise CollectorError("MCP plot_expression roll must be a bounded string")
         if projection["expression"] != arguments.get("expr"):
             raise CollectorError("MCP plot_expression result identity differs")
         if projection["valid"] is not True:
