@@ -1090,7 +1090,7 @@ macro_rules! catalog_rooms {
             RoomMeta {
                 id: "mandelbrot",
                 title: "Mandelbrot Set",
-                wing: "Fractals & the Infinite",
+                wing: "Fractals",
                 blurb: "Iterate z into z squared plus c and ask if it stays bounded. The points that \
                         do form the most complex object in mathematics. t zooms toward the seahorses.",
                 accent: [70, 130, 255],
@@ -1102,7 +1102,7 @@ macro_rules! catalog_rooms {
             RoomMeta {
                 id: "julia",
                 title: "Julia Set",
-                wing: "Fractals & the Infinite",
+                wing: "Fractals",
                 blurb: "The same rule as Mandelbrot, but c is fixed and the whole plane is the seed. \
                         Every c grows a different fractal; t walks c around a circle to morph it.",
                 accent: [255, 120, 60],
@@ -1114,7 +1114,7 @@ macro_rules! catalog_rooms {
             RoomMeta {
                 id: "barnsley-fern",
                 title: "Barnsley Fern",
-                wing: "Fractals & the Infinite",
+                wing: "Fractals",
                 blurb: "Pick one of four simple transformations at random, over and over, and a fern \
                         grows out of the noise. Click to plant a smaller self-similar fern.",
                 accent: [60, 200, 90],
@@ -3773,7 +3773,7 @@ macro_rules! catalog_rooms {
             RoomMeta {
                 id: "shannon-entropy",
                 title: "Shannon Entropy",
-                wing: "Chance & Noise",
+                wing: "Chance & Order",
                 blurb: "H(p) for a biased coin.",
                 accent: [50, 100, 140],
             }
@@ -3784,7 +3784,7 @@ macro_rules! catalog_rooms {
             RoomMeta {
                 id: "bayes-update",
                 title: "Bayes Update",
-                wing: "Chance & Noise",
+                wing: "Chance & Order",
                 blurb: "Prior times likelihood becomes posterior.",
                 accent: [100, 80, 120],
             }
@@ -3795,7 +3795,7 @@ macro_rules! catalog_rooms {
             RoomMeta {
                 id: "erdos-renyi",
                 title: "Erdos-Renyi Graph",
-                wing: "Chance & Noise",
+                wing: "Chance & Order",
                 blurb: "Random edges with probability p.",
                 accent: [80, 110, 70],
             }
@@ -3806,7 +3806,7 @@ macro_rules! catalog_rooms {
             RoomMeta {
                 id: "markov-chain",
                 title: "Markov Chain",
-                wing: "Chance & Noise",
+                wing: "Chance & Order",
                 blurb: "Memoryless walk on states.",
                 accent: [90, 60, 100],
             }
@@ -3817,7 +3817,7 @@ macro_rules! catalog_rooms {
             RoomMeta {
                 id: "huffman-tree",
                 title: "Huffman Tree",
-                wing: "Chance & Noise",
+                wing: "Chance & Order",
                 blurb: "Optimal prefix codes from frequencies.",
                 accent: [70, 120, 90],
             }
@@ -3828,7 +3828,7 @@ macro_rules! catalog_rooms {
             RoomMeta {
                 id: "mutual-info",
                 title: "Mutual Information",
-                wing: "Chance & Noise",
+                wing: "Chance & Order",
                 blurb: "How much X tells you about Y.",
                 accent: [110, 90, 50],
             }
@@ -4111,6 +4111,36 @@ pub(crate) const ROOM_OWN_ANSWER: [(&str, &str); 16] = [
 /// Static metadata for every listed room, in catalog order.
 pub const ROOM_CATALOG: &[RoomMeta] = &catalog_rooms!(metadata_array);
 
+/// Every wing a listed room may be filed under, in catalog order.
+///
+/// A wing is free text on [`RoomMeta`], and the browser builds its list by
+/// grouping rooms whose wing strings match. Nothing said the list was closed,
+/// so a fresh phrase minted a wing in silence, and two arrived that way: a
+/// three-room `Fractals & the Infinite` holding the Mandelbrot set, the Julia
+/// set and the Barnsley fern, beside a thirty-five room `Fractals` holding
+/// their derivatives, and a six-room `Chance & Noise` beside `Chance & Order`.
+/// A player browsing wings saw two pairs of near-identical names and the three
+/// most famous fractals in the product shelved outside `Fractals`.
+///
+/// This is the closed set. The next accidental wing is a failing test rather
+/// than a playtest finding. Hidden rooms are outside it: they never reach the
+/// browser, so they are not a wing a player can be sent to.
+pub const CATALOG_WINGS: [&str; 13] = [
+    "Number & Pattern",
+    "Emergence",
+    "Chance & Order",
+    "Waves & Sound",
+    "Shape & Space",
+    "Motion & Dynamics",
+    "Change",
+    "Fractals",
+    "Chaos & Order",
+    "Signals & Codes",
+    "Open Problems",
+    "Mind & Computation",
+    "Analysis",
+];
+
 #[cfg(test)]
 macro_rules! source_id_array {
     ($(($module:ident, $room:ident, $metadata:expr)),* $(,)?) => {
@@ -4228,10 +4258,11 @@ pub(crate) fn construct_hidden_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::*;
 
-    // The alpha 18 catalog with Kepler's amber raised for small interface text.
-    // Only that accent changes from alpha 18; order, ids, titles, wings and
-    // blurbs stay fixed across all 355 entries.
-    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x7c5e_b72a_88fc_f317;
+    // The alpha 18 catalog with Kepler's amber raised for small interface text,
+    // and the two accidental wings merged into the documented wings they sat
+    // beside. Order, ids, titles and blurbs stay fixed across all 355 entries;
+    // nine of them changed the wing they are filed under and nothing else.
+    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x5191_3c14_e461_c347;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {
@@ -4251,6 +4282,68 @@ mod tests {
             checksum = extend_checksum(checksum, &metadata.accent);
         }
         checksum
+    }
+
+    #[test]
+    fn every_room_is_filed_under_a_wing_that_was_meant_to_exist() {
+        // The wing is free text and the browser groups on string equality, so
+        // before this test a typo or a fresh phrase minted a wing in silence.
+        // Both halves matter: a room outside the set is an accidental wing,
+        // and a set entry no room uses is a wing the browser will never show.
+        for metadata in ROOM_CATALOG {
+            assert!(
+                CATALOG_WINGS.contains(&metadata.wing),
+                "{} is filed under {:?}, which is not a wing of the catalog",
+                metadata.id,
+                metadata.wing
+            );
+        }
+        for wing in CATALOG_WINGS {
+            assert!(
+                ROOM_CATALOG.iter().any(|metadata| metadata.wing == wing),
+                "{wing} holds no rooms, so it is a name without a place"
+            );
+        }
+        let mut named = CATALOG_WINGS.to_vec();
+        named.sort_unstable();
+        named.dedup();
+        assert_eq!(named.len(), CATALOG_WINGS.len(), "a wing is named twice");
+    }
+
+    #[test]
+    fn the_closed_wing_set_is_in_the_order_a_player_meets_it() {
+        // The browser lists wings in first-mention order. Keeping the constant
+        // in that order means reading it tells you what the wing list looks
+        // like, rather than only which names are allowed.
+        let mut met: Vec<&str> = Vec::new();
+        for metadata in ROOM_CATALOG {
+            if !met.contains(&metadata.wing) {
+                met.push(metadata.wing);
+            }
+        }
+        assert_eq!(met, CATALOG_WINGS.to_vec());
+    }
+
+    /// How many doorways are still shorter than a caption that says something.
+    ///
+    /// Seventy characters is roughly one line of terminal prose, and a blurb
+    /// under it is usually a label rather than an invitation. The count is
+    /// tracked because it was quoted in prose in three places and measured in
+    /// none, which is how a number goes stale while everyone repeats it.
+    /// Shrink-only: rewriting a doorway must lower it, and nothing may raise
+    /// it.
+    const SHORT_DOORWAYS: usize = 245;
+
+    #[test]
+    fn the_short_doorway_count_is_measured_rather_than_quoted() {
+        let short = ROOM_CATALOG
+            .iter()
+            .filter(|metadata| metadata.blurb.chars().count() < 70)
+            .count();
+        assert_eq!(
+            short, SHORT_DOORWAYS,
+            "the catalog has {short} doorways under seventy characters;              lower the constant when one is rewritten, and never raise it"
+        );
     }
 
     #[test]

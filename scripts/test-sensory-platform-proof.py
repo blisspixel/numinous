@@ -16,6 +16,22 @@ class SensoryPlatformProofTests(unittest.TestCase):
         self.workflow = WORKFLOW.read_text(encoding="utf-8")
         self.manifest = APP_MANIFEST.read_text(encoding="utf-8")
 
+    def test_contract_runs_once_in_every_local_and_ci_gate(self):
+        # This file had no wiring check at all, so nothing noticed that the
+        # release gate never ran it. A contract CI requires and verify skips is
+        # a gate that reports success for work it did not judge.
+        command = "scripts/test-sensory-platform-proof.py"
+        for path in (
+            ROOT / "scripts" / "check.ps1",
+            ROOT / "scripts" / "check.sh",
+            ROOT / "scripts" / "verify.ps1",
+            ROOT / "scripts" / "verify.sh",
+            ROOT / "scripts" / "hooks" / "pre-commit",
+            WORKFLOW,
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(path.read_text(encoding="utf-8").count(command), 1)
+
     def test_probe_target_requires_the_disabled_feature(self):
         self.assertIn('name = "sensory_platform"', self.manifest)
         self.assertIn('required-features = ["gpu-post"]', self.manifest)

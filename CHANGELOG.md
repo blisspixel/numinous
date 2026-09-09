@@ -5,6 +5,44 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- The wing browser no longer shows two pairs of near-identical names, and the
+  three most famous fractals in the product are no longer filed outside
+  `Fractals`. A wing was free text on the room's metadata and the browser built
+  its list by grouping rooms whose wing strings matched, so a fresh phrase
+  minted a wing in silence. Two arrived that way: `Fractals & the Infinite`,
+  holding the Mandelbrot set, the Julia set and the Barnsley fern beside a
+  thirty-five room `Fractals` that held their derivatives, and `Chance & Noise`
+  beside `Chance & Order`. Neither appeared in any document. Both are merged
+  into the wing they sat beside, so thirteen wings hold 355 rooms. Nine rooms
+  changed the wing they are filed under and nothing else; the reviewed catalog
+  checksum is rebaselined over exactly that. `CATALOG_WINGS` now closes the set,
+  and a test refuses a room filed outside it and a name no room uses, so the
+  next accidental wing is a build failure rather than a playtest finding.
+- `VERIFY.md` told a downloaded player there are 40 MCP tools, "24 public play
+  tools, fifteen private". The tests pin 41: 24 public, 16 private, and one
+  broadcast consent control. The stale split was arithmetically self-consistent
+  and wrong, which is the hardest kind to notice, and `VERIFY.md` is one of only
+  four files a release archive carries. `docs/ROADMAP.md` said 40 in three more
+  places while already saying 41 in two others.
+- `scripts/verify.sh` and `scripts/verify.ps1` now run the two Sensory Lift
+  platform contracts and the 1.89 MSRV check that `main CI` requires. Without
+  them the release gate could print "All checks passed" and exit 0 while naming
+  none of the three jobs about to fail. The contracts' own "runs once in every
+  local and CI gate" test did not list the release gate, which is why the hole
+  was invisible; it lists it now, and the platform proof, which had no wiring
+  test at all, has one.
+- The 1.0 gate table said six rooms carry a standing dull or mute verdict from
+  packaged play. The most recent round records two, `attention` and
+  `strange-loop`; the other four were answered and the table kept the original
+  figure. Short doorways were quoted at 246 in three places and measured in
+  none, and the catalog holds 245. A shrink-only count now measures it, so the
+  number moves when a doorway is rewritten rather than when someone remembers.
+- `AGENTS.md` told a contributor in its house-rules section that commit messages
+  are not scanned, and then explained fifty lines later that a commit-msg hook
+  and CI hold them to the same three rules. The second is correct. The first was
+  what a new contributor read first.
+
 ### Changed
 - Lissajous study no longer points at `docs/experiments/returning-home.md`,
   a file no packaged player can open. The treatment names the bundled

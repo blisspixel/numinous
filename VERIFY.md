@@ -38,12 +38,20 @@ Run the full gate and regenerate every artifact:
 - macOS / Linux: `bash scripts/verify.sh`
 
 It runs format, clippy and rustdoc with warnings denied, Rust, 0.4 study runner
-and collector, portable Agent Plugins, and deterministic release-packaging tests, locked build,
-coverage (if `cargo-llvm-cov` is present), supply-chain policy (if `cargo-deny`
-is present), the house-style guard, and the native installer safety self-test,
-then compares the compiled CLI and MCP study contracts and writes images and
-audio into `renders/`, including English and Japanese reader plates.
+and collector, portable Agent Plugins, both Sensory Lift platform contracts, and
+deterministic release-packaging tests, the 1.89 MSRV check (if that toolchain is
+installed), locked build, coverage (if `cargo-llvm-cov` is present),
+supply-chain policy (if `cargo-deny` is present), the house-style guard, and the
+native installer safety self-test, then compares the compiled CLI and MCP study
+contracts and writes images and audio into `renders/`, including English and
+Japanese reader plates.
 If it prints "All checks passed" and exits 0, everything is green.
+
+The optional steps are the only place this gate is weaker than `main CI`, and
+each one says so when it skips. Everything else CI requires, this runs: the two
+Sensory Lift contracts and the MSRV check used to be missing here while CI
+required them, so the release gate could print that every check passed while
+naming none of the three jobs about to fail.
 
 GitHub exposes one protected result named `main CI`. It is an aggregate, not a
 shortcut: it waits for format, Clippy, tests, docs, MSRV, house style,
@@ -147,7 +155,7 @@ with the script's `verify` mode and the same receipt paths.
 
 The four-target release workflow runs `scripts/release-engagement-smoke.py`
 against every disposable packaged install. It requires a substantive Times
-Tables CLI render and modern MCP discovery, the exact 40-tool list, and one
+Tables CLI render and modern MCP discovery, the exact 41-tool list, and one
 structured `play_room` result from an isolated temporary profile. Version-only
 execution is not treated as engagement proof.
 
@@ -566,9 +574,9 @@ boons, daily streaks, resonances), the Studio (plot, animate, sing, in the
 terminal and the window), Visual Eras (including PNG output), Music Engine A
 (the seeded chiptune, `numinous tune`), GPU real-time fractals, live sound in
 the app and CLI plus structured notation over MCP, the `forget` right for
-players who are minds, and 40 MCP tools: 24 public play tools, fifteen private
-progression, creation, or local-state tools, and one local broadcast consent
-control.
+players who are minds, and 41 MCP tools: 24 public play tools, sixteen private
+progression, creation, study, or local-state tools, and one local broadcast
+consent control.
 Products 0.2 Flagship Proof and 0.3 Tactile Alpha are exit-met on the
 agent-and-machine bar. Their evidence includes the engineered flagship ahas,
 MCP wager path, hallway and five-flagship tactile cohorts, scoped reference
