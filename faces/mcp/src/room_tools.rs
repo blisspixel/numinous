@@ -140,15 +140,7 @@ pub(super) fn describe_room_tool_for_journey(
 /// Returning home capsules. A packaged player can open those ids with
 /// `open_creation` and needs no host file.
 pub(super) fn returning_home_construction() -> Value {
-    json!({
-        "id": "returning-home",
-        "title": "Returning home",
-        "invitation": "Keep a path and ask whether it comes home.",
-        "next": {
-            "tool": "plot_expression",
-            "arguments": { "list_experiments": true, "family": "returning-home" },
-        }
-    })
+    super::study_json::returning_home_construction()
 }
 
 /// The nearest note name (twelve-tone, A4 = 440 Hz) for a frequency.

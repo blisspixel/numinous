@@ -91,7 +91,7 @@ pub(crate) fn response_json(response: &StudyResponse) -> Result<Value, String> {
         StudySelection::Block(id) => json!({ "kind": "block", "block": id }),
         _ => return Err("This face cannot represent an unsupported study selection.".to_string()),
     };
-    Ok(json!({
+    let mut value = json!({
         "schema": STUDY_SCHEMA,
         "schemaVersion": STUDY_SCHEMA_VERSION,
         "room": document.room_id,
@@ -104,7 +104,25 @@ pub(crate) fn response_json(response: &StudyResponse) -> Result<Value, String> {
         "availableBlocks": document.blocks.iter().map(block_metadata).collect::<Vec<_>>(),
         "authoredDepthRooms": authored_depth_rooms(),
         "blocks": response.selected_blocks().map(block_json).collect::<Result<Vec<_>, _>>()?,
-    }))
+    });
+    if numinous_core::studio_construction_family(document.room_id) == Some("returning-home") {
+        value["construction"] = returning_home_construction();
+    }
+    Ok(value)
+}
+
+/// Optional Studio door for Lissajous. Both faces emit the same object so a
+/// structured next remains a followable tool call.
+pub(crate) fn returning_home_construction() -> Value {
+    json!({
+        "id": "returning-home",
+        "title": "Returning home",
+        "invitation": "Keep a path and ask whether it comes home.",
+        "next": {
+            "tool": "plot_expression",
+            "arguments": { "list_experiments": true, "family": "returning-home" },
+        }
+    })
 }
 
 /// Catalog-wide coverage, so a caller never probes room by room to find a depth.

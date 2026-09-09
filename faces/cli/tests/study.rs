@@ -88,6 +88,12 @@ fn public_study_is_available_before_any_visit_and_reports_japanese() {
             .iter()
             .any(|block| block["id"] == "lissajous.recurrence")
     );
+    assert_eq!(value["construction"]["id"], "returning-home");
+    assert_eq!(value["construction"]["next"]["tool"], "plot_expression");
+    assert_eq!(
+        value["construction"]["next"]["arguments"],
+        serde_json::json!({"list_experiments": true, "family": "returning-home"})
+    );
     assert!(!state.0.exists(), "study must not create player state");
 }
 
@@ -292,5 +298,6 @@ fn structured_study_reports_catalog_coverage_so_no_client_probes_room_by_room() 
             .unwrap()
             .contains(&serde_json::json!("mathematics"))
     );
+    assert!(value.get("construction").is_none());
     assert!(!state.0.exists());
 }
