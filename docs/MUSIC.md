@@ -106,6 +106,9 @@ is still a target.
   WAV; MIDI stays the first curve. Pattern text of those onsets now ships
   as tracker marks. Pattern Studio's editable tracker
   and event graph remain later work.
+- **Field melody, built as a real-axis reading.** Height sings the plate's
+  doubling ladder along `y = 0`. Phase sings the argument wheel. Zero stays
+  silent: it is a proof about a cell, not a sample.
 
 ### A2. Target: bit-depth voices synchronized to the Visual Eras
 The current chiptune engine supplies one square, triangle, and noise palette.

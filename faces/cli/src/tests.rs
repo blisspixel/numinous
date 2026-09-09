@@ -3578,6 +3578,62 @@ fn field_plot_saves_reopens_and_records_progress_once() {
 }
 
 #[test]
+fn field_capsules_sing_height_and_refuse_the_zero_proof() {
+    let (source, xmin, xmax, a, _, _, reading) =
+        super::resolve_sing_input("the-bowl", None, None, None).expect("bowl id");
+    assert_eq!(source, "x^2 + y^2 - 1");
+    assert_eq!(reading, Some(numinous_core::FieldReading::Height));
+    let wav = std::env::temp_dir().join("numinous_cli_field_bowl.wav");
+    let _ = std::fs::remove_file(&wav);
+    let message = super::sing_to_path(
+        &source,
+        xmin,
+        xmax,
+        8,
+        a,
+        numinous_core::StudioScale::Continuous,
+        &[],
+        reading,
+        &wav,
+    )
+    .expect("height sings");
+    assert!(message.contains("8 notes"), "{message}");
+    assert!(std::fs::metadata(&wav).expect("wav").len() > 1000);
+    let _ = std::fs::remove_file(&wav);
+
+    let error = super::resolve_sing_input("the-circle", None, None, None)
+        .and_then(|(source, xmin, xmax, a, scale, sliders, reading)| {
+            super::overlay_or_graph_melody(&source, xmin, xmax, 8, a, scale, &sliders, reading)
+        })
+        .expect_err("zero is a proof");
+    assert!(error.contains("zero reading is a proof"), "{error}");
+
+    let (source, xmin, xmax, a, _, _, reading) =
+        super::resolve_sing_input("z", None, None, None).expect("raw field");
+    assert_eq!(reading, Some(numinous_core::FieldReading::Phase));
+    assert_eq!(
+        (xmin, xmax, a),
+        (
+            numinous_core::DEFAULT_FIELD_MIN,
+            numinous_core::DEFAULT_FIELD_MAX,
+            1.0
+        )
+    );
+    let mix = super::overlay_or_graph_melody(
+        &source,
+        xmin,
+        xmax,
+        8,
+        a,
+        numinous_core::StudioScale::Continuous,
+        &[],
+        reading,
+    )
+    .expect("phase of z");
+    assert_eq!(mix.0.notes.len(), 8);
+}
+
+#[test]
 fn a_partial_parametric_pair_is_refused_before_progress() {
     let mut journey = numinous_core::Journey::default();
     let code = run(
@@ -3795,20 +3851,32 @@ fn overlay_programs_sing_every_graph_in_wav_and_keep_the_first_in_midi() {
     let _ = std::fs::remove_file(&midi);
     let _ = std::fs::remove_file(&lead);
     let scale = numinous_core::StudioScale::Continuous;
-    let mix = super::overlay_or_graph_melody("sin(x) & cos(x)", -1.0, 1.0, 8, 1.0, scale, &[])
-        .expect("mix");
+    let mix =
+        super::overlay_or_graph_melody("sin(x) & cos(x)", -1.0, 1.0, 8, 1.0, scale, &[], None)
+            .expect("mix");
     assert_eq!(mix.0.notes.len(), 16);
     assert_eq!(mix.1.notes.len(), 8);
-    let first =
-        super::overlay_or_graph_melody("sin(x)", -1.0, 1.0, 8, 1.0, scale, &[]).expect("first");
+    let first = super::overlay_or_graph_melody("sin(x)", -1.0, 1.0, 8, 1.0, scale, &[], None)
+        .expect("first");
     assert_eq!(mix.1, first.1);
-    let wav_message = super::sing_to_path("sin(x) & cos(x)", -1.0, 1.0, 8, 1.0, scale, &[], &wav)
-        .expect("overlay wav");
+    let wav_message =
+        super::sing_to_path("sin(x) & cos(x)", -1.0, 1.0, 8, 1.0, scale, &[], None, &wav)
+            .expect("overlay wav");
     assert!(wav_message.contains("16 notes"), "{wav_message}");
-    let midi_message = super::sing_to_path("sin(x) & cos(x)", -1.0, 1.0, 8, 1.0, scale, &[], &midi)
-        .expect("overlay midi");
+    let midi_message = super::sing_to_path(
+        "sin(x) & cos(x)",
+        -1.0,
+        1.0,
+        8,
+        1.0,
+        scale,
+        &[],
+        None,
+        &midi,
+    )
+    .expect("overlay midi");
     assert!(midi_message.contains("8 notes"), "{midi_message}");
-    super::sing_to_path("sin(x)", -1.0, 1.0, 8, 1.0, scale, &[], &lead).expect("lead midi");
+    super::sing_to_path("sin(x)", -1.0, 1.0, 8, 1.0, scale, &[], None, &lead).expect("lead midi");
     assert_eq!(
         std::fs::read(&midi).expect("overlay midi bytes"),
         std::fs::read(&lead).expect("lead midi bytes")
@@ -3818,7 +3886,7 @@ fn overlay_programs_sing_every_graph_in_wav_and_keep_the_first_in_midi() {
     let creation = numinous_core::StudioCreation::new_program(["sin(x)", "cos(x)"], -1.0, 1.0, 1.0)
         .expect("program");
     std::fs::write(&capsule, creation.to_num_file()).expect("write overlay capsule");
-    let (source, xmin, xmax, a, _, _) =
+    let (source, xmin, xmax, a, _, _, _) =
         super::resolve_sing_input(&capsule.to_string_lossy(), None, None, None).expect("capsule");
     assert_eq!(source, "sin(x) & cos(x)");
     assert_eq!((xmin, xmax, a), (-1.0, 1.0, 1.0));
@@ -4450,21 +4518,22 @@ fn sing_resolves_a_studio_capsule_with_its_own_window_and_knob() {
     let creation = numinous_core::StudioCreation::new("sin(a*x)", -2.0, 3.0, 0.5).expect("capsule");
     std::fs::write(&path, creation.to_num_file()).expect("write capsule");
 
-    let (source, xmin, xmax, a, scale, _sliders) =
+    let (source, xmin, xmax, a, scale, _sliders, reading) =
         super::resolve_sing_input(&path.to_string_lossy(), None, None, None)
             .expect("capsule resolves");
     assert_eq!(source, "sin(a*x)");
     assert_eq!((xmin, xmax, a), (-2.0, 3.0, 0.5));
     assert_eq!(scale, numinous_core::StudioScale::Continuous);
+    assert_eq!(reading, None);
 
     // An explicit flag still overrides the capsule's own value.
-    let (_, _, _, a, _, _) =
+    let (_, _, _, a, _, _, _) =
         super::resolve_sing_input(&path.to_string_lossy(), None, None, Some(2.0))
             .expect("override resolves");
     assert_eq!(a, 2.0);
 
     // Raw math keeps the documented defaults.
-    let (source, xmin, xmax, a, scale, _sliders) =
+    let (source, xmin, xmax, a, scale, _sliders, reading) =
         super::resolve_sing_input("sin(x)", None, None, None).expect("math resolves");
     assert_eq!(source, "sin(x)");
     assert_eq!(
@@ -4472,6 +4541,7 @@ fn sing_resolves_a_studio_capsule_with_its_own_window_and_knob() {
         (-std::f64::consts::TAU, std::f64::consts::TAU, 1.0)
     );
     assert_eq!(scale, numinous_core::StudioScale::Continuous);
+    assert_eq!(reading, None);
     let _ = std::fs::remove_file(&path);
 }
 
@@ -4493,16 +4563,17 @@ fn sing_resolves_a_parametric_capsules_y_voice_and_stored_scale() {
     .with_scale(numinous_core::StudioScale::Pentatonic);
     std::fs::write(&path, creation.to_num_file()).expect("write capsule");
 
-    let (source, xmin, xmax, a, scale, _sliders) =
+    let (source, xmin, xmax, a, scale, _sliders, reading) =
         super::resolve_sing_input(&path.to_string_lossy(), None, None, None)
             .expect("capsule resolves");
     assert_eq!(source, "sin(2*t)");
     assert_eq!((xmin, xmax, a), (0.0, std::f64::consts::TAU, 0.25));
     assert_eq!(scale, numinous_core::StudioScale::Pentatonic);
+    assert_eq!(reading, None);
 
     let wav = path.with_extension("wav");
-    let message =
-        super::sing_to_path(&source, xmin, xmax, 16, a, scale, &[], &wav).expect("scaled voice");
+    let message = super::sing_to_path(&source, xmin, xmax, 16, a, scale, &[], None, &wav)
+        .expect("scaled voice");
     assert!(message.contains("pentatonic scale"), "{message}");
     assert!(std::fs::metadata(&wav).expect("wav").len() > 1000);
     let _ = std::fs::remove_file(&path);
@@ -4677,6 +4748,7 @@ fn sing_writes_midi_when_the_path_says_so() {
         1.0,
         numinous_core::StudioScale::Continuous,
         &[],
+        None,
         &path,
     )
     .expect("sing midi");
@@ -4697,6 +4769,7 @@ fn sing_refuses_an_unknown_export_extension() {
         1.0,
         numinous_core::StudioScale::Continuous,
         &[],
+        None,
         &path,
     )
     .expect_err("mp3 is not this rung");

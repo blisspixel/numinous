@@ -271,7 +271,8 @@ you can read the shape of rather than a table of frequencies. A parametric
 creation draws both coordinates and sings `y(t)`. A field over the plane,
 typed with `y`, `z`, `i`, `re`, `im`, `arg`, or `conj`, or saved with
 `ymin`, `ymax`, and `reading`, draws a character plate: phase, height, or
-a proved zero curve. Fields are seen first; they have no melody yet. Choose `continuous`,
+a proved zero curve. Height and phase sing that reading along the real axis;
+the zero reading is a proof and stays silent. Choose `continuous`,
 `chromatic`, `major`, `minor`, or `pentatonic` with the `scale` field on a graph or pair. The
 bounded expression
 language includes `floor(value)`, Euclidean `mod(value, divisor)`,

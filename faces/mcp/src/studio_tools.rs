@@ -1103,6 +1103,19 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         Ok(scale) => scale,
         Err(error) => return tool_error(&error),
     };
+    let reading = match args.get("reading").and_then(Value::as_str) {
+        None => None,
+        Some(value) => match numinous_core::FieldReading::parse(value) {
+            Some(reading) => Some(reading),
+            None => return tool_error("Argument 'reading' must be phase, height, or zero."),
+        },
+    };
+    let field_vocab = numinous_core::parse_field(source)
+        .ok()
+        .is_some_and(|expression| numinous_core::uses_field_vocabulary(&expression));
+    if reading.is_some() && !field_vocab {
+        return tool_error("reading is a field claim; this expression is not a field.");
+    }
     let note_count = notes.unwrap_or(numinous_core::DEFAULT_MELODY_NOTES);
     let (spec, midi_spec, xmin, xmax, a, bound_sliders) = if source.contains('&') {
         let xmin = args
@@ -1155,6 +1168,12 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
             Ok(request) => request,
             Err(error) => return tool_error(&error.to_string()),
         };
+        if let Some(reading) = reading {
+            request = match request.with_reading(reading) {
+                Ok(bound) => bound,
+                Err(error) => return tool_error(&error.to_string()),
+            };
+        }
         if !sliders.is_empty() {
             request = match request.with_sliders(sliders) {
                 Ok(bound) => bound,
@@ -1261,16 +1280,33 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
     if !bound_sliders.is_empty() {
         structured["sliders"] = sliders_json(&bound_sliders);
     }
-    structured["next"] = save_creation_next(with_slider_args(
-        json!({
-            "expr": source,
-            "xmin": xmin,
-            "xmax": xmax,
-            "a": a,
-            "scale": scale.name(),
-        }),
-        &bound_sliders,
-    ));
+    if field_vocab {
+        let stored = reading.unwrap_or_default();
+        structured["reading"] = json!(stored.name());
+        structured["next"] = save_creation_next(with_slider_args(
+            json!({
+                "expr": source,
+                "xmin": xmin,
+                "xmax": xmax,
+                "ymin": numinous_core::DEFAULT_FIELD_MIN,
+                "ymax": numinous_core::DEFAULT_FIELD_MAX,
+                "a": a,
+                "reading": stored.name(),
+            }),
+            &bound_sliders,
+        ));
+    } else {
+        structured["next"] = save_creation_next(with_slider_args(
+            json!({
+                "expr": source,
+                "xmin": xmin,
+                "xmax": xmax,
+                "a": a,
+                "scale": scale.name(),
+            }),
+            &bound_sliders,
+        ));
+    }
     if want_receipt {
         let audio_asked = args.get("audio").and_then(Value::as_bool).unwrap_or(false);
         let action = encounter_sing_action(
