@@ -17,5 +17,7 @@ descriptions, not only files:
    rewrite.
 3. **No emojis.**
 
-Everything else, the quality bar, the pre-commit hook, where files live, is in
-[`AGENTS.md`](AGENTS.md) and `docs/ENGINEERING.md`.
+Everything else, the quality bar, the pre-commit hook, where files live, what
+a packaged player can read, canonical seams, and how to verify, is in
+[`AGENTS.md`](AGENTS.md) and `docs/ENGINEERING.md`. Do not copy those sections
+here.
