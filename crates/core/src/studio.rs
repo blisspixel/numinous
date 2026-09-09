@@ -25,6 +25,12 @@ pub const PROGRAM_MARKS: [char; MAX_PROGRAM_EXPRS] = ['#', '*', '+', 'o'];
 /// is undefined rather than silently truncated.
 pub const MAX_EUCLID_STEPS: usize = 64;
 
+/// Hit mark in the pattern-text view of a 0/1 step graph.
+pub const PATTERN_HIT: char = 'x';
+
+/// Rest mark in the pattern-text view of a 0/1 step graph.
+pub const PATTERN_REST: char = '.';
+
 /// Maximum editable text for one scalar formula, one labeled parametric pair,
 /// or one overlay program. Each expression keeps the per-source cap above;
 /// this larger bound accounts for extra expressions and their separators.
@@ -1261,6 +1267,37 @@ impl StudioCreation {
             ),
             Err(_) => silent_spec(),
         }
+    }
+
+    /// Pattern-text view of integer 0/1 graphs, one row per overlay curve.
+    ///
+    /// Empty when this is not a step pattern: the window must be an integer
+    /// span of 1 to [`MAX_EUCLID_STEPS`] steps, and every graph must stay 0
+    /// or 1 across each step. This is a tracker reading of the same formula
+    /// that draws, not a second document.
+    #[must_use]
+    pub fn pattern_rows(&self) -> Vec<String> {
+        match self.kind() {
+            StudioKind::Graph | StudioKind::Program => {}
+            StudioKind::Parametric | StudioKind::Field => return Vec::new(),
+        }
+        let Ok(program) = self.program() else {
+            return Vec::new();
+        };
+        let expressions: &[Expr] = match program.kind() {
+            StudioKind::Program => program.overlay_expressions(),
+            StudioKind::Graph => std::slice::from_ref(program.voice_expression()),
+            StudioKind::Parametric | StudioKind::Field => return Vec::new(),
+        };
+        let mut rows = Vec::with_capacity(expressions.len());
+        for expression in expressions {
+            let Some(row) = pattern_row(expression, self.xmin, self.xmax, self.a, &self.sliders)
+            else {
+                return Vec::new();
+            };
+            rows.push(row);
+        }
+        rows
     }
 
     /// The creation's name, when it has one.
@@ -2691,6 +2728,51 @@ pub(crate) fn euclid_pulse(x: f64, hits: f64, steps: f64) -> f64 {
     let k = hits.floor().clamp(0.0, n);
     let i = x.floor().rem_euclid(n);
     if (i * k).rem_euclid(n) < k { 1.0 } else { 0.0 }
+}
+
+fn is_integer_value(value: f64) -> bool {
+    value.is_finite() && value == value.trunc()
+}
+
+/// Pattern-text view of one 0/1 graph on an integer window.
+///
+/// Returns [`None`] when the window is not an integer span in
+/// `1..=MAX_EUCLID_STEPS`, or when any step is not constantly 0 or 1.
+#[must_use]
+pub fn pattern_row(
+    expr: &Expr,
+    xmin: f64,
+    xmax: f64,
+    a: f64,
+    sliders: &[crate::slider::StudioSlider],
+) -> Option<String> {
+    if !is_integer_value(xmin) || !is_integer_value(xmax) {
+        return None;
+    }
+    let span = xmax - xmin;
+    if span < 1.0 || span > MAX_EUCLID_STEPS as f64 {
+        return None;
+    }
+    let start = xmin as i64;
+    let count = span as usize;
+    let mut marks = String::with_capacity(count);
+    for offset in 0..count {
+        let x = (start + offset as i64) as f64;
+        let at_start = eval_named(expr, x, a, sliders);
+        let at_mid = eval_named(expr, x + 0.5, a, sliders);
+        if at_start != at_mid {
+            return None;
+        }
+        let mark = if at_start == 1.0 {
+            PATTERN_HIT
+        } else if at_start == 0.0 {
+            PATTERN_REST
+        } else {
+            return None;
+        };
+        marks.push(mark);
+    }
+    Some(marks)
 }
 
 /// Evaluate a parsed expression at variable `x` and parameter `a`.
@@ -4174,6 +4256,28 @@ mod tests {
         assert!((eval_named(&k, 1.0, 1.0, &bound) - 0.0).abs() < 1e-12);
         let plot = super::plot_text("euclid(3,8)", 0.0, 8.0, 1.0, 48, 8).expect("plot");
         assert!(plot.0.contains('#'), "{}", plot.0);
+    }
+
+    #[test]
+    fn euclidean_graphs_have_a_pattern_text_view() {
+        let tresillo = studio_experiment("tresillo").expect("tresillo");
+        assert_eq!(tresillo.pattern_rows(), ["x..x..x."]);
+        let five = StudioCreation::new("euclid(5,8)", 0.0, 8.0, 1.0).expect("five");
+        assert_eq!(five.pattern_rows(), ["x.x.xx.x"]);
+        let layered = studio_experiment("three-against-five").expect("layered");
+        assert_eq!(layered.pattern_rows(), ["x..x..x.", "x.x.xx.x"]);
+        let curve = StudioCreation::new("sin(x)", 0.0, 8.0, 1.0).expect("curve");
+        assert!(curve.pattern_rows().is_empty());
+        let mixed =
+            StudioCreation::new_program(["sin(x)", "euclid(3,8)"], 0.0, 8.0, 1.0).expect("mixed");
+        assert!(
+            mixed.pattern_rows().is_empty(),
+            "a mixed overlay is not a tracker row"
+        );
+        let half = StudioCreation::new("euclid(3,8)", 0.0, 8.5, 1.0).expect("half");
+        assert!(half.pattern_rows().is_empty());
+        let path = studio_experiment("full-return").expect("path");
+        assert!(path.pattern_rows().is_empty());
     }
 
     #[test]

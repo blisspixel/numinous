@@ -403,6 +403,10 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
         if !creation.sliders().is_empty() {
             structured["sliders"] = sliders_json(creation.sliders());
         }
+        let pattern = creation.pattern_rows();
+        if !pattern.is_empty() {
+            structured["pattern"] = json!(pattern);
+        }
         structured["next"] = save_creation_next(with_slider_args(
             json!({
                 "expr": source,
@@ -492,6 +496,16 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
             });
             if !request.sliders().is_empty() {
                 structured["sliders"] = sliders_json(request.sliders());
+            }
+            if let Ok(creation) = numinous_core::StudioCreation::new(expr, xmin, xmax, a) {
+                let creation = creation
+                    .clone()
+                    .with_sliders(request.sliders().to_vec())
+                    .unwrap_or(creation);
+                let pattern = creation.pattern_rows();
+                if !pattern.is_empty() {
+                    structured["pattern"] = json!(pattern);
+                }
             }
             structured["next"] = save_creation_next(with_slider_args(
                 json!({
@@ -917,6 +931,10 @@ fn studio_creation_result(
     let closure = numinous_core::PathClosure::of(creation);
     if let Some(value) = closure_json(&closure) {
         structured["closure"] = value;
+    }
+    let pattern = creation.pattern_rows();
+    if !pattern.is_empty() {
+        structured["pattern"] = json!(pattern);
     }
     if creation.kind() == numinous_core::StudioKind::Field {
         structured["field"] = json!({

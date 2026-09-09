@@ -93,7 +93,8 @@ or `overlay` (`the-parts`, `the-sum`), or `euclidean` (`tresillo`,
 A formula may name extra knobs besides `a`; each is a slider with a value
 and a declared range. Type `sin(x) & cos(x)` to overlay graphs; every graph sings in WAV, and MIDI
 stays the first curve. Type
-`euclid(3,8)` for a Euclidean rhythm. A field expression (`z`, `y`, `i`, `re`, `im`,
+`euclid(3,8)` for a Euclidean rhythm. An integer 0/1 window reports
+`pattern` as tracker text: tresillo is `x..x..x.`. A field expression (`z`, `y`, `i`, `re`, `im`,
 `arg`, `conj`) draws a plate rather than a curve; it is seen first and
 has no melody. `open_creation`
 also accepts those ids directly. Opening a two-oscillator parametric path

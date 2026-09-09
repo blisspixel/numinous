@@ -3834,6 +3834,7 @@ fn euclidean_rhythms_plot_save_and_open() {
     let _ = std::fs::remove_file(&path);
     let plot = super::plot_report_with("euclid(3,8)", 0.0, 8.0, 1.0, 32, 10, &[]).expect("plot");
     assert!(plot.contains('#'), "{plot}");
+    assert!(plot.contains("pattern x..x..x."), "{plot}");
     let message = super::save_studio_creation_with_sliders(
         "euclid(3,8)",
         super::StudioParameters {
@@ -3856,9 +3857,14 @@ fn euclidean_rhythms_plot_save_and_open() {
     assert!(text.contains("expr=euclid(3,8)"), "{text}");
     let opened = super::open_studio_report("tresillo", 32, 10).expect("bundled");
     assert!(opened.contains("title=Tresillo"), "{opened}");
+    assert!(opened.contains("pattern=x..x..x."), "{opened}");
     let layered = super::open_studio_report("three-against-five", 32, 10).expect("layered");
     assert!(layered.contains("title=Three against five"), "{layered}");
     assert!(layered.contains("kind=program"), "{layered}");
+    assert!(layered.contains("pattern=x..x..x."), "{layered}");
+    assert!(layered.contains("pattern=x.x.xx.x"), "{layered}");
+    assert!(layered.contains("# x..x..x."), "{layered}");
+    assert!(layered.contains("* x.x.xx.x"), "{layered}");
     let _ = std::fs::remove_file(&path);
 }
 
