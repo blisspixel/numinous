@@ -261,7 +261,8 @@ fn packaged_player_docs_name_creation_next() {
                 && flattened.contains("grid")
                 && flattened.contains("x..x..x.")
                 && flattened.contains("pat(")
-                && flattened.contains("12345678"),
+                && flattened.contains("12345678")
+                && flattened.contains("roll"),
             "{name} must name the bundled Studio experiments a packaged player can open"
         );
         assert!(
@@ -2845,6 +2846,11 @@ fn tracker_marks_plot_save_and_follow_next() {
         plotted["result"]["structuredContent"]["grid"],
         "12345678\nx..x..x."
     );
+    let roll = plotted["result"]["structuredContent"]["roll"]
+        .as_str()
+        .expect("roll");
+    assert!(roll.contains("24 x..x..x."), "{roll}");
+    assert!(roll.contains("0 .xx.xx.x"), "{roll}");
     let saved = call("save_creation", next["arguments"].clone());
     assert_eq!(saved["result"]["isError"], false, "{saved}");
     let bare = call(
