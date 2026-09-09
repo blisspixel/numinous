@@ -103,7 +103,8 @@ is still a target.
 - **Euclidean rhythms, built as a Studio function.** `euclid(hits, steps)`
   spreads k onsets as evenly as possible over n steps. The graph is 1 on a
   hit and 0 on a rest. Overlay layers two of them, and every graph sings in
-  WAV; MIDI stays the first curve. Pattern Studio's tracker
+  WAV; MIDI stays the first curve. Pattern text of those onsets now ships
+  as tracker marks. Pattern Studio's editable tracker
   and event graph remain later work.
 
 ### A2. Target: bit-depth voices synchronized to the Visual Eras
