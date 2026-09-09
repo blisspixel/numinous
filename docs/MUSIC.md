@@ -105,8 +105,8 @@ is still a target.
   hit and 0 on a rest. Overlay layers two of them, and every graph sings in
   WAV; MIDI stays the first curve. Pattern text of those onsets now ships
   as tracker marks, and the same rows have a numbered step-grid reading
-  the App draws as cells. Pattern Studio's editable tracker
-  and event graph remain later work.
+  the App draws as cells. Type `x..x..x.` or `pat(x..x..x.)` to write
+  those marks. Pattern Studio's piano roll and event graph remain later work.
 - **Field melody, built as a real-axis reading.** Height sings the plate's
   doubling ladder along `y = 0`. Phase sings the argument wheel. Zero stays
   silent: it is a proof about a cell, not a sample.

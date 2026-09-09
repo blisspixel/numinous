@@ -16,7 +16,8 @@ From a packaged install, open a capsule by id: `tresillo`,
 | [Three against five](three-against-five.num) | Two patterns share eight steps. Where do three hits and five hits land together? |
 
 The trial does not gate play. Type `euclid(3,8)` to make your own, or
-`euclid(3,8) & euclid(5,8)` to overlay two. An integer 0/1 window also
+`euclid(3,8) & euclid(5,8)` to overlay two. Type `x..x..x.` or
+`pat(x..x..x.)` to write those marks by hand. An integer 0/1 window also
 reports pattern text and a numbered step grid: tresillo is `x..x..x.` under
 `12345678`. The step count is at most 64.
 Capsules stay on the versions they already used: a titled graph is still
