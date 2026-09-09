@@ -118,6 +118,17 @@ an external playtester found the mismatch by reading the packaged manual and not
 finding it. When you write a player-facing fact, check which file a player can
 actually open.
 
+### Followable next
+
+MCP structured `next` is a tool call a client can issue without editing:
+`tool` plus `arguments`. Room doors, journal cues, Show, Studio keep, open,
+and fork, plot and sing, and bundled experiments use that shape. A field
+named `next` that carries a bare `id` instead of `arguments`, or that names
+a tool the caller cannot invoke with the given payload, is not a door. A
+regression that follows the returned pointer verbatim is the evidence. Do
+not treat a comment, a release note, or a sentence in `docs/PLAYING.md` as
+that evidence.
+
 ### The Python gates are linted, and typed by ratchet
 
 The scripts in `scripts/` decide whether a release ships, and for a long time
