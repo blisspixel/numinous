@@ -2827,6 +2827,29 @@ pub fn pattern_row(
     Some(marks)
 }
 
+/// Numbered step-grid caption of pattern rows.
+///
+/// The header is the 1-based step index, ones digit only, so an eight-step
+/// tresillo is `12345678` over `x..x..x.`. Empty when there are no rows, or
+/// when the rows disagree about how many steps they have. This is the same
+/// reading as [`StudioCreation::pattern_rows`], not a second document.
+#[must_use]
+pub fn pattern_grid_text(rows: &[String]) -> Option<String> {
+    let width = rows.first()?.chars().count();
+    if width == 0 || rows.iter().any(|row| row.chars().count() != width) {
+        return None;
+    }
+    let header: String = (1..=width)
+        .map(|step| char::from_digit((step % 10) as u32, 10).unwrap_or('0'))
+        .collect();
+    let mut text = header;
+    for row in rows {
+        text.push('\n');
+        text.push_str(row);
+    }
+    Some(text)
+}
+
 /// Evaluate a parsed expression at variable `x` and parameter `a`.
 ///
 /// Named sliders that are not in a table evaluate at one, the same default
@@ -4393,6 +4416,21 @@ mod tests {
         assert!(half.pattern_rows().is_empty());
         let path = studio_experiment("full-return").expect("path");
         assert!(path.pattern_rows().is_empty());
+        assert_eq!(
+            super::pattern_grid_text(&tresillo.pattern_rows()).expect("grid"),
+            "12345678\nx..x..x."
+        );
+        assert_eq!(
+            super::pattern_grid_text(&layered.pattern_rows()).expect("layered grid"),
+            "12345678\nx..x..x.\nx.x.xx.x"
+        );
+        assert!(super::pattern_grid_text(&[]).is_none());
+        assert!(super::pattern_grid_text(&["x.".into(), "x".into()]).is_none());
+        let ten = StudioCreation::new("euclid(1,10)", 0.0, 10.0, 1.0).expect("ten");
+        assert_eq!(
+            super::pattern_grid_text(&ten.pattern_rows()).expect("ten grid"),
+            "1234567890\nx........."
+        );
     }
 
     #[test]

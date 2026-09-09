@@ -40,7 +40,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   tracker marks, `x` on a hit and `.` on a rest. Tresillo is `x..x..x.`.
   Overlay rows share the same window. CLI, MCP, and the App Studio status
   name them. This is a reading of the formula that already draws, not a
-  second document. Tracker editing, step grid, and piano roll remain later.
+  second document.
+- Step grid, second Pattern Studio view: the same 0/1 rows as a numbered
+  grid (`12345678` over `x..x..x.`). The App draws the hits as cells.
+  CLI `grid=` and MCP `structuredContent.grid` name them. Tracker editing
+  and piano roll remain later.
 - Overlay quest, first contrast: family `two-voices` draws the two
   oscillators of Returning home as graphs over the same window.
   `closing-voices` is the 1 and 17/12 pair; `wandering-voices` replaces

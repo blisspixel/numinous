@@ -825,65 +825,67 @@ impl StudioPanel {
                 top: f64::from(60 * scale),
                 bottom_margin: f64::from(24 * scale),
             };
-            match program.kind() {
-                StudioKind::Graph => {
-                    let expr = program.voice_expression();
-                    let _ = numinous_app::studio_render::draw_curve(
-                        &mut raster,
-                        layout,
-                        xmin,
-                        xmax,
-                        |x| {
-                            let value = numinous_core::eval_named(expr, x, a, &self.sliders);
-                            value.is_finite().then_some(value)
-                        },
-                    );
-                }
-                StudioKind::Parametric => {
-                    let _ = numinous_app::studio_render::draw_parametric(
-                        &mut raster,
-                        layout,
-                        xmin,
-                        xmax,
-                        |input| program.point_named(input, a, &self.sliders),
-                    );
-                }
-                StudioKind::Field => {
-                    let (ymin, ymax) = self.field_window();
-                    let _ = numinous_app::studio_render::draw_field(
-                        &mut raster,
-                        layout,
-                        0,
-                        program.voice_expression(),
-                        self.reading,
-                        xmin,
-                        xmax,
-                        ymin,
-                        ymax,
-                        a,
-                        &self.sliders,
-                    );
-                }
-                StudioKind::Program => {
-                    let sliders = self.sliders.clone();
-                    let mut curves: Vec<_> = program
-                        .overlay_expressions()
-                        .iter()
-                        .map(|expr| {
-                            let sliders = sliders.clone();
-                            move |x: f64| {
-                                let value = numinous_core::eval_named(expr, x, a, &sliders);
+            if !self.paint_pattern_grid(&mut raster, layout) {
+                match program.kind() {
+                    StudioKind::Graph => {
+                        let expr = program.voice_expression();
+                        let _ = numinous_app::studio_render::draw_curve(
+                            &mut raster,
+                            layout,
+                            xmin,
+                            xmax,
+                            |x| {
+                                let value = numinous_core::eval_named(expr, x, a, &self.sliders);
                                 value.is_finite().then_some(value)
-                            }
-                        })
-                        .collect();
-                    let _ = numinous_app::studio_render::draw_overlay(
-                        &mut raster,
-                        layout,
-                        xmin,
-                        xmax,
-                        &mut curves,
-                    );
+                            },
+                        );
+                    }
+                    StudioKind::Parametric => {
+                        let _ = numinous_app::studio_render::draw_parametric(
+                            &mut raster,
+                            layout,
+                            xmin,
+                            xmax,
+                            |input| program.point_named(input, a, &self.sliders),
+                        );
+                    }
+                    StudioKind::Field => {
+                        let (ymin, ymax) = self.field_window();
+                        let _ = numinous_app::studio_render::draw_field(
+                            &mut raster,
+                            layout,
+                            0,
+                            program.voice_expression(),
+                            self.reading,
+                            xmin,
+                            xmax,
+                            ymin,
+                            ymax,
+                            a,
+                            &self.sliders,
+                        );
+                    }
+                    StudioKind::Program => {
+                        let sliders = self.sliders.clone();
+                        let mut curves: Vec<_> = program
+                            .overlay_expressions()
+                            .iter()
+                            .map(|expr| {
+                                let sliders = sliders.clone();
+                                move |x: f64| {
+                                    let value = numinous_core::eval_named(expr, x, a, &sliders);
+                                    value.is_finite().then_some(value)
+                                }
+                            })
+                            .collect();
+                        let _ = numinous_app::studio_render::draw_overlay(
+                            &mut raster,
+                            layout,
+                            xmin,
+                            xmax,
+                            &mut curves,
+                        );
+                    }
                 }
             }
         }
@@ -1023,6 +1025,21 @@ impl StudioPanel {
         ]
     }
 
+    fn paint_pattern_grid(
+        &self,
+        raster: &mut Raster,
+        layout: numinous_app::studio_render::CurveLayout,
+    ) -> bool {
+        let Ok(creation) = self.current_creation() else {
+            return false;
+        };
+        let rows = creation.pattern_rows();
+        if rows.is_empty() {
+            return false;
+        }
+        numinous_app::studio_render::draw_pattern_grid(raster, layout, &rows)
+    }
+
     fn closure_caption(&self) -> Option<String> {
         let creation = self.current_creation().ok()?;
         PathClosure::of(&creation)
@@ -1103,58 +1120,63 @@ impl StudioPanel {
                 top: f64::from(10 + 56 * scale),
                 bottom_margin: f64::from(footer_height + 8 * scale),
             };
-            match program.kind() {
-                StudioKind::Graph => {
-                    let _ =
-                        numinous_app::studio_render::draw_curve(raster, layout, xmin, xmax, |x| {
-                            self.curve_value(x, a)
-                        });
-                }
-                StudioKind::Parametric => {
-                    let _ = numinous_app::studio_render::draw_parametric(
-                        raster,
-                        layout,
-                        xmin,
-                        xmax,
-                        |input| program.point_named(input, a, &self.sliders),
-                    );
-                }
-                StudioKind::Field => {
-                    let (ymin, ymax) = self.field_window();
-                    let _ = numinous_app::studio_render::draw_field(
-                        raster,
-                        layout,
-                        0,
-                        program.voice_expression(),
-                        self.reading,
-                        xmin,
-                        xmax,
-                        ymin,
-                        ymax,
-                        a,
-                        &self.sliders,
-                    );
-                }
-                StudioKind::Program => {
-                    let sliders = self.sliders.clone();
-                    let mut curves: Vec<_> = program
-                        .overlay_expressions()
-                        .iter()
-                        .map(|expr| {
-                            let sliders = sliders.clone();
-                            move |x: f64| {
-                                let value = numinous_core::eval_named(expr, x, a, &sliders);
-                                value.is_finite().then_some(value)
-                            }
-                        })
-                        .collect();
-                    let _ = numinous_app::studio_render::draw_overlay(
-                        raster,
-                        layout,
-                        xmin,
-                        xmax,
-                        &mut curves,
-                    );
+            if !self.paint_pattern_grid(raster, layout) {
+                match program.kind() {
+                    StudioKind::Graph => {
+                        let _ = numinous_app::studio_render::draw_curve(
+                            raster,
+                            layout,
+                            xmin,
+                            xmax,
+                            |x| self.curve_value(x, a),
+                        );
+                    }
+                    StudioKind::Parametric => {
+                        let _ = numinous_app::studio_render::draw_parametric(
+                            raster,
+                            layout,
+                            xmin,
+                            xmax,
+                            |input| program.point_named(input, a, &self.sliders),
+                        );
+                    }
+                    StudioKind::Field => {
+                        let (ymin, ymax) = self.field_window();
+                        let _ = numinous_app::studio_render::draw_field(
+                            raster,
+                            layout,
+                            0,
+                            program.voice_expression(),
+                            self.reading,
+                            xmin,
+                            xmax,
+                            ymin,
+                            ymax,
+                            a,
+                            &self.sliders,
+                        );
+                    }
+                    StudioKind::Program => {
+                        let sliders = self.sliders.clone();
+                        let mut curves: Vec<_> = program
+                            .overlay_expressions()
+                            .iter()
+                            .map(|expr| {
+                                let sliders = sliders.clone();
+                                move |x: f64| {
+                                    let value = numinous_core::eval_named(expr, x, a, &sliders);
+                                    value.is_finite().then_some(value)
+                                }
+                            })
+                            .collect();
+                        let _ = numinous_app::studio_render::draw_overlay(
+                            raster,
+                            layout,
+                            xmin,
+                            xmax,
+                            &mut curves,
+                        );
+                    }
                 }
             }
         }
@@ -1760,6 +1782,12 @@ mod tests {
         );
         let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 80);
         assert!(context.contains("PATTERN x..x..x."), "{context}");
+        let mut raster = Raster::new(240, 180);
+        panel.draw(&mut raster, InputMode::KeyboardMouse, 240, 180);
+        assert!(
+            raster.lit_count() > 20,
+            "the step grid has to mark tresillo's three hits"
+        );
         let five = panel.adjacent_experiment(1).expect("five");
         assert_eq!(five.id, "three-against-five");
         assert_eq!(five.creation().kind(), numinous_core::StudioKind::Program);

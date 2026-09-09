@@ -265,7 +265,7 @@ pub use studio::{
     StudioCreation, StudioExperiment, StudioKind, StudioPlot, StudioProgram, StudioScale,
     adjacent_construction_creation, adjacent_studio_experiment, eval, eval_field, eval_field_named,
     eval_named, first_studio_construction, is_returning_home_transfer, parse, parse_field,
-    pattern_row, plot_text, returning_home_transfer, studio_auto_recipe,
+    pattern_grid_text, pattern_row, plot_text, returning_home_transfer, studio_auto_recipe,
     studio_construction_family, studio_experiment, studio_experiment_matching,
     studio_experiment_meta, studio_experiments_in, studio_recipe, studio_recipe_count, to_melody,
     to_melody_with_scale, to_melody_with_scale_named, uses_field_vocabulary,
