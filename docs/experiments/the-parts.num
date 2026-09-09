@@ -1,0 +1,9 @@
+NUMINOUS_STUDIO 7
+kind=program
+expr=sin(x)
+expr=cos(x)
+xmin=-6.283185307179586
+xmax=6.283185307179586
+a=1
+scale=continuous
+title=The parts

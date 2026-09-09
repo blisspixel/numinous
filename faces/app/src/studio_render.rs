@@ -123,6 +123,56 @@ pub fn draw_curve(
     Some((samples.ymin, samples.ymax))
 }
 
+/// Draw several graphs over one shared vertical range.
+pub fn draw_overlay(
+    raster: &mut Raster,
+    layout: CurveLayout,
+    xmin: f64,
+    xmax: f64,
+    curves: &mut [impl FnMut(f64) -> Option<f64>],
+) -> Option<(f64, f64)> {
+    let width = layout.width.min(raster.width());
+    let sampled: Vec<CurveSamples> = curves
+        .iter_mut()
+        .filter_map(|value_at| sample_curve(width, xmin, xmax, value_at))
+        .collect();
+    if sampled.is_empty() {
+        return None;
+    }
+    let ymin = sampled
+        .iter()
+        .map(|curve| curve.ymin)
+        .fold(f64::INFINITY, f64::min);
+    let ymax = sampled
+        .iter()
+        .map(|curve| curve.ymax)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let height = layout.height.min(raster.height());
+    let plot_height = height as f64 - layout.top - layout.bottom_margin;
+    if !layout.top.is_finite()
+        || !layout.bottom_margin.is_finite()
+        || layout.top < 0.0
+        || layout.bottom_margin < 0.0
+        || plot_height < 8.0
+    {
+        return None;
+    }
+    let yspan = (ymax - ymin).max(1e-9);
+    for (index, samples) in sampled.iter().enumerate() {
+        let mark = numinous_core::PROGRAM_MARKS[index.min(numinous_core::PROGRAM_MARKS.len() - 1)];
+        let mut previous = None;
+        for (column, value) in &samples.points {
+            let x = *column as i32;
+            let y = (layout.top + (1.0 - (value - ymin) / yspan) * plot_height) as i32;
+            if let Some((previous_x, previous_y)) = previous {
+                raster.line(previous_x, previous_y, x, y, mark);
+            }
+            previous = Some((x, y));
+        }
+    }
+    Some((ymin, ymax))
+}
+
 /// Fit one parametric path with equal physical coordinate units into the band.
 /// Sampling is denser than the pixel width so closed curves do not become a
 /// sparse polygon at small windows, but stays capped independently of input.

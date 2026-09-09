@@ -40,7 +40,8 @@ printable-ASCII sentence the forker can edit. The fourth growth ring,
 1, identity or lineage alone still writes version 2, a pair or stored scale
 writes version 3, credit writes version 4, a field writes version 5, and unknown future headers are
 refused. Named sliders write `NUMINOUS_STUDIO 6` as `slider=name:value:min:max`.
-General multi-expression programs remain a later ring. This is the Baba Is You and
+Overlay programs write `NUMINOUS_STUDIO 7` as repeated `expr=` lines under
+`kind=program`. Pattern algebra remains a later ring. This is the Baba Is You and
 Doom-WAD model, and its safety record is perfect for a structural reason:
 there is no code to escape with.
 
