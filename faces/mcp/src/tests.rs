@@ -882,6 +882,11 @@ fn tools_list_has_the_expected_tools() {
             && sing_description.contains("MIDI stays the first graph"),
         "sing_expression must name overlay WAV mix and MIDI lead: {sing_description}"
     );
+    assert!(
+        sing_description.contains("real axis")
+            && sing_description.contains("zero reading is a proof"),
+        "sing_expression must name field melody and the silent proof: {sing_description}"
+    );
     for tool in [save_creation, fork_creation] {
         assert_eq!(
             tool["inputSchema"]["properties"]["credit"]["type"],
@@ -2689,6 +2694,36 @@ fn overlay_programs_sing_every_graph_in_wav_and_keep_the_first_in_midi() {
         overlay_midi["resource"]["blob"], lead_midi["resource"]["blob"],
         "overlay MIDI stays the first graph"
     );
+}
+
+#[test]
+fn height_and_phase_fields_sing_and_zero_stays_a_proof() {
+    let height = call(
+        "sing_expression",
+        json!({"expr": "x^2 + y^2 - 1", "reading": "height", "notes": 8}),
+    );
+    assert_eq!(height["result"]["isError"], false, "{height}");
+    let content = &height["result"]["structuredContent"];
+    assert_eq!(content["notes"].as_array().expect("notes").len(), 8);
+    assert_eq!(content["reading"], "height");
+    assert_eq!(content["next"]["tool"], "save_creation");
+    assert_eq!(content["next"]["arguments"]["reading"], "height");
+    let saved = call("save_creation", content["next"]["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    assert_eq!(saved["result"]["structuredContent"]["kind"], "field");
+    assert_eq!(saved["result"]["structuredContent"]["reading"], "height");
+
+    let zero = call(
+        "sing_expression",
+        json!({"expr": "x^2 + y^2 - 1", "reading": "zero", "notes": 8}),
+    );
+    assert_eq!(zero["result"]["isError"], true, "{zero}");
+    let text = zero["result"]["content"][0]["text"].as_str().unwrap_or("");
+    assert!(text.contains("proof"), "{text}");
+
+    let phase = call("sing_expression", json!({"expr": "z", "notes": 8}));
+    assert_eq!(phase["result"]["isError"], false, "{phase}");
+    assert_eq!(phase["result"]["structuredContent"]["reading"], "phase");
 }
 
 #[test]

@@ -9,14 +9,14 @@ use std::fmt;
 
 use crate::field::{
     DEFAULT_FIELD_SIZE, FieldError, FieldPlate, FieldReading, MAX_FIELD_HEIGHT, MAX_FIELD_WIDTH,
-    draw_named as draw_field,
+    draw_named as draw_field, is_real_valued,
 };
 use crate::slider::{StudioSlider, bind_sliders, collect_slider_names};
 use crate::sound::SoundSpec;
 use crate::studio::{
-    Expr, MAX_MELODY_NOTES, MAX_STUDIO_SOURCE_CHARS, PlotTextError, StudioScale, parse,
-    parse_field, plot_parsed_text_named, studio_auto_recipe, studio_recipe, studio_recipe_count,
-    to_melody_with_scale_named,
+    Expr, MAX_MELODY_NOTES, MAX_STUDIO_SOURCE_CHARS, PlotTextError, StudioProgram, StudioScale,
+    parse, parse_field, plot_parsed_text_named, studio_auto_recipe, studio_recipe,
+    studio_recipe_count, to_melody_with_scale_named, uses_field_vocabulary,
 };
 
 /// Default left edge of a Studio expression window.
@@ -437,6 +437,7 @@ impl FieldRequest {
 pub struct SingRequest {
     source: String,
     expression: Expr,
+    reading: Option<FieldReading>,
     xmin: f64,
     xmax: f64,
     parameter: f64,
@@ -460,8 +461,6 @@ impl SingRequest {
         notes: Option<usize>,
     ) -> Result<Self, StudioRequestError> {
         let source = source.into();
-        let expression = parse_source(&source)?;
-        let (xmin, xmax, parameter) = resolve_window(xmin, xmax, parameter)?;
         let notes = notes.unwrap_or(DEFAULT_MELODY_NOTES);
         if !(1..=MAX_MELODY_NOTES).contains(&notes) {
             return Err(StudioRequestError::InvalidNoteCount {
@@ -469,17 +468,56 @@ impl SingRequest {
                 maximum: MAX_MELODY_NOTES,
             });
         }
+        if let Ok(expression) = parse_field(&source)
+            && uses_field_vocabulary(&expression)
+        {
+            validate_source_length(&source)?;
+            let (xmin, xmax, parameter) = resolve_field_window(xmin, xmax, parameter)?;
+            let names = collect_slider_names(&expression);
+            let sliders = bind_sliders(&names, &[]).map_err(StudioRequestError::InvalidSource)?;
+            return Ok(Self {
+                source,
+                expression,
+                reading: Some(FieldReading::default()),
+                xmin,
+                xmax,
+                parameter,
+                sliders,
+                notes,
+            });
+        }
+        let expression = parse_source(&source)?;
+        let (xmin, xmax, parameter) = resolve_window(xmin, xmax, parameter)?;
         let names = collect_slider_names(&expression);
         let sliders = bind_sliders(&names, &[]).map_err(StudioRequestError::InvalidSource)?;
         Ok(Self {
             source,
             expression,
+            reading: None,
             xmin,
             xmax,
             parameter,
             sliders,
             notes,
         })
+    }
+
+    /// Bind which truth a field sings along the real axis.
+    ///
+    /// # Errors
+    /// Returns a refusal when this is not a field, or when the zero reading
+    /// is asked of an expression that leaves the real line.
+    pub fn with_reading(mut self, reading: FieldReading) -> Result<Self, StudioRequestError> {
+        if self.reading.is_none() {
+            return Err(StudioRequestError::InvalidSource(
+                "reading is only valid with a field expression".to_string(),
+            ));
+        }
+        if reading == FieldReading::Zero && !is_real_valued(&self.expression) {
+            return Err(StudioRequestError::from_field(FieldError::NotRealValued));
+        }
+        self.reading = Some(reading);
+        Ok(self)
     }
 
     /// Bind caller-supplied sliders onto this melody request.
@@ -507,15 +545,32 @@ impl SingRequest {
     /// Returns [`StudioRequestError::Undefined`] when no finite sample exists
     /// across the requested window.
     pub fn execute_with_scale(&self, scale: StudioScale) -> Result<SoundSpec, StudioRequestError> {
-        let spec = to_melody_with_scale_named(
-            &self.expression,
-            self.xmin,
-            self.xmax,
-            self.notes,
-            self.parameter,
-            &self.sliders,
-            scale,
-        );
+        let spec = match self.reading {
+            Some(FieldReading::Zero) => {
+                return Err(StudioRequestError::Field(
+                    "the zero reading is a proof; it has no melody".to_string(),
+                ));
+            }
+            Some(reading) => StudioProgram::field_with_reading(&self.source, reading)
+                .map_err(StudioRequestError::InvalidSource)?
+                .to_melody(
+                    self.xmin,
+                    self.xmax,
+                    self.notes,
+                    self.parameter,
+                    &self.sliders,
+                    scale,
+                ),
+            None => to_melody_with_scale_named(
+                &self.expression,
+                self.xmin,
+                self.xmax,
+                self.notes,
+                self.parameter,
+                &self.sliders,
+                scale,
+            ),
+        };
         if spec.notes.is_empty() {
             Err(StudioRequestError::Undefined)
         } else {
@@ -527,6 +582,12 @@ impl SingRequest {
     #[must_use]
     pub fn source(&self) -> &str {
         &self.source
+    }
+
+    /// Stored field reading, when this melody is a field along the real axis.
+    #[must_use]
+    pub const fn reading(&self) -> Option<FieldReading> {
+        self.reading
     }
 
     /// Left edge of the resolved expression window.
@@ -655,7 +716,7 @@ fn resolve_source(source: PlotSource) -> (String, PlotDiscovery, Option<u64>) {
     }
 }
 
-fn parse_source(source: &str) -> Result<Expr, StudioRequestError> {
+fn validate_source_length(source: &str) -> Result<(), StudioRequestError> {
     if source.is_empty() {
         return Err(StudioRequestError::InvalidSource(
             "Studio expression is empty".to_string(),
@@ -666,6 +727,11 @@ fn parse_source(source: &str) -> Result<Expr, StudioRequestError> {
             "Studio expression is too long; limit is {MAX_STUDIO_SOURCE_CHARS} characters"
         )));
     }
+    Ok(())
+}
+
+fn parse_source(source: &str) -> Result<Expr, StudioRequestError> {
+    validate_source_length(source)?;
     parse(source).map_err(StudioRequestError::InvalidSource)
 }
 
@@ -911,5 +977,46 @@ mod tests {
             .with_sliders(vec![StudioSlider::new("b", 2.0, 0.25, 8.0).expect("b")])
             .expect("bound");
         assert_eq!(song.execute().expect("melody").notes.len(), 8);
+    }
+
+    #[test]
+    fn field_songs_use_the_plate_numbers_and_refuse_the_zero_proof() {
+        let phase = SingRequest::new("z", None, None, None, Some(8)).expect("phase");
+        assert_eq!(phase.reading(), Some(FieldReading::Phase));
+        assert_eq!(phase.xmin(), DEFAULT_FIELD_MIN);
+        assert_eq!(phase.xmax(), DEFAULT_FIELD_MAX);
+        assert_eq!(phase.execute().expect("wheel").notes.len(), 8);
+
+        let height = phase
+            .clone()
+            .with_reading(FieldReading::Height)
+            .expect("height");
+        assert_eq!(height.reading(), Some(FieldReading::Height));
+        assert_eq!(height.execute().expect("ladder").notes.len(), 8);
+        assert_ne!(
+            phase.execute().expect("phase notes"),
+            height.execute().expect("height notes")
+        );
+
+        let zero = SingRequest::new("x^2 + y^2 - 1", None, None, None, Some(8))
+            .expect("circle")
+            .with_reading(FieldReading::Zero)
+            .expect("bound");
+        assert!(matches!(
+            zero.execute(),
+            Err(StudioRequestError::Field(message)) if message.contains("proof")
+        ));
+        assert!(
+            SingRequest::new("sin(x)", None, None, None, Some(8))
+                .expect("graph")
+                .with_reading(FieldReading::Phase)
+                .is_err()
+        );
+        assert!(
+            SingRequest::new("z", None, None, None, Some(8))
+                .expect("complex")
+                .with_reading(FieldReading::Zero)
+                .is_err()
+        );
     }
 }

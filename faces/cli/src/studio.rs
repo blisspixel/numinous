@@ -10,8 +10,9 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use numinous_core::{
-    FieldReading, FieldRequest, PathClosure, PlotRequest, PlotSource, SingRequest, SoundSpec,
-    StudioCreation, StudioKind, StudioRequestError, StudioScale, StudioSlider, sliders_from_specs,
+    DEFAULT_FIELD_MAX, DEFAULT_FIELD_MIN, FieldReading, FieldRequest, PathClosure, PlotRequest,
+    PlotSource, SingRequest, SoundSpec, StudioCreation, StudioKind, StudioRequestError,
+    StudioScale, StudioSlider, parse_field, sliders_from_specs, uses_field_vocabulary,
 };
 
 use crate::render_input::validate_render_dimensions;
@@ -396,6 +397,11 @@ pub(super) fn plot_request_error(error: StudioRequestError) -> String {
 }
 
 /// WAV mixes every overlay graph; MIDI keeps the first graph.
+/// Height and phase fields sing along the real axis; zero stays silent.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a melody is source, window, count, knob, scale, sliders, and reading"
+)]
 pub(super) fn overlay_or_graph_melody(
     source: &str,
     xmin: f64,
@@ -404,8 +410,12 @@ pub(super) fn overlay_or_graph_melody(
     a: f64,
     scale: StudioScale,
     sliders: &[StudioSlider],
+    reading: Option<FieldReading>,
 ) -> Result<(SoundSpec, SoundSpec), String> {
     if source.contains('&') {
+        if reading.is_some() {
+            return Err("reading is a field claim; an overlay is graphs\n".to_string());
+        }
         let parts: Vec<String> = source
             .split('&')
             .map(|part| part.trim().to_string())
@@ -423,6 +433,9 @@ pub(super) fn overlay_or_graph_melody(
     } else {
         let mut request = SingRequest::new(source, Some(xmin), Some(xmax), Some(a), Some(notes))
             .map_err(sing_request_error)?;
+        if let Some(reading) = reading {
+            request = request.with_reading(reading).map_err(sing_request_error)?;
+        }
         if !sliders.is_empty() {
             request = request
                 .with_sliders(sliders.to_vec())
@@ -433,6 +446,12 @@ pub(super) fn overlay_or_graph_melody(
             .map_err(sing_request_error)?;
         Ok((spec.clone(), spec))
     }
+}
+
+fn is_field_source(source: &str) -> bool {
+    parse_field(source)
+        .ok()
+        .is_some_and(|expression| uses_field_vocabulary(&expression))
 }
 
 pub(super) fn sing_request_error(error: StudioRequestError) -> String {
@@ -563,7 +582,15 @@ fn save_creation(
 /// A creation's voice travels through the terminal: sing accepts the same
 /// `.num` files and links the rest of the Studio surface speaks, and the
 /// capsule supplies its own window and knob unless flags override them.
-type ResolvedSingInput = (String, f64, f64, f64, StudioScale, Vec<StudioSlider>);
+type ResolvedSingInput = (
+    String,
+    f64,
+    f64,
+    f64,
+    StudioScale,
+    Vec<StudioSlider>,
+    Option<FieldReading>,
+);
 
 pub(super) fn resolve_sing_input(
     input: &str,
@@ -573,9 +600,6 @@ pub(super) fn resolve_sing_input(
 ) -> Result<ResolvedSingInput, String> {
     if names_a_studio_creation(input) {
         let creation = load_studio_creation(input)?;
-        if creation.kind() == StudioKind::Field {
-            return Err("a field is seen first; it has no melody yet\n".to_string());
-        }
         let source = if creation.kind() == StudioKind::Program {
             creation.editor_source()
         } else {
@@ -591,15 +615,26 @@ pub(super) fn resolve_sing_input(
             a.unwrap_or_else(|| creation.a()),
             creation.scale(),
             creation.sliders().to_vec(),
+            creation.reading(),
         ));
     }
+    let field = is_field_source(input);
     Ok((
         input.to_string(),
-        xmin.unwrap_or(-std::f64::consts::TAU),
-        xmax.unwrap_or(std::f64::consts::TAU),
+        xmin.unwrap_or(if field {
+            DEFAULT_FIELD_MIN
+        } else {
+            -std::f64::consts::TAU
+        }),
+        xmax.unwrap_or(if field {
+            DEFAULT_FIELD_MAX
+        } else {
+            std::f64::consts::TAU
+        }),
         a.unwrap_or(1.0),
         StudioScale::Continuous,
         Vec::new(),
+        field.then_some(FieldReading::Phase),
     ))
 }
 
@@ -797,6 +832,7 @@ fn names_a_studio_creation(input: &str) -> bool {
         || Path::new(input)
             .extension()
             .is_some_and(|extension| extension.eq_ignore_ascii_case("num"))
+        || numinous_core::studio_experiment(input).is_some()
 }
 
 /// The first sibling name not already taken, bounded so a hostile directory

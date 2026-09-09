@@ -145,8 +145,9 @@ pub use encounter::{
 pub use era::Era;
 pub use field::{
     DEFAULT_FIELD_SIZE, FieldError, FieldPlate, FieldReading, MAX_FIELD_HEIGHT, MAX_FIELD_WIDTH,
-    draw as draw_field, draw_named as draw_field_named, is_real_valued as field_is_real_valued,
-    mark_level as field_mark_level,
+    draw as draw_field, draw_named as draw_field_named, height_measure as field_height_measure,
+    is_real_valued as field_is_real_valued, mark_level as field_mark_level,
+    phase_measure as field_phase_measure,
 };
 pub use font::{draw_text, text_width, wrap_text};
 pub use gauntlet::{

@@ -9,7 +9,7 @@
 use std::f64::consts::{E, PI};
 
 use crate::complex::Complex;
-use crate::field::{self, FieldReading, is_real_valued};
+use crate::field::{self, FieldReading, height_measure, is_real_valued, phase_measure};
 use crate::sound::{Note, SoundSpec};
 
 /// Maximum accepted Studio source length for share files and links.
@@ -1235,8 +1235,9 @@ impl StudioCreation {
 
     /// Render this exact creation's voice. A parametric creation sings its
     /// y-coordinate over `t`; the x-coordinate remains the visible path.
-    /// A field is seen first: it has no melody yet. Overlay programs mix
-    /// every graph; [`Self::to_midi_melody`] keeps the first graph.
+    /// Height and phase fields sing the stored reading along the real axis.
+    /// The zero reading stays silent: it is a proof, not a sample. Overlay
+    /// programs mix every graph; [`Self::to_midi_melody`] keeps the first graph.
     #[must_use]
     pub fn to_melody(&self, notes: usize) -> SoundSpec {
         match self.program() {
@@ -2305,6 +2306,8 @@ pub enum StudioProgram {
         source: String,
         /// Parsed field expression.
         expression: Expr,
+        /// Which truth about the field the plate and voice use.
+        reading: FieldReading,
     },
     /// Several graphs over one window. Every graph sings in WAV; MIDI keeps
     /// the first expression.
@@ -2346,6 +2349,7 @@ impl StudioProgram {
                 return Ok(Self::Field {
                     source: source.to_string(),
                     expression: field,
+                    reading: FieldReading::default(),
                 });
             }
             return Ok(Self::Graph {
@@ -2402,11 +2406,46 @@ impl StudioProgram {
     /// # Errors
     /// Returns an expression validation or parser diagnostic.
     pub fn field(source: &str) -> Result<Self, String> {
+        Self::field_with_reading(source, FieldReading::default())
+    }
+
+    /// Parse a field program with a stored reading.
+    ///
+    /// # Errors
+    /// Returns an expression validation or parser diagnostic.
+    pub fn field_with_reading(source: &str, reading: FieldReading) -> Result<Self, String> {
         validate_share_source(source)?;
         Ok(Self::Field {
             source: source.to_string(),
             expression: parse_field(source)?,
+            reading,
         })
+    }
+
+    /// Keep this program's formula and bind a field reading.
+    ///
+    /// Graphs, pairs, and overlay programs ignore the reading.
+    #[must_use]
+    pub fn with_reading(self, reading: FieldReading) -> Self {
+        match self {
+            Self::Field {
+                source, expression, ..
+            } => Self::Field {
+                source,
+                expression,
+                reading,
+            },
+            other => other,
+        }
+    }
+
+    /// Stored field reading, when this program is a field.
+    #[must_use]
+    pub const fn reading(&self) -> Option<FieldReading> {
+        match self {
+            Self::Field { reading, .. } => Some(*reading),
+            _ => None,
+        }
     }
 
     /// Parse a parametric pair.
@@ -2431,7 +2470,9 @@ impl StudioProgram {
     /// Returns a parser diagnostic if an invariant has regressed.
     pub fn from_creation(creation: &StudioCreation) -> Result<Self, String> {
         match creation.kind() {
-            StudioKind::Field => Self::field(creation.source()),
+            StudioKind::Field => {
+                Self::field_with_reading(creation.source(), creation.reading().unwrap_or_default())
+            }
             StudioKind::Parametric => Self::parametric(
                 creation.source(),
                 creation
@@ -2521,8 +2562,9 @@ impl StudioProgram {
     }
 
     /// Lead expression when this program sings. Graphs sing their y value;
-    /// parametric paths sing their y coordinate over `t`. Overlay programs
-    /// keep this first graph for MIDI; [`Self::to_melody`] mixes every graph.
+    /// parametric paths sing their y coordinate over `t`. Height and phase
+    /// fields sing along the real axis. Overlay programs keep this first
+    /// graph for MIDI; [`Self::to_melody`] mixes every graph.
     #[must_use]
     pub fn voice_expression(&self) -> &Expr {
         match self {
@@ -2532,7 +2574,8 @@ impl StudioProgram {
         }
     }
 
-    /// WAV and live voice. Overlay programs mix every graph.
+    /// WAV and live voice. Overlay programs mix every graph. Height and
+    /// phase fields sing along the real axis; the zero reading is silent.
     #[must_use]
     pub fn to_melody(
         &self,
@@ -2544,7 +2587,11 @@ impl StudioProgram {
         scale: StudioScale,
     ) -> SoundSpec {
         match self {
-            Self::Field { .. } => silent_spec(),
+            Self::Field {
+                expression,
+                reading,
+                ..
+            } => field_to_melody(expression, *reading, xmin, xmax, notes, a, sliders, scale),
             Self::Program { expressions, .. } => {
                 mix_overlay_melodies(expressions, xmin, xmax, notes, a, sliders, scale)
             }
@@ -2560,7 +2607,8 @@ impl StudioProgram {
         }
     }
 
-    /// MIDI voice. Overlay programs keep the first graph.
+    /// MIDI voice. Overlay programs keep the first graph. A field's MIDI
+    /// is the same real-axis voice as its WAV.
     #[must_use]
     pub fn to_midi_melody(
         &self,
@@ -2572,7 +2620,11 @@ impl StudioProgram {
         scale: StudioScale,
     ) -> SoundSpec {
         match self {
-            Self::Field { .. } => silent_spec(),
+            Self::Field {
+                expression,
+                reading,
+                ..
+            } => field_to_melody(expression, *reading, xmin, xmax, notes, a, sliders, scale),
             _ => to_melody_with_scale_named(
                 self.voice_expression(),
                 xmin,
@@ -2990,6 +3042,69 @@ fn mix_overlay_melodies(
         .notes
         .sort_by(|left, right| left.start.total_cmp(&right.start));
     mixed
+}
+
+/// Height and phase along the real axis, using the plate's own numbers.
+///
+/// Time walks `x` through `[xmin, xmax]` at `y = 0`. Height is the doubling
+/// ladder. Phase is the argument wheel. The zero reading is a proof about a
+/// cell, not a sample, so it stays silent.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a field voice is the formula, reading, window, count, knob, sliders, and scale"
+)]
+fn field_to_melody(
+    expr: &Expr,
+    reading: FieldReading,
+    xmin: f64,
+    xmax: f64,
+    notes: usize,
+    a: f64,
+    sliders: &[crate::slider::StudioSlider],
+    scale: StudioScale,
+) -> SoundSpec {
+    if reading == FieldReading::Zero {
+        return silent_spec();
+    }
+    let notes = notes.clamp(1, MAX_MELODY_NOTES);
+    let denom = (notes as f64 - 1.0).max(1.0);
+    let samples: Vec<f32> = (0..notes)
+        .filter_map(|i| {
+            let x = xmin + (xmax - xmin) * i as f64 / denom;
+            let value = eval_field_named(expr, Complex::real(x), a, sliders);
+            let unit = match reading {
+                FieldReading::Height => height_measure(value),
+                FieldReading::Phase => phase_measure(value),
+                FieldReading::Zero => None,
+            }?;
+            Some(unit as f32)
+        })
+        .collect();
+    melody_from_norms(&samples, scale)
+}
+
+fn melody_from_norms(samples: &[f32], scale: StudioScale) -> SoundSpec {
+    if samples.is_empty() {
+        return silent_spec();
+    }
+    let step = 0.12_f32;
+    let note_vec: Vec<Note> = samples
+        .iter()
+        .enumerate()
+        .map(|(i, &norm)| {
+            let semitones = quantized_semitones(norm.clamp(0.0, 1.0) * 24.0, scale);
+            Note {
+                freq: 220.0 * 2.0_f32.powf(semitones / 12.0),
+                start: i as f32 * step,
+                dur: step * 1.4,
+                amp: 0.3,
+            }
+        })
+        .collect();
+    SoundSpec {
+        duration: note_vec.len() as f32 * step + 0.3,
+        notes: note_vec,
+    }
 }
 
 /// Turn one expression into a melody with named sliders bound.
@@ -4779,7 +4894,11 @@ mod tests {
         assert_eq!(child.reading(), Some(FieldReading::Height));
         assert_eq!(child.source(), creation.source());
         assert!(child.descends().unwrap().contains("kind=field"));
-        assert!(child.to_melody(8).notes.is_empty());
+        assert!(
+            !child.to_melody(8).notes.is_empty(),
+            "height along the real axis is a sample, so it sings"
+        );
+        assert!(creation.to_melody(8).notes.is_empty(), "zero is a proof");
 
         assert!(
             StudioCreation::new_field("z^2 - 1", -2.0, 2.0, -2.0, 2.0, 1.0, FieldReading::Zero)
@@ -4801,6 +4920,71 @@ mod tests {
         );
         assert!(uses_field_vocabulary(&parse_field("re(z)").expect("re")));
         assert!(!uses_field_vocabulary(&parse("sin(x)").expect("sin")));
+    }
+
+    #[test]
+    fn height_and_phase_fields_sing_the_real_axis_and_zero_stays_silent() {
+        let height = studio_experiment("the-bowl").expect("the-bowl");
+        assert_eq!(height.reading(), Some(FieldReading::Height));
+        let sung = height.to_melody(8);
+        assert_eq!(sung.notes.len(), 8);
+        assert_eq!(sung, height.to_midi_melody(8), "a field is one voice");
+
+        let phase = studio_experiment("simple-zero").expect("simple-zero");
+        assert_eq!(phase.reading(), Some(FieldReading::Phase));
+        let wheel = phase.to_melody(16);
+        assert_eq!(wheel.notes.len(), 16);
+        let low = wheel
+            .notes
+            .iter()
+            .map(|note| note.freq)
+            .fold(f32::INFINITY, f32::min);
+        let high = wheel
+            .notes
+            .iter()
+            .map(|note| note.freq)
+            .fold(f32::NEG_INFINITY, f32::max);
+        assert!(
+            high > low * 1.5,
+            "z on the real axis points left, then right: {low} then {high}"
+        );
+
+        let pole = studio_experiment("a-pole").expect("a-pole");
+        let pole_voice = pole.to_melody(16);
+        assert!(pole_voice.notes.len() > 1);
+        let first = pole_voice.notes[0].freq;
+        assert!(
+            pole_voice
+                .notes
+                .iter()
+                .any(|note| (note.freq - first).abs() > 1.0),
+            "1/z on the real axis changes direction at the origin"
+        );
+
+        let zero = studio_experiment("the-circle").expect("the-circle");
+        assert_eq!(zero.reading(), Some(FieldReading::Zero));
+        assert!(zero.to_melody(8).notes.is_empty());
+        assert!(zero.to_midi_melody(8).notes.is_empty());
+
+        let identity = StudioProgram::field("z").expect("z");
+        let identity_height = identity
+            .clone()
+            .with_reading(FieldReading::Height)
+            .to_melody(-2.0, 2.0, 5, 1.0, &[], StudioScale::Continuous);
+        assert_eq!(identity_height.notes.len(), 5);
+        assert!(
+            identity_height.notes[2].freq < identity_height.notes[0].freq,
+            "height of z along the real axis is a V: the origin is the bottom"
+        );
+        let identity_zero = identity.with_reading(FieldReading::Zero).to_melody(
+            -2.0,
+            2.0,
+            5,
+            1.0,
+            &[],
+            StudioScale::Continuous,
+        );
+        assert!(identity_zero.notes.is_empty());
     }
 
     #[test]
