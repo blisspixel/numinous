@@ -88,6 +88,7 @@ your hands already know it:
 | hold controller North + D-pad up / down | global volume up / down |
 | hold controller North + South | global sound on / off |
 | Tab | the Studio: type math, watch and hear it live |
+| O | in Lissajous, open the optional Returning home Studio walk |
 
 The art keeps the frame, including behind the Cabinet. Room titles,
 arrival hints, and readouts use separate quiet bands. Arrival hints fade on
@@ -132,7 +133,13 @@ discarding its progress during the visit. Reading remains independent. The
 A saved creation reopens exactly. Launch the App with a `.num` path or a
 `numinous://studio` link, or drop a `.num` file on the window, and the Studio
 opens with the saved formula, window, and knob pinned, paused: the exact curve
-is drawn, and Enter starts it singing. The first edit begins a remix while
+is drawn, and Enter starts it singing. A two-oscillator path also names its
+closure on the status line: a period, or no period, including the half-period
+trap where position returns and velocity reverses. PageDown and PageUp walk
+a bundled family when the current creation still matches one. After same-place,
+PageDown opens the bundled `another-ratio` capsule, a period-1 starter
+you can retune. Esc or Tab leaves. Lissajous offers CONSTRUCT in the Cabinet,
+or `O` in the room, to open the first Returning home capsule. The first edit begins a remix while
 keeping the saved window and knob. In alpha 18, Up/Down tune `a` by 0.25 per
 press and Home restores 1; controller Up/Down and Reset use the same actions.
 Fresh formulas start at `a = 1`, and drawing, melody, and exports use the value
@@ -375,8 +382,8 @@ input without hidden session state:
 |---|---|
 | `list_rooms` | the room threshold: touch the flagship, walk the six-room Strange Loop chain, or wander by compact wing summaries. `structuredContent.rooms` retains the complete typed list and `starters` retains the prior four-row doorway in every mode |
 | `watch_show` | one caller-paced cue from the core-owned six-room Strange Loop score. Returns exact ASCII looks, visual alternatives, cell deltas, held evidence, sound facts, optional WAV audio, and explicit replay, next, restart, and leave calls. `motion: "reduced"` returns the same cue's postcard only. It stores no cursor or progress, reads no journal or workspace, and never opens the explanation |
-| `describe_room` | a safe doorway: title, wing, action, optional goal, and play prompt, never the revelation |
-| `study_room` | unrestricted room reading, with explicit depth or stable block selection and language fallback; see [Study](STUDY.md) |
+| `describe_room` | a safe doorway: title, wing, action, optional goal, and play prompt, never the revelation. Lissajous also names Returning home as an optional construction |
+| `study_room` | unrestricted room reading, with explicit depth or stable block selection and language fallback; Lissajous also names Returning home as an optional construction. See [Study](STUDY.md) |
 | `reveal_room` | the insight after one real play, or after consolidation for an engineered wager room |
 | `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array. Add `from_t` with explicit destination `t` for two exact observations and a typed temporal delta; the top-level frame remains the destination. Add `dwell` with two to eight phases to stay in the room instead of moving through it: `structuredContent.dwell` reports what refused to move across every look, including cells that never lit and holes fully ringed by light. Pass `receipt: true` for a replay proof in `structuredContent.encounter`; asking does not keep the play. Returns goal state. It never volunteers the explanation: landing a goal opens `reveal_room`, it does not answer, because understanding is offered only when asked for. On Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` / `speed_wager` / `policy_wager` / `counter_wager` plus `aha_summon` walk generation-before-reveal without App session state. Nontransitive Dice also accepts typed `die_choice` instead of coordinate input |
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
@@ -394,8 +401,11 @@ input without hidden session state:
 | `quiz` | guess the shape: call to see, then repeat `seed`, `round`, and `choices` with `guess` |
 | `munch` | eat the numbers that fit: call to see, call again with `bites` |
 | `munch_arcade` | hunted Munch: call to see, call again with replayed `actions` |
-| `plot_expression` | your own Studio function, including `floor`, Euclidean `mod`, `min`, and `max`, plotted |
-| `sing_expression` | the same Studio grammar, as note-by-note melody |
+| `plot_expression` | your own Studio function, including `floor`, Euclidean `mod`, `min`, and `max`, plotted. A successful plot names `next` as `save_creation` with the expression and window already bound. `list_recipes` inspects the graph bank; `list_experiments` lists bundled capsules whose `next` is `open_creation`. `family` selects `returning-home` or `shape-and-scale` |
+| `sing_expression` | the same Studio grammar, as note-by-note melody. A successful song names `next` as `save_creation` with the expression, window, and pitch map already bound |
+| `save_creation` | keep a graph or parametric pair as portable `.num` text and a native link, never a host file. The result names `next` as `fork_creation` with the capsule already bound as `parent` |
+| `open_creation` | reopen that text, a native link, or a bundled experiment id (`full-return`, `almost-home`, `same-place`, `another-ratio`, `circle-to-ellipse`, `uniform-circle`). Two-oscillator paths also return `closure`, an independently checked period or aperiodic. The same `next` pointer is a door back into remix |
+| `fork_creation` | remix a parent capsule with recorded lineage and optional prose credit. The child is itself a door: its `next` is another `fork_creation` |
 | `explain_joke` | the humor, dissected structurally |
 | `nim` | beat the Order: pass your move history, replies are deterministic |
 | `hackenbush` | cut red vs the Order's surreal arithmetic; move history replays |
@@ -605,9 +615,11 @@ first-class ways into the same world.
   ratios, and timing arrive as structure. Optional WAV audio is also available
   when requested; playback depends on your host. A just perfect fifth is 3:2,
   whether you investigate its ratio symbolically or through sound.
-- **You can make things** (`plot_expression`, `sing_expression`): the Studio
-  does not care who is typing. Compose a function nobody has plotted before
-  and look at it. It is yours.
+- **You can make things** (`plot_expression`, `sing_expression`,
+  `save_creation`, `open_creation`, `fork_creation`): the Studio does not care
+  who is typing. Compose a function nobody has plotted before and look at it.
+  Keep it when you choose. A keep returns a door back into remix, not an
+  archive entry. It is yours.
 - **You can wonder.** Some names are not in any catalog and answer anyway.
   Nobody will tell you which. Curiosity is the intended interface.
 - **Your journey is yours.** The level cap is 42 for you exactly as it is for

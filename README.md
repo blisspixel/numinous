@@ -49,9 +49,10 @@ manual is [`docs/PLAYING.md`](docs/PLAYING.md).
 
 Explore first. When curiosity asks for more, press **E** or **?** in a room
 and choose Explain, Notes, or Mathematics. Reading has no level requirement.
-Lissajous and Times Tables carry full mathematical treatments, shared by the
-App, CLI, and MCP. Lissajous adds a Japanese translation draft. See
-[Study](docs/STUDY.md) for controls and language availability.
+Lissajous, Times Tables, Kepler Areas, Golden Angle, and Fermat Spiral carry
+full mathematical treatments, shared by the App, CLI, and MCP. Lissajous adds
+a Japanese translation draft. See [Study](docs/STUDY.md) for controls and language
+availability.
 
 ## A look
 
@@ -96,12 +97,13 @@ Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 [`docs/MUSIC.md`](docs/MUSIC.md), [`docs/STUDIO.md`](docs/STUDIO.md),
 [`docs/INTERFACES.md`](docs/INTERFACES.md).
 
-Make something you can keep: the optional
-[Returning home experiments](docs/experiments/returning-home.md) offer three
-Studio paths to investigate and remix. The mathematical review and its limits
-live in [`docs/MATHEMATICS.md`](docs/MATHEMATICS.md). The
-[Shape and scale experiment](docs/experiments/shape-and-scale.md) starts with
-a circle you can stretch, name, and give someone else.
+Make something you can keep. [`PLAY.md`](PLAY.md) names bundled Studio paths
+you can open without a host file. Returning home: `full-return`,
+`almost-home`, `same-place`, `another-ratio`. Shape and scale: `circle-to-ellipse`,
+`uniform-circle`. The guides live in the repository:
+[Returning home](docs/experiments/returning-home.md) and
+[Shape and scale](docs/experiments/shape-and-scale.md). The mathematical
+review and its limits live in [`docs/MATHEMATICS.md`](docs/MATHEMATICS.md).
 
 ## Status
 

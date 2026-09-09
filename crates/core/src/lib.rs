@@ -77,6 +77,7 @@ pub mod munchers;
 pub mod nim;
 mod numerics;
 pub mod party;
+pub mod path_closure;
 pub mod persistence;
 pub mod photosensitivity;
 pub mod predict;
@@ -173,6 +174,7 @@ pub use nim::{
     apply as nim_apply, finished as nim_finished, new_game as nim_new, order_move as nim_order,
     the_secret as nim_secret,
 };
+pub use path_closure::{AperiodicClosure, ClosureCheckpoint, PathClosure, PeriodicClosure};
 pub use persistence::{
     LocalCacheInventory, LocalCairnInventory, LocalFileInventory, LocalJourneyInventory,
     LocalScoresInventory, LocalStateEraseError, LocalStateEraseSelection, LocalStateInventory,
@@ -243,9 +245,13 @@ pub use spectrum::{
 };
 pub use studio::{
     Expr, MAX_CREDIT_CHARS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_SHARE_INPUT_BYTES,
-    MAX_STUDIO_EDITOR_CHARS, MAX_STUDIO_SOURCE_CHARS, NumFileError, STUDIO_RECIPES, StudioCreation,
-    StudioKind, StudioPlot, StudioProgram, StudioScale, eval, parse, plot_text, studio_auto_recipe,
-    studio_recipe, studio_recipe_count, to_melody, to_melody_with_scale,
+    MAX_STUDIO_EDITOR_CHARS, MAX_STUDIO_SOURCE_CHARS, NumFileError, STUDIO_EXPERIMENTS,
+    STUDIO_RECIPES, StudioCreation, StudioExperiment, StudioKind, StudioPlot, StudioProgram,
+    StudioScale, adjacent_construction_creation, adjacent_studio_experiment, eval,
+    first_studio_construction, is_returning_home_transfer, parse, plot_text,
+    returning_home_transfer, studio_auto_recipe, studio_construction_family, studio_experiment,
+    studio_experiment_matching, studio_experiment_meta, studio_experiments_in, studio_recipe,
+    studio_recipe_count, to_melody, to_melody_with_scale,
 };
 pub use studio_request::{
     DEFAULT_MELODY_NOTES, DEFAULT_PLOT_HEIGHT, DEFAULT_PLOT_WIDTH, DEFAULT_STUDIO_PARAMETER,

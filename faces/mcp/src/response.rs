@@ -74,7 +74,7 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
                     .push_str(" The local journal could not be read; no contents were returned."),
                 _ => {}
             }
-            summary.push_str(" Read structuredContent for the goal, blurb, next play call, and optional journal cue.");
+            summary.push_str(" Read structuredContent for the goal, blurb, next play call, optional construction, and optional journal cue.");
             Some(summary)
         }
         "play_room" => {

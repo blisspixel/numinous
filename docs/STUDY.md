@@ -12,13 +12,19 @@ It awards no reward, records no reading completion, and does not change Journey.
 | `notes` | Existing room explanations, advanced notes, and citations where present. |
 | `mathematics` | An authored treatment with assumptions, derivations, examples, limits, and references. |
 
-Two rooms currently have an authored Mathematics treatment. Lissajous covers
+Five rooms currently have an authored Mathematics treatment. Lissajous covers
 full oscillator state, periods and position returns, phase, torus motion,
 occupation measure, recurrence, and the limits of the drawing and sound. Times
 Tables derives the envelope of its chords in closed form, identifies it as an
 epicycloid, and proves it has one cusp fewer than the multiplier, which is the
-shape a player watches bloom on the dial. A citation or an advanced note is not
-silently presented as that treatment.
+shape a player watches bloom on the dial. Kepler Areas states the centered
+ellipse with the sun at the positive focus, Kepler's equation, equal-area
+sectors, and the apsidal speed ratio `(1+e)/(1-e)`. Golden Angle identifies
+Vogel's packing and proves the room's step is `2*pi/phi^2`, which rounds to
+137.5 degrees at one decimal. Fermat Spiral states `r^2 = a^2 theta`, the two
+opposite signs of `r` as the room's two arms, and the equal-area identity
+between successive turns. A citation or an advanced note is not silently
+presented as that treatment.
 
 You never have to hunt for it. Explanation and notes exist for every room, so
 they are always available. Because an authored treatment is scarce, every study
@@ -27,10 +33,11 @@ them in the refusal. That pointer is coverage, not permission: reading any depth
 that exists has no visit, level, or progress requirement, so a named room opens
 immediately.
 
-The Times Tables treatment is English only. The Lissajous Japanese draft was
-independently reviewed and this text was not, so a Japanese request for Times
-Tables resolves to English and reports `translation_unavailable` rather than
-offering an unchecked translation.
+The Times Tables, Kepler Areas, Golden Angle, and Fermat Spiral treatments are
+English only.
+The Lissajous Japanese draft was independently reviewed and these texts were
+not, so a Japanese request for those rooms resolves to English and reports
+`translation_unavailable` rather than offering an unchecked translation.
 
 Lissajous has English content and a Japanese `reviewed_draft`. Its original
 English room explanation, deep cuts, and catalog citation remain in Notes and
@@ -109,7 +116,11 @@ distinguish text from mathematical notation; equations and references are
 separate parts. References retain their source ID, title, URL, and description.
 Plain text preserves the same content and reports availability and fallback.
 Transport keys and metadata labels remain English.
-Study calls stay outside the Shared Play broadcast; reading and language
+MCP `study_room` for Lissajous also carries `construction`, the same optional
+Returning home door `describe_room` names, with `next` already bound as a
+followable `plot_expression` list of the bundled capsules. Other rooms omit
+the field. It is a garage after a touch of math, not a lobby in front of the
+room. Study calls stay outside the Shared Play broadcast; reading and language
 selection remain with the participant making the request.
 
 The existing CLI `reveal` and MCP `reveal_room` retain their progression rules.

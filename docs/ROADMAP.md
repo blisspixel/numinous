@@ -107,15 +107,39 @@ mastery, exploration, and company also remain complete reasons to play.
   mark has one SVG source and reproducible native icon assets. `VISUALS.md`
   owns its construction; the updated color evidence remains a bounded palette
   check, not a complete accessibility assessment.
-- **Playable now:** [Returning home](experiments/returning-home.md) has three
+- **Playable now:** [Returning home](experiments/returning-home.md) has four
   portable Studio contrasts with exact formulas and retained fork lineage.
-  These are current-tool experiments; the proposed in-app quest stays open.
+  These are current-tool experiments; a richer overlay quest stays open.
 - **Designed:** [Route Lab](ROUTE_LAB.md) makes shortest-path search and
   traveling-salesman improvement visible on one small street map. Its first
   slice includes a complete four-stop comparison, an exact small-case solver,
   and honest heuristic limits. Implementation and player evidence remain open.
-- **Designed next:** one capability quest that carries a law into a new
-  construction, with a contrasting-case and transfer gate (`PROGRESSION.md`);
+- **Built:** a plotted or sung Studio experiment names `next` as
+  `save_creation` with the expression and window already bound, and a kept
+  creation names `next` as `fork_creation` with the capsule already bound as
+  parent. Bundled Studio capsules open by id: Returning home
+  (`full-return`, `almost-home`, `same-place`, `another-ratio`) and Shape
+  and scale (`circle-to-ellipse`, `uniform-circle`). `list_experiments`
+  names `open_creation` with the id; `family` selects one set. Describing or
+  studying Lissajous offers Returning home as an optional construction.
+  Opening a two-oscillator path reports an independently checked `closure`:
+  period `12` on full-return, no period on almost-home, the half-period
+  position-only trap on same-place, and period `1` on another-ratio. An
+  unseen `8/5` construction reports period `5`. The trial is the same in
+  core, CLI, MCP, and the App Studio status, and it does not gate play.
+  `PLAY.md` and the packaged play-numinous skill say so. The chain
+  is glance, then keep, then remix, each optional, after a successful touch of
+  math. It is not a lobby, inventory, or loadout gate. Named sliders, a
+  second independent variable, and the in-app capability quest remain the
+  next creator rungs.
+- **Built, first trial:** Returning home now has an independently checked
+  closure on two-oscillator Studio paths (`PROGRESSION.md`). Contrasting
+  cases, an unseen ratio, save/reopen identity, and an unobstructed leave
+  path are locked in core, CLI, MCP, and the App Studio status. Lissajous
+  offers an optional CONSTRUCT door into the first capsule; PageDown walks
+  the family, including the bundled `another-ratio` starter; leaving
+  Studio returns to the room.
+- **Designed next:** a richer overlay quest around that walk, and
   one explicitly kept and previewed project that resumes the selected question,
   evidence, creation, and next action (`DIGITAL_DEVELOPMENT.md`). These are small
   testable slices before a general quest engine or semantic memory system.
@@ -124,9 +148,15 @@ mastery, exploration, and company also remain complete reasons to play.
   Explanation, Notes, and Mathematics. Lissajous has the first authored
   treatment, including derivations, worked examples, primary references, and
   numerical limits. Times Tables is the second, deriving the envelope of its
-  chords and proving its cusp count. App, CLI `study`, and MCP `study_room` share core content
-  and request semantics. Other rooms retain existing explanations and notes;
-  an unwritten Mathematics treatment is explicitly unavailable.
+  chords and proving its cusp count. Kepler Areas is the third, stating the
+  centered ellipse with the sun at the positive focus, Kepler's equation,
+  equal-area sectors, and the apsidal speed ratio. Golden Angle is the fourth,
+  identifying Vogel's packing and proving the room step is `2*pi/phi^2`. Fermat
+  Spiral is the fifth, stating `r^2 = a^2 theta` and the equal-area identity
+  between successive turns, the radial half of the packing Golden Angle owns.
+  App, CLI `study`, and MCP `study_room` share core content and request semantics.
+  Other rooms retain existing explanations and notes; an unwritten Mathematics
+  treatment is explicitly unavailable.
 - **Built in alpha 20, voluntary experiments:** the seven staged App paths
   require an explicit U or Cabinet Experiment choice. Enter advances an earned
   connection; E always opens study. Runtime regressions cover reading before
@@ -162,7 +192,7 @@ unclaimed until run.
 | **3. The Mind's Seat, current increment complete** | Exact temporal evidence, multi-look `dwell`, sound facts and audio, replay receipts, explicit journal promotion, process-local workspace, remembered-room retrieval and cue, the three-door threshold, portable Studio lineage, the portable typed evidence capsule, and the caller-paced Show for minds are built. Reflection proposals remain deferred to their separate evidence and consent review | The audience the product exists for now has time, company, bounded continuity, authorship, and a directed performance on its native face without hidden state or automatic memory |
 | **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | The feature-gated linear HDR, half-resolution bloom, and tone-map spike passes its reference integrated-GPU budgets at 1080p and 1440p; an equivalent reusable single-threaded CPU reference fails both. Direct FIFO presentation now passes both full host boundaries too, without an offscreen output copy or readback. The disabled App path feeds real room rasters into the same surface renderer with explicit recovery and visible software fallback. A typed probe now runs that exact production boundary in the Windows, macOS, and Linux CI matrix while classifying all such timings as informational. An independent set builder now recomputes and binds the exact six physical candidates. The Windows pair now passes on the Framework 13 AMD Radeon 780M reference: release-profile, AC power, exact client area, FIFO sRGB, 30 warmups and 120 samples, zero skipped or suboptimal frames, combined p95 17.842 ms at 1080p against 33 ms and 17.830 ms at 1440p against 50 ms. Receipts: `docs/evidence/sensory-app-windows-1080p-2026-09-02.json` and `docs/evidence/sensory-app-windows-1440p-2026-09-02.json`. WSL2 Ubuntu on this laptop is not a Linux cell: the 780M appears only as Mesa Dozen (Vulkan-on-D3D12), wgpu 30 hides that non-conformant adapter, and the presenter falls back to software. Next: native macOS and Linux pairs at one frozen revision before the closed set can be built. The full lift still owns splats, one shared audio bus with reverb and shaped envelopes, global dissolve, and damped-spring input | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists, all still after the lift so the opening is authored in the new light. **The cheap half is done:** the App had no way to see the catalog at all, and now carries the same three doors the protocol face has offered since the threshold landed, in the same order. Touch one astonishing thing, walk the authored route carrying a question into each room, or wander by wing with the arrows staying inside the one chosen. The wing list, the walk, and which room the flagship is are core's, so the faces cannot drift; each still writes its own invitation. **What remains here is the authored opening itself**, which is the part the lift changes | Awe today is a rare event in a long random walk; the arc makes it the designed path. The humans, including the children this is also for, no longer meet the catalog through an arrow key |
-| **6. Creator depth on the built loop** | **The first multi-expression ring is built in alpha.16:** one atomic `x(t), y(t)` pair draws a planar path and sings its y coordinate through continuous, chromatic, major, minor, or pentatonic pitch mapping. Version 3 capsules carry the pair and scale through the App, CLI, MCP, Gallery, exact reopen, and lineage-preserving fork while old version 1 and 2 documents stay unchanged. **MIDI export of that sung melody is built on all three faces:** core writes a Standard MIDI File type 0 from the same SoundSpec (nearest 12-TET key, leftover cents as pitch bend over plus or minus two semitones, range declared as Registered Parameter Number 0). CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` `midi: true`, and the App F4 share as `melody.mid` share it. WAV was already the audio export. **Editable prose credit is built:** a fork offers `After {title} by {author}` from the parent, the forker can rewrite or clear it, and version 4 capsules carry that sentence through every face. Next rungs: named sliders and general multi-expression programs. **A second independent variable remains the large unlock**, because it turns a language of curves into a language of fields and opens domain coloring, implicit curves, and height maps for one grammar change | The creator ladder keeps rising without waiting on later community publishing, and each rung ships with its own machine gates; freestyle play is bounded by vocabulary long before it is bounded by rendering |
+| **6. Creator depth on the built loop** | **The first multi-expression ring is built in alpha.16:** one atomic `x(t), y(t)` pair draws a planar path and sings its y coordinate through continuous, chromatic, major, minor, or pentatonic pitch mapping. Version 3 capsules carry the pair and scale through the App, CLI, MCP, Gallery, exact reopen, and lineage-preserving fork while old version 1 and 2 documents stay unchanged. **MIDI export of that sung melody is built on all three faces:** core writes a Standard MIDI File type 0 from the same SoundSpec (nearest 12-TET key, leftover cents as pitch bend over plus or minus two semitones, range declared as Registered Parameter Number 0). CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` `midi: true`, and the App F4 share as `melody.mid` share it. WAV was already the audio export. **Editable prose credit is built:** a fork offers `After {title} by {author}` from the parent, the forker can rewrite or clear it, and version 4 capsules carry that sentence through every face. **The MCP keep chain is named in the packaged player docs:** a plot or song returns `next` at `save_creation` with the expression and window already bound; save, open, and fork return `next` at `fork_creation` with the capsule already bound as parent. `PLAY.md` and the play-numinous skill say so. Those doors answer a successful glance or keep; they are not a lobby or a loadout gate. Next rungs: named sliders and general multi-expression programs. **A second independent variable remains the large unlock**, because it turns a language of curves into a language of fields and opens domain coloring, implicit curves, and height maps for one grammar change | The creator ladder keeps rising without waiting on later community publishing, and each rung ships with its own machine gates; freestyle play is bounded by vocabulary long before it is bounded by rendering |
 | **7. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps into one committed per-room evidence file, after the Sensory Lift. **The wing taxonomy now needs a ruling too**, because the App's wing browser makes it visible to players for the first time. Fifteen wings hold 355 rooms, and the shape reads oddly from outside: `Shape & Space` holds 94 while `Signals & Codes` and `Open Problems` hold one each, and two pairs look like accidents even though only one of each pair is documented. `Chaos & Order` and `Open Problems` are deliberate, named as such in this file and in `PANEL.md`. `Fractals & the Infinite` (Mandelbrot, Julia, Barnsley Fern) and `Chance & Noise` appear in no document at all, and each sits beside a larger wing of nearly the same name, so a player browsing wings will see the three most famous fractals in the product filed outside `Fractals` and read it as a bug | Rooms should be judged at their best, not at the old ceiling; the five commissioned rooms lead the next cohort after the review |
 | **Continuous filler between rocks** | The fifteen verified connection edges land as reveal lines and deep cuts, a few per PR. **The enumerated set of ten is closed**: the qubit and the Hopf fibration, the hanging chain and the soap film, the cycloid that is its own evolute, the three enumerations of the rationals that share one mediant, the parabola and the corner and the digit shift that are one system, the angle and the curve that a sunflower needs both of, the bell and the gasket that are one triangle read by size and by parity, the first collision against the last empty bin, Gauss's diary of 1799, and the two faces of one function at an easy point and along a hard line. Further edges need finding before they can be placed | The highest wonder-per-line work that exists; the fabric grows without blocking anything |
 | **Owner-blocked (stated, not scheduled)** | 0.4-am Understanding cohort: register, calibrate, and run the matched cohort through the sealed collector | Decisions entry 1 records it as optional paid validation awaiting an owner budget and registration ruling; carrying it as a contributor priority was a contradiction |

@@ -347,8 +347,8 @@ pub(super) fn blocks(locale: &StudyLocaleResolution) -> Vec<StudyBlock> {
                     t(".", "です。"),
                 ]),
                 p(&[t(
-                    "Follow the playable capsules in docs/experiments/returning-home.md.",
-                    "遊べるカプセルはdocs/experiments/returning-home.mdからたどれます。",
+                    "The playable capsules are bundled as full-return, almost-home, same-place, and another-ratio. Open them from Studio by those ids; they need no host file.",
+                    "遊べるカプセルはfull-return、almost-home、same-place、another-ratioとして同梱されています。Studioでそれらのidから開けます。ホスト上のファイルは不要です。",
                 )]),
             ],
         ),

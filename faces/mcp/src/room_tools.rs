@@ -93,7 +93,7 @@ pub(super) fn describe_room_tool_for_journey(
                 numinous_core::room_action(room.as_ref()),
                 m.blurb,
             );
-            let structured = json!({
+            let mut structured = json!({
                 "room": m.id,
                 "title": m.title,
                 "wing": m.wing,
@@ -102,9 +102,12 @@ pub(super) fn describe_room_tool_for_journey(
                 "blurb": m.blurb,
                 "next": {
                     "tool": "play_room",
-                    "id": m.id,
+                    "arguments": { "id": m.id },
                 },
             });
+            if m.id == "lissajous" {
+                structured["construction"] = returning_home_construction();
+            }
             tool_structured(&text, structured)
         }
         // Not every name is a room. A few answer anyway, and a few answer
@@ -129,6 +132,23 @@ pub(super) fn describe_room_tool_for_journey(
             None => tool_error(&unknown_room(id)),
         },
     }
+}
+
+/// Optional Studio door after a touch of Lissajous math, never a lobby.
+///
+/// The `next` is a followable `plot_expression` call that lists the bundled
+/// Returning home capsules. A packaged player can open those ids with
+/// `open_creation` and needs no host file.
+pub(super) fn returning_home_construction() -> Value {
+    json!({
+        "id": "returning-home",
+        "title": "Returning home",
+        "invitation": "Keep a path and ask whether it comes home.",
+        "next": {
+            "tool": "plot_expression",
+            "arguments": { "list_experiments": true, "family": "returning-home" },
+        }
+    })
 }
 
 /// The nearest note name (twelve-tone, A4 = 440 Hz) for a frequency.

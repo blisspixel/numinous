@@ -10,6 +10,9 @@ use std::{fmt, str::FromStr};
 
 use crate::Room;
 
+mod fermat_spiral;
+mod golden_angle;
+mod kepler_laws;
 mod lissajous;
 mod request;
 mod times_tables;
@@ -419,7 +422,13 @@ impl RoomStudy {
 /// It exists so an unwritten depth reads as unwritten rather than as broken.
 /// A player who asks for mathematics and is refused can otherwise only find
 /// out where it does exist by asking again, room by room, across the catalog.
-pub const AUTHORED_MATHEMATICS_ROOMS: &[&str] = &["lissajous", "times-tables"];
+pub const AUTHORED_MATHEMATICS_ROOMS: &[&str] = &[
+    "lissajous",
+    "times-tables",
+    "kepler-laws",
+    "golden-angle",
+    "fermat-spiral",
+];
 
 /// One room's authored treatment: its content languages and its block builder.
 ///
@@ -451,6 +460,24 @@ static AUTHORED: &[Authored] = &[
         content_locales: &["en"],
         written_locales: &["en"],
         blocks: times_tables::blocks,
+    },
+    Authored {
+        room_id: "kepler-laws",
+        content_locales: &["en"],
+        written_locales: &["en"],
+        blocks: kepler_laws::blocks,
+    },
+    Authored {
+        room_id: "golden-angle",
+        content_locales: &["en"],
+        written_locales: &["en"],
+        blocks: golden_angle::blocks,
+    },
+    Authored {
+        room_id: "fermat-spiral",
+        content_locales: &["en"],
+        written_locales: &["en"],
+        blocks: fermat_spiral::blocks,
     },
 ];
 

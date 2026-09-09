@@ -15,7 +15,7 @@ pub(super) fn catalog_entry() -> Value {
     json!({
         "name": "study_room",
         "title": "Study a room",
-        "description": "Read optional room study directly. No visit, level, wager, consolidation, or reading progress is required or awarded. Choose explanation (default), notes, or mathematics, or open one returned stable block id. Explanation and notes exist for every room. An authored mathematics treatment is written for only a few rooms so far, so structuredContent.authoredDepthRooms names them on every response and a refusal names them too; do not probe the catalog room by room. Unavailable depths and blocks return an error; notes never substitute for mathematics. Text and structured content preserve scientific notation and references. Language and translation availability are explicit for the document and each block; Japanese is a reviewed draft for the Lissajous pilot, with English fallback elsewhere.",
+        "description": "Read optional room study directly. No visit, level, wager, consolidation, or reading progress is required or awarded. Choose explanation (default), notes, or mathematics, or open one returned stable block id. Explanation and notes exist for every room. An authored mathematics treatment is written for only a few rooms so far, so structuredContent.authoredDepthRooms names them on every response and a refusal names them too; do not probe the catalog room by room. Unavailable depths and blocks return an error; notes never substitute for mathematics. Studying Lissajous also names structuredContent.construction as Returning home, with next already bound as a plot_expression list of the bundled capsules; other rooms omit it. Text and structured content preserve scientific notation and references. Language and translation availability are explicit for the document and each block; Japanese is a reviewed draft for the Lissajous pilot, with English fallback elsewhere.",
         "annotations": {
             "readOnlyHint": true,
             "destructiveHint": false,
@@ -192,7 +192,27 @@ fn output_schema() -> Value {
             "availableDepths": { "type": "array", "items": depth_schema() },
             "availableBlocks": { "type": "array", "items": block_schema(false) },
             "authoredDepthRooms": authored_depth_rooms_schema(),
-            "blocks": { "type": "array", "minItems": 1, "items": block_schema(true) }
+            "blocks": { "type": "array", "minItems": 1, "items": block_schema(true) },
+            "construction": {
+                "description": "Present only for Lissajous: the optional Returning home Studio door, with next already bound as a followable plot_expression list of the bundled capsules. Other rooms omit the field.",
+                "type": "object",
+                "properties": {
+                    "id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "invitation": { "type": "string" },
+                    "next": {
+                        "type": "object",
+                        "properties": {
+                            "tool": { "type": "string" },
+                            "arguments": { "type": "object" }
+                        },
+                        "required": ["tool", "arguments"],
+                        "additionalProperties": false
+                    }
+                },
+                "required": ["id", "title", "invitation", "next"],
+                "additionalProperties": false
+            }
         },
         "required": ["schema", "schemaVersion", "room", "selection", "locale", "contentLocales", "availableDepths", "availableBlocks", "authoredDepthRooms", "blocks"],
         "additionalProperties": false
@@ -258,7 +278,12 @@ fn response(args: &Value) -> Result<(String, Value), String> {
 
 pub(super) fn tool(args: &Value) -> Value {
     match response(args) {
-        Ok((text, structured)) => tool_structured(&text, structured),
+        Ok((text, mut structured)) => {
+            if structured["room"] == "lissajous" {
+                structured["construction"] = super::room_tools::returning_home_construction();
+            }
+            tool_structured(&text, structured)
+        }
         Err(message) => tool_error(&message),
     }
 }

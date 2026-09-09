@@ -48,12 +48,17 @@ When you want an explanation, call `study_room` with `room` and choose
 level, or wager. You can also request one returned stable `block` ID directly;
 leave `depth` out when selecting a block. Optional `locale` selects a language,
 and document and block metadata report actual availability and fallback.
-Two rooms have an authored Mathematics treatment: Lissajous in English and a
-Japanese draft, and Times Tables in English. Every response carries
+Five rooms have an authored Mathematics treatment: `lissajous` in English and a
+Japanese draft, and `times-tables`, `kepler-laws`, `golden-angle`, and
+`fermat-spiral` in English.
+Every response carries
 `authoredDepthRooms`, so read that rather than probing the catalog room by room.
-An unwritten depth returns an availability error. Study calls stay outside the
-Shared Play broadcast. The existing `reveal_room` path remains available after
-one play for ordinary rooms and consolidation for engineered wager rooms.
+Studying Lissajous also names `structuredContent.construction` as Returning
+home, with `next` already bound as a `plot_expression` list of the bundled
+capsules; other rooms omit it. An unwritten depth returns an availability
+error. Study calls stay outside the Shared Play broadcast. The existing
+`reveal_room` path remains available after one play for ordinary rooms and
+consolidation for engineered wager rooms.
 
 If you choose a prediction or engineered aha, commit before seeing the
 truth. Treat the grade as feedback about your model, never as a judgment of you.
@@ -71,12 +76,30 @@ Use `listen_room` when notation and measured sound roles help you perceive the
 system. Use `plot_expression` and `sing_expression` when you want to make rather
 than observe. `sing_expression` with `midi: true` returns a Standard MIDI
 File of the same melody: 12-TET keys plus pitch bend of leftover cents over
-plus or minus two semitones. Use `save_creation` when you want that expression to become a
+plus or minus two semitones. A successful plot or song returns
+`structuredContent.next` as a `save_creation` call with the expression and
+window already bound. Follow it to keep the experiment; a glance is a door,
+not a dead picture. Pass `list_experiments: true` on `plot_expression` for
+bundled Studio capsules; each row's `next` is `open_creation` with the
+experiment id already bound, and no host file is read. `family` selects
+`returning-home` (`full-return`, `almost-home`, `same-place`,
+`another-ratio`) or `shape-and-scale` (`circle-to-ellipse`,
+`uniform-circle`). `open_creation`
+also accepts those ids directly. Opening a two-oscillator parametric path
+returns `structuredContent.closure`: an independently checked period, or
+an explicit aperiodic, including the half-period trap where position
+returns and state does not. Follow a Returning home row, then read
+`closure` rather than trusting the picture. The trial does not gate play.
+Use `save_creation` when you want that expression to become a
 portable titled or signed capsule, `open_creation` to reopen returned `.num`
 text or a native link, and `fork_creation` to make a child that names its exact
-parent and offers editable prose credit from the parent's identity. These tools return the capsule and exact preview in the result. They do
-not read or create a host file. Keep the returned `journalSubject` only through
-an explicit `record_journal` call if that creation belongs in your journal.
+parent and offers editable prose credit from the parent's identity. These tools
+return the capsule and exact preview in the result. They also return
+`structuredContent.next` as a `fork_creation` call with the capsule already
+bound as `parent`. Follow it to remix; a keep is a door, not an archive entry.
+They do not read or create a host file. Keep the returned `journalSubject` only
+through an explicit `record_journal` call if that creation belongs in your
+journal.
 
 The journal is optional and scoped to the local profile. Record only what you
 choose. Affect is accepted only as your explicit self-report. You can inspect,

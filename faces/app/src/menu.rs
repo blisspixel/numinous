@@ -61,6 +61,7 @@ pub enum MenuItemId {
     Modes,
     Explain,
     Experiment,
+    Construct,
     Watch,
     Play,
     Create,
@@ -97,6 +98,7 @@ pub enum MenuIntent {
     None,
     ExplainRoom,
     ChooseExperiment,
+    ConstructRoom,
     Close,
     Choose(MenuChoice),
     VolumeDelta(i8),
@@ -418,19 +420,33 @@ fn wing_items() -> Vec<MenuItem> {
     entries
 }
 
-fn items(route: MenuRoute, experiment_available: bool) -> Vec<MenuItem> {
+fn items(route: MenuRoute, experiment_available: bool, construct_available: bool) -> Vec<MenuItem> {
     match route {
         MenuRoute::Home => {
             let mut entries = HOME_ITEMS.to_vec();
+            let mut insert_at = 2;
             if experiment_available {
                 entries.insert(
-                    2,
+                    insert_at,
                     MenuItem {
                         id: MenuItemId::Experiment,
                         title: "EXPERIMENT",
                         description: "CHOOSE THIS ROOM'S PREDICTION OR OBSERVATION PATH.",
                         shortcut: Some('u'),
                         action: MenuAction::Intent(MenuIntent::ChooseExperiment),
+                    },
+                );
+                insert_at += 1;
+            }
+            if construct_available {
+                entries.insert(
+                    insert_at,
+                    MenuItem {
+                        id: MenuItemId::Construct,
+                        title: "CONSTRUCT",
+                        description: "THIS ROOM'S STUDIO CONTRASTS. OPTIONAL.",
+                        shortcut: Some('o'),
+                        action: MenuAction::Intent(MenuIntent::ConstructRoom),
                     },
                 );
             }
@@ -467,6 +483,7 @@ pub struct MenuState {
     pressed: Option<MenuItemId>,
     origin: MenuOrigin,
     experiment_available: bool,
+    construct_available: bool,
 }
 
 impl Default for MenuState {
@@ -486,6 +503,7 @@ impl MenuState {
             pressed: None,
             origin: MenuOrigin::Launch,
             experiment_available: false,
+            construct_available: false,
         }
     }
 
@@ -498,6 +516,15 @@ impl MenuState {
     pub fn set_experiment_available(&mut self, available: bool) {
         self.experiment_available = available;
         if !available && self.focused == MenuItemId::Experiment {
+            self.focused = MenuItemId::Explain;
+            self.clear_pointer();
+        }
+    }
+
+    /// Supply the room's optional Studio construction without teaching ids.
+    pub fn set_construct_available(&mut self, available: bool) {
+        self.construct_available = available;
+        if !available && self.focused == MenuItemId::Construct {
             self.focused = MenuItemId::Explain;
             self.clear_pointer();
         }
@@ -575,9 +602,13 @@ impl MenuState {
     }
 
     pub fn focus(&mut self, id: MenuItemId) -> bool {
-        if !items(self.route(), self.experiment_available)
-            .iter()
-            .any(|item| item.id == id)
+        if !items(
+            self.route(),
+            self.experiment_available,
+            self.construct_available,
+        )
+        .iter()
+        .any(|item| item.id == id)
             || self.focused == id
         {
             return false;
@@ -587,7 +618,11 @@ impl MenuState {
     }
 
     pub fn focus_next(&mut self, delta: isize) {
-        let route_items = items(self.route(), self.experiment_available);
+        let route_items = items(
+            self.route(),
+            self.experiment_available,
+            self.construct_available,
+        );
         let current = route_items
             .iter()
             .position(|item| item.id == self.focused)
@@ -605,10 +640,13 @@ impl MenuState {
     }
 
     pub fn activate_focused(&mut self) -> MenuIntent {
-        let Some(item) = items(self.route(), self.experiment_available)
-            .into_iter()
-            .find(|item| item.id == self.focused)
-        else {
+        let Some(item) = items(
+            self.route(),
+            self.experiment_available,
+            self.construct_available,
+        )
+        .into_iter()
+        .find(|item| item.id == self.focused) else {
             return MenuIntent::None;
         };
         self.apply(item.action)
@@ -616,9 +654,13 @@ impl MenuState {
 
     pub fn activate_shortcut(&mut self, shortcut: char) -> Option<MenuIntent> {
         let shortcut = shortcut.to_ascii_lowercase();
-        let item = items(self.route(), self.experiment_available)
-            .into_iter()
-            .find(|item| item.shortcut == Some(shortcut))?;
+        let item = items(
+            self.route(),
+            self.experiment_available,
+            self.construct_available,
+        )
+        .into_iter()
+        .find(|item| item.shortcut == Some(shortcut))?;
         self.focused = item.id;
         Some(self.apply(item.action))
     }
@@ -753,7 +795,11 @@ impl MenuLayout {
     pub fn new(state: &MenuState, width: usize, height: usize) -> Self {
         let compact = width < COMPACT_WIDTH || height < COMPACT_HEIGHT;
         let text_scale = menu_text_scale(width, height, compact);
-        let route_items = items(state.route(), state.experiment_available);
+        let route_items = items(
+            state.route(),
+            state.experiment_available,
+            state.construct_available,
+        );
         let mut placed = Vec::with_capacity(route_items.len());
         if compact && state.route() == MenuRoute::Controls {
             placed.push(MenuItemLayout {
@@ -917,10 +963,14 @@ fn route_title(route: MenuRoute) -> String {
 }
 
 fn selected_item(state: &MenuState) -> MenuItem {
-    items(state.route(), state.experiment_available)
-        .into_iter()
-        .find(|item| item.id == state.focused)
-        .unwrap_or(HOME_ITEMS[0])
+    items(
+        state.route(),
+        state.experiment_available,
+        state.construct_available,
+    )
+    .into_iter()
+    .find(|item| item.id == state.focused)
+    .unwrap_or(HOME_ITEMS[0])
 }
 
 pub fn draw_menu(
@@ -968,10 +1018,13 @@ pub fn draw_menu(
 
     let selected = selected_item(state);
     for item_layout in &layout.items {
-        let Some(item) = items(state.route(), state.experiment_available)
-            .into_iter()
-            .find(|item| item.id == item_layout.id)
-        else {
+        let Some(item) = items(
+            state.route(),
+            state.experiment_available,
+            state.construct_available,
+        )
+        .into_iter()
+        .find(|item| item.id == item_layout.id) else {
             continue;
         };
         let focused = item.id == state.focused;
@@ -1111,7 +1164,11 @@ pub fn draw_menu(
     }
 
     if layout.compact && state.route() != MenuRoute::Controls {
-        let route_items = items(state.route(), state.experiment_available);
+        let route_items = items(
+            state.route(),
+            state.experiment_available,
+            state.construct_available,
+        );
         let position = route_items
             .iter()
             .position(|item| item.id == state.focused)
@@ -1335,6 +1392,27 @@ mod tests {
     }
 
     #[test]
+    fn room_construction_adds_an_optional_studio_door() {
+        let mut state = MenuState::launch();
+        assert!(state.activate_shortcut('o').is_none());
+        state.set_construct_available(true);
+        assert_eq!(
+            state.activate_shortcut('o'),
+            Some(MenuIntent::ConstructRoom)
+        );
+        let layout = MenuLayout::new(&state, 900, 700);
+        assert!(
+            layout
+                .items
+                .iter()
+                .any(|item| item.id == MenuItemId::Construct)
+        );
+        state.set_construct_available(false);
+        assert_eq!(state.focused(), MenuItemId::Explain);
+        assert!(state.activate_shortcut('o').is_none());
+    }
+
+    #[test]
     fn quit_is_a_deliberate_visible_choice_with_the_global_shortcut() {
         let mut visible = MenuState::launch();
         assert!(visible.focus(MenuItemId::Quit));
@@ -1434,7 +1512,7 @@ mod tests {
         // The App's front door onto the catalog. Stepping is one room per press
         // through hundreds, so a wing has to be choosable from the menu, and a
         // player who chose one has to be able to leave without knowing a key.
-        let entries = items(MenuRoute::Wings, false);
+        let entries = items(MenuRoute::Wings, false, false);
         let wings = numinous_core::wings();
         assert_eq!(
             entries.len(),

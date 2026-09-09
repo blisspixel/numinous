@@ -10,7 +10,8 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use numinous_core::{
-    PlotRequest, PlotSource, StudioCreation, StudioKind, StudioRequestError, StudioScale,
+    PathClosure, PlotRequest, PlotSource, StudioCreation, StudioKind, StudioRequestError,
+    StudioScale,
 };
 
 use crate::render_input::validate_render_dimensions;
@@ -368,6 +369,9 @@ pub(super) fn fork_studio_creation_extended(
 }
 
 pub(super) fn load_studio_creation(input: &str) -> Result<StudioCreation, String> {
+    if let Some(creation) = numinous_core::studio_experiment(input) {
+        return Ok(creation);
+    }
     if input.starts_with("numinous://") {
         return StudioCreation::from_link(input)
             .map_err(|_| "invalid Numinous Studio link\n".to_string());
@@ -436,6 +440,7 @@ pub(super) fn open_studio_report(
         "remix it: numinous fork \"{}\" --out my-remix.num",
         creation.to_link()
     ));
+    lines.extend(PathClosure::of(&creation).report_lines());
     Ok(format!("{}\n\n{}", lines.join("\n"), report))
 }
 

@@ -61,8 +61,9 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 - `RADIO_ASSETS.md` the built-in soundtrack layout, license, and cache override.
 - `STUDIO.md` the shipped expression canvas and the planned path toward a
   bounded room-authoring layer.
-- [Returning home](experiments/returning-home.md) three playable Studio
-  experiments about full motion, near returns, and a deceptive repeated position.
+- [Returning home](experiments/returning-home.md) four playable Studio
+  experiments about full motion, near returns, a deceptive repeated position,
+  and a period-1 starter to retune.
 - [Shape and scale](experiments/shape-and-scale.md) stretch a circle, compare
   proportions with fitted size, and share a named creation.
 - `ROUTE_LAB.md` the proposed visual route-planning room, with shortest paths,
