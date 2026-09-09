@@ -289,9 +289,12 @@ open it. Pass `family: "returning-home"` for `full-return`, `almost-home`,
 `same-place`, and `another-ratio`, `family: "shape-and-scale"` for
 `circle-to-ellipse` and `uniform-circle`, `family: "three-readings"` for
 `simple-zero`, `a-pole`, `the-circle`, and `the-bowl`, or `family: "named-sliders"`
-for `extra-knob` and `live-ratio`. A formula may name extra knobs besides `a`;
+for `extra-knob` and `live-ratio`, or `family: "overlay"` for `the-parts`
+and `the-sum`. A formula may name extra knobs besides `a`;
 each is a slider with a value and a declared range, and capsules write
-`NUMINOUS_STUDIO 6` only when those extra sliders exist. `open_creation` accepts those ids directly. They are Studio
+`NUMINOUS_STUDIO 6` only when those extra sliders exist. Type `sin(x) & cos(x)`
+to overlay graphs; capsules write `NUMINOUS_STUDIO 7` only when more than one
+graph is present. `open_creation` accepts those ids directly. They are Studio
 doors after a touch of math, not a lobby in front of the rooms. Lissajous
 names Returning home when you describe it or study it. Opening a
 two-oscillator path reports `closure`: an independently checked period, or
