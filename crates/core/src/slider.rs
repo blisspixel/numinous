@@ -231,6 +231,7 @@ pub fn is_reserved_name(name: &str) -> bool {
             | "min"
             | "max"
             | "euclid"
+            | "pat"
     )
 }
 
@@ -337,7 +338,13 @@ fn walk_slider_names(expression: &Expr, names: &mut Vec<String>) {
             walk_slider_names(lhs, names);
             walk_slider_names(rhs, names);
         }
-        Expr::Num(_) | Expr::Var | Expr::VarIm | Expr::Point | Expr::ImagUnit | Expr::Param => {}
+        Expr::Num(_)
+        | Expr::Var
+        | Expr::VarIm
+        | Expr::Point
+        | Expr::ImagUnit
+        | Expr::Param
+        | Expr::Pattern(_) => {}
     }
 }
 
@@ -410,6 +417,7 @@ mod tests {
         assert!(!is_slider_name("x"));
         assert!(!is_slider_name("sin"));
         assert!(!is_slider_name("euclid"));
+        assert!(!is_slider_name("pat"));
         assert!(!is_slider_name("B"));
         assert!(!is_slider_name(""));
     }

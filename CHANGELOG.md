@@ -43,8 +43,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   second document.
 - Step grid, second Pattern Studio view: the same 0/1 rows as a numbered
   grid (`12345678` over `x..x..x.`). The App draws the hits as cells.
-  CLI `grid=` and MCP `structuredContent.grid` name them. Tracker editing
-  and piano roll remain later.
+  CLI `grid=` and MCP `structuredContent.grid` name them.
+- Editable tracker: type `x..x..x.` or `pat(x..x..x.)`. That is the same
+  0/1 graph that already draws, sings, and reports pattern text and the
+  step grid. Overlay rows with `&`. A row may run hits together:
+  `x.x.xx.x` is five. Piano roll remains later.
 - Overlay quest, first contrast: family `two-voices` draws the two
   oscillators of Returning home as graphs over the same window.
   `closing-voices` is the 1 and 17/12 pair; `wandering-voices` replaces

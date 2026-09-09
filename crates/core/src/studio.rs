@@ -56,6 +56,7 @@ pub const STUDIO_RECIPES: &[&str] = &[
     "min(max(x, -2), 2)",
     "max(abs(x) - a, 0)",
     "euclid(3,8)",
+    "pat(x..x..x.)",
 ];
 
 /// How many curated recipes the bank holds.
@@ -2277,6 +2278,11 @@ pub enum Expr {
     Call(Func, Box<Expr>),
     /// A two-argument function call, e.g. `min(..., ...)`.
     PairCall(PairFunc, Box<Expr>, Box<Expr>),
+    /// An explicit step pattern, `pat(x..x..x.)` or the editor form `x..x..x.`.
+    ///
+    /// Each mark is one step: `x` is a hit, `.` is a rest. The sample at `x`
+    /// is 1 on a hit and 0 on a rest, wrapping like `euclid`.
+    Pattern(Vec<bool>),
 }
 
 /// A parsed Studio program ready for repeated drawing or sound generation.
@@ -2682,7 +2688,7 @@ pub fn uses_field_vocabulary(expression: &Expr) -> bool {
     match expression {
         Expr::VarIm | Expr::Point | Expr::ImagUnit => true,
         Expr::Call(Func::Re | Func::Im | Func::Arg | Func::Conj, _) => true,
-        Expr::Num(_) | Expr::Var | Expr::Param | Expr::Slider(_) => false,
+        Expr::Num(_) | Expr::Var | Expr::Param | Expr::Slider(_) | Expr::Pattern(_) => false,
         Expr::Neg(inner) | Expr::Call(_, inner) => uses_field_vocabulary(inner),
         Expr::Bin(_, lhs, rhs) | Expr::PairCall(_, lhs, rhs) => {
             uses_field_vocabulary(lhs) || uses_field_vocabulary(rhs)
@@ -2780,6 +2786,20 @@ pub(crate) fn euclid_pulse(x: f64, hits: f64, steps: f64) -> f64 {
     let k = hits.floor().clamp(0.0, n);
     let i = x.floor().rem_euclid(n);
     if (i * k).rem_euclid(n) < k { 1.0 } else { 0.0 }
+}
+
+/// One sample of `pat(x..x..x.)` at `x`.
+///
+/// The step index is `floor(x)` wrapped into `n` positions, the length of
+/// the mark string. A hit is 1, a rest is 0. Nonfinite input or an empty
+/// pattern is undefined.
+pub(crate) fn pattern_pulse(x: f64, hits: &[bool]) -> f64 {
+    let n = hits.len();
+    if !x.is_finite() || n == 0 || n > MAX_EUCLID_STEPS {
+        return f64::NAN;
+    }
+    let i = x.floor().rem_euclid(n as f64);
+    if hits[i as usize] { 1.0 } else { 0.0 }
 }
 
 fn is_integer_value(value: f64) -> bool {
@@ -2924,6 +2944,7 @@ pub fn eval_named(expr: &Expr, x: f64, a: f64, sliders: &[crate::slider::StudioS
                 PairFunc::Euclid => euclid_pulse(x, lhs, rhs),
             }
         }
+        Expr::Pattern(hits) => pattern_pulse(x, hits),
     }
 }
 
@@ -3002,6 +3023,7 @@ pub fn eval_field_named(
                 PairFunc::Euclid => euclid_pulse(z.re, lhs.re, rhs.re),
             })
         }
+        Expr::Pattern(hits) => Complex::real(pattern_pulse(z.re, hits)),
     }
 }
 
@@ -3527,6 +3549,31 @@ enum Grammar {
     Field,
 }
 
+/// Whole-source tracker marks: `x..x..x.`.
+///
+/// A lone `x` stays the variable. A run of letters with no rest stays a
+/// slider name. The form must include a `.` so those two cannot be stolen.
+fn tracker_pattern_from_source(source: &str) -> Result<Option<Vec<bool>>, String> {
+    let compact: String = source.chars().filter(|c| !c.is_whitespace()).collect();
+    if compact.len() < 2 || !compact.contains('.') {
+        return Ok(None);
+    }
+    if !compact
+        .chars()
+        .all(|mark| mark == PATTERN_HIT || mark == PATTERN_REST)
+    {
+        return Ok(None);
+    }
+    if compact.len() > MAX_EUCLID_STEPS {
+        return Err(format!(
+            "a tracker row may hold at most {MAX_EUCLID_STEPS} steps"
+        ));
+    }
+    Ok(Some(
+        compact.chars().map(|mark| mark == PATTERN_HIT).collect(),
+    ))
+}
+
 fn parse_in(source: &str, grammar: Grammar) -> Result<Expr, String> {
     let tokenized = tokenize(source)?;
     let tokens = tokenized.tokens;
@@ -3534,6 +3581,9 @@ fn parse_in(source: &str, grammar: Grammar) -> Result<Expr, String> {
         return Err(format!(
             "expression is too complex; limit is {MAX_EXPR_TOKENS} tokens"
         ));
+    }
+    if let Some(hits) = tracker_pattern_from_source(source)? {
+        return Ok(Expr::Pattern(hits));
     }
     let mut parser = Parser {
         tokens,
@@ -3565,6 +3615,8 @@ enum Tok {
     Comma,
     LParen,
     RParen,
+    /// A tracker rest, and the decimal point when it is not part of a number.
+    Dot,
 }
 
 impl Tok {
@@ -3580,6 +3632,7 @@ impl Tok {
             Self::Comma => "','".to_string(),
             Self::LParen => "'('".to_string(),
             Self::RParen => "')'".to_string(),
+            Self::Dot => "'.'".to_string(),
         }
     }
 }
@@ -3600,7 +3653,9 @@ fn tokenize(source: &str) -> Result<Tokenized, String> {
         let c = chars[i];
         if c.is_whitespace() {
             i += 1;
-        } else if c.is_ascii_digit() || c == '.' {
+        } else if c.is_ascii_digit()
+            || (c == '.' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit())
+        {
             let start = i;
             while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
                 i += 1;
@@ -3611,6 +3666,10 @@ fn tokenize(source: &str) -> Result<Tokenized, String> {
                 .map_err(|_| format!("bad number '{text}' at column {}", start + 1))?;
             tokens.push(Tok::Num(value));
             columns.push(start + 1);
+        } else if c == '.' {
+            tokens.push(Tok::Dot);
+            columns.push(i + 1);
+            i += 1;
         } else if c.is_ascii_alphabetic() {
             let start = i;
             while i < chars.len() && chars[i].is_ascii_alphanumeric() {
@@ -3792,8 +3851,57 @@ impl Parser {
         }
     }
 
+    /// `pat(x..x..x.)`: an explicit step pattern.
+    fn pattern_call(&mut self, name_column: usize) -> Result<Expr, String> {
+        self.pos += 1;
+        let mut hits = Vec::new();
+        loop {
+            match self.peek() {
+                Some(Tok::Ident(name))
+                    if !name.is_empty() && name.chars().all(|mark| mark == PATTERN_HIT) =>
+                {
+                    hits.extend(std::iter::repeat_n(true, name.len()));
+                    self.pos += 1;
+                }
+                Some(Tok::Dot) => {
+                    hits.push(false);
+                    self.pos += 1;
+                }
+                Some(Tok::RParen) => break,
+                Some(other) => {
+                    return Err(format!(
+                        "pat() expected 'x' or '.' at column {}; found {}",
+                        self.current_column(),
+                        other.diagnostic_name()
+                    ));
+                }
+                None => {
+                    return Err(format!(
+                        "expression ended at column {}; expected ')' after pat( ",
+                        self.current_column()
+                    ));
+                }
+            }
+            if hits.len() > MAX_EUCLID_STEPS {
+                return Err(format!(
+                    "pat() may hold at most {MAX_EUCLID_STEPS} steps at column {name_column}"
+                ));
+            }
+        }
+        self.expect_right_paren("after pat( ")?;
+        if hits.is_empty() {
+            return Err(format!(
+                "pat() needs at least one mark at column {name_column}"
+            ));
+        }
+        Ok(Expr::Pattern(hits))
+    }
+
     /// Resolve an identifier: the variable, a constant, or a function call.
     fn ident(&mut self, name: &str, depth: usize, name_column: usize) -> Result<Expr, String> {
+        if name == "pat" && matches!(self.peek(), Some(Tok::LParen)) {
+            return self.pattern_call(name_column);
+        }
         if matches!(self.peek(), Some(Tok::LParen)) {
             let unary = match name {
                 "sin" => Some(Func::Sin),
@@ -3857,14 +3965,15 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::{
-        FieldReading, MAX_CREDIT_CHARS, MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS,
-        MAX_PARSE_DEPTH, MAX_STUDIO_SOURCE_CHARS, STUDIO_EXPERIMENTS, STUDIO_RECIPES,
-        StudioCreation, StudioKind, StudioProgram, StudioScale, adjacent_construction_creation,
-        adjacent_studio_experiment, eval, eval_named, first_studio_construction,
-        is_returning_home_transfer, parse, returning_home_transfer, studio_auto_recipe,
-        studio_construction_family, studio_experiment, studio_experiment_matching,
-        studio_experiment_meta, studio_experiments_in, studio_recipe, studio_recipe_count,
-        to_melody, to_melody_with_scale, to_melody_with_scale_named, uses_field_vocabulary,
+        Expr, FieldReading, MAX_CREDIT_CHARS, MAX_EUCLID_STEPS, MAX_EXPR_TOKENS, MAX_MELODY_NOTES,
+        MAX_META_TEXT_CHARS, MAX_PARSE_DEPTH, MAX_STUDIO_SOURCE_CHARS, STUDIO_EXPERIMENTS,
+        STUDIO_RECIPES, StudioCreation, StudioKind, StudioProgram, StudioScale,
+        adjacent_construction_creation, adjacent_studio_experiment, eval, eval_named,
+        first_studio_construction, is_returning_home_transfer, parse, returning_home_transfer,
+        studio_auto_recipe, studio_construction_family, studio_experiment,
+        studio_experiment_matching, studio_experiment_meta, studio_experiments_in, studio_recipe,
+        studio_recipe_count, to_melody, to_melody_with_scale, to_melody_with_scale_named,
+        uses_field_vocabulary,
     };
     use super::{eval_field, parse_field};
     use crate::complex::Complex;
@@ -4430,6 +4539,81 @@ mod tests {
         assert_eq!(
             super::pattern_grid_text(&ten.pattern_rows()).expect("ten grid"),
             "1234567890\nx........."
+        );
+    }
+
+    #[test]
+    fn tracker_marks_are_an_explicit_pattern() {
+        let marks = parse("x..x..x.").expect("bare");
+        let named = parse("pat(x..x..x.)").expect("pat");
+        assert_eq!(marks, named);
+        assert_eq!(eval(&marks, 0.0, 1.0), 1.0);
+        assert_eq!(eval(&marks, 1.0, 1.0), 0.0);
+        assert_eq!(eval(&marks, 3.0, 1.0), 1.0);
+        assert_eq!(eval(&marks, 8.0, 1.0), 1.0);
+        let creation = StudioCreation::new("x..x..x.", 0.0, 8.0, 1.0).expect("row");
+        assert_eq!(creation.pattern_rows(), ["x..x..x."]);
+        assert_eq!(
+            StudioProgram::from_editor("x..x..x.")
+                .expect("editor")
+                .kind(),
+            StudioKind::Graph
+        );
+        let layered = StudioProgram::from_editor("x..x..x. & x.x.xx.x").expect("overlay");
+        assert_eq!(layered.kind(), StudioKind::Program);
+        let program =
+            StudioCreation::new_program(["x..x..x.", "x.x.xx.x"], 0.0, 8.0, 1.0).expect("two");
+        assert_eq!(program.pattern_rows(), ["x..x..x.", "x.x.xx.x"]);
+        assert_eq!(
+            StudioCreation::from_num_file(&program.to_num_file()).expect("overlay file"),
+            program
+        );
+        assert!(parse("pat()").is_err());
+        assert!(parse("pat").is_err());
+        assert!(parse("pat(z..)").is_err());
+        assert!(matches!(parse("x").expect("variable"), Expr::Var));
+        assert!(matches!(parse("xx").expect("slider"), Expr::Slider(_)));
+        assert_eq!(eval(&parse(".x").expect("rest then hit"), 0.0, 1.0), 0.0);
+        assert_eq!(eval(&parse(".x").expect("rest then hit"), 1.0, 1.0), 1.0);
+        assert!((at(".5 + x", 1.0) - 1.5).abs() < 1e-12);
+        assert_eq!(at("pat(x..x..x.) * 2", 0.0), 2.0);
+        assert_eq!(at("pat(x..x..x.) * 2", 1.0), 0.0);
+        let five = parse("pat(x.x.xx.x)").expect("consecutive hits");
+        for step in 0..8 {
+            assert_eq!(
+                eval(&five, step as f64, 1.0),
+                at("euclid(5,8)", step as f64),
+                "step {step}"
+            );
+        }
+        for step in 0..8 {
+            assert_eq!(
+                at("pat(x..x..x.)", step as f64),
+                at("euclid(3,8)", step as f64),
+                "tresillo step {step}"
+            );
+        }
+        let handmade = StudioCreation::new("pat(x..x..x.)", 0.0, 8.0, 1.0).expect("named");
+        assert_eq!(handmade.pattern_rows(), ["x..x..x."]);
+        assert_eq!(
+            StudioCreation::from_num_file(&handmade.to_num_file()).expect("file"),
+            handmade
+        );
+        assert_eq!(
+            StudioCreation::from_link(&handmade.to_link()).expect("link"),
+            handmade
+        );
+        let too_long = format!("pat({})", "x".repeat(MAX_EUCLID_STEPS + 1));
+        assert!(
+            parse(&too_long)
+                .expect_err("overlong pat")
+                .contains("at most")
+        );
+        let too_long_row = format!("{}x.", "x".repeat(MAX_EUCLID_STEPS));
+        assert!(
+            parse(&too_long_row)
+                .expect_err("overlong row")
+                .contains("at most")
         );
     }
 

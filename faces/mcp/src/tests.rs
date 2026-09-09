@@ -260,6 +260,7 @@ fn packaged_player_docs_name_creation_next() {
                 && flattened.contains("pattern")
                 && flattened.contains("grid")
                 && flattened.contains("x..x..x.")
+                && flattened.contains("pat(")
                 && flattened.contains("12345678"),
             "{name} must name the bundled Studio experiments a packaged player can open"
         );
@@ -2824,6 +2825,60 @@ fn euclidean_rhythms_plot_save_and_open_follow_next() {
     );
     assert_eq!(remix["result"]["isError"], false, "{remix}");
     assert_eq!(remix["result"]["structuredContent"]["kind"], "program");
+}
+
+#[test]
+fn tracker_marks_plot_save_and_follow_next() {
+    let plotted = call(
+        "plot_expression",
+        json!({"expr": "pat(x..x..x.)", "xmin": 0.0, "xmax": 8.0}),
+    );
+    assert_eq!(plotted["result"]["isError"], false, "{plotted}");
+    let next = &plotted["result"]["structuredContent"]["next"];
+    assert_eq!(next["tool"], "save_creation");
+    assert_eq!(next["arguments"]["expr"], "pat(x..x..x.)");
+    assert_eq!(
+        plotted["result"]["structuredContent"]["pattern"],
+        json!(["x..x..x."])
+    );
+    assert_eq!(
+        plotted["result"]["structuredContent"]["grid"],
+        "12345678\nx..x..x."
+    );
+    let saved = call("save_creation", next["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let bare = call(
+        "plot_expression",
+        json!({"expr": "x..x..x.", "xmin": 0.0, "xmax": 8.0}),
+    );
+    assert_eq!(bare["result"]["isError"], false, "{bare}");
+    assert_eq!(
+        bare["result"]["structuredContent"]["pattern"],
+        json!(["x..x..x."])
+    );
+    let overlay = call(
+        "plot_expression",
+        json!({"expr": "x..x..x. & x.x.xx.x", "xmin": 0.0, "xmax": 8.0}),
+    );
+    assert_eq!(overlay["result"]["isError"], false, "{overlay}");
+    let overlay_next = &overlay["result"]["structuredContent"]["next"];
+    assert_eq!(overlay_next["tool"], "save_creation");
+    assert_eq!(overlay_next["arguments"]["expr"], "x..x..x. & x.x.xx.x");
+    let overlay_saved = call("save_creation", overlay_next["arguments"].clone());
+    assert_eq!(overlay_saved["result"]["isError"], false, "{overlay_saved}");
+    assert_eq!(
+        overlay["result"]["structuredContent"]["pattern"],
+        json!(["x..x..x.", "x.x.xx.x"])
+    );
+    let forked = call(
+        "fork_creation",
+        saved["result"]["structuredContent"]["next"]["arguments"].clone(),
+    );
+    assert_eq!(forked["result"]["isError"], false, "{forked}");
+    assert_eq!(
+        forked["result"]["structuredContent"]["expression"],
+        "pat(x..x..x.)"
+    );
 }
 
 #[test]

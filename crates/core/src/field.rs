@@ -598,7 +598,12 @@ fn crossing_once(
 #[must_use]
 pub fn is_real_valued(expression: &Expr) -> bool {
     match expression {
-        Expr::Num(_) | Expr::Var | Expr::VarIm | Expr::Param | Expr::Slider(_) => true,
+        Expr::Num(_)
+        | Expr::Var
+        | Expr::VarIm
+        | Expr::Param
+        | Expr::Slider(_)
+        | Expr::Pattern(_) => true,
         Expr::Point | Expr::ImagUnit => false,
         Expr::Neg(inner) => is_real_valued(inner),
         Expr::Bin(op, lhs, rhs) => {
@@ -696,6 +701,7 @@ fn eval_enclosure(
                 PairFunc::Euclid => euclid_enclosure(x, left, right),
             }
         }
+        Expr::Pattern(hits) => pattern_enclosure(x, hits),
     }
 }
 
@@ -753,6 +759,69 @@ fn euclid_enclosure(x: Enclosure, hits: Enclosure, steps: Enclosure) -> Enclosur
     let mut inspected = 0usize;
     while index <= last && inspected <= crate::studio::MAX_EUCLID_STEPS {
         match crate::studio::euclid_pulse(index, hits.lo(), steps.lo()) {
+            0.0 => seen_zero = true,
+            1.0 => seen_one = true,
+            _ => return Enclosure::WHOLE,
+        }
+        index += 1.0;
+        inspected += 1;
+    }
+    if inspected > crate::studio::MAX_EUCLID_STEPS && index <= last {
+        return Enclosure::span(0.0, 1.0).doubted();
+    }
+    match (seen_zero, seen_one) {
+        (true, false) => with_certainty(Enclosure::point(0.0)),
+        (false, true) => with_certainty(Enclosure::point(1.0)),
+        (true, true) => Enclosure::span(0.0, 1.0).doubted(),
+        (false, false) => Enclosure::WHOLE,
+    }
+}
+
+fn pattern_enclosure(x: Enclosure, hits: &[bool]) -> Enclosure {
+    let n = hits.len();
+    if n == 0 || n > crate::studio::MAX_EUCLID_STEPS {
+        return Enclosure::WHOLE;
+    }
+    let constant = if hits.iter().all(|hit| *hit) {
+        Some(1.0)
+    } else if hits.iter().all(|hit| !*hit) {
+        Some(0.0)
+    } else {
+        None
+    };
+    let certainty = x.certainty();
+    let with_certainty = |value: Enclosure| {
+        if certainty == Certainty::Sound {
+            value
+        } else {
+            value.doubted()
+        }
+    };
+    let exact_int = (1u64 << 53) as f64;
+    if !x.lo().is_finite()
+        || !x.hi().is_finite()
+        || x.lo().abs() >= exact_int
+        || x.hi().abs() >= exact_int
+    {
+        return match constant {
+            Some(value) => with_certainty(Enclosure::point(value)),
+            None => Enclosure::span(0.0, 1.0).doubted(),
+        };
+    }
+    if let Some(value) = constant {
+        return with_certainty(Enclosure::point(value));
+    }
+    let first = x.lo().floor();
+    let last = x.hi().floor();
+    if last < first {
+        return Enclosure::WHOLE;
+    }
+    let mut seen_zero = false;
+    let mut seen_one = false;
+    let mut index = first;
+    let mut inspected = 0usize;
+    while index <= last && inspected <= crate::studio::MAX_EUCLID_STEPS {
+        match crate::studio::pattern_pulse(index, hits) {
             0.0 => seen_zero = true,
             1.0 => seen_one = true,
             _ => return Enclosure::WHOLE,
@@ -932,6 +1001,23 @@ mod tests {
             &expression,
             FieldReading::Zero,
             (1.25, 1.75),
+            (-1.0, 1.0),
+            1.0,
+            (8, 8),
+            0.5,
+        )
+        .expect("draws");
+        assert_eq!(drawn.unresolved, 0, "{}", drawn.text);
+        assert!(!drawn.text.contains(CURVE), "{}", drawn.text);
+    }
+
+    #[test]
+    fn a_handmade_rest_span_has_no_half_crossing() {
+        let expression = parse_field("pat(x..x..x.) - 0.5").expect("parses");
+        let drawn = draw(
+            &expression,
+            FieldReading::Zero,
+            (1.0, 2.9),
             (-1.0, 1.0),
             1.0,
             (8, 8),

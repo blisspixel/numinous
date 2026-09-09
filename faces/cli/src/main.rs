@@ -502,7 +502,8 @@ enum Command {
     /// Discovery: pass an expression, or --recipe N, or --seed N (curated bank).
     Plot {
         /// Manual expression in x and a. Unary: sin cos tan exp ln abs sqrt floor.
-        /// Pair functions: mod min max euclid. Constants: pi e.
+        /// Pair functions: mod min max euclid. Tracker: pat(x..x..x.) or x..x..x.
+        /// Constants: pi e.
         /// Omit when using --x-expr/--y-expr, --recipe, --seed, or --list-recipes.
         expr: Option<String>,
         /// Parametric x(t) expression. Requires --y-expr and excludes graph discovery.

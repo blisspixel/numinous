@@ -48,8 +48,8 @@ of two to four graphs ship as version 7. Euclidean rhythms ship as
 `euclid(hits, steps)` in the expression language; overlay layers them.
 Pattern text of integer 0/1 graphs now ships. Height and phase fields
 sing along the real axis; the zero reading stays silent. The step-grid
-reading of those rows now ships. Pattern Studio's tracker editing and
-piano roll remain open.
+reading of those rows now ships. Tracker editing is `x..x..x.` or
+`pat(x..x..x.)`. Pattern Studio's piano roll remains open.
 The sung melody can leave as WAV or as a Standard MIDI File on all three faces:
 CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` with `midi: true`, and the App
 F4 share as `melody.mid`. Overlay programs mix every graph in WAV; MIDI stays
@@ -120,7 +120,7 @@ you share are the same object at every rung:
 | Doodle | `y = sin(x)` | `.num` (one expression) | Tier 1 |
 | Curve | `x(t)=cos(3*t); y(t)=sin(2*t)` | `.num` v3 (pair and pitch map) | Tier 1 |
 | Toy | `sin(a*x)`, tune `a` | `.num` manifest (sliders, palette, sound) | Tier 1 |
-| Instrument | `euclid(3,8)`, layered patterns | `.num` graph or overlay; Pattern Studio views later | Tier 1 |
+| Instrument | `euclid(3,8)` or `pat(x..x..x.)` | `.num` graph or overlay; Pattern Studio piano roll later | Tier 1 |
 | Room | the above plus a challenge and a reveal | signed capsule via portal | Tier 2 |
 
 The critical rule: **there is no export or convert step between rungs.** A doodle

@@ -76,7 +76,7 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "OVERLAY: SIN(X) & COS(X)  SHARED WINDOW",
     "FIELD: Z, Y, I, RE IM ARG CONJ  SEEN FIRST",
     "ONE: SIN COS TAN EXP LN ABS SQRT FLOOR",
-    "TWO: MOD(V,V) MIN(V,V) MAX(V,V) EUCLID(K,N)",
+    "TWO: MOD MIN MAX EUCLID  PAT(X..X..X.)",
     "F2: RANDOM RECIPE FROM THE BANK",
     "F3: AUTO SET  (~21S)",
     "F4: NAME + SHARE  .NUM + LINK + PNG + MIDI",
@@ -1328,7 +1328,7 @@ mod tests {
     #[test]
     fn help_names_the_complete_scalar_vocabulary() {
         let help = STUDIO_HELP_LINES.join("\n");
-        for name in ["FLOOR", "MOD(V,V)", "MIN(V,V)", "MAX(V,V)", "EUCLID(K,N)"] {
+        for name in ["FLOOR", "MOD", "MIN", "MAX", "EUCLID", "PAT(X..X..X.)"] {
             assert!(help.contains(name), "help must name {name}");
         }
         assert!(
@@ -1792,6 +1792,34 @@ mod tests {
         assert_eq!(five.id, "three-against-five");
         assert_eq!(five.creation().kind(), numinous_core::StudioKind::Program);
         assert_eq!(five.creation().pattern_rows(), ["x..x..x.", "x.x.xx.x"]);
+        let typed =
+            numinous_core::StudioCreation::new("x..x..x.", 0.0, 8.0, 1.0).expect("typed tracker");
+        let mut typed_panel = StudioPanel::default();
+        typed_panel.open_creation(&typed);
+        assert_eq!(
+            typed_panel
+                .current_creation()
+                .expect("typed")
+                .pattern_rows(),
+            ["x..x..x."]
+        );
+        assert_eq!(typed_panel.source_for_test(), "x..x..x.");
+        let mut typed_raster = Raster::new(240, 180);
+        typed_panel.draw(&mut typed_raster, InputMode::KeyboardMouse, 240, 180);
+        assert!(
+            typed_raster.lit_count() > 20,
+            "typed tracker marks draw the same cells"
+        );
+        let named = numinous_core::StudioCreation::new("pat(x..x..x.)", 0.0, 8.0, 1.0)
+            .expect("named tracker");
+        typed_panel.open_creation(&named);
+        assert_eq!(
+            typed_panel
+                .current_creation()
+                .expect("named")
+                .pattern_rows(),
+            ["x..x..x."]
+        );
     }
 
     #[test]
