@@ -3943,6 +3943,46 @@ fn euclidean_rhythms_plot_save_and_open() {
 }
 
 #[test]
+fn tracker_marks_plot_save_and_open() {
+    let path = std::env::temp_dir().join("numinous_cli_pat_save_test.num");
+    let _ = std::fs::remove_file(&path);
+    let plot = super::plot_report_with("pat(x..x..x.)", 0.0, 8.0, 1.0, 32, 10, &[]).expect("plot");
+    assert!(plot.contains('#'), "{plot}");
+    assert!(plot.contains("pattern x..x..x."), "{plot}");
+    assert!(plot.contains("grid 12345678"), "{plot}");
+    let bare = super::plot_report_with("x..x..x.", 0.0, 8.0, 1.0, 32, 10, &[]).expect("bare");
+    assert!(bare.contains("pattern x..x..x."), "{bare}");
+    let layered = super::plot_report_with("x..x..x. & x.x.xx.x", 0.0, 8.0, 1.0, 32, 10, &[])
+        .expect("overlay");
+    assert!(layered.contains("pattern # x..x..x."), "{layered}");
+    assert!(layered.contains("* x.x.xx.x"), "{layered}");
+    let message = super::save_studio_creation_with_sliders(
+        "pat(x..x..x.)",
+        super::StudioParameters {
+            minimum: 0.0,
+            maximum: 8.0,
+            a: 1.0,
+            scale: numinous_core::StudioScale::Continuous,
+        },
+        super::CreationIdentity {
+            title: Some("Handmade tresillo"),
+            author: None,
+            credit: None,
+        },
+        &[],
+        &path,
+    )
+    .expect("save");
+    assert!(message.contains("numinous://studio?"));
+    let text = std::fs::read_to_string(&path).expect("saved");
+    assert!(text.contains("expr=pat(x..x..x.)"), "{text}");
+    let opened = super::open_studio_report(&path.to_string_lossy(), 32, 10).expect("reopen");
+    assert!(opened.contains("pattern=x..x..x."), "{opened}");
+    assert!(opened.contains("grid=12345678"), "{opened}");
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
 fn two_voices_open_returning_home_oscillators() {
     let closing = super::open_studio_report("closing-voices", 32, 10).expect("closing");
     assert!(closing.contains("title=Closing voices"), "{closing}");

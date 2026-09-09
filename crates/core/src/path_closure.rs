@@ -336,7 +336,10 @@ fn constant(
             constant(left, parameter, sliders)?.checked_div(constant(right, parameter, sliders)?)
         }
         Expr::Call(Func::Sqrt, arg) => constant(arg, parameter, sliders)?.checked_sqrt(),
-        Expr::Call(_, _) | Expr::Bin(Op::Pow, _, _) | Expr::PairCall(_, _, _) => None,
+        Expr::Call(_, _)
+        | Expr::Bin(Op::Pow, _, _)
+        | Expr::PairCall(_, _, _)
+        | Expr::Pattern(_) => None,
     }
 }
 
