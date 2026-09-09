@@ -1,8 +1,8 @@
 //! Shared deterministic curve sampling and rasterization for Studio surfaces.
 
 use numinous_core::{
-    Expr, FieldReading, PlanarProjection, Raster, Surface, draw_field as draw_field_plate,
-    field_mark_level,
+    Expr, FieldReading, PlanarProjection, Raster, StudioSlider, Surface,
+    draw_field_named as draw_field_plate, field_mark_level,
 };
 
 struct CurveSamples {
@@ -272,6 +272,7 @@ pub fn draw_field(
     ymin: f64,
     ymax: f64,
     a: f64,
+    sliders: &[StudioSlider],
 ) -> bool {
     let width = layout.width.min(raster.width());
     let height = layout.height.min(raster.height());
@@ -295,6 +296,7 @@ pub fn draw_field(
         (xmin, xmax),
         (ymin, ymax),
         a,
+        sliders,
         (cols, rows),
         1.0,
     ) else {

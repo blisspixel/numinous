@@ -101,10 +101,11 @@ Make something you can keep. [`PLAY.md`](PLAY.md) names bundled Studio paths
 you can open without a host file. Returning home: `full-return`,
 `almost-home`, `same-place`, `another-ratio`. Shape and scale: `circle-to-ellipse`,
 `uniform-circle`. Three readings: `simple-zero`, `a-pole`, `the-circle`,
-`the-bowl`. The guides live in the repository:
+`the-bowl`. Named sliders: `extra-knob`, `live-ratio`. The guides live in the repository:
 [Returning home](docs/experiments/returning-home.md),
-[Shape and scale](docs/experiments/shape-and-scale.md), and
-[Three readings](docs/experiments/three-readings.md). The mathematical
+[Shape and scale](docs/experiments/shape-and-scale.md),
+[Three readings](docs/experiments/three-readings.md), and
+[Named sliders](docs/experiments/named-sliders.md). The mathematical
 review and its limits live in [`docs/MATHEMATICS.md`](docs/MATHEMATICS.md).
 
 ## Status

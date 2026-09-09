@@ -104,6 +104,7 @@ pub mod share;
 pub mod show;
 pub mod sim;
 pub mod sims;
+pub mod slider;
 pub mod sound;
 pub mod spectrum;
 pub mod studio;
@@ -144,7 +145,8 @@ pub use encounter::{
 pub use era::Era;
 pub use field::{
     DEFAULT_FIELD_SIZE, FieldError, FieldPlate, FieldReading, MAX_FIELD_HEIGHT, MAX_FIELD_WIDTH,
-    draw as draw_field, is_real_valued as field_is_real_valued, mark_level as field_mark_level,
+    draw as draw_field, draw_named as draw_field_named, is_real_valued as field_is_real_valued,
+    mark_level as field_mark_level,
 };
 pub use font::{draw_text, text_width, wrap_text};
 pub use gauntlet::{
@@ -243,6 +245,11 @@ pub use show::{
 };
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};
+pub use slider::{
+    DEFAULT_SLIDER_MAX, DEFAULT_SLIDER_MIN, DEFAULT_SLIDER_VALUE, MAX_NAMED_SLIDERS,
+    MAX_SLIDER_NAME_CHARS, StudioSlider, bind_sliders, collect_slider_names, is_slider_name,
+    retain_sliders, sliders_from_specs,
+};
 pub use sound::{Note, ParametricSound, SoundSpec, wav_bytes};
 pub use spectrum::{
     BAND_COUNT, BAND_NAMES, ONSET_HIT, SpectrumBarLayout, SpectrumLevers, arrangement_spectrum,
@@ -255,10 +262,11 @@ pub use studio::{
     MAX_STUDIO_EDITOR_CHARS, MAX_STUDIO_SOURCE_CHARS, NumFileError, STUDIO_EXPERIMENTS,
     STUDIO_RECIPES, StudioCreation, StudioExperiment, StudioKind, StudioPlot, StudioProgram,
     StudioScale, adjacent_construction_creation, adjacent_studio_experiment, eval, eval_field,
-    first_studio_construction, is_returning_home_transfer, parse, parse_field, plot_text,
-    returning_home_transfer, studio_auto_recipe, studio_construction_family, studio_experiment,
-    studio_experiment_matching, studio_experiment_meta, studio_experiments_in, studio_recipe,
-    studio_recipe_count, to_melody, to_melody_with_scale, uses_field_vocabulary,
+    eval_field_named, eval_named, first_studio_construction, is_returning_home_transfer, parse,
+    parse_field, plot_text, returning_home_transfer, studio_auto_recipe,
+    studio_construction_family, studio_experiment, studio_experiment_matching,
+    studio_experiment_meta, studio_experiments_in, studio_recipe, studio_recipe_count, to_melody,
+    to_melody_with_scale, to_melody_with_scale_named, uses_field_vocabulary,
 };
 pub use studio_request::{
     DEFAULT_FIELD_MAX, DEFAULT_FIELD_MIN, DEFAULT_MELODY_NOTES, DEFAULT_PLOT_HEIGHT,

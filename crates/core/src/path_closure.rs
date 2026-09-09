@@ -162,10 +162,11 @@ fn analyze_parametric(creation: &StudioCreation) -> PathClosure {
         Some(value) => value,
         None => return PathClosure::Unsupported,
     };
-    let Some(x_osc) = oscillator(&x_expression, parameter) else {
+    let sliders = creation.sliders();
+    let Some(x_osc) = oscillator(&x_expression, parameter, sliders) else {
         return PathClosure::Unsupported;
     };
-    let Some(y_osc) = oscillator(&y_expression, parameter) else {
+    let Some(y_osc) = oscillator(&y_expression, parameter, sliders) else {
         return PathClosure::Unsupported;
     };
     let Some(x_freq) = frequency_cycles(&x_osc.omega) else {
@@ -219,10 +220,14 @@ struct State {
     vy: f64,
 }
 
-fn oscillator(expr: &Expr, parameter: Exact) -> Option<Oscillator> {
+fn oscillator(
+    expr: &Expr,
+    parameter: Exact,
+    sliders: &[crate::slider::StudioSlider],
+) -> Option<Oscillator> {
     match expr {
         Expr::Call(kind @ (Func::Sin | Func::Cos), arg) => {
-            let (phase, omega) = affine(arg, parameter)?;
+            let (phase, omega) = affine(arg, parameter, sliders)?;
             if omega.is_zero() {
                 return None;
             }
@@ -234,26 +239,26 @@ fn oscillator(expr: &Expr, parameter: Exact) -> Option<Oscillator> {
             })
         }
         Expr::Neg(inner) => {
-            let mut osc = oscillator(inner, parameter)?;
+            let mut osc = oscillator(inner, parameter, sliders)?;
             osc.amp = osc.amp.checked_neg()?;
             Some(osc)
         }
         Expr::Bin(Op::Mul, left, right) => {
-            if let Some(scale) = constant(left, parameter) {
-                let mut osc = oscillator(right, parameter)?;
+            if let Some(scale) = constant(left, parameter, sliders) {
+                let mut osc = oscillator(right, parameter, sliders)?;
                 osc.amp = osc.amp.checked_mul(scale)?;
                 return Some(osc);
             }
-            if let Some(scale) = constant(right, parameter) {
-                let mut osc = oscillator(left, parameter)?;
+            if let Some(scale) = constant(right, parameter, sliders) {
+                let mut osc = oscillator(left, parameter, sliders)?;
                 osc.amp = osc.amp.checked_mul(scale)?;
                 return Some(osc);
             }
             None
         }
         Expr::Bin(Op::Div, left, right) => {
-            let scale = constant(right, parameter)?;
-            let mut osc = oscillator(left, parameter)?;
+            let scale = constant(right, parameter, sliders)?;
+            let mut osc = oscillator(left, parameter, sliders)?;
             osc.amp = osc.amp.checked_div(scale)?;
             Some(osc)
         }
@@ -261,67 +266,76 @@ fn oscillator(expr: &Expr, parameter: Exact) -> Option<Oscillator> {
     }
 }
 
-fn affine(expr: &Expr, parameter: Exact) -> Option<(Exact, Exact)> {
+fn affine(
+    expr: &Expr,
+    parameter: Exact,
+    sliders: &[crate::slider::StudioSlider],
+) -> Option<(Exact, Exact)> {
     match expr {
         Expr::Var => Some((Exact::zero(), Exact::one())),
         Expr::Neg(inner) => {
-            let (phase, omega) = affine(inner, parameter)?;
+            let (phase, omega) = affine(inner, parameter, sliders)?;
             Some((phase.checked_neg()?, omega.checked_neg()?))
         }
         Expr::Bin(Op::Add, left, right) => {
-            let (p0, w0) = affine(left, parameter)?;
-            let (p1, w1) = affine(right, parameter)?;
+            let (p0, w0) = affine(left, parameter, sliders)?;
+            let (p1, w1) = affine(right, parameter, sliders)?;
             Some((p0.checked_add(p1)?, w0.checked_add(w1)?))
         }
         Expr::Bin(Op::Sub, left, right) => {
-            let (p0, w0) = affine(left, parameter)?;
-            let (p1, w1) = affine(right, parameter)?;
+            let (p0, w0) = affine(left, parameter, sliders)?;
+            let (p1, w1) = affine(right, parameter, sliders)?;
             Some((p0.checked_sub(p1)?, w0.checked_sub(w1)?))
         }
         Expr::Bin(Op::Mul, left, right) => {
-            if let Some(scale) = constant(left, parameter) {
-                let (phase, omega) = affine(right, parameter)?;
+            if let Some(scale) = constant(left, parameter, sliders) {
+                let (phase, omega) = affine(right, parameter, sliders)?;
                 return Some((phase.checked_mul(scale)?, omega.checked_mul(scale)?));
             }
-            if let Some(scale) = constant(right, parameter) {
-                let (phase, omega) = affine(left, parameter)?;
+            if let Some(scale) = constant(right, parameter, sliders) {
+                let (phase, omega) = affine(left, parameter, sliders)?;
                 return Some((phase.checked_mul(scale)?, omega.checked_mul(scale)?));
             }
             None
         }
         Expr::Bin(Op::Div, left, right) => {
-            let scale = constant(right, parameter)?;
-            let (phase, omega) = affine(left, parameter)?;
+            let scale = constant(right, parameter, sliders)?;
+            let (phase, omega) = affine(left, parameter, sliders)?;
             Some((phase.checked_div(scale)?, omega.checked_div(scale)?))
         }
         _ => {
-            let value = constant(expr, parameter)?;
+            let value = constant(expr, parameter, sliders)?;
             Some((value, Exact::zero()))
         }
     }
 }
 
-fn constant(expr: &Expr, parameter: Exact) -> Option<Exact> {
+fn constant(
+    expr: &Expr,
+    parameter: Exact,
+    sliders: &[crate::slider::StudioSlider],
+) -> Option<Exact> {
     match expr {
         Expr::Num(value) => Exact::from_f64(*value),
         Expr::Param => Some(parameter),
+        Expr::Slider(name) => Exact::from_f64(crate::slider::slider_value(name, sliders)),
         // The variable, and the field leaves a curve grammar cannot
         // produce, are not constants.
         Expr::Var | Expr::VarIm | Expr::Point | Expr::ImagUnit => None,
-        Expr::Neg(inner) => constant(inner, parameter)?.checked_neg(),
+        Expr::Neg(inner) => constant(inner, parameter, sliders)?.checked_neg(),
         Expr::Bin(Op::Add, left, right) => {
-            constant(left, parameter)?.checked_add(constant(right, parameter)?)
+            constant(left, parameter, sliders)?.checked_add(constant(right, parameter, sliders)?)
         }
         Expr::Bin(Op::Sub, left, right) => {
-            constant(left, parameter)?.checked_sub(constant(right, parameter)?)
+            constant(left, parameter, sliders)?.checked_sub(constant(right, parameter, sliders)?)
         }
         Expr::Bin(Op::Mul, left, right) => {
-            constant(left, parameter)?.checked_mul(constant(right, parameter)?)
+            constant(left, parameter, sliders)?.checked_mul(constant(right, parameter, sliders)?)
         }
         Expr::Bin(Op::Div, left, right) => {
-            constant(left, parameter)?.checked_div(constant(right, parameter)?)
+            constant(left, parameter, sliders)?.checked_div(constant(right, parameter, sliders)?)
         }
-        Expr::Call(Func::Sqrt, arg) => constant(arg, parameter)?.checked_sqrt(),
+        Expr::Call(Func::Sqrt, arg) => constant(arg, parameter, sliders)?.checked_sqrt(),
         Expr::Call(_, _) | Expr::Bin(Op::Pow, _, _) | Expr::PairCall(_, _, _) => None,
     }
 }

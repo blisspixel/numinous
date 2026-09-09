@@ -166,6 +166,20 @@ pub const STUDIO_EXPERIMENTS: &[StudioExperiment] = &[
         invitation: "This is the same formula as The circle, read as height. Where does the bowl meet nothing?",
         num_file: include_str!("../../../docs/experiments/the-bowl.num"),
     },
+    StudioExperiment {
+        id: "extra-knob",
+        family: "named-sliders",
+        title: "An extra knob",
+        invitation: "Change b. What moved, and what stayed the same?",
+        num_file: include_str!("../../../docs/experiments/extra-knob.num"),
+    },
+    StudioExperiment {
+        id: "live-ratio",
+        family: "named-sliders",
+        title: "A live ratio",
+        invitation: "Change p or q. When does the path close again?",
+        num_file: include_str!("../../../docs/experiments/live-ratio.num"),
+    },
 ];
 
 /// Look up a bundled experiment by id, or by `experiment:<id>`.
@@ -412,6 +426,7 @@ pub struct StudioCreation {
     ymin: Option<f64>,
     ymax: Option<f64>,
     a: f64,
+    sliders: Vec<crate::slider::StudioSlider>,
     scale: StudioScale,
     reading: Option<FieldReading>,
     title: Option<String>,
@@ -432,7 +447,7 @@ impl StudioCreation {
         validate_share_source(&source)?;
         parse(&source)?;
         validate_share_numbers(xmin, xmax, a)?;
-        Ok(Self {
+        Self {
             source,
             second_source: None,
             xmin,
@@ -440,6 +455,7 @@ impl StudioCreation {
             ymin: None,
             ymax: None,
             a,
+            sliders: Vec::new(),
             scale: StudioScale::Continuous,
             reading: None,
             title: None,
@@ -447,7 +463,8 @@ impl StudioCreation {
             credit: None,
             era: None,
             descends: None,
-        })
+        }
+        .bind_sliders()
     }
 
     /// Build a validated parametric creation over one bounded parameter
@@ -471,7 +488,7 @@ impl StudioCreation {
         parse(&x_source)?;
         parse(&y_source)?;
         validate_share_numbers(tmin, tmax, a)?;
-        Ok(Self {
+        Self {
             source: x_source,
             second_source: Some(y_source),
             xmin: tmin,
@@ -479,6 +496,7 @@ impl StudioCreation {
             ymin: None,
             ymax: None,
             a,
+            sliders: Vec::new(),
             scale: StudioScale::Continuous,
             reading: None,
             title: None,
@@ -486,7 +504,8 @@ impl StudioCreation {
             credit: None,
             era: None,
             descends: None,
-        })
+        }
+        .bind_sliders()
     }
 
     /// Build a validated field over a requested rectangle of the plane.
@@ -523,7 +542,7 @@ impl StudioCreation {
                     .to_string(),
             );
         }
-        Ok(Self {
+        Self {
             source,
             second_source: None,
             xmin,
@@ -531,6 +550,7 @@ impl StudioCreation {
             ymin: Some(ymin),
             ymax: Some(ymax),
             a,
+            sliders: Vec::new(),
             scale: StudioScale::Continuous,
             reading: Some(reading),
             title: None,
@@ -538,7 +558,8 @@ impl StudioCreation {
             credit: None,
             era: None,
             descends: None,
-        })
+        }
+        .bind_sliders()
     }
 
     /// Change which truth a field plate asserts, keeping the formula and window.
@@ -703,6 +724,7 @@ impl StudioCreation {
             child = child.with_author(author)?;
         }
         child = child.with_suggested_fork_credit(self);
+        child = child.inherit_sliders(self)?;
         child.with_descends(&self.to_link())
     }
 
@@ -747,6 +769,7 @@ impl StudioCreation {
             child = child.with_author(author)?;
         }
         child = child.with_suggested_fork_credit(self);
+        child = child.inherit_sliders(self)?;
         child.with_descends(&self.to_link())
     }
 
@@ -784,6 +807,7 @@ impl StudioCreation {
             child = child.with_author(author)?;
         }
         child = child.with_suggested_fork_credit(self);
+        child = child.inherit_sliders(self)?;
         child.with_descends(&self.to_link())
     }
 
@@ -899,6 +923,62 @@ impl StudioCreation {
         self.a
     }
 
+    /// Named sliders this formula binds, in first-seen order.
+    #[must_use]
+    pub fn sliders(&self) -> &[crate::slider::StudioSlider] {
+        &self.sliders
+    }
+
+    /// Replace the named sliders. Every extra identifier in the formula must
+    /// be present; a name the formula does not use is refused.
+    ///
+    /// # Errors
+    /// Returns a message when the bindings do not match the formula.
+    pub fn with_sliders(
+        mut self,
+        sliders: Vec<crate::slider::StudioSlider>,
+    ) -> Result<Self, String> {
+        let names = self.collect_slider_names()?;
+        self.sliders = crate::slider::bind_sliders(&names, &sliders)?;
+        Ok(self)
+    }
+
+    /// Copy matching parent sliders onto this child, keeping defaults for
+    /// names the parent never bound.
+    fn inherit_sliders(self, parent: &Self) -> Result<Self, String> {
+        let names = self.collect_slider_names()?;
+        let kept: Vec<crate::slider::StudioSlider> = parent
+            .sliders
+            .iter()
+            .filter(|slider| names.iter().any(|name| name == slider.name()))
+            .cloned()
+            .collect();
+        self.with_sliders(kept)
+    }
+
+    fn collect_slider_names(&self) -> Result<Vec<String>, String> {
+        let first = if self.kind() == StudioKind::Field {
+            parse_field(&self.source)?
+        } else {
+            parse(&self.source)?
+        };
+        let mut names = crate::slider::collect_slider_names(&first);
+        if let Some(second) = &self.second_source {
+            for name in crate::slider::collect_slider_names(&parse(second)?) {
+                if !names.iter().any(|existing| existing == &name) {
+                    names.push(name);
+                }
+            }
+        }
+        Ok(names)
+    }
+
+    fn bind_sliders(self) -> Result<Self, String> {
+        let names = self.collect_slider_names()?;
+        let sliders = crate::slider::bind_sliders(&names, &[])?;
+        Ok(Self { sliders, ..self })
+    }
+
     /// Stored musical pitch map.
     #[must_use]
     pub const fn scale(&self) -> StudioScale {
@@ -927,8 +1007,16 @@ impl StudioCreation {
             return self.plot_field_text(width, height, 0.5);
         }
         let program = self.program()?;
-        plot_program_text(&program, self.xmin, self.xmax, self.a, width, height)
-            .map_err(|error| error.message().to_string())
+        plot_program_text(
+            &program,
+            self.xmin,
+            self.xmax,
+            self.a,
+            &self.sliders,
+            width,
+            height,
+        )
+        .map_err(|error| error.message().to_string())
     }
 
     /// Render this field at a chosen character aspect.
@@ -955,12 +1043,13 @@ impl StudioCreation {
             .ymax
             .ok_or_else(|| "a field creation needs ymax".to_string())?;
         let expression = parse_field(&self.source)?;
-        let plate = field::draw(
+        let plate = field::draw_named(
             &expression,
             reading,
             (self.xmin, self.xmax),
             (ymin, ymax),
             self.a,
+            &self.sliders,
             (width, height),
             char_aspect,
         )
@@ -986,12 +1075,13 @@ impl StudioCreation {
             };
         }
         match self.program() {
-            Ok(program) => to_melody_with_scale(
+            Ok(program) => to_melody_with_scale_named(
                 program.voice_expression(),
                 self.xmin,
                 self.xmax,
                 notes,
                 self.a,
+                &self.sliders,
                 self.scale,
             ),
             Err(_) => SoundSpec {
@@ -1041,10 +1131,13 @@ impl StudioCreation {
     /// Serialize to a `.num` Studio file, in the lowest format version that
     /// carries the content. Plain graphs stay version 1, identity makes them
     /// version 2, a parametric pair or stored scale uses version 3, prose
-    /// credit uses version 4, and a field uses version 5.
+    /// credit uses version 4, a field uses version 5, and named sliders use
+    /// version 6.
     #[must_use]
     pub fn to_num_file(&self) -> String {
-        let version = if self.kind() == StudioKind::Field {
+        let version = if !self.sliders.is_empty() {
+            6
+        } else if self.kind() == StudioKind::Field {
             5
         } else if self.credit.is_some() {
             4
@@ -1095,6 +1188,9 @@ impl StudioCreation {
             }
             out.push_str(&format!("scale={}\n", self.scale.name()));
         }
+        for slider in &self.sliders {
+            out.push_str(&format!("slider={}\n", slider.to_file_value()));
+        }
         if let Some(title) = &self.title {
             out.push_str(&format!("title={title}\n"));
         }
@@ -1113,11 +1209,11 @@ impl StudioCreation {
         out
     }
 
-    /// Parse a `.num` Studio file, version 1 through 5.
+    /// Parse a `.num` Studio file, version 1 through 6.
     ///
     /// Version 1 rejects the metadata fields rather than ignoring them, so a
     /// file cannot claim the old header while smuggling new content. A header
-    /// past version 5 is refused by name: a future capsule is a fact to
+    /// past version 6 is refused by name: a future capsule is a fact to
     /// report, not a guess to parse.
     ///
     /// # Errors
@@ -1132,6 +1228,7 @@ impl StudioCreation {
             Some("NUMINOUS_STUDIO 3") => 3,
             Some("NUMINOUS_STUDIO 4") => 4,
             Some("NUMINOUS_STUDIO 5") => 5,
+            Some("NUMINOUS_STUDIO 6") => 6,
             Some(header) if header.starts_with("NUMINOUS_STUDIO ") => {
                 return Err(
                     "this Studio .num file is from a newer Numinous; update to open it".to_string(),
@@ -1157,6 +1254,7 @@ impl StudioCreation {
         let mut credit: Option<String> = None;
         let mut era: Option<crate::era::Era> = None;
         let mut descends: Option<String> = None;
+        let mut sliders: Vec<crate::slider::StudioSlider> = Vec::new();
         for line in lines {
             if line.trim().is_empty() {
                 continue;
@@ -1175,6 +1273,11 @@ impl StudioCreation {
                         "Studio .num field '{key}' needs a NUMINOUS_STUDIO 5 header"
                     ));
                 }
+                "slider" if version < 6 => {
+                    return Err(
+                        "Studio .num field 'slider' needs a NUMINOUS_STUDIO 6 header".to_string(),
+                    );
+                }
                 "kind" if kind.is_none() => {
                     kind = Some(
                         StudioKind::parse(value)
@@ -1192,7 +1295,7 @@ impl StudioCreation {
                 "tmax" if tmax.is_none() => tmax = Some(parse_share_number("tmax", value)?),
                 "a" if a.is_none() => a = Some(parse_share_number("a", value)?),
                 "scale" if scale.is_none() => {
-                    if version >= 5 {
+                    if version == 5 || kind == Some(StudioKind::Field) {
                         return Err("a field Studio capsule has no scale".to_string());
                     }
                     scale = Some(
@@ -1226,6 +1329,7 @@ impl StudioCreation {
                     );
                 }
                 "descends" if descends.is_none() => descends = Some(value.to_string()),
+                "slider" => sliders.push(crate::slider::StudioSlider::from_file_value(value)?),
                 "kind" | "expr" | "xexpr" | "yexpr" | "xmin" | "xmax" | "ymin" | "ymax"
                 | "tmin" | "tmax" | "a" | "scale" | "reading" | "title" | "author" | "era"
                 | "descends" | "credit" => {
@@ -1245,10 +1349,15 @@ impl StudioCreation {
                 xmax.ok_or_else(|| "missing xmax".to_string())?,
                 a,
             )?
-        } else if version >= 5 {
+        } else if version == 5 || kind == Some(StudioKind::Field) {
             let kind = kind.ok_or_else(|| "missing Studio kind".to_string())?;
             if kind != StudioKind::Field {
                 return Err("a NUMINOUS_STUDIO 5 capsule needs kind=field".to_string());
+            }
+            if version < 5 {
+                return Err(
+                    "Studio .num field 'kind=field' needs a NUMINOUS_STUDIO 5 header".to_string(),
+                );
             }
             if x_source.is_some()
                 || y_source.is_some()
@@ -1307,6 +1416,16 @@ impl StudioCreation {
             };
             creation.with_scale(scale)
         };
+        if !creation.sliders.is_empty() && version < 6 {
+            return Err("named sliders need a NUMINOUS_STUDIO 6 header".to_string());
+        }
+        if !sliders.is_empty() {
+            creation = creation.with_sliders(sliders)?;
+        } else if version >= 6 && !creation.sliders.is_empty() {
+            return Err(
+                "a NUMINOUS_STUDIO 6 capsule that names sliders needs slider lines".to_string(),
+            );
+        }
         if let Some(title) = title {
             creation = creation.with_title(&title)?;
         }
@@ -1430,6 +1549,12 @@ impl StudioCreation {
         if let Some(era) = self.era {
             link.push_str(&format!("&era={}", percent_encode(era.name())));
         }
+        for slider in &self.sliders {
+            link.push_str(&format!(
+                "&slider={}",
+                percent_encode(&slider.to_file_value())
+            ));
+        }
         link
     }
 
@@ -1462,6 +1587,7 @@ impl StudioCreation {
         let mut author: Option<String> = None;
         let mut credit: Option<String> = None;
         let mut era: Option<crate::era::Era> = None;
+        let mut sliders: Vec<crate::slider::StudioSlider> = Vec::new();
         for pair in query.split('&') {
             if pair.is_empty() {
                 continue;
@@ -1510,6 +1636,10 @@ impl StudioCreation {
                         crate::era::Era::parse(&decoded)
                             .ok_or_else(|| format!("unknown Studio era '{decoded}'"))?,
                     );
+                }
+                "slider" => {
+                    let decoded = percent_decode(value)?;
+                    sliders.push(crate::slider::StudioSlider::from_file_value(&decoded)?);
                 }
                 "kind" | "expr" | "xexpr" | "yexpr" | "xmin" | "xmax" | "ymin" | "ymax"
                 | "tmin" | "tmax" | "a" | "scale" | "reading" | "title" | "author" | "era"
@@ -1598,6 +1728,9 @@ impl StudioCreation {
                 )?
             }
         };
+        if !sliders.is_empty() {
+            creation = creation.with_sliders(sliders)?;
+        }
         if let Some(title) = title {
             creation = creation.with_title(&title)?;
         }
@@ -1804,6 +1937,8 @@ pub enum Expr {
     ImagUnit,
     /// The adjustable parameter `a`.
     Param,
+    /// A named slider: an extra finite parameter the formula bound.
+    Slider(String),
     /// Unary negation.
     Neg(Box<Expr>),
     /// A binary operation.
@@ -1976,13 +2111,27 @@ impl StudioProgram {
     /// Evaluate one graph input or parametric time into a planar point.
     #[must_use]
     pub fn point(&self, input: f64, a: f64) -> Option<(f64, f64)> {
+        self.point_named(input, a, &[])
+    }
+
+    /// Evaluate one input with named sliders bound.
+    #[must_use]
+    pub fn point_named(
+        &self,
+        input: f64,
+        a: f64,
+        sliders: &[crate::slider::StudioSlider],
+    ) -> Option<(f64, f64)> {
         let point = match self {
-            Self::Graph { expression, .. } => (input, eval(expression, input, a)),
+            Self::Graph { expression, .. } => (input, eval_named(expression, input, a, sliders)),
             Self::Parametric {
                 x_expression,
                 y_expression,
                 ..
-            } => (eval(x_expression, input, a), eval(y_expression, input, a)),
+            } => (
+                eval_named(x_expression, input, a, sliders),
+                eval_named(y_expression, input, a, sliders),
+            ),
             Self::Field { .. } => return None,
         };
         (point.0.is_finite() && point.1.is_finite()).then_some(point)
@@ -1997,6 +2146,29 @@ impl StudioProgram {
             Self::Parametric { y_expression, .. } => y_expression,
         }
     }
+
+    /// Unique slider names this program binds, in first-seen order.
+    #[must_use]
+    pub fn slider_names(&self) -> Vec<String> {
+        match self {
+            Self::Graph { expression, .. } | Self::Field { expression, .. } => {
+                crate::slider::collect_slider_names(expression)
+            }
+            Self::Parametric {
+                x_expression,
+                y_expression,
+                ..
+            } => {
+                let mut names = crate::slider::collect_slider_names(x_expression);
+                for name in crate::slider::collect_slider_names(y_expression) {
+                    if !names.iter().any(|existing| existing == &name) {
+                        names.push(name);
+                    }
+                }
+                names
+            }
+        }
+    }
 }
 
 /// Whether a parsed expression uses the field grammar's extra vocabulary.
@@ -2009,7 +2181,7 @@ pub fn uses_field_vocabulary(expression: &Expr) -> bool {
     match expression {
         Expr::VarIm | Expr::Point | Expr::ImagUnit => true,
         Expr::Call(Func::Re | Func::Im | Func::Arg | Func::Conj, _) => true,
-        Expr::Num(_) | Expr::Var | Expr::Param => false,
+        Expr::Num(_) | Expr::Var | Expr::Param | Expr::Slider(_) => false,
         Expr::Neg(inner) | Expr::Call(_, inner) => uses_field_vocabulary(inner),
         Expr::Bin(_, lhs, rhs) | Expr::PairCall(_, lhs, rhs) => {
             uses_field_vocabulary(lhs) || uses_field_vocabulary(rhs)
@@ -2088,19 +2260,32 @@ pub enum PairFunc {
 }
 
 /// Evaluate a parsed expression at variable `x` and parameter `a`.
+///
+/// Named sliders that are not in a table evaluate at one, the same default
+/// `a` uses. Pass [`eval_named`] when the creation binds them.
 #[must_use]
 pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
+    eval_named(expr, x, a, &[])
+}
+
+/// Evaluate a parsed expression with named sliders bound.
+#[must_use]
+pub fn eval_named(expr: &Expr, x: f64, a: f64, sliders: &[crate::slider::StudioSlider]) -> f64 {
     match expr {
         Expr::Num(n) => *n,
         Expr::Var => x,
         Expr::Param => a,
+        Expr::Slider(name) => crate::slider::slider_value(name, sliders),
         // A curve is parsed against a grammar that cannot produce these, so
         // they do not arise here. They are answered rather than ignored
         // because a point of the plane genuinely has no value on the line.
         Expr::VarIm | Expr::Point | Expr::ImagUnit => f64::NAN,
-        Expr::Neg(inner) => -eval(inner, x, a),
+        Expr::Neg(inner) => -eval_named(inner, x, a, sliders),
         Expr::Bin(op, lhs, rhs) => {
-            let (lhs, rhs) = (eval(lhs, x, a), eval(rhs, x, a));
+            let (lhs, rhs) = (
+                eval_named(lhs, x, a, sliders),
+                eval_named(rhs, x, a, sliders),
+            );
             match op {
                 Op::Add => lhs + rhs,
                 Op::Sub => lhs - rhs,
@@ -2110,7 +2295,7 @@ pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
             }
         }
         Expr::Call(func, arg) => {
-            let arg = eval(arg, x, a);
+            let arg = eval_named(arg, x, a, sliders);
             match func {
                 Func::Sin => arg.sin(),
                 Func::Cos => arg.cos(),
@@ -2134,7 +2319,10 @@ pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
             }
         }
         Expr::PairCall(func, lhs, rhs) => {
-            let (lhs, rhs) = (eval(lhs, x, a), eval(rhs, x, a));
+            let (lhs, rhs) = (
+                eval_named(lhs, x, a, sliders),
+                eval_named(rhs, x, a, sliders),
+            );
             if lhs.is_nan() || rhs.is_nan() {
                 return f64::NAN;
             }
@@ -2157,6 +2345,17 @@ pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
 /// branch, so a field built on one really does carry the seam that branch has.
 #[must_use]
 pub fn eval_field(expr: &Expr, z: Complex, a: f64) -> Complex {
+    eval_field_named(expr, z, a, &[])
+}
+
+/// Evaluate a parsed field expression with named sliders bound.
+#[must_use]
+pub fn eval_field_named(
+    expr: &Expr,
+    z: Complex,
+    a: f64,
+    sliders: &[crate::slider::StudioSlider],
+) -> Complex {
     match expr {
         Expr::Num(n) => Complex::real(*n),
         Expr::Var => Complex::real(z.re),
@@ -2164,9 +2363,13 @@ pub fn eval_field(expr: &Expr, z: Complex, a: f64) -> Complex {
         Expr::Point => z,
         Expr::ImagUnit => Complex::I,
         Expr::Param => Complex::real(a),
-        Expr::Neg(inner) => -eval_field(inner, z, a),
+        Expr::Slider(name) => Complex::real(crate::slider::slider_value(name, sliders)),
+        Expr::Neg(inner) => -eval_field_named(inner, z, a, sliders),
         Expr::Bin(op, lhs, rhs) => {
-            let (lhs, rhs) = (eval_field(lhs, z, a), eval_field(rhs, z, a));
+            let (lhs, rhs) = (
+                eval_field_named(lhs, z, a, sliders),
+                eval_field_named(rhs, z, a, sliders),
+            );
             match op {
                 Op::Add => lhs + rhs,
                 Op::Sub => lhs - rhs,
@@ -2176,7 +2379,7 @@ pub fn eval_field(expr: &Expr, z: Complex, a: f64) -> Complex {
             }
         }
         Expr::Call(func, arg) => {
-            let arg = eval_field(arg, z, a);
+            let arg = eval_field_named(arg, z, a, sliders);
             match func {
                 Func::Sin => arg.sin(),
                 Func::Cos => arg.cos(),
@@ -2193,7 +2396,10 @@ pub fn eval_field(expr: &Expr, z: Complex, a: f64) -> Complex {
             }
         }
         Expr::PairCall(func, lhs, rhs) => {
-            let (lhs, rhs) = (eval_field(lhs, z, a), eval_field(rhs, z, a));
+            let (lhs, rhs) = (
+                eval_field_named(lhs, z, a, sliders),
+                eval_field_named(rhs, z, a, sliders),
+            );
             if !lhs.is_real() || !rhs.is_real() || lhs.is_nan() || rhs.is_nan() {
                 return Complex::UNDEFINED;
             }
@@ -2237,11 +2443,25 @@ pub fn to_melody_with_scale(
     a: f64,
     scale: StudioScale,
 ) -> SoundSpec {
+    to_melody_with_scale_named(expr, xmin, xmax, notes, a, &[], scale)
+}
+
+/// Turn one expression into a melody with named sliders bound.
+#[must_use]
+pub fn to_melody_with_scale_named(
+    expr: &Expr,
+    xmin: f64,
+    xmax: f64,
+    notes: usize,
+    a: f64,
+    sliders: &[crate::slider::StudioSlider],
+    scale: StudioScale,
+) -> SoundSpec {
     let notes = notes.clamp(1, MAX_MELODY_NOTES);
     let step = 0.12_f32;
     let denom = (notes as f64 - 1.0).max(1.0);
     let samples: Vec<f64> = (0..notes)
-        .map(|i| eval(expr, xmin + (xmax - xmin) * i as f64 / denom, a))
+        .map(|i| eval_named(expr, xmin + (xmax - xmin) * i as f64 / denom, a, sliders))
         .filter(|y| y.is_finite())
         .collect();
     if samples.is_empty() {
@@ -2365,6 +2585,7 @@ fn plot_program_text(
     input_min: f64,
     input_max: f64,
     a: f64,
+    sliders: &[crate::slider::StudioSlider],
     width: usize,
     height: usize,
 ) -> Result<StudioPlot, ProgramPlotError> {
@@ -2373,7 +2594,7 @@ fn plot_program_text(
     }
     match program {
         StudioProgram::Graph { expression, .. } => {
-            plot_parsed_text(expression, input_min, input_max, a, width, height)
+            plot_parsed_text_named(expression, input_min, input_max, a, sliders, width, height)
                 .map(|(text, ymin, ymax)| StudioPlot {
                     text,
                     xmin: input_min,
@@ -2389,7 +2610,7 @@ fn plot_program_text(
             let points: Vec<Option<(f64, f64)>> = (0..sample_count)
                 .map(|index| {
                     let input = input_min + (input_max - input_min) * index as f64 / denom;
-                    program.point(input, a)
+                    program.point_named(input, a, sliders)
                 })
                 .collect();
             let finite: Vec<(f64, f64)> = points.iter().flatten().copied().collect();
@@ -2465,13 +2686,25 @@ pub(crate) fn plot_parsed_text(
     width: usize,
     height: usize,
 ) -> Result<(String, f64, f64), PlotTextError> {
+    plot_parsed_text_named(expr, xmin, xmax, a, &[], width, height)
+}
+
+pub(crate) fn plot_parsed_text_named(
+    expr: &Expr,
+    xmin: f64,
+    xmax: f64,
+    a: f64,
+    sliders: &[crate::slider::StudioSlider],
+    width: usize,
+    height: usize,
+) -> Result<(String, f64, f64), PlotTextError> {
     if width < 2 || height < 2 || xmax <= xmin {
         return Err(PlotTextError::InvalidGeometry);
     }
     let samples: Vec<(f64, f64)> = (0..width)
         .map(|i| {
             let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
-            (x, eval(expr, x, a))
+            (x, eval_named(expr, x, a, sliders))
         })
         .filter(|(_, y)| y.is_finite())
         .collect();
@@ -2863,6 +3096,9 @@ impl Parser {
                 "y" if self.grammar == Grammar::Field => Ok(Expr::VarIm),
                 "z" if self.grammar == Grammar::Field => Ok(Expr::Point),
                 "i" if self.grammar == Grammar::Field => Ok(Expr::ImagUnit),
+                other if crate::slider::is_slider_name(other) => {
+                    Ok(Expr::Slider(other.to_string()))
+                }
                 other => Err(format!("unknown name '{other}' at column {name_column}")),
             }
         }
@@ -2875,11 +3111,11 @@ mod tests {
         FieldReading, MAX_CREDIT_CHARS, MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS,
         MAX_PARSE_DEPTH, MAX_STUDIO_SOURCE_CHARS, STUDIO_EXPERIMENTS, STUDIO_RECIPES,
         StudioCreation, StudioKind, StudioProgram, StudioScale, adjacent_construction_creation,
-        adjacent_studio_experiment, eval, first_studio_construction, is_returning_home_transfer,
-        parse, returning_home_transfer, studio_auto_recipe, studio_construction_family,
-        studio_experiment, studio_experiment_matching, studio_experiment_meta,
-        studio_experiments_in, studio_recipe, studio_recipe_count, to_melody, to_melody_with_scale,
-        uses_field_vocabulary,
+        adjacent_studio_experiment, eval, eval_named, first_studio_construction,
+        is_returning_home_transfer, parse, returning_home_transfer, studio_auto_recipe,
+        studio_construction_family, studio_experiment, studio_experiment_matching,
+        studio_experiment_meta, studio_experiments_in, studio_recipe, studio_recipe_count,
+        to_melody, to_melody_with_scale, uses_field_vocabulary,
     };
     use super::{eval_field, parse_field};
     use crate::complex::Complex;
@@ -3029,7 +3265,7 @@ mod tests {
 
     #[test]
     fn bundled_studio_experiments_parse_keep_lineage_and_open_by_id() {
-        assert_eq!(STUDIO_EXPERIMENTS.len(), 10);
+        assert_eq!(STUDIO_EXPERIMENTS.len(), 12);
         let full = studio_experiment("full-return").expect("full-return");
         assert_eq!(full.title(), Some("A full return"));
         assert_eq!(full.kind(), StudioKind::Parametric);
@@ -3104,6 +3340,28 @@ mod tests {
         assert_eq!(shapes.len(), 2);
         let readings = studio_experiments_in(Some("three-readings")).expect("readings family");
         assert_eq!(readings.len(), 4);
+        let knobs = studio_experiments_in(Some("named-sliders")).expect("slider family");
+        assert_eq!(knobs.len(), 2);
+        let extra = studio_experiment("extra-knob").expect("extra-knob");
+        assert_eq!(extra.title(), Some("An extra knob"));
+        assert_eq!(extra.source(), "sin(a*x) + b");
+        assert_eq!(extra.sliders().len(), 1);
+        assert_eq!(extra.sliders()[0].name(), "b");
+        assert!(extra.to_num_file().starts_with("NUMINOUS_STUDIO 6\n"));
+        let ratio = studio_experiment("live-ratio").expect("live-ratio");
+        assert_eq!(ratio.title(), Some("A live ratio"));
+        assert_eq!(ratio.source(), "cos(2*pi*p*t)");
+        assert_eq!(ratio.second_source(), Some("sin(2*pi*q*t)"));
+        assert_eq!(ratio.sliders()[0].name(), "p");
+        assert_eq!(ratio.sliders()[0].value(), 3.0);
+        assert_eq!(ratio.sliders()[1].name(), "q");
+        assert_eq!(ratio.sliders()[1].value(), 2.0);
+        match crate::path_closure::PathClosure::of(&ratio) {
+            crate::path_closure::PathClosure::Periodic(periodic) => {
+                assert_eq!(periodic.period_text, "1");
+            }
+            other => panic!("live-ratio should close: {other:?}"),
+        }
         assert_eq!(
             studio_experiment("the-circle").expect("circle").reading(),
             Some(FieldReading::Zero)
@@ -3339,7 +3597,8 @@ mod tests {
         assert!(parse("sin(").is_err());
         assert!(parse("2 3").is_err()); // trailing input
         assert!(parse("nope(x)").is_err());
-        assert!(parse("wut").is_err());
+        assert!(parse("Wut").is_err());
+        assert!(parse("log").is_err());
         assert!(parse("2 @ 3").is_err());
     }
 
@@ -3693,12 +3952,15 @@ mod tests {
         let err = StudioCreation::from_num_file(smuggled_credit).expect_err("credit needs v4");
         assert!(err.contains("NUMINOUS_STUDIO 4"), "{err}");
         // A future version is a fact to report, not a guess to parse.
-        let future = "NUMINOUS_STUDIO 6\nexpr=x\nxmin=-1\nxmax=1\na=0\n";
+        let future = "NUMINOUS_STUDIO 7\nexpr=x\nxmin=-1\nxmax=1\na=0\n";
         let err = StudioCreation::from_num_file(future).expect_err("future refused");
         assert!(err.contains("newer Numinous"), "{err}");
         let field_on_four = "NUMINOUS_STUDIO 4\nkind=field\nexpr=z\nxmin=-2\nxmax=2\nymin=-2\nymax=2\nreading=phase\na=1\n";
         let err = StudioCreation::from_num_file(field_on_four).expect_err("field needs v5");
         assert!(err.contains("NUMINOUS_STUDIO 5"), "{err}");
+        let sliders_on_one = "NUMINOUS_STUDIO 1\nexpr=sin(b*x)\nxmin=-1\nxmax=1\na=1\n";
+        let err = StudioCreation::from_num_file(sliders_on_one).expect_err("sliders need v6");
+        assert!(err.contains("NUMINOUS_STUDIO 6"), "{err}");
     }
 
     #[test]
@@ -3798,6 +4060,58 @@ mod tests {
         );
         assert!(uses_field_vocabulary(&parse_field("re(z)").expect("re")));
         assert!(!uses_field_vocabulary(&parse("sin(x)").expect("sin")));
+    }
+
+    #[test]
+    fn named_sliders_round_trip_as_version_six() {
+        let creation = StudioCreation::new("sin(b*x)", -1.0, 1.0, 1.0)
+            .expect("creation")
+            .with_sliders(vec![
+                crate::slider::StudioSlider::new("b", 2.0, 0.25, 8.0).expect("b"),
+            ])
+            .expect("sliders");
+        assert_eq!(creation.sliders().len(), 1);
+        assert_eq!(creation.sliders()[0].value(), 2.0);
+        let text = creation.to_num_file();
+        assert!(text.starts_with("NUMINOUS_STUDIO 6\n"), "{text}");
+        assert!(text.contains("slider=b:2:0.25:8\n"), "{text}");
+        assert_eq!(
+            StudioCreation::from_num_file(&text).expect("file"),
+            creation
+        );
+        let link = creation.to_link();
+        assert!(link.contains("slider="), "{link}");
+        assert_eq!(StudioCreation::from_link(&link).expect("link"), creation);
+        let plot = creation.plot_text(48, 16).expect("plot");
+        assert!(plot.text.contains('#'));
+        let at_default = eval(&parse("sin(b*x)").expect("parse"), 0.5, 1.0);
+        let at_bound = eval_named(
+            &parse("sin(b*x)").expect("parse"),
+            0.5,
+            1.0,
+            creation.sliders(),
+        );
+        assert!((at_default - (1.0_f64 * 0.5).sin()).abs() < 1e-12);
+        assert!((at_bound - (2.0_f64 * 0.5).sin()).abs() < 1e-12);
+
+        let pair =
+            StudioCreation::new_parametric("cos(p*t)", "sin(q*t)", 0.0, std::f64::consts::TAU, 1.0)
+                .expect("pair")
+                .with_sliders(vec![
+                    crate::slider::StudioSlider::new("p", 3.0, 1.0, 8.0).expect("p"),
+                    crate::slider::StudioSlider::new("q", 2.0, 1.0, 8.0).expect("q"),
+                ])
+                .expect("ratio");
+        let pair_text = pair.to_num_file();
+        assert!(pair_text.starts_with("NUMINOUS_STUDIO 6\n"), "{pair_text}");
+        assert!(pair_text.contains("kind=parametric\n"), "{pair_text}");
+        assert_eq!(
+            StudioCreation::from_num_file(&pair_text).expect("pair file"),
+            pair
+        );
+        let child = pair.fork(None, Some("Remix"), None).expect("fork");
+        assert_eq!(child.sliders()[0].value(), 3.0);
+        assert_eq!(child.sliders()[1].value(), 2.0);
     }
 
     #[test]

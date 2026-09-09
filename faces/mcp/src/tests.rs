@@ -244,7 +244,10 @@ fn packaged_player_docs_name_creation_next() {
                 && flattened.contains("another-ratio")
                 && flattened.contains("circle-to-ellipse")
                 && flattened.contains("three-readings")
-                && flattened.contains("the-circle"),
+                && flattened.contains("the-circle")
+                && flattened.contains("named-sliders")
+                && flattened.contains("extra-knob")
+                && flattened.contains("live-ratio"),
             "{name} must name the bundled Studio experiments a packaged player can open"
         );
         assert!(
@@ -2504,6 +2507,81 @@ fn a_plotted_or_sung_experiment_names_a_way_to_keep_it() {
     assert_eq!(capsule["scale"], "minor");
     assert_eq!(capsule["xmin"], -1.0);
     assert_eq!(capsule["a"], 2.0);
+}
+
+#[test]
+fn named_sliders_plot_save_open_and_fork_follow_next() {
+    let plotted = call(
+        "plot_expression",
+        json!({
+            "expr": "sin(b*x)",
+            "xmin": -1.0,
+            "xmax": 1.0,
+            "sliders": [{"name": "b", "value": 2.0, "min": 0.25, "max": 8.0}]
+        }),
+    );
+    assert_eq!(plotted["result"]["isError"], false, "{plotted}");
+    let next = &plotted["result"]["structuredContent"]["next"];
+    assert_eq!(next["tool"], "save_creation");
+    assert_eq!(next["arguments"]["expr"], "sin(b*x)");
+    assert_eq!(next["arguments"]["sliders"][0]["name"], "b");
+    assert_eq!(next["arguments"]["sliders"][0]["value"], 2.0);
+    let saved = call("save_creation", next["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let capsule = &saved["result"]["structuredContent"];
+    assert_eq!(capsule["capsuleFormatVersion"], 6);
+    assert_eq!(capsule["sliders"][0]["name"], "b");
+    assert_eq!(capsule["sliders"][0]["value"], 2.0);
+    let opened = call(
+        "open_creation",
+        json!({"capsule": capsule["numFile"].as_str().expect("num")}),
+    );
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert_eq!(
+        opened["result"]["structuredContent"]["sliders"][0]["value"],
+        2.0
+    );
+    let listed = call(
+        "plot_expression",
+        json!({"list_experiments": true, "family": "named-sliders"}),
+    );
+    let listed = &listed["result"]["structuredContent"];
+    assert_eq!(listed["family"], "named-sliders");
+    assert_eq!(listed["experimentCount"], 2);
+    assert_eq!(listed["experiments"][0]["id"], "extra-knob");
+    assert_eq!(listed["experiments"][0]["next"]["tool"], "open_creation");
+    let extra = call(
+        "open_creation",
+        listed["experiments"][0]["next"]["arguments"].clone(),
+    );
+    assert_eq!(extra["result"]["isError"], false, "{extra}");
+    assert_eq!(
+        extra["result"]["structuredContent"]["title"],
+        "An extra knob"
+    );
+    assert_eq!(
+        extra["result"]["structuredContent"]["capsuleFormatVersion"],
+        6
+    );
+    let ratio = call("open_creation", json!({"capsule": "live-ratio"}));
+    assert_eq!(ratio["result"]["isError"], false, "{ratio}");
+    assert_eq!(
+        ratio["result"]["structuredContent"]["title"],
+        "A live ratio"
+    );
+    assert_eq!(
+        ratio["result"]["structuredContent"]["closure"]["period"],
+        "1"
+    );
+    let forked = call(
+        "fork_creation",
+        extra["result"]["structuredContent"]["next"]["arguments"].clone(),
+    );
+    assert_eq!(forked["result"]["isError"], false, "{forked}");
+    assert_eq!(
+        forked["result"]["structuredContent"]["sliders"][0]["name"],
+        "b"
+    );
 }
 
 #[test]

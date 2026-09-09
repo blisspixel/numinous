@@ -142,6 +142,7 @@ you can retune. Esc or Tab leaves. Lissajous offers CONSTRUCT in the Cabinet,
 or `O` in the room, to open the first Returning home capsule. The first edit begins a remix while
 keeping the saved window and knob. In alpha 18, Up/Down tune `a` by 0.25 per
 press and Home restores 1; controller Up/Down and Reset use the same actions.
+When a formula names extra sliders, Tab selects among `a` and those names.
 Fresh formulas start at `a = 1`, and drawing, melody, and exports use the value
 shown. A deliberate parameter change keeps the formula and its window.
 F6 changes only the pitch map. Leaving and
@@ -154,7 +155,8 @@ game in progress, and files that are not valid creations are refused with a
 reason, never half-opened.
 
 For a small creation you can investigate and extend, try the optional
-[Returning home](experiments/returning-home.md) experiments.
+[Returning home](experiments/returning-home.md) experiments, or
+[Named sliders](experiments/named-sliders.md).
 
 F4 in the Studio opens the naming step: one line for a title, one for your
 signature (offered again on your next share), one for prose credit (a fork
@@ -401,10 +403,10 @@ input without hidden session state:
 | `quiz` | guess the shape: call to see, then repeat `seed`, `round`, and `choices` with `guess` |
 | `munch` | eat the numbers that fit: call to see, call again with `bites` |
 | `munch_arcade` | hunted Munch: call to see, call again with replayed `actions` |
-| `plot_expression` | your own Studio function, including `floor`, Euclidean `mod`, `min`, and `max`, plotted. A successful plot names `next` as `save_creation` with the expression and window already bound. `list_recipes` inspects the graph bank; `list_experiments` lists bundled capsules whose `next` is `open_creation`. `family` selects `returning-home` or `shape-and-scale` |
+| `plot_expression` | your own Studio function, including `floor`, Euclidean `mod`, `min`, and `max`, plotted. Named sliders besides `a` travel as `sliders`. A successful plot names `next` as `save_creation` with the expression and window already bound. `list_recipes` inspects the graph bank; `list_experiments` lists bundled capsules whose `next` is `open_creation`. `family` selects `returning-home`, `shape-and-scale`, `three-readings`, or `named-sliders` |
 | `sing_expression` | the same Studio grammar, as note-by-note melody. A successful song names `next` as `save_creation` with the expression, window, and pitch map already bound |
 | `save_creation` | keep a graph or parametric pair as portable `.num` text and a native link, never a host file. The result names `next` as `fork_creation` with the capsule already bound as `parent` |
-| `open_creation` | reopen that text, a native link, or a bundled experiment id (`full-return`, `almost-home`, `same-place`, `another-ratio`, `circle-to-ellipse`, `uniform-circle`). Two-oscillator paths also return `closure`, an independently checked period or aperiodic. The same `next` pointer is a door back into remix |
+| `open_creation` | reopen that text, a native link, or a bundled experiment id (`full-return`, `almost-home`, `same-place`, `another-ratio`, `circle-to-ellipse`, `uniform-circle`, `simple-zero`, `a-pole`, `the-circle`, `the-bowl`, `extra-knob`, `live-ratio`). Two-oscillator paths also return `closure`, an independently checked period or aperiodic. The same `next` pointer is a door back into remix |
 | `fork_creation` | remix a parent capsule with recorded lineage and optional prose credit. The child is itself a door: its `next` is another `fork_creation` |
 | `explain_joke` | the humor, dissected structurally |
 | `nim` | beat the Order: pass your move history, replies are deterministic |

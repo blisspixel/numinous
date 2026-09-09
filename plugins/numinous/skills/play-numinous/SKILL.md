@@ -84,8 +84,10 @@ bundled Studio capsules; each row's `next` is `open_creation` with the
 experiment id already bound, and no host file is read. `family` selects
 `returning-home` (`full-return`, `almost-home`, `same-place`,
 `another-ratio`), `shape-and-scale` (`circle-to-ellipse`,
-`uniform-circle`), or `three-readings` (`simple-zero`, `a-pole`,
-`the-circle`, `the-bowl`). A field expression (`z`, `y`, `i`, `re`, `im`,
+`uniform-circle`), `three-readings` (`simple-zero`, `a-pole`,
+`the-circle`, `the-bowl`), or `named-sliders` (`extra-knob`, `live-ratio`).
+A formula may name extra knobs besides `a`; each is a slider with a value
+and a declared range. A field expression (`z`, `y`, `i`, `re`, `im`,
 `arg`, `conj`) draws a plate rather than a curve; it is seen first and
 has no melody. `open_creation`
 also accepts those ids directly. Opening a two-oscillator parametric path

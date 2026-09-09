@@ -2524,6 +2524,7 @@ impl ApplicationHandler for App {
                     // Studio mode: the keyboard is a math keyboard.
                     match logical_key {
                         key if self.handle_studio_parameter_key(&key, repeat) => {}
+                        Key::Named(NamedKey::Tab) if self.studio_panel.cycle_knob(1) => {}
                         Key::Named(NamedKey::Escape) | Key::Named(NamedKey::Tab) => {
                             self.exit_studio();
                         }

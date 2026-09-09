@@ -66,6 +66,8 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
   and a period-1 starter to retune.
 - [Shape and scale](experiments/shape-and-scale.md) stretch a circle, compare
   proportions with fitted size, and share a named creation.
+- [Named sliders](experiments/named-sliders.md) one extra knob, then a live
+  Lissajous ratio.
 - `ROUTE_LAB.md` the proposed visual route-planning room, with shortest paths,
   tours improved by hand, solver traces, and an exact small-map comparison.
 - `SYNESTHESIA.md` the sensory seam: the glow pipeline (the documented HDR look, not yet built) and the one-event-two-renderings model that binds sight and sound.

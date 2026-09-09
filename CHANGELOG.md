@@ -5,6 +5,16 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Named sliders in Studio. A formula may bind extra identifiers besides `a`.
+  Each is a finite value inside a declared closed range. Capsules write
+  `NUMINOUS_STUDIO 6` only when extra sliders exist, so every older file still
+  opens. `a` stays the unnamed default knob. CLI `--slider name=value`, MCP
+  `sliders`, and the App plot, save, reopen, and fork them. App Tab selects
+  a slider, Up/Down steps it, Home restores 1 when that is in range.
+  Bundled family `named-sliders`: `extra-knob` and `live-ratio`. `PLAY.md`
+  and the skill name the ids.
+
 ## [0.4.0-alpha.25] - 2026-09-09
 
 ### Added
