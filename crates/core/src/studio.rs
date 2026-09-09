@@ -8,6 +8,7 @@
 
 use std::f64::consts::{E, PI};
 
+use crate::complex::Complex;
 use crate::sound::{Note, SoundSpec};
 
 /// Maximum accepted Studio source length for share files and links.
@@ -1423,8 +1424,17 @@ fn hex_value(byte: u8) -> Option<u8> {
 pub enum Expr {
     /// A literal number (also holds folded constants like pi).
     Num(f64),
-    /// The variable `x`.
+    /// The variable `x`, or `t` in a parametric pair. In a field it is the
+    /// real coordinate of the sampled point.
     Var,
+    /// The imaginary coordinate `y` of a sampled field point. A field leaf:
+    /// a curve has no second coordinate to read, so it has no real value.
+    VarIm,
+    /// The whole sampled point `z` of a field. A field leaf, for the same
+    /// reason: a point of the plane is not a number on the line.
+    Point,
+    /// The imaginary unit `i`. A field leaf.
+    ImagUnit,
     /// The adjustable parameter `a`.
     Param,
     /// Unary negation.
@@ -1637,6 +1647,14 @@ pub enum Func {
     Sqrt,
     /// Greatest integer less than or equal to the argument.
     Floor,
+    /// Real part.
+    Re,
+    /// Imaginary part.
+    Im,
+    /// Principal argument, in `(-pi, pi]`. The origin has none.
+    Arg,
+    /// Complex conjugate.
+    Conj,
 }
 
 /// A supported two-argument function.
@@ -1657,6 +1675,10 @@ pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
         Expr::Num(n) => *n,
         Expr::Var => x,
         Expr::Param => a,
+        // A curve is parsed against a grammar that cannot produce these, so
+        // they do not arise here. They are answered rather than ignored
+        // because a point of the plane genuinely has no value on the line.
+        Expr::VarIm | Expr::Point | Expr::ImagUnit => f64::NAN,
         Expr::Neg(inner) => -eval(inner, x, a),
         Expr::Bin(op, lhs, rhs) => {
             let (lhs, rhs) = (eval(lhs, x, a), eval(rhs, x, a));
@@ -1679,6 +1701,17 @@ pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
                 Func::Abs => arg.abs(),
                 Func::Sqrt => arg.sqrt(),
                 Func::Floor => arg.floor(),
+                Func::Re | Func::Conj => arg,
+                Func::Im => 0.0,
+                Func::Arg => {
+                    if arg > 0.0 {
+                        0.0
+                    } else if arg < 0.0 {
+                        PI
+                    } else {
+                        f64::NAN
+                    }
+                }
             }
         }
         Expr::PairCall(func, lhs, rhs) => {
@@ -1693,6 +1726,73 @@ pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
             }
         }
     }
+}
+
+/// Evaluate a parsed field expression at the plane point `z` and parameter `a`.
+///
+/// The parameter stays real: it is one dial, and a dial that could leave the
+/// line would need two. Functions with no meaning off the line, `floor`,
+/// `mod`, `min`, and `max`, refuse a value with an imaginary part rather than
+/// invent an ordering for the plane, and a refusal reaches the renderer as an
+/// undefined sample. `ln`, `sqrt`, and a fractional power take their principal
+/// branch, so a field built on one really does carry the seam that branch has.
+#[must_use]
+pub fn eval_field(expr: &Expr, z: Complex, a: f64) -> Complex {
+    match expr {
+        Expr::Num(n) => Complex::real(*n),
+        Expr::Var => Complex::real(z.re),
+        Expr::VarIm => Complex::real(z.im),
+        Expr::Point => z,
+        Expr::ImagUnit => Complex::I,
+        Expr::Param => Complex::real(a),
+        Expr::Neg(inner) => -eval_field(inner, z, a),
+        Expr::Bin(op, lhs, rhs) => {
+            let (lhs, rhs) = (eval_field(lhs, z, a), eval_field(rhs, z, a));
+            match op {
+                Op::Add => lhs + rhs,
+                Op::Sub => lhs - rhs,
+                Op::Mul => lhs * rhs,
+                Op::Div => lhs / rhs,
+                Op::Pow => lhs.powc(rhs),
+            }
+        }
+        Expr::Call(func, arg) => {
+            let arg = eval_field(arg, z, a);
+            match func {
+                Func::Sin => arg.sin(),
+                Func::Cos => arg.cos(),
+                Func::Tan => arg.tan(),
+                Func::Exp => arg.exp(),
+                Func::Ln => arg.ln(),
+                Func::Abs => Complex::real(arg.abs()),
+                Func::Sqrt => arg.sqrt(),
+                Func::Floor => real_only(arg, f64::floor),
+                Func::Re => Complex::real(arg.re),
+                Func::Im => Complex::real(arg.im),
+                Func::Arg => Complex::real(arg.arg()),
+                Func::Conj => arg.conj(),
+            }
+        }
+        Expr::PairCall(func, lhs, rhs) => {
+            let (lhs, rhs) = (eval_field(lhs, z, a), eval_field(rhs, z, a));
+            if !lhs.is_real() || !rhs.is_real() || lhs.is_nan() || rhs.is_nan() {
+                return Complex::UNDEFINED;
+            }
+            Complex::real(match func {
+                PairFunc::Mod => lhs.re.rem_euclid(rhs.re),
+                PairFunc::Min => lhs.re.min(rhs.re),
+                PairFunc::Max => lhs.re.max(rhs.re),
+            })
+        }
+    }
+}
+
+/// Apply a function that only the real line defines, refusing anything else.
+fn real_only(value: Complex, apply: fn(f64) -> f64) -> Complex {
+    if value.is_real() {
+        return Complex::real(apply(value.re));
+    }
+    Complex::UNDEFINED
 }
 
 /// The most notes a melody may hold. Each note is a fixed slice of time and a
@@ -1997,6 +2097,34 @@ const MAX_PARSE_DEPTH: usize = 64;
 /// too deep, unexpected token, unknown name, unbalanced parentheses, or
 /// trailing input).
 pub fn parse(source: &str) -> Result<Expr, String> {
+    parse_in(source, Grammar::Curve)
+}
+
+/// Parse a field expression over the complex plane.
+///
+/// The field grammar is the curve grammar plus the vocabulary a point of the
+/// plane needs: `z` for the point itself, `y` for its imaginary coordinate
+/// beside the `x` a curve already spells, `i` for the imaginary unit, and
+/// `re`, `im`, `arg`, and `conj` for reading a value back apart. The curve
+/// grammar is left exactly as it was, so every saved curve parses to the same
+/// expression it always did.
+///
+/// # Errors
+/// Returns the same bounded parser diagnostics as [`parse`].
+pub fn parse_field(source: &str) -> Result<Expr, String> {
+    parse_in(source, Grammar::Field)
+}
+
+/// Which vocabulary an expression is read against.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Grammar {
+    /// One real variable and the parameter. What every saved curve uses.
+    Curve,
+    /// A point of the complex plane and the functions that read it.
+    Field,
+}
+
+fn parse_in(source: &str, grammar: Grammar) -> Result<Expr, String> {
     let tokenized = tokenize(source)?;
     let tokens = tokenized.tokens;
     if tokens.len() > MAX_EXPR_TOKENS {
@@ -2009,6 +2137,7 @@ pub fn parse(source: &str) -> Result<Expr, String> {
         columns: tokenized.columns,
         end_column: tokenized.end_column,
         pos: 0,
+        grammar,
     };
     let expr = parser.expr(0)?;
     if parser.pos != parser.tokens.len() {
@@ -2118,6 +2247,7 @@ struct Parser {
     columns: Vec<usize>,
     end_column: usize,
     pos: usize,
+    grammar: Grammar,
 }
 
 impl Parser {
@@ -2271,6 +2401,10 @@ impl Parser {
                 "abs" => Some(Func::Abs),
                 "sqrt" => Some(Func::Sqrt),
                 "floor" => Some(Func::Floor),
+                "re" if self.grammar == Grammar::Field => Some(Func::Re),
+                "im" if self.grammar == Grammar::Field => Some(Func::Im),
+                "arg" if self.grammar == Grammar::Field => Some(Func::Arg),
+                "conj" if self.grammar == Grammar::Field => Some(Func::Conj),
                 _ => None,
             };
             let pair = match name {
@@ -2304,6 +2438,9 @@ impl Parser {
                 "a" => Ok(Expr::Param),
                 "pi" => Ok(Expr::Num(PI)),
                 "e" => Ok(Expr::Num(E)),
+                "y" if self.grammar == Grammar::Field => Ok(Expr::VarIm),
+                "z" if self.grammar == Grammar::Field => Ok(Expr::Point),
+                "i" if self.grammar == Grammar::Field => Ok(Expr::ImagUnit),
                 other => Err(format!("unknown name '{other}' at column {name_column}")),
             }
         }
@@ -2321,6 +2458,131 @@ mod tests {
         studio_experiment_matching, studio_experiment_meta, studio_experiments_in, studio_recipe,
         studio_recipe_count, to_melody, to_melody_with_scale,
     };
+    use super::{eval_field, parse_field};
+    use crate::complex::Complex;
+
+    #[test]
+    fn the_curve_grammar_still_refuses_every_field_name() {
+        for source in [
+            "y", "z", "i", "re(x)", "im(x)", "arg(x)", "conj(x)", "z^2 - 1",
+        ] {
+            let error = parse(source).expect_err("curve grammar rejects a field name");
+            assert!(
+                error.contains("unknown"),
+                "{source} gave the wrong diagnostic: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn every_saved_curve_still_parses_to_the_expression_it_always_did() {
+        for source in STUDIO_RECIPES {
+            let curve = parse(source).expect("recipe parses as a curve");
+            let field = parse_field(source).expect("recipe parses as a field too");
+            assert_eq!(curve, field, "{source} changed meaning between grammars");
+        }
+    }
+
+    #[test]
+    fn a_field_reads_the_point_its_coordinates_and_the_imaginary_unit() {
+        let z = Complex::new(3.0, -4.0);
+        assert_eq!(eval_field(&parse_field("z").unwrap(), z, 0.0), z);
+        assert_eq!(
+            eval_field(&parse_field("x").unwrap(), z, 0.0),
+            Complex::real(3.0)
+        );
+        assert_eq!(
+            eval_field(&parse_field("y").unwrap(), z, 0.0),
+            Complex::real(-4.0)
+        );
+        assert_eq!(eval_field(&parse_field("i").unwrap(), z, 0.0), Complex::I);
+        assert_eq!(
+            eval_field(&parse_field("a").unwrap(), z, 2.5),
+            Complex::real(2.5)
+        );
+        assert_eq!(
+            eval_field(&parse_field("x + i*y").unwrap(), z, 0.0),
+            z,
+            "the coordinates rebuild the point"
+        );
+    }
+
+    #[test]
+    fn a_field_lands_exactly_on_its_zeros() {
+        let expr = parse_field("z^2 - 1").expect("parses");
+        assert_eq!(eval_field(&expr, Complex::ONE, 0.0), Complex::ZERO);
+        assert_eq!(eval_field(&expr, Complex::real(-1.0), 0.0), Complex::ZERO);
+        assert_eq!(
+            eval_field(&expr, Complex::ZERO, 0.0),
+            Complex::real(-1.0),
+            "the origin is not a zero of this one"
+        );
+    }
+
+    #[test]
+    fn a_pole_is_reported_as_a_pole_rather_than_as_an_undefined_sample() {
+        let expr = parse_field("(z^2 - 1)/(z^2 + 1)").expect("parses");
+        let at_pole = eval_field(&expr, Complex::I, 0.0);
+        assert!(!at_pole.is_finite());
+        assert!(!at_pole.is_nan(), "a pole has a size, not no answer");
+        assert_eq!(eval_field(&expr, Complex::ONE, 0.0), Complex::ZERO);
+    }
+
+    #[test]
+    fn reading_a_value_apart_and_back_together_returns_it() {
+        let z = Complex::new(0.75, -1.5);
+        let expr = parse_field("re(z) + i*im(z)").expect("parses");
+        assert_eq!(eval_field(&expr, z, 0.0), z);
+        assert_eq!(
+            eval_field(&parse_field("conj(z)").unwrap(), z, 0.0),
+            z.conj()
+        );
+        let angle = eval_field(&parse_field("arg(z)").unwrap(), z, 0.0);
+        assert!((angle.re - z.arg()).abs() < 1e-15);
+        assert!(angle.is_real());
+    }
+
+    #[test]
+    fn the_functions_the_line_owns_refuse_a_point_off_it() {
+        let off_axis = Complex::new(1.5, 0.5);
+        for source in ["floor(z)", "mod(z, 2)", "min(z, 1)", "max(z, 1)"] {
+            let expr = parse_field(source).expect("parses");
+            assert!(
+                eval_field(&expr, off_axis, 0.0).is_nan(),
+                "{source} answered for a point off the real line"
+            );
+            assert!(
+                !eval_field(&expr, Complex::real(1.5), 0.0).is_nan(),
+                "{source} refused a point on the real line"
+            );
+        }
+    }
+
+    #[test]
+    fn a_real_valued_field_stays_on_the_axis_so_its_zero_set_is_a_boundary() {
+        let expr = parse_field("x^2 + y^2 - 1").expect("parses");
+        for point in [
+            Complex::new(0.0, 0.0),
+            Complex::new(2.0, 0.0),
+            Complex::new(0.3, -0.9),
+        ] {
+            assert!(eval_field(&expr, point, 0.0).is_real());
+        }
+        assert_eq!(
+            eval_field(&expr, Complex::new(0.0, 0.0), 0.0),
+            Complex::real(-1.0)
+        );
+        assert_eq!(eval_field(&expr, Complex::ONE, 0.0), Complex::ZERO);
+        assert!(eval_field(&expr, Complex::new(2.0, 0.0), 0.0).re > 0.0);
+    }
+
+    #[test]
+    fn a_field_expression_is_held_to_the_same_bounds_as_a_curve() {
+        let deep = "sin(".repeat(MAX_PARSE_DEPTH + 2) + "z" + &")".repeat(MAX_PARSE_DEPTH + 2);
+        assert!(parse_field(&deep).is_err());
+        let wide = vec!["z"; MAX_EXPR_TOKENS + 1].join("+");
+        assert!(parse_field(&wide).is_err());
+    }
 
     #[test]
     fn curated_recipes_parse_and_auto_walk_is_deterministic() {

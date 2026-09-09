@@ -302,7 +302,9 @@ fn constant(expr: &Expr, parameter: Exact) -> Option<Exact> {
     match expr {
         Expr::Num(value) => Exact::from_f64(*value),
         Expr::Param => Some(parameter),
-        Expr::Var => None,
+        // The variable, and the field leaves a curve grammar cannot
+        // produce, are not constants.
+        Expr::Var | Expr::VarIm | Expr::Point | Expr::ImagUnit => None,
         Expr::Neg(inner) => constant(inner, parameter)?.checked_neg(),
         Expr::Bin(Op::Add, left, right) => {
             constant(left, parameter)?.checked_add(constant(right, parameter)?)
