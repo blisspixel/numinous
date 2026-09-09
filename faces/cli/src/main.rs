@@ -642,6 +642,7 @@ enum Command {
         seed: Option<u64>,
     },
     /// Sing a function: turn y = f(x) into a melody and write WAV or MIDI.
+    /// Height and phase fields sing along the real axis; zero stays silent.
     Sing {
         /// The same Studio expression grammar, a .num file path, or a numinous:// link.
         expr: String,
@@ -664,6 +665,9 @@ enum Command {
         /// Override the capsule pitch map, or quantize a raw expression.
         #[arg(long, value_enum)]
         scale: Option<StudioScaleArg>,
+        /// Field reading to sing: phase, height, or zero. A capsule supplies its own.
+        #[arg(long)]
+        reading: Option<String>,
         /// Write a WAV (.wav) or Standard MIDI File (.mid) here.
         #[arg(long)]
         out: PathBuf,
@@ -2262,14 +2266,23 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             a,
             slider,
             scale,
+            reading,
             out,
         } => {
             journey.play();
             emit(resolve_sing_input(&expr, xmin, xmax, a).and_then(
-                |(source, xmin, xmax, a, stored_scale, mut sliders)| {
+                |(source, xmin, xmax, a, stored_scale, mut sliders, stored_reading)| {
                     if !slider.is_empty() {
                         sliders = parse_slider_specs(&slider)?;
                     }
+                    let reading = match reading.as_deref() {
+                        None => stored_reading,
+                        Some(value) => {
+                            Some(numinous_core::FieldReading::parse(value).ok_or_else(|| {
+                                "--reading must be phase, height, or zero\n".to_string()
+                            })?)
+                        }
+                    };
                     sing_to_path(
                         &source,
                         xmin,
@@ -2278,6 +2291,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                         a,
                         scale.map(Into::into).unwrap_or(stored_scale),
                         &sliders,
+                        reading,
                         &out,
                     )
                 },
@@ -2722,6 +2736,7 @@ fn sing_wav(
         a,
         numinous_core::StudioScale::Continuous,
         &[],
+        None,
         path,
     )
 }
@@ -2729,7 +2744,7 @@ fn sing_wav(
 /// Turn `source` into a melody and write WAV (.wav) or MIDI (.mid/.midi).
 #[expect(
     clippy::too_many_arguments,
-    reason = "a melody export is source, window, count, knob, scale, sliders, and path"
+    reason = "a melody export is source, window, count, knob, scale, sliders, reading, and path"
 )]
 fn sing_to_path(
     source: &str,
@@ -2739,10 +2754,11 @@ fn sing_to_path(
     a: f64,
     scale: numinous_core::StudioScale,
     sliders: &[numinous_core::StudioSlider],
+    reading: Option<numinous_core::FieldReading>,
     path: &Path,
 ) -> Result<String, String> {
     let (wav_spec, midi_spec) =
-        overlay_or_graph_melody(source, xmin, xmax, notes, a, scale, sliders)?;
+        overlay_or_graph_melody(source, xmin, xmax, notes, a, scale, sliders, reading)?;
     let ext = path
         .extension()
         .and_then(|ext| ext.to_str())

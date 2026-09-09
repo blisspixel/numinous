@@ -6,6 +6,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Field melody in Studio. Height and phase fields sing the stored reading
+  along the real axis (`y = 0`). Height is the plate's doubling ladder.
+  Phase is the argument wheel. The zero reading stays silent: it is a
+  proof, not a sample. CLI `numinous sing the-bowl`, MCP `sing_expression`
+  with `reading`, and the App live voice share that core mapping. `PLAY.md`
+  and the skill say so.
 - Named sliders in Studio. A formula may bind extra identifiers besides `a`.
   Each is a finite value inside a declared closed range. Capsules write
   `NUMINOUS_STUDIO 6` only when extra sliders exist, so every older file still

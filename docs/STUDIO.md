@@ -28,8 +28,9 @@ explicit aperiodic, including the half-period position-only trap. The App
 Studio status names that caption. Lissajous can open the first Returning
 home capsule; PageDown walks the family, then Closing voices. That trial is the first Returning
 home capability slice (`PROGRESSION.md`); it does not gate play. Fields over the plane now ship: `y`, `z`, `i`, `re`, `im`, `arg`, and `conj`
-draw a character plate with a stored reading. Fields are seen first; they have
-no melody yet. Named sliders now ship: extra identifiers besides `a` bind a
+draw a character plate with a stored reading. Height and phase sing that
+reading along the real axis; the zero reading is a proof and stays silent.
+Named sliders now ship: extra identifiers besides `a` bind a
 value and a declared range, and capsules write version 6 only when they are
 present. App Tab selects a slider, Up/Down steps it, Home restores 1 when
 that is in range. Overlay programs now ship: type `sin(x) & cos(x)` for two
@@ -102,8 +103,9 @@ coordinate or a graph mixed with a pair is rejected. A field is one source that
 uses `y`, `z`, `i`, `re`, `im`, `arg`, or `conj`, or that is saved with a 2D
 window and a reading. It draws a character plate: phase (where the value
 points), height (how big it is), or zero (where it is nothing, with a third
-answer when the cell cannot be decided). Fields are seen first; they have no
-melody yet. The named pitch maps are
+answer when the cell cannot be decided). Height and phase sing that reading
+along the real axis; the zero reading is a proof and stays silent. The named
+pitch maps are
 `continuous`, `chromatic`, `major`, `minor`, and `pentatonic`.
 
 ## The one-liner
@@ -143,7 +145,7 @@ audio channels at once:
 | A value over time | position, height, hue, size | pitch (quantized to a scale) |
 | A rhythm / sequence | points appearing, pulses, motion | note onsets, drums |
 | A ratio | a stable curve, a closing loop | a musical interval |
-| A field over the plane | domain color, brightness | a spectral drone / filter sweep |
+| A field over the plane | domain color, brightness | height or phase along the real axis |
 
 So when you write a euclidean rhythm, you *see* the beats land and *hear* them at the same instant, from the same code. When you tune a ratio to close a Lissajous curve, it resolves into a consonant chord as it closes. The synesthesia (see `SOUND.md`) is not decoration bolted on; it falls out of the language by construction.
 

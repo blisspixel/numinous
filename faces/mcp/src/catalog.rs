@@ -624,7 +624,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "plot_expression",
-                "description": "Create in Formula Jam / Studio. Draw one graph with expr, one parametric path with x_expr and y_expr over t, or one field over the plane when expr uses y, z, i, re, im, arg, or conj, or when ymin, ymax, or reading is set. Fields are seen first: they have no melody. Curated recipe and seeded discovery remain graph paths. Optional auto_step with seed walks the same bank like Auto without session state. Pass list_recipes true to inspect the graph bank. Pass list_experiments true for bundled Studio capsules: each row names next as open_creation with the experiment id already bound, so a packaged player can open them without a host file. family returning-home, shape-and-scale, three-readings, named-sliders, overlay, euclidean, or two-voices selects one set. Unary functions: sin cos tan exp ln abs sqrt floor, and for fields re im arg conj. Pair functions: mod min max euclid. Constants: pi, e, and for fields i. An integer 0/1 graph also names pattern as tracker text. A successful plot names next as save_creation with the expression and window already bound. Recipe lists, experiment lists, and errors do not.",
+                "description": "Create in Formula Jam / Studio. Draw one graph with expr, one parametric path with x_expr and y_expr over t, or one field over the plane when expr uses y, z, i, re, im, arg, or conj, or when ymin, ymax, or reading is set. Height and phase fields sing their reading along the real axis; the zero reading is a proof and stays silent. Curated recipe and seeded discovery remain graph paths. Optional auto_step with seed walks the same bank like Auto without session state. Pass list_recipes true to inspect the graph bank. Pass list_experiments true for bundled Studio capsules: each row names next as open_creation with the experiment id already bound, so a packaged player can open them without a host file. family returning-home, shape-and-scale, three-readings, named-sliders, overlay, euclidean, or two-voices selects one set. Unary functions: sin cos tan exp ln abs sqrt floor, and for fields re im arg conj. Pair functions: mod min max euclid. Constants: pi, e, and for fields i. An integer 0/1 graph also names pattern as tracker text. A successful plot names next as save_creation with the expression and window already bound. Recipe lists, experiment lists, and errors do not.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -835,14 +835,19 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "sing_expression",
-                "description": "Hear your own function through the same Studio grammar: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Choose a portable pitch scale or keep the continuous default. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block. Pass midi true for a Standard MIDI File as a resource block: nearest 12-TET keys, leftover cents as pitch bend over plus or minus two semitones, with that range declared in the file. Overlay programs mix every graph in WAV; MIDI stays the first graph. A successful song names next as save_creation with the expression, window, and pitch map already bound.",
+                "description": "Hear your own function through the same Studio grammar: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Choose a portable pitch scale or keep the continuous default. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block. Pass midi true for a Standard MIDI File as a resource block: nearest 12-TET keys, leftover cents as pitch bend over plus or minus two semitones, with that range declared in the file. Overlay programs mix every graph in WAV; MIDI stays the first graph. Height and phase fields sing that reading along the real axis; the zero reading is a proof and stays silent. A successful song names next as save_creation with the expression, window, and pitch map already bound.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "expr": {
                             "type": "string",
                             "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
-                            "description": "The expression in x, or an overlay program such as sin(x) & cos(x)."
+                            "description": "The expression in x, an overlay program such as sin(x) & cos(x), or a field using y, z, i, re, im, arg, or conj."
+                        },
+                        "reading": {
+                            "type": "string",
+                            "enum": ["phase", "height", "zero"],
+                            "description": "Field reading to sing along the real axis (default phase). Height is the doubling ladder. Zero is a proof and has no melody."
                         },
                         "audio": {
                             "type": "boolean",

@@ -382,6 +382,52 @@ pub fn draw_named(
     })
 }
 
+/// Continuous phase the plate's wheel uses: a turn in `[0, 1]`.
+///
+/// The origin has no direction and takes 0, matching the first ramp step.
+/// A pole or an undefined value has no phase to report.
+#[must_use]
+pub fn phase_measure(value: Complex) -> Option<f64> {
+    if value.is_nan() || !value.is_finite() {
+        return None;
+    }
+    let angle = value.arg();
+    let turns = if angle.is_finite() {
+        (angle + std::f64::consts::PI) / std::f64::consts::TAU
+    } else {
+        0.0
+    };
+    Some(turns.clamp(0.0, 1.0))
+}
+
+/// Continuous height the plate's ladder uses: log2 magnitude, centred on 1,
+/// as a unit interval.
+///
+/// Zero is the bottom of the ramp. A pole is the top, matching `@` on the
+/// plate. Each doubling of size is one eighth of the interval, the same
+/// spacing the characters already claim. Undefined has no size to report.
+#[must_use]
+pub fn height_measure(value: Complex) -> Option<f64> {
+    if value.is_nan() {
+        return None;
+    }
+    if !value.is_finite() {
+        return Some(1.0);
+    }
+    let size = value.abs();
+    if size == 0.0 {
+        return Some(0.0);
+    }
+    let steps = size.log2();
+    if !steps.is_finite() {
+        return Some(0.0);
+    }
+    // Centre the ladder on one, so a value of unit size sits mid ramp and each
+    // step is a doubling either way.
+    let centred = steps + (RAMP.len() as f64) * 0.5;
+    Some((centred / (RAMP.len() as f64 - 1.0)).clamp(0.0, 1.0))
+}
+
 /// The ramp step for a value's direction.
 fn phase_mark(value: Complex) -> char {
     let angle = value.arg();
@@ -729,8 +775,9 @@ fn euclid_enclosure(x: Enclosure, hits: Enclosure, steps: Enclosure) -> Enclosur
 mod tests {
     use super::{
         CURVE, DEFAULT_FIELD_SIZE, FieldError, FieldPlate, FieldReading, MAX_FIELD_WIDTH,
-        NO_ANSWER, RAMP, draw, is_real_valued,
+        NO_ANSWER, RAMP, draw, height_measure, is_real_valued, phase_measure,
     };
+    use crate::complex::Complex;
     use crate::studio::parse_field;
 
     fn plate(source: &str, reading: FieldReading, span: f64) -> FieldPlate {
@@ -916,6 +963,32 @@ mod tests {
         let undefined = plate("min(z, 1)", FieldReading::Phase, 2.0);
         assert!(undefined.undefined > 0, "an off-line minimum has no answer");
         assert!(undefined.text.contains(NO_ANSWER));
+    }
+
+    #[test]
+    fn phase_and_height_measures_are_the_plate_numbers() {
+        assert_eq!(phase_measure(Complex::ZERO), Some(0.0));
+        assert!((phase_measure(Complex::ONE).unwrap() - 0.5).abs() < 1e-12);
+        assert!((phase_measure(Complex::I).unwrap() - 0.75).abs() < 1e-12);
+        assert!((phase_measure(Complex::real(-1.0)).unwrap() - 1.0).abs() < 1e-12);
+        assert_eq!(phase_measure(Complex::UNDEFINED), None);
+        assert_eq!(
+            phase_measure(Complex::new(f64::INFINITY, f64::INFINITY)),
+            None
+        );
+
+        assert_eq!(height_measure(Complex::ZERO), Some(0.0));
+        let unit = height_measure(Complex::ONE).unwrap();
+        let doubled = height_measure(Complex::real(2.0)).unwrap();
+        assert!(
+            (doubled - unit - 1.0 / (RAMP.len() as f64 - 1.0)).abs() < 1e-12,
+            "each doubling is one eighth of the ladder: {unit} then {doubled}"
+        );
+        assert_eq!(
+            height_measure(Complex::new(f64::INFINITY, f64::INFINITY)),
+            Some(1.0)
+        );
+        assert_eq!(height_measure(Complex::UNDEFINED), None);
     }
 
     #[test]

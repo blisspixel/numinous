@@ -95,8 +95,9 @@ and a declared range. Type `sin(x) & cos(x)` to overlay graphs; every graph sing
 stays the first curve. Type
 `euclid(3,8)` for a Euclidean rhythm. An integer 0/1 window reports
 `pattern` as tracker text: tresillo is `x..x..x.`. A field expression (`z`, `y`, `i`, `re`, `im`,
-`arg`, `conj`) draws a plate rather than a curve; it is seen first and
-has no melody. `open_creation`
+`arg`, `conj`) draws a plate rather than a curve. Height and phase sing
+that reading along the real axis; the zero reading is a proof and stays
+silent. `open_creation`
 also accepts those ids directly. Opening a two-oscillator parametric path
 returns `structuredContent.closure`: an independently checked period, or
 an explicit aperiodic, including the half-period trap where position

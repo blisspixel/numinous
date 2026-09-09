@@ -5,7 +5,8 @@ the artifact.
 
 These four small creations let you compare a phase wheel, a pole, a proved
 curve, and a height map of that same curve. There is no score or required
-order. Fields are seen first: they have no melody yet.
+order. Height and phase sing along the real axis; the zero reading is a
+proof and stays silent.
 
 From a packaged install, open a capsule by id: `simple-zero`, `a-pole`,
 `the-circle`, `the-bowl`. `plot_expression` with `list_experiments` true and

@@ -335,8 +335,8 @@ impl StudioPanel {
     }
 
     /// Cycle the portable musical scale, or a field's reading, and return the
-    /// new voice. Fields are seen first: cycling a reading remixes the plate
-    /// and returns silence.
+    /// new voice. Height and phase remix the plate and sing the real axis.
+    /// Zero remixes the plate and returns silence: it is a proof.
     pub fn cycle_scale(&mut self) -> Option<SoundSpec> {
         self.pause_auto();
         self.morph = None;
@@ -348,6 +348,9 @@ impl StudioPanel {
             || self.field_locked
         {
             self.reading = self.reading.next();
+            if let Some(program) = self.program.take() {
+                self.program = Some(program.with_reading(self.reading));
+            }
             return self.current_sound();
         }
         self.scale = self.scale.next();
@@ -541,6 +544,7 @@ impl StudioPanel {
                 if !self.field_locked {
                     self.reading = FieldReading::default();
                 }
+                let program = program.with_reading(self.reading);
                 self.expr = Some(program.voice_expression().clone());
                 self.program = Some(program);
                 self.error = None;
@@ -1713,6 +1717,29 @@ mod tests {
         );
         let sum = panel.adjacent_experiment(1).expect("sum");
         assert_eq!(sum.id, "the-sum");
+    }
+
+    #[test]
+    fn height_fields_sing_and_zero_stays_silent() {
+        let bowl = numinous_core::studio_experiment("the-bowl").expect("the-bowl");
+        let mut panel = StudioPanel::default();
+        panel.open_creation(&bowl);
+        let live = panel.current_sound().expect("height voice");
+        assert_eq!(live, bowl.to_melody(32));
+        assert!(!live.notes.is_empty());
+        assert_eq!(panel.confirm_opened().expect("confirmed"), live);
+
+        let circle = numinous_core::studio_experiment("the-circle").expect("the-circle");
+        panel.open_creation(&circle);
+        let silent = panel.current_sound().expect("zero voice");
+        assert!(silent.notes.is_empty());
+        let phase = panel.cycle_scale().expect("phase");
+        assert!(!phase.notes.is_empty());
+        let height = panel.cycle_scale().expect("height");
+        assert!(!height.notes.is_empty());
+        assert_ne!(phase, height);
+        let zero = panel.cycle_scale().expect("zero");
+        assert!(zero.notes.is_empty());
     }
 
     #[test]
