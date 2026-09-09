@@ -647,8 +647,81 @@ fn eval_enclosure(
                 PairFunc::Mod => left.rem_euclid(right),
                 PairFunc::Min => left.min(right),
                 PairFunc::Max => left.max(right),
+                PairFunc::Euclid => euclid_enclosure(x, left, right),
             }
         }
+    }
+}
+
+/// Enclosure of `euclid(hits, steps)` over the sampled real box `x`.
+///
+/// A constant 0 or 1 over the box is reported as a point. Mixed onsets and
+/// rests, or a hit count that is not a single value, span `[0, 1]` and say
+/// so as doubtful, because the rhythm is discontinuous at step boundaries.
+fn euclid_enclosure(x: Enclosure, hits: Enclosure, steps: Enclosure) -> Enclosure {
+    let certainty = x.certainty().and(hits.certainty()).and(steps.certainty());
+    let with_certainty = |value: Enclosure| {
+        if certainty == Certainty::Sound {
+            value
+        } else {
+            value.doubted()
+        }
+    };
+    if hits.lo() != hits.hi() || steps.lo() != steps.hi() {
+        return Enclosure::span(0.0, 1.0).doubted();
+    }
+    let n = steps.lo().floor();
+    if !n.is_finite() || n < 1.0 || n > crate::studio::MAX_EUCLID_STEPS as f64 {
+        return Enclosure::WHOLE;
+    }
+    let k = hits.lo().floor().clamp(0.0, n);
+    let constant = if k == 0.0 {
+        Some(0.0)
+    } else if k == n {
+        Some(1.0)
+    } else {
+        None
+    };
+    let exact_int = (1u64 << 53) as f64;
+    if !x.lo().is_finite()
+        || !x.hi().is_finite()
+        || x.lo().abs() >= exact_int
+        || x.hi().abs() >= exact_int
+    {
+        return match constant {
+            Some(value) => with_certainty(Enclosure::point(value)),
+            None => Enclosure::span(0.0, 1.0).doubted(),
+        };
+    }
+    if let Some(value) = constant {
+        return with_certainty(Enclosure::point(value));
+    }
+    let first = x.lo().floor();
+    let last = x.hi().floor();
+    if last < first {
+        return Enclosure::WHOLE;
+    }
+    let mut seen_zero = false;
+    let mut seen_one = false;
+    let mut index = first;
+    let mut inspected = 0usize;
+    while index <= last && inspected <= crate::studio::MAX_EUCLID_STEPS {
+        match crate::studio::euclid_pulse(index, hits.lo(), steps.lo()) {
+            0.0 => seen_zero = true,
+            1.0 => seen_one = true,
+            _ => return Enclosure::WHOLE,
+        }
+        index += 1.0;
+        inspected += 1;
+    }
+    if inspected > crate::studio::MAX_EUCLID_STEPS && index <= last {
+        return Enclosure::span(0.0, 1.0).doubted();
+    }
+    match (seen_zero, seen_one) {
+        (true, false) => with_certainty(Enclosure::point(0.0)),
+        (false, true) => with_certainty(Enclosure::point(1.0)),
+        (true, true) => Enclosure::span(0.0, 1.0).doubted(),
+        (false, false) => Enclosure::WHOLE,
     }
 }
 
@@ -803,6 +876,23 @@ mod tests {
             .lines()
             .all(|line| line.chars().filter(|mark| *mark == CURVE).count() < 20);
         assert!(poles_marked, "a row was filled with invented curve");
+    }
+
+    #[test]
+    fn a_euclidean_rest_step_has_no_half_crossing() {
+        let expression = parse_field("euclid(3,8) - 0.5").expect("parses");
+        let drawn = draw(
+            &expression,
+            FieldReading::Zero,
+            (1.25, 1.75),
+            (-1.0, 1.0),
+            1.0,
+            (8, 8),
+            0.5,
+        )
+        .expect("draws");
+        assert_eq!(drawn.unresolved, 0, "{}", drawn.text);
+        assert!(!drawn.text.contains(CURVE), "{}", drawn.text);
     }
 
     #[test]

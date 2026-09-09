@@ -44,7 +44,9 @@ multi-expression form, one atomic `x(t), y(t)` pair, plus a stored pitch map.
 Existing version 1 and 2 documents remain unchanged. Version 4 adds editable
 prose credit. Version 5 adds a field over the plane with a stored reading.
 Named sliders with declared ranges now ship as version 6. Overlay programs
-of two to four graphs ship as version 7. Pattern algebra remains open.
+of two to four graphs ship as version 7. Euclidean rhythms ship as
+`euclid(hits, steps)` in the expression language; overlay layers them.
+Pattern Studio's tracker, step grid, and piano roll remain open.
 The sung melody can leave as WAV or as a Standard MIDI File on all three faces:
 CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` with `midi: true`, and the App
 F4 share as `melody.mid`. The existing parameter `a` is now explicit: Up/Down
@@ -114,7 +116,7 @@ you share are the same object at every rung:
 | Doodle | `y = sin(x)` | `.num` (one expression) | Tier 1 |
 | Curve | `x(t)=cos(3*t); y(t)=sin(2*t)` | `.num` v3 (pair and pitch map) | Tier 1 |
 | Toy | `sin(a*x)`, tune `a` | `.num` manifest (sliders, palette, sound) | Tier 1 |
-| Instrument | `euclid(3,8)`, layered patterns | `.num` manifest (pattern algebra) | Tier 2 |
+| Instrument | `euclid(3,8)`, layered patterns | `.num` graph or overlay; Pattern Studio views later | Tier 1 |
 | Room | the above plus a challenge and a reveal | signed capsule via portal | Tier 2 |
 
 The critical rule: **there is no export or convert step between rungs.** A doodle

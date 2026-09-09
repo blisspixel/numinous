@@ -19,6 +19,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   `NUMINOUS_STUDIO 7` only when more than one graph is present. CLI, MCP, and
   the App plot, save, reopen, and fork them. Bundled family `overlay`:
   `the-parts` and `the-sum`. `PLAY.md` and the skill name the ids.
+- Euclidean rhythms in Studio. `euclid(hits, steps)` places that many onsets
+  as evenly as possible among that many steps. The graph is 1 on a hit and
+  0 on a rest. Overlay layers them: `euclid(3,8) & euclid(5,8)`. The step
+  count is at most 64. CLI, MCP, and the App plot, save, reopen, and fork
+  them. Bundled family `euclidean`: `tresillo` and `three-against-five`.
+  `PLAY.md` and the skill name the ids.
 
 ## [0.4.0-alpha.25] - 2026-09-09
 

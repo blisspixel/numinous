@@ -1823,6 +1823,19 @@ fn four_lobes_raise_one_earned_banner_and_reset_cleanly() {
     );
 }
 
+fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
+    let dir = std::env::temp_dir().join(format!(
+        "{prefix}-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&dir).expect("create dir");
+    dir
+}
+
 fn write_test_wav(path: &std::path::Path, channels: u16, seconds: u32) {
     let spec = hound::WavSpec {
         channels,
@@ -4747,8 +4760,7 @@ fn gauntlet_munch_stage_routes_shared_controls() {
 
 #[test]
 fn the_radio_loads_cached_tracks_and_joins_live() {
-    let dir = std::env::temp_dir().join("numinous_radio_test");
-    let _ = std::fs::create_dir_all(&dir);
+    let dir = unique_temp_dir("numinous_radio_test");
     let path = dir.join("trance-001.wav");
     write_test_wav(&path, 1, 3);
     assert!(radio_cache::audio_is_bounded(&path));
@@ -4781,9 +4793,7 @@ fn the_radio_loads_cached_tracks_and_joins_live() {
 
 #[test]
 fn skip_track_advances_the_rotation_and_explains_unavailable_states() {
-    let dir = std::env::temp_dir().join("numinous_radio_skip_test");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).expect("create dir");
+    let dir = unique_temp_dir("numinous_radio_skip_test");
     let first = dir.join("trance-001.wav");
     let second = dir.join("trance-002.wav");
     write_test_wav(&first, 1, 2);
@@ -4813,9 +4823,7 @@ fn skip_track_advances_the_rotation_and_explains_unavailable_states() {
 
 #[test]
 fn radio_resync_selects_the_wall_clock_track_after_an_inactive_gap() {
-    let dir = std::env::temp_dir().join("numinous_radio_resync_test");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).expect("create dir");
+    let dir = unique_temp_dir("numinous_radio_resync_test");
     let first = dir.join("trance-001.wav");
     let second = dir.join("trance-002.wav");
     write_test_wav(&first, 1, 2);
@@ -4836,8 +4844,7 @@ fn radio_resync_selects_the_wall_clock_track_after_an_inactive_gap() {
 
 #[test]
 fn radio_duration_uses_frames_for_stereo_tracks() {
-    let dir = std::env::temp_dir().join("numinous_radio_stereo_test");
-    let _ = std::fs::create_dir_all(&dir);
+    let dir = unique_temp_dir("numinous_radio_stereo_test");
     let path = dir.join("stereo.wav");
     write_test_wav(&path, 2, 3);
 
@@ -4853,7 +4860,7 @@ fn radio_duration_uses_frames_for_stereo_tracks() {
 
 #[test]
 fn oversized_radio_files_are_rejected_before_loading() {
-    let path = std::env::temp_dir().join("numinous_radio_oversized.wav");
+    let path = unique_temp_dir("numinous_radio_oversized").join("oversized.wav");
     let file = std::fs::File::create(&path).expect("oversized placeholder");
     file.set_len(radio_cache::MAX_AUDIO_BYTES + 1)
         .expect("make sparse oversized file");
@@ -4875,9 +4882,7 @@ fn oversized_radio_files_are_rejected_before_loading() {
 
 #[test]
 fn radio_rotation_recovers_from_a_bad_cached_file() {
-    let dir = std::env::temp_dir().join("numinous_radio_recovery_test");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).expect("create dir");
+    let dir = unique_temp_dir("numinous_radio_recovery_test");
     let bad = dir.join("trance-bad.wav");
     let good = dir.join("trance-good.wav");
     std::fs::write(&bad, b"not actually a wav").expect("bad wav");

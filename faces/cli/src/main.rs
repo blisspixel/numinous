@@ -502,7 +502,7 @@ enum Command {
     /// Discovery: pass an expression, or --recipe N, or --seed N (curated bank).
     Plot {
         /// Manual expression in x and a. Unary: sin cos tan exp ln abs sqrt floor.
-        /// Pair functions: mod min max. Constants: pi e.
+        /// Pair functions: mod min max euclid. Constants: pi e.
         /// Omit when using --x-expr/--y-expr, --recipe, --seed, or --list-recipes.
         expr: Option<String>,
         /// Parametric x(t) expression. Requires --y-expr and excludes graph discovery.
@@ -588,7 +588,7 @@ enum Command {
         /// experiment id (full-return, almost-home, same-place,
         /// another-ratio, circle-to-ellipse, uniform-circle, simple-zero,
         /// a-pole, the-circle, the-bowl, extra-knob, live-ratio, the-parts,
-        /// the-sum).
+        /// the-sum, tresillo, three-against-five).
         input: String,
         /// Plot width in columns.
         #[arg(long, default_value_t = 72)]
