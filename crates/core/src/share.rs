@@ -180,10 +180,11 @@ impl StudioShareMeta {
             "semitones. Large intervals between notes are preserved; pitches".to_string(),
             "outside the available keys and bend range are clamped. Notes".to_string(),
             "become one voice, rounded to 960 ticks per second. When starts".to_string(),
-            "share a tick, the last valid source note wins. The declared".to_string(),
-            "duration and trailing silence remain; the native waveform and".to_string(),
-            "overlapping envelopes do not. Open it in a DAW or player that".to_string(),
-            "reads Standard MIDI Files.".to_string(),
+            "share a tick, the last valid source note wins. An overlay".to_string(),
+            "program's MIDI is the first graph; every graph sings in WAV.".to_string(),
+            "The declared duration and trailing silence remain; the native".to_string(),
+            "waveform and overlapping envelopes do not. Open it in a DAW or".to_string(),
+            "player that reads Standard MIDI Files.".to_string(),
         ]);
         if let Some(descends) = &self.descends {
             lines.push(String::new());

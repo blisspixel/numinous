@@ -1077,38 +1077,88 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         Some(_) => return tool_error("Argument 'notes' must be an integer from 1 through 64."),
         None => None,
     };
-    let mut request = match numinous_core::SingRequest::new(
-        source,
-        args.get("xmin").and_then(Value::as_f64),
-        args.get("xmax").and_then(Value::as_f64),
-        args.get("a").and_then(Value::as_f64),
-        notes,
-    ) {
-        Ok(request) => request,
-        Err(error) => return tool_error(&error.to_string()),
-    };
-    match parse_sliders(args) {
-        Ok(sliders) if sliders.is_empty() => {}
-        Ok(sliders) => match request.with_sliders(sliders) {
-            Ok(bound) => request = bound,
-            Err(error) => return tool_error(&error.to_string()),
-        },
+    let sliders = match parse_sliders(args) {
+        Ok(sliders) => sliders,
         Err(error) => return tool_error(&error),
-    }
+    };
     let scale = match studio_scale(args.get("scale").and_then(Value::as_str)) {
         Ok(scale) => scale,
         Err(error) => return tool_error(&error),
     };
-    let spec = match request.execute_with_scale(scale) {
-        Ok(spec) => spec,
-        Err(numinous_core::StudioRequestError::Undefined) => {
+    let note_count = notes.unwrap_or(numinous_core::DEFAULT_MELODY_NOTES);
+    let (spec, midi_spec, xmin, xmax, a, bound_sliders) = if source.contains('&') {
+        let xmin = args
+            .get("xmin")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN);
+        let xmax = args
+            .get("xmax")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX);
+        let a = args
+            .get("a")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER);
+        let parts: Vec<String> = source
+            .split('&')
+            .map(|part| part.trim().to_string())
+            .collect();
+        let mut creation = match numinous_core::StudioCreation::new_program(parts, xmin, xmax, a) {
+            Ok(creation) => creation,
+            Err(error) => return tool_error(&error),
+        };
+        if !sliders.is_empty() {
+            creation = match creation.with_sliders(sliders) {
+                Ok(bound) => bound,
+                Err(error) => return tool_error(&error),
+            };
+        }
+        let creation = creation.with_scale(scale);
+        let wav = creation.to_melody(note_count);
+        if wav.notes.is_empty() {
             return tool_error("Nothing to sing: the function is undefined across this range.");
         }
-        Err(error) => return tool_error(&error.to_string()),
+        (
+            wav,
+            creation.to_midi_melody(note_count),
+            creation.xmin(),
+            creation.xmax(),
+            creation.a(),
+            creation.sliders().to_vec(),
+        )
+    } else {
+        let mut request = match numinous_core::SingRequest::new(
+            source,
+            args.get("xmin").and_then(Value::as_f64),
+            args.get("xmax").and_then(Value::as_f64),
+            args.get("a").and_then(Value::as_f64),
+            notes,
+        ) {
+            Ok(request) => request,
+            Err(error) => return tool_error(&error.to_string()),
+        };
+        if !sliders.is_empty() {
+            request = match request.with_sliders(sliders) {
+                Ok(bound) => bound,
+                Err(error) => return tool_error(&error.to_string()),
+            };
+        }
+        let spec = match request.execute_with_scale(scale) {
+            Ok(spec) => spec,
+            Err(numinous_core::StudioRequestError::Undefined) => {
+                return tool_error("Nothing to sing: the function is undefined across this range.");
+            }
+            Err(error) => return tool_error(&error.to_string()),
+        };
+        (
+            spec.clone(),
+            spec,
+            request.xmin(),
+            request.xmax(),
+            request.parameter(),
+            request.sliders().to_vec(),
+        )
     };
-    let xmin = request.xmin();
-    let xmax = request.xmax();
-    let a = request.parameter();
     let mut lines = vec![format!(
         "y = {source} as a melody on the {} scale: {:.1}s, {} notes. Each line names the step \
          taken to reach it: the size measured in cents, the equal-tempered \
@@ -1150,7 +1200,7 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         Err(message) => return tool_error(&message),
     };
     let midi = match audible::midi_requested(args) {
-        Ok(true) => match audible::midi_block(&spec) {
+        Ok(true) => match audible::midi_block(&midi_spec) {
             Ok(rendered) => Some(rendered),
             Err(message) => return tool_error(&message),
         },
@@ -1190,8 +1240,8 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         "audio": audible.as_ref().map(|(_, described)| described.clone()),
         "midi": midi.as_ref().map(|(_, described)| described.clone()),
     });
-    if !request.sliders().is_empty() {
-        structured["sliders"] = sliders_json(request.sliders());
+    if !bound_sliders.is_empty() {
+        structured["sliders"] = sliders_json(&bound_sliders);
     }
     structured["next"] = save_creation_next(with_slider_args(
         json!({
@@ -1201,7 +1251,7 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
             "a": a,
             "scale": scale.name(),
         }),
-        request.sliders(),
+        &bound_sliders,
     ));
     if want_receipt {
         let audio_asked = args.get("audio").and_then(Value::as_bool).unwrap_or(false);

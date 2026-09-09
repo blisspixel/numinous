@@ -647,7 +647,8 @@ impl StudioCreation {
     }
 
     /// Build an overlay program: two to [`MAX_PROGRAM_EXPRS`] graphs that share
-    /// one window, knob, sliders, and scale. The first expression sings.
+    /// one window, knob, sliders, and scale. Every graph sings in WAV; MIDI
+    /// keeps the first expression.
     ///
     /// # Errors
     /// Returns a message when the count is out of range, a part is empty or
@@ -1228,18 +1229,12 @@ impl StudioCreation {
 
     /// Render this exact creation's voice. A parametric creation sings its
     /// y-coordinate over `t`; the x-coordinate remains the visible path.
-    /// A field is seen first: it has no melody yet.
+    /// A field is seen first: it has no melody yet. Overlay programs mix
+    /// every graph; [`Self::to_midi_melody`] keeps the first graph.
     #[must_use]
     pub fn to_melody(&self, notes: usize) -> SoundSpec {
-        if self.kind() == StudioKind::Field {
-            return SoundSpec {
-                duration: 0.12,
-                notes: Vec::new(),
-            };
-        }
         match self.program() {
-            Ok(program) => to_melody_with_scale_named(
-                program.voice_expression(),
+            Ok(program) => program.to_melody(
                 self.xmin,
                 self.xmax,
                 notes,
@@ -1247,10 +1242,24 @@ impl StudioCreation {
                 &self.sliders,
                 self.scale,
             ),
-            Err(_) => SoundSpec {
-                duration: 0.12,
-                notes: Vec::new(),
-            },
+            Err(_) => silent_spec(),
+        }
+    }
+
+    /// MIDI voice of this creation. Overlay programs keep the first graph
+    /// because the file is one channel of pitch bend. WAV mixes every graph.
+    #[must_use]
+    pub fn to_midi_melody(&self, notes: usize) -> SoundSpec {
+        match self.program() {
+            Ok(program) => program.to_midi_melody(
+                self.xmin,
+                self.xmax,
+                notes,
+                self.a,
+                &self.sliders,
+                self.scale,
+            ),
+            Err(_) => silent_spec(),
         }
     }
 
@@ -2260,7 +2269,8 @@ pub enum StudioProgram {
         /// Parsed field expression.
         expression: Expr,
     },
-    /// Several graphs over one window. The first expression sings.
+    /// Several graphs over one window. Every graph sings in WAV; MIDI keeps
+    /// the first expression.
     Program {
         /// Canonical sources, first-seen order.
         sources: Vec<String>,
@@ -2473,15 +2483,68 @@ impl StudioProgram {
         }
     }
 
-    /// Expression that carries pitch when this program sings. Graphs sing
-    /// their y value; parametric paths sing their y coordinate over `t`.
-    /// Overlay programs sing the first graph.
+    /// Lead expression when this program sings. Graphs sing their y value;
+    /// parametric paths sing their y coordinate over `t`. Overlay programs
+    /// keep this first graph for MIDI; [`Self::to_melody`] mixes every graph.
     #[must_use]
     pub fn voice_expression(&self) -> &Expr {
         match self {
             Self::Graph { expression, .. } | Self::Field { expression, .. } => expression,
             Self::Parametric { y_expression, .. } => y_expression,
             Self::Program { expressions, .. } => &expressions[0],
+        }
+    }
+
+    /// WAV and live voice. Overlay programs mix every graph.
+    #[must_use]
+    pub fn to_melody(
+        &self,
+        xmin: f64,
+        xmax: f64,
+        notes: usize,
+        a: f64,
+        sliders: &[crate::slider::StudioSlider],
+        scale: StudioScale,
+    ) -> SoundSpec {
+        match self {
+            Self::Field { .. } => silent_spec(),
+            Self::Program { expressions, .. } => {
+                mix_overlay_melodies(expressions, xmin, xmax, notes, a, sliders, scale)
+            }
+            _ => to_melody_with_scale_named(
+                self.voice_expression(),
+                xmin,
+                xmax,
+                notes,
+                a,
+                sliders,
+                scale,
+            ),
+        }
+    }
+
+    /// MIDI voice. Overlay programs keep the first graph.
+    #[must_use]
+    pub fn to_midi_melody(
+        &self,
+        xmin: f64,
+        xmax: f64,
+        notes: usize,
+        a: f64,
+        sliders: &[crate::slider::StudioSlider],
+        scale: StudioScale,
+    ) -> SoundSpec {
+        match self {
+            Self::Field { .. } => silent_spec(),
+            _ => to_melody_with_scale_named(
+                self.voice_expression(),
+                xmin,
+                xmax,
+                notes,
+                a,
+                sliders,
+                scale,
+            ),
         }
     }
 
@@ -2817,6 +2880,34 @@ pub fn to_melody_with_scale(
     scale: StudioScale,
 ) -> SoundSpec {
     to_melody_with_scale_named(expr, xmin, xmax, notes, a, &[], scale)
+}
+
+fn silent_spec() -> SoundSpec {
+    SoundSpec {
+        duration: 0.12,
+        notes: Vec::new(),
+    }
+}
+
+fn mix_overlay_melodies(
+    expressions: &[Expr],
+    xmin: f64,
+    xmax: f64,
+    notes: usize,
+    a: f64,
+    sliders: &[crate::slider::StudioSlider],
+    scale: StudioScale,
+) -> SoundSpec {
+    let mut mixed = silent_spec();
+    for expression in expressions {
+        let voice = to_melody_with_scale_named(expression, xmin, xmax, notes, a, sliders, scale);
+        mixed.duration = mixed.duration.max(voice.duration);
+        mixed.notes.extend(voice.notes);
+    }
+    mixed
+        .notes
+        .sort_by(|left, right| left.start.total_cmp(&right.start));
+    mixed
 }
 
 /// Turn one expression into a melody with named sliders bound.
@@ -3553,7 +3644,7 @@ mod tests {
         is_returning_home_transfer, parse, returning_home_transfer, studio_auto_recipe,
         studio_construction_family, studio_experiment, studio_experiment_matching,
         studio_experiment_meta, studio_experiments_in, studio_recipe, studio_recipe_count,
-        to_melody, to_melody_with_scale, uses_field_vocabulary,
+        to_melody, to_melody_with_scale, to_melody_with_scale_named, uses_field_vocabulary,
     };
     use super::{eval_field, parse_field};
     use crate::complex::Complex;
@@ -4702,6 +4793,52 @@ mod tests {
         let program_on_six = "NUMINOUS_STUDIO 6\nkind=program\nexpr=sin(x)\nexpr=cos(x)\nxmin=-1\nxmax=1\na=1\nscale=continuous\n";
         let err = StudioCreation::from_num_file(program_on_six).expect_err("program needs v7");
         assert!(err.contains("NUMINOUS_STUDIO 7"), "{err}");
+    }
+
+    #[test]
+    fn overlay_programs_mix_every_graph_in_wav_and_keep_the_first_in_midi() {
+        let creation =
+            StudioCreation::new_program(["sin(x)", "cos(x)"], -1.0, 1.0, 1.0).expect("program");
+        let mixed = creation.to_melody(8);
+        let lead = creation.to_midi_melody(8);
+        let first = to_melody_with_scale_named(
+            &parse("sin(x)").expect("sin"),
+            -1.0,
+            1.0,
+            8,
+            1.0,
+            &[],
+            StudioScale::Continuous,
+        );
+        let second = to_melody_with_scale_named(
+            &parse("cos(x)").expect("cos"),
+            -1.0,
+            1.0,
+            8,
+            1.0,
+            &[],
+            StudioScale::Continuous,
+        );
+        assert_eq!(lead, first, "MIDI stays the first graph");
+        assert_eq!(mixed.notes.len(), first.notes.len() + second.notes.len());
+        for note in first.notes.iter().chain(second.notes.iter()) {
+            assert!(
+                mixed.notes.iter().any(|sung| sung == note),
+                "WAV is missing {note:?}"
+            );
+        }
+        assert_eq!(lead.midi(), first.midi());
+        assert_ne!(
+            mixed.render(8_000),
+            first.render(8_000),
+            "the second graph has to change the WAV"
+        );
+        let graph = StudioCreation::new("sin(x)", -1.0, 1.0, 1.0).expect("graph");
+        assert_eq!(
+            graph.to_melody(8),
+            graph.to_midi_melody(8),
+            "a single graph is the same voice in WAV and MIDI"
+        );
     }
 
     #[test]

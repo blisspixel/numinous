@@ -34,7 +34,8 @@ value and a declared range, and capsules write version 6 only when they are
 present. App Tab selects a slider, Up/Down steps it, Home restores 1 when
 that is in range. Overlay programs now ship: type `sin(x) & cos(x)` for two
 to four graphs on one window; capsules write version 7 only when more than
-one graph is present. The first curve sings. Euclidean rhythms ship as
+one graph is present. Every overlay graph sings in WAV; MIDI stays the first
+curve. Euclidean rhythms ship as
 `euclid(hits, steps)`: 1 on a hit, 0 on a rest, at most 64 steps. Overlay
 layers them. Tracker, step grid, piano roll, MIDI-in, MusicXML, raw shader
 authoring, and community rooms are design targets. `ROADMAP.md` is the status
@@ -151,7 +152,7 @@ The Studio is a ramp, not a cliff. Same tool, radically different ceilings.
 
 - **Level 0, the graphing calculator.** `y = sin(x)`. It draws, glowing, and it sings the curve. A curious newcomer is delighted in ten seconds. This is the whole onboarding.
 - **Level 1, draw a path.** `x(t)=cos(3*t); y(t)=sin(2*t)` draws and sings a Lissajous figure. The exact parametric pair, pitch map, and named sliders are built. Draggable numbers, polar, and 3D representations remain planned.
-- **Level 2, mathematical patterns.** `euclid(3,8)` is built: a graph of onsets, overlayable, and sung as the first curve. `note("c e g")` and live transforms (`rev`, `fast`, `slow`, `every`, `degrade`) remain planned. The pattern should drive sound and geometry together. Now it is an instrument and a generative visual at once, algorithmic techno you can see (see `MUSIC.md`).
+- **Level 2, mathematical patterns.** `euclid(3,8)` is built: a graph of onsets, overlayable, mixed in WAV, with MIDI on the first curve. `note("c e g")` and live transforms (`rev`, `fast`, `slow`, `every`, `degrade`) remain planned. The pattern should drive sound and geometry together. Now it is an instrument and a generative visual at once, algorithmic techno you can see (see `MUSIC.md`).
 - **Level 3, fields and shaders.** Write an expression over the whole plane for domain coloring and SDFs, or drop into raw **WGSL** for full control (see `VISUALS.md`). Now it is a shader toy with a soundtrack.
 
 A player can stop at any level and have made something real and beautiful.
