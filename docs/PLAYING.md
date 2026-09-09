@@ -138,7 +138,9 @@ closure on the status line: a period, or no period, including the half-period
 trap where position returns and velocity reverses. PageDown and PageUp walk
 a bundled family when the current creation still matches one. After same-place,
 PageDown opens the bundled `another-ratio` capsule, a period-1 starter
-you can retune. Esc or Tab leaves. Lissajous offers CONSTRUCT in the Cabinet,
+you can retune. After that, PageDown opens `closing-voices`, the two
+oscillators of A full return as graphs; one more step is `wandering-voices`.
+PageUp walks back. Esc or Tab leaves. Lissajous offers CONSTRUCT in the Cabinet,
 or `O` in the room, to open the first Returning home capsule. The first edit begins a remix while
 keeping the saved window and knob. In alpha 18, Up/Down tune `a` by 0.25 per
 press and Home restores 1; controller Up/Down and Reset use the same actions.

@@ -147,8 +147,8 @@ mastery, exploration, and company also remain complete reasons to play.
   cases, an unseen ratio, save/reopen identity, and an unobstructed leave
   path are locked in core, CLI, MCP, and the App Studio status. Lissajous
   offers an optional CONSTRUCT door into the first capsule; PageDown walks
-  the family, including the bundled `another-ratio` starter; leaving
-  Studio returns to the room.
+  the family, including the bundled `another-ratio` starter, then
+  Closing voices; leaving Studio returns to the room.
 - **Built, first overlay contrast:** family `two-voices` draws the two
   oscillators of A full return and Almost home as overlay graphs over
   `[0, 12]`. The path capsules stay in Returning home. A picture of two

@@ -25,8 +25,10 @@ Opening a capsule reports an independently checked `closure`: whether the
 ideal motion repeats, and whether a half-period checkpoint is a full-state
 return or a position-only trap. The App Studio status names the same caption.
 From Lissajous, CONSTRUCT or `O` opens the first capsule; PageDown walks
-the family, including a period-1 starter titled Another ratio. Change the y
-frequency to try a new return. The picture is not the proof.
+the family, including a period-1 starter titled Another ratio. After that
+capsule, PageDown opens Closing voices, the two oscillators drawn as
+graphs. Change the y frequency to try a new return. The picture is not the
+proof.
 
 ## Four paths
 

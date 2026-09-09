@@ -300,7 +300,8 @@ to overlay graphs; capsules write `NUMINOUS_STUDIO 7` only when more than one
 graph is present. Type `euclid(3,8)` for a Euclidean rhythm. `open_creation`
 accepts those ids directly. They are Studio
 doors after a touch of math, not a lobby in front of the rooms. Lissajous
-names Returning home when you describe it or study it. Opening a
+names Returning home when you describe it or study it. In the App,
+PageDown after `another-ratio` opens `closing-voices`. Opening a
 two-oscillator path reports `closure`: an independently checked period, or
 an explicit aperiodic, including the deceptive half-period where position
 returns and velocity reverses. A picture is not the proof. The trial does

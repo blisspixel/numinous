@@ -98,7 +98,8 @@ also accepts those ids directly. Opening a two-oscillator parametric path
 returns `structuredContent.closure`: an independently checked period, or
 an explicit aperiodic, including the half-period trap where position
 returns and state does not. Follow a Returning home row, then read
-`closure` rather than trusting the picture. The trial does not gate play.
+`closure` rather than trusting the picture. After `another-ratio`, the App
+walk continues into `closing-voices`. The trial does not gate play.
 Use `save_creation` when you want that expression to become a
 portable titled or signed capsule, `open_creation` to reopen returned `.num`
 text or a native link, and `fork_creation` to make a child that names its exact

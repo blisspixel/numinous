@@ -2552,11 +2552,36 @@ mod tests {
             panel.current_creation().expect("opened").title(),
             Some("Another ratio")
         );
+        panel.open_creation(
+            &panel
+                .adjacent_experiment(1)
+                .expect("closing-voices")
+                .creation(),
+        );
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("Closing voices")
+        );
+        panel.open_creation(
+            &panel
+                .adjacent_experiment(1)
+                .expect("wandering-voices")
+                .creation(),
+        );
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("Wandering voices")
+        );
         assert!(panel.adjacent_experiment(1).is_none());
         panel.open_creation(&panel.adjacent_experiment(-1).expect("back").creation());
         assert_eq!(
             panel.current_creation().expect("opened").title(),
-            Some("Same place, another direction")
+            Some("Closing voices")
+        );
+        panel.open_creation(&panel.adjacent_experiment(-1).expect("home").creation());
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("Another ratio")
         );
     }
 
