@@ -76,7 +76,13 @@ def compare(cli, mcp, arguments, environment):
 # Rooms with an authored mathematics treatment, mirroring the core registry.
 # Kept beside the cases so a new treatment fails here loudly rather than
 # silently weakening what this gate checks.
-AUTHORED_MATHEMATICS_ROOMS = ["lissajous", "times-tables"]
+AUTHORED_MATHEMATICS_ROOMS = [
+    "lissajous",
+    "times-tables",
+    "kepler-laws",
+    "golden-angle",
+    "fermat-spiral",
+]
 
 
 def run(cli, mcp):
@@ -101,6 +107,8 @@ def run(cli, mcp):
             assert not state.exists(), "a study call created player state"
 
         assert outputs[0]["selection"] == {"kind": "depth", "depth": "explanation"}
+        assert outputs[0]["construction"]["id"] == "returning-home"
+        assert outputs[0]["construction"]["next"]["tool"] == "plot_expression"
         assert outputs[1]["locale"] == {"requested": "ja", "resolved": "ja", "fallback": None}
         assert outputs[2]["locale"]["fallback"] == "parent_language"
         assert all(block["locale"]["resolved"] == "en" for block in outputs[3]["blocks"])
@@ -112,6 +120,7 @@ def run(cli, mcp):
         # exist must never read as content that does not exist.
         assert "mathematics" in outputs[5]["availableDepths"]
         assert outputs[5]["authoredDepthRooms"]["mathematics"] == AUTHORED_MATHEMATICS_ROOMS
+        assert "construction" not in outputs[5]
         assert any(part["kind"] == "reference" for part in outputs[6]["blocks"][0]["parts"])
 
         invalid = [
@@ -119,7 +128,7 @@ def run(cli, mcp):
             {"room": "lissajous", "locale": "ja_JP"},
             # A room with no authored treatment. Times Tables used to be that
             # example and now carries one of its own.
-            {"room": "golden-angle", "depth": "mathematics"},
+            {"room": "cellular-automata", "depth": "mathematics"},
             {"room": "lissajous", "block": "lissajous.missing"},
             {"room": "lissajous", "block": "lissajous.recurrence", "depth": "mathematics"},
         ]

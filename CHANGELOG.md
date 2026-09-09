@@ -91,6 +91,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   and requires the saved capsule to reopen the same window.
 
 ### Fixed
+- CLI `study --json` now names the same Lissajous Returning home construction
+  MCP already returned, so the three-OS study-parity gate holds. Other rooms
+  still omit it. The shared study JSON is the one object.
 - The Understanding collector's frozen `plot_expression` schema now expects
   the keep door. A successful graph plot has returned `next` as
   `save_creation` since that door shipped; the collector still required the

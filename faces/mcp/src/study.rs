@@ -278,12 +278,7 @@ fn response(args: &Value) -> Result<(String, Value), String> {
 
 pub(super) fn tool(args: &Value) -> Value {
     match response(args) {
-        Ok((text, mut structured)) => {
-            if structured["room"] == "lissajous" {
-                structured["construction"] = super::room_tools::returning_home_construction();
-            }
-            tool_structured(&text, structured)
-        }
+        Ok((text, structured)) => tool_structured(&text, structured),
         Err(message) => tool_error(&message),
     }
 }
