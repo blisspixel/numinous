@@ -10,6 +10,8 @@ no score or required order. The path capsules remain `full-return` and
 From a packaged install, open a capsule by id: `closing-voices`,
 `wandering-voices`. `plot_expression` with `list_experiments` true and
 `family` `two-voices` lists them. `open_creation` accepts those ids.
+In the App, PageDown after Another ratio opens Closing voices; PageUp
+returns.
 
 | Creation | Try this |
 | --- | --- |

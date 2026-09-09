@@ -308,13 +308,19 @@ pub fn first_studio_construction(room_id: &str) -> Option<StudioExperiment> {
 pub fn studio_experiment_matching(creation: &StudioCreation) -> Option<StudioExperiment> {
     STUDIO_EXPERIMENTS.iter().copied().find(|experiment| {
         let bundled = experiment.creation();
-        bundled.source() == creation.source()
+        bundled.kind() == creation.kind()
+            && bundled.source() == creation.source()
             && bundled.second_source() == creation.second_source()
+            && bundled.extra_sources() == creation.extra_sources()
             && bundled.reading() == creation.reading()
     })
 }
 
 /// Neighbor in the same family, with no wrap. `delta` is typically -1 or 1.
+///
+/// After the last Returning home capsule, +1 opens the first two-voices
+/// overlay. That is a transfer into the next contrast, not a wrap back to
+/// A full return. PageUp from Closing voices returns to Another ratio.
 #[must_use]
 pub fn adjacent_studio_experiment(id: &str, delta: i32) -> Option<StudioExperiment> {
     let current = studio_experiment_meta(id)?;
@@ -324,9 +330,26 @@ pub fn adjacent_studio_experiment(id: &str, delta: i32) -> Option<StudioExperime
         .position(|experiment| experiment.id == current.id)?;
     let next = i32::try_from(index).ok()?.checked_add(delta)?;
     if next < 0 {
-        return None;
+        return quest_predecessor(current.id);
     }
-    family.get(usize::try_from(next).ok()?).copied()
+    family
+        .get(usize::try_from(next).ok()?)
+        .copied()
+        .or_else(|| quest_successor(current.id))
+}
+
+fn quest_successor(id: &str) -> Option<StudioExperiment> {
+    match id {
+        "another-ratio" => studio_experiment_meta("closing-voices"),
+        _ => None,
+    }
+}
+
+fn quest_predecessor(id: &str) -> Option<StudioExperiment> {
+    match id {
+        "closing-voices" => studio_experiment_meta("another-ratio"),
+        _ => None,
+    }
 }
 
 /// Starter path after the last Returning home contrast.
@@ -3794,6 +3817,14 @@ mod tests {
         assert!(parts.to_num_file().starts_with("NUMINOUS_STUDIO 7\n"));
         let sum = studio_experiment("the-sum").expect("the-sum");
         assert_eq!(sum.extra_sources().len(), 2);
+        assert_eq!(
+            studio_experiment_matching(&parts).map(|experiment| experiment.id),
+            Some("the-parts")
+        );
+        assert_eq!(
+            studio_experiment_matching(&sum).map(|experiment| experiment.id),
+            Some("the-sum")
+        );
         let plot = sum.plot_text(48, 16).expect("sum plot");
         assert!(plot.text.contains('#'));
         assert!(plot.text.contains('*'));
@@ -3856,7 +3887,15 @@ mod tests {
             adjacent_studio_experiment("same-place", 1).map(|experiment| experiment.id),
             Some("another-ratio")
         );
-        assert!(adjacent_studio_experiment("another-ratio", 1).is_none());
+        assert_eq!(
+            adjacent_studio_experiment("another-ratio", 1).map(|experiment| experiment.id),
+            Some("closing-voices")
+        );
+        assert_eq!(
+            adjacent_studio_experiment("closing-voices", -1).map(|experiment| experiment.id),
+            Some("another-ratio")
+        );
+        assert!(adjacent_studio_experiment("wandering-voices", 1).is_none());
         assert!(adjacent_studio_experiment("full-return", -1).is_none());
         assert_eq!(
             adjacent_studio_experiment("same-place", -1).map(|experiment| experiment.id),
@@ -3876,7 +3915,19 @@ mod tests {
         assert!(is_returning_home_transfer(&from_same));
         let back = adjacent_construction_creation(&from_same, -1).expect("same-place");
         assert_eq!(back.title(), Some("Same place, another direction"));
-        assert!(adjacent_construction_creation(&from_same, 1).is_none());
+        let voices = adjacent_construction_creation(&from_same, 1).expect("closing-voices");
+        assert_eq!(voices.title(), Some("Closing voices"));
+        assert_eq!(
+            studio_experiment_matching(&voices).map(|experiment| experiment.id),
+            Some("closing-voices")
+        );
+        let wandering = adjacent_construction_creation(&voices, 1).expect("wandering-voices");
+        assert_eq!(wandering.title(), Some("Wandering voices"));
+        assert_eq!(
+            studio_experiment_matching(&wandering).map(|experiment| experiment.id),
+            Some("wandering-voices")
+        );
+        assert!(adjacent_construction_creation(&wandering, 1).is_none());
         assert_eq!(
             crate::PathClosure::of(&transfer).status_caption(),
             Some("PERIOD 1".to_string())

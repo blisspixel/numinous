@@ -26,7 +26,7 @@ the expected expression input across every face. Two-oscillator parametric
 paths report an independently checked closure when opened: a period, or an
 explicit aperiodic, including the half-period position-only trap. The App
 Studio status names that caption. Lissajous can open the first Returning
-home capsule; PageDown walks the family. That trial is the first Returning
+home capsule; PageDown walks the family, then Closing voices. That trial is the first Returning
 home capability slice (`PROGRESSION.md`); it does not gate play. Fields over the plane now ship: `y`, `z`, `i`, `re`, `im`, `arg`, and `conj`
 draw a character plate with a stored reading. Fields are seen first; they have
 no melody yet. Named sliders now ship: extra identifiers besides `a` bind a
