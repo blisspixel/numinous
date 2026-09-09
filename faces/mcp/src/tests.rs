@@ -253,7 +253,10 @@ fn packaged_player_docs_name_creation_next() {
                 && flattened.contains("the-sum")
                 && flattened.contains("euclidean")
                 && flattened.contains("tresillo")
-                && flattened.contains("three-against-five"),
+                && flattened.contains("three-against-five")
+                && flattened.contains("two-voices")
+                && flattened.contains("closing-voices")
+                && flattened.contains("wandering-voices"),
             "{name} must name the bundled Studio experiments a packaged player can open"
         );
         assert!(
@@ -2689,6 +2692,37 @@ fn euclidean_rhythms_plot_save_and_open_follow_next() {
     );
     assert_eq!(remix["result"]["isError"], false, "{remix}");
     assert_eq!(remix["result"]["structuredContent"]["kind"], "program");
+}
+
+#[test]
+fn two_voices_open_and_follow_next() {
+    let listed = call(
+        "plot_expression",
+        json!({"list_experiments": true, "family": "two-voices"}),
+    );
+    let listed = &listed["result"]["structuredContent"];
+    assert_eq!(listed["family"], "two-voices");
+    assert_eq!(listed["experimentCount"], 2);
+    let opened = call(
+        "open_creation",
+        listed["experiments"][0]["next"]["arguments"].clone(),
+    );
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert_eq!(
+        opened["result"]["structuredContent"]["title"],
+        "Closing voices"
+    );
+    assert_eq!(opened["result"]["structuredContent"]["kind"], "program");
+    assert_eq!(
+        opened["result"]["structuredContent"]["capsuleFormatVersion"],
+        7
+    );
+    let wandering = call("open_creation", json!({"capsule": "wandering-voices"}));
+    assert_eq!(wandering["result"]["isError"], false, "{wandering}");
+    assert_eq!(
+        wandering["result"]["structuredContent"]["title"],
+        "Wandering voices"
+    );
 }
 
 #[test]

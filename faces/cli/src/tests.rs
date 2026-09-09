@@ -3821,6 +3821,16 @@ fn euclidean_rhythms_plot_save_and_open() {
 }
 
 #[test]
+fn two_voices_open_returning_home_oscillators() {
+    let closing = super::open_studio_report("closing-voices", 32, 10).expect("closing");
+    assert!(closing.contains("title=Closing voices"), "{closing}");
+    assert!(closing.contains("kind=program"), "{closing}");
+    let wandering = super::open_studio_report("wandering-voices", 32, 10).expect("wandering");
+    assert!(wandering.contains("title=Wandering voices"), "{wandering}");
+    assert!(wandering.contains("sqrt(2)"), "{wandering}");
+}
+
+#[test]
 fn a_titled_save_round_trips_and_the_report_names_it() {
     let path = std::env::temp_dir().join("numinous_cli_titled_save_test.num");
     let _ = std::fs::remove_file(&path);

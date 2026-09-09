@@ -292,7 +292,8 @@ open it. Pass `family: "returning-home"` for `full-return`, `almost-home`,
 `simple-zero`, `a-pole`, `the-circle`, and `the-bowl`, or `family: "named-sliders"`
 for `extra-knob` and `live-ratio`, or `family: "overlay"` for `the-parts`
 and `the-sum`, or `family: "euclidean"` for `tresillo` and
-`three-against-five`. A formula may name extra knobs besides `a`;
+`three-against-five`, or `family: "two-voices"` for `closing-voices` and
+`wandering-voices`. A formula may name extra knobs besides `a`;
 each is a slider with a value and a declared range, and capsules write
 `NUMINOUS_STUDIO 6` only when those extra sliders exist. Type `sin(x) & cos(x)`
 to overlay graphs; capsules write `NUMINOUS_STUDIO 7` only when more than one

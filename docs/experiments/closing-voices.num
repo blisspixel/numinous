@@ -1,0 +1,9 @@
+NUMINOUS_STUDIO 7
+kind=program
+expr=cos(2*pi*x)
+expr=sin(2*pi*(17/12)*x)
+xmin=0
+xmax=12
+a=1
+scale=continuous
+title=Closing voices

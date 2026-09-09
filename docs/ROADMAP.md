@@ -135,8 +135,10 @@ mastery, exploration, and company also remain complete reasons to play.
   built: two to four graphs share one window as `NUMINOUS_STUDIO 7`, family
   `overlay`. Euclidean rhythms are built: `euclid(hits, steps)` places
   onsets as evenly as possible, family `euclidean` (`tresillo`,
-  `three-against-five`). Pattern Studio's tracker
-  views and the in-app capability quest remain the next creator rungs.
+  `three-against-five`). The first overlay contrast is built: family
+  `two-voices` draws Returning home's oscillators as graphs
+  (`closing-voices`, `wandering-voices`). Pattern Studio's tracker
+  views and the rest of the in-app capability quest remain later rungs.
   The second independent variable is built: a field over
   the plane with three readings, version 5 capsules, and family
   `three-readings`.
@@ -147,6 +149,10 @@ mastery, exploration, and company also remain complete reasons to play.
   offers an optional CONSTRUCT door into the first capsule; PageDown walks
   the family, including the bundled `another-ratio` starter; leaving
   Studio returns to the room.
+- **Built, first overlay contrast:** family `two-voices` draws the two
+  oscillators of A full return and Almost home as overlay graphs over
+  `[0, 12]`. The path capsules stay in Returning home. A picture of two
+  graphs is not a proof of period.
 - **Designed next:** a richer overlay quest around that walk, and
   one explicitly kept and previewed project that resumes the selected question,
   evidence, creation, and next action (`DIGITAL_DEVELOPMENT.md`). These are small
