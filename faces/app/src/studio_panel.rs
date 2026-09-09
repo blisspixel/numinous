@@ -1,8 +1,8 @@
 //! App-local Studio input, parsing, audio, and drawing helpers.
 
 use numinous_core::{
-    Expr, MAX_STUDIO_EDITOR_CHARS, Raster, SoundSpec, StudioCreation, StudioKind, StudioProgram,
-    StudioScale, Surface,
+    Expr, MAX_STUDIO_EDITOR_CHARS, PathClosure, Raster, SoundSpec, StudioCreation, StudioKind,
+    StudioProgram, StudioScale, Surface,
 };
 
 use crate::input_legend::{self, InputMode};
@@ -80,6 +80,7 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "F4: NAME + SHARE  .NUM + LINK + PNG + MIDI",
     "F5: GALLERY  THE SAVED WALL",
     "F6: CYCLE MUSICAL SCALE",
+    "PGUP/PGDN: WALK A BUNDLED FAMILY",
     "F1: TOGGLE THIS HELP",
     "TAB / ESC: CLOSE STUDIO",
     "UP/DOWN: TUNE A BY 0.25",
@@ -353,6 +354,14 @@ impl StudioPanel {
         self.begin_remix();
         self.parameter = parameter;
         self.current_sound()
+    }
+
+    /// Neighbor in the current bundled family, if this creation still matches one.
+    #[must_use]
+    pub fn adjacent_experiment(&self, delta: i32) -> Option<numinous_core::StudioExperiment> {
+        let creation = self.current_creation().ok()?;
+        let current = numinous_core::studio_experiment_matching(&creation)?;
+        numinous_core::adjacent_studio_experiment(current.id, delta)
     }
 
     /// Load the next curated recipe. Returns a melody when the recipe parses.
@@ -716,6 +725,12 @@ impl StudioPanel {
         };
         let context = if let Some(error) = &self.error {
             format!("DRAFT: {}", error.to_uppercase())
+        } else if let Some(closure) = self.closure_caption() {
+            if paused {
+                format!("SCALE {}  {closure}", self.scale_name().to_uppercase())
+            } else {
+                closure
+            }
         } else if self.opened.is_some() {
             let (xmin, xmax, _) = self.window_and_knob();
             let domain = if self
@@ -755,6 +770,13 @@ impl StudioPanel {
                 if self.error.is_some() { '-' } else { '*' },
             ),
         ]
+    }
+
+    fn closure_caption(&self) -> Option<String> {
+        let creation = self.current_creation().ok()?;
+        PathClosure::of(&creation)
+            .status_caption()
+            .map(|caption| caption.to_ascii_uppercase())
     }
 
     /// Draw the Studio panel into the raster.
@@ -2055,5 +2077,113 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn returning_home_status_names_the_closure_trial() {
+        let mut panel = StudioPanel::default();
+        panel.toggle_help();
+        let columns = 56;
+        panel.open_creation(
+            &numinous_core::StudioCreation::from_capsule("full-return").expect("full-return"),
+        );
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, columns);
+        assert!(
+            context.contains("PERIOD 12"),
+            "full-return must name its period: {context}"
+        );
+        assert!(
+            context.contains("HALF: PLACE NOT STATE"),
+            "full-return half-period is the same trap: {context}"
+        );
+
+        panel.open_creation(
+            &numinous_core::StudioCreation::from_capsule("same-place").expect("same-place"),
+        );
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, columns);
+        assert!(context.contains("PERIOD 1"), "{context}");
+        assert!(context.contains("HALF: PLACE NOT STATE"), "{context}");
+
+        panel.open_creation(
+            &numinous_core::StudioCreation::from_capsule("almost-home").expect("almost-home"),
+        );
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, columns);
+        assert!(context.contains("NO PERIOD"), "{context}");
+
+        let unseen = numinous_core::StudioCreation::new_parametric(
+            "cos(2*pi*t)",
+            "sin(2*pi*(8/5)*t)",
+            0.0,
+            5.0,
+            1.0,
+        )
+        .expect("unseen ratio");
+        panel.open_creation(&unseen);
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, columns);
+        assert!(context.contains("PERIOD 5"), "{context}");
+        assert!(
+            !context.contains("HALF: PLACE NOT STATE"),
+            "8/5 does not return in position at half-period: {context}"
+        );
+
+        let mut raster = Raster::new(900, 700);
+        panel.draw(&mut raster, InputMode::KeyboardMouse, 900, 700);
+        let scale = studio_scale(900);
+        let fitted_columns = 900_usize.saturating_sub(20) / (6 * scale as usize);
+        let [_, (drawn, mark)] = panel.status_lines(InputMode::KeyboardMouse, fitted_columns);
+        assert_composed_text_line(&raster, &drawn, 10 + 44 * scale, scale, mark);
+    }
+
+    #[test]
+    fn bundled_family_walks_without_wrapping() {
+        let mut panel = StudioPanel::default();
+        panel.toggle_help();
+        panel.open_creation(
+            &numinous_core::StudioCreation::from_capsule("full-return").expect("full-return"),
+        );
+        assert!(panel.adjacent_experiment(-1).is_none());
+        let next = panel.adjacent_experiment(1).expect("almost-home");
+        assert_eq!(next.id, "almost-home");
+        panel.open_creation(&next.creation());
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("Almost home")
+        );
+        panel.open_creation(&panel.adjacent_experiment(1).expect("same-place").creation());
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("Same place, another direction")
+        );
+        panel.open_creation(
+            &panel
+                .adjacent_experiment(1)
+                .expect("another-ratio")
+                .creation(),
+        );
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("Another ratio")
+        );
+        assert!(panel.adjacent_experiment(1).is_none());
+        panel.open_creation(&panel.adjacent_experiment(-1).expect("back").creation());
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("Same place, another direction")
+        );
+    }
+
+    #[test]
+    fn a_graph_status_does_not_wear_a_path_trial() {
+        let creation =
+            numinous_core::StudioCreation::new("sin(a*x)", -2.0, 2.0, 1.0).expect("graph");
+        let mut panel = StudioPanel::default();
+        panel.toggle_help();
+        panel.open_creation(&creation);
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 56);
+        assert!(
+            !context.contains("PERIOD"),
+            "a graph is not a closing path: {context}"
+        );
+        assert!(context.contains("REOPENED"), "{context}");
     }
 }

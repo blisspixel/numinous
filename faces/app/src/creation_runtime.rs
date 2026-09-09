@@ -475,6 +475,30 @@ impl App {
         self.set_studio_sound(self.studio_panel.entry_sound());
     }
 
+    /// Optional construction from a room that owns a Studio family.
+    pub(super) fn open_room_construction(&mut self) {
+        let Some(experiment) =
+            numinous_core::first_studio_construction(self.rooms[self.current].meta().id)
+        else {
+            return;
+        };
+        self.open_studio_creation(&experiment.creation());
+        self.banner = Some(feedback::Banner::status(experiment.title, 120));
+    }
+
+    /// Walk the bundled family of the current Studio creation. No wrap.
+    pub(super) fn walk_studio_experiment(&mut self, delta: i32) -> bool {
+        if !self.studio || self.show_help || self.gallery.is_some() || self.share_naming.is_some() {
+            return false;
+        }
+        let Some(experiment) = self.studio_panel.adjacent_experiment(delta) else {
+            return true;
+        };
+        self.open_studio_creation(&experiment.creation());
+        self.banner = Some(feedback::Banner::status(experiment.title, 120));
+        true
+    }
+
     /// Enter Studio mode without touching the panel's formula or voice, so a
     /// reopened creation is not resung by the entry itself.
     fn enter_studio_shell(&mut self) {
@@ -599,8 +623,14 @@ impl App {
         self.open_num_file(path);
     }
 
-    /// The launch-argument front door: a `.num` path or a `numinous://` link.
+    /// The launch-argument front door: a `.num` path, a `numinous://` link,
+    /// or a bundled experiment id.
     pub(super) fn open_start_input(&mut self, input: &str) {
+        if let Some(creation) = numinous_core::studio_experiment(input) {
+            self.open_studio_creation(&creation);
+            self.banner = Some(feedback::Banner::status("REOPENED  ENTER: PLAY", 90));
+            return;
+        }
         if input.starts_with("numinous://") {
             match numinous_core::StudioCreation::from_link(input) {
                 Ok(creation) => {

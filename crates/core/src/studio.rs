@@ -60,6 +60,201 @@ pub fn studio_auto_recipe(seed: u64, step: u64) -> &'static str {
     studio_recipe(seed.wrapping_add(step))
 }
 
+/// One bundled Studio experiment: a titled, portable capsule with a question.
+///
+/// These are garage doors after a touch of math, not a lobby. The `.num`
+/// documents in `docs/experiments/` remain the source; this table is how a
+/// packaged player opens them without a host path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StudioExperiment {
+    /// Stable id, also accepted by [`StudioCreation::from_capsule`].
+    pub id: &'static str,
+    /// Family this experiment belongs to, for filtered lists.
+    pub family: &'static str,
+    /// Capsule title, matching the bundled `.num` document.
+    pub title: &'static str,
+    /// One nonspoiling question to try with this creation.
+    pub invitation: &'static str,
+    num_file: &'static str,
+}
+
+impl StudioExperiment {
+    /// Parse the bundled capsule. The documents are repository invariants.
+    #[must_use]
+    pub fn creation(self) -> StudioCreation {
+        StudioCreation::from_num_file(self.num_file).unwrap_or_else(|error| {
+            panic!(
+                "bundled Studio experiment '{}' must parse: {error}",
+                self.id
+            )
+        })
+    }
+}
+
+/// Bundled Studio experiments, family by family, in the order a player should
+/// meet them.
+pub const STUDIO_EXPERIMENTS: &[StudioExperiment] = &[
+    StudioExperiment {
+        id: "full-return",
+        family: "returning-home",
+        title: "A full return",
+        invitation: "Count how many oscillations each coordinate makes before the whole motion repeats.",
+        num_file: include_str!("../../../docs/experiments/full-return.num"),
+    },
+    StudioExperiment {
+        id: "almost-home",
+        family: "returning-home",
+        title: "Almost home",
+        invitation: "Compare its formula with the first creation. What changed, and what would count as evidence of repetition?",
+        num_file: include_str!("../../../docs/experiments/almost-home.num"),
+    },
+    StudioExperiment {
+        id: "same-place",
+        family: "returning-home",
+        title: "Same place, another direction",
+        invitation: "Evaluate the point at t = 0 and t = 0.5. Would you expect its next move to be the same?",
+        num_file: include_str!("../../../docs/experiments/same-place.num"),
+    },
+    StudioExperiment {
+        id: "another-ratio",
+        family: "returning-home",
+        title: "Another ratio",
+        invitation: "Change one frequency. What would count as a return now?",
+        num_file: include_str!("../../../docs/experiments/another-ratio.num"),
+    },
+    StudioExperiment {
+        id: "circle-to-ellipse",
+        family: "shape-and-scale",
+        title: "Circle to ellipse",
+        invitation: "What changes between a = 1 and a = 4? How wide is the shape compared with its height?",
+        num_file: include_str!("../../../docs/experiments/circle-to-ellipse.num"),
+    },
+    StudioExperiment {
+        id: "uniform-circle",
+        family: "shape-and-scale",
+        title: "Uniform circle",
+        invitation: "Change a from 1 to 4 again. Can the mathematical size change while the fitted picture looks the same?",
+        num_file: include_str!("../../../docs/experiments/uniform-circle.num"),
+    },
+];
+
+/// Look up a bundled experiment by id, or by `experiment:<id>`.
+#[must_use]
+pub fn studio_experiment(id: &str) -> Option<StudioCreation> {
+    studio_experiment_meta(id).map(StudioExperiment::creation)
+}
+
+/// Metadata for a bundled experiment id, or `experiment:<id>`.
+#[must_use]
+pub fn studio_experiment_meta(id: &str) -> Option<StudioExperiment> {
+    let id = id.strip_prefix("experiment:").unwrap_or(id);
+    STUDIO_EXPERIMENTS
+        .iter()
+        .copied()
+        .find(|experiment| experiment.id == id)
+}
+
+/// Bundled experiments, optionally restricted to one family.
+///
+/// # Errors
+/// Returns a guiding message when `family` is not a known family name.
+pub fn studio_experiments_in(family: Option<&str>) -> Result<Vec<StudioExperiment>, String> {
+    match family {
+        None => Ok(STUDIO_EXPERIMENTS.to_vec()),
+        Some(name) => {
+            let listed: Vec<StudioExperiment> = STUDIO_EXPERIMENTS
+                .iter()
+                .copied()
+                .filter(|experiment| experiment.family == name)
+                .collect();
+            if listed.is_empty() {
+                let mut families = Vec::new();
+                for experiment in STUDIO_EXPERIMENTS {
+                    if !families.contains(&experiment.family) {
+                        families.push(experiment.family);
+                    }
+                }
+                Err(format!(
+                    "Unknown experiment family '{name}'. Known families: {}.",
+                    families.join(", ")
+                ))
+            } else {
+                Ok(listed)
+            }
+        }
+    }
+}
+
+/// The Studio family a catalog room offers as an optional construction.
+///
+/// Lissajous owns Returning home. Other rooms stay quiet rather than
+/// inheriting a family they do not ask.
+#[must_use]
+pub fn studio_construction_family(room_id: &str) -> Option<&'static str> {
+    match crate::canonical_room_id(room_id) {
+        "lissajous" => Some("returning-home"),
+        _ => None,
+    }
+}
+
+/// First bundled experiment in a room's construction family, if it has one.
+#[must_use]
+pub fn first_studio_construction(room_id: &str) -> Option<StudioExperiment> {
+    let family = studio_construction_family(room_id)?;
+    studio_experiments_in(Some(family))
+        .ok()
+        .and_then(|listed| listed.into_iter().next())
+}
+
+/// The bundled experiment whose formula matches this creation, if any.
+#[must_use]
+pub fn studio_experiment_matching(creation: &StudioCreation) -> Option<StudioExperiment> {
+    STUDIO_EXPERIMENTS.iter().copied().find(|experiment| {
+        let bundled = experiment.creation();
+        bundled.source() == creation.source() && bundled.second_source() == creation.second_source()
+    })
+}
+
+/// Neighbor in the same family, with no wrap. `delta` is typically -1 or 1.
+#[must_use]
+pub fn adjacent_studio_experiment(id: &str, delta: i32) -> Option<StudioExperiment> {
+    let current = studio_experiment_meta(id)?;
+    let family = studio_experiments_in(Some(current.family)).ok()?;
+    let index = family
+        .iter()
+        .position(|experiment| experiment.id == current.id)?;
+    let next = i32::try_from(index).ok()?.checked_add(delta)?;
+    if next < 0 {
+        return None;
+    }
+    family.get(usize::try_from(next).ok()?).copied()
+}
+
+/// Starter path after the last Returning home contrast.
+///
+/// Both frequencies are 1, so the trial reads period 1. The y ratio is not
+/// a spoiler; changing it is the transfer.
+#[must_use]
+pub fn returning_home_transfer() -> StudioCreation {
+    studio_experiment("another-ratio").expect("bundled another-ratio must parse")
+}
+
+/// Whether this creation is still the unedited transfer starter.
+#[must_use]
+pub fn is_returning_home_transfer(creation: &StudioCreation) -> bool {
+    studio_experiment_matching(creation).is_some_and(|experiment| experiment.id == "another-ratio")
+}
+
+/// Next or previous creation in a construction family walk. No wrap.
+#[must_use]
+pub fn adjacent_construction_creation(
+    creation: &StudioCreation,
+    delta: i32,
+) -> Option<StudioCreation> {
+    let current = studio_experiment_matching(creation)?;
+    adjacent_studio_experiment(current.id, delta).map(StudioExperiment::creation)
+}
+
 /// The most characters a capsule title or author may hold.
 pub const MAX_META_TEXT_CHARS: usize = 64;
 /// The most characters a capsule prose credit may hold.
@@ -822,14 +1017,18 @@ impl StudioCreation {
 
     /// Open portable capsule data supplied directly by a caller.
     ///
-    /// Native links and `.num` text share one bounded input door. Filesystem
-    /// paths are deliberately not accepted here: a face that owns path access
-    /// must use [`Self::from_num_path`] and make that capability explicit.
+    /// Native links, `.num` text, and bundled experiment ids share one bounded
+    /// input door. Filesystem paths are deliberately not accepted here: a face
+    /// that owns path access must use [`Self::from_num_path`] and make that
+    /// capability explicit.
     ///
     /// # Errors
     /// Returns a message when the input is neither a valid native link nor a
     /// valid `.num` document.
     pub fn from_capsule(input: &str) -> Result<Self, String> {
+        if let Some(creation) = studio_experiment(input) {
+            return Ok(creation);
+        }
         if input.starts_with("numinous://") {
             Self::from_link(input)
         } else {
@@ -2115,9 +2314,12 @@ impl Parser {
 mod tests {
     use super::{
         MAX_CREDIT_CHARS, MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_PARSE_DEPTH,
-        MAX_STUDIO_SOURCE_CHARS, STUDIO_RECIPES, StudioCreation, StudioKind, StudioProgram,
-        StudioScale, eval, parse, studio_auto_recipe, studio_recipe, studio_recipe_count,
-        to_melody, to_melody_with_scale,
+        MAX_STUDIO_SOURCE_CHARS, STUDIO_EXPERIMENTS, STUDIO_RECIPES, StudioCreation, StudioKind,
+        StudioProgram, StudioScale, adjacent_construction_creation, adjacent_studio_experiment,
+        eval, first_studio_construction, is_returning_home_transfer, parse,
+        returning_home_transfer, studio_auto_recipe, studio_construction_family, studio_experiment,
+        studio_experiment_matching, studio_experiment_meta, studio_experiments_in, studio_recipe,
+        studio_recipe_count, to_melody, to_melody_with_scale,
     };
 
     #[test]
@@ -2138,6 +2340,144 @@ mod tests {
             studio_auto_recipe(3, studio_recipe_count() as u64),
             studio_recipe(3)
         );
+    }
+
+    #[test]
+    fn bundled_studio_experiments_parse_keep_lineage_and_open_by_id() {
+        assert_eq!(STUDIO_EXPERIMENTS.len(), 6);
+        let full = studio_experiment("full-return").expect("full-return");
+        assert_eq!(full.title(), Some("A full return"));
+        assert_eq!(full.kind(), StudioKind::Parametric);
+        assert_eq!(full.source(), "cos(2*pi*t)");
+        assert_eq!(full.second_source(), Some("sin(2*pi*(17/12)*t)"));
+        assert_eq!((full.xmin(), full.xmax(), full.a()), (0.0, 12.0, 1.0));
+        assert_eq!(
+            studio_experiment("experiment:full-return").expect("prefixed"),
+            full
+        );
+        assert_eq!(
+            StudioCreation::from_capsule("full-return").expect("capsule id"),
+            full
+        );
+
+        let almost = studio_experiment("almost-home").expect("almost-home");
+        assert_eq!(almost.title(), Some("Almost home"));
+        let parent = full.to_link();
+        assert_eq!(almost.descends(), Some(parent.as_str()));
+        assert!(
+            studio_experiment_meta("almost-home")
+                .expect("meta")
+                .invitation
+                .contains("Compare its formula")
+        );
+
+        let same = studio_experiment("same-place").expect("same-place");
+        assert_eq!(same.title(), Some("Same place, another direction"));
+        assert!(same.descends().is_none());
+
+        let transfer = studio_experiment("another-ratio").expect("another-ratio");
+        assert_eq!(transfer.title(), Some("Another ratio"));
+        assert_eq!(transfer.source(), "cos(2*pi*t)");
+        assert_eq!(transfer.second_source(), Some("sin(2*pi*t)"));
+        assert!(!transfer.source().contains("8/5"));
+        assert!(!transfer.second_source().unwrap().contains("8/5"));
+        assert!(transfer.descends().is_none());
+        assert!(
+            studio_experiment_meta("another-ratio")
+                .expect("meta")
+                .invitation
+                .contains("Change one frequency")
+        );
+        assert!(
+            !studio_experiment_meta("another-ratio")
+                .expect("meta")
+                .invitation
+                .contains("8/5")
+        );
+
+        let ellipse = studio_experiment("circle-to-ellipse").expect("circle-to-ellipse");
+        assert_eq!(ellipse.title(), Some("Circle to ellipse"));
+        assert_eq!(ellipse.source(), "a*cos(t)");
+        assert_eq!(ellipse.second_source(), Some("sin(t)"));
+        let uniform = studio_experiment("uniform-circle").expect("uniform-circle");
+        assert_eq!(uniform.title(), Some("Uniform circle"));
+        assert_eq!(uniform.second_source(), Some("a*sin(t)"));
+        assert_eq!(
+            studio_experiment_meta("circle-to-ellipse")
+                .expect("meta")
+                .family,
+            "shape-and-scale"
+        );
+
+        let home = studio_experiments_in(Some("returning-home")).expect("home family");
+        assert_eq!(home.len(), 4);
+        assert!(
+            home.iter()
+                .all(|experiment| experiment.family == "returning-home")
+        );
+        let shapes = studio_experiments_in(Some("shape-and-scale")).expect("shape family");
+        assert_eq!(shapes.len(), 2);
+        assert!(studio_experiments_in(Some("no-such-family")).is_err());
+
+        assert!(studio_experiment("missing").is_none());
+        assert!(StudioCreation::from_capsule("docs/experiments/full-return.num").is_err());
+
+        assert_eq!(
+            studio_construction_family("lissajous"),
+            Some("returning-home")
+        );
+        assert_eq!(studio_construction_family("times-tables"), None);
+        assert_eq!(
+            first_studio_construction("lissajous").map(|experiment| experiment.id),
+            Some("full-return")
+        );
+        assert_eq!(
+            studio_experiment_matching(&full).map(|experiment| experiment.id),
+            Some("full-return")
+        );
+        assert_eq!(
+            adjacent_studio_experiment("full-return", 1).map(|experiment| experiment.id),
+            Some("almost-home")
+        );
+        assert_eq!(
+            adjacent_studio_experiment("almost-home", 1).map(|experiment| experiment.id),
+            Some("same-place")
+        );
+        assert_eq!(
+            adjacent_studio_experiment("same-place", 1).map(|experiment| experiment.id),
+            Some("another-ratio")
+        );
+        assert!(adjacent_studio_experiment("another-ratio", 1).is_none());
+        assert!(adjacent_studio_experiment("full-return", -1).is_none());
+        assert_eq!(
+            adjacent_studio_experiment("same-place", -1).map(|experiment| experiment.id),
+            Some("almost-home")
+        );
+        assert_eq!(
+            adjacent_studio_experiment("another-ratio", -1).map(|experiment| experiment.id),
+            Some("same-place")
+        );
+        assert!(adjacent_studio_experiment("circle-to-ellipse", 1).is_some());
+        assert!(adjacent_studio_experiment("uniform-circle", 1).is_none());
+
+        let transfer = returning_home_transfer();
+        assert_eq!(transfer, studio_experiment("another-ratio").expect("id"));
+        assert!(is_returning_home_transfer(&transfer));
+        let from_same = adjacent_construction_creation(&same, 1).expect("transfer");
+        assert!(is_returning_home_transfer(&from_same));
+        let back = adjacent_construction_creation(&from_same, -1).expect("same-place");
+        assert_eq!(back.title(), Some("Same place, another direction"));
+        assert!(adjacent_construction_creation(&from_same, 1).is_none());
+        assert_eq!(
+            crate::PathClosure::of(&transfer).status_caption(),
+            Some("PERIOD 1".to_string())
+        );
+        let edited =
+            StudioCreation::new_parametric("cos(2*pi*t)", "sin(2*pi*(8/5)*t)", 0.0, 5.0, 1.0)
+                .expect("player-typed ratio");
+        assert!(!is_returning_home_transfer(&edited));
+        assert!(adjacent_construction_creation(&edited, 1).is_none());
+        assert!(adjacent_construction_creation(&edited, -1).is_none());
     }
 
     fn at(source: &str, x: f64) -> f64 {

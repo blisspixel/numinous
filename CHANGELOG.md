@@ -5,6 +5,105 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- Lissajous study no longer points at `docs/experiments/returning-home.md`,
+  a file no packaged player can open. The treatment names the bundled
+  `full-return`, `almost-home`, `same-place`, and `another-ratio` ids in
+  English and the Japanese draft. MCP `study_room` for Lissajous carries
+  the same optional Returning home construction `describe_room` already
+  named, with `next` already bound as a followable `plot_expression` list.
+  Other rooms omit it. `PLAY.md` and the skill say so.
+- `AGENTS.md` now names the seams and honesty rules later sessions were
+  rediscovering from playtests. Core owns product truth; faces translate.
+  A packaged player can read only `PLAY.md`, `README.md`, `VERIFY.md`, and
+  the play-numinous skill. A structured `next` is a followable tool call.
+  `scripts/check.ps1` and `scripts/check.sh` are the local fast floor;
+  `verify` remains the release gate. `CLAUDE.md` stays a thin pointer.
+  `docs/ENGINEERING.md` records the followable-next evidence rule next to
+  the packaged-doc rule it already owned.
+
+### Added
+- Another ratio is a bundled Returning home capsule, `another-ratio`. CLI,
+  MCP, and a packaged player can open it by id, the same way as full-return.
+  PageDown after same-place still reaches it; the walk is the family table,
+  not App-only magic. The y formula stays `sin(2*pi*t)`, so 8/5 remains a
+  player-typed check. `PLAY.md` and the skill name the id.
+- Returning home has an independently checked closure trial. Opening a
+  two-oscillator parametric path reports whether the ideal motion repeats,
+  its exact period when the frequencies are commensurate, and whether a
+  half-period checkpoint is a full-state return or a position-only trap.
+  Full-return is period 12, almost-home is aperiodic, same-place reverses
+  velocity at t = 0.5, and an unseen 8/5 construction is period 5. Core
+  owns the verdict; CLI `open-studio`, MCP creation results, and the App
+  Studio status line project it. Save and reopen preserve it. The trial
+  does not gate play. Lissajous offers CONSTRUCT or `O` to open the first
+  Returning home capsule; PageDown and PageUp walk the family without
+  wrapping. After same-place, PageDown opens Another ratio, a period-1
+  starter with no spoiler frequency. Esc or Tab leaves.
+- Fermat Spiral has an authored Mathematics treatment, the fifth after
+  Lissajous, Times Tables, Kepler Areas, and Golden Angle. It states
+  `r^2 = a^2 theta`, identifies the two opposite signs of `r` with the room's
+  two arms, and derives the equal-area identity between successive turns.
+  English only. The Golden Angle treatment already named this room as the
+  radial half of the packing; the refusal that names where mathematics is
+  written now includes `fermat-spiral`, and `PLAY.md`, the skill, and the
+  README say so.
+- Golden Angle has an authored Mathematics treatment, the fourth after
+  Lissajous, Times Tables, and Kepler Areas. It states Vogel's packing,
+  proves the room's step is `pi*(3-sqrt(5)) = 2*pi/phi^2`, and records that
+  the resting status 137.5 is a one-decimal rounding of that value, not a
+  second definition. English only. The refusal that names where mathematics
+  is written now includes `golden-angle`, and `PLAY.md`, the skill, the
+  README, and `docs/ROSETTA.md` say so.
+- Kepler Areas has an authored Mathematics treatment, the third after
+  Lissajous and Times Tables. It states the centered ellipse with the sun at
+  the positive focus, Kepler's equation, equal-time sectors, and the apsidal
+  speed ratio `(1+e)/(1-e)`, with worked values that a regression recomputes.
+  English only: there is no reviewed translation. The refusal that names
+  where mathematics is written now includes `kepler-laws`, and `PLAY.md`,
+  the skill, and the README say so.
+- Shape and scale is playable from a packaged install, the same honesty
+  gap Returning home had. The two capsules lived only in
+  `docs/experiments/`. They are now bundled as `circle-to-ellipse` and
+  `uniform-circle` in family `shape-and-scale`. `list_experiments` lists
+  every family, or one family when `family` is set. Lissajous still offers
+  only Returning home. `PLAY.md`, the skill, and the README name the ids a
+  downloaded player can open.
+- Returning home is playable from a packaged install. The three Studio
+  capsules were only in `docs/experiments/`, which no release archive
+  carries, so a stranger following the README could not open them. Core now
+  embeds those documents. `plot_expression` with `list_experiments: true`
+  lists them; each row's `next` is `open_creation` with the experiment id
+  already bound. `open_creation`, `fork_creation`, CLI `open-studio`, and
+  an App launch argument accept `full-return`, `almost-home`, and
+  `same-place` without a host path. Describing Lissajous names the same
+  list as an optional construction; it does not replace play. Almost-home
+  still records its parent link. This is a garage after a touch of math,
+  not a lobby in front of the rooms.
+- A plotted or sung Studio experiment now names a way to keep it.
+  `plot_expression` and `sing_expression` return `structuredContent.next`
+  pointing at `save_creation` with the expression, window, and (for a song)
+  pitch map already bound. Following it needs nothing remembered and invents
+  no new experiment. Recipe lists and errors do not get a door: there is no
+  experiment yet. Keep still names fork. The chain is glance, then keep, then
+  remix, each optional. `PLAY.md`, the skill, initialize copy, and the tool
+  descriptions say so. A regression follows the pointer verbatim over stdio
+  and requires the saved capsule to reopen the same window.
+
+### Fixed
+- A packaged stranger can now read the Studio door that alpha 24 already
+  built. `save_creation`, `open_creation`, and `fork_creation` have returned
+  `structuredContent.next` pointing at `fork_creation` with the capsule already
+  bound as `parent` since that release, and a regression follows that pointer
+  verbatim. `PLAY.md` and the packaged play-numinous skill named `descends` on
+  fork and never the callable `next` on save, open, and fork. Initialize
+  instructions and the three tool descriptions were silent too. A playtester
+  on the alpha 24 Linux package found the pointer in live MCP and not in the
+  files a downloaded player can actually open. Those packaged surfaces, the
+  initialize copy, and the tool descriptions now name it. A regression requires
+  the distinctive phrase in `PLAY.md` and the skill so the next honesty gap
+  cannot hide in `docs/PLAYING.md`, which no release archive carries.
+
 ## [0.4.0-alpha.24] - 2026-09-07
 
 ### Fixed

@@ -22,7 +22,12 @@ are preserved. Absolute note times round to 960 ticks per second; the last
 valid source note wins when starts share a tick. Declared duration and trailing
 silence remain, while the native waveform does not. The share README names
 these limits. Parse diagnostics use one-based source columns and name
-the expected expression input across every face. Named sliders, general
+the expected expression input across every face. Two-oscillator parametric
+paths report an independently checked closure when opened: a period, or an
+explicit aperiodic, including the half-period position-only trap. The App
+Studio status names that caption. Lissajous can open the first Returning
+home capsule; PageDown walks the family. That trial is the first Returning
+home capability slice (`PROGRESSION.md`); it does not gate play. Named sliders, general
 multi-expression programs, pattern algebra, tracker, step grid, piano roll,
 MIDI-in, MusicXML, raw shader authoring, and community rooms are design
 targets. `ROADMAP.md` is the status authority.
@@ -183,7 +188,8 @@ window, knob, pitch map, era, and lineage. The first edit begins a remix while
 retaining its chosen window and knob, just as for a graph. A return to an
 untouched creation keeps its preview and identity. The optional
 [Returning home](experiments/returning-home.md) capsules offer a repeating path,
-an ideal irrational contrast, and a deceptive shorter return to investigate.
+an ideal irrational contrast, a deceptive shorter return, and a period-1
+starter to retune.
 
 - **Random** chooses a complete expression from a curated recipe bank and
   restores the default window and parameter. The chosen expression remains

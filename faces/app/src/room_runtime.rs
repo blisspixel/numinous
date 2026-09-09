@@ -17,6 +17,8 @@ impl App {
         self.experiment_primary_consumed = false;
         self.menu
             .set_experiment_available(self.current_room_has_experiment() && !self.the_show);
+        self.menu
+            .set_construct_available(self.current_room_has_construction() && !self.the_show);
         if self.goal_announced {
             self.banner = None;
         }
@@ -81,6 +83,10 @@ impl App {
 
     pub(super) fn current_room_has_experiment(&self) -> bool {
         numinous_core::is_engineered_aha_room(self.rooms[self.current].meta().id)
+    }
+
+    pub(super) fn current_room_has_construction(&self) -> bool {
+        numinous_core::studio_construction_family(self.rooms[self.current].meta().id).is_some()
     }
 
     pub(super) fn chosen_experiment_active(&self) -> bool {

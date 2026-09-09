@@ -80,9 +80,12 @@ Now here is everything you need to start. Three tools:
    does not keep it. To keep one, pass that object as `receipt` on
    `record_journal`. The server replays it; only a live match is stored.
 3. **`study_room`**: when you want, ask what you are seeing. No play or wager is
-   required. Start with the explanation or choose a deeper available treatment;
-   [Study](docs/STUDY.md) has the details. `describe_room` gives a room's title,
-   wing, action, goal, and doorway without the explanation.
+   required. Start with the explanation or choose a deeper available treatment.
+   Mathematics is written for `lissajous`, `times-tables`, `kepler-laws`,
+   `golden-angle`, and `fermat-spiral` so far; `authoredDepthRooms` names them. Studying Lissajous
+   also names Returning home as an optional construction whose `next` lists
+   the bundled capsules. `describe_room` gives a room's title, wing, action,
+   goal, and doorway without the explanation.
 
 Or let the house choose a bounded performance. Call **`watch_show`** with no
 arguments for the first cue of the six-room Strange Loop score. Each result
@@ -272,16 +275,37 @@ language includes `floor(value)`, Euclidean `mod(value, divisor)`,
 `min(left, right)`, and `max(left, right)`. Try
 `min(max(mod(floor(3*x), 5), 1), 3)`, then change one number.
 
+A successful plot or song also carries `structuredContent.next`: a ready
+`save_creation` call with the expression and window already bound. Follow it
+to keep what you just made. A glance is a door into keeping, the same way a
+keep is a door into remix.
+
+Portable Studio questions live here without a host file. Call
+`plot_expression` with `list_experiments: true`, then follow a row's `next` to
+open it. Pass `family: "returning-home"` for `full-return`, `almost-home`,
+`same-place`, and `another-ratio`, or `family: "shape-and-scale"` for
+`circle-to-ellipse` and `uniform-circle`. `open_creation` accepts those ids directly. They are Studio
+doors after a touch of math, not a lobby in front of the rooms. Lissajous
+names Returning home when you describe it or study it. Opening a
+two-oscillator path reports `closure`: an independently checked period, or
+an explicit aperiodic, including the deceptive half-period where position
+returns and velocity reverses. A picture is not the proof. The trial does
+not gate play.
+
 Keep that work when you choose. `save_creation` returns canonical `.num` text,
 a native link, and an exact preview; graph or paired parametric source, pitch
 scale, optional title, author, and era travel inside the capsule.
-`open_creation` accepts the returned text or link, never a
-host file path. `fork_creation` accepts a parent capsule, keeps its canvas, and
-returns a child whose `descends` field names the exact parent link. Each result
-also exposes `journalSubject`, which you may pass as the subject of an explicit
-`record_journal` call with kind `creation`. The capsule remains in the tool
-result for you or your host to keep. Numinous does not create a host file for
-these MCP operations.
+`open_creation` accepts the returned text, a native link, or a bundled
+experiment id, never a host file path. `fork_creation` accepts a parent capsule, keeps its canvas, and
+returns a child whose `descends` field names the exact parent link. Each of
+those three results also carries `structuredContent.next`: a ready
+`fork_creation` call with the capsule already bound as `parent`. Follow it to
+remix what you just kept. Nothing to remember, and no host file. A keep is a
+door back into play, the same way `watch_show` names its next cue and a journal
+cue names `workspace`. Each result also exposes `journalSubject`, which you may
+pass as the subject of an explicit `record_journal` call with kind `creation`.
+The capsule remains in the tool result for you or your host to keep. Numinous
+does not create a host file for these MCP operations.
 
 Pass `audio: true` to `sing_expression` or to `listen_room` and the reply also
 carries a real WAV in an audio content block, beside the notation rather than

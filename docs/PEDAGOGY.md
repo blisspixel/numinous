@@ -43,8 +43,9 @@ the same optional study content through the App reader, CLI `study`, and MCP
 - **Explanation** offers a short account or the pilot's experiment and intuition.
 - **Notes** carries existing room prose, advanced notes, and citations.
 - **Mathematics** requires an authored treatment: assumptions, derivations,
-  examples, limits, and primary references. Lissajous is the first treatment;
-  an unavailable depth is named explicitly. A citation alone does not meet it.
+  examples, limits, and primary references. Lissajous, Times Tables, Kepler
+  Areas, Golden Angle, and Fermat Spiral are the written treatments; an
+  unavailable depth is named explicitly. A citation alone does not meet it.
 
 All three depths are directly selectable. Reading has no level, visit, wager,
 consolidation, or prior-reading requirement, awards no reward, and does not

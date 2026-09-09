@@ -39,7 +39,8 @@ fn server_instructions() -> &'static str {
         "Add from_t with an explicit destination t when you want two exact observations and their temporal delta in one stateless call; a static room can honestly report zero visible change. To stay in a room rather than move through it, pass dwell with several phases: the reply reports what refused to move across all of them, including how much stayed dark inside the region that did move. ",
         "Pass receipt true on play_room for a replay proof in structuredContent.encounter; a receipt is not a memory, and asking does not keep the play. To keep one, pass that object as receipt on record_journal; the server replays it and stores only a live match. ",
         "workspace holds a resettable visit state in this process only: inspect, edit, retrieve, defer, or clear place, intention, pending_prediction, unfinished work, recent notes, and journal handles. Retrieve names one room explicitly, selects at most four current exact-subject matches from the player-owned journal, explains every source, and abstains when no evidence exists. Play does not write the workspace. It is not a memory, and exiting or clearing drops it. ",
-        "save_creation, open_creation, and fork_creation return portable .num text and native links without reading or writing a host file. A creation result's journalSubject can be passed explicitly to record_journal with kind creation, so a signed creative arc remains player-owned. ",
+        "plot_expression and sing_expression name next as save_creation with the expression and window already bound, so a glance is a door into keeping rather than a dead picture. Recipe lists and errors do not. Pass list_experiments true on plot_expression for bundled Studio capsules; each row names next as open_creation with the experiment id already bound, and no host file is read. family returning-home or shape-and-scale selects one set. ",
+        "save_creation, open_creation, and fork_creation return portable .num text and native links without reading or writing a host file. Each creation result names next as fork_creation with the capsule already bound as parent, so a keep is a door back into play rather than an archive entry. A creation result's journalSubject can be passed explicitly to record_journal with kind creation, so a signed creative arc remains player-owned. ",
         "On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. ",
         "On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. ",
         "Read structuredContent.engineeredAha for the beat, visible wager, and post-summon grade. reveal_room opens only after a normal room has been played, or after an engineered Aha has consolidated. ",
@@ -599,7 +600,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "plot_expression",
-                "description": "Create in Formula Jam / Studio. Draw one graph with expr, or one parametric path with x_expr and y_expr over t. Curated recipe and seeded discovery remain graph paths. Optional auto_step with seed walks the same bank like Auto without session state. Pass list_recipes true to inspect it. Unary functions: sin cos tan exp ln abs sqrt floor. Pair functions: mod min max. Constants: pi, e.",
+                "description": "Create in Formula Jam / Studio. Draw one graph with expr, or one parametric path with x_expr and y_expr over t. Curated recipe and seeded discovery remain graph paths. Optional auto_step with seed walks the same bank like Auto without session state. Pass list_recipes true to inspect the graph bank. Pass list_experiments true for bundled Studio capsules: each row names next as open_creation with the experiment id already bound, so a packaged player can open them without a host file. family returning-home or shape-and-scale selects one set. Unary functions: sin cos tan exp ln abs sqrt floor. Pair functions: mod min max. Constants: pi, e. A successful plot names next as save_creation with the expression and window already bound. Recipe lists, experiment lists, and errors do not.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -637,6 +638,15 @@ fn build_tools_catalog() -> Value {
                             "type": "boolean",
                             "description": "When true, return the curated recipe bank without plotting."
                         },
+                        "list_experiments": {
+                            "type": "boolean",
+                            "description": "When true, return bundled Studio experiments without plotting. Each row's next is open_creation with the experiment id already bound."
+                        },
+                        "family": {
+                            "type": "string",
+                            "enum": ["returning-home", "shape-and-scale"],
+                            "description": "With list_experiments: only this family. Omit for every bundled experiment."
+                        },
                         "xmin": { "type": "number", "description": "Left edge of x (default -tau)." },
                         "xmax": { "type": "number", "description": "Right edge of x (default tau)." },
                         "tmin": { "type": "number", "description": "Left edge of parametric time (default -tau)." },
@@ -648,7 +658,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "save_creation",
-                "description": "Save one Studio graph or parametric pair as a portable, titled, signed capsule with a stored pitch scale. Returns bounded .num text, a native numinous:// link, exact parsed fields, and a preview. No host file is created and no host path is accepted or returned. Keep numFile in your own storage, or pass either representation to open_creation and fork_creation.",
+                "description": "Save one Studio graph or parametric pair as a portable, titled, signed capsule with a stored pitch scale. Returns bounded .num text, a native numinous:// link, exact parsed fields, and a preview. No host file is created and no host path is accepted or returned. Keep numFile in your own storage, or pass either representation to open_creation and fork_creation. A successful result names next as fork_creation with the returned capsule already bound as parent.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -708,7 +718,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "open_creation",
-                "description": "Open portable Studio capsule data exactly. Pass either complete .num text or a native numinous:// link, never a filesystem path. Returns canonical .num text, the canonical link, identity, lineage when the .num carries it, and a preview. No host file is read or created.",
+                "description": "Open portable Studio capsule data exactly. Pass complete .num text, a native numinous:// link, or a bundled experiment id (full-return, almost-home, same-place, another-ratio, circle-to-ellipse, uniform-circle), never a filesystem path. Returns canonical .num text, the canonical link, identity, lineage when the .num carries it, and a preview. Two-oscillator parametric paths also return structuredContent.closure: an independently checked period, or an explicit aperiodic, including the deceptive half-period position return. No host file is read or created. A successful result names next as fork_creation with the returned capsule already bound as parent.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -716,7 +726,7 @@ fn build_tools_catalog() -> Value {
                             "type": "string",
                             "minLength": 1,
                             "maxLength": numinous_core::MAX_SHARE_INPUT_BYTES,
-                            "description": "Complete NUMINOUS_STUDIO .num text or numinous://studio link. Filesystem paths are not accepted."
+                            "description": "Complete NUMINOUS_STUDIO .num text, numinous://studio link, or bundled experiment id. Filesystem paths are not accepted."
                         },
                         "width": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_WIDTH, "description": "Preview width (default 72)." },
                         "height": { "type": "integer", "minimum": 2, "maximum": MAX_TOOL_HEIGHT, "description": "Preview height (default 26)." }
@@ -727,7 +737,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "fork_creation",
-                "description": "Remix portable Studio capsule data with explicit lineage. A graph may replace expr; a parametric pair may replace both x_expr and y_expr. The child keeps the parent's domain, parameter, Visual Era, and pitch scale unless scale is supplied, takes only its own title and author, offers editable prose credit from the parent's identity, and records the parent's canonical link. Returns .num text and a link; no host file is read or created.",
+                "description": "Remix portable Studio capsule data with explicit lineage. A graph may replace expr; a parametric pair may replace both x_expr and y_expr. The child keeps the parent's domain, parameter, Visual Era, and pitch scale unless scale is supplied, takes only its own title and author, offers editable prose credit from the parent's identity, and records the parent's canonical link. Returns .num text and a link; no host file is read or created. A successful result names next as fork_creation with the returned capsule already bound as parent.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -735,7 +745,7 @@ fn build_tools_catalog() -> Value {
                             "type": "string",
                             "minLength": 1,
                             "maxLength": numinous_core::MAX_SHARE_INPUT_BYTES,
-                            "description": "Parent NUMINOUS_STUDIO .num text or numinous://studio link. Filesystem paths are not accepted."
+                            "description": "Parent NUMINOUS_STUDIO .num text, numinous://studio link, or bundled experiment id. Filesystem paths are not accepted."
                         },
                         "expr": {
                             "type": "string",
@@ -784,7 +794,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "sing_expression",
-                "description": "Hear your own function through the same Studio grammar: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Choose a portable pitch scale or keep the continuous default. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block. Pass midi true for a Standard MIDI File of the same melody as a resource block: nearest 12-TET keys, leftover cents as pitch bend over plus or minus two semitones, with that range declared in the file.",
+                "description": "Hear your own function through the same Studio grammar: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Choose a portable pitch scale or keep the continuous default. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block. Pass midi true for a Standard MIDI File of the same melody as a resource block: nearest 12-TET keys, leftover cents as pitch bend over plus or minus two semitones, with that range declared in the file. A successful song names next as save_creation with the expression, window, and pitch map already bound.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {

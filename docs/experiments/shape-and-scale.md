@@ -27,8 +27,11 @@ Compare [Uniform circle](uniform-circle.num) when you feel like another puzzle:
 
 Both capsules save one full turn, from `t = 0` to the floating-point value of
 `2*pi`, starting at `a = 1`. The CLI can draw either file with
-`numinous open-studio`, followed by its path. MCP `open_creation` accepts the
-same capsule text in its `capsule` field.
+`numinous open-studio`, followed by its path, or the bundled ids
+`circle-to-ellipse` and `uniform-circle`. MCP `open_creation` accepts the
+same capsule text, or those ids, so a packaged player does not need these
+files. `plot_expression` with `list_experiments` true and
+`family: "shape-and-scale"` lists them and names `open_creation` as `next`.
 
 <details>
 <summary>What the view preserves, and what it hides</summary>

@@ -2,7 +2,7 @@
 
 Can a moving point come home without repeating its motion?
 
-These three small creations let you investigate that question in the current
+These four small creations let you investigate that question in the current
 Studio. Change a formula, compare the result, and keep a version you like.
 There is no score or required order. The explanation below can wait, or you can
 read it first and use the creations to test it.
@@ -17,16 +17,25 @@ It opens paused with the saved formula, time window, and parameter. Enter starts
 the melody. Editing begins a remix while preserving that window and parameter.
 F4 saves a portable share; F6 changes the pitch map. The CLI can draw the same
 file with `numinous open-studio docs/experiments/full-return.num`. The MCP
-`open_creation` tool accepts the capsule's text in its `capsule` field for the
-same experiment.
+`open_creation` tool accepts the capsule's text in its `capsule` field, or the
+bundled ids `full-return`, `almost-home`, `same-place`, and `another-ratio`,
+so a packaged player does not need these files. `plot_expression` with
+`list_experiments` true lists them and names `open_creation` as `next`.
+Opening a capsule reports an independently checked `closure`: whether the
+ideal motion repeats, and whether a half-period checkpoint is a full-state
+return or a position-only trap. The App Studio status names the same caption.
+From Lissajous, CONSTRUCT or `O` opens the first capsule; PageDown walks
+the family, including a period-1 starter titled Another ratio. Change the y
+frequency to try a new return. The picture is not the proof.
 
-## Three paths
+## Four paths
 
 | Creation | Try this |
 | --- | --- |
 | [A full return](full-return.num) | Count how many oscillations each coordinate makes before the whole motion repeats. |
 | [Almost home](almost-home.num) | Compare its formula with the first creation. What changed, and what would count as evidence of repetition? |
 | [Same place, another direction](same-place.num) | Evaluate the point at `t = 0` and `t = 0.5`. Would you expect its next move to be the same? |
+| [Another ratio](another-ratio.num) | Change one frequency. What would count as a return now? |
 
 Almost home is a fork of A full return. Its capsule retains the exact parent
 link, so you can trace the change or give someone else a different branch.
@@ -73,6 +82,7 @@ These cases follow the standard periodic and quasiperiodic oscillator model.
 For a further mathematical treatment, see
 [MIT's Lissajous exercises, section 3](https://math.mit.edu/classes/18.353J/PSetAnswers/AnswerPSet_2024_07.pdf).
 This guide is a playable contrast, not evidence that a participant learned or
-enjoyed it. The proposed in-app quest remains in [PROGRESSION.md](../PROGRESSION.md).
+enjoyed it. The optional walk and transfer are built; a richer overlay remains
+open in [PROGRESSION.md](../PROGRESSION.md).
 
 </details>

@@ -4114,6 +4114,58 @@ fn open_studio_subcommand_parses_and_records_success() {
 }
 
 #[test]
+fn open_studio_accepts_a_bundled_experiment_id() {
+    let mut journey = numinous_core::Journey::default();
+    let code = run(
+        Command::OpenStudio {
+            input: "full-return".to_string(),
+            width: 24,
+            height: 8,
+        },
+        &mut journey,
+    );
+    assert_eq!(code, std::process::ExitCode::SUCCESS);
+    assert_eq!(journey.plays, 1);
+
+    let code = run(
+        Command::OpenStudio {
+            input: "circle-to-ellipse".to_string(),
+            width: 24,
+            height: 8,
+        },
+        &mut journey,
+    );
+    assert_eq!(code, std::process::ExitCode::SUCCESS);
+    assert_eq!(journey.plays, 2);
+}
+
+#[test]
+fn open_studio_reports_returning_home_closure() {
+    let full = open_studio_report("full-return", 24, 8).expect("full-return");
+    assert!(full.contains("closure=periodic period=12"), "{full}");
+    assert!(full.contains("cycles_in_period x=12 y=17"), "{full}");
+
+    let same = open_studio_report("same-place", 24, 8).expect("same-place");
+    assert!(
+        same.contains("half-period t=0.5 position returns"),
+        "{same}"
+    );
+    assert!(same.contains("state does not return"), "{same}");
+
+    let almost = open_studio_report("almost-home", 24, 8).expect("almost-home");
+    assert!(almost.contains("closure=aperiodic"), "{almost}");
+    assert!(almost.contains("y_freq=sqrt(2)"), "{almost}");
+    assert!(
+        almost.contains("ideal motion has no positive common period"),
+        "{almost}"
+    );
+
+    let transfer = open_studio_report("another-ratio", 24, 8).expect("another-ratio");
+    assert!(transfer.contains("closure=periodic period=1"), "{transfer}");
+    assert!(!transfer.contains("8/5"), "{transfer}");
+}
+
+#[test]
 fn failed_open_studio_does_not_record_progress() {
     let mut journey = numinous_core::Journey::default();
     let missing = std::env::temp_dir().join("numinous_cli_studio_missing_test.num");

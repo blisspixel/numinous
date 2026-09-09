@@ -1,0 +1,9 @@
+NUMINOUS_STUDIO 3
+kind=parametric
+xexpr=cos(2*pi*t)
+yexpr=sin(2*pi*t)
+tmin=0
+tmax=1
+a=1
+scale=continuous
+title=Another ratio

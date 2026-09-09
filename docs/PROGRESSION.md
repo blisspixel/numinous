@@ -26,17 +26,25 @@ This gives us a progression system that is:
 
 ## Next capability quest: make a relationship usable
 
-**Designed on 2026-09-04, not built.** Start with one bridge from Lissajous
-motion to a parametric Studio creation. The player chooses a repeating shape,
-compares frequency ratios, investigates closure, and makes a portable path.
-The power is the ability to construct and recognize periodic motion in a new
-case. An expert can enter at construction; Watch and free exploration stay open.
+**Trial and App walk built; overlay quest still open.** One bridge from
+Lissajous motion to a parametric Studio creation. The player chooses a
+repeating shape, compares frequency ratios, investigates closure, and makes a
+portable path. The power is the ability to construct and recognize periodic
+motion in a new case. An expert can enter at construction; Watch and free
+exploration stay open.
 
-The current [Returning home](experiments/returning-home.md) guide offers three
-playable capsules: a full return, an ideal irrational near return, and a
-position-only return with reversed velocity. They use existing Studio tools
-and retained fork lineage. The in-app quest, cross-face trial contract, and
-participant evidence are still open.
+The current [Returning home](experiments/returning-home.md) guide offers four
+playable capsules: a full return, an ideal irrational near return, a
+position-only return with reversed velocity, and a period-1 starter titled
+Another ratio. They use existing Studio tools and retained fork lineage.
+Core `PathClosure` independently checks those four, plus an unseen `8/5`
+ratio, and save/reopen preserves the verdict. CLI `open-studio`, MCP
+`open_creation` / `save_creation` / `fork_creation`, and the App Studio
+status line report the same facts. In the App, Lissajous offers CONSTRUCT or
+`O` to open the first capsule; PageDown and PageUp walk the family without
+wrapping. `another-ratio` is a bundled id, so CLI and MCP open the transfer
+the same way. Changing the y ratio is the transfer. Esc or Tab leaves.
+Participant evidence remains open.
 
 This needs real contrasting cases. Current Lissajous hand tuning snaps to
 integer frequencies, so every hand-built ratio is rational. That alone cannot
