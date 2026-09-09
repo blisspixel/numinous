@@ -122,6 +122,15 @@ def fake_tool_call(
             "expression": arguments["expr"],
             "height": 1,
             "kind": "graph",
+            "next": {
+                "tool": "save_creation",
+                "arguments": {
+                    "expr": arguments["expr"],
+                    "xmin": -1.0,
+                    "xmax": 1.0,
+                    "a": 1.0,
+                },
+            },
             "plot": visible + "\n",
             "recipeCount": 1,
             "recipeIndex": None,
@@ -1786,6 +1795,16 @@ class CollectorTests(unittest.TestCase):
         initialization, result = fake_tool_call("plot_expression", arguments)
         result["structuredContent"]["kind"] = "parametric"
         with self.assertRaisesRegex(collector.CollectorError, "kind must be graph"):
+            collector.project_mcp_result(
+                "plot_expression",
+                result,
+                arguments,
+                initialization["serverInfo"],
+            )
+
+        initialization, result = fake_tool_call("plot_expression", arguments)
+        result["structuredContent"]["next"]["tool"] = "fork_creation"
+        with self.assertRaisesRegex(collector.CollectorError, "followable save_creation"):
             collector.project_mcp_result(
                 "plot_expression",
                 result,
