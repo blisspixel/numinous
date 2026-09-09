@@ -100,9 +100,11 @@ Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 Make something you can keep. [`PLAY.md`](PLAY.md) names bundled Studio paths
 you can open without a host file. Returning home: `full-return`,
 `almost-home`, `same-place`, `another-ratio`. Shape and scale: `circle-to-ellipse`,
-`uniform-circle`. The guides live in the repository:
-[Returning home](docs/experiments/returning-home.md) and
-[Shape and scale](docs/experiments/shape-and-scale.md). The mathematical
+`uniform-circle`. Three readings: `simple-zero`, `a-pole`, `the-circle`,
+`the-bowl`. The guides live in the repository:
+[Returning home](docs/experiments/returning-home.md),
+[Shape and scale](docs/experiments/shape-and-scale.md), and
+[Three readings](docs/experiments/three-readings.md). The mathematical
 review and its limits live in [`docs/MATHEMATICS.md`](docs/MATHEMATICS.md).
 
 ## Status

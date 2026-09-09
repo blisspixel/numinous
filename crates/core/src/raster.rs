@@ -117,6 +117,30 @@ impl Raster {
         self.pixels.iter().filter(|&&p| p != BACKGROUND).count()
     }
 
+    /// Fill a rectangle with the accent scaled by `level` in `0..=1`.
+    ///
+    /// This is for pictures whose marks are a ramp of brightness rather than
+    /// the semantic ink table. Field plates use it so `.` and `#` stay
+    /// distinct instead of collapsing through [`Self::ink`].
+    pub fn shade_rect(&mut self, x: i32, y: i32, width: i32, height: i32, level: f32) {
+        if width <= 0 || height <= 0 {
+            return;
+        }
+        let color = scale(self.accent, 0.25 + 1.45 * level.clamp(0.0, 1.0));
+        let x0 = x.max(0) as usize;
+        let y0 = y.max(0) as usize;
+        let x1 = x.saturating_add(width).max(0) as usize;
+        let y1 = y.saturating_add(height).max(0) as usize;
+        let x1 = x1.min(self.width);
+        let y1 = y1.min(self.height);
+        for row in y0..y1 {
+            let start = row * self.width;
+            for col in x0..x1 {
+                self.pixels[start + col] = color;
+            }
+        }
+    }
+
     /// Dim every pixel to `keep` percent of its brightness, a backdrop for
     /// overlay text so menus stay legible over busy rooms.
     pub fn dim(&mut self, keep: u32) {

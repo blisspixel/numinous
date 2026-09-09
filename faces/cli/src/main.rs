@@ -54,10 +54,10 @@ use render_input::{parse_gesture_arg, parse_gestures, parse_poke_arg, parse_poke
 #[cfg(test)]
 use studio::load_studio_creation;
 use studio::{
-    CreationIdentity, ForkEdits, StudioParameters, fork_studio_creation_extended,
+    CreationIdentity, ForkEdits, StudioParameters, field_report, fork_studio_creation_extended,
     open_studio_report, parametric_report, plot_report, plot_request_error, resolve_plot_source,
-    resolve_sing_input, save_parametric_creation, save_studio_creation_with_scale,
-    sing_request_error,
+    resolve_sing_input, save_field_creation, save_parametric_creation,
+    save_studio_creation_with_scale, sing_request_error,
 };
 #[cfg(test)]
 use studio::{fork_studio_creation, save_studio_creation};
@@ -528,6 +528,15 @@ enum Command {
         /// Right edge of the x range.
         #[arg(long)]
         xmax: Option<f64>,
+        /// Lower edge of a field window. Requires --ymax.
+        #[arg(long)]
+        ymin: Option<f64>,
+        /// Upper edge of a field window. Requires --ymin.
+        #[arg(long)]
+        ymax: Option<f64>,
+        /// Which truth a field plate asserts: phase, height, or zero.
+        #[arg(long)]
+        reading: Option<String>,
         /// Left edge of parametric time (default -tau).
         #[arg(long)]
         tmin: Option<f64>,
@@ -573,7 +582,8 @@ enum Command {
     OpenStudio {
         /// Path to a .num file, a numinous://studio?... link, or a bundled
         /// experiment id (full-return, almost-home, same-place,
-        /// another-ratio, circle-to-ellipse, uniform-circle).
+        /// another-ratio, circle-to-ellipse, uniform-circle, simple-zero,
+        /// a-pole, the-circle, the-bowl).
         input: String,
         /// Plot width in columns.
         #[arg(long, default_value_t = 72)]
@@ -1866,6 +1876,9 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             list_recipes,
             xmin,
             xmax,
+            ymin,
+            ymax,
+            reading,
             tmin,
             tmax,
             a,
@@ -1921,6 +1934,12 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 if xmin.is_some() || xmax.is_some() {
                     return emit(Err(
                         "a parametric plot uses --tmin and --tmax, not --xmin and --xmax\n"
+                            .to_string(),
+                    ));
+                }
+                if ymin.is_some() || ymax.is_some() || reading.is_some() {
+                    return emit(Err(
+                        "a parametric plot is a path, not a field; omit --ymin, --ymax, and --reading\n"
                             .to_string(),
                     ));
                 }
@@ -2003,6 +2022,83 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             if tmin.is_some() || tmax.is_some() {
                 return emit(Err(
                     "--tmin and --tmax are only valid with --x-expr/--y-expr\n".to_string(),
+                ));
+            }
+            if ymin.is_some() != ymax.is_some() {
+                return emit(Err(
+                    "a field plot needs both --ymin and --ymax\n".to_string()
+                ));
+            }
+            let parsed_reading = match reading.as_deref() {
+                None => None,
+                Some(value) => match numinous_core::FieldReading::parse(value) {
+                    Some(reading) => Some(reading),
+                    None => {
+                        return emit(Err("--reading must be phase, height, or zero\n".to_string()));
+                    }
+                },
+            };
+            let field_expr = expr.as_deref().filter(|source| {
+                numinous_core::parse_field(source)
+                    .ok()
+                    .is_some_and(|expression| numinous_core::uses_field_vocabulary(&expression))
+            });
+            let is_field = ymin.is_some() || parsed_reading.is_some() || field_expr.is_some();
+            if is_field {
+                if recipe.is_some() || seed.is_some() || auto_step != 0 {
+                    return emit(Err(
+                        "a field plot is typed; omit --recipe, --seed, and --auto-step\n"
+                            .to_string(),
+                    ));
+                }
+                if animate {
+                    return emit(Err(
+                        "a field plot is a still plate; omit --animate\n".to_string()
+                    ));
+                }
+                let Some(source) = expr.as_deref() else {
+                    return emit(Err("a field plot needs an expression\n".to_string()));
+                };
+                if save.is_some() && scale != numinous_core::StudioScale::Continuous {
+                    return emit(Err("a field is seen first; it has no scale\n".to_string()));
+                }
+                let xmin = xmin.unwrap_or(numinous_core::DEFAULT_FIELD_MIN);
+                let xmax = xmax.unwrap_or(numinous_core::DEFAULT_FIELD_MAX);
+                let ymin = ymin.unwrap_or(numinous_core::DEFAULT_FIELD_MIN);
+                let ymax = ymax.unwrap_or(numinous_core::DEFAULT_FIELD_MAX);
+                let reading = parsed_reading.unwrap_or_default();
+                let report =
+                    match field_report(source, reading, xmin, xmax, ymin, ymax, a, (width, height))
+                    {
+                        Ok(report) => report,
+                        Err(message) => return emit(Err(message)),
+                    };
+                if let Some(path) = save.as_deref() {
+                    match save_field_creation(
+                        source,
+                        reading,
+                        xmin,
+                        xmax,
+                        ymin,
+                        ymax,
+                        a,
+                        CreationIdentity {
+                            title: title.as_deref(),
+                            author: author.as_deref(),
+                            credit: credit.as_deref(),
+                        },
+                        path,
+                    ) {
+                        Ok(message) => print!("{message}"),
+                        Err(message) => return emit(Err(message)),
+                    }
+                }
+                journey.play();
+                return emit(Ok(report));
+            }
+            if parsed_reading.is_some() {
+                return emit(Err(
+                    "--reading is only valid with a field expression\n".to_string()
                 ));
             }
             let source = match resolve_plot_source(expr.as_deref(), recipe, seed, auto_step) {

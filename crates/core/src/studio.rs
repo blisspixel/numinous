@@ -9,6 +9,7 @@
 use std::f64::consts::{E, PI};
 
 use crate::complex::Complex;
+use crate::field::{self, FieldReading, is_real_valued};
 use crate::sound::{Note, SoundSpec};
 
 /// Maximum accepted Studio source length for share files and links.
@@ -137,6 +138,34 @@ pub const STUDIO_EXPERIMENTS: &[StudioExperiment] = &[
         invitation: "Change a from 1 to 4 again. Can the mathematical size change while the fitted picture looks the same?",
         num_file: include_str!("../../../docs/experiments/uniform-circle.num"),
     },
+    StudioExperiment {
+        id: "simple-zero",
+        family: "three-readings",
+        title: "A simple zero",
+        invitation: "Follow the ramp around the origin. How many times does it go around before it meets itself?",
+        num_file: include_str!("../../../docs/experiments/simple-zero.num"),
+    },
+    StudioExperiment {
+        id: "a-pole",
+        family: "three-readings",
+        title: "A pole",
+        invitation: "Compare its formula with A simple zero. Which way does the ramp run now?",
+        num_file: include_str!("../../../docs/experiments/a-pole.num"),
+    },
+    StudioExperiment {
+        id: "the-circle",
+        family: "three-readings",
+        title: "The circle",
+        invitation: "A marked cell is a proved crossing, not a sample. What is a blank cell entitled to claim?",
+        num_file: include_str!("../../../docs/experiments/the-circle.num"),
+    },
+    StudioExperiment {
+        id: "the-bowl",
+        family: "three-readings",
+        title: "The bowl",
+        invitation: "This is the same formula as The circle, read as height. Where does the bowl meet nothing?",
+        num_file: include_str!("../../../docs/experiments/the-bowl.num"),
+    },
 ];
 
 /// Look up a bundled experiment by id, or by `experiment:<id>`.
@@ -212,7 +241,9 @@ pub fn first_studio_construction(room_id: &str) -> Option<StudioExperiment> {
 pub fn studio_experiment_matching(creation: &StudioCreation) -> Option<StudioExperiment> {
     STUDIO_EXPERIMENTS.iter().copied().find(|experiment| {
         let bundled = experiment.creation();
-        bundled.source() == creation.source() && bundled.second_source() == creation.second_source()
+        bundled.source() == creation.source()
+            && bundled.second_source() == creation.second_source()
+            && bundled.reading() == creation.reading()
     })
 }
 
@@ -274,6 +305,8 @@ pub enum StudioKind {
     Graph,
     /// One planar path, `x = f(t)` and `y = g(t)`.
     Parametric,
+    /// One field over the plane, `f(x, y)` or `f(z)`.
+    Field,
 }
 
 impl StudioKind {
@@ -283,6 +316,7 @@ impl StudioKind {
         match self {
             Self::Graph => "graph",
             Self::Parametric => "parametric",
+            Self::Field => "field",
         }
     }
 
@@ -291,6 +325,7 @@ impl StudioKind {
         match value {
             "graph" => Some(Self::Graph),
             "parametric" => Some(Self::Parametric),
+            "field" => Some(Self::Field),
             _ => None,
         }
     }
@@ -359,7 +394,9 @@ impl StudioScale {
 /// version adds identity: an optional title, author, Visual Era, and parent
 /// link. The third adds one paired parametric form and a stored pitch map.
 /// The fourth adds editable prose credit, the sentence a forker writes so
-/// honor is not only a machine `descends` link.
+/// honor is not only a machine `descends` link. The fifth adds a field over
+/// the plane: a second independent variable, a stored 2D window, and which
+/// reading of the field the plate asserts.
 ///
 /// The metadata is data-only, per `docs/EXTENSIBILITY.md` Tier 1: every field
 /// is capped, character-whitelisted, and interpreted by trusted engine code.
@@ -372,8 +409,11 @@ pub struct StudioCreation {
     second_source: Option<String>,
     xmin: f64,
     xmax: f64,
+    ymin: Option<f64>,
+    ymax: Option<f64>,
     a: f64,
     scale: StudioScale,
+    reading: Option<FieldReading>,
     title: Option<String>,
     author: Option<String>,
     credit: Option<String>,
@@ -397,8 +437,11 @@ impl StudioCreation {
             second_source: None,
             xmin,
             xmax,
+            ymin: None,
+            ymax: None,
             a,
             scale: StudioScale::Continuous,
+            reading: None,
             title: None,
             author: None,
             credit: None,
@@ -433,14 +476,90 @@ impl StudioCreation {
             second_source: Some(y_source),
             xmin: tmin,
             xmax: tmax,
+            ymin: None,
+            ymax: None,
             a,
             scale: StudioScale::Continuous,
+            reading: None,
             title: None,
             author: None,
             credit: None,
             era: None,
             descends: None,
         })
+    }
+
+    /// Build a validated field over a requested rectangle of the plane.
+    ///
+    /// The stored window is the rectangle the player asked for. Fitting that
+    /// rectangle to a plate's cell shape happens at draw time, so a circle
+    /// saved from a tall terminal cell reopens as the same mathematics on
+    /// square pixels. `reading` is which proposition the plate asserts, and
+    /// it is part of the artifact: a proved curve and a phase wheel of the
+    /// same formula are not two skins of one creation.
+    ///
+    /// # Errors
+    /// Returns a message if the source is invalid, the window or parameter
+    /// are not finite increasing rectangles, or a zero reading is asked of a
+    /// field that leaves the real line.
+    pub fn new_field(
+        source: impl Into<String>,
+        xmin: f64,
+        xmax: f64,
+        ymin: f64,
+        ymax: f64,
+        a: f64,
+        reading: FieldReading,
+    ) -> Result<Self, String> {
+        let source = source.into().trim().to_string();
+        validate_share_source(&source)?;
+        let expression = parse_field(&source)?;
+        validate_share_numbers(xmin, xmax, a)?;
+        validate_share_numbers(ymin, ymax, a)?;
+        if reading == FieldReading::Zero && !is_real_valued(&expression) {
+            return Err(
+                "the zero reading needs a real-valued field; this one leaves the real line, \
+                 so read its phase instead"
+                    .to_string(),
+            );
+        }
+        Ok(Self {
+            source,
+            second_source: None,
+            xmin,
+            xmax,
+            ymin: Some(ymin),
+            ymax: Some(ymax),
+            a,
+            scale: StudioScale::Continuous,
+            reading: Some(reading),
+            title: None,
+            author: None,
+            credit: None,
+            era: None,
+            descends: None,
+        })
+    }
+
+    /// Change which truth a field plate asserts, keeping the formula and window.
+    ///
+    /// # Errors
+    /// Returns a message when this is not a field, or when the new reading
+    /// cannot be asked of this expression.
+    pub fn with_reading(mut self, reading: FieldReading) -> Result<Self, String> {
+        if self.kind() != StudioKind::Field {
+            return Err("only a field creation has a reading".to_string());
+        }
+        let expression = parse_field(&self.source)?;
+        if reading == FieldReading::Zero && !is_real_valued(&expression) {
+            return Err(
+                "the zero reading needs a real-valued field; this one leaves the real line, \
+                 so read its phase instead"
+                    .to_string(),
+            );
+        }
+        self.reading = Some(reading);
+        Ok(self)
     }
 
     /// Name the creation.
@@ -559,6 +678,9 @@ impl StudioCreation {
         title: Option<&str>,
         author: Option<&str>,
     ) -> Result<Self, String> {
+        if self.kind() == StudioKind::Field {
+            return self.fork_field(source, None, title, author);
+        }
         let mut child = match (&self.second_source, source) {
             (None, source) => {
                 Self::new(source.unwrap_or(&self.source), self.xmin, self.xmax, self.a)?
@@ -571,6 +693,50 @@ impl StudioCreation {
             }
         };
         child = child.with_scale(self.scale);
+        if let Some(era) = self.era {
+            child = child.with_era(era);
+        }
+        if let Some(title) = title {
+            child = child.with_title(title)?;
+        }
+        if let Some(author) = author {
+            child = child.with_author(author)?;
+        }
+        child = child.with_suggested_fork_credit(self);
+        child.with_descends(&self.to_link())
+    }
+
+    /// Fork a field creation, optionally replacing the formula or the reading.
+    /// The requested window, parameter, and era stay with the child.
+    ///
+    /// # Errors
+    /// Returns a message for a non-field parent, an invalid replacement, or
+    /// any invalid child field.
+    pub fn fork_field(
+        &self,
+        source: Option<&str>,
+        reading: Option<FieldReading>,
+        title: Option<&str>,
+        author: Option<&str>,
+    ) -> Result<Self, String> {
+        let Some(parent_reading) = self.reading else {
+            return Err("the parent is not a field".to_string());
+        };
+        let ymin = self
+            .ymin
+            .ok_or_else(|| "the parent field has no ymin".to_string())?;
+        let ymax = self
+            .ymax
+            .ok_or_else(|| "the parent field has no ymax".to_string())?;
+        let mut child = Self::new_field(
+            source.unwrap_or(&self.source),
+            self.xmin,
+            self.xmax,
+            ymin,
+            ymax,
+            self.a,
+            reading.unwrap_or(parent_reading),
+        )?;
         if let Some(era) = self.era {
             child = child.with_era(era);
         }
@@ -676,10 +842,12 @@ impl StudioCreation {
         self.second_source.as_deref()
     }
 
-    /// Whether this capsule is one graph or one parametric path.
+    /// Whether this capsule is one graph, one parametric path, or one field.
     #[must_use]
     pub const fn kind(&self) -> StudioKind {
-        if self.second_source.is_some() {
+        if self.reading.is_some() {
+            StudioKind::Field
+        } else if self.second_source.is_some() {
             StudioKind::Parametric
         } else {
             StudioKind::Graph
@@ -693,6 +861,24 @@ impl StudioCreation {
             Some(y_source) => format!("x(t)={}; y(t)={y_source}", self.source),
             None => self.source.clone(),
         }
+    }
+
+    /// Lower edge of a field window, when this is a field.
+    #[must_use]
+    pub const fn ymin(&self) -> Option<f64> {
+        self.ymin
+    }
+
+    /// Upper edge of a field window, when this is a field.
+    #[must_use]
+    pub const fn ymax(&self) -> Option<f64> {
+        self.ymax
+    }
+
+    /// Which truth a field plate asserts, when this is a field.
+    #[must_use]
+    pub const fn reading(&self) -> Option<FieldReading> {
+        self.reading
     }
 
     /// Left edge of the graph x range or parametric t range.
@@ -728,22 +914,77 @@ impl StudioCreation {
     }
 
     /// Render this exact creation as text, including a parametric path when
-    /// the capsule carries two coordinate expressions.
+    /// the capsule carries two coordinate expressions, or a field plate when
+    /// it carries a reading.
     /// Graphs auto-scale y; parametric paths fit both coordinates with equal
-    /// physical units, including the terminal character aspect.
+    /// physical units, including the terminal character aspect. Fields draw
+    /// the stored reading over the requested window, fitted to tall cells.
     ///
     /// # Errors
     /// Returns a parser, geometry, or all-undefined diagnostic.
     pub fn plot_text(&self, width: usize, height: usize) -> Result<StudioPlot, String> {
+        if self.kind() == StudioKind::Field {
+            return self.plot_field_text(width, height, 0.5);
+        }
         let program = self.program()?;
         plot_program_text(&program, self.xmin, self.xmax, self.a, width, height)
             .map_err(|error| error.message().to_string())
     }
 
+    /// Render this field at a chosen character aspect.
+    ///
+    /// `char_aspect` is how wide a cell is compared with its height: half for
+    /// a terminal, one for square pixels. The stored window is what was asked
+    /// for; the returned plot reports the rectangle actually drawn.
+    ///
+    /// # Errors
+    /// Returns a parser or field-drawing diagnostic.
+    pub fn plot_field_text(
+        &self,
+        width: usize,
+        height: usize,
+        char_aspect: f64,
+    ) -> Result<StudioPlot, String> {
+        let reading = self
+            .reading
+            .ok_or_else(|| "only a field creation draws a field plate".to_string())?;
+        let ymin = self
+            .ymin
+            .ok_or_else(|| "a field creation needs ymin".to_string())?;
+        let ymax = self
+            .ymax
+            .ok_or_else(|| "a field creation needs ymax".to_string())?;
+        let expression = parse_field(&self.source)?;
+        let plate = field::draw(
+            &expression,
+            reading,
+            (self.xmin, self.xmax),
+            (ymin, ymax),
+            self.a,
+            (width, height),
+            char_aspect,
+        )
+        .map_err(|error| error.message().to_string())?;
+        Ok(StudioPlot {
+            text: plate.text,
+            xmin: plate.x_bounds.0,
+            xmax: plate.x_bounds.1,
+            ymin: plate.y_bounds.0,
+            ymax: plate.y_bounds.1,
+        })
+    }
+
     /// Render this exact creation's voice. A parametric creation sings its
     /// y-coordinate over `t`; the x-coordinate remains the visible path.
+    /// A field is seen first: it has no melody yet.
     #[must_use]
     pub fn to_melody(&self, notes: usize) -> SoundSpec {
+        if self.kind() == StudioKind::Field {
+            return SoundSpec {
+                duration: 0.12,
+                notes: Vec::new(),
+            };
+        }
         match self.program() {
             Ok(program) => to_melody_with_scale(
                 program.voice_expression(),
@@ -799,11 +1040,13 @@ impl StudioCreation {
 
     /// Serialize to a `.num` Studio file, in the lowest format version that
     /// carries the content. Plain graphs stay version 1, identity makes them
-    /// version 2, a parametric pair or stored scale uses version 3, and
-    /// prose credit uses version 4.
+    /// version 2, a parametric pair or stored scale uses version 3, prose
+    /// credit uses version 4, and a field uses version 5.
     #[must_use]
     pub fn to_num_file(&self) -> String {
-        let version = if self.credit.is_some() {
+        let version = if self.kind() == StudioKind::Field {
+            5
+        } else if self.credit.is_some() {
             4
         } else if self.kind() == StudioKind::Parametric || self.scale != StudioScale::Continuous {
             3
@@ -819,6 +1062,17 @@ impl StudioCreation {
                 self.source,
                 format_share_number(self.xmin),
                 format_share_number(self.xmax),
+                format_share_number(self.a)
+            ));
+        } else if self.kind() == StudioKind::Field {
+            out.push_str(&format!(
+                "kind=field\nexpr={}\nxmin={}\nxmax={}\nymin={}\nymax={}\nreading={}\na={}\n",
+                self.source,
+                format_share_number(self.xmin),
+                format_share_number(self.xmax),
+                format_share_number(self.ymin.expect("field has ymin")),
+                format_share_number(self.ymax.expect("field has ymax")),
+                self.reading.expect("field has reading").name(),
                 format_share_number(self.a)
             ));
         } else {
@@ -859,11 +1113,11 @@ impl StudioCreation {
         out
     }
 
-    /// Parse a `.num` Studio file, version 1 through 4.
+    /// Parse a `.num` Studio file, version 1 through 5.
     ///
     /// Version 1 rejects the metadata fields rather than ignoring them, so a
     /// file cannot claim the old header while smuggling new content. A header
-    /// past version 4 is refused by name: a future capsule is a fact to
+    /// past version 5 is refused by name: a future capsule is a fact to
     /// report, not a guess to parse.
     ///
     /// # Errors
@@ -877,6 +1131,7 @@ impl StudioCreation {
             Some("NUMINOUS_STUDIO 2") => 2,
             Some("NUMINOUS_STUDIO 3") => 3,
             Some("NUMINOUS_STUDIO 4") => 4,
+            Some("NUMINOUS_STUDIO 5") => 5,
             Some(header) if header.starts_with("NUMINOUS_STUDIO ") => {
                 return Err(
                     "this Studio .num file is from a newer Numinous; update to open it".to_string(),
@@ -890,10 +1145,13 @@ impl StudioCreation {
         let mut y_source: Option<String> = None;
         let mut xmin: Option<f64> = None;
         let mut xmax: Option<f64> = None;
+        let mut ymin: Option<f64> = None;
+        let mut ymax: Option<f64> = None;
         let mut tmin: Option<f64> = None;
         let mut tmax: Option<f64> = None;
         let mut a: Option<f64> = None;
         let mut scale: Option<StudioScale> = None;
+        let mut reading: Option<FieldReading> = None;
         let mut title: Option<String> = None;
         let mut author: Option<String> = None;
         let mut credit: Option<String> = None;
@@ -912,6 +1170,11 @@ impl StudioCreation {
                         "Studio .num field '{key}' needs a NUMINOUS_STUDIO 3 header"
                     ));
                 }
+                "ymin" | "ymax" | "reading" if version < 5 => {
+                    return Err(format!(
+                        "Studio .num field '{key}' needs a NUMINOUS_STUDIO 5 header"
+                    ));
+                }
                 "kind" if kind.is_none() => {
                     kind = Some(
                         StudioKind::parse(value)
@@ -923,13 +1186,24 @@ impl StudioCreation {
                 "yexpr" if y_source.is_none() => y_source = Some(value.to_string()),
                 "xmin" if xmin.is_none() => xmin = Some(parse_share_number("xmin", value)?),
                 "xmax" if xmax.is_none() => xmax = Some(parse_share_number("xmax", value)?),
+                "ymin" if ymin.is_none() => ymin = Some(parse_share_number("ymin", value)?),
+                "ymax" if ymax.is_none() => ymax = Some(parse_share_number("ymax", value)?),
                 "tmin" if tmin.is_none() => tmin = Some(parse_share_number("tmin", value)?),
                 "tmax" if tmax.is_none() => tmax = Some(parse_share_number("tmax", value)?),
                 "a" if a.is_none() => a = Some(parse_share_number("a", value)?),
                 "scale" if scale.is_none() => {
+                    if version >= 5 {
+                        return Err("a field Studio capsule has no scale".to_string());
+                    }
                     scale = Some(
                         StudioScale::parse(value)
                             .ok_or_else(|| format!("unknown Studio scale '{value}'"))?,
+                    );
+                }
+                "reading" if reading.is_none() => {
+                    reading = Some(
+                        FieldReading::parse(value)
+                            .ok_or_else(|| format!("unknown Studio reading '{value}'"))?,
                     );
                 }
                 "title" | "author" | "era" | "descends" if version < 2 => {
@@ -952,8 +1226,9 @@ impl StudioCreation {
                     );
                 }
                 "descends" if descends.is_none() => descends = Some(value.to_string()),
-                "kind" | "expr" | "xexpr" | "yexpr" | "xmin" | "xmax" | "tmin" | "tmax" | "a"
-                | "scale" | "title" | "author" | "era" | "descends" | "credit" => {
+                "kind" | "expr" | "xexpr" | "yexpr" | "xmin" | "xmax" | "ymin" | "ymax"
+                | "tmin" | "tmax" | "a" | "scale" | "reading" | "title" | "author" | "era"
+                | "descends" | "credit" => {
                     return Err(format!("duplicate Studio .num field '{key}'"));
                 }
                 other => return Err(format!("unknown Studio .num field '{other}'")),
@@ -961,15 +1236,48 @@ impl StudioCreation {
         }
         let a = a.ok_or_else(|| "missing a".to_string())?;
         let mut creation = if version < 3 {
+            if ymin.is_some() || ymax.is_some() || reading.is_some() {
+                return Err("graph Studio capsule mixes field fields".to_string());
+            }
             Self::new(
                 source.ok_or_else(|| "missing Studio expression".to_string())?,
                 xmin.ok_or_else(|| "missing xmin".to_string())?,
                 xmax.ok_or_else(|| "missing xmax".to_string())?,
                 a,
             )?
+        } else if version >= 5 {
+            let kind = kind.ok_or_else(|| "missing Studio kind".to_string())?;
+            if kind != StudioKind::Field {
+                return Err("a NUMINOUS_STUDIO 5 capsule needs kind=field".to_string());
+            }
+            if x_source.is_some()
+                || y_source.is_some()
+                || tmin.is_some()
+                || tmax.is_some()
+                || scale.is_some()
+            {
+                return Err("field Studio capsule mixes graph or parametric fields".to_string());
+            }
+            Self::new_field(
+                source.ok_or_else(|| "missing Studio expression".to_string())?,
+                xmin.ok_or_else(|| "missing xmin".to_string())?,
+                xmax.ok_or_else(|| "missing xmax".to_string())?,
+                ymin.ok_or_else(|| "missing ymin".to_string())?,
+                ymax.ok_or_else(|| "missing ymax".to_string())?,
+                a,
+                reading.ok_or_else(|| "missing Studio reading".to_string())?,
+            )?
         } else {
             let kind = kind.ok_or_else(|| "missing Studio kind".to_string())?;
+            if kind == StudioKind::Field {
+                return Err(
+                    "Studio .num field 'kind=field' needs a NUMINOUS_STUDIO 5 header".to_string(),
+                );
+            }
             let scale = scale.ok_or_else(|| "missing Studio scale".to_string())?;
+            if ymin.is_some() || ymax.is_some() || reading.is_some() {
+                return Err("graph Studio capsule mixes field fields".to_string());
+            }
             let creation = match kind {
                 StudioKind::Graph => {
                     if x_source.is_some() || y_source.is_some() || tmin.is_some() || tmax.is_some()
@@ -995,6 +1303,7 @@ impl StudioCreation {
                         a,
                     )?
                 }
+                StudioKind::Field => unreachable!("field kind needs version 5"),
             };
             creation.with_scale(scale)
         };
@@ -1068,8 +1377,18 @@ impl StudioCreation {
     /// in `.num` files, where the byte cap bounds it flat.
     #[must_use]
     pub fn to_link(&self) -> String {
-        let mut link = if self.kind() == StudioKind::Graph && self.scale == StudioScale::Continuous
-        {
+        let mut link = if self.kind() == StudioKind::Field {
+            format!(
+                "numinous://studio?kind=field&expr={}&xmin={}&xmax={}&ymin={}&ymax={}&reading={}&a={}",
+                percent_encode(&self.source),
+                format_share_number(self.xmin),
+                format_share_number(self.xmax),
+                format_share_number(self.ymin.expect("field has ymin")),
+                format_share_number(self.ymax.expect("field has ymax")),
+                self.reading.expect("field has reading").name(),
+                format_share_number(self.a)
+            )
+        } else if self.kind() == StudioKind::Graph && self.scale == StudioScale::Continuous {
             format!(
                 "numinous://studio?expr={}&xmin={}&xmax={}&a={}",
                 percent_encode(&self.source),
@@ -1132,10 +1451,13 @@ impl StudioCreation {
         let mut y_source: Option<String> = None;
         let mut xmin: Option<f64> = None;
         let mut xmax: Option<f64> = None;
+        let mut ymin: Option<f64> = None;
+        let mut ymax: Option<f64> = None;
         let mut tmin: Option<f64> = None;
         let mut tmax: Option<f64> = None;
         let mut a: Option<f64> = None;
         let mut scale: Option<StudioScale> = None;
+        let mut reading: Option<FieldReading> = None;
         let mut title: Option<String> = None;
         let mut author: Option<String> = None;
         let mut credit: Option<String> = None;
@@ -1160,6 +1482,8 @@ impl StudioCreation {
                 "yexpr" if y_source.is_none() => y_source = Some(percent_decode(value)?),
                 "xmin" if xmin.is_none() => xmin = Some(parse_share_number("xmin", value)?),
                 "xmax" if xmax.is_none() => xmax = Some(parse_share_number("xmax", value)?),
+                "ymin" if ymin.is_none() => ymin = Some(parse_share_number("ymin", value)?),
+                "ymax" if ymax.is_none() => ymax = Some(parse_share_number("ymax", value)?),
                 "tmin" if tmin.is_none() => tmin = Some(parse_share_number("tmin", value)?),
                 "tmax" if tmax.is_none() => tmax = Some(parse_share_number("tmax", value)?),
                 "a" if a.is_none() => a = Some(parse_share_number("a", value)?),
@@ -1168,6 +1492,13 @@ impl StudioCreation {
                     scale = Some(
                         StudioScale::parse(&decoded)
                             .ok_or_else(|| format!("unknown Studio scale '{decoded}'"))?,
+                    );
+                }
+                "reading" if reading.is_none() => {
+                    let decoded = percent_decode(value)?;
+                    reading = Some(
+                        FieldReading::parse(&decoded)
+                            .ok_or_else(|| format!("unknown Studio reading '{decoded}'"))?,
                     );
                 }
                 "title" if title.is_none() => title = Some(percent_decode(value)?),
@@ -1180,8 +1511,9 @@ impl StudioCreation {
                             .ok_or_else(|| format!("unknown Studio era '{decoded}'"))?,
                     );
                 }
-                "kind" | "expr" | "xexpr" | "yexpr" | "xmin" | "xmax" | "tmin" | "tmax" | "a"
-                | "scale" | "title" | "author" | "era" | "credit" => {
+                "kind" | "expr" | "xexpr" | "yexpr" | "xmin" | "xmax" | "ymin" | "ymax"
+                | "tmin" | "tmax" | "a" | "scale" | "reading" | "title" | "author" | "era"
+                | "credit" => {
                     return Err(format!("duplicate Studio link field '{key}'"));
                 }
                 other => return Err(format!("unknown Studio link field '{other}'")),
@@ -1195,6 +1527,9 @@ impl StudioCreation {
                     || tmin.is_some()
                     || tmax.is_some()
                     || scale.is_some()
+                    || ymin.is_some()
+                    || ymax.is_some()
+                    || reading.is_some()
                 {
                     return Err("Studio link needs kind for version 3 fields".to_string());
                 }
@@ -1206,8 +1541,15 @@ impl StudioCreation {
                 )?
             }
             Some(StudioKind::Graph) => {
-                if x_source.is_some() || y_source.is_some() || tmin.is_some() || tmax.is_some() {
-                    return Err("graph Studio link mixes parametric fields".to_string());
+                if x_source.is_some()
+                    || y_source.is_some()
+                    || tmin.is_some()
+                    || tmax.is_some()
+                    || ymin.is_some()
+                    || ymax.is_some()
+                    || reading.is_some()
+                {
+                    return Err("graph Studio link mixes parametric or field fields".to_string());
                 }
                 Self::new(
                     source.ok_or_else(|| "missing Studio expression".to_string())?,
@@ -1218,8 +1560,14 @@ impl StudioCreation {
                 .with_scale(scale.ok_or_else(|| "missing Studio scale".to_string())?)
             }
             Some(StudioKind::Parametric) => {
-                if source.is_some() || xmin.is_some() || xmax.is_some() {
-                    return Err("parametric Studio link mixes graph fields".to_string());
+                if source.is_some()
+                    || xmin.is_some()
+                    || xmax.is_some()
+                    || ymin.is_some()
+                    || ymax.is_some()
+                    || reading.is_some()
+                {
+                    return Err("parametric Studio link mixes graph or field fields".to_string());
                 }
                 Self::new_parametric(
                     x_source.ok_or_else(|| "missing parametric x expression".to_string())?,
@@ -1229,6 +1577,25 @@ impl StudioCreation {
                     a,
                 )?
                 .with_scale(scale.ok_or_else(|| "missing Studio scale".to_string())?)
+            }
+            Some(StudioKind::Field) => {
+                if x_source.is_some()
+                    || y_source.is_some()
+                    || tmin.is_some()
+                    || tmax.is_some()
+                    || scale.is_some()
+                {
+                    return Err("field Studio link mixes graph or parametric fields".to_string());
+                }
+                Self::new_field(
+                    source.ok_or_else(|| "missing Studio expression".to_string())?,
+                    xmin.ok_or_else(|| "missing xmin".to_string())?,
+                    xmax.ok_or_else(|| "missing xmax".to_string())?,
+                    ymin.ok_or_else(|| "missing ymin".to_string())?,
+                    ymax.ok_or_else(|| "missing ymax".to_string())?,
+                    a,
+                    reading.ok_or_else(|| "missing Studio reading".to_string())?,
+                )?
             }
         };
         if let Some(title) = title {
@@ -1468,6 +1835,13 @@ pub enum StudioProgram {
         /// Parsed y-coordinate expression.
         y_expression: Expr,
     },
+    /// One field over the plane.
+    Field {
+        /// Canonical source.
+        source: String,
+        /// Parsed field expression.
+        expression: Expr,
+    },
 }
 
 impl StudioProgram {
@@ -1487,6 +1861,13 @@ impl StudioProgram {
         }
         if !source.contains(';') {
             validate_share_source(source)?;
+            let field = parse_field(source)?;
+            if uses_field_vocabulary(&field) {
+                return Ok(Self::Field {
+                    source: source.to_string(),
+                    expression: field,
+                });
+            }
             return Ok(Self::Graph {
                 source: source.to_string(),
                 expression: parse(source)?,
@@ -1515,6 +1896,18 @@ impl StudioProgram {
         })
     }
 
+    /// Parse a field program.
+    ///
+    /// # Errors
+    /// Returns an expression validation or parser diagnostic.
+    pub fn field(source: &str) -> Result<Self, String> {
+        validate_share_source(source)?;
+        Ok(Self::Field {
+            source: source.to_string(),
+            expression: parse_field(source)?,
+        })
+    }
+
     /// Parse a parametric pair.
     ///
     /// # Errors
@@ -1536,9 +1929,15 @@ impl StudioProgram {
     /// # Errors
     /// Returns a parser diagnostic if an invariant has regressed.
     pub fn from_creation(creation: &StudioCreation) -> Result<Self, String> {
-        match creation.second_source() {
-            Some(y_source) => Self::parametric(creation.source(), y_source),
-            None => Self::graph(creation.source()),
+        match creation.kind() {
+            StudioKind::Field => Self::field(creation.source()),
+            StudioKind::Parametric => Self::parametric(
+                creation.source(),
+                creation
+                    .second_source()
+                    .ok_or_else(|| "parametric creation is missing y(t)".to_string())?,
+            ),
+            StudioKind::Graph => Self::graph(creation.source()),
         }
     }
 
@@ -1548,6 +1947,7 @@ impl StudioProgram {
         match self {
             Self::Graph { .. } => StudioKind::Graph,
             Self::Parametric { .. } => StudioKind::Parametric,
+            Self::Field { .. } => StudioKind::Field,
         }
     }
 
@@ -1555,7 +1955,7 @@ impl StudioProgram {
     #[must_use]
     pub fn editor_source(&self) -> String {
         match self {
-            Self::Graph { source, .. } => source.clone(),
+            Self::Graph { source, .. } | Self::Field { source, .. } => source.clone(),
             Self::Parametric {
                 x_source, y_source, ..
             } => format!("x(t)={x_source}; y(t)={y_source}"),
@@ -1566,7 +1966,7 @@ impl StudioProgram {
     #[must_use]
     pub fn sources(&self) -> (&str, Option<&str>) {
         match self {
-            Self::Graph { source, .. } => (source, None),
+            Self::Graph { source, .. } | Self::Field { source, .. } => (source, None),
             Self::Parametric {
                 x_source, y_source, ..
             } => (x_source, Some(y_source)),
@@ -1583,6 +1983,7 @@ impl StudioProgram {
                 y_expression,
                 ..
             } => (eval(x_expression, input, a), eval(y_expression, input, a)),
+            Self::Field { .. } => return None,
         };
         (point.0.is_finite() && point.1.is_finite()).then_some(point)
     }
@@ -1592,8 +1993,26 @@ impl StudioProgram {
     #[must_use]
     pub fn voice_expression(&self) -> &Expr {
         match self {
-            Self::Graph { expression, .. } => expression,
+            Self::Graph { expression, .. } | Self::Field { expression, .. } => expression,
             Self::Parametric { y_expression, .. } => y_expression,
+        }
+    }
+}
+
+/// Whether a parsed expression uses the field grammar's extra vocabulary.
+///
+/// `y`, `z`, `i`, `re`, `im`, `arg`, and `conj` are the leaves and readers a
+/// curve cannot name. A formula that never uses them is a graph even when
+/// parsed as a field, so `sin(x)` stays a graph.
+#[must_use]
+pub fn uses_field_vocabulary(expression: &Expr) -> bool {
+    match expression {
+        Expr::VarIm | Expr::Point | Expr::ImagUnit => true,
+        Expr::Call(Func::Re | Func::Im | Func::Arg | Func::Conj, _) => true,
+        Expr::Num(_) | Expr::Var | Expr::Param => false,
+        Expr::Neg(inner) | Expr::Call(_, inner) => uses_field_vocabulary(inner),
+        Expr::Bin(_, lhs, rhs) | Expr::PairCall(_, lhs, rhs) => {
+            uses_field_vocabulary(lhs) || uses_field_vocabulary(rhs)
         }
     }
 }
@@ -2023,6 +2442,9 @@ fn plot_program_text(
                 ymax,
             })
         }
+        StudioProgram::Field { .. } => {
+            Err(ProgramPlotError::Sampling(PlotTextError::InvalidGeometry))
+        }
     }
 }
 
@@ -2450,13 +2872,14 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_CREDIT_CHARS, MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_PARSE_DEPTH,
-        MAX_STUDIO_SOURCE_CHARS, STUDIO_EXPERIMENTS, STUDIO_RECIPES, StudioCreation, StudioKind,
-        StudioProgram, StudioScale, adjacent_construction_creation, adjacent_studio_experiment,
-        eval, first_studio_construction, is_returning_home_transfer, parse,
-        returning_home_transfer, studio_auto_recipe, studio_construction_family, studio_experiment,
-        studio_experiment_matching, studio_experiment_meta, studio_experiments_in, studio_recipe,
-        studio_recipe_count, to_melody, to_melody_with_scale,
+        FieldReading, MAX_CREDIT_CHARS, MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS,
+        MAX_PARSE_DEPTH, MAX_STUDIO_SOURCE_CHARS, STUDIO_EXPERIMENTS, STUDIO_RECIPES,
+        StudioCreation, StudioKind, StudioProgram, StudioScale, adjacent_construction_creation,
+        adjacent_studio_experiment, eval, first_studio_construction, is_returning_home_transfer,
+        parse, returning_home_transfer, studio_auto_recipe, studio_construction_family,
+        studio_experiment, studio_experiment_matching, studio_experiment_meta,
+        studio_experiments_in, studio_recipe, studio_recipe_count, to_melody, to_melody_with_scale,
+        uses_field_vocabulary,
     };
     use super::{eval_field, parse_field};
     use crate::complex::Complex;
@@ -2606,7 +3029,7 @@ mod tests {
 
     #[test]
     fn bundled_studio_experiments_parse_keep_lineage_and_open_by_id() {
-        assert_eq!(STUDIO_EXPERIMENTS.len(), 6);
+        assert_eq!(STUDIO_EXPERIMENTS.len(), 10);
         let full = studio_experiment("full-return").expect("full-return");
         assert_eq!(full.title(), Some("A full return"));
         assert_eq!(full.kind(), StudioKind::Parametric);
@@ -2679,6 +3102,16 @@ mod tests {
         );
         let shapes = studio_experiments_in(Some("shape-and-scale")).expect("shape family");
         assert_eq!(shapes.len(), 2);
+        let readings = studio_experiments_in(Some("three-readings")).expect("readings family");
+        assert_eq!(readings.len(), 4);
+        assert_eq!(
+            studio_experiment("the-circle").expect("circle").reading(),
+            Some(FieldReading::Zero)
+        );
+        assert_eq!(
+            studio_experiment("the-bowl").expect("bowl").reading(),
+            Some(FieldReading::Height)
+        );
         assert!(studio_experiments_in(Some("no-such-family")).is_err());
 
         assert!(studio_experiment("missing").is_none());
@@ -3260,9 +3693,12 @@ mod tests {
         let err = StudioCreation::from_num_file(smuggled_credit).expect_err("credit needs v4");
         assert!(err.contains("NUMINOUS_STUDIO 4"), "{err}");
         // A future version is a fact to report, not a guess to parse.
-        let future = "NUMINOUS_STUDIO 5\nexpr=x\nxmin=-1\nxmax=1\na=0\n";
+        let future = "NUMINOUS_STUDIO 6\nexpr=x\nxmin=-1\nxmax=1\na=0\n";
         let err = StudioCreation::from_num_file(future).expect_err("future refused");
         assert!(err.contains("newer Numinous"), "{err}");
+        let field_on_four = "NUMINOUS_STUDIO 4\nkind=field\nexpr=z\nxmin=-2\nxmax=2\nymin=-2\nymax=2\nreading=phase\na=1\n";
+        let err = StudioCreation::from_num_file(field_on_four).expect_err("field needs v5");
+        assert!(err.contains("NUMINOUS_STUDIO 5"), "{err}");
     }
 
     #[test]
@@ -3299,6 +3735,69 @@ mod tests {
         assert!(link.contains("kind=parametric"), "{link}");
         assert!(link.contains("xexpr=cos%283%2At%20%2B%20a%29"), "{link}");
         assert_eq!(StudioCreation::from_link(&link).expect("link"), creation);
+    }
+
+    #[test]
+    fn field_capsules_round_trip_as_version_five() {
+        let creation = StudioCreation::new_field(
+            "x^2 + y^2 - 1",
+            -2.0,
+            2.0,
+            -2.0,
+            2.0,
+            1.0,
+            FieldReading::Zero,
+        )
+        .expect("field")
+        .with_title("The circle")
+        .expect("title");
+        assert_eq!(creation.kind(), StudioKind::Field);
+        let text = creation.to_num_file();
+        assert!(text.starts_with("NUMINOUS_STUDIO 5\n"), "{text}");
+        assert!(text.contains("kind=field\n"), "{text}");
+        assert!(text.contains("reading=zero\n"), "{text}");
+        assert!(!text.contains("scale="), "{text}");
+        assert_eq!(
+            StudioCreation::from_num_file(&text).expect("file"),
+            creation
+        );
+        let link = creation.to_link();
+        assert!(link.contains("kind=field"), "{link}");
+        assert!(link.contains("reading=zero"), "{link}");
+        assert_eq!(StudioCreation::from_link(&link).expect("link"), creation);
+
+        let plot = creation.plot_text(72, 28).expect("plot");
+        assert!(plot.text.contains('#'));
+        assert!(!plot.text.contains('?'));
+
+        let child = creation
+            .fork_field(None, Some(FieldReading::Height), Some("The bowl"), None)
+            .expect("fork");
+        assert_eq!(child.reading(), Some(FieldReading::Height));
+        assert_eq!(child.source(), creation.source());
+        assert!(child.descends().unwrap().contains("kind=field"));
+        assert!(child.to_melody(8).notes.is_empty());
+
+        assert!(
+            StudioCreation::new_field("z^2 - 1", -2.0, 2.0, -2.0, 2.0, 1.0, FieldReading::Zero)
+                .is_err()
+        );
+        assert_eq!(
+            StudioProgram::from_editor("x^2 + y^2 - 1")
+                .expect("editor")
+                .kind(),
+            StudioKind::Field
+        );
+        assert_eq!(
+            StudioProgram::from_editor("sin(x)").expect("graph").kind(),
+            StudioKind::Graph
+        );
+        assert_eq!(
+            StudioProgram::from_editor("z").expect("identity").kind(),
+            StudioKind::Field
+        );
+        assert!(uses_field_vocabulary(&parse_field("re(z)").expect("re")));
+        assert!(!uses_field_vocabulary(&parse("sin(x)").expect("sin")));
     }
 
     #[test]

@@ -106,6 +106,29 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
         return tool_error("A parametric plot needs both x_expr and y_expr.");
     }
     let has_parametric = has_x_expr && has_y_expr;
+    let has_ymin = args.get("ymin").is_some();
+    let has_ymax = args.get("ymax").is_some();
+    if has_ymin != has_ymax {
+        return tool_error("A field plot needs both ymin and ymax.");
+    }
+    let reading = match args.get("reading").and_then(Value::as_str) {
+        None => None,
+        Some(value) => match numinous_core::FieldReading::parse(value) {
+            Some(reading) => Some(reading),
+            None => {
+                return tool_error("Argument 'reading' must be phase, height, or zero.");
+            }
+        },
+    };
+    let field_vocab = args
+        .get("expr")
+        .and_then(Value::as_str)
+        .and_then(|source| numinous_core::parse_field(source).ok())
+        .is_some_and(|expression| numinous_core::uses_field_vocabulary(&expression));
+    let is_field = has_ymin || reading.is_some() || field_vocab;
+    if is_field && has_parametric {
+        return tool_error("A field plot uses expr, not x_expr and y_expr.");
+    }
     let has_recipe = args.get("recipe").is_some();
     let has_seed = args.get("seed").is_some();
     let has_auto_step = args.get("auto_step").is_some();
@@ -120,6 +143,103 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
     }
     if has_auto_step && !has_seed {
         return tool_error("auto_step requires seed (stateless Auto walk over the curated bank).");
+    }
+
+    if is_field {
+        if has_recipe || has_seed {
+            return tool_error("A field plot is typed; omit recipe and seed.");
+        }
+        if args.get("tmin").is_some() || args.get("tmax").is_some() {
+            return tool_error("A field plot uses xmin, xmax, ymin, and ymax, not tmin and tmax.");
+        }
+        let Some(source) = args.get("expr").and_then(Value::as_str) else {
+            return tool_error("A field plot needs expr.");
+        };
+        let reading = reading.unwrap_or_default();
+        let xmin = args
+            .get("xmin")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_FIELD_MIN);
+        let xmax = args
+            .get("xmax")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_FIELD_MAX);
+        let ymin = args
+            .get("ymin")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_FIELD_MIN);
+        let ymax = args
+            .get("ymax")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_FIELD_MAX);
+        let a = args
+            .get("a")
+            .and_then(Value::as_f64)
+            .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER);
+        let request = match numinous_core::FieldRequest::new(
+            source,
+            Some(reading),
+            Some(xmin),
+            Some(xmax),
+            Some(ymin),
+            Some(ymax),
+            Some(a),
+            None,
+            None,
+            Some(0.5),
+        ) {
+            Ok(request) => request,
+            Err(error) => return tool_error(&error.to_string()),
+        };
+        let plate = match request.execute() {
+            Ok(plate) => plate,
+            Err(error) => return tool_error(&error.to_string()),
+        };
+        let mut structured = json!({
+            "kind": "field",
+            "expression": source,
+            "discovery": "manual",
+            "a": a,
+            "xmin": xmin,
+            "xmax": xmax,
+            "ymin": ymin,
+            "ymax": ymax,
+            "reading": reading.name(),
+            "drawn": {
+                "xmin": plate.x_bounds.0,
+                "xmax": plate.x_bounds.1,
+                "ymin": plate.y_bounds.0,
+                "ymax": plate.y_bounds.1,
+            },
+            "field": {
+                "reading": plate.reading.name(),
+                "complete": plate.is_complete(),
+                "unresolved": plate.unresolved,
+                "undefined": plate.undefined,
+            },
+            "width": plate.size.0,
+            "height": plate.size.1,
+            "valid": true,
+            "plot": plate.text
+        });
+        structured["next"] = save_creation_next(json!({
+            "expr": source,
+            "xmin": xmin,
+            "xmax": xmax,
+            "ymin": ymin,
+            "ymax": ymax,
+            "reading": reading.name(),
+            "a": a,
+        }));
+        return tool_structured(
+            &format!(
+                "f = {source}    reading {}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\n{}\n\n{}",
+                reading.name(),
+                reading.legend(),
+                plate.text
+            ),
+            structured,
+        );
     }
 
     if has_parametric {
@@ -286,17 +406,71 @@ pub(super) fn save_creation_tool(args: &Value) -> Value {
     }
     if usize::from(source.is_some()) + usize::from(x_source.is_some()) != 1 {
         return tool_error(
-            "Provide expr for a graph, or x_expr with y_expr for a parametric pair.",
+            "Provide expr for a graph or field, or x_expr with y_expr for a parametric pair.",
         );
+    }
+    let has_ymin = args.get("ymin").is_some();
+    let has_ymax = args.get("ymax").is_some();
+    if has_ymin != has_ymax {
+        return tool_error("A field creation needs both ymin and ymax.");
+    }
+    let reading = match args.get("reading").and_then(Value::as_str) {
+        None => None,
+        Some(value) => match numinous_core::FieldReading::parse(value) {
+            Some(reading) => Some(reading),
+            None => {
+                return tool_error("Argument 'reading' must be phase, height, or zero.");
+            }
+        },
+    };
+    let field_vocab = source
+        .and_then(|source| numinous_core::parse_field(source).ok())
+        .is_some_and(|expression| numinous_core::uses_field_vocabulary(&expression));
+    let is_field = has_ymin || reading.is_some() || field_vocab;
+    if is_field && x_source.is_some() {
+        return tool_error("A field creation uses expr, not x_expr and y_expr.");
     }
     let a = args
         .get("a")
         .and_then(Value::as_f64)
         .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER);
     let creation_result = match (source, x_source, y_source) {
+        (Some(source), None, None) if is_field => {
+            if args.get("tmin").is_some() || args.get("tmax").is_some() {
+                return tool_error(
+                    "A field creation uses xmin, xmax, ymin, and ymax, not tmin and tmax.",
+                );
+            }
+            if args.get("scale").is_some() {
+                return tool_error("A field is seen first; it has no scale.");
+            }
+            numinous_core::StudioCreation::new_field(
+                source,
+                args.get("xmin")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(numinous_core::DEFAULT_FIELD_MIN),
+                args.get("xmax")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(numinous_core::DEFAULT_FIELD_MAX),
+                args.get("ymin")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(numinous_core::DEFAULT_FIELD_MIN),
+                args.get("ymax")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(numinous_core::DEFAULT_FIELD_MAX),
+                a,
+                reading.unwrap_or_default(),
+            )
+        }
         (Some(source), None, None) => {
             if args.get("tmin").is_some() || args.get("tmax").is_some() {
                 return tool_error("A graph creation uses xmin and xmax, not tmin and tmax.");
+            }
+            if args.get("ymin").is_some()
+                || args.get("ymax").is_some()
+                || args.get("reading").is_some()
+            {
+                return tool_error("A graph creation does not take ymin, ymax, or reading.");
             }
             numinous_core::StudioCreation::new(
                 source,
@@ -400,6 +574,26 @@ pub(super) fn fork_creation_tool(args: &Value) -> Value {
             }
             parent.fork(
                 expr,
+                args.get("title").and_then(Value::as_str),
+                args.get("author").and_then(Value::as_str),
+            )
+        }
+        numinous_core::StudioKind::Field => {
+            if x_expr.is_some() || y_expr.is_some() {
+                return tool_error("A field fork accepts expr, not x_expr or y_expr.");
+            }
+            let reading = match args.get("reading").and_then(Value::as_str) {
+                None => None,
+                Some(value) => match numinous_core::FieldReading::parse(value) {
+                    Some(reading) => Some(reading),
+                    None => {
+                        return tool_error("Argument 'reading' must be phase, height, or zero.");
+                    }
+                },
+            };
+            parent.fork_field(
+                expr,
+                reading,
                 args.get("title").and_then(Value::as_str),
                 args.get("author").and_then(Value::as_str),
             )
@@ -522,15 +716,18 @@ fn studio_creation_result(
         "action": action,
         "capsuleFormatVersion": capsule_format_version,
         "kind": creation.kind().name(),
-        "expression": (creation.kind() == numinous_core::StudioKind::Graph).then(|| creation.source()),
+        "expression": (creation.kind() != numinous_core::StudioKind::Parametric).then(|| creation.source()),
         "xExpression": (creation.kind() == numinous_core::StudioKind::Parametric).then(|| creation.source()),
         "yExpression": creation.second_source(),
-        "xmin": (creation.kind() == numinous_core::StudioKind::Graph).then(|| creation.xmin()),
-        "xmax": (creation.kind() == numinous_core::StudioKind::Graph).then(|| creation.xmax()),
+        "xmin": (creation.kind() != numinous_core::StudioKind::Parametric).then(|| creation.xmin()),
+        "xmax": (creation.kind() != numinous_core::StudioKind::Parametric).then(|| creation.xmax()),
+        "ymin": creation.ymin(),
+        "ymax": creation.ymax(),
+        "reading": creation.reading().map(numinous_core::FieldReading::name),
         "tmin": (creation.kind() == numinous_core::StudioKind::Parametric).then(|| creation.xmin()),
         "tmax": (creation.kind() == numinous_core::StudioKind::Parametric).then(|| creation.xmax()),
         "a": creation.a(),
-        "scale": creation.scale().name(),
+        "scale": (creation.kind() != numinous_core::StudioKind::Field).then(|| creation.scale().name()),
         "title": creation.title(),
         "author": creation.author(),
         "credit": creation.credit(),
@@ -558,6 +755,13 @@ fn studio_creation_result(
     let closure = numinous_core::PathClosure::of(creation);
     if let Some(value) = closure_json(&closure) {
         structured["closure"] = value;
+    }
+    if creation.kind() == numinous_core::StudioKind::Field {
+        structured["field"] = json!({
+            "reading": creation.reading().map(numinous_core::FieldReading::name),
+            "complete": !preview.text.contains('?'),
+            "unresolved": preview.text.chars().filter(|mark| *mark == '?').count(),
+        });
     }
     // A kept creation that names no way onward is an archive entry, not a door.
     // Every other surface that hands a caller something already says what to do
@@ -588,7 +792,9 @@ fn studio_creation_result(
 
 fn closure_json(closure: &numinous_core::PathClosure) -> Option<Value> {
     match closure {
-        numinous_core::PathClosure::Graph | numinous_core::PathClosure::Unsupported => None,
+        numinous_core::PathClosure::Graph
+        | numinous_core::PathClosure::Field
+        | numinous_core::PathClosure::Unsupported => None,
         numinous_core::PathClosure::Periodic(periodic) => Some(json!({
             "kind": "periodic",
             "period": periodic.period_text,

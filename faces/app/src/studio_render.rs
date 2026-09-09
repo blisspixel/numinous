@@ -1,6 +1,9 @@
 //! Shared deterministic curve sampling and rasterization for Studio surfaces.
 
-use numinous_core::{PlanarProjection, Raster, Surface};
+use numinous_core::{
+    Expr, FieldReading, PlanarProjection, Raster, Surface, draw_field as draw_field_plate,
+    field_mark_level,
+};
 
 struct CurveSamples {
     points: Vec<(usize, f64)>,
@@ -247,6 +250,73 @@ pub fn draw_parametric_rect(
         previous = Some((px, py));
     }
     Some((xmin, xmax, ymin, ymax))
+}
+
+/// Blit a field plate into a raster band as a luminance grid.
+///
+/// Each character of the plate becomes a block of pixels whose brightness
+/// follows the ramp. The plate is the picture: this is not a second colourful
+/// encoding. Square cells (`char_aspect` 1) keep a circle round on pixels.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a field blit needs the plate, the band, and the requested window"
+)]
+pub fn draw_field(
+    raster: &mut Raster,
+    layout: CurveLayout,
+    left: i32,
+    expression: &Expr,
+    reading: FieldReading,
+    xmin: f64,
+    xmax: f64,
+    ymin: f64,
+    ymax: f64,
+    a: f64,
+) -> bool {
+    let width = layout.width.min(raster.width());
+    let height = layout.height.min(raster.height());
+    let plot_height = height as f64 - layout.top - layout.bottom_margin;
+    if !layout.top.is_finite()
+        || !layout.bottom_margin.is_finite()
+        || layout.top < 0.0
+        || layout.bottom_margin < 0.0
+        || plot_height < 8.0
+        || width < 8
+    {
+        return false;
+    }
+    let top = layout.top.round().max(0.0) as i32;
+    let band = plot_height.round().max(8.0) as usize;
+    let cols = width.clamp(8, 160);
+    let rows = (band / 4).clamp(8, 90);
+    let Ok(plate) = draw_field_plate(
+        expression,
+        reading,
+        (xmin, xmax),
+        (ymin, ymax),
+        a,
+        (cols, rows),
+        1.0,
+    ) else {
+        return false;
+    };
+    let cell_w = (width / cols).max(1) as i32;
+    let cell_h = (band / rows).max(1) as i32;
+    for (row, line) in plate.text.lines().enumerate() {
+        for (col, mark) in line.chars().enumerate() {
+            let Some(level) = field_mark_level(mark) else {
+                continue;
+            };
+            raster.shade_rect(
+                left + (col as i32) * cell_w,
+                top + (row as i32) * cell_h,
+                cell_w,
+                cell_h,
+                level,
+            );
+        }
+    }
+    true
 }
 
 #[cfg(test)]

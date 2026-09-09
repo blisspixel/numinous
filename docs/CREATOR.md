@@ -42,7 +42,8 @@ title, author, Era, and a validated `descends` parent link, written only when
 present so plain shares stay version 1. Version 3 adds the first bounded
 multi-expression form, one atomic `x(t), y(t)` pair, plus a stored pitch map.
 Existing version 1 and 2 documents remain unchanged. Version 4 adds editable
-prose credit. Named sliders and general multi-expression programs remain open.
+prose credit. Version 5 adds a field over the plane with a stored reading.
+Named sliders and general multi-expression programs remain open.
 The sung melody can leave as WAV or as a Standard MIDI File on all three faces:
 CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` with `midi: true`, and the App
 F4 share as `melody.mid`. The existing parameter `a` is now explicit: Up/Down
