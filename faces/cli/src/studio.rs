@@ -369,6 +369,12 @@ fn pattern_caption(creation: &StudioCreation) -> String {
             caption.push_str(line);
         }
     }
+    if let Some(roll) = creation.piano_roll_text() {
+        for line in roll.lines() {
+            caption.push_str("\nroll ");
+            caption.push_str(line);
+        }
+    }
     caption
 }
 
@@ -835,6 +841,11 @@ pub(super) fn open_studio_report(
     if let Some(grid) = numinous_core::pattern_grid_text(&pattern) {
         for line in grid.lines() {
             lines.push(format!("grid={line}"));
+        }
+    }
+    if let Some(roll) = creation.piano_roll_text() {
+        for line in roll.lines() {
+            lines.push(format!("roll={line}"));
         }
     }
     Ok(format!("{}\n\n{}", lines.join("\n"), report))

@@ -281,7 +281,8 @@ language includes `floor(value)`, Euclidean `mod(value, divisor)`,
 places three onsets as evenly as possible among eight steps. An integer
 0/1 window also reports `pattern` as tracker text and `grid` as a numbered
 step grid: tresillo is `x..x..x.` under `12345678`. Type `x..x..x.` or
-`pat(x..x..x.)` to write those marks. Overlay rows with `&`.
+`pat(x..x..x.)` to write those marks. Overlay rows with `&`. A sung graph
+also names `roll` as the MIDI piano roll, pitch over time.
 
 A successful plot or song also carries `structuredContent.next`: a ready
 `save_creation` call with the expression and window already bound. Follow it
@@ -304,7 +305,8 @@ to overlay graphs; every graph sings in WAV, and MIDI stays the first curve.
 Capsules write `NUMINOUS_STUDIO 7` only when more than one graph is present.
 Type `euclid(3,8)` for a Euclidean rhythm. Type `x..x..x.` or
 `pat(x..x..x.)` to write tracker marks. An integer 0/1 graph names
-`pattern` as tracker text and `grid` as a numbered step grid. `open_creation`
+`pattern` as tracker text and `grid` as a numbered step grid. The sung
+MIDI voice names `roll` as a piano-roll grid, pitch over time. `open_creation`
 accepts those ids directly. They are Studio
 doors after a touch of math, not a lobby in front of the rooms. Lissajous
 names Returning home when you describe it or study it. In the App,

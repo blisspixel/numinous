@@ -31,6 +31,16 @@ pub const PATTERN_HIT: char = 'x';
 /// Rest mark in the pattern-text view of a 0/1 step graph.
 pub const PATTERN_REST: char = '.';
 
+/// Columns in the piano-roll reading when the creation is not a step pattern.
+///
+/// Matches the default sung-note count so the roll is the same melody the
+/// faces already play.
+pub const PIANO_ROLL_COLUMNS: usize = 32;
+
+/// Root of the Studio melody map, in Hz. A0 of the sung range; 24 semitones
+/// above it is the top of that map.
+const PIANO_ROLL_ROOT_HZ: f32 = 220.0;
+
 /// Maximum editable text for one scalar formula, one labeled parametric pair,
 /// or one overlay program. Each expression keeps the per-source cap above;
 /// this larger bound accounts for extra expressions and their separators.
@@ -1300,6 +1310,27 @@ impl StudioCreation {
             rows.push(row);
         }
         rows
+    }
+
+    /// Piano-roll reading of the sung MIDI voice, pitch over time.
+    ///
+    /// Empty when the creation is silent. Step patterns use one column per
+    /// step so the roll lines up with pattern text and the step grid. Other
+    /// graphs use [`PIANO_ROLL_COLUMNS`]. This is a reading of the same
+    /// notes [`Self::to_midi_melody`] sings, not a second document.
+    #[must_use]
+    pub fn piano_roll_text(&self) -> Option<String> {
+        piano_roll_text(self, piano_roll_note_count(self))
+    }
+
+    /// Piano-roll mark rows, high pitch first, using `x` and `.`.
+    ///
+    /// Empty when the creation is silent. The App paints these cells with
+    /// the same grid drawer the step-grid reading uses.
+    #[must_use]
+    pub fn piano_roll_marks(&self) -> Option<Vec<String>> {
+        piano_roll(self, piano_roll_note_count(self))
+            .map(|rows| rows.into_iter().map(|(_, marks)| marks).collect())
     }
 
     /// The creation's name, when it has one.
@@ -2799,7 +2830,11 @@ pub(crate) fn pattern_pulse(x: f64, hits: &[bool]) -> f64 {
         return f64::NAN;
     }
     let i = x.floor().rem_euclid(n as f64);
-    if hits[i as usize] { 1.0 } else { 0.0 }
+    match hits.get(i as usize) {
+        Some(true) => 1.0,
+        Some(false) => 0.0,
+        None => f64::NAN,
+    }
 }
 
 fn is_integer_value(value: f64) -> bool {
@@ -2866,6 +2901,141 @@ pub fn pattern_grid_text(rows: &[String]) -> Option<String> {
     for row in rows {
         text.push('\n');
         text.push_str(row);
+    }
+    Some(text)
+}
+
+fn piano_roll_note_count(creation: &StudioCreation) -> usize {
+    creation
+        .pattern_rows()
+        .first()
+        .map(|row| row.chars().count())
+        .filter(|count| (1..=MAX_EUCLID_STEPS).contains(count))
+        .unwrap_or(PIANO_ROLL_COLUMNS)
+}
+
+fn melody_semitone(freq: f32) -> Option<i32> {
+    if !freq.is_finite() || freq <= 0.0 {
+        return None;
+    }
+    let ratio = freq / PIANO_ROLL_ROOT_HZ;
+    if !ratio.is_finite() || ratio <= 0.0 {
+        return None;
+    }
+    let semitones = 12.0 * ratio.log2();
+    if !semitones.is_finite() {
+        return None;
+    }
+    Some(semitones.round() as i32)
+}
+
+/// Piano-roll rows of the sung MIDI voice: high pitch first.
+///
+/// Each row is a semitone offset from [`PIANO_ROLL_ROOT_HZ`] and a string of
+/// tracker marks, one column per sung note. Empty when the creation is
+/// silent or a frequency cannot be named as a semitone.
+fn pattern_lead_samples(creation: &StudioCreation) -> Option<Vec<f64>> {
+    if creation.pattern_rows().is_empty() {
+        return None;
+    }
+    match creation.kind() {
+        StudioKind::Graph | StudioKind::Program => {}
+        StudioKind::Parametric | StudioKind::Field => return None,
+    }
+    let program = creation.program().ok()?;
+    let xmin = creation.xmin();
+    let xmax = creation.xmax();
+    if !is_integer_value(xmin) || !is_integer_value(xmax) {
+        return None;
+    }
+    let count = (xmax - xmin) as usize;
+    if !(1..=MAX_EUCLID_STEPS).contains(&count) {
+        return None;
+    }
+    let start = xmin as i64;
+    let mut samples = Vec::with_capacity(count);
+    for offset in 0..count {
+        let y = eval_named(
+            program.voice_expression(),
+            (start + offset as i64) as f64,
+            creation.a(),
+            creation.sliders(),
+        );
+        if !y.is_finite() {
+            return None;
+        }
+        samples.push(y);
+    }
+    Some(samples)
+}
+
+fn piano_roll_spec(creation: &StudioCreation, notes: usize) -> Option<SoundSpec> {
+    let spec = if let Some(samples) = pattern_lead_samples(creation) {
+        spec_from_samples(&samples, creation.scale())
+    } else {
+        creation.to_midi_melody(notes)
+    };
+    (!spec.notes.is_empty()).then_some(spec)
+}
+
+fn piano_roll(creation: &StudioCreation, notes: usize) -> Option<Vec<(i32, String)>> {
+    let spec = piano_roll_spec(creation, notes)?;
+    let pitches: Vec<i32> = spec
+        .notes
+        .iter()
+        .map(|note| melody_semitone(note.freq))
+        .collect::<Option<Vec<_>>>()?;
+    if pitches.is_empty() || pitches.len() > MAX_MELODY_NOTES {
+        return None;
+    }
+    let mut unique = pitches.clone();
+    unique.sort_unstable();
+    unique.dedup();
+    unique.reverse();
+    let rows = unique
+        .into_iter()
+        .map(|pitch| {
+            let marks: String = pitches
+                .iter()
+                .map(|step| {
+                    if *step == pitch {
+                        PATTERN_HIT
+                    } else {
+                        PATTERN_REST
+                    }
+                })
+                .collect();
+            (pitch, marks)
+        })
+        .collect();
+    Some(rows)
+}
+
+/// Labeled piano-roll caption of the sung MIDI voice.
+///
+/// The header is the 1-based note index, ones digit only, indented to the
+/// pitch labels. Tresillo on eight steps is two rows: hits at 24 semitones
+/// and rests at the root. Empty when the creation is silent. This is the
+/// same reading as [`StudioCreation::piano_roll_text`], not a second document.
+#[must_use]
+pub fn piano_roll_text(creation: &StudioCreation, notes: usize) -> Option<String> {
+    let rows = piano_roll(creation, notes)?;
+    let width = rows.first()?.1.chars().count();
+    if width == 0 || rows.iter().any(|(_, marks)| marks.chars().count() != width) {
+        return None;
+    }
+    let label_width = rows
+        .iter()
+        .map(|(pitch, _)| pitch.to_string().len())
+        .max()?;
+    let header: String = (1..=width)
+        .map(|step| char::from_digit((step % 10) as u32, 10).unwrap_or('0'))
+        .collect();
+    let indent = " ".repeat(label_width);
+    let mut text = format!("{indent} {header}");
+    for (pitch, marks) in &rows {
+        text.push('\n');
+        text.push_str(&format!("{pitch:label_width$} {marks}"));
     }
     Some(text)
 }
@@ -3152,27 +3322,11 @@ fn melody_from_norms(samples: &[f32], scale: StudioScale) -> SoundSpec {
     }
 }
 
-/// Turn one expression into a melody with named sliders bound.
-#[must_use]
-pub fn to_melody_with_scale_named(
-    expr: &Expr,
-    xmin: f64,
-    xmax: f64,
-    notes: usize,
-    a: f64,
-    sliders: &[crate::slider::StudioSlider],
-    scale: StudioScale,
-) -> SoundSpec {
-    let notes = notes.clamp(1, MAX_MELODY_NOTES);
-    let step = 0.12_f32;
-    let denom = (notes as f64 - 1.0).max(1.0);
-    let samples: Vec<f64> = (0..notes)
-        .map(|i| eval_named(expr, xmin + (xmax - xmin) * i as f64 / denom, a, sliders))
-        .filter(|y| y.is_finite())
-        .collect();
+fn spec_from_samples(samples: &[f64], scale: StudioScale) -> SoundSpec {
+    const STEP: f32 = 0.12;
     if samples.is_empty() {
         return SoundSpec {
-            duration: step,
+            duration: STEP,
             notes: Vec::new(),
         };
     }
@@ -3189,16 +3343,36 @@ pub fn to_melody_with_scale_named(
             let semitones = quantized_semitones(norm * 24.0, scale);
             Note {
                 freq: 220.0 * 2.0_f32.powf(semitones / 12.0),
-                start: i as f32 * step,
-                dur: step * 1.4,
+                start: i as f32 * STEP,
+                dur: STEP * 1.4,
                 amp: 0.3,
             }
         })
         .collect();
     SoundSpec {
-        duration: note_vec.len() as f32 * step + 0.3,
+        duration: note_vec.len() as f32 * STEP + 0.3,
         notes: note_vec,
     }
+}
+
+/// Turn one expression into a melody with named sliders bound.
+#[must_use]
+pub fn to_melody_with_scale_named(
+    expr: &Expr,
+    xmin: f64,
+    xmax: f64,
+    notes: usize,
+    a: f64,
+    sliders: &[crate::slider::StudioSlider],
+    scale: StudioScale,
+) -> SoundSpec {
+    let notes = notes.clamp(1, MAX_MELODY_NOTES);
+    let denom = (notes as f64 - 1.0).max(1.0);
+    let samples: Vec<f64> = (0..notes)
+        .map(|i| eval_named(expr, xmin + (xmax - xmin) * i as f64 / denom, a, sliders))
+        .filter(|y| y.is_finite())
+        .collect();
+    spec_from_samples(&samples, scale)
 }
 
 fn quantized_semitones(value: f32, scale: StudioScale) -> f32 {
@@ -3969,8 +4143,8 @@ mod tests {
         MAX_META_TEXT_CHARS, MAX_PARSE_DEPTH, MAX_STUDIO_SOURCE_CHARS, STUDIO_EXPERIMENTS,
         STUDIO_RECIPES, StudioCreation, StudioKind, StudioProgram, StudioScale,
         adjacent_construction_creation, adjacent_studio_experiment, eval, eval_named,
-        first_studio_construction, is_returning_home_transfer, parse, returning_home_transfer,
-        studio_auto_recipe, studio_construction_family, studio_experiment,
+        first_studio_construction, is_returning_home_transfer, parse, piano_roll_text,
+        returning_home_transfer, studio_auto_recipe, studio_construction_family, studio_experiment,
         studio_experiment_matching, studio_experiment_meta, studio_experiments_in, studio_recipe,
         studio_recipe_count, to_melody, to_melody_with_scale, to_melody_with_scale_named,
         uses_field_vocabulary,
@@ -4551,11 +4725,22 @@ mod tests {
         assert_eq!(eval(&marks, 1.0, 1.0), 0.0);
         assert_eq!(eval(&marks, 3.0, 1.0), 1.0);
         assert_eq!(eval(&marks, 8.0, 1.0), 1.0);
+        assert_eq!(eval(&marks, -1.0, 1.0), 0.0);
+        assert_eq!(
+            to_melody(&marks, 0.0, 8.0, 32, 1.0),
+            to_melody(&parse("euclid(3,8)").expect("euclid"), 0.0, 8.0, 32, 1.0)
+        );
         let creation = StudioCreation::new("x..x..x.", 0.0, 8.0, 1.0).expect("row");
         assert_eq!(creation.pattern_rows(), ["x..x..x."]);
         assert_eq!(
             StudioProgram::from_editor("x..x..x.")
                 .expect("editor")
+                .kind(),
+            StudioKind::Graph
+        );
+        assert_eq!(
+            StudioProgram::from_editor("pat(x..x..x.)")
+                .expect("named editor")
                 .kind(),
             StudioKind::Graph
         );
@@ -4592,6 +4777,11 @@ mod tests {
                 at("euclid(3,8)", step as f64),
                 "tresillo step {step}"
             );
+            assert_eq!(
+                at("pat(x..x..x.)", step as f64 + 0.75),
+                at("euclid(3,8)", step as f64 + 0.75),
+                "tresillo interior {step}"
+            );
         }
         let handmade = StudioCreation::new("pat(x..x..x.)", 0.0, 8.0, 1.0).expect("named");
         assert_eq!(handmade.pattern_rows(), ["x..x..x."]);
@@ -4615,6 +4805,38 @@ mod tests {
                 .expect_err("overlong row")
                 .contains("at most")
         );
+    }
+
+    #[test]
+    fn the_piano_roll_is_the_sung_midi_voice() {
+        let tresillo = StudioCreation::new("pat(x..x..x.)", 0.0, 8.0, 1.0).expect("tresillo");
+        assert_eq!(
+            piano_roll_text(&tresillo, 8).expect("roll"),
+            "   12345678\n24 x..x..x.\n 0 .xx.xx.x"
+        );
+        assert_eq!(
+            tresillo.piano_roll_text().expect("creation roll"),
+            "   12345678\n24 x..x..x.\n 0 .xx.xx.x"
+        );
+        assert_eq!(
+            tresillo.piano_roll_marks().expect("marks"),
+            ["x..x..x.", ".xx.xx.x"]
+        );
+        let layered =
+            StudioCreation::new_program(["x..x..x.", "x.x.xx.x"], 0.0, 8.0, 1.0).expect("two");
+        assert_eq!(
+            layered.piano_roll_marks().expect("lead curve"),
+            ["x..x..x.", ".xx.xx.x"],
+            "MIDI keeps the first curve"
+        );
+        let silent = studio_experiment("the-circle").expect("zero field");
+        assert!(silent.piano_roll_text().is_none());
+        let euclid = StudioCreation::new("euclid(3,8)", 0.0, 8.0, 1.0).expect("euclid");
+        assert_eq!(euclid.piano_roll_text(), tresillo.piano_roll_text());
+        let curve = StudioCreation::new("sin(x)", -2.0, 2.0, 1.0).expect("curve");
+        let roll = curve.piano_roll_text().expect("sung curve");
+        assert!(roll.contains("1234567890"), "{roll}");
+        assert!(roll.contains('x'), "{roll}");
     }
 
     #[test]

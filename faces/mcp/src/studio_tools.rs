@@ -1045,12 +1045,14 @@ fn parse_sliders(args: &Value) -> Result<Vec<numinous_core::StudioSlider>, Strin
 
 fn attach_pattern(structured: &mut Value, creation: &numinous_core::StudioCreation) {
     let pattern = creation.pattern_rows();
-    if pattern.is_empty() {
-        return;
+    if !pattern.is_empty() {
+        structured["pattern"] = json!(pattern);
+        if let Some(grid) = numinous_core::pattern_grid_text(&pattern) {
+            structured["grid"] = json!(grid);
+        }
     }
-    structured["pattern"] = json!(pattern);
-    if let Some(grid) = numinous_core::pattern_grid_text(&pattern) {
-        structured["grid"] = json!(grid);
+    if let Some(roll) = creation.piano_roll_text() {
+        structured["roll"] = json!(roll);
     }
 }
 

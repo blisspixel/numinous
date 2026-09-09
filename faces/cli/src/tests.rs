@@ -3950,6 +3950,8 @@ fn tracker_marks_plot_save_and_open() {
     assert!(plot.contains('#'), "{plot}");
     assert!(plot.contains("pattern x..x..x."), "{plot}");
     assert!(plot.contains("grid 12345678"), "{plot}");
+    assert!(plot.contains("roll 24 x..x..x."), "{plot}");
+    assert!(plot.contains("roll  0 .xx.xx.x"), "{plot}");
     let bare = super::plot_report_with("x..x..x.", 0.0, 8.0, 1.0, 32, 10, &[]).expect("bare");
     assert!(bare.contains("pattern x..x..x."), "{bare}");
     let layered = super::plot_report_with("x..x..x. & x.x.xx.x", 0.0, 8.0, 1.0, 32, 10, &[])
@@ -3979,6 +3981,7 @@ fn tracker_marks_plot_save_and_open() {
     let opened = super::open_studio_report(&path.to_string_lossy(), 32, 10).expect("reopen");
     assert!(opened.contains("pattern=x..x..x."), "{opened}");
     assert!(opened.contains("grid=12345678"), "{opened}");
+    assert!(opened.contains("roll=24 x..x..x."), "{opened}");
     let _ = std::fs::remove_file(&path);
 }
 
