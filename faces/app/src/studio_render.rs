@@ -1,7 +1,7 @@
 //! Shared deterministic curve sampling and rasterization for Studio surfaces.
 
 use numinous_core::{
-    Expr, FieldReading, PlanarProjection, Raster, StudioSlider, Surface,
+    Expr, FieldReading, PATTERN_HIT, PlanarProjection, Raster, StudioSlider, Surface,
     draw_field_named as draw_field_plate, field_mark_level,
 };
 
@@ -171,6 +171,58 @@ pub fn draw_overlay(
         }
     }
     Some((ymin, ymax))
+}
+
+/// Draw integer 0/1 graphs as a step grid, one row per overlay curve.
+///
+/// This is the Pattern Studio grid reading of the same formula that already
+/// draws and sings. Empty rows, mixed widths, or a band too small to mark
+/// a cell return false and leave the raster unchanged.
+pub fn draw_pattern_grid(raster: &mut Raster, layout: CurveLayout, rows: &[String]) -> bool {
+    let width = layout.width.min(raster.width());
+    let height = layout.height.min(raster.height());
+    let plot_height = height as f64 - layout.top - layout.bottom_margin;
+    if rows.is_empty()
+        || !layout.top.is_finite()
+        || !layout.bottom_margin.is_finite()
+        || layout.top < 0.0
+        || layout.bottom_margin < 0.0
+        || plot_height < 8.0
+        || width < 8
+    {
+        return false;
+    }
+    let steps = rows[0].chars().count();
+    if steps == 0 || rows.iter().any(|row| row.chars().count() != steps) {
+        return false;
+    }
+    let layers = rows.len();
+    let cell_w = ((width as f64) / steps as f64).floor().max(1.0) as i32;
+    let cell_h = (plot_height / layers as f64).floor().max(1.0) as i32;
+    if cell_w < 1 || cell_h < 1 {
+        return false;
+    }
+    let inset = (cell_w.min(cell_h) / 8).max(1);
+    let inner_w = (cell_w - 2 * inset).max(1);
+    let inner_h = (cell_h - 2 * inset).max(1);
+    let top = layout.top.round().max(0.0) as i32;
+    const LAYER_LEVEL: [f32; 4] = [0.96, 0.70, 0.56, 0.42];
+    for (layer, row) in rows.iter().enumerate() {
+        let level = LAYER_LEVEL[layer.min(LAYER_LEVEL.len() - 1)];
+        for (step, mark) in row.chars().enumerate() {
+            if mark != PATTERN_HIT {
+                continue;
+            }
+            raster.shade_rect(
+                (step as i32) * cell_w + inset,
+                top + (layer as i32) * cell_h + inset,
+                inner_w,
+                inner_h,
+                level,
+            );
+        }
+    }
+    true
 }
 
 /// Fit one parametric path with equal physical coordinate units into the band.
@@ -543,6 +595,41 @@ mod tests {
         .expect("drawn curve");
         assert_eq!(drawn, range);
         assert!(raster.lit_count() > 0);
+    }
+
+    #[test]
+    fn a_step_grid_marks_hits_and_leaves_rests() {
+        let mut raster = Raster::new(80, 40);
+        let layout = CurveLayout {
+            width: 80,
+            height: 40,
+            top: 0.0,
+            bottom_margin: 1.0,
+        };
+        assert!(draw_pattern_grid(&mut raster, layout, &["x..x..x.".into()]));
+        let lit = raster.lit_count();
+        assert!(lit > 10, "tresillo has three hits: {lit}");
+        let mut empty = Raster::new(80, 40);
+        assert!(draw_pattern_grid(&mut empty, layout, &["........".into()]));
+        assert_eq!(empty.lit_count(), 0);
+        let mut mixed = Raster::new(80, 40);
+        assert!(!draw_pattern_grid(
+            &mut mixed,
+            layout,
+            &["x.".into(), "x".into()]
+        ));
+        assert_eq!(mixed.lit_count(), 0);
+        let mut tiny = Raster::new(80, 40);
+        assert!(!draw_pattern_grid(
+            &mut tiny,
+            CurveLayout {
+                width: 80,
+                height: 40,
+                top: 0.0,
+                bottom_margin: 39.0,
+            },
+            &["x..x..x.".into()]
+        ));
     }
 
     #[test]

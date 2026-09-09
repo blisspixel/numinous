@@ -47,8 +47,9 @@ Named sliders with declared ranges now ship as version 6. Overlay programs
 of two to four graphs ship as version 7. Euclidean rhythms ship as
 `euclid(hits, steps)` in the expression language; overlay layers them.
 Pattern text of integer 0/1 graphs now ships. Height and phase fields
-sing along the real axis; the zero reading stays silent. Pattern Studio's
-tracker editing, step grid, and piano roll remain open.
+sing along the real axis; the zero reading stays silent. The step-grid
+reading of those rows now ships. Pattern Studio's tracker editing and
+piano roll remain open.
 The sung melody can leave as WAV or as a Standard MIDI File on all three faces:
 CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` with `midi: true`, and the App
 F4 share as `melody.mid`. Overlay programs mix every graph in WAV; MIDI stays

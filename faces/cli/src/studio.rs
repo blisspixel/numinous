@@ -348,7 +348,7 @@ fn pattern_caption(creation: &StudioCreation) -> String {
     if rows.is_empty() {
         return String::new();
     }
-    if creation.kind() == StudioKind::Program {
+    let mut caption = if creation.kind() == StudioKind::Program {
         let body = rows
             .iter()
             .enumerate()
@@ -362,7 +362,14 @@ fn pattern_caption(creation: &StudioCreation) -> String {
         format!("\npattern {body}")
     } else {
         format!("\npattern {}", rows[0])
+    };
+    if let Some(grid) = numinous_core::pattern_grid_text(&rows) {
+        for line in grid.lines() {
+            caption.push_str("\ngrid ");
+            caption.push_str(line);
+        }
     }
+    caption
 }
 
 fn overlay_legend(sources: &[String]) -> String {
@@ -821,8 +828,14 @@ pub(super) fn open_studio_report(
         creation.to_link()
     ));
     lines.extend(PathClosure::of(&creation).report_lines());
-    for row in creation.pattern_rows() {
+    let pattern = creation.pattern_rows();
+    for row in &pattern {
         lines.push(format!("pattern={}", row));
+    }
+    if let Some(grid) = numinous_core::pattern_grid_text(&pattern) {
+        for line in grid.lines() {
+            lines.push(format!("grid={line}"));
+        }
     }
     Ok(format!("{}\n\n{}", lines.join("\n"), report))
 }
