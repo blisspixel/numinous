@@ -75,6 +75,10 @@ echo "== release packaging =="
 python3 scripts/test-package-release.py
 echo "== portable agent plugin =="
 python3 scripts/test-agent-plugin.py
+echo "== Sensory Lift platform proof contract =="
+python3 scripts/test-sensory-platform-proof.py
+echo "== Sensory Lift physical set contract =="
+python3 scripts/test-sensory-platform-set.py
 echo "== release engagement contract =="
 python3 scripts/test-release-engagement-smoke.py
 echo "== physical input session contract =="
@@ -89,6 +93,12 @@ echo "== dependency migration performance contract =="
 python3 scripts/test-dependency-migration-performance.py
 echo "== dependency migration performance receipt =="
 python3 scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
+if cargo +1.89.0 --version >/dev/null 2>&1; then
+    echo "== MSRV 1.89 =="
+    cargo +1.89.0 check --workspace --all-targets --locked
+else
+    echo "== MSRV 1.89 == (skipped: run 'rustup toolchain install 1.89.0' to enable; CI enforces it)"
+fi
 echo "== build =="
 cargo build --workspace --locked
 echo "== study parity =="

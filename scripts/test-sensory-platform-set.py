@@ -145,10 +145,15 @@ def valid_records() -> list[tuple[dict[str, object], bytes]]:
 
 class SensoryPlatformSetTests(unittest.TestCase):
     def test_contract_runs_once_in_every_local_and_ci_gate(self) -> None:
+        # The release gate belongs on this list. It was missing, and so was the
+        # contract: verify could print that every check passed while the CI job
+        # that runs this file was the one about to fail.
         command = "scripts/test-sensory-platform-set.py"
         for path in (
             ROOT / "scripts" / "check.ps1",
             ROOT / "scripts" / "check.sh",
+            ROOT / "scripts" / "verify.ps1",
+            ROOT / "scripts" / "verify.sh",
             ROOT / "scripts" / "hooks" / "pre-commit",
             ROOT / ".github" / "workflows" / "ci.yml",
         ):

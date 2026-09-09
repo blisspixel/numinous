@@ -80,6 +80,8 @@ Step "understanding study runner" { python scripts/test-understanding-study.py }
 Step "understanding study collector" { python scripts/test-understanding-collect.py }
 Step "release packaging" { python scripts/test-package-release.py }
 Step "portable agent plugin" { python scripts/test-agent-plugin.py }
+Step "Sensory Lift platform proof contract" { python scripts/test-sensory-platform-proof.py }
+Step "Sensory Lift physical set contract" { python scripts/test-sensory-platform-set.py }
 Step "release engagement contract" { python scripts/test-release-engagement-smoke.py }
 Step "physical input session contract" { python scripts/test-input-hardware-session.py }
 Step "release SBOM contract" { python scripts/test-release-sbom.py }
@@ -87,6 +89,12 @@ Step "release workflow contract" { python scripts/test-release-workflow.py }
 Step "workflow action policy" { python scripts/test-workflow-pins.py }
 Step "dependency migration performance contract" { python scripts/test-dependency-migration-performance.py }
 Step "dependency migration performance receipt" { python scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json }
+cargo +1.89.0 --version *> $null
+if ($LASTEXITCODE -eq 0) {
+    Step "MSRV 1.89" { cargo +1.89.0 check --workspace --all-targets --locked }
+} else {
+    Write-Host "`n== MSRV 1.89 == (skipped: run 'rustup toolchain install 1.89.0' to enable; CI enforces it)" -ForegroundColor Yellow
+}
 Step "build"  { cargo build --workspace --locked }
 Step "study parity" {
     $studyMetadata = cargo metadata --no-deps --format-version 1 --locked | ConvertFrom-Json
