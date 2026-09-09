@@ -460,6 +460,7 @@ fn draw_tile_curve(
             ymin,
             ymax,
             a,
+            entry.creation.sliders(),
         );
         return;
     }
@@ -474,14 +475,18 @@ fn draw_tile_curve(
             },
             xmin,
             xmax,
-            |input| entry.program.point(input, a),
+            |input| {
+                entry
+                    .program
+                    .point_named(input, a, entry.creation.sliders())
+            },
         );
         return;
     }
     let points: Vec<(usize, f64)> = (0..tile_width)
         .filter_map(|column| {
             let x = xmin + span * column as f64 / (tile_width as f64 - 1.0);
-            let point = entry.program.point(x, a)?;
+            let point = entry.program.point_named(x, a, entry.creation.sliders())?;
             point.1.is_finite().then_some((column, point.1))
         })
         .collect();

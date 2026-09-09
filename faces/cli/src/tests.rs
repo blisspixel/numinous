@@ -3440,6 +3440,7 @@ fn plot_discovery_resolves_recipe_seed_and_list() {
             title: None,
             author: None,
             credit: None,
+            slider: Vec::new(),
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3506,6 +3507,7 @@ fn parametric_plot_saves_reopens_and_records_progress_once() {
             title: Some("Three by Two".to_string()),
             author: None,
             credit: None,
+            slider: Vec::new(),
             scale: super::StudioScaleArg::Pentatonic,
         },
         &mut journey,
@@ -3556,6 +3558,7 @@ fn field_plot_saves_reopens_and_records_progress_once() {
             title: Some("The circle".to_string()),
             author: None,
             credit: None,
+            slider: Vec::new(),
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3603,6 +3606,7 @@ fn a_partial_parametric_pair_is_refused_before_progress() {
             title: None,
             author: None,
             credit: None,
+            slider: Vec::new(),
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3640,6 +3644,7 @@ fn a_parametric_plot_refuses_graph_range_flags_before_progress() {
             title: None,
             author: None,
             credit: None,
+            slider: Vec::new(),
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3702,6 +3707,45 @@ fn plot_save_writes_a_portable_studio_file() {
         save_studio_creation("sin(a*x)", -2.0, 2.0, 0.5, None, None, &path).is_err(),
         "save should not overwrite an existing share file"
     );
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
+fn named_sliders_plot_save_and_open_round_trip() {
+    let path = std::env::temp_dir().join("numinous_cli_named_slider_save_test.num");
+    let _ = std::fs::remove_file(&path);
+    let sliders = [numinous_core::StudioSlider::new("b", 2.0, 0.25, 8.0).expect("b")];
+    let plot = super::plot_report_with("sin(b*x)", -1.0, 1.0, 1.0, 32, 10, &sliders).expect("plot");
+    assert!(plot.contains("sliders b=2:0.25:8"), "{plot}");
+    let message = super::save_studio_creation_with_sliders(
+        "sin(b*x)",
+        super::StudioParameters {
+            minimum: -1.0,
+            maximum: 1.0,
+            a: 1.0,
+            scale: numinous_core::StudioScale::Continuous,
+        },
+        super::CreationIdentity {
+            title: Some("An extra knob"),
+            author: None,
+            credit: None,
+        },
+        &sliders,
+        &path,
+    )
+    .expect("save");
+    assert!(message.contains("numinous://studio?"));
+    let text = std::fs::read_to_string(&path).expect("saved");
+    assert!(text.starts_with("NUMINOUS_STUDIO 6\n"), "{text}");
+    let opened = super::open_studio_report(path.to_str().expect("utf8"), 32, 10).expect("open");
+    assert!(opened.contains("slider=b:2:0.25:8"), "{opened}");
+    let extra = super::open_studio_report("extra-knob", 32, 10).expect("bundled extra");
+    assert!(extra.contains("title=An extra knob"), "{extra}");
+    assert!(extra.contains("slider=b:1:-2:2"), "{extra}");
+    let ratio = super::open_studio_report("live-ratio", 48, 16).expect("bundled ratio");
+    assert!(ratio.contains("title=A live ratio"), "{ratio}");
+    assert!(ratio.contains("slider=p:3:1:8"), "{ratio}");
+    assert!(ratio.contains("closure=periodic period=1"), "{ratio}");
     let _ = std::fs::remove_file(&path);
 }
 
@@ -3930,6 +3974,7 @@ fn a_title_without_save_is_refused_before_progress() {
             title: Some("Slow Waves".to_string()),
             author: None,
             credit: None,
+            slider: Vec::new(),
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -3969,6 +4014,7 @@ fn plot_save_and_animate_is_rejected_before_progress() {
             title: None,
             author: None,
             credit: None,
+            slider: Vec::new(),
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -4007,6 +4053,7 @@ fn invalid_animated_plot_is_rejected_before_progress() {
             title: None,
             author: None,
             credit: None,
+            slider: Vec::new(),
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -4047,6 +4094,7 @@ fn plot_save_waits_for_a_valid_still_plot() {
             title: None,
             author: None,
             credit: None,
+            slider: Vec::new(),
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -4087,6 +4135,7 @@ fn plot_save_waits_for_finite_samples() {
             title: None,
             author: None,
             credit: None,
+            slider: Vec::new(),
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -4127,6 +4176,7 @@ fn failed_plot_save_does_not_record_progress() {
             title: None,
             author: None,
             credit: None,
+            slider: Vec::new(),
             scale: super::StudioScaleArg::Continuous,
         },
         &mut journey,
@@ -4271,7 +4321,7 @@ fn sing_resolves_a_studio_capsule_with_its_own_window_and_knob() {
     let creation = numinous_core::StudioCreation::new("sin(a*x)", -2.0, 3.0, 0.5).expect("capsule");
     std::fs::write(&path, creation.to_num_file()).expect("write capsule");
 
-    let (source, xmin, xmax, a, scale) =
+    let (source, xmin, xmax, a, scale, _sliders) =
         super::resolve_sing_input(&path.to_string_lossy(), None, None, None)
             .expect("capsule resolves");
     assert_eq!(source, "sin(a*x)");
@@ -4279,12 +4329,13 @@ fn sing_resolves_a_studio_capsule_with_its_own_window_and_knob() {
     assert_eq!(scale, numinous_core::StudioScale::Continuous);
 
     // An explicit flag still overrides the capsule's own value.
-    let (_, _, _, a, _) = super::resolve_sing_input(&path.to_string_lossy(), None, None, Some(2.0))
-        .expect("override resolves");
+    let (_, _, _, a, _, _) =
+        super::resolve_sing_input(&path.to_string_lossy(), None, None, Some(2.0))
+            .expect("override resolves");
     assert_eq!(a, 2.0);
 
     // Raw math keeps the documented defaults.
-    let (source, xmin, xmax, a, scale) =
+    let (source, xmin, xmax, a, scale, _sliders) =
         super::resolve_sing_input("sin(x)", None, None, None).expect("math resolves");
     assert_eq!(source, "sin(x)");
     assert_eq!(
@@ -4313,7 +4364,7 @@ fn sing_resolves_a_parametric_capsules_y_voice_and_stored_scale() {
     .with_scale(numinous_core::StudioScale::Pentatonic);
     std::fs::write(&path, creation.to_num_file()).expect("write capsule");
 
-    let (source, xmin, xmax, a, scale) =
+    let (source, xmin, xmax, a, scale, _sliders) =
         super::resolve_sing_input(&path.to_string_lossy(), None, None, None)
             .expect("capsule resolves");
     assert_eq!(source, "sin(2*t)");
@@ -4322,7 +4373,7 @@ fn sing_resolves_a_parametric_capsules_y_voice_and_stored_scale() {
 
     let wav = path.with_extension("wav");
     let message =
-        super::sing_to_path(&source, xmin, xmax, 16, a, scale, &wav).expect("scaled voice");
+        super::sing_to_path(&source, xmin, xmax, 16, a, scale, &[], &wav).expect("scaled voice");
     assert!(message.contains("pentatonic scale"), "{message}");
     assert!(std::fs::metadata(&wav).expect("wav").len() > 1000);
     let _ = std::fs::remove_file(&path);
@@ -4496,6 +4547,7 @@ fn sing_writes_midi_when_the_path_says_so() {
         16,
         1.0,
         numinous_core::StudioScale::Continuous,
+        &[],
         &path,
     )
     .expect("sing midi");
@@ -4515,6 +4567,7 @@ fn sing_refuses_an_unknown_export_extension() {
         8,
         1.0,
         numinous_core::StudioScale::Continuous,
+        &[],
         &path,
     )
     .expect_err("mp3 is not this rung");

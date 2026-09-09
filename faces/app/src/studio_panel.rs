@@ -2,7 +2,7 @@
 
 use numinous_core::{
     Expr, FieldReading, MAX_STUDIO_EDITOR_CHARS, PathClosure, Raster, SoundSpec, StudioCreation,
-    StudioKind, StudioProgram, StudioScale, Surface,
+    StudioKind, StudioProgram, StudioScale, StudioSlider, Surface,
 };
 
 use crate::input_legend::{self, InputMode};
@@ -83,9 +83,10 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "F6: CYCLE MUSICAL SCALE",
     "PGUP/PGDN: WALK A BUNDLED FAMILY",
     "F1: TOGGLE THIS HELP",
-    "TAB / ESC: CLOSE STUDIO",
-    "UP/DOWN: TUNE A BY 0.25",
-    "HOME: RESET A TO 1",
+    "TAB: NEXT KNOB OR CLOSE",
+    "ESC: CLOSE STUDIO",
+    "UP/DOWN: STEP THE SELECTED KNOB",
+    "HOME: RESTORE 1 IF IN RANGE",
     "EDITING PAUSES AUTO",
 ];
 
@@ -145,6 +146,10 @@ pub struct StudioPanel {
     field_locked: bool,
     /// Explicit parameter shared by the picture, melody, and portable creation.
     parameter: f64,
+    /// Extra named knobs the formula binds, besides `a`.
+    sliders: Vec<StudioSlider>,
+    /// 0 is `a`; 1 and up select `sliders[n-1]`.
+    selected_knob: usize,
     /// Recipe index for Random (advances each draw).
     recipe_cursor: u64,
     /// Auto set: calm recipe rotation while the player watches.
@@ -186,6 +191,8 @@ impl StudioPanel {
             reading: FieldReading::default(),
             field_locked: false,
             parameter: numinous_core::DEFAULT_STUDIO_PARAMETER,
+            sliders: Vec::new(),
+            selected_knob: 0,
             // Start at 1 so the first Random draw is not the default recipe.
             recipe_cursor: 1,
             auto_active: false,
@@ -221,6 +228,8 @@ impl StudioPanel {
         match creation.program() {
             Ok(program) => {
                 self.parameter = creation.a();
+                self.sliders = creation.sliders().to_vec();
+                self.selected_knob = 0;
                 self.expr = Some(program.voice_expression().clone());
                 self.program = Some(program);
                 self.error = None;
@@ -350,16 +359,62 @@ impl StudioPanel {
         self.scale.name()
     }
 
+    /// Whether the formula currently binds extra named sliders besides `a`.
+    #[must_use]
+    pub fn has_named_sliders(&self) -> bool {
+        !self.sliders.is_empty()
+    }
+
+    /// Cycle which knob Up/Down will tune. 0 is `a`.
+    pub fn cycle_knob(&mut self, delta: i32) -> bool {
+        let count = self.sliders.len() + 1;
+        if count <= 1 {
+            return false;
+        }
+        let selected = i32::try_from(self.selected_knob).unwrap_or(0);
+        let total = i32::try_from(count).unwrap_or(1);
+        let wrapped = selected.wrapping_add(delta).rem_euclid(total);
+        self.selected_knob = usize::try_from(wrapped).unwrap_or(0);
+        true
+    }
+
     /// Move the explicit parameter in quarter steps. An admitted change is
     /// one edit: it pauses Auto, ends a morph, and returns one replacement voice.
     pub fn adjust_parameter(&mut self, steps: i32) -> Option<SoundSpec> {
-        self.set_parameter(self.parameter + f64::from(steps) * 0.25)
+        if self.selected_knob == 0 {
+            return self.set_parameter(self.parameter + f64::from(steps) * 0.25);
+        }
+        let index = self.selected_knob.checked_sub(1)?;
+        let slider = self.sliders.get(index)?.clone();
+        let updated = slider.stepped(steps).ok()?;
+        if updated.value() == self.sliders[index].value() {
+            return None;
+        }
+        self.sliders[index] = updated;
+        self.creation_for_parameter(self.parameter).ok()?;
+        self.pause_auto();
+        self.morph = None;
+        self.begin_remix();
+        self.current_sound()
     }
 
     /// Return the parameter to the shared Studio default without replacing the
     /// formula, its window, or its lineage.
     pub fn reset_parameter(&mut self) -> Option<SoundSpec> {
-        self.set_parameter(numinous_core::DEFAULT_STUDIO_PARAMETER)
+        if self.selected_knob == 0 {
+            return self.set_parameter(numinous_core::DEFAULT_STUDIO_PARAMETER);
+        }
+        let index = self.selected_knob.checked_sub(1)?;
+        let slider = self.sliders.get(index)?.clone();
+        let updated = slider
+            .with_value(numinous_core::DEFAULT_SLIDER_VALUE)
+            .ok()?;
+        self.sliders[index] = updated;
+        self.creation_for_parameter(self.parameter).ok()?;
+        self.pause_auto();
+        self.morph = None;
+        self.begin_remix();
+        self.current_sound()
     }
 
     fn set_parameter(&mut self, parameter: f64) -> Option<SoundSpec> {
@@ -411,6 +466,8 @@ impl StudioPanel {
         self.field_locked = false;
         self.reading = FieldReading::default();
         self.parameter = numinous_core::DEFAULT_STUDIO_PARAMETER;
+        self.sliders.clear();
+        self.selected_knob = 0;
         self.source = STUDIO_RECIPES[index].to_string();
         self.auto_elapsed = 0.0;
         let spec = self.reparse();
@@ -486,6 +543,7 @@ impl StudioPanel {
                 self.expr = Some(program.voice_expression().clone());
                 self.program = Some(program);
                 self.error = None;
+                self.sync_sliders();
                 self.current_sound()
             }
             Err(message) => {
@@ -546,12 +604,13 @@ impl StudioPanel {
         }
         let expr = self.expr.as_ref()?;
         let (xmin, xmax, a) = self.window_and_knob();
-        Some(numinous_core::to_melody_with_scale(
+        Some(numinous_core::to_melody_with_scale_named(
             expr,
             xmin,
             xmax,
             numinous_core::DEFAULT_MELODY_NOTES,
             a,
+            &self.sliders,
             self.scale,
         ))
     }
@@ -627,7 +686,30 @@ impl StudioPanel {
             StudioKind::Graph => StudioCreation::new(program.sources().0, xmin, xmax, a)
                 .map(|creation| creation.with_scale(self.scale)),
         }
+        .and_then(|creation| {
+            let names: Vec<String> = creation
+                .sliders()
+                .iter()
+                .map(|slider| slider.name().to_string())
+                .collect();
+            let kept: Vec<numinous_core::StudioSlider> = self
+                .sliders
+                .iter()
+                .filter(|slider| names.iter().any(|name| name == slider.name()))
+                .cloned()
+                .collect();
+            creation.with_sliders(kept)
+        })
         .map_err(|_| ShareRefusal::UnparsedFormula)
+    }
+
+    fn sync_sliders(&mut self) {
+        if let Ok(creation) = self.creation_for_parameter(self.parameter) {
+            self.sliders = creation.sliders().to_vec();
+            if self.selected_knob > self.sliders.len() {
+                self.selected_knob = 0;
+            }
+        }
     }
 
     fn field_window(&self) -> (f64, f64) {
@@ -743,7 +825,7 @@ impl StudioPanel {
                         xmin,
                         xmax,
                         |x| {
-                            let value = numinous_core::eval(expr, x, a);
+                            let value = numinous_core::eval_named(expr, x, a, &self.sliders);
                             value.is_finite().then_some(value)
                         },
                     );
@@ -754,7 +836,7 @@ impl StudioPanel {
                         layout,
                         xmin,
                         xmax,
-                        |input| program.point(input, a),
+                        |input| program.point_named(input, a, &self.sliders),
                     );
                 }
                 StudioKind::Field => {
@@ -770,6 +852,7 @@ impl StudioPanel {
                         ymin,
                         ymax,
                         a,
+                        &self.sliders,
                     );
                 }
             }
@@ -796,13 +879,13 @@ impl StudioPanel {
         let current = self
             .expr
             .as_ref()
-            .map(|expr| numinous_core::eval(expr, x, a))
+            .map(|expr| numinous_core::eval_named(expr, x, a, &self.sliders))
             .filter(|value| value.is_finite());
         let Some(morph) = &self.morph else {
             return current;
         };
-        let previous =
-            Some(numinous_core::eval(&morph.from, x, a)).filter(|value| value.is_finite());
+        let previous = Some(numinous_core::eval_named(&morph.from, x, a, &self.sliders))
+            .filter(|value| value.is_finite());
         match (previous, current) {
             (Some(from), Some(to)) => Some(from + (to - from) * morph.progress()),
             (Some(from), None) => Some(from),
@@ -818,13 +901,36 @@ impl StudioPanel {
         text.chars().take(remaining + 1).count() <= remaining
     }
 
+    fn knob_status(&self) -> String {
+        let a = compact_number(self.parameter);
+        let mut parts = Vec::new();
+        parts.push(if self.selected_knob == 0 {
+            format!("[A {a}]")
+        } else {
+            format!("A {a}")
+        });
+        for (index, slider) in self.sliders.iter().enumerate() {
+            let token = format!(
+                "{} {}",
+                slider.name().to_uppercase(),
+                compact_number(slider.value())
+            );
+            if self.selected_knob == index + 1 {
+                parts.push(format!("[{token}]"));
+            } else {
+                parts.push(token);
+            }
+        }
+        parts.join("  ")
+    }
+
     fn status_lines(&self, mode: InputMode, columns: usize) -> [(String, char); 2] {
-        let parameter = compact_number(self.parameter);
+        let knob_line = self.knob_status();
         let paused = self.opened.as_ref().is_some_and(|opened| opened.paused);
         let primary = if paused {
-            format!("A {parameter}  ENTER: PLAY")
+            format!("{knob_line}  ENTER: PLAY")
         } else {
-            format!("A {parameter}  SCALE {}", self.scale_name().to_uppercase())
+            format!("{knob_line}  SCALE {}", self.scale_name().to_uppercase())
         };
         let context = if let Some(error) = &self.error {
             format!("DRAFT: {}", error.to_uppercase())
@@ -974,7 +1080,7 @@ impl StudioPanel {
                         layout,
                         xmin,
                         xmax,
-                        |input| program.point(input, a),
+                        |input| program.point_named(input, a, &self.sliders),
                     );
                 }
                 StudioKind::Field => {
@@ -990,6 +1096,7 @@ impl StudioPanel {
                         ymin,
                         ymax,
                         a,
+                        &self.sliders,
                     );
                 }
             }
@@ -1475,6 +1582,59 @@ mod tests {
             broken.current_creation(),
             Err(super::ShareRefusal::UnparsedFormula)
         );
+    }
+
+    #[test]
+    fn named_sliders_tab_steps_and_home_and_reopen() {
+        let mut panel = StudioPanel::new("sin(b*x)").expect("panel");
+        assert_eq!(panel.sliders.len(), 1);
+        assert_eq!(panel.selected_knob, 0);
+        assert!(panel.cycle_knob(1));
+        assert_eq!(panel.selected_knob, 1);
+        let voice = panel.adjust_parameter(4).expect("step b");
+        assert_eq!(panel.sliders[0].value(), 2.0);
+        let creation = panel.current_creation().expect("creation");
+        assert!(creation.to_num_file().starts_with("NUMINOUS_STUDIO 6\n"));
+        assert_eq!(creation.sliders()[0].value(), 2.0);
+        assert_eq!(voice, creation.to_melody(32));
+        assert!(panel.reset_parameter().is_some());
+        assert_eq!(panel.sliders[0].value(), 1.0);
+        assert!(panel.cycle_knob(1));
+        assert_eq!(panel.selected_knob, 0);
+        assert!(!StudioPanel::new("sin(a*x)").expect("a only").cycle_knob(1));
+
+        let saved = numinous_core::StudioCreation::new("sin(b*x)", -1.0, 1.0, 1.0)
+            .expect("saved")
+            .with_sliders(vec![
+                numinous_core::StudioSlider::new("b", 2.0, 0.25, 8.0).expect("b"),
+            ])
+            .expect("bound");
+        let mut reopened = StudioPanel::default();
+        reopened.open_creation(&saved);
+        assert_eq!(reopened.sliders[0].value(), 2.0);
+        assert_eq!(
+            reopened.current_sound().expect("voice"),
+            saved.to_melody(32)
+        );
+        reopened.cycle_knob(1);
+        assert!(reopened.reset_parameter().is_some());
+        assert_eq!(reopened.sliders[0].value(), 1.0);
+        let ranged = numinous_core::StudioSlider::new("b", 3.0, 2.0, 8.0).expect("ranged");
+        let mut blocked = StudioPanel::new("sin(b*x)").expect("blocked");
+        blocked.sliders = vec![ranged];
+        blocked.selected_knob = 1;
+        assert!(blocked.reset_parameter().is_none());
+        assert_eq!(blocked.sliders[0].value(), 3.0);
+
+        let extra = numinous_core::studio_experiment("extra-knob").expect("extra");
+        let mut walk = StudioPanel::default();
+        walk.open_creation(&extra);
+        assert_eq!(
+            walk.current_creation().expect("opened").title(),
+            Some("An extra knob")
+        );
+        let ratio = walk.adjacent_experiment(1).expect("ratio");
+        assert_eq!(ratio.id, "live-ratio");
     }
 
     #[test]
@@ -2067,7 +2227,7 @@ mod tests {
                     panel.draw(&mut raster, mode, width, height);
                     assert_composed_text_line(
                         &raster,
-                        &format!("A {}  ENTER: PLAY", compact_number(value)),
+                        &format!("[A {}]  ENTER: PLAY", compact_number(value)),
                         10 + 34 * scale,
                         scale,
                         '*',
@@ -2079,7 +2239,7 @@ mod tests {
                     panel.draw(&mut draft, mode, width, height);
                     assert_composed_text_line(
                         &draft,
-                        &format!("A {}  SCALE CONTINUOUS", compact_number(value)),
+                        &format!("[A {}]  SCALE CONTINUOUS", compact_number(value)),
                         10 + 34 * scale,
                         scale,
                         '*',

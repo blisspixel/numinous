@@ -274,6 +274,36 @@ pub fn draw(
     size: (usize, usize),
     char_aspect: f64,
 ) -> Result<FieldPlate, FieldError> {
+    draw_named(
+        expression,
+        reading,
+        x_bounds,
+        y_bounds,
+        parameter,
+        &[],
+        size,
+        char_aspect,
+    )
+}
+
+/// Draw a field plate with named sliders bound.
+///
+/// # Errors
+/// The same refusals as [`draw`].
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a field plate is a formula, a window, a reading, a size, a cell shape, and the knobs it binds"
+)]
+pub fn draw_named(
+    expression: &Expr,
+    reading: FieldReading,
+    x_bounds: (f64, f64),
+    y_bounds: (f64, f64),
+    parameter: f64,
+    sliders: &[crate::slider::StudioSlider],
+    size: (usize, usize),
+    char_aspect: f64,
+) -> Result<FieldPlate, FieldError> {
     let (width, height) = size;
     if width < 2 || height < 2 || width > MAX_FIELD_WIDTH || height > MAX_FIELD_HEIGHT {
         return Err(FieldError::InvalidSize);
@@ -308,7 +338,8 @@ pub fn draw(
             let right = left + step.0;
             let mark = match reading {
                 FieldReading::Zero => {
-                    let cell = crossing(expression, (left, right), (bottom, top), parameter);
+                    let cell =
+                        crossing(expression, (left, right), (bottom, top), parameter, sliders);
                     match cell {
                         Crossing::Present => CURVE,
                         Crossing::Absent => ' ',
@@ -320,7 +351,8 @@ pub fn draw(
                 }
                 _ => {
                     let point = Complex::new((left + right) * 0.5, (bottom + top) * 0.5);
-                    let value = crate::studio::eval_field(expression, point, parameter);
+                    let value =
+                        crate::studio::eval_field_named(expression, point, parameter, sliders);
                     if value.is_nan() {
                         undefined += 1;
                         NO_ANSWER
@@ -392,9 +424,15 @@ enum Crossing {
 }
 
 /// Decide what one cell of the zero reading may claim.
-fn crossing(expression: &Expr, x: (f64, f64), y: (f64, f64), parameter: f64) -> Crossing {
-    match crossing_once(expression, x, y, parameter) {
-        Crossing::Unresolved => refine_crossing(expression, x, y, parameter),
+fn crossing(
+    expression: &Expr,
+    x: (f64, f64),
+    y: (f64, f64),
+    parameter: f64,
+    sliders: &[crate::slider::StudioSlider],
+) -> Crossing {
+    match crossing_once(expression, x, y, parameter, sliders) {
+        Crossing::Unresolved => refine_crossing(expression, x, y, parameter, sliders),
         decided => decided,
     }
 }
@@ -402,7 +440,13 @@ fn crossing(expression: &Expr, x: (f64, f64), y: (f64, f64), parameter: f64) -> 
 /// One extra split of an unresolved cell. Cheap at terminal size, and it
 /// never paints a present or an absent it has not proved: a subcell that
 /// still cannot decide keeps the parent unresolved.
-fn refine_crossing(expression: &Expr, x: (f64, f64), y: (f64, f64), parameter: f64) -> Crossing {
+fn refine_crossing(
+    expression: &Expr,
+    x: (f64, f64),
+    y: (f64, f64),
+    parameter: f64,
+    sliders: &[crate::slider::StudioSlider],
+) -> Crossing {
     let mid_x = (x.0 + x.1) * 0.5;
     let mid_y = (y.0 + y.1) * 0.5;
     if !mid_x.is_finite() || !mid_y.is_finite() {
@@ -417,7 +461,7 @@ fn refine_crossing(expression: &Expr, x: (f64, f64), y: (f64, f64), parameter: f
     let mut any_present = false;
     let mut all_absent = true;
     for (left, right, bottom, top) in quads {
-        match crossing_once(expression, (left, right), (bottom, top), parameter) {
+        match crossing_once(expression, (left, right), (bottom, top), parameter, sliders) {
             Crossing::Present => {
                 any_present = true;
                 all_absent = false;
@@ -435,12 +479,19 @@ fn refine_crossing(expression: &Expr, x: (f64, f64), y: (f64, f64), parameter: f
     }
 }
 
-fn crossing_once(expression: &Expr, x: (f64, f64), y: (f64, f64), parameter: f64) -> Crossing {
+fn crossing_once(
+    expression: &Expr,
+    x: (f64, f64),
+    y: (f64, f64),
+    parameter: f64,
+    sliders: &[crate::slider::StudioSlider],
+) -> Crossing {
     let over_cell = eval_enclosure(
         expression,
         Enclosure::span(x.0, x.1),
         Enclosure::span(y.0, y.1),
         parameter,
+        sliders,
     );
     if over_cell.certainty() == Certainty::Sound && !over_cell.holds_zero() {
         // The value is bounded away from zero across the whole cell, so no
@@ -466,7 +517,12 @@ fn crossing_once(expression: &Expr, x: (f64, f64), y: (f64, f64), parameter: f64
     let mut saw_positive = false;
     let mut saw_negative = false;
     for (at_x, at_y) in corners {
-        let value = crate::studio::eval_field(expression, Complex::new(at_x, at_y), parameter);
+        let value = crate::studio::eval_field_named(
+            expression,
+            Complex::new(at_x, at_y),
+            parameter,
+            sliders,
+        );
         if !value.is_finite() || !value.is_real() {
             return Crossing::Unresolved;
         }
@@ -496,7 +552,7 @@ fn crossing_once(expression: &Expr, x: (f64, f64), y: (f64, f64), parameter: f64
 #[must_use]
 pub fn is_real_valued(expression: &Expr) -> bool {
     match expression {
-        Expr::Num(_) | Expr::Var | Expr::VarIm | Expr::Param => true,
+        Expr::Num(_) | Expr::Var | Expr::VarIm | Expr::Param | Expr::Slider(_) => true,
         Expr::Point | Expr::ImagUnit => false,
         Expr::Neg(inner) => is_real_valued(inner),
         Expr::Bin(op, lhs, rhs) => {
@@ -528,16 +584,23 @@ pub fn is_real_valued(expression: &Expr) -> bool {
 /// leave the line cannot appear. They are still answered, with the whole line
 /// and no conclusion, because a total function is easier to trust than one with
 /// a promise attached.
-fn eval_enclosure(expression: &Expr, x: Enclosure, y: Enclosure, a: f64) -> Enclosure {
+fn eval_enclosure(
+    expression: &Expr,
+    x: Enclosure,
+    y: Enclosure,
+    a: f64,
+    sliders: &[crate::slider::StudioSlider],
+) -> Enclosure {
     match expression {
         Expr::Num(value) => Enclosure::point(*value),
         Expr::Var => x,
         Expr::VarIm => y,
         Expr::Param => Enclosure::point(a),
+        Expr::Slider(name) => Enclosure::point(crate::slider::slider_value(name, sliders)),
         Expr::Point | Expr::ImagUnit => Enclosure::WHOLE,
-        Expr::Neg(inner) => -eval_enclosure(inner, x, y, a),
+        Expr::Neg(inner) => -eval_enclosure(inner, x, y, a, sliders),
         Expr::Bin(op, lhs, rhs) => {
-            let left = eval_enclosure(lhs, x, y, a);
+            let left = eval_enclosure(lhs, x, y, a, sliders);
             match op {
                 Op::Pow => match **rhs {
                     Expr::Num(exponent)
@@ -550,7 +613,7 @@ fn eval_enclosure(expression: &Expr, x: Enclosure, y: Enclosure, a: f64) -> Encl
                     _ => Enclosure::WHOLE,
                 },
                 _ => {
-                    let right = eval_enclosure(rhs, x, y, a);
+                    let right = eval_enclosure(rhs, x, y, a, sliders);
                     match op {
                         Op::Add => left + right,
                         Op::Sub => left - right,
@@ -562,7 +625,7 @@ fn eval_enclosure(expression: &Expr, x: Enclosure, y: Enclosure, a: f64) -> Encl
             }
         }
         Expr::Call(func, inner) => {
-            let value = eval_enclosure(inner, x, y, a);
+            let value = eval_enclosure(inner, x, y, a, sliders);
             match func {
                 Func::Sin => value.sin(),
                 Func::Cos => value.cos(),
@@ -578,8 +641,8 @@ fn eval_enclosure(expression: &Expr, x: Enclosure, y: Enclosure, a: f64) -> Encl
             }
         }
         Expr::PairCall(func, lhs, rhs) => {
-            let left = eval_enclosure(lhs, x, y, a);
-            let right = eval_enclosure(rhs, x, y, a);
+            let left = eval_enclosure(lhs, x, y, a, sliders);
+            let right = eval_enclosure(rhs, x, y, a, sliders);
             match func {
                 PairFunc::Mod => left.rem_euclid(right),
                 PairFunc::Min => left.min(right),

@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use numinous_core::{
     FieldReading, FieldRequest, PathClosure, PlotRequest, PlotSource, StudioCreation, StudioKind,
-    StudioRequestError, StudioScale,
+    StudioRequestError, StudioScale, StudioSlider, sliders_from_specs,
 };
 
 use crate::render_input::validate_render_dimensions;
@@ -40,6 +40,7 @@ pub(super) struct ForkEdits<'a> {
     pub x_expr: Option<&'a str>,
     pub y_expr: Option<&'a str>,
     pub scale: Option<StudioScale>,
+    pub sliders: &'a [StudioSlider],
     pub identity: CreationIdentity<'a>,
 }
 
@@ -74,6 +75,24 @@ pub(super) fn resolve_plot_source(
     })
 }
 
+/// Parse repeatable `--slider name=value` or `name=value:min:max` flags.
+pub(super) fn parse_slider_specs(specs: &[String]) -> Result<Vec<StudioSlider>, String> {
+    sliders_from_specs(specs).map_err(|error| format!("{error}\n"))
+}
+
+pub(super) fn with_sliders(
+    creation: StudioCreation,
+    sliders: &[StudioSlider],
+) -> Result<StudioCreation, String> {
+    if sliders.is_empty() {
+        Ok(creation)
+    } else {
+        creation
+            .with_sliders(sliders.to_vec())
+            .map_err(|error| format!("{error}\n"))
+    }
+}
+
 /// Plot `source` as y = f(x, a) over `[xmin, xmax]`, auto-scaling y.
 pub(super) fn plot_report(
     source: &str,
@@ -83,7 +102,20 @@ pub(super) fn plot_report(
     width: usize,
     height: usize,
 ) -> Result<String, String> {
-    let request = PlotRequest::new(
+    plot_report_with(source, xmin, xmax, a, width, height, &[])
+}
+
+/// Plot a graph with named sliders bound.
+pub(super) fn plot_report_with(
+    source: &str,
+    xmin: f64,
+    xmax: f64,
+    a: f64,
+    width: usize,
+    height: usize,
+    sliders: &[StudioSlider],
+) -> Result<String, String> {
+    let mut request = PlotRequest::new(
         PlotSource::Manual(source.to_string()),
         Some(xmin),
         Some(xmax),
@@ -92,22 +124,41 @@ pub(super) fn plot_report(
         Some(height),
     )
     .map_err(plot_request_error)?;
+    if !sliders.is_empty() {
+        request = request
+            .with_sliders(sliders.to_vec())
+            .map_err(plot_request_error)?;
+    }
     let result = request.execute().map_err(plot_request_error)?;
     Ok(format!(
-        "y = {}    x in [{xmin:.3}, {xmax:.3}]    y in [{:.3}, {:.3}]\n\n{}",
+        "y = {}    x in [{xmin:.3}, {xmax:.3}]    y in [{:.3}, {:.3}]{}\n\n{}",
         terminal_safe(source),
         result.ymin,
         result.ymax,
+        slider_caption(request.sliders()),
         result.text
     ))
+}
+
+fn slider_caption(sliders: &[StudioSlider]) -> String {
+    if sliders.is_empty() {
+        String::new()
+    } else {
+        let body = sliders
+            .iter()
+            .map(StudioSlider::to_spec)
+            .collect::<Vec<_>>()
+            .join(" ");
+        format!("    sliders {body}")
+    }
 }
 
 /// Plot one field over a requested rectangle of the plane.
 #[expect(
     clippy::too_many_arguments,
-    reason = "a field report is one source plus the rectangle and reading it was asked for"
+    reason = "a field report is one source plus the rectangle, reading, and sliders"
 )]
-pub(super) fn field_report(
+pub(super) fn field_report_with(
     source: &str,
     reading: FieldReading,
     xmin: f64,
@@ -115,9 +166,10 @@ pub(super) fn field_report(
     ymin: f64,
     ymax: f64,
     a: f64,
+    sliders: &[StudioSlider],
     size: (usize, usize),
 ) -> Result<String, String> {
-    let request = FieldRequest::new(
+    let mut request = FieldRequest::new(
         source,
         Some(reading),
         Some(xmin),
@@ -130,15 +182,21 @@ pub(super) fn field_report(
         Some(0.5),
     )
     .map_err(plot_request_error)?;
+    if !sliders.is_empty() {
+        request = request
+            .with_sliders(sliders.to_vec())
+            .map_err(plot_request_error)?;
+    }
     let plate = request.execute().map_err(plot_request_error)?;
     Ok(format!(
-        "f = {}    reading {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]\n{}\n\n{}",
+        "f = {}    reading {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]{}\n{}\n\n{}",
         terminal_safe(source),
         reading.name(),
         plate.x_bounds.0,
         plate.x_bounds.1,
         plate.y_bounds.0,
         plate.y_bounds.1,
+        slider_caption(request.sliders()),
         reading.legend(),
         plate.text
     ))
@@ -157,9 +215,13 @@ pub(super) fn save_field_creation(
     ymax: f64,
     a: f64,
     identity: CreationIdentity<'_>,
+    sliders: &[StudioSlider],
     path: &Path,
 ) -> Result<String, String> {
-    let creation = StudioCreation::new_field(source, xmin, xmax, ymin, ymax, a, reading)?;
+    let creation = with_sliders(
+        StudioCreation::new_field(source, xmin, xmax, ymin, ymax, a, reading)?,
+        sliders,
+    )?;
     save_creation(creation, identity, path)
 }
 
@@ -170,14 +232,28 @@ pub(super) fn parametric_report(
     parameters: StudioParameters,
     size: (usize, usize),
 ) -> Result<String, String> {
-    let creation = StudioCreation::new_parametric(
-        x_source,
-        y_source,
-        parameters.minimum,
-        parameters.maximum,
-        parameters.a,
-    )?
-    .with_scale(parameters.scale);
+    parametric_report_with(x_source, y_source, parameters, size, &[])
+}
+
+/// Plot a parametric pair with named sliders bound.
+pub(super) fn parametric_report_with(
+    x_source: &str,
+    y_source: &str,
+    parameters: StudioParameters,
+    size: (usize, usize),
+    sliders: &[StudioSlider],
+) -> Result<String, String> {
+    let creation = with_sliders(
+        StudioCreation::new_parametric(
+            x_source,
+            y_source,
+            parameters.minimum,
+            parameters.maximum,
+            parameters.a,
+        )?
+        .with_scale(parameters.scale),
+        sliders,
+    )?;
     creation_report(&creation, size.0, size.1)
 }
 
@@ -197,16 +273,17 @@ pub(super) fn creation_report(
     })?;
     match creation.kind() {
         StudioKind::Graph => Ok(format!(
-            "y = {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]\n\n{}",
+            "y = {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]{}\n\n{}",
             terminal_safe(creation.source()),
             creation.xmin(),
             creation.xmax(),
             plot.ymin,
             plot.ymax,
+            slider_caption(creation.sliders()),
             plot.text
         )),
         StudioKind::Parametric => Ok(format!(
-            "x(t) = {}    y(t) = {}\nt in [{:.3}, {:.3}]    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]    scale {}\n\n{}",
+            "x(t) = {}    y(t) = {}\nt in [{:.3}, {:.3}]    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]    scale {}{}\n\n{}",
             terminal_safe(creation.source()),
             terminal_safe(creation.second_source().expect("parametric y source")),
             creation.xmin(),
@@ -216,18 +293,20 @@ pub(super) fn creation_report(
             plot.ymin,
             plot.ymax,
             creation.scale().name(),
+            slider_caption(creation.sliders()),
             plot.text
         )),
         StudioKind::Field => {
             let reading = creation.reading().expect("field reading");
             Ok(format!(
-                "f = {}    reading {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]\n{}\n\n{}",
+                "f = {}    reading {}    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]{}\n{}\n\n{}",
                 terminal_safe(creation.source()),
                 reading.name(),
                 plot.xmin,
                 plot.xmax,
                 plot.ymin,
                 plot.ymax,
+                slider_caption(creation.sliders()),
                 reading.legend(),
                 plot.text
             ))
@@ -291,15 +370,33 @@ pub(super) fn save_studio_creation(
     )
 }
 
+#[cfg(test)]
 pub(super) fn save_studio_creation_with_scale(
     source: &str,
     parameters: StudioParameters,
     identity: CreationIdentity<'_>,
     path: &Path,
 ) -> Result<String, String> {
-    let creation =
+    let creation = with_sliders(
         StudioCreation::new(source, parameters.minimum, parameters.maximum, parameters.a)?
-            .with_scale(parameters.scale);
+            .with_scale(parameters.scale),
+        &[],
+    )?;
+    save_creation(creation, identity, path)
+}
+
+pub(super) fn save_studio_creation_with_sliders(
+    source: &str,
+    parameters: StudioParameters,
+    identity: CreationIdentity<'_>,
+    sliders: &[StudioSlider],
+    path: &Path,
+) -> Result<String, String> {
+    let creation = with_sliders(
+        StudioCreation::new(source, parameters.minimum, parameters.maximum, parameters.a)?
+            .with_scale(parameters.scale),
+        sliders,
+    )?;
     save_creation(creation, identity, path)
 }
 
@@ -308,16 +405,20 @@ pub(super) fn save_parametric_creation(
     y_source: &str,
     parameters: StudioParameters,
     identity: CreationIdentity<'_>,
+    sliders: &[StudioSlider],
     path: &Path,
 ) -> Result<String, String> {
-    let creation = StudioCreation::new_parametric(
-        x_source,
-        y_source,
-        parameters.minimum,
-        parameters.maximum,
-        parameters.a,
-    )?
-    .with_scale(parameters.scale);
+    let creation = with_sliders(
+        StudioCreation::new_parametric(
+            x_source,
+            y_source,
+            parameters.minimum,
+            parameters.maximum,
+            parameters.a,
+        )?
+        .with_scale(parameters.scale),
+        sliders,
+    )?;
     save_creation(creation, identity, path)
 }
 
@@ -346,12 +447,14 @@ fn save_creation(
 /// A creation's voice travels through the terminal: sing accepts the same
 /// `.num` files and links the rest of the Studio surface speaks, and the
 /// capsule supplies its own window and knob unless flags override them.
+type ResolvedSingInput = (String, f64, f64, f64, StudioScale, Vec<StudioSlider>);
+
 pub(super) fn resolve_sing_input(
     input: &str,
     xmin: Option<f64>,
     xmax: Option<f64>,
     a: Option<f64>,
-) -> Result<(String, f64, f64, f64, StudioScale), String> {
+) -> Result<ResolvedSingInput, String> {
     if names_a_studio_creation(input) {
         let creation = load_studio_creation(input)?;
         if creation.kind() == StudioKind::Field {
@@ -366,6 +469,7 @@ pub(super) fn resolve_sing_input(
             xmax.unwrap_or_else(|| creation.xmax()),
             a.unwrap_or_else(|| creation.a()),
             creation.scale(),
+            creation.sliders().to_vec(),
         ));
     }
     Ok((
@@ -374,6 +478,7 @@ pub(super) fn resolve_sing_input(
         xmax.unwrap_or(std::f64::consts::TAU),
         a.unwrap_or(1.0),
         StudioScale::Continuous,
+        Vec::new(),
     ))
 }
 
@@ -393,6 +498,7 @@ pub(super) fn fork_studio_creation(
             x_expr: None,
             y_expr: None,
             scale: None,
+            sliders: &[],
             identity: CreationIdentity {
                 title,
                 author,
@@ -444,6 +550,9 @@ pub(super) fn fork_studio_creation_extended(
     .map_err(|error| format!("{error}\n"))?;
     if let Some(scale) = edits.scale {
         fork = fork.with_scale(scale);
+    }
+    if !edits.sliders.is_empty() {
+        fork = with_sliders(fork, edits.sliders)?;
     }
     fork = fork
         .with_credit_override(edits.identity.credit)
@@ -531,6 +640,9 @@ pub(super) fn open_studio_report(
         }
     }
     lines.push(format!("a={}", creation.a()));
+    for slider in creation.sliders() {
+        lines.push(format!("slider={}", slider.to_file_value()));
+    }
     if let Some(era) = creation.era() {
         lines.push(format!("era={}", era.name()));
     }

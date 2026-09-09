@@ -1,0 +1,9 @@
+NUMINOUS_STUDIO 6
+kind=graph
+expr=sin(a*x) + b
+xmin=-6.283185307179586
+xmax=6.283185307179586
+a=1
+scale=continuous
+slider=b:1:-2:2
+title=An extra knob

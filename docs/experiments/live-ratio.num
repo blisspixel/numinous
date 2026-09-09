@@ -1,0 +1,11 @@
+NUMINOUS_STUDIO 6
+kind=parametric
+xexpr=cos(2*pi*p*t)
+yexpr=sin(2*pi*q*t)
+tmin=0
+tmax=1
+a=1
+scale=continuous
+slider=p:3:1:8
+slider=q:2:1:8
+title=A live ratio

@@ -176,7 +176,7 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
             .get("a")
             .and_then(Value::as_f64)
             .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER);
-        let request = match numinous_core::FieldRequest::new(
+        let mut request = match numinous_core::FieldRequest::new(
             source,
             Some(reading),
             Some(xmin),
@@ -191,6 +191,14 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
             Ok(request) => request,
             Err(error) => return tool_error(&error.to_string()),
         };
+        match parse_sliders(args) {
+            Ok(sliders) if sliders.is_empty() => {}
+            Ok(sliders) => match request.with_sliders(sliders) {
+                Ok(bound) => request = bound,
+                Err(error) => return tool_error(&error.to_string()),
+            },
+            Err(error) => return tool_error(&error),
+        }
         let plate = match request.execute() {
             Ok(plate) => plate,
             Err(error) => return tool_error(&error.to_string()),
@@ -222,15 +230,21 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
             "valid": true,
             "plot": plate.text
         });
-        structured["next"] = save_creation_next(json!({
-            "expr": source,
-            "xmin": xmin,
-            "xmax": xmax,
-            "ymin": ymin,
-            "ymax": ymax,
-            "reading": reading.name(),
-            "a": a,
-        }));
+        if !request.sliders().is_empty() {
+            structured["sliders"] = sliders_json(request.sliders());
+        }
+        structured["next"] = save_creation_next(with_slider_args(
+            json!({
+                "expr": source,
+                "xmin": xmin,
+                "xmax": xmax,
+                "ymin": ymin,
+                "ymax": ymax,
+                "reading": reading.name(),
+                "a": a,
+            }),
+            request.sliders(),
+        ));
         return tool_structured(
             &format!(
                 "f = {source}    reading {}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\n{}\n\n{}",
@@ -266,12 +280,20 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
             .get("a")
             .and_then(Value::as_f64)
             .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER);
-        let creation = match numinous_core::StudioCreation::new_parametric(
+        let mut creation = match numinous_core::StudioCreation::new_parametric(
             x_source, y_source, tmin, tmax, a,
         ) {
             Ok(creation) => creation,
             Err(error) => return tool_error(&error),
         };
+        match parse_sliders(args) {
+            Ok(sliders) if sliders.is_empty() => {}
+            Ok(sliders) => match creation.with_sliders(sliders) {
+                Ok(bound) => creation = bound,
+                Err(error) => return tool_error(&error),
+            },
+            Err(error) => return tool_error(&error),
+        }
         let result = match creation.plot_text(
             numinous_core::DEFAULT_PLOT_WIDTH,
             numinous_core::DEFAULT_PLOT_HEIGHT,
@@ -296,13 +318,19 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
             "valid": true,
             "plot": result.text
         });
-        structured["next"] = save_creation_next(json!({
-            "x_expr": x_source,
-            "y_expr": y_source,
-            "tmin": tmin,
-            "tmax": tmax,
-            "a": a,
-        }));
+        if !creation.sliders().is_empty() {
+            structured["sliders"] = sliders_json(creation.sliders());
+        }
+        structured["next"] = save_creation_next(with_slider_args(
+            json!({
+                "x_expr": x_source,
+                "y_expr": y_source,
+                "tmin": tmin,
+                "tmax": tmax,
+                "a": a,
+            }),
+            creation.sliders(),
+        ));
         return tool_structured(
             &format!(
                 "x(t) = {x_source}    y(t) = {y_source}\nt in [{tmin:.3}, {tmax:.3}]    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]\nDiscovery: manual\n\n{}",
@@ -338,7 +366,7 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
         }
     };
 
-    let request = match numinous_core::PlotRequest::new(
+    let mut request = match numinous_core::PlotRequest::new(
         source,
         args.get("xmin").and_then(Value::as_f64),
         args.get("xmax").and_then(Value::as_f64),
@@ -349,6 +377,14 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
         Ok(request) => request,
         Err(error) => return tool_error(&error.to_string()),
     };
+    match parse_sliders(args) {
+        Ok(sliders) if sliders.is_empty() => {}
+        Ok(sliders) => match request.with_sliders(sliders) {
+            Ok(bound) => request = bound,
+            Err(error) => return tool_error(&error.to_string()),
+        },
+        Err(error) => return tool_error(&error),
+    }
     match request.execute() {
         Ok(result) => {
             let expr = request.source();
@@ -376,12 +412,18 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
                 "valid": true,
                 "plot": result.text
             });
-            structured["next"] = save_creation_next(json!({
-                "expr": expr,
-                "xmin": xmin,
-                "xmax": xmax,
-                "a": a,
-            }));
+            if !request.sliders().is_empty() {
+                structured["sliders"] = sliders_json(request.sliders());
+            }
+            structured["next"] = save_creation_next(with_slider_args(
+                json!({
+                    "expr": expr,
+                    "xmin": xmin,
+                    "xmax": xmax,
+                    "a": a,
+                }),
+                request.sliders(),
+            ));
             tool_structured(&summary, structured)
         }
         Err(numinous_core::StudioRequestError::Undefined) => {
@@ -505,6 +547,14 @@ pub(super) fn save_creation_tool(args: &Value) -> Value {
         Ok(creation) => creation,
         Err(error) => return tool_error(&error),
     };
+    match parse_sliders(args) {
+        Ok(sliders) if sliders.is_empty() => {}
+        Ok(sliders) => match creation.with_sliders(sliders) {
+            Ok(bound) => creation = bound,
+            Err(error) => return tool_error(&error),
+        },
+        Err(error) => return tool_error(&error),
+    }
     creation = match studio_scale(args.get("scale").and_then(Value::as_str)) {
         Ok(scale) => creation.with_scale(scale),
         Err(error) => return tool_error(&error),
@@ -614,6 +664,14 @@ pub(super) fn fork_creation_tool(args: &Value) -> Value {
         Ok(creation) => creation,
         Err(error) => return tool_error(&error),
     };
+    match parse_sliders(args) {
+        Ok(sliders) if sliders.is_empty() => {}
+        Ok(sliders) => match child.with_sliders(sliders) {
+            Ok(bound) => child = bound,
+            Err(error) => return tool_error(&error),
+        },
+        Err(error) => return tool_error(&error),
+    }
     if let Some(raw_scale) = args.get("scale").and_then(Value::as_str) {
         child = match studio_scale(Some(raw_scale)) {
             Ok(scale) => child.with_scale(scale),
@@ -727,6 +785,7 @@ fn studio_creation_result(
         "tmin": (creation.kind() == numinous_core::StudioKind::Parametric).then(|| creation.xmin()),
         "tmax": (creation.kind() == numinous_core::StudioKind::Parametric).then(|| creation.xmax()),
         "a": creation.a(),
+        "sliders": (!creation.sliders().is_empty()).then(|| sliders_json(creation.sliders())),
         "scale": (creation.kind() != numinous_core::StudioKind::Field).then(|| creation.scale().name()),
         "title": creation.title(),
         "author": creation.author(),
@@ -823,6 +882,71 @@ fn checkpoint_json(checkpoint: &numinous_core::ClosureCheckpoint) -> Value {
     })
 }
 
+fn with_slider_args(mut arguments: Value, sliders: &[numinous_core::StudioSlider]) -> Value {
+    if !sliders.is_empty() {
+        arguments["sliders"] = sliders_json(sliders);
+    }
+    arguments
+}
+
+fn parse_sliders(args: &Value) -> Result<Vec<numinous_core::StudioSlider>, String> {
+    let Some(value) = args.get("sliders") else {
+        return Ok(Vec::new());
+    };
+    let Some(items) = value.as_array() else {
+        return Err("Argument 'sliders' must be an array.".to_string());
+    };
+    items
+        .iter()
+        .map(|item| {
+            if let Some(spec) = item.as_str() {
+                return numinous_core::StudioSlider::from_spec(spec);
+            }
+            let Some(name) = item.get("name").and_then(Value::as_str) else {
+                return Err("each slider needs a name".to_string());
+            };
+            let slider_value = item.get("value").and_then(Value::as_f64);
+            let min = item.get("min").and_then(Value::as_f64);
+            let max = item.get("max").and_then(Value::as_f64);
+            match (slider_value, min, max) {
+                (None, None, None) => numinous_core::StudioSlider::default_named(name),
+                (Some(value), None, None) => numinous_core::StudioSlider::new(
+                    name,
+                    value,
+                    numinous_core::DEFAULT_SLIDER_MIN,
+                    numinous_core::DEFAULT_SLIDER_MAX,
+                ),
+                (None, Some(min), Some(max)) => numinous_core::StudioSlider::new(
+                    name,
+                    numinous_core::DEFAULT_SLIDER_VALUE,
+                    min,
+                    max,
+                ),
+                (Some(value), Some(min), Some(max)) => {
+                    numinous_core::StudioSlider::new(name, value, min, max)
+                }
+                _ => Err("a slider needs both min and max, or neither".to_string()),
+            }
+        })
+        .collect()
+}
+
+fn sliders_json(sliders: &[numinous_core::StudioSlider]) -> Value {
+    Value::Array(
+        sliders
+            .iter()
+            .map(|slider| {
+                json!({
+                    "name": slider.name(),
+                    "value": slider.value(),
+                    "min": slider.min(),
+                    "max": slider.max(),
+                })
+            })
+            .collect(),
+    )
+}
+
 fn save_creation_next(arguments: Value) -> Value {
     // A plotted or sung experiment that names no way to keep it is a glance,
     // not a door. save_creation is the one thing a caller can do after making
@@ -850,7 +974,7 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         Some(_) => return tool_error("Argument 'notes' must be an integer from 1 through 64."),
         None => None,
     };
-    let request = match numinous_core::SingRequest::new(
+    let mut request = match numinous_core::SingRequest::new(
         source,
         args.get("xmin").and_then(Value::as_f64),
         args.get("xmax").and_then(Value::as_f64),
@@ -860,6 +984,14 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         Ok(request) => request,
         Err(error) => return tool_error(&error.to_string()),
     };
+    match parse_sliders(args) {
+        Ok(sliders) if sliders.is_empty() => {}
+        Ok(sliders) => match request.with_sliders(sliders) {
+            Ok(bound) => request = bound,
+            Err(error) => return tool_error(&error.to_string()),
+        },
+        Err(error) => return tool_error(&error),
+    }
     let scale = match studio_scale(args.get("scale").and_then(Value::as_str)) {
         Ok(scale) => scale,
         Err(error) => return tool_error(&error),
@@ -955,13 +1087,19 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         "audio": audible.as_ref().map(|(_, described)| described.clone()),
         "midi": midi.as_ref().map(|(_, described)| described.clone()),
     });
-    structured["next"] = save_creation_next(json!({
-        "expr": source,
-        "xmin": xmin,
-        "xmax": xmax,
-        "a": a,
-        "scale": scale.name(),
-    }));
+    if !request.sliders().is_empty() {
+        structured["sliders"] = sliders_json(request.sliders());
+    }
+    structured["next"] = save_creation_next(with_slider_args(
+        json!({
+            "expr": source,
+            "xmin": xmin,
+            "xmax": xmax,
+            "a": a,
+            "scale": scale.name(),
+        }),
+        request.sliders(),
+    ));
     if want_receipt {
         let audio_asked = args.get("audio").and_then(Value::as_bool).unwrap_or(false);
         let action = encounter_sing_action(

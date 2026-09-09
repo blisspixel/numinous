@@ -9,13 +9,14 @@ use std::fmt;
 
 use crate::field::{
     DEFAULT_FIELD_SIZE, FieldError, FieldPlate, FieldReading, MAX_FIELD_HEIGHT, MAX_FIELD_WIDTH,
-    draw as draw_field,
+    draw_named as draw_field,
 };
+use crate::slider::{StudioSlider, bind_sliders, collect_slider_names};
 use crate::sound::SoundSpec;
 use crate::studio::{
     Expr, MAX_MELODY_NOTES, MAX_STUDIO_SOURCE_CHARS, PlotTextError, StudioScale, parse,
-    parse_field, plot_parsed_text, studio_auto_recipe, studio_recipe, studio_recipe_count,
-    to_melody_with_scale,
+    parse_field, plot_parsed_text_named, studio_auto_recipe, studio_recipe, studio_recipe_count,
+    to_melody_with_scale_named,
 };
 
 /// Default left edge of a Studio expression window.
@@ -105,6 +106,7 @@ pub struct PlotRequest {
     xmin: f64,
     xmax: f64,
     parameter: f64,
+    sliders: Vec<StudioSlider>,
     width: usize,
     height: usize,
 }
@@ -131,6 +133,8 @@ impl PlotRequest {
         let width = width.unwrap_or(DEFAULT_PLOT_WIDTH);
         let height = height.unwrap_or(DEFAULT_PLOT_HEIGHT);
         validate_plot_size(width, height)?;
+        let names = collect_slider_names(&expression);
+        let sliders = bind_sliders(&names, &[]).map_err(StudioRequestError::InvalidSource)?;
         Ok(Self {
             source,
             expression,
@@ -139,9 +143,20 @@ impl PlotRequest {
             xmin,
             xmax,
             parameter,
+            sliders,
             width,
             height,
         })
+    }
+
+    /// Bind caller-supplied sliders onto this request.
+    ///
+    /// # Errors
+    /// Returns a refusal when a supplied name is not in the formula.
+    pub fn with_sliders(mut self, sliders: Vec<StudioSlider>) -> Result<Self, StudioRequestError> {
+        let names = collect_slider_names(&self.expression);
+        self.sliders = bind_sliders(&names, &sliders).map_err(StudioRequestError::InvalidSource)?;
+        Ok(self)
     }
 
     /// Execute the validated plot request.
@@ -150,11 +165,12 @@ impl PlotRequest {
     /// Returns [`StudioRequestError::Undefined`] when no finite sample exists
     /// across the requested window.
     pub fn execute(&self) -> Result<PlotResult, StudioRequestError> {
-        plot_parsed_text(
+        plot_parsed_text_named(
             &self.expression,
             self.xmin,
             self.xmax,
             self.parameter,
+            &self.sliders,
             self.width,
             self.height,
         )
@@ -204,6 +220,12 @@ impl PlotRequest {
         self.parameter
     }
 
+    /// Named sliders this formula binds.
+    #[must_use]
+    pub fn sliders(&self) -> &[StudioSlider] {
+        &self.sliders
+    }
+
     /// Resolved plot width.
     #[must_use]
     pub const fn width(&self) -> usize {
@@ -239,6 +261,7 @@ pub struct FieldRequest {
     ymin: f64,
     ymax: f64,
     parameter: f64,
+    sliders: Vec<StudioSlider>,
     width: usize,
     height: usize,
     char_aspect: f64,
@@ -302,6 +325,8 @@ impl FieldRequest {
             return Err(StudioRequestError::PlotTooLarge { width, height });
         }
         let char_aspect = char_aspect.unwrap_or(0.5);
+        let names = collect_slider_names(&expression);
+        let sliders = bind_sliders(&names, &[]).map_err(StudioRequestError::InvalidSource)?;
         Ok(Self {
             source,
             expression,
@@ -311,10 +336,21 @@ impl FieldRequest {
             ymin,
             ymax,
             parameter,
+            sliders,
             width,
             height,
             char_aspect,
         })
+    }
+
+    /// Bind caller-supplied sliders onto this field request.
+    ///
+    /// # Errors
+    /// Returns a refusal when a supplied name is not in the formula.
+    pub fn with_sliders(mut self, sliders: Vec<StudioSlider>) -> Result<Self, StudioRequestError> {
+        let names = collect_slider_names(&self.expression);
+        self.sliders = bind_sliders(&names, &sliders).map_err(StudioRequestError::InvalidSource)?;
+        Ok(self)
     }
 
     /// Execute the validated field request.
@@ -328,6 +364,7 @@ impl FieldRequest {
             (self.xmin, self.xmax),
             (self.ymin, self.ymax),
             self.parameter,
+            &self.sliders,
             (self.width, self.height),
             self.char_aspect,
         )
@@ -344,6 +381,12 @@ impl FieldRequest {
     #[must_use]
     pub const fn reading(&self) -> FieldReading {
         self.reading
+    }
+
+    /// Named sliders this formula binds.
+    #[must_use]
+    pub fn sliders(&self) -> &[StudioSlider] {
+        &self.sliders
     }
 
     /// Left edge of the requested window.
@@ -397,6 +440,7 @@ pub struct SingRequest {
     xmin: f64,
     xmax: f64,
     parameter: f64,
+    sliders: Vec<StudioSlider>,
     notes: usize,
 }
 
@@ -425,14 +469,27 @@ impl SingRequest {
                 maximum: MAX_MELODY_NOTES,
             });
         }
+        let names = collect_slider_names(&expression);
+        let sliders = bind_sliders(&names, &[]).map_err(StudioRequestError::InvalidSource)?;
         Ok(Self {
             source,
             expression,
             xmin,
             xmax,
             parameter,
+            sliders,
             notes,
         })
+    }
+
+    /// Bind caller-supplied sliders onto this melody request.
+    ///
+    /// # Errors
+    /// Returns a refusal when a supplied name is not in the formula.
+    pub fn with_sliders(mut self, sliders: Vec<StudioSlider>) -> Result<Self, StudioRequestError> {
+        let names = collect_slider_names(&self.expression);
+        self.sliders = bind_sliders(&names, &sliders).map_err(StudioRequestError::InvalidSource)?;
+        Ok(self)
     }
 
     /// Execute the validated melody request.
@@ -450,12 +507,13 @@ impl SingRequest {
     /// Returns [`StudioRequestError::Undefined`] when no finite sample exists
     /// across the requested window.
     pub fn execute_with_scale(&self, scale: StudioScale) -> Result<SoundSpec, StudioRequestError> {
-        let spec = to_melody_with_scale(
+        let spec = to_melody_with_scale_named(
             &self.expression,
             self.xmin,
             self.xmax,
             self.notes,
             self.parameter,
+            &self.sliders,
             scale,
         );
         if spec.notes.is_empty() {
@@ -487,6 +545,12 @@ impl SingRequest {
     #[must_use]
     pub const fn parameter(&self) -> f64 {
         self.parameter
+    }
+
+    /// Named sliders this formula binds.
+    #[must_use]
+    pub fn sliders(&self) -> &[StudioSlider] {
+        &self.sliders
     }
 
     /// Resolved melody note count.
@@ -805,5 +869,47 @@ mod tests {
             Err(StudioRequestError::InvalidSource(_))
         ));
         assert!(SingRequest::new("x\n", None, None, None, None).is_ok());
+    }
+
+    #[test]
+    fn named_sliders_bind_on_plot_and_song_and_refuse_strangers() {
+        let default = PlotRequest::new(
+            PlotSource::Manual("sin(b*x)".to_string()),
+            Some(-1.0),
+            Some(1.0),
+            None,
+            Some(24),
+            Some(8),
+        )
+        .expect("plot");
+        assert_eq!(default.sliders().len(), 1);
+        assert_eq!(default.sliders()[0].name(), "b");
+        assert_eq!(default.sliders()[0].value(), 1.0);
+        let tuned = default
+            .clone()
+            .with_sliders(vec![StudioSlider::new("b", 2.0, 0.25, 8.0).expect("b")])
+            .expect("tuned");
+        assert_eq!(tuned.sliders()[0].value(), 2.0);
+        assert_ne!(
+            default.execute().expect("default plot").text,
+            tuned.execute().expect("tuned plot").text
+        );
+        let stranger = PlotRequest::new(
+            PlotSource::Manual("sin(x)".to_string()),
+            None,
+            None,
+            None,
+            Some(24),
+            Some(8),
+        )
+        .expect("plain")
+        .with_sliders(vec![StudioSlider::default_named("b").expect("b")]);
+        assert!(stranger.is_err());
+
+        let song = SingRequest::new("sin(b*x)", Some(-1.0), Some(1.0), None, Some(8))
+            .expect("song")
+            .with_sliders(vec![StudioSlider::new("b", 2.0, 0.25, 8.0).expect("b")])
+            .expect("bound");
+        assert_eq!(song.execute().expect("melody").notes.len(), 8);
     }
 }
