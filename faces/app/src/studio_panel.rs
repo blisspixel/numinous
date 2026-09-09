@@ -1718,6 +1718,23 @@ mod tests {
     }
 
     #[test]
+    fn two_voices_draw_returning_home_oscillators() {
+        let closing = numinous_core::studio_experiment("closing-voices").expect("closing");
+        let mut panel = StudioPanel::default();
+        panel.open_creation(&closing);
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("Closing voices")
+        );
+        let wandering = panel.adjacent_experiment(1).expect("wandering");
+        assert_eq!(wandering.id, "wandering-voices");
+        assert_eq!(
+            wandering.creation().kind(),
+            numinous_core::StudioKind::Program
+        );
+    }
+
+    #[test]
     fn explicit_parameter_matches_the_saved_picture_and_voice() {
         for source in ["sin(a*x)+x/3", "x(t)=cos(t); y(t)=sin(a*t)+t/3"] {
             let mut panel = StudioPanel::new(source).expect("panel");

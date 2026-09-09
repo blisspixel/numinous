@@ -25,6 +25,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   count is at most 64. CLI, MCP, and the App plot, save, reopen, and fork
   them. Bundled family `euclidean`: `tresillo` and `three-against-five`.
   `PLAY.md` and the skill name the ids.
+- Overlay quest, first contrast: family `two-voices` draws the two
+  oscillators of Returning home as graphs over the same window.
+  `closing-voices` is the 1 and 17/12 pair; `wandering-voices` replaces
+  17/12 with `sqrt(2)`. The path capsules stay `full-return` and
+  `almost-home`. The first curve still sings. `PLAY.md` and the skill
+  name the ids.
 
 ## [0.4.0-alpha.25] - 2026-09-09
 

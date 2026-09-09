@@ -87,7 +87,8 @@ experiment id already bound, and no host file is read. `family` selects
 `uniform-circle`), `three-readings` (`simple-zero`, `a-pole`,
 `the-circle`, `the-bowl`), `named-sliders` (`extra-knob`, `live-ratio`),
 or `overlay` (`the-parts`, `the-sum`), or `euclidean` (`tresillo`,
-`three-against-five`).
+`three-against-five`), or `two-voices` (`closing-voices`,
+`wandering-voices`).
 A formula may name extra knobs besides `a`; each is a slider with a value
 and a declared range. Type `sin(x) & cos(x)` to overlay graphs. Type
 `euclid(3,8)` for a Euclidean rhythm. A field expression (`z`, `y`, `i`, `re`, `im`,

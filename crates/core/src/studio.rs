@@ -219,6 +219,20 @@ pub const STUDIO_EXPERIMENTS: &[StudioExperiment] = &[
         invitation: "Two patterns share eight steps. Where do three hits and five hits land together?",
         num_file: include_str!("../../../docs/experiments/three-against-five.num"),
     },
+    StudioExperiment {
+        id: "closing-voices",
+        family: "two-voices",
+        title: "Closing voices",
+        invitation: "These are the two oscillators of A full return. Count the peaks. How many does each make in this window?",
+        num_file: include_str!("../../../docs/experiments/closing-voices.num"),
+    },
+    StudioExperiment {
+        id: "wandering-voices",
+        family: "two-voices",
+        title: "Wandering voices",
+        invitation: "Compare with Closing voices. What would a common period require of both counts?",
+        num_file: include_str!("../../../docs/experiments/wandering-voices.num"),
+    },
 ];
 
 /// Look up a bundled experiment by id, or by `experiment:<id>`.
@@ -3672,7 +3686,7 @@ mod tests {
 
     #[test]
     fn bundled_studio_experiments_parse_keep_lineage_and_open_by_id() {
-        assert_eq!(STUDIO_EXPERIMENTS.len(), 16);
+        assert_eq!(STUDIO_EXPERIMENTS.len(), 18);
         let full = studio_experiment("full-return").expect("full-return");
         assert_eq!(full.title(), Some("A full return"));
         assert_eq!(full.kind(), StudioKind::Parametric);
@@ -3761,6 +3775,16 @@ mod tests {
         let against = studio_experiment("three-against-five").expect("three-against-five");
         assert_eq!(against.kind(), StudioKind::Program);
         assert_eq!(against.editor_source(), "euclid(3,8) & euclid(5,8)");
+        let voices = studio_experiments_in(Some("two-voices")).expect("voices family");
+        assert_eq!(voices.len(), 2);
+        let closing = studio_experiment("closing-voices").expect("closing-voices");
+        assert_eq!(closing.kind(), StudioKind::Program);
+        assert_eq!(closing.editor_source(), "cos(2*pi*x) & sin(2*pi*(17/12)*x)");
+        assert_eq!(closing.xmin(), 0.0);
+        assert_eq!(closing.xmax(), 12.0);
+        let wandering = studio_experiment("wandering-voices").expect("wandering-voices");
+        assert_eq!(wandering.kind(), StudioKind::Program);
+        assert!(wandering.editor_source().contains("sqrt(2)"));
         let child = against.fork(None, Some("Remix"), None).expect("fork");
         assert_eq!(child.kind(), StudioKind::Program);
         assert_eq!(child.editor_source(), "euclid(3,8) & euclid(5,8)");

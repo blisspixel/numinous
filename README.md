@@ -102,14 +102,16 @@ you can open without a host file. Returning home: `full-return`,
 `almost-home`, `same-place`, `another-ratio`. Shape and scale: `circle-to-ellipse`,
 `uniform-circle`. Three readings: `simple-zero`, `a-pole`, `the-circle`,
 `the-bowl`. Named sliders: `extra-knob`, `live-ratio`. Overlay:
-`the-parts`, `the-sum`. Euclidean: `tresillo`, `three-against-five`. The
+`the-parts`, `the-sum`. Euclidean: `tresillo`, `three-against-five`. Two
+voices: `closing-voices`, `wandering-voices`. The
 guides live in the repository:
 [Returning home](docs/experiments/returning-home.md),
 [Shape and scale](docs/experiments/shape-and-scale.md),
 [Three readings](docs/experiments/three-readings.md),
 [Named sliders](docs/experiments/named-sliders.md),
-[Overlay](docs/experiments/overlay.md), and
-[Euclidean rhythms](docs/experiments/euclidean.md). The mathematical
+[Overlay](docs/experiments/overlay.md),
+[Euclidean rhythms](docs/experiments/euclidean.md), and
+[Two voices](docs/experiments/two-voices.md). The mathematical
 review and its limits live in [`docs/MATHEMATICS.md`](docs/MATHEMATICS.md).
 
 ## Status
