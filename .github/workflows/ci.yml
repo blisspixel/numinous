@@ -25,7 +25,7 @@ jobs:
         with:
           components: rustfmt, clippy
       - name: Install Linux App libraries
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
+        run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev
       - name: Format check
         run: cargo fmt --all --check
       - name: Clippy (deny warnings)
@@ -106,7 +106,7 @@ jobs:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@b4f984c1e7daae8e175614de3e73a8411a20333c # 1.89.0
       - name: Install Linux audio and input development libraries
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
+        run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev
       - name: Minimum supported Rust check
         run: cargo +1.89.0 check --workspace --all-targets --locked
 
@@ -229,7 +229,7 @@ jobs:
         with:
           components: llvm-tools-preview
       - name: Install Linux audio and input development libraries
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
+        run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev
       - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4
         with:
           tool: cargo-llvm-cov
@@ -254,7 +254,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
       - name: Install Linux audio and input development libraries
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev libxkbcommon-x11-0 mesa-vulkan-drivers xvfb
+        run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev libxkbcommon-x11-0 mesa-vulkan-drivers xvfb
       - name: Workspace tests
         run: cargo test --workspace --all-targets --locked
       - name: Feature App platform compile
