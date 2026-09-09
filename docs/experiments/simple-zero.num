@@ -1,0 +1,10 @@
+NUMINOUS_STUDIO 5
+kind=field
+expr=z
+xmin=-2
+xmax=2
+ymin=-2
+ymax=2
+reading=phase
+a=1
+title=A simple zero

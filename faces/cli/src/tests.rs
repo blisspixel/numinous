@@ -3425,6 +3425,9 @@ fn plot_discovery_resolves_recipe_seed_and_list() {
             list_recipes: true,
             xmin: Some(-1.0),
             xmax: Some(1.0),
+            ymin: None,
+            ymax: None,
+            reading: None,
             tmin: None,
             tmax: None,
             a: 1.0,
@@ -3488,6 +3491,9 @@ fn parametric_plot_saves_reopens_and_records_progress_once() {
             list_recipes: false,
             xmin: None,
             xmax: None,
+            ymin: None,
+            ymax: None,
+            reading: None,
             tmin: Some(0.0),
             tmax: Some(std::f64::consts::TAU),
             a: 0.25,
@@ -3516,6 +3522,55 @@ fn parametric_plot_saves_reopens_and_records_progress_once() {
     assert!(opened.contains("kind=parametric"));
     assert!(opened.contains("scale=pentatonic"));
     assert!(opened.contains("x(t) = cos(3*t+a)"));
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
+fn field_plot_saves_reopens_and_records_progress_once() {
+    let path = std::env::temp_dir().join("numinous_cli_field_plate_test.num");
+    let _ = std::fs::remove_file(&path);
+    let mut journey = numinous_core::Journey::default();
+    let code = run(
+        Command::Plot {
+            expr: Some("x^2 + y^2 - 1".to_string()),
+            x_expr: None,
+            y_expr: None,
+            recipe: None,
+            seed: None,
+            auto_step: 0,
+            list_recipes: false,
+            xmin: Some(-2.0),
+            xmax: Some(2.0),
+            ymin: Some(-2.0),
+            ymax: Some(2.0),
+            reading: Some("zero".to_string()),
+            tmin: None,
+            tmax: None,
+            a: 1.0,
+            animate: false,
+            amin: 0.0,
+            amax: 1.0,
+            width: 40,
+            height: 16,
+            save: Some(path.clone()),
+            title: Some("The circle".to_string()),
+            author: None,
+            credit: None,
+            scale: super::StudioScaleArg::Continuous,
+        },
+        &mut journey,
+    );
+    assert_eq!(code, std::process::ExitCode::SUCCESS);
+    assert_eq!(journey.plays, 1);
+    let creation = numinous_core::StudioCreation::from_num_path(&path).expect("saved field");
+    assert_eq!(creation.kind(), numinous_core::StudioKind::Field);
+    assert_eq!(creation.reading(), Some(numinous_core::FieldReading::Zero));
+    assert_eq!(creation.title(), Some("The circle"));
+    let opened =
+        super::open_studio_report(path.to_str().expect("path"), 40, 16).expect("open saved field");
+    assert!(opened.contains("kind=field"));
+    assert!(opened.contains("reading=zero"));
+    assert!(opened.contains("f = x^2 + y^2 - 1"));
     std::fs::remove_file(path).expect("cleanup");
 }
 
@@ -3533,6 +3588,9 @@ fn a_partial_parametric_pair_is_refused_before_progress() {
             list_recipes: false,
             xmin: Some(-1.0),
             xmax: Some(1.0),
+            ymin: None,
+            ymax: None,
+            reading: None,
             tmin: None,
             tmax: None,
             a: 0.0,
@@ -3567,6 +3625,9 @@ fn a_parametric_plot_refuses_graph_range_flags_before_progress() {
             list_recipes: false,
             xmin: Some(-1.0),
             xmax: None,
+            ymin: None,
+            ymax: None,
+            reading: None,
             tmin: None,
             tmax: None,
             a: 0.0,
@@ -3854,6 +3915,9 @@ fn a_title_without_save_is_refused_before_progress() {
             list_recipes: false,
             xmin: Some(-1.0),
             xmax: Some(1.0),
+            ymin: None,
+            ymax: None,
+            reading: None,
             tmin: None,
             tmax: None,
             a: 1.0,
@@ -3890,6 +3954,9 @@ fn plot_save_and_animate_is_rejected_before_progress() {
             list_recipes: false,
             xmin: Some(-1.0),
             xmax: Some(1.0),
+            ymin: None,
+            ymax: None,
+            reading: None,
             tmin: None,
             tmax: None,
             a: 1.0,
@@ -3925,6 +3992,9 @@ fn invalid_animated_plot_is_rejected_before_progress() {
             list_recipes: false,
             xmin: Some(-1.0),
             xmax: Some(1.0),
+            ymin: None,
+            ymax: None,
+            reading: None,
             tmin: None,
             tmax: None,
             a: 1.0,
@@ -3962,6 +4032,9 @@ fn plot_save_waits_for_a_valid_still_plot() {
             list_recipes: false,
             xmin: Some(-1.0),
             xmax: Some(1.0),
+            ymin: None,
+            ymax: None,
+            reading: None,
             tmin: None,
             tmax: None,
             a: 1.0,
@@ -3999,6 +4072,9 @@ fn plot_save_waits_for_finite_samples() {
             list_recipes: false,
             xmin: Some(-2.0),
             xmax: Some(-1.0),
+            ymin: None,
+            ymax: None,
+            reading: None,
             tmin: None,
             tmax: None,
             a: 1.0,
@@ -4036,6 +4112,9 @@ fn failed_plot_save_does_not_record_progress() {
             list_recipes: false,
             xmin: Some(-1.0),
             xmax: Some(1.0),
+            ymin: None,
+            ymax: None,
+            reading: None,
             tmin: None,
             tmax: None,
             a: 1.0,

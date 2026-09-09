@@ -12,6 +12,8 @@ use crate::studio::{Expr, Func, Op, StudioCreation, StudioKind, StudioProgram};
 pub enum PathClosure {
     /// A graph is a height over x, not a planar path that can come home.
     Graph,
+    /// A field is a value over the plane, not a path that can come home.
+    Field,
     /// The pair is not two harmonic oscillators of the form
     /// `A*sin(w*t+p)` or `A*cos(w*t+p)` with a constant scale and phase.
     Unsupported,
@@ -78,6 +80,7 @@ impl PathClosure {
     pub fn of(creation: &StudioCreation) -> Self {
         match creation.kind() {
             StudioKind::Graph => Self::Graph,
+            StudioKind::Field => Self::Field,
             StudioKind::Parametric => analyze_parametric(creation),
         }
     }
@@ -87,7 +90,7 @@ impl PathClosure {
     #[must_use]
     pub fn report_lines(&self) -> Vec<String> {
         match self {
-            Self::Graph | Self::Unsupported => Vec::new(),
+            Self::Graph | Self::Field | Self::Unsupported => Vec::new(),
             Self::Periodic(periodic) => {
                 let mut lines = vec![format!(
                     "closure=periodic period={} x_freq={} y_freq={}",
@@ -119,7 +122,7 @@ impl PathClosure {
     #[must_use]
     pub fn status_caption(&self) -> Option<String> {
         match self {
-            Self::Graph | Self::Unsupported => None,
+            Self::Graph | Self::Field | Self::Unsupported => None,
             Self::Periodic(periodic) => {
                 let mut line = format!("PERIOD {}", periodic.period_text);
                 if periodic.half_period.position_returns && !periodic.half_period.state_returns {

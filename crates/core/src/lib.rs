@@ -55,8 +55,10 @@ pub mod codebreaker;
 pub mod complex;
 pub mod concepts;
 pub mod dichromacy;
+pub mod enclosure;
 pub mod encounter;
 pub mod era;
+pub mod field;
 pub mod fifteen;
 pub mod font;
 pub mod gauntlet;
@@ -140,6 +142,10 @@ pub use encounter::{
     SingExpressionResult,
 };
 pub use era::Era;
+pub use field::{
+    DEFAULT_FIELD_SIZE, FieldError, FieldPlate, FieldReading, MAX_FIELD_HEIGHT, MAX_FIELD_WIDTH,
+    draw as draw_field, is_real_valued as field_is_real_valued, mark_level as field_mark_level,
+};
 pub use font::{draw_text, text_width, wrap_text};
 pub use gauntlet::{
     GAUNTLET_BOMB_DIGITS, GAUNTLET_CHOICE_POINTS, GAUNTLET_MAX_WIRES, GAUNTLET_STAGES,
@@ -248,16 +254,17 @@ pub use studio::{
     Expr, MAX_CREDIT_CHARS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_SHARE_INPUT_BYTES,
     MAX_STUDIO_EDITOR_CHARS, MAX_STUDIO_SOURCE_CHARS, NumFileError, STUDIO_EXPERIMENTS,
     STUDIO_RECIPES, StudioCreation, StudioExperiment, StudioKind, StudioPlot, StudioProgram,
-    StudioScale, adjacent_construction_creation, adjacent_studio_experiment, eval,
-    first_studio_construction, is_returning_home_transfer, parse, plot_text,
+    StudioScale, adjacent_construction_creation, adjacent_studio_experiment, eval, eval_field,
+    first_studio_construction, is_returning_home_transfer, parse, parse_field, plot_text,
     returning_home_transfer, studio_auto_recipe, studio_construction_family, studio_experiment,
     studio_experiment_matching, studio_experiment_meta, studio_experiments_in, studio_recipe,
-    studio_recipe_count, to_melody, to_melody_with_scale,
+    studio_recipe_count, to_melody, to_melody_with_scale, uses_field_vocabulary,
 };
 pub use studio_request::{
-    DEFAULT_MELODY_NOTES, DEFAULT_PLOT_HEIGHT, DEFAULT_PLOT_WIDTH, DEFAULT_STUDIO_PARAMETER,
-    DEFAULT_STUDIO_XMAX, DEFAULT_STUDIO_XMIN, PlotDiscovery, PlotRequest, PlotResult, PlotSource,
-    SingRequest, StudioRequestError,
+    DEFAULT_FIELD_MAX, DEFAULT_FIELD_MIN, DEFAULT_MELODY_NOTES, DEFAULT_PLOT_HEIGHT,
+    DEFAULT_PLOT_WIDTH, DEFAULT_STUDIO_PARAMETER, DEFAULT_STUDIO_XMAX, DEFAULT_STUDIO_XMIN,
+    FieldRequest, PlotDiscovery, PlotRequest, PlotResult, PlotSource, SingRequest,
+    StudioRequestError,
 };
 pub use study::{
     AUTHORED_MATHEMATICS_ROOMS, MAX_STUDY_BLOCK_ID_BYTES, MAX_STUDY_LOCALE_BYTES, RoomStudy,

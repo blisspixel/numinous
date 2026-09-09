@@ -268,8 +268,11 @@ reach it, sized exactly in cents, named when a name fits, and given as a whole
 number ratio when a simple one explains it. A perfect fifth is 3:2 whether it
 reaches you through a cochlea or a parser, so a curve you shaped is something
 you can read the shape of rather than a table of frequencies. A parametric
-creation draws both coordinates and sings `y(t)`. Choose `continuous`,
-`chromatic`, `major`, `minor`, or `pentatonic` with the `scale` field. The
+creation draws both coordinates and sings `y(t)`. A field over the plane,
+typed with `y`, `z`, `i`, `re`, `im`, `arg`, or `conj`, or saved with
+`ymin`, `ymax`, and `reading`, draws a character plate: phase, height, or
+a proved zero curve. Fields are seen first; they have no melody yet. Choose `continuous`,
+`chromatic`, `major`, `minor`, or `pentatonic` with the `scale` field on a graph or pair. The
 bounded expression
 language includes `floor(value)`, Euclidean `mod(value, divisor)`,
 `min(left, right)`, and `max(left, right)`. Try
@@ -283,8 +286,9 @@ keep is a door into remix.
 Portable Studio questions live here without a host file. Call
 `plot_expression` with `list_experiments: true`, then follow a row's `next` to
 open it. Pass `family: "returning-home"` for `full-return`, `almost-home`,
-`same-place`, and `another-ratio`, or `family: "shape-and-scale"` for
-`circle-to-ellipse` and `uniform-circle`. `open_creation` accepts those ids directly. They are Studio
+`same-place`, and `another-ratio`, `family: "shape-and-scale"` for
+`circle-to-ellipse` and `uniform-circle`, or `family: "three-readings"` for
+`simple-zero`, `a-pole`, `the-circle`, and `the-bowl`. `open_creation` accepts those ids directly. They are Studio
 doors after a touch of math, not a lobby in front of the rooms. Lissajous
 names Returning home when you describe it or study it. Opening a
 two-oscillator path reports `closure`: an independently checked period, or
