@@ -180,8 +180,9 @@ interval is also not a mathematical consequence of periodicity.
 
 Source: [MIT 18.353, quasiperiodic functions and Lissajous figures, section 3](https://math.mit.edu/classes/18.353J/PSetAnswers/AnswerPSet_2024_07.pdf).
 Implementation and regressions: `crates/core/src/rooms/lissajous.rs`.
-[Returning home](experiments/returning-home.md) supplies three portable Studio
-contrasts with exact formulas, including an ideal irrational ratio.
+[Returning home](experiments/returning-home.md) supplies four portable Studio
+contrasts with exact formulas, including an ideal irrational ratio and a
+period-1 starter to retune.
 
 ### Standing Wave
 
@@ -548,6 +549,25 @@ describes direct access; mathematical depth is not a reward for prior visits.
 The source regressions check the stated numerical examples and translation
 identity, including equations and reference targets. They do not constitute
 formal verification or independent scholarly review of the entire treatment.
+The authored Kepler Areas treatment in `crates/core/src/study/kepler_laws.rs`
+is English only and is shared by the App, CLI, and MCP. It states the centered
+ellipse with the sun at `+a e`, Kepler's equation, equal-time sectors of area
+`pi*a*b/6`, and the apsidal speed ratio `(1+e)/(1-e)`. Source regressions
+recompute the quoted ratios and the solver residual. They do not constitute
+independent scholarly review of the entire treatment.
+
+The authored Golden Angle treatment in `crates/core/src/study/golden_angle.rs`
+is English only. It identifies Vogel's polar recipe, proves
+`pi*(3-sqrt(5)) = 2*pi/phi^2`, and records that the resting status 137.5 is a
+one-decimal rounding. Source regressions recompute those identities. They do
+not constitute independent scholarly review of the entire treatment.
+
+The authored Fermat Spiral treatment in `crates/core/src/study/fermat_spiral.rs`
+is English only. It states `r^2 = a^2 theta`, identifies the two opposite signs
+of `r` with the room's two arms, and derives the equal-area identity between
+successive turns. Source regressions recompute those identities. They do not
+constitute independent scholarly review of the entire treatment.
+
 Other rooms retain their existing explanation and notes until a comparable
 Mathematics treatment is authored.
 

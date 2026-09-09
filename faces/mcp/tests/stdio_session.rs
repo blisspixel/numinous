@@ -338,11 +338,11 @@ fn direct_study_over_stdio_rejects_invalid_requests_and_preserves_state_bytes() 
         json!({ "room": "lissajous", "locale": null }),
         json!({ "room": "lissajous", "locale": "ja_JP" }),
         json!({ "room": "lissajous", "depth": "deep" }),
-        // A room with no authored treatment. Times Tables used to be that
+        // A room with no authored treatment. Golden Angle used to be that
         // example and now carries one of its own.
-        json!({ "room": "golden-angle", "depth": "mathematics" }),
+        json!({ "room": "cellular-automata", "depth": "mathematics" }),
         json!({ "room": "lissajous", "block": "lissajous.missing" }),
-        json!({ "room": "golden-angle", "block": "lissajous.recurrence" }),
+        json!({ "room": "cellular-automata", "block": "lissajous.recurrence" }),
         json!({ "room": "lissajous", "block": "../recurrence" }),
         json!({ "room": "lissajous", "block": "lissajous.recurrence", "depth": "mathematics" }),
         json!({ "room": "lissajous", "visits": 100 }),
@@ -2883,6 +2883,131 @@ fn a_kept_creation_names_a_way_onward_that_actually_opens() {
     // The loop closes: the child is itself a door, not a leaf.
     assert_eq!(child["next"]["tool"], "fork_creation");
     assert_eq!(child["next"]["arguments"]["parent"], child["link"]);
+
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// A plotted experiment must name a real way to keep it, and that way must
+/// work. The pointer is only a door if a caller can follow it verbatim and
+/// reopen the same window. A pointer that needs editing before it opens is
+/// not a door.
+#[test]
+fn a_plotted_experiment_names_a_way_to_keep_that_actually_opens() {
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous_mcp_plot_keep_{}_{}",
+        std::process::id(),
+        session
+    ));
+    std::fs::create_dir(&root).expect("fresh plot-keep root");
+    let journey = root.join("journey.txt");
+    let journal = root.join("journal.txt");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{"name":name,"arguments":arguments}
+        })
+    };
+
+    let plotted = run_session_with_state(
+        &[call(
+            1,
+            "plot_expression",
+            json!({"expr":"sin(3*x)","xmin":-2.0,"xmax":2.0,"a":0.5}),
+        )],
+        &journey,
+        &journal,
+    );
+    let structured = &reply_by_id(&plotted, 1)["result"]["structuredContent"];
+    let next = &structured["next"];
+    assert_eq!(next["tool"], "save_creation");
+    assert_eq!(next["arguments"]["expr"], structured["expression"]);
+    assert_eq!(next["arguments"]["xmin"], structured["xmin"]);
+    assert_eq!(next["arguments"]["xmax"], structured["xmax"]);
+    assert_eq!(next["arguments"]["a"], structured["a"]);
+
+    let kept = run_session_with_state(
+        &[
+            call(
+                1,
+                "plot_expression",
+                json!({"expr":"sin(3*x)","xmin":-2.0,"xmax":2.0,"a":0.5}),
+            ),
+            call(
+                2,
+                next["tool"].as_str().expect("tool name"),
+                next["arguments"].clone(),
+            ),
+        ],
+        &journey,
+        &journal,
+    );
+    let child = &reply_by_id(&kept, 2)["result"];
+    assert_eq!(child["isError"], false, "the pointer must open: {child}");
+    let child = &child["structuredContent"];
+    assert_eq!(child["action"], "save");
+    assert_eq!(child["expression"], "sin(3*x)");
+    assert_eq!(child["xmin"], -2.0);
+    assert_eq!(child["xmax"], 2.0);
+    assert_eq!(child["a"], 0.5);
+    assert_eq!(child["next"]["tool"], "fork_creation");
+    assert_eq!(child["next"]["arguments"]["parent"], child["link"]);
+
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Bundled Returning home experiments must open from an experiment id, with
+/// no host path, and the list's next pointer must be followable verbatim.
+#[test]
+fn returning_home_experiments_open_from_an_id_without_a_host_path() {
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous_mcp_experiments_{}_{}",
+        std::process::id(),
+        session
+    ));
+    std::fs::create_dir(&root).expect("fresh experiments root");
+    let journey = root.join("journey.txt");
+    let journal = root.join("journal.txt");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{"name":name,"arguments":arguments}
+        })
+    };
+
+    let listed = run_session_with_state(
+        &[call(
+            1,
+            "plot_expression",
+            json!({"list_experiments": true}),
+        )],
+        &journey,
+        &journal,
+    );
+    let row = &reply_by_id(&listed, 1)["result"]["structuredContent"]["experiments"][0];
+    assert_eq!(row["id"], "full-return");
+    let next = &row["next"];
+    assert_eq!(next["tool"], "open_creation");
+
+    let opened = run_session_with_state(
+        &[
+            call(1, "plot_expression", json!({"list_experiments": true})),
+            call(
+                2,
+                next["tool"].as_str().expect("tool name"),
+                next["arguments"].clone(),
+            ),
+        ],
+        &journey,
+        &journal,
+    );
+    let child = &reply_by_id(&opened, 2)["result"];
+    assert_eq!(child["isError"], false, "the pointer must open: {child}");
+    let child = &child["structuredContent"];
+    assert_eq!(child["title"], "A full return");
+    assert_eq!(child["containsHostPath"], false);
+    assert_eq!(child["next"]["tool"], "fork_creation");
 
     let _ = std::fs::remove_dir_all(&root);
 }

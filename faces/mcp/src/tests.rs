@@ -186,6 +186,20 @@ fn initialize_returns_server_info() {
             && instructions.contains("record_journal"),
         "instructions say a receipt is a replay proof, not a memory: {instructions}"
     );
+    assert!(
+        instructions.contains("plot_expression")
+            && instructions.contains("sing_expression")
+            && instructions.contains("next as save_creation")
+            && instructions.contains("expression and window already bound")
+            && instructions.contains("list_experiments"),
+        "instructions say a plotted or sung experiment is a door into keeping: {instructions}"
+    );
+    assert!(
+        instructions.contains("save_creation")
+            && instructions.contains("names next as fork_creation")
+            && instructions.contains("already bound as parent"),
+        "instructions say a kept creation is a door: {instructions}"
+    );
     let preferred = handle_request(&json!({
         "jsonrpc":"2.0","id":2,"method":"initialize",
         "params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"t","version":"1"}}
@@ -201,6 +215,51 @@ fn initialize_returns_server_info() {
         unsupported_future["result"]["protocolVersion"],
         "2025-06-18"
     );
+}
+
+#[test]
+fn packaged_player_docs_name_creation_next() {
+    // Alpha 24 built the door on the wire. A packaged playtester found it in
+    // live MCP and not in PLAY.md or the skill, the two files a downloaded
+    // player can actually open. docs/PLAYING.md does not ship in a release
+    // archive, so a sentence there does not count.
+    const PLAY: &str = include_str!("../../../PLAY.md");
+    const SKILL: &str = include_str!("../../../plugins/numinous/skills/play-numinous/SKILL.md");
+    for (name, body) in [("PLAY.md", PLAY), ("play-numinous skill", SKILL)] {
+        let flattened = body.split_whitespace().collect::<Vec<_>>().join(" ");
+        assert!(
+            flattened.contains("structuredContent.next")
+                && flattened.contains("fork_creation")
+                && flattened.contains("already bound as"),
+            "{name} must name the creation next pointer a packaged player can follow"
+        );
+        assert!(
+            flattened.contains("save_creation")
+                && flattened.contains("expression and window already bound"),
+            "{name} must name the plot and song door into keeping"
+        );
+        assert!(
+            flattened.contains("list_experiments")
+                && flattened.contains("full-return")
+                && flattened.contains("another-ratio")
+                && flattened.contains("circle-to-ellipse"),
+            "{name} must name the bundled Studio experiments a packaged player can open"
+        );
+        assert!(
+            flattened.contains("Studying Lissajous") && flattened.contains("construction"),
+            "{name} must name the Lissajous study construction door a packaged player can follow"
+        );
+        assert!(
+            flattened.contains("closure") && flattened.contains("half-period"),
+            "{name} must name the Returning home closure trial a packaged player can read"
+        );
+        for id in numinous_core::AUTHORED_MATHEMATICS_ROOMS {
+            assert!(
+                flattened.contains(id),
+                "{name} must name authored study room {id} so a packaged player can call it"
+            );
+        }
+    }
 }
 
 fn modern_meta(capabilities: Value) -> Value {
@@ -763,6 +822,39 @@ fn tools_list_has_the_expected_tools() {
     assert_eq!(
         fork_creation["inputSchema"]["properties"]["parent"]["maxLength"],
         numinous_core::MAX_SHARE_INPUT_BYTES
+    );
+    for tool in [save_creation, open_creation, fork_creation] {
+        let description = tool["description"].as_str().expect("tool description");
+        assert!(
+            description.contains("names next as fork_creation")
+                && description.contains("already bound as parent"),
+            "{} must name the followable next pointer: {description}",
+            tool["name"]
+        );
+    }
+    let plot_expression = tools
+        .iter()
+        .find(|tool| tool["name"] == "plot_expression")
+        .expect("plot_expression tool");
+    let plot_description = plot_expression["description"]
+        .as_str()
+        .expect("plot description");
+    assert!(
+        plot_description.contains("names next as save_creation")
+            && plot_description.contains("expression and window already bound"),
+        "plot_expression must name the keep door: {plot_description}"
+    );
+    let sing_expression = tools
+        .iter()
+        .find(|tool| tool["name"] == "sing_expression")
+        .expect("sing_expression tool");
+    let sing_description = sing_expression["description"]
+        .as_str()
+        .expect("sing description");
+    assert!(
+        sing_description.contains("names next as save_creation")
+            && sing_description.contains("already bound"),
+        "sing_expression must name the keep door: {sing_description}"
     );
     for tool in [save_creation, fork_creation] {
         assert_eq!(
@@ -2329,6 +2421,90 @@ fn an_agent_can_create_in_the_studio() {
 }
 
 #[test]
+fn a_plotted_or_sung_experiment_names_a_way_to_keep_it() {
+    // A glance that names no way to keep it is a dead picture. The pointer is
+    // only a door if following it verbatim keeps the same experiment, and if
+    // that keep is itself a door into remix. Discovery lists and errors are
+    // not experiments, so they do not get one.
+    let plotted = call(
+        "plot_expression",
+        json!({"expr":"sin(3*x)","xmin":-2.0,"xmax":2.0,"a":0.5}),
+    );
+    let next = &plotted["result"]["structuredContent"]["next"];
+    assert_eq!(next["tool"], "save_creation");
+    assert_eq!(next["arguments"]["expr"], "sin(3*x)");
+    assert_eq!(next["arguments"]["xmin"], -2.0);
+    assert_eq!(next["arguments"]["xmax"], 2.0);
+    assert_eq!(next["arguments"]["a"], 0.5);
+    assert!(next["arguments"].get("scale").is_none());
+    let saved = call("save_creation", next["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let capsule = &saved["result"]["structuredContent"];
+    assert_eq!(capsule["expression"], "sin(3*x)");
+    assert_eq!(capsule["xmin"], -2.0);
+    assert_eq!(capsule["xmax"], 2.0);
+    assert_eq!(capsule["a"], 0.5);
+    assert_eq!(capsule["next"]["tool"], "fork_creation");
+
+    let parametric = call(
+        "plot_expression",
+        json!({
+            "x_expr":"cos(3*t)","y_expr":"sin(2*t)",
+            "tmin":0.0,"tmax":std::f64::consts::TAU,"a":0.25
+        }),
+    );
+    let next = &parametric["result"]["structuredContent"]["next"];
+    assert_eq!(next["tool"], "save_creation");
+    let saved = call("save_creation", next["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let capsule = &saved["result"]["structuredContent"];
+    assert_eq!(capsule["xExpression"], "cos(3*t)");
+    assert_eq!(capsule["yExpression"], "sin(2*t)");
+    assert_eq!(capsule["tmin"], 0.0);
+    assert_eq!(capsule["tmax"], std::f64::consts::TAU);
+    assert_eq!(capsule["a"], 0.25);
+
+    let recipe = call("plot_expression", json!({"recipe": 0}));
+    let next = &recipe["result"]["structuredContent"]["next"];
+    assert_eq!(next["arguments"]["expr"], numinous_core::studio_recipe(0));
+    let saved = call("save_creation", next["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    assert_eq!(
+        saved["result"]["structuredContent"]["expression"],
+        numinous_core::studio_recipe(0)
+    );
+
+    let listed = call("plot_expression", json!({"list_recipes": true}));
+    assert!(listed["result"]["structuredContent"].get("next").is_none());
+    let refused = call("plot_expression", json!({"expr": "sin("}));
+    assert_eq!(refused["result"]["isError"], true);
+    assert!(refused["result"]["structuredContent"].is_null());
+
+    let sung = call(
+        "sing_expression",
+        json!({
+            "expr":"sin(x)","xmin":-1.0,"xmax":1.0,"a":2.0,
+            "scale":"minor","notes":8
+        }),
+    );
+    let next = &sung["result"]["structuredContent"]["next"];
+    assert_eq!(next["tool"], "save_creation");
+    assert_eq!(next["arguments"]["expr"], "sin(x)");
+    assert_eq!(next["arguments"]["xmin"], -1.0);
+    assert_eq!(next["arguments"]["xmax"], 1.0);
+    assert_eq!(next["arguments"]["a"], 2.0);
+    assert_eq!(next["arguments"]["scale"], "minor");
+    assert!(next["arguments"].get("notes").is_none());
+    let saved = call("save_creation", next["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let capsule = &saved["result"]["structuredContent"];
+    assert_eq!(capsule["expression"], "sin(x)");
+    assert_eq!(capsule["scale"], "minor");
+    assert_eq!(capsule["xmin"], -1.0);
+    assert_eq!(capsule["a"], 2.0);
+}
+
+#[test]
 fn creations_save_open_fork_and_enter_the_journal_without_host_files() {
     let expression = std::iter::repeat_n("1+", 170).collect::<String>() + "sin(x)";
     let title = "T".repeat(numinous_core::MAX_META_TEXT_CHARS);
@@ -2730,6 +2906,68 @@ fn formula_jam_discovery_lists_recipes_and_walks_the_bank() {
 
     let conflict = call("plot_expression", json!({"expr": "x", "recipe": 1}));
     assert_eq!(conflict["result"]["isError"], true);
+
+    let listed = call("plot_expression", json!({"list_experiments": true}));
+    let content = &listed["result"]["structuredContent"];
+    assert_eq!(content["discovery"], "experiments");
+    assert_eq!(
+        content["experimentCount"],
+        numinous_core::STUDIO_EXPERIMENTS.len() as u64
+    );
+    let experiments = content["experiments"].as_array().expect("experiments");
+    assert_eq!(experiments.len(), numinous_core::STUDIO_EXPERIMENTS.len());
+    let first = &experiments[0];
+    assert_eq!(first["id"], "full-return");
+    assert_eq!(first["family"], "returning-home");
+    assert_eq!(first["next"]["tool"], "open_creation");
+    assert_eq!(first["next"]["arguments"]["capsule"], "full-return");
+    let opened = call("open_creation", first["next"]["arguments"].clone());
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert_eq!(
+        opened["result"]["structuredContent"]["title"],
+        "A full return"
+    );
+    assert_eq!(
+        opened["result"]["structuredContent"]["closure"]["kind"],
+        "periodic"
+    );
+    assert_eq!(
+        opened["result"]["structuredContent"]["closure"]["period"],
+        "12"
+    );
+    assert_eq!(
+        opened["result"]["structuredContent"]["next"]["tool"],
+        "fork_creation"
+    );
+    let shapes = call(
+        "plot_expression",
+        json!({"list_experiments": true, "family": "shape-and-scale"}),
+    );
+    let shapes = &shapes["result"]["structuredContent"];
+    assert_eq!(shapes["family"], "shape-and-scale");
+    assert_eq!(shapes["experimentCount"], 2);
+    assert_eq!(shapes["experiments"][0]["id"], "circle-to-ellipse");
+    let ellipse = call(
+        "open_creation",
+        shapes["experiments"][0]["next"]["arguments"].clone(),
+    );
+    assert_eq!(ellipse["result"]["isError"], false, "{ellipse}");
+    assert_eq!(
+        ellipse["result"]["structuredContent"]["title"],
+        "Circle to ellipse"
+    );
+    let unknown = call(
+        "plot_expression",
+        json!({"list_experiments": true, "family": "no-such-family"}),
+    );
+    assert_eq!(unknown["result"]["isError"], true);
+    let family_only = call("plot_expression", json!({"family": "returning-home"}));
+    assert_eq!(family_only["result"]["isError"], true);
+    let both = call(
+        "plot_expression",
+        json!({"list_recipes": true, "list_experiments": true}),
+    );
+    assert_eq!(both["result"]["isError"], true);
 }
 
 #[test]
@@ -7333,12 +7571,163 @@ fn describe_room_tool_returns_details() {
     assert!(structured["action"].is_string());
     assert_eq!(structured["goal"], "LAND ON EXACTLY 4 LOBES");
     assert_eq!(structured["next"]["tool"], "play_room");
+    assert_eq!(
+        structured["next"]["arguments"],
+        json!({"id": "times-tables"})
+    );
+    assert!(structured.get("construction").is_none());
+    let played = call("play_room", structured["next"]["arguments"].clone());
+    assert_eq!(played["result"]["isError"], false, "{played}");
+    assert_eq!(
+        played["result"]["structuredContent"]["room"],
+        "times-tables"
+    );
     for field in ["reveal", "concept", "deep_cuts", "citation"] {
         assert!(
             structured.get(field).is_none(),
             "{field} leaked: {structured}"
         );
     }
+}
+
+#[test]
+fn describing_lissajous_names_the_returning_home_construction() {
+    let described = call("describe_room", json!({"id": "lissajous"}));
+    let structured = &described["result"]["structuredContent"];
+    assert_eq!(structured["room"], "lissajous");
+    assert_eq!(structured["next"]["tool"], "play_room");
+    assert_eq!(structured["next"]["arguments"], json!({"id": "lissajous"}));
+    let construction = &structured["construction"];
+    assert_eq!(construction["id"], "returning-home");
+    assert_eq!(construction["next"]["tool"], "plot_expression");
+    assert_eq!(
+        construction["next"]["arguments"],
+        json!({"list_experiments": true, "family": "returning-home"})
+    );
+    let listed = call("plot_expression", construction["next"]["arguments"].clone());
+    assert_eq!(listed["result"]["isError"], false, "{listed}");
+    let listed = &listed["result"]["structuredContent"];
+    assert_eq!(listed["discovery"], "experiments");
+    assert_eq!(listed["family"], "returning-home");
+    assert_eq!(listed["experimentCount"], 4);
+    let experiments = listed["experiments"].as_array().expect("experiments");
+    assert!(
+        experiments
+            .iter()
+            .all(|row| row["family"] == "returning-home")
+    );
+    assert_eq!(experiments[3]["id"], "another-ratio");
+}
+
+#[test]
+fn opening_returning_home_reports_independent_closure() {
+    let full = call("open_creation", json!({"capsule": "full-return"}));
+    assert_eq!(full["result"]["isError"], false, "{full}");
+    let closure = &full["result"]["structuredContent"]["closure"];
+    assert_eq!(closure["kind"], "periodic");
+    assert_eq!(closure["period"], "12");
+    assert_eq!(closure["xFrequency"], "1");
+    assert_eq!(closure["yFrequency"], "17/12");
+    assert_eq!(closure["xCycles"], 12);
+    assert_eq!(closure["yCycles"], 17);
+    assert_eq!(closure["windowEnd"]["stateReturns"], true);
+
+    let same = call("open_creation", json!({"capsule": "same-place"}));
+    let half = &same["result"]["structuredContent"]["closure"]["halfPeriod"];
+    assert_eq!(half["t"], 0.5);
+    assert_eq!(half["positionReturns"], true);
+    assert_eq!(half["stateReturns"], false);
+
+    let almost = call("open_creation", json!({"capsule": "almost-home"}));
+    assert_eq!(
+        almost["result"]["structuredContent"]["closure"]["kind"],
+        "aperiodic"
+    );
+    assert_eq!(
+        almost["result"]["structuredContent"]["closure"]["yFrequency"],
+        "sqrt(2)"
+    );
+
+    let transfer = call("open_creation", json!({"capsule": "another-ratio"}));
+    assert_eq!(transfer["result"]["isError"], false, "{transfer}");
+    let closure = &transfer["result"]["structuredContent"]["closure"];
+    assert_eq!(closure["kind"], "periodic");
+    assert_eq!(closure["period"], "1");
+    assert_eq!(closure["xFrequency"], "1");
+    assert_eq!(closure["yFrequency"], "1");
+    assert!(
+        transfer["result"]["structuredContent"]["numFile"]
+            .as_str()
+            .is_some_and(|text| !text.contains("8/5")),
+        "the transfer must not spoil the unseen ratio"
+    );
+
+    let unseen = call(
+        "save_creation",
+        json!({
+            "x_expr": "cos(2*pi*t)",
+            "y_expr": "sin(2*pi*(8/5)*t)",
+            "tmin": 0.0,
+            "tmax": 5.0
+        }),
+    );
+    assert_eq!(unseen["result"]["isError"], false, "{unseen}");
+    let closure = &unseen["result"]["structuredContent"]["closure"];
+    assert_eq!(closure["kind"], "periodic");
+    assert_eq!(closure["period"], "5");
+    assert_eq!(closure["yFrequency"], "8/5");
+    let reopened = call(
+        "open_creation",
+        json!({"capsule": unseen["result"]["structuredContent"]["numFile"]}),
+    );
+    assert_eq!(
+        reopened["result"]["structuredContent"]["closure"],
+        unseen["result"]["structuredContent"]["closure"]
+    );
+
+    let graph = call("save_creation", json!({"expr": "sin(x)"}));
+    assert!(
+        graph["result"]["structuredContent"]
+            .get("closure")
+            .is_none()
+    );
+}
+
+#[test]
+fn studying_lissajous_names_the_returning_home_construction() {
+    let studied = call(
+        "study_room",
+        json!({"room": "lissajous", "depth": "mathematics"}),
+    );
+    assert_eq!(studied["result"]["isError"], false, "{studied}");
+    let structured = &studied["result"]["structuredContent"];
+    assert_eq!(structured["room"], "lissajous");
+    let construction = &structured["construction"];
+    assert_eq!(
+        construction,
+        &super::room_tools::returning_home_construction()
+    );
+    let next = &construction["next"];
+    let listed = call(
+        next["tool"].as_str().expect("followable tool"),
+        next["arguments"].clone(),
+    );
+    assert_eq!(listed["result"]["isError"], false, "{listed}");
+    let listed = &listed["result"]["structuredContent"];
+    assert_eq!(listed["discovery"], "experiments");
+    assert_eq!(listed["family"], "returning-home");
+    assert_eq!(listed["experimentCount"], 4);
+
+    let other = call(
+        "study_room",
+        json!({"room": "times-tables", "depth": "mathematics"}),
+    );
+    assert_eq!(other["result"]["isError"], false, "{other}");
+    assert!(
+        other["result"]["structuredContent"]
+            .get("construction")
+            .is_none()
+    );
 }
 
 #[test]

@@ -14,7 +14,66 @@ use crate::{MAX_TOOL_HEIGHT, MAX_TOOL_WIDTH, audible, note_name, tool_error, too
 
 /// Formula Jam discovery and still plots.
 pub(super) fn plot_expression_tool(args: &Value) -> Value {
-    if args.get("list_recipes").and_then(Value::as_bool) == Some(true) {
+    let list_recipes = args.get("list_recipes").and_then(Value::as_bool) == Some(true);
+    let list_experiments = args.get("list_experiments").and_then(Value::as_bool) == Some(true);
+    if list_recipes && list_experiments {
+        return tool_error(
+            "list_recipes and list_experiments are different banks. Pass one of them.",
+        );
+    }
+    if list_experiments {
+        let family = args.get("family").and_then(Value::as_str);
+        let listed = match numinous_core::studio_experiments_in(family) {
+            Ok(listed) => listed,
+            Err(error) => return tool_error(&error),
+        };
+        let experiments: Vec<Value> = listed
+            .iter()
+            .map(|experiment| {
+                json!({
+                    "id": experiment.id,
+                    "family": experiment.family,
+                    "title": experiment.title,
+                    "invitation": experiment.invitation,
+                    "next": {
+                        "tool": "open_creation",
+                        "arguments": { "capsule": experiment.id },
+                    }
+                })
+            })
+            .collect();
+        let lines: Vec<String> = listed
+            .iter()
+            .map(|experiment| {
+                format!(
+                    "  {}: {} [{}]",
+                    experiment.id, experiment.title, experiment.family
+                )
+            })
+            .collect();
+        let heading = match family {
+            Some(name) => format!("Studio experiments in {name}"),
+            None => "Studio experiments".to_string(),
+        };
+        return tool_structured(
+            &format!(
+                "{heading} ({}). Follow next to open one; no host file.\n{}",
+                experiments.len(),
+                lines.join("\n")
+            ),
+            json!({
+                "discovery": "experiments",
+                "family": family,
+                "experimentCount": experiments.len(),
+                "experiments": experiments,
+                "valid": true
+            }),
+        );
+    }
+    if args.get("family").is_some() {
+        return tool_error("family requires list_experiments true.");
+    }
+    if list_recipes {
         let recipes: Vec<Value> = numinous_core::STUDIO_RECIPES
             .iter()
             .enumerate()
@@ -100,28 +159,36 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
             Ok(result) => result,
             Err(error) => return tool_error(&error),
         };
+        let mut structured = json!({
+            "kind": "parametric",
+            "xExpression": x_source,
+            "yExpression": y_source,
+            "discovery": "manual",
+            "a": a,
+            "tmin": tmin,
+            "tmax": tmax,
+            "xmin": result.xmin,
+            "xmax": result.xmax,
+            "ymin": result.ymin,
+            "ymax": result.ymax,
+            "width": numinous_core::DEFAULT_PLOT_WIDTH,
+            "height": numinous_core::DEFAULT_PLOT_HEIGHT,
+            "valid": true,
+            "plot": result.text
+        });
+        structured["next"] = save_creation_next(json!({
+            "x_expr": x_source,
+            "y_expr": y_source,
+            "tmin": tmin,
+            "tmax": tmax,
+            "a": a,
+        }));
         return tool_structured(
             &format!(
                 "x(t) = {x_source}    y(t) = {y_source}\nt in [{tmin:.3}, {tmax:.3}]    x in [{:.3}, {:.3}]    y in [{:.3}, {:.3}]\nDiscovery: manual\n\n{}",
                 result.xmin, result.xmax, result.ymin, result.ymax, result.text
             ),
-            json!({
-                "kind": "parametric",
-                "xExpression": x_source,
-                "yExpression": y_source,
-                "discovery": "manual",
-                "a": a,
-                "tmin": tmin,
-                "tmax": tmax,
-                "xmin": result.xmin,
-                "xmax": result.xmax,
-                "ymin": result.ymin,
-                "ymax": result.ymax,
-                "width": numinous_core::DEFAULT_PLOT_WIDTH,
-                "height": numinous_core::DEFAULT_PLOT_HEIGHT,
-                "valid": true,
-                "plot": result.text
-            }),
+            structured,
         );
     }
     if args.get("tmin").is_some() || args.get("tmax").is_some() {
@@ -173,25 +240,29 @@ pub(super) fn plot_expression_tool(args: &Value) -> Value {
                 "y = {expr}    x in [{xmin:.3}, {xmax:.3}]    y in [{:.3}, {:.3}]\nDiscovery: {discovery}\n\n{}",
                 result.ymin, result.ymax, result.text
             );
-            tool_structured(
-                &summary,
-                json!({
-                    "kind": "graph",
-                    "expression": expr,
-                    "discovery": discovery,
-                    "recipeIndex": request.recipe_index(),
-                    "recipeCount": numinous_core::studio_recipe_count(),
-                    "a": a,
-                    "xmin": xmin,
-                    "xmax": xmax,
-                    "ymin": result.ymin,
-                    "ymax": result.ymax,
-                    "width": request.width(),
-                    "height": request.height(),
-                    "valid": true,
-                    "plot": result.text
-                }),
-            )
+            let mut structured = json!({
+                "kind": "graph",
+                "expression": expr,
+                "discovery": discovery,
+                "recipeIndex": request.recipe_index(),
+                "recipeCount": numinous_core::studio_recipe_count(),
+                "a": a,
+                "xmin": xmin,
+                "xmax": xmax,
+                "ymin": result.ymin,
+                "ymax": result.ymax,
+                "width": request.width(),
+                "height": request.height(),
+                "valid": true,
+                "plot": result.text
+            });
+            structured["next"] = save_creation_next(json!({
+                "expr": expr,
+                "xmin": xmin,
+                "xmax": xmax,
+                "a": a,
+            }));
+            tool_structured(&summary, structured)
         }
         Err(numinous_core::StudioRequestError::Undefined) => {
             tool_error("Nothing to plot: the function is undefined across this range.")
@@ -484,6 +555,10 @@ fn studio_creation_result(
     if let Some(parent_link) = parent_link {
         structured["parentLink"] = json!(parent_link);
     }
+    let closure = numinous_core::PathClosure::of(creation);
+    if let Some(value) = closure_json(&closure) {
+        structured["closure"] = value;
+    }
     // A kept creation that names no way onward is an archive entry, not a door.
     // Every other surface that hands a caller something already says what to do
     // with it: the room doorways name describe_room, the journal cue names
@@ -496,16 +571,63 @@ fn studio_creation_result(
         "tool": "fork_creation",
         "arguments": { "parent": link },
     });
-    tool_structured(
-        &format!(
-            "{verb} Studio creation as portable capsule data. No host file was read or created.\nForm: {}\nScale: {}\nLink: {}\n\n{}",
-            creation.editor_source(),
-            creation.scale().name(),
-            creation.to_link(),
-            preview.text
-        ),
-        structured,
-    )
+    let mut text = format!(
+        "{verb} Studio creation as portable capsule data. No host file was read or created.\nForm: {}\nScale: {}\nLink: {}\n\n{}",
+        creation.editor_source(),
+        creation.scale().name(),
+        creation.to_link(),
+        preview.text
+    );
+    let closure_lines = closure.report_lines();
+    if !closure_lines.is_empty() {
+        text.push_str("\n\n");
+        text.push_str(&closure_lines.join("\n"));
+    }
+    tool_structured(&text, structured)
+}
+
+fn closure_json(closure: &numinous_core::PathClosure) -> Option<Value> {
+    match closure {
+        numinous_core::PathClosure::Graph | numinous_core::PathClosure::Unsupported => None,
+        numinous_core::PathClosure::Periodic(periodic) => Some(json!({
+            "kind": "periodic",
+            "period": periodic.period_text,
+            "xFrequency": periodic.x_frequency_text,
+            "yFrequency": periodic.y_frequency_text,
+            "xCycles": periodic.x_cycles,
+            "yCycles": periodic.y_cycles,
+            "windowPeriods": periodic.window_periods,
+            "halfPeriod": checkpoint_json(&periodic.half_period),
+            "windowEnd": checkpoint_json(&periodic.window_end),
+        })),
+        numinous_core::PathClosure::Aperiodic(aperiodic) => Some(json!({
+            "kind": "aperiodic",
+            "xFrequency": aperiodic.x_frequency_text,
+            "yFrequency": aperiodic.y_frequency_text,
+            "windowEnd": checkpoint_json(&aperiodic.window_end),
+        })),
+    }
+}
+
+fn checkpoint_json(checkpoint: &numinous_core::ClosureCheckpoint) -> Value {
+    json!({
+        "t": checkpoint.t,
+        "positionReturns": checkpoint.position_returns,
+        "stateReturns": checkpoint.state_returns,
+    })
+}
+
+fn save_creation_next(arguments: Value) -> Value {
+    // A plotted or sung experiment that names no way to keep it is a glance,
+    // not a door. save_creation is the one thing a caller can do after making
+    // that they could not do from the picture or the notes alone. The pointer
+    // carries the expression and window already used, so following it needs
+    // nothing remembered and invents no new experiment. Recipe lists and
+    // errors do not get one: there is no experiment yet.
+    json!({
+        "tool": "save_creation",
+        "arguments": arguments,
+    })
 }
 
 /// Turn an agent's function into readable music and optional audio.
@@ -543,6 +665,9 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         }
         Err(error) => return tool_error(&error.to_string()),
     };
+    let xmin = request.xmin();
+    let xmax = request.xmax();
+    let a = request.parameter();
     let mut lines = vec![format!(
         "y = {source} as a melody on the {} scale: {:.1}s, {} notes. Each line names the step \
          taken to reach it: the size measured in cents, the equal-tempered \
@@ -624,19 +749,20 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         "audio": audible.as_ref().map(|(_, described)| described.clone()),
         "midi": midi.as_ref().map(|(_, described)| described.clone()),
     });
+    structured["next"] = save_creation_next(json!({
+        "expr": source,
+        "xmin": xmin,
+        "xmax": xmax,
+        "a": a,
+        "scale": scale.name(),
+    }));
     if want_receipt {
         let audio_asked = args.get("audio").and_then(Value::as_bool).unwrap_or(false);
         let action = encounter_sing_action(
             source,
-            args.get("xmin")
-                .and_then(Value::as_f64)
-                .unwrap_or(numinous_core::DEFAULT_STUDIO_XMIN),
-            args.get("xmax")
-                .and_then(Value::as_f64)
-                .unwrap_or(numinous_core::DEFAULT_STUDIO_XMAX),
-            args.get("a")
-                .and_then(Value::as_f64)
-                .unwrap_or(numinous_core::DEFAULT_STUDIO_PARAMETER),
+            xmin,
+            xmax,
+            a,
             notes.unwrap_or(numinous_core::DEFAULT_MELODY_NOTES) as u64,
             scale,
             audio_asked,

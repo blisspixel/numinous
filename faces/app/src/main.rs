@@ -694,6 +694,8 @@ impl App {
         };
         app.menu
             .set_experiment_available(app.current_room_has_experiment());
+        app.menu
+            .set_construct_available(app.current_room_has_construction());
         app
     }
 
@@ -1031,6 +1033,8 @@ impl App {
         self.menu.open_home(menu::MenuOrigin::Room);
         self.menu
             .set_experiment_available(self.current_room_has_experiment() && !self.the_show);
+        self.menu
+            .set_construct_available(self.current_room_has_construction() && !self.the_show);
     }
 
     fn open_activity_menu(&mut self, kind: menu::ActivityKind) {
@@ -1143,6 +1147,10 @@ impl App {
             menu::MenuIntent::ChooseExperiment => {
                 self.close_menu();
                 self.toggle_chosen_experiment();
+            }
+            menu::MenuIntent::ConstructRoom => {
+                self.close_menu();
+                self.open_room_construction();
             }
             menu::MenuIntent::Close | menu::MenuIntent::ResumeActivity => self.close_menu(),
             menu::MenuIntent::Choose(choice) => self.activate_menu_choice(choice),
@@ -2548,6 +2556,12 @@ impl ApplicationHandler for App {
                             // Formula Jam Auto: calm recipe set; F3 resumes after edit.
                             self.studio_panel.toggle_auto();
                         }
+                        Key::Named(NamedKey::PageDown) => {
+                            let _ = self.walk_studio_experiment(1);
+                        }
+                        Key::Named(NamedKey::PageUp) => {
+                            let _ = self.walk_studio_experiment(-1);
+                        }
                         Key::Named(NamedKey::F4) => {
                             // The share starts with its name: F4 opens the
                             // naming step, Enter there writes the bundle.
@@ -2622,6 +2636,15 @@ impl ApplicationHandler for App {
                         // Ordinary rooms retain their readout wager.
                         Key::Character(c) if c.as_str() == "u" => {
                             self.toggle_room_wager();
+                        }
+                        Key::Character(c)
+                            if c.as_str() == "o"
+                                && numinous_core::studio_construction_family(
+                                    self.rooms[self.current].meta().id,
+                                )
+                                .is_some() =>
+                        {
+                            self.open_room_construction();
                         }
                         // Enter is the front-door start: into The Show (the room
                         // tour). Same toggle as B, including from the open menu.

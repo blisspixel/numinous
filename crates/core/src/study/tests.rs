@@ -196,7 +196,7 @@ fn fallback_reports_actual_language_per_document_and_block() {
         );
         assert_eq!(block.translation, StudyTranslationStatus::Original);
     }
-    let ordinary = room_by_id("golden-angle").expect("existing ordinary room");
+    let ordinary = room_by_id("cellular-automata").expect("existing ordinary room");
     let untranslated = room_study(ordinary.as_ref(), "ja-JP").unwrap();
     assert_eq!(untranslated.content_locales, &["en"]);
     assert_eq!(untranslated.locale.resolved, "en");
@@ -469,7 +469,7 @@ fn request_defaults_and_direct_selection_never_substitute_another_depth() {
         response
     );
 
-    let ordinary = room_by_id("golden-angle").unwrap();
+    let ordinary = room_by_id("cellular-automata").unwrap();
     let mathematics = StudyRequest::parse(None, Some("mathematics"), None).unwrap();
     assert_eq!(
         mathematics.read(ordinary.as_ref()),
@@ -669,11 +669,11 @@ fn every_room_always_has_explanation_and_notes_so_neither_is_advertised() {
 
 #[test]
 fn refusing_a_depth_names_where_it_is_written_and_claims_no_requirement() {
-    let room = room_by_id("golden-angle").expect("golden-angle is in the catalog");
+    let room = room_by_id("cellular-automata").expect("cellular-automata is in the catalog");
     let request = StudyRequest::parse(None, Some("mathematics"), None).expect("valid request");
     let error = request
         .read(room.as_ref())
-        .expect_err("golden-angle has no authored treatment");
+        .expect_err("cellular-automata has no authored treatment");
     assert_eq!(
         error,
         StudyRequestError::DepthUnavailable(StudyDepth::Mathematics)
@@ -695,6 +695,31 @@ fn refusing_a_depth_names_where_it_is_written_and_claims_no_requirement() {
         "the refusal must not imply a requirement: {message}"
     );
     assert!(!message.to_lowercase().contains("unlock"));
+}
+
+#[test]
+fn lissajous_study_names_bundled_returning_home_ids_not_a_docs_path() {
+    // The treatment used to point at docs/experiments/returning-home.md, which
+    // a packaged player cannot open. The capsules are bundled; the ids are the
+    // door.
+    let room = room_by_id("lissajous").expect("pilot room");
+    for locale in ["en", "ja"] {
+        let document = room_study(room.as_ref(), locale).expect("bounded request");
+        let text = document
+            .block("lissajous.state")
+            .expect("home-is-more-than-a-place")
+            .plain_text();
+        for id in ["full-return", "almost-home", "same-place", "another-ratio"] {
+            assert!(
+                text.contains(id),
+                "{locale} must name bundled id {id}: {text}"
+            );
+        }
+        assert!(
+            !text.contains("docs/experiments"),
+            "{locale} must not point at a file a packaged player cannot read: {text}"
+        );
+    }
 }
 
 #[test]

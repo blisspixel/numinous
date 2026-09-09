@@ -21,8 +21,9 @@ Confusing them is the mistake to avoid.
 
 English play instructions ship in `PLAY.md` and `docs/PLAYING.md`. Free play,
 optional Explanation and Notes, and directly requested Mathematics are distinct
-choices. Lissajous and Times Tables currently supply an authored Mathematics
-treatment; the Times Tables text is English only.
+choices. Lissajous, Times Tables, Kepler Areas, Golden Angle, and Fermat Spiral
+currently supply an authored Mathematics treatment; only Lissajous has a
+Japanese draft.
 The separate staged experiments retain their own progression; reading has no
 reward or Journey requirement. See
 [PEDAGOGY.md](PEDAGOGY.md#play-first-depth-by-choice).
@@ -360,8 +361,9 @@ deep cuts are optional, and the citation table includes generic fallbacks.
 These are English source strings, not 355 rigorous treatments. This replaces
 the former undated word, token, and relation counts, which are not maintained
 coverage measures. The structured study document now records room, depth,
-locale, and translation review status explicitly. Only the Lissajous pilot
-currently adds an authored Mathematics treatment.
+locale, and translation review status explicitly. Five rooms currently add an
+authored Mathematics treatment: Lissajous, Times Tables, Kepler Areas, Golden
+Angle, and Fermat Spiral. Only Lissajous has a Japanese draft.
 
 The status line is a useful but limited pairing of prose and computation.
 `registry.rs` tests nonempty status at `t = 0`, a digit after a center poke,

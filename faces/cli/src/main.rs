@@ -571,7 +571,9 @@ enum Command {
     /// Open a Studio .num file or numinous://studio link and render it.
     #[command(name = "open-studio")]
     OpenStudio {
-        /// Path to a .num file, or a numinous://studio?... link.
+        /// Path to a .num file, a numinous://studio?... link, or a bundled
+        /// experiment id (full-return, almost-home, same-place,
+        /// another-ratio, circle-to-ellipse, uniform-circle).
         input: String,
         /// Plot width in columns.
         #[arg(long, default_value_t = 72)]

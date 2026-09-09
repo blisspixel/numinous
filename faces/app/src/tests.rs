@@ -3526,6 +3526,124 @@ fn the_launch_argument_front_door_opens_files_and_links() {
     bad.open_start_input("numinous://studio?expr=x&xmin=-1&xmax=1&a=%");
     assert!(!bad.studio, "an invalid link opens nothing");
     assert!(bad.banner.is_some(), "the refusal says why");
+
+    let mut experiment = headless("numinous_app_test_start_open_experiment.txt");
+    experiment.open_start_input("full-return");
+    assert!(
+        experiment.studio,
+        "a bundled experiment id opens the Studio"
+    );
+    assert!(experiment.studio_panel.opened_paused());
+    assert_eq!(
+        experiment
+            .studio_panel
+            .current_creation()
+            .expect("opened")
+            .title(),
+        Some("A full return")
+    );
+
+    let mut transfer = headless("numinous_app_test_start_open_transfer.txt");
+    transfer.open_start_input("another-ratio");
+    assert!(transfer.studio, "another-ratio opens the Studio");
+    assert_eq!(
+        transfer
+            .studio_panel
+            .current_creation()
+            .expect("opened")
+            .title(),
+        Some("Another ratio")
+    );
+
+    let mut shape = headless("numinous_app_test_start_open_shape.txt");
+    shape.open_start_input("circle-to-ellipse");
+    assert!(shape.studio, "shape-and-scale opens the Studio");
+    assert_eq!(
+        shape
+            .studio_panel
+            .current_creation()
+            .expect("opened")
+            .title(),
+        Some("Circle to ellipse")
+    );
+}
+
+#[test]
+fn lissajous_construction_opens_returning_home_and_walks_the_family() {
+    let mut app = headless("numinous_app_test_lissajous_construct.txt");
+    app.current = app
+        .rooms
+        .iter()
+        .position(|room| room.meta().id == "lissajous")
+        .expect("Lissajous");
+    app.show_help = false;
+    app.open_room_construction();
+    assert!(app.studio, "construction opens Studio");
+    assert_eq!(
+        app.studio_panel.current_creation().expect("opened").title(),
+        Some("A full return")
+    );
+    assert!(app.studio_panel.opened_paused());
+    let creation = app.studio_panel.current_creation().expect("opened");
+    assert_eq!(
+        numinous_core::PathClosure::of(&creation).status_caption(),
+        Some("PERIOD 12  HALF: PLACE NOT STATE".to_string())
+    );
+
+    assert!(app.walk_studio_experiment(1));
+    assert_eq!(
+        app.studio_panel.current_creation().expect("opened").title(),
+        Some("Almost home")
+    );
+    assert!(app.walk_studio_experiment(1));
+    assert_eq!(
+        app.studio_panel.current_creation().expect("opened").title(),
+        Some("Same place, another direction")
+    );
+    assert!(app.walk_studio_experiment(1));
+    let transfer = app.studio_panel.current_creation().expect("transfer");
+    assert_eq!(transfer.title(), Some("Another ratio"));
+    assert_eq!(transfer.source(), "cos(2*pi*t)");
+    assert_eq!(transfer.second_source(), Some("sin(2*pi*t)"));
+    assert!(
+        !transfer.second_source().unwrap().contains("8/5"),
+        "the transfer must not spoil the unseen ratio"
+    );
+    assert_eq!(
+        numinous_core::PathClosure::of(&transfer).status_caption(),
+        Some("PERIOD 1".to_string())
+    );
+    assert!(app.walk_studio_experiment(1));
+    assert_eq!(
+        app.studio_panel
+            .current_creation()
+            .expect("no wrap")
+            .title(),
+        Some("Another ratio"),
+        "the walk does not wrap past the transfer"
+    );
+    assert!(app.walk_studio_experiment(-1));
+    assert_eq!(
+        app.studio_panel.current_creation().expect("back").title(),
+        Some("Same place, another direction")
+    );
+
+    app.exit_studio();
+    assert!(!app.studio, "Esc/Tab leave path stays open");
+    assert_eq!(app.rooms[app.current].meta().id, "lissajous");
+}
+
+#[test]
+fn a_room_without_construction_does_not_open_studio() {
+    let mut app = headless("numinous_app_test_no_construct.txt");
+    app.current = app
+        .rooms
+        .iter()
+        .position(|room| room.meta().id == "times-tables")
+        .expect("Times Tables");
+    app.show_help = false;
+    app.open_room_construction();
+    assert!(!app.studio);
 }
 
 #[test]
