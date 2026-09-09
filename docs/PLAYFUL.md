@@ -216,7 +216,8 @@ The first two slices are live: a safe expression engine
 (`crates/core/src/studio.rs`) parses and evaluates single-input math, and
 `numinous plot "sin(3*x) + x/2"` draws a graph. Paired `--x-expr` and
 `--y-expr` fields draw a parametric path over `t`, and its y coordinate can sing
-continuously or through a named pitch map. Next it grows named sliders, richer
+continuously or through a named pitch map. Named sliders with declared ranges
+now travel through every face. Next it grows richer
 programs, and export into the full instrument.
 
 The graphing calculator reimagined as an instrument. You type a system, parametric,

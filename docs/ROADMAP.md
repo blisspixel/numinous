@@ -693,7 +693,7 @@ access.
    atomic parametric pair and five named pitch maps travel through every face
    in a version 3 capsule. MIDI export of the sung melody is built on CLI, MCP,
    and the App F4 share; editable prose credit is built on version 4 capsules.
-   MusicXML and named sliders go next. The Daily Seed (one deterministic
+   Named sliders are built on version 6. MusicXML goes next. The Daily Seed (one deterministic
    provocation per day, the same for every human and agent) doubles as the
    generative loop and a return hook; the postcard prints its own link;
    the morph machinery points at two Gallery capsules.
