@@ -8,8 +8,14 @@ short, non-negotiable summary and the house rules that are easy to get wrong.
 
 Numinous is a Rust workspace: a headless core (`crates/core`) with three faces
 (the app, the CLI, the MCP server in `faces/`), plus `crates/gpu` and
-`crates/audio`. Start with `README.md`, then `docs/README.md` for the map. To
-play it, `PLAY.md`.
+`crates/audio`. Mathematics as a shared language, made playable, for humans
+and digital minds as peers. The rooms are the product. Studio multiplies
+them. Progression is ceremony and never a gate on play or study.
+
+Start with `README.md`, then `docs/README.md` for the map. To play it,
+`PLAY.md`. Current work lives in `docs/ROADMAP.md`. If README and ROADMAP
+disagree on what is built or next, ROADMAP wins. Direction is
+`docs/NORTH_STAR.md`; the definition of no is `docs/SCOPE.md`.
 
 ## House rules (non-negotiable)
 
@@ -39,8 +45,36 @@ domain logic, no placeholders or TODOs in a final commit, no dead or
 commented-out code, lint clean (`clippy -D warnings`), and 80%+ meaningful test
 coverage with no regression. `unsafe_code` is forbidden. Comments are accurate
 and humble: shipping code is not the same as code that works well, so do not
-claim more than the evidence supports. When the docs do not specify something,
-write the code a CS professor would be proud of: correct, simple, principled.
+claim more than the evidence supports. `docs/RESEARCH.md` defines Built,
+Measured, Observed, Designed, and Hypothesis; do not write Designed work as
+Built. When the docs do not specify something, write the code a CS professor
+would be proud of: correct, simple, principled.
+
+## Canonical seams
+
+Product truth lives in `numinous-core`: rooms, grading, persistence, Studio
+capsules, Journey, study content, and protocol-neutral request types. The
+three faces translate transport and presentation. They do not reimplement
+rules. Python in `scripts/` drives compiled binaries as black boxes and must
+not become a second owner of domain facts.
+
+Before adding a shared helper, parser, persistence path, or catalog, find the
+existing one. Face-local adapters are for transport. Do not reopen the stack:
+the toolchain, edition, and crate versions are pinned in `rust-toolchain.toml`
+and `docs/ENGINEERING.md`.
+
+## What a downloaded player can actually read
+
+A release archive carries `PLAY.md`, `README.md`, `VERIFY.md`, and
+`plugins/numinous/skills/play-numinous/SKILL.md`. Nothing under `docs/` ships
+in that archive. A player-facing fact, including MCP `next` pointers and
+bundled experiment ids, has to live in one of those four files or it is not
+documented for a packaged player. `docs/PLAYING.md` is the full manual for a
+clone, not a substitute.
+
+A structured `next` field is a followable tool call: `tool` plus `arguments`.
+If following it verbatim does not work, it is not a door. Lock that with a
+regression that follows the pointer. Detail is in `docs/ENGINEERING.md`.
 
 ## Enable the local gate (once per clone)
 
@@ -48,17 +82,30 @@ write the code a CS professor would be proud of: correct, simple, principled.
 git config core.hooksPath scripts/hooks
 ```
 
-The pre-commit hook then blocks any commit that would fail the fast gate:
+The pre-commit hook then blocks any commit that would fail the fast floor:
 house-style on every commit, and the cargo gate (`fmt`, `clippy -D warnings`,
-tests) when Rust, `Cargo.*`, or a shader changes. A commit-msg hook holds the
-message itself to the same three rules, because the rules cover commit messages
-as much as files and a message is the half an ordinary edit cannot reach later:
-fixing one means rewriting published history, which changes every downstream
-hash and breaks the provenance a released archive pins. CI runs the same check
-over the commits a pull request adds, so the rule does not depend on anyone
-remembering this setup. The full release gate, including coverage and the locked
-build, is `scripts/verify.sh` (Windows: `scripts/verify.ps1`). Run it before you
-push.
+rustdoc with warnings denied, tests) when Rust, `Cargo.*`, or a shader
+changes. A commit-msg hook holds the message itself to the same three rules,
+because the rules cover commit messages as much as files and a message is the
+half an ordinary edit cannot reach later: fixing one means rewriting published
+history, which changes every downstream hash and breaks the provenance a
+released archive pins. CI runs the same check over the commits a pull request
+adds, so the rule does not depend on anyone remembering this setup.
+
+To run that floor yourself:
+
+- Windows: `scripts\check.ps1`
+- macOS / Linux: `bash scripts/check.sh`
+
+Those scripts also run the Python harness contracts (MCP play, agent
+hallway and tactile, goldens, packaging). The hook only pays for those when
+the matching scripts change. Focused work can start with `cargo test -p
+<crate>` for the crate you touched, then the floor.
+
+The full release gate, including coverage and the locked build, is
+`scripts/verify.sh` (Windows: `scripts/verify.ps1`). Run it before you push.
+The command list and optional tools are in `VERIFY.md`. Do not make a check
+pass by weakening it.
 
 ## Where things live
 
@@ -72,6 +119,11 @@ push.
 ## When you finish a change
 
 Update `CHANGELOG.md` (the `[Unreleased]` section) and, if you completed a
-roadmap item, mark it in `docs/ROADMAP.md` with evidence. Keep commits small and
-focused, with a clear imperative subject and a body that explains the why, and
-with none of the attribution, dashes, or emojis named above.
+roadmap item, mark it in `docs/ROADMAP.md` with evidence. If the change is
+player-facing, check the four packaged files, not only `docs/`. If it adds a
+count in prose, route it through `numinous_core::counted` and lock it against
+live data. If it adds an MCP `next`, follow it in a test. Keep commits small
+and focused, with a clear imperative subject and a body that explains the why,
+and with none of the attribution, dashes, or emojis named above. Temporary
+agent scratch stays in gitignored `.agent/`; durable knowledge belongs in
+source, tests, or tracked docs.
