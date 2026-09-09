@@ -258,7 +258,9 @@ fn packaged_player_docs_name_creation_next() {
                 && flattened.contains("closing-voices")
                 && flattened.contains("wandering-voices")
                 && flattened.contains("pattern")
-                && flattened.contains("x..x..x."),
+                && flattened.contains("grid")
+                && flattened.contains("x..x..x.")
+                && flattened.contains("12345678"),
             "{name} must name the bundled Studio experiments a packaged player can open"
         );
         assert!(
@@ -2740,6 +2742,10 @@ fn euclidean_rhythms_plot_save_and_open_follow_next() {
         plotted["result"]["structuredContent"]["pattern"],
         json!(["x..x..x."])
     );
+    assert_eq!(
+        plotted["result"]["structuredContent"]["grid"],
+        "12345678\nx..x..x."
+    );
     let saved = call("save_creation", next["arguments"].clone());
     assert_eq!(saved["result"]["isError"], false, "{saved}");
     let layered_plot = call(
@@ -2768,8 +2774,16 @@ fn euclidean_rhythms_plot_save_and_open_follow_next() {
         json!(["x..x..x.", "x.x.xx.x"])
     );
     assert_eq!(
+        layered_plot["result"]["structuredContent"]["grid"],
+        "12345678\nx..x..x.\nx.x.xx.x"
+    );
+    assert_eq!(
         overlay_saved["result"]["structuredContent"]["pattern"],
         json!(["x..x..x.", "x.x.xx.x"])
+    );
+    assert_eq!(
+        overlay_saved["result"]["structuredContent"]["grid"],
+        "12345678\nx..x..x.\nx.x.xx.x"
     );
     let listed = call(
         "plot_expression",
@@ -2787,6 +2801,10 @@ fn euclidean_rhythms_plot_save_and_open_follow_next() {
     assert_eq!(
         opened["result"]["structuredContent"]["pattern"],
         json!(["x..x..x."])
+    );
+    assert_eq!(
+        opened["result"]["structuredContent"]["grid"],
+        "12345678\nx..x..x."
     );
     let forked = call(
         "fork_creation",
