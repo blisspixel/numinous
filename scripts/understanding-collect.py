@@ -641,6 +641,7 @@ MCP_RESULT_FIELDS = {
             "expression",
             "height",
             "kind",
+            "next",
             "plot",
             "recipeCount",
             "recipeIndex",
@@ -814,6 +815,16 @@ def project_mcp_result(
         xmax, xmin, ymax, ymin = numeric
         if not xmin < xmax or not ymin <= ymax:
             raise CollectorError("MCP plot_expression bounds are invalid")
+        next_value = structured.get("next")
+        if (
+            not isinstance(next_value, dict)
+            or set(next_value) != {"arguments", "tool"}
+            or next_value.get("tool") != "save_creation"
+            or not isinstance(next_value.get("arguments"), dict)
+        ):
+            raise CollectorError(
+                "MCP plot_expression next must be a followable save_creation"
+            )
     study.bounded_canonical_size(projection, f"MCP tool {tool} projection", 524_288)
     study.assert_sanitized(projection, "mcp")
     return projection

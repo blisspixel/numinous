@@ -91,6 +91,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   and requires the saved capsule to reopen the same window.
 
 ### Fixed
+- The Understanding collector's frozen `plot_expression` schema now expects
+  the keep door. A successful graph plot has returned `next` as
+  `save_creation` since that door shipped; the collector still required the
+  older field set, so the three-OS build job failed the first time a
+  packaged player could actually follow it. The study projection still omits
+  `next`: a keep is a door, not cohort evidence.
 - A packaged stranger can now read the Studio door that alpha 24 already
   built. `save_creation`, `open_creation`, and `fork_creation` have returned
   `structuredContent.next` pointing at `fork_creation` with the capsule already
