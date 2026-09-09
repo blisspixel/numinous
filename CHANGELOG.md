@@ -12,6 +12,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   proof, not a sample. CLI `numinous sing the-bowl`, MCP `sing_expression`
   with `reading`, and the App live voice share that core mapping. `PLAY.md`
   and the skill say so.
+
+### Changed
+- Linux CI drops the image's unused Chrome apt source before `apt-get
+  update`, so a hash mismatch there cannot fail the compile.
 - Named sliders in Studio. A formula may bind extra identifiers besides `a`.
   Each is a finite value inside a declared closed range. Capsules write
   `NUMINOUS_STUDIO 6` only when extra sliders exist, so every older file still

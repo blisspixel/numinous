@@ -57,7 +57,7 @@ jobs:
           targets: ${{ matrix.target }}
       - name: Install Linux audio and input development libraries
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
+        run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev
       - name: Build release binaries
         run: cargo build --release --locked --target ${{ matrix.target }} --bin numinous --bin numinous-app --bin numinous-mcp
       - name: Smoke test CLI

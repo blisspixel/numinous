@@ -122,6 +122,23 @@ class PinTests(unittest.TestCase):
                 )
         self.assertGreater(checked, 0, "no checkout actions found, so this checks nothing")
 
+    def test_linux_apt_goes_through_the_chrome_immune_helper(self):
+        # GitHub ubuntu images ship a Chrome apt source this repository does
+        # not use. A hash mismatch there has failed otherwise-green jobs.
+        helper = ROOT / "scripts" / "ci-linux-libs.sh"
+        self.assertTrue(helper.is_file(), "the Linux library helper is missing")
+        helper_text = helper.read_text(encoding="utf-8")
+        self.assertIn("google-chrome", helper_text)
+        self.assertIn("apt-get update", helper_text)
+        for path in workflow_files():
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn(
+                "sudo apt-get update",
+                text,
+                f"{path.name} still updates apt directly, so a Chrome hash "
+                f"mismatch can fail the job before any Numinous code runs",
+            )
+
 
 class RoundtripJobTests(unittest.TestCase):
     """0.6-am asks for the roundtrip on three operating systems."""
