@@ -75,8 +75,9 @@ Kepler Areas is a compact first wager: tune an ellipse with `pokes`, call
 Use `listen_room` when notation and measured sound roles help you perceive the
 system. Use `plot_expression` and `sing_expression` when you want to make rather
 than observe. `sing_expression` with `midi: true` returns a Standard MIDI
-File of the same melody: 12-TET keys plus pitch bend of leftover cents over
-plus or minus two semitones. A successful plot or song returns
+File: 12-TET keys plus pitch bend of leftover cents over plus or minus two
+semitones. Overlay programs mix every graph in WAV; MIDI stays the first
+curve. A successful plot or song returns
 `structuredContent.next` as a `save_creation` call with the expression and
 window already bound. Follow it to keep the experiment; a glance is a door,
 not a dead picture. Pass `list_experiments: true` on `plot_expression` for
@@ -90,7 +91,8 @@ or `overlay` (`the-parts`, `the-sum`), or `euclidean` (`tresillo`,
 `three-against-five`), or `two-voices` (`closing-voices`,
 `wandering-voices`).
 A formula may name extra knobs besides `a`; each is a slider with a value
-and a declared range. Type `sin(x) & cos(x)` to overlay graphs. Type
+and a declared range. Type `sin(x) & cos(x)` to overlay graphs; every graph sings in WAV, and MIDI
+stays the first curve. Type
 `euclid(3,8)` for a Euclidean rhythm. A field expression (`z`, `y`, `i`, `re`, `im`,
 `arg`, `conj`) draws a plate rather than a curve; it is seen first and
 has no melody. `open_creation`

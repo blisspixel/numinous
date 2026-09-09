@@ -16,8 +16,8 @@ use std::time::Duration;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use numinous_core::{
-    CUT_LEVELS, Canvas, Journey, PlotRequest, Raster, Room, RoomMeta, SingRequest, Surface,
-    all_rooms, draw_text, hidden_room_by_id, room_by_id,
+    CUT_LEVELS, Canvas, Journey, PlotRequest, Raster, Room, RoomMeta, Surface, all_rooms,
+    draw_text, hidden_room_by_id, room_by_id,
 };
 
 mod access;
@@ -55,10 +55,10 @@ use render_input::{parse_gesture_arg, parse_gestures, parse_poke_arg, parse_poke
 use studio::load_studio_creation;
 use studio::{
     CreationIdentity, ForkEdits, StudioParameters, field_report_with,
-    fork_studio_creation_extended, open_studio_report, parametric_report, parametric_report_with,
-    parse_slider_specs, plot_report, plot_report_with, plot_request_error, resolve_plot_source,
-    resolve_sing_input, save_field_creation, save_parametric_creation,
-    save_studio_creation_with_sliders, sing_request_error,
+    fork_studio_creation_extended, open_studio_report, overlay_or_graph_melody, parametric_report,
+    parametric_report_with, parse_slider_specs, plot_report, plot_report_with, plot_request_error,
+    resolve_plot_source, resolve_sing_input, save_field_creation, save_parametric_creation,
+    save_studio_creation_with_sliders,
 };
 #[cfg(test)]
 use studio::{fork_studio_creation, save_studio_creation};
@@ -2741,34 +2741,28 @@ fn sing_to_path(
     sliders: &[numinous_core::StudioSlider],
     path: &Path,
 ) -> Result<String, String> {
-    let mut request = SingRequest::new(source, Some(xmin), Some(xmax), Some(a), Some(notes))
-        .map_err(sing_request_error)?;
-    if !sliders.is_empty() {
-        request = request
-            .with_sliders(sliders.to_vec())
-            .map_err(sing_request_error)?;
-    }
-    let spec = request
-        .execute_with_scale(scale)
-        .map_err(sing_request_error)?;
+    let (wav_spec, midi_spec) =
+        overlay_or_graph_melody(source, xmin, xmax, notes, a, scale, sliders)?;
     let ext = path
         .extension()
         .and_then(|ext| ext.to_str())
         .unwrap_or("wav")
         .to_ascii_lowercase();
-    match ext.as_str() {
+    let spec = match ext.as_str() {
         "wav" => {
-            write_wav(path, &spec.render(44_100), 44_100, 1)?;
+            write_wav(path, &wav_spec.render(44_100), 44_100, 1)?;
+            wav_spec
         }
         "mid" | "midi" => {
-            std::fs::write(path, spec.midi()).map_err(|error| {
+            std::fs::write(path, midi_spec.midi()).map_err(|error| {
                 format!("could not create {}: {error}", terminal_safe_path(path))
             })?;
+            midi_spec
         }
         other => {
             return Err(format!("sing writes .wav or .mid, not .{other}\n"));
         }
-    }
+    };
     Ok(format!(
         "wrote {} ({:.1}s, {} notes) from y = {} on the {} scale\n",
         terminal_safe_path(path),

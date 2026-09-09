@@ -1,7 +1,8 @@
 # Two voices
 
 A path is two oscillators drawn as one. An overlay draws those oscillators
-as two graphs over the same time window. The first curve still sings.
+as two graphs over the same time window. Every graph sings in WAV; MIDI
+stays the first curve.
 
 These two small creations let you see the parts of Returning home. There is
 no score or required order. The path capsules remain `full-return` and

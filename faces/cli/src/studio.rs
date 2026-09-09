@@ -10,8 +10,8 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use numinous_core::{
-    FieldReading, FieldRequest, PathClosure, PlotRequest, PlotSource, StudioCreation, StudioKind,
-    StudioRequestError, StudioScale, StudioSlider, sliders_from_specs,
+    FieldReading, FieldRequest, PathClosure, PlotRequest, PlotSource, SingRequest, SoundSpec,
+    StudioCreation, StudioKind, StudioRequestError, StudioScale, StudioSlider, sliders_from_specs,
 };
 
 use crate::render_input::validate_render_dimensions;
@@ -366,6 +366,46 @@ pub(super) fn plot_request_error(error: StudioRequestError) -> String {
     }
 }
 
+/// WAV mixes every overlay graph; MIDI keeps the first graph.
+pub(super) fn overlay_or_graph_melody(
+    source: &str,
+    xmin: f64,
+    xmax: f64,
+    notes: usize,
+    a: f64,
+    scale: StudioScale,
+    sliders: &[StudioSlider],
+) -> Result<(SoundSpec, SoundSpec), String> {
+    if source.contains('&') {
+        let parts: Vec<String> = source
+            .split('&')
+            .map(|part| part.trim().to_string())
+            .collect();
+        let mut creation = StudioCreation::new_program(parts, xmin, xmax, a)?;
+        if !sliders.is_empty() {
+            creation = creation.with_sliders(sliders.to_vec())?;
+        }
+        let creation = creation.with_scale(scale);
+        let wav = creation.to_melody(notes);
+        if wav.notes.is_empty() {
+            return Err(sing_request_error(StudioRequestError::Undefined));
+        }
+        Ok((wav, creation.to_midi_melody(notes)))
+    } else {
+        let mut request = SingRequest::new(source, Some(xmin), Some(xmax), Some(a), Some(notes))
+            .map_err(sing_request_error)?;
+        if !sliders.is_empty() {
+            request = request
+                .with_sliders(sliders.to_vec())
+                .map_err(sing_request_error)?;
+        }
+        let spec = request
+            .execute_with_scale(scale)
+            .map_err(sing_request_error)?;
+        Ok((spec.clone(), spec))
+    }
+}
+
 pub(super) fn sing_request_error(error: StudioRequestError) -> String {
     match error {
         StudioRequestError::Undefined => {
@@ -507,11 +547,16 @@ pub(super) fn resolve_sing_input(
         if creation.kind() == StudioKind::Field {
             return Err("a field is seen first; it has no melody yet\n".to_string());
         }
-        return Ok((
+        let source = if creation.kind() == StudioKind::Program {
+            creation.editor_source()
+        } else {
             creation
                 .second_source()
                 .unwrap_or_else(|| creation.source())
-                .to_string(),
+                .to_string()
+        };
+        return Ok((
+            source,
             xmin.unwrap_or_else(|| creation.xmin()),
             xmax.unwrap_or_else(|| creation.xmax()),
             a.unwrap_or_else(|| creation.a()),

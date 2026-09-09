@@ -45,7 +45,7 @@ fn server_instructions() -> &'static str {
         "On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. ",
         "Read structuredContent.engineeredAha for the beat, visible wager, and post-summon grade. reveal_room opens only after a normal room has been played, or after an engineered Aha has consolidated. ",
         "For optional reading without progression, call study_room with an explicit catalog room and optional locale. Choose explanation, notes, or mathematics, or open one stable block id directly. Content depth and language fallback are reported explicitly; unavailable mathematics remains unavailable. Study does not read or award Journey or reading progress. ",
-        "Pass audio true to watch_show, listen_room, or sing_expression and a real WAV arrives in an audio content block beside the notation. That is a sound sent, not a sound heard: whether your client surfaces it is its answer to give, and if it cannot, the notation is the whole of what you get. Pass midi true on sing_expression for a Standard MIDI File of the same melody: 12-TET keys plus pitch bend of leftover cents. ",
+        "Pass audio true to watch_show, listen_room, or sing_expression and a real WAV arrives in an audio content block beside the notation. That is a sound sent, not a sound heard: whether your client surfaces it is its answer to give, and if it cannot, the notation is the whole of what you get. Pass midi true on sing_expression for a Standard MIDI File: 12-TET keys plus pitch bend of leftover cents. Overlay programs mix every graph in WAV; MIDI stays the first graph. ",
         "Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
     )
 }
@@ -835,14 +835,14 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "sing_expression",
-                "description": "Hear your own function through the same Studio grammar: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Choose a portable pitch scale or keep the continuous default. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block. Pass midi true for a Standard MIDI File of the same melody as a resource block: nearest 12-TET keys, leftover cents as pitch bend over plus or minus two semitones, with that range declared in the file. A successful song names next as save_creation with the expression, window, and pitch map already bound.",
+                "description": "Hear your own function through the same Studio grammar: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation. Choose a portable pitch scale or keep the continuous default. Every note after the first carries the step taken to reach it, in structuredContent.steps: its exact size in cents, the equal-tempered name when one is near enough, and the whole number ratio when a simple one explains it, with how many cents off it sits. A step no consonance explains is given no ratio rather than a search result, so what the curve did is legible without ears. Pass audio true and the melody also comes back as an actual sound: a mono 16-bit WAV in an audio content block. Pass midi true for a Standard MIDI File as a resource block: nearest 12-TET keys, leftover cents as pitch bend over plus or minus two semitones, with that range declared in the file. Overlay programs mix every graph in WAV; MIDI stays the first graph. A successful song names next as save_creation with the expression, window, and pitch map already bound.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "expr": {
                             "type": "string",
                             "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
-                            "description": "The expression in x."
+                            "description": "The expression in x, or an overlay program such as sin(x) & cos(x)."
                         },
                         "audio": {
                             "type": "boolean",
@@ -853,7 +853,7 @@ fn build_tools_catalog() -> Value {
                         },
                         "midi": {
                             "type": "boolean",
-                            "description": "Also return the melody as a Standard MIDI File type 0 resource (audio/midi). Off by default. The native voice stays frequencies in time; MIDI is 12-TET keys plus pitch bend of leftover cents over plus or minus two semitones, with that range declared in the file. StructuredContent.midi names that loss."
+                            "description": "Also return the melody as a Standard MIDI File type 0 resource (audio/midi). Off by default. The native voice stays frequencies in time; MIDI is 12-TET keys plus pitch bend of leftover cents over plus or minus two semitones, with that range declared in the file. Overlay programs keep the first graph. StructuredContent.midi names that loss."
                         },
                         "notes": {
                             "type": "integer",

@@ -296,8 +296,8 @@ and `the-sum`, or `family: "euclidean"` for `tresillo` and
 `wandering-voices`. A formula may name extra knobs besides `a`;
 each is a slider with a value and a declared range, and capsules write
 `NUMINOUS_STUDIO 6` only when those extra sliders exist. Type `sin(x) & cos(x)`
-to overlay graphs; capsules write `NUMINOUS_STUDIO 7` only when more than one
-graph is present. Type `euclid(3,8)` for a Euclidean rhythm. `open_creation`
+to overlay graphs; every graph sings in WAV, and MIDI stays the first curve.
+Capsules write `NUMINOUS_STUDIO 7` only when more than one graph is present. Type `euclid(3,8)` for a Euclidean rhythm. `open_creation`
 accepts those ids directly. They are Studio
 doors after a touch of math, not a lobby in front of the rooms. Lissajous
 names Returning home when you describe it or study it. In the App,

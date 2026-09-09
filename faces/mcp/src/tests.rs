@@ -267,6 +267,11 @@ fn packaged_player_docs_name_creation_next() {
             flattened.contains("closure") && flattened.contains("half-period"),
             "{name} must name the Returning home closure trial a packaged player can read"
         );
+        assert!(
+            flattened.contains("every graph sings in WAV")
+                && flattened.contains("MIDI stays the first curve"),
+            "{name} must name overlay WAV mix and MIDI lead a packaged player can hear"
+        );
         for id in numinous_core::AUTHORED_MATHEMATICS_ROOMS {
             assert!(
                 flattened.contains(id),
@@ -869,6 +874,11 @@ fn tools_list_has_the_expected_tools() {
         sing_description.contains("names next as save_creation")
             && sing_description.contains("already bound"),
         "sing_expression must name the keep door: {sing_description}"
+    );
+    assert!(
+        sing_description.contains("mix every graph in WAV")
+            && sing_description.contains("MIDI stays the first graph"),
+        "sing_expression must name overlay WAV mix and MIDI lead: {sing_description}"
     );
     for tool in [save_creation, fork_creation] {
         assert_eq!(
@@ -2625,6 +2635,57 @@ fn overlay_programs_plot_save_and_open_follow_next() {
     assert_eq!(
         opened["result"]["structuredContent"]["capsuleFormatVersion"],
         7
+    );
+}
+
+#[test]
+fn overlay_programs_sing_every_graph_in_wav_and_keep_the_first_in_midi() {
+    let sung = call(
+        "sing_expression",
+        json!({
+            "expr": "sin(x) & cos(x)",
+            "xmin": -1.0,
+            "xmax": 1.0,
+            "notes": 8,
+            "audio": true,
+            "midi": true
+        }),
+    );
+    assert_eq!(sung["result"]["isError"], false, "{sung}");
+    let content = sung["result"]["structuredContent"].clone();
+    assert_eq!(content["notes"].as_array().expect("notes").len(), 16);
+    assert_eq!(content["midi"]["sourceNoteCount"], 8);
+    let next = &content["next"];
+    assert_eq!(next["tool"], "save_creation");
+    assert_eq!(next["arguments"]["expr"], "sin(x) & cos(x)");
+    let saved = call("save_creation", next["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    assert_eq!(saved["result"]["structuredContent"]["kind"], "program");
+    let lead = call(
+        "sing_expression",
+        json!({
+            "expr": "sin(x)",
+            "xmin": -1.0,
+            "xmax": 1.0,
+            "notes": 8,
+            "midi": true
+        }),
+    );
+    let overlay_midi = sung["result"]["content"]
+        .as_array()
+        .expect("content")
+        .iter()
+        .find(|block| block["type"] == "resource")
+        .expect("overlay midi");
+    let lead_midi = lead["result"]["content"]
+        .as_array()
+        .expect("lead content")
+        .iter()
+        .find(|block| block["type"] == "resource")
+        .expect("lead midi");
+    assert_eq!(
+        overlay_midi["resource"]["blob"], lead_midi["resource"]["blob"],
+        "overlay MIDI stays the first graph"
     );
 }
 

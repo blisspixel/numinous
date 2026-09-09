@@ -593,18 +593,18 @@ impl StudioPanel {
     /// A reopened creation supplies its saved window; a fresh formula uses the
     /// shared defaults. Gallery playback never changes these numbers.
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
-        if self
-            .program
-            .as_ref()
-            .is_some_and(|program| program.kind() == StudioKind::Field)
-        {
-            return Some(SoundSpec {
-                duration: 0.12,
-                notes: Vec::new(),
-            });
+        let (xmin, xmax, a) = self.window_and_knob();
+        if let Some(program) = &self.program {
+            return Some(program.to_melody(
+                xmin,
+                xmax,
+                numinous_core::DEFAULT_MELODY_NOTES,
+                a,
+                &self.sliders,
+                self.scale,
+            ));
         }
         let expr = self.expr.as_ref()?;
-        let (xmin, xmax, a) = self.window_and_knob();
         Some(numinous_core::to_melody_with_scale_named(
             expr,
             xmin,
@@ -1691,6 +1691,14 @@ mod tests {
         assert_eq!(creation.kind(), numinous_core::StudioKind::Program);
         assert!(creation.to_num_file().starts_with("NUMINOUS_STUDIO 7\n"));
         assert_eq!(creation.editor_source(), "sin(x) & cos(x)");
+        let live = panel.current_sound().expect("live mix");
+        assert_eq!(live, creation.to_melody(32));
+        assert_eq!(live.notes.len(), 64);
+        assert_eq!(
+            creation.to_midi_melody(32).notes.len(),
+            32,
+            "MIDI stays the first graph"
+        );
         let parts = numinous_core::studio_experiment("the-parts").expect("parts");
         panel.open_creation(&parts);
         assert_eq!(

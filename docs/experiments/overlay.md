@@ -1,7 +1,7 @@
 # Overlay
 
 Two claims can share one window. An overlay program draws several graphs
-together. The first curve still sings.
+together. Every graph sings in WAV; MIDI stays the first curve.
 
 These two small creations let you compare the parts with their sum. There
 is no score or required order.
@@ -23,7 +23,8 @@ more than one graph is present. Type `sin(x) & cos(x)` to make your own.
 
 A graph is one function of x. An overlay is several such functions, sampled
 over the same interval, fitted to one shared vertical range. Distinct marks
-name the curves in source order: `#`, `*`, `+`, `o`. The melody is the first
-expression. A sum is a third claim, not a skin of the overlay.
+name the curves in source order: `#`, `*`, `+`, `o`. WAV mixes every
+expression; MIDI keeps the first. A sum is a third claim, not a skin of the
+overlay.
 
 </details>
