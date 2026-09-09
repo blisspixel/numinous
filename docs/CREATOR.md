@@ -49,7 +49,8 @@ of two to four graphs ship as version 7. Euclidean rhythms ship as
 Pattern Studio's tracker, step grid, and piano roll remain open.
 The sung melody can leave as WAV or as a Standard MIDI File on all three faces:
 CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` with `midi: true`, and the App
-F4 share as `melody.mid`. The existing parameter `a` is now explicit: Up/Down
+F4 share as `melody.mid`. Overlay programs mix every graph in WAV; MIDI stays
+the first curve. The existing parameter `a` is now explicit: Up/Down
 adjust it by 0.25 and Home restores 1, with corresponding controller actions.
 Drawing, live melody, capsule, postcard, and MIDI all use that same value and
 window. Reopened values retain their exact precision; the first actual edit

@@ -102,7 +102,8 @@ is still a target.
 - **Number sequences become melody and rhythm.** Primes, Fibonacci, Collatz orbits, digits of pi, all play themselves. A prime spiral has a prime beat.
 - **Euclidean rhythms, built as a Studio function.** `euclid(hits, steps)`
   spreads k onsets as evenly as possible over n steps. The graph is 1 on a
-  hit and 0 on a rest. Overlay layers two of them. Pattern Studio's tracker
+  hit and 0 on a rest. Overlay layers two of them, and every graph sings in
+  WAV; MIDI stays the first curve. Pattern Studio's tracker
   and event graph remain later work.
 
 ### A2. Target: bit-depth voices synchronized to the Visual Eras

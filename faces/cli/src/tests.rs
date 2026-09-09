@@ -3787,6 +3787,48 @@ fn overlay_programs_plot_save_and_open() {
 }
 
 #[test]
+fn overlay_programs_sing_every_graph_in_wav_and_keep_the_first_in_midi() {
+    let wav = std::env::temp_dir().join("numinous_cli_overlay_sing.wav");
+    let midi = std::env::temp_dir().join("numinous_cli_overlay_sing.mid");
+    let lead = std::env::temp_dir().join("numinous_cli_overlay_lead.mid");
+    let _ = std::fs::remove_file(&wav);
+    let _ = std::fs::remove_file(&midi);
+    let _ = std::fs::remove_file(&lead);
+    let scale = numinous_core::StudioScale::Continuous;
+    let mix = super::overlay_or_graph_melody("sin(x) & cos(x)", -1.0, 1.0, 8, 1.0, scale, &[])
+        .expect("mix");
+    assert_eq!(mix.0.notes.len(), 16);
+    assert_eq!(mix.1.notes.len(), 8);
+    let first =
+        super::overlay_or_graph_melody("sin(x)", -1.0, 1.0, 8, 1.0, scale, &[]).expect("first");
+    assert_eq!(mix.1, first.1);
+    let wav_message = super::sing_to_path("sin(x) & cos(x)", -1.0, 1.0, 8, 1.0, scale, &[], &wav)
+        .expect("overlay wav");
+    assert!(wav_message.contains("16 notes"), "{wav_message}");
+    let midi_message = super::sing_to_path("sin(x) & cos(x)", -1.0, 1.0, 8, 1.0, scale, &[], &midi)
+        .expect("overlay midi");
+    assert!(midi_message.contains("8 notes"), "{midi_message}");
+    super::sing_to_path("sin(x)", -1.0, 1.0, 8, 1.0, scale, &[], &lead).expect("lead midi");
+    assert_eq!(
+        std::fs::read(&midi).expect("overlay midi bytes"),
+        std::fs::read(&lead).expect("lead midi bytes")
+    );
+    let capsule = std::env::temp_dir().join("numinous_cli_overlay_sing.num");
+    let _ = std::fs::remove_file(&capsule);
+    let creation = numinous_core::StudioCreation::new_program(["sin(x)", "cos(x)"], -1.0, 1.0, 1.0)
+        .expect("program");
+    std::fs::write(&capsule, creation.to_num_file()).expect("write overlay capsule");
+    let (source, xmin, xmax, a, _, _) =
+        super::resolve_sing_input(&capsule.to_string_lossy(), None, None, None).expect("capsule");
+    assert_eq!(source, "sin(x) & cos(x)");
+    assert_eq!((xmin, xmax, a), (-1.0, 1.0, 1.0));
+    let _ = std::fs::remove_file(&wav);
+    let _ = std::fs::remove_file(&midi);
+    let _ = std::fs::remove_file(&lead);
+    let _ = std::fs::remove_file(&capsule);
+}
+
+#[test]
 fn euclidean_rhythms_plot_save_and_open() {
     let path = std::env::temp_dir().join("numinous_cli_euclid_save_test.num");
     let _ = std::fs::remove_file(&path);

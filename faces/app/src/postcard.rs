@@ -254,7 +254,7 @@ fn fill_studio_share_bundle(
         .open(&midi_path)?;
     midi_file.write_all(
         &creation
-            .to_melody(numinous_core::DEFAULT_MELODY_NOTES)
+            .to_midi_melody(numinous_core::DEFAULT_MELODY_NOTES)
             .midi(),
     )?;
 
@@ -599,7 +599,9 @@ mod tests {
         assert_eq!(&midi[0..4], b"MThd");
         assert_eq!(
             midi,
-            graph.to_melody(numinous_core::DEFAULT_MELODY_NOTES).midi(),
+            graph
+                .to_midi_melody(numinous_core::DEFAULT_MELODY_NOTES)
+                .midi(),
             "the share must sing the stored scale, not a silent default"
         );
         assert_ne!(
@@ -630,7 +632,7 @@ mod tests {
         assert_eq!(
             parametric_midi,
             parametric
-                .to_melody(numinous_core::DEFAULT_MELODY_NOTES)
+                .to_midi_melody(numinous_core::DEFAULT_MELODY_NOTES)
                 .midi()
         );
         let y_voice = numinous_core::to_melody(
@@ -656,6 +658,38 @@ mod tests {
         assert_ne!(
             parametric_midi, x_voice,
             "a parametric share must not sing the x(t) path as if it were the voice"
+        );
+
+        let overlay =
+            numinous_core::StudioCreation::new_program(["sin(x)", "cos(x)"], -1.0, 1.0, 1.0)
+                .expect("overlay");
+        let overlay_dir =
+            write_studio_share_bundle(&overlay, &rgba, &parent).expect("overlay bundle");
+        let overlay_midi = std::fs::read(overlay_dir.join("melody.mid")).expect("overlay midi");
+        assert_eq!(
+            overlay_midi,
+            overlay
+                .to_midi_melody(numinous_core::DEFAULT_MELODY_NOTES)
+                .midi()
+        );
+        assert_eq!(
+            overlay_midi,
+            numinous_core::StudioCreation::new("sin(x)", -1.0, 1.0, 1.0)
+                .expect("lead")
+                .to_midi_melody(numinous_core::DEFAULT_MELODY_NOTES)
+                .midi(),
+            "overlay MIDI stays the first graph"
+        );
+        assert_ne!(
+            overlay
+                .to_melody(numinous_core::DEFAULT_MELODY_NOTES)
+                .notes
+                .len(),
+            overlay
+                .to_midi_melody(numinous_core::DEFAULT_MELODY_NOTES)
+                .notes
+                .len(),
+            "WAV mixes every overlay graph"
         );
 
         let _ = std::fs::remove_dir_all(&parent);

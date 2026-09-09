@@ -15,10 +15,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   Bundled family `named-sliders`: `extra-knob` and `live-ratio`. `PLAY.md`
   and the skill name the ids.
 - Overlay programs: two to four graphs share one window, knob, sliders, and
-  scale. Type `sin(x) & cos(x)`. The first curve sings. Capsules write
-  `NUMINOUS_STUDIO 7` only when more than one graph is present. CLI, MCP, and
-  the App plot, save, reopen, and fork them. Bundled family `overlay`:
-  `the-parts` and `the-sum`. `PLAY.md` and the skill name the ids.
+  scale. Type `sin(x) & cos(x)`. Every graph sings in WAV; MIDI stays the
+  first curve. Capsules write `NUMINOUS_STUDIO 7` only when more than one
+  graph is present. CLI, MCP, and the App plot, save, reopen, and fork them.
+  Bundled family `overlay`: `the-parts` and `the-sum`. `PLAY.md` and the
+  skill name the ids.
 - Euclidean rhythms in Studio. `euclid(hits, steps)` places that many onsets
   as evenly as possible among that many steps. The graph is 1 on a hit and
   0 on a rest. Overlay layers them: `euclid(3,8) & euclid(5,8)`. The step
@@ -29,9 +30,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   oscillators of Returning home as graphs over the same window.
   `closing-voices` is the 1 and 17/12 pair; `wandering-voices` replaces
   17/12 with `sqrt(2)`. The path capsules stay `full-return` and
-  `almost-home`. The first curve still sings. App PageDown after
-  Another ratio opens Closing voices; PageUp returns. `PLAY.md` and the
-  skill name the ids.
+  `almost-home`. Every graph sings in WAV; MIDI stays the first curve.
+  App PageDown after Another ratio opens Closing voices; PageUp returns.
+  `PLAY.md` and the skill name the ids.
 
 ## [0.4.0-alpha.25] - 2026-09-09
 
