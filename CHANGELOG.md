@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.26] - 2026-09-13
+
 ### Added
 - Field melody in Studio. Height and phase fields sing the stored reading
   along the real axis (`y = 0`). Height is the plate's doubling ladder.
