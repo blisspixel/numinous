@@ -67,6 +67,7 @@ pub const STUDIO_RECIPES: &[&str] = &[
     "max(abs(x) - a, 0)",
     "euclid(3,8)",
     "pat(x..x..x.)",
+    "note(\"c e g\")",
 ];
 
 /// How many curated recipes the bank holds.
@@ -249,6 +250,20 @@ pub const STUDIO_EXPERIMENTS: &[StudioExperiment] = &[
         title: "Wandering voices",
         invitation: "Compare with Closing voices. What would a common period require of both counts?",
         num_file: include_str!("../../../docs/experiments/wandering-voices.num"),
+    },
+    StudioExperiment {
+        id: "major-triad",
+        family: "notes",
+        title: "A major triad",
+        invitation: "Three named pitches. Which intervals sit between them, and what would a fourth pitch do?",
+        num_file: include_str!("../../../docs/experiments/major-triad.num"),
+    },
+    StudioExperiment {
+        id: "octave-climb",
+        family: "notes",
+        title: "An octave climb",
+        invitation: "The last pitch is an octave above the first. Does the climb feel like a return?",
+        num_file: include_str!("../../../docs/experiments/octave-climb.num"),
     },
 ];
 
@@ -1323,6 +1338,24 @@ impl StudioCreation {
         piano_roll_text(self, piano_roll_note_count(self))
     }
 
+    /// Step count when the sung voice is a step reading: a 0/1 pattern row
+    /// or named pitches over an integer window.
+    ///
+    /// `None` for a continuous graph, a path, or a field. A step reading is
+    /// what the tracker text, the step grid, and the piano roll line up on,
+    /// one column per step.
+    #[must_use]
+    pub fn step_count(&self) -> Option<usize> {
+        named_note_step_samples(self)
+            .map(|samples| samples.len())
+            .or_else(|| {
+                self.pattern_rows()
+                    .first()
+                    .map(|row| row.chars().count())
+                    .filter(|count| (1..=MAX_EUCLID_STEPS).contains(count))
+            })
+    }
+
     /// Piano-roll mark rows, high pitch first, using `x` and `.`.
     ///
     /// Empty when the creation is silent. The App paints these cells with
@@ -2314,6 +2347,12 @@ pub enum Expr {
     /// Each mark is one step: `x` is a hit, `.` is a rest. The sample at `x`
     /// is 1 on a hit and 0 on a rest, wrapping like `euclid`.
     Pattern(Vec<bool>),
+    /// Named MIDI pitches, `note("c e g")`.
+    ///
+    /// Each entry is one step: `Some` is a MIDI note number, `None` is a
+    /// rest. The sample at `x` is that MIDI number, wrapping like `pat`.
+    /// A rest is undefined rather than the root.
+    Notes(Vec<Option<u8>>),
 }
 
 /// A parsed Studio program ready for repeated drawing or sound generation.
@@ -2719,7 +2758,12 @@ pub fn uses_field_vocabulary(expression: &Expr) -> bool {
     match expression {
         Expr::VarIm | Expr::Point | Expr::ImagUnit => true,
         Expr::Call(Func::Re | Func::Im | Func::Arg | Func::Conj, _) => true,
-        Expr::Num(_) | Expr::Var | Expr::Param | Expr::Slider(_) | Expr::Pattern(_) => false,
+        Expr::Num(_)
+        | Expr::Var
+        | Expr::Param
+        | Expr::Slider(_)
+        | Expr::Pattern(_)
+        | Expr::Notes(_) => false,
         Expr::Neg(inner) | Expr::Call(_, inner) => uses_field_vocabulary(inner),
         Expr::Bin(_, lhs, rhs) | Expr::PairCall(_, lhs, rhs) => {
             uses_field_vocabulary(lhs) || uses_field_vocabulary(rhs)
@@ -2837,6 +2881,23 @@ pub(crate) fn pattern_pulse(x: f64, hits: &[bool]) -> f64 {
     }
 }
 
+/// One sample of `note("c e g")` at `x`.
+///
+/// The step index is `floor(x)` wrapped into `n` positions, the length of
+/// the named melody. A pitch is its MIDI number. A rest is undefined.
+/// Nonfinite input or an empty melody is undefined.
+pub(crate) fn notes_pulse(x: f64, notes: &[Option<u8>]) -> f64 {
+    let n = notes.len();
+    if !x.is_finite() || n == 0 || n > MAX_EUCLID_STEPS {
+        return f64::NAN;
+    }
+    let i = x.floor().rem_euclid(n as f64);
+    match notes.get(i as usize) {
+        Some(Some(midi)) => f64::from(*midi),
+        Some(None) | None => f64::NAN,
+    }
+}
+
 fn is_integer_value(value: f64) -> bool {
     value.is_finite() && value == value.trunc()
 }
@@ -2906,12 +2967,7 @@ pub fn pattern_grid_text(rows: &[String]) -> Option<String> {
 }
 
 fn piano_roll_note_count(creation: &StudioCreation) -> usize {
-    creation
-        .pattern_rows()
-        .first()
-        .map(|row| row.chars().count())
-        .filter(|count| (1..=MAX_EUCLID_STEPS).contains(count))
-        .unwrap_or(PIANO_ROLL_COLUMNS)
+    creation.step_count().unwrap_or(PIANO_ROLL_COLUMNS)
 }
 
 fn melody_semitone(freq: f32) -> Option<i32> {
@@ -2969,8 +3025,112 @@ fn pattern_lead_samples(creation: &StudioCreation) -> Option<Vec<f64>> {
     Some(samples)
 }
 
+fn named_note_step_samples(creation: &StudioCreation) -> Option<Vec<f64>> {
+    match creation.kind() {
+        StudioKind::Graph | StudioKind::Program => {}
+        StudioKind::Parametric | StudioKind::Field => return None,
+    }
+    let program = creation.program().ok()?;
+    if !matches!(program.voice_expression(), Expr::Notes(_)) {
+        return None;
+    }
+    if !is_integer_value(creation.xmin()) || !is_integer_value(creation.xmax()) {
+        return None;
+    }
+    let count = (creation.xmax() - creation.xmin()) as usize;
+    if !(1..=MAX_EUCLID_STEPS).contains(&count) {
+        return None;
+    }
+    let start = creation.xmin() as i64;
+    let mut samples = Vec::with_capacity(count);
+    for offset in 0..count {
+        samples.push(eval_named(
+            program.voice_expression(),
+            (start + offset as i64) as f64,
+            creation.a(),
+            creation.sliders(),
+        ));
+    }
+    Some(samples)
+}
+
+fn midi_hz(midi: f64) -> Option<f32> {
+    if !midi.is_finite() || !(0.0..=127.0).contains(&midi) {
+        return None;
+    }
+    let freq = 440.0 * 2.0_f32.powf((midi as f32 - 69.0) / 12.0);
+    (freq.is_finite() && freq > 0.0).then_some(freq)
+}
+
+fn spec_from_midi_samples(samples: &[f64]) -> SoundSpec {
+    const STEP: f32 = 0.12;
+    if samples.is_empty() {
+        return SoundSpec {
+            duration: STEP,
+            notes: Vec::new(),
+        };
+    }
+    let notes: Vec<Note> = samples
+        .iter()
+        .enumerate()
+        .filter_map(|(i, &y)| {
+            let freq = midi_hz(y)?;
+            Some(Note {
+                freq,
+                start: i as f32 * STEP,
+                dur: STEP * 1.4,
+                amp: 0.3,
+            })
+        })
+        .collect();
+    SoundSpec {
+        duration: samples.len() as f32 * STEP + 0.3,
+        notes,
+    }
+}
+
+fn piano_roll_from_midi_samples(samples: &[f64]) -> Option<Vec<(i32, String)>> {
+    if samples.is_empty() || samples.len() > MAX_MELODY_NOTES {
+        return None;
+    }
+    let mut pitches = Vec::with_capacity(samples.len());
+    for &y in samples {
+        if !y.is_finite() {
+            pitches.push(None);
+            continue;
+        }
+        pitches.push(Some(melody_semitone(midi_hz(y)?)?));
+    }
+    if pitches.iter().all(Option::is_none) {
+        return None;
+    }
+    let mut unique: Vec<i32> = pitches.iter().copied().flatten().collect();
+    unique.sort_unstable();
+    unique.dedup();
+    unique.reverse();
+    let rows = unique
+        .into_iter()
+        .map(|pitch| {
+            let marks: String = pitches
+                .iter()
+                .map(|step| {
+                    if *step == Some(pitch) {
+                        PATTERN_HIT
+                    } else {
+                        PATTERN_REST
+                    }
+                })
+                .collect();
+            (pitch, marks)
+        })
+        .collect();
+    Some(rows)
+}
+
 fn piano_roll_spec(creation: &StudioCreation, notes: usize) -> Option<SoundSpec> {
-    let spec = if let Some(samples) = pattern_lead_samples(creation) {
+    let spec = if let Some(samples) = named_note_step_samples(creation) {
+        spec_from_midi_samples(&samples)
+    } else if let Some(samples) = pattern_lead_samples(creation) {
         spec_from_samples(&samples, creation.scale())
     } else {
         creation.to_midi_melody(notes)
@@ -2979,6 +3139,9 @@ fn piano_roll_spec(creation: &StudioCreation, notes: usize) -> Option<SoundSpec>
 }
 
 fn piano_roll(creation: &StudioCreation, notes: usize) -> Option<Vec<(i32, String)>> {
+    if let Some(samples) = named_note_step_samples(creation) {
+        return piano_roll_from_midi_samples(&samples);
+    }
     let spec = piano_roll_spec(creation, notes)?;
     let pitches: Vec<i32> = spec
         .notes
@@ -3115,6 +3278,7 @@ pub fn eval_named(expr: &Expr, x: f64, a: f64, sliders: &[crate::slider::StudioS
             }
         }
         Expr::Pattern(hits) => pattern_pulse(x, hits),
+        Expr::Notes(notes) => notes_pulse(x, notes),
     }
 }
 
@@ -3194,6 +3358,7 @@ pub fn eval_field_named(
             })
         }
         Expr::Pattern(hits) => Complex::real(pattern_pulse(z.re, hits)),
+        Expr::Notes(notes) => Complex::real(notes_pulse(z.re, notes)),
     }
 }
 
@@ -3366,6 +3531,25 @@ pub fn to_melody_with_scale_named(
     sliders: &[crate::slider::StudioSlider],
     scale: StudioScale,
 ) -> SoundSpec {
+    if let Expr::Notes(_) = expr {
+        if is_integer_value(xmin) && is_integer_value(xmax) {
+            let span = xmax - xmin;
+            if span >= 1.0 && span <= MAX_EUCLID_STEPS as f64 {
+                let start = xmin as i64;
+                let count = span as usize;
+                let samples: Vec<f64> = (0..count)
+                    .map(|offset| eval_named(expr, (start + offset as i64) as f64, a, sliders))
+                    .collect();
+                return spec_from_midi_samples(&samples);
+            }
+        }
+        let notes = notes.clamp(1, MAX_MELODY_NOTES);
+        let denom = (notes as f64 - 1.0).max(1.0);
+        let samples: Vec<f64> = (0..notes)
+            .map(|i| eval_named(expr, xmin + (xmax - xmin) * i as f64 / denom, a, sliders))
+            .collect();
+        return spec_from_midi_samples(&samples);
+    }
     let notes = notes.clamp(1, MAX_MELODY_NOTES);
     let denom = (notes as f64 - 1.0).max(1.0);
     let samples: Vec<f64> = (0..notes)
@@ -3748,6 +3932,73 @@ fn tracker_pattern_from_source(source: &str) -> Result<Option<Vec<bool>>, String
     ))
 }
 
+fn parse_named_notes(text: &str, name_column: usize) -> Result<Expr, String> {
+    let mut notes = Vec::new();
+    for token in text.split_whitespace() {
+        if notes.len() >= MAX_EUCLID_STEPS {
+            return Err(format!(
+                "note() may hold at most {MAX_EUCLID_STEPS} pitches at column {name_column}"
+            ));
+        }
+        notes.push(parse_pitch_token(token, name_column)?);
+    }
+    if notes.is_empty() {
+        return Err(format!(
+            "note() needs at least one pitch at column {name_column}"
+        ));
+    }
+    Ok(Expr::Notes(notes))
+}
+
+fn parse_pitch_token(token: &str, name_column: usize) -> Result<Option<u8>, String> {
+    if token == "." {
+        return Ok(None);
+    }
+    let mut chars = token.chars().peekable();
+    let letter = chars
+        .next()
+        .ok_or_else(|| format!("note() expected a pitch at column {name_column}"))?;
+    let base = match letter {
+        'c' => 0,
+        'd' => 2,
+        'e' => 4,
+        'f' => 5,
+        'g' => 7,
+        'a' => 9,
+        'b' => 11,
+        _ => {
+            return Err(format!(
+                "note() expected a pitch name at column {name_column}; found '{token}'"
+            ));
+        }
+    };
+    let accidental = match chars.peek() {
+        Some('#') | Some('s') => {
+            chars.next();
+            1
+        }
+        Some('b') => {
+            chars.next();
+            -1
+        }
+        _ => 0,
+    };
+    let rest: String = chars.collect();
+    let octave = if rest.is_empty() {
+        4
+    } else if rest.len() == 1 && rest.as_bytes()[0].is_ascii_digit() {
+        i32::from(rest.as_bytes()[0] - b'0')
+    } else {
+        return Err(format!(
+            "note() expected a pitch name at column {name_column}; found '{token}'"
+        ));
+    };
+    let midi = (octave + 1) * 12 + base + accidental;
+    u8::try_from(midi)
+        .map(Some)
+        .map_err(|_| format!("note() pitch '{token}' is out of range at column {name_column}"))
+}
+
 fn parse_in(source: &str, grammar: Grammar) -> Result<Expr, String> {
     let tokenized = tokenize(source)?;
     let tokens = tokenized.tokens;
@@ -3791,6 +4042,8 @@ enum Tok {
     RParen,
     /// A tracker rest, and the decimal point when it is not part of a number.
     Dot,
+    /// A quoted melody for `note("c e g")`.
+    String(String),
 }
 
 impl Tok {
@@ -3807,6 +4060,7 @@ impl Tok {
             Self::LParen => "'('".to_string(),
             Self::RParen => "')'".to_string(),
             Self::Dot => "'.'".to_string(),
+            Self::String(_) => "string".to_string(),
         }
     }
 }
@@ -3843,6 +4097,24 @@ fn tokenize(source: &str) -> Result<Tokenized, String> {
         } else if c == '.' {
             tokens.push(Tok::Dot);
             columns.push(i + 1);
+            i += 1;
+        } else if c == '"' {
+            let start = i;
+            i += 1;
+            while i < chars.len() && chars[i] != '"' {
+                if chars[i].is_control() {
+                    return Err(format!(
+                        "string cannot contain control characters at column {}",
+                        start + 1
+                    ));
+                }
+                i += 1;
+            }
+            if i >= chars.len() {
+                return Err(format!("unclosed string at column {}", start + 1));
+            }
+            tokens.push(Tok::String(chars[start + 1..i].iter().collect()));
+            columns.push(start + 1);
             i += 1;
         } else if c.is_ascii_alphabetic() {
             let start = i;
@@ -4071,10 +4343,35 @@ impl Parser {
         Ok(Expr::Pattern(hits))
     }
 
+    /// `note("c e g")`: named MIDI pitches over steps.
+    fn note_call(&mut self, name_column: usize) -> Result<Expr, String> {
+        self.pos += 1;
+        let column = self.current_column();
+        let text = match self.bump() {
+            Some(Tok::String(text)) => text,
+            Some(other) => {
+                return Err(format!(
+                    "note() expected a quoted melody at column {column}; found {}",
+                    other.diagnostic_name()
+                ));
+            }
+            None => {
+                return Err(format!(
+                    "expression ended at column {column}; expected a quoted melody after note( "
+                ));
+            }
+        };
+        self.expect_right_paren("after note( ")?;
+        parse_named_notes(&text, name_column)
+    }
+
     /// Resolve an identifier: the variable, a constant, or a function call.
     fn ident(&mut self, name: &str, depth: usize, name_column: usize) -> Result<Expr, String> {
         if name == "pat" && matches!(self.peek(), Some(Tok::LParen)) {
             return self.pattern_call(name_column);
+        }
+        if name == "note" && matches!(self.peek(), Some(Tok::LParen)) {
+            return self.note_call(name_column);
         }
         if matches!(self.peek(), Some(Tok::LParen)) {
             let unary = match name {
@@ -4303,7 +4600,7 @@ mod tests {
 
     #[test]
     fn bundled_studio_experiments_parse_keep_lineage_and_open_by_id() {
-        assert_eq!(STUDIO_EXPERIMENTS.len(), 18);
+        assert_eq!(STUDIO_EXPERIMENTS.len(), 20);
         let full = studio_experiment("full-return").expect("full-return");
         assert_eq!(full.title(), Some("A full return"));
         assert_eq!(full.kind(), StudioKind::Parametric);
@@ -4402,6 +4699,14 @@ mod tests {
         let wandering = studio_experiment("wandering-voices").expect("wandering-voices");
         assert_eq!(wandering.kind(), StudioKind::Program);
         assert!(wandering.editor_source().contains("sqrt(2)"));
+        let notes = studio_experiments_in(Some("notes")).expect("notes family");
+        assert_eq!(notes.len(), 2);
+        let triad = studio_experiment("major-triad").expect("major-triad");
+        assert_eq!(triad.source(), "note(\"c e g\")");
+        assert_eq!((triad.xmin(), triad.xmax()), (0.0, 3.0));
+        let climb = studio_experiment("octave-climb").expect("octave-climb");
+        assert_eq!(climb.source(), "note(\"c e g c5\")");
+        assert_eq!((climb.xmin(), climb.xmax()), (0.0, 4.0));
         let child = against.fork(None, Some("Remix"), None).expect("fork");
         assert_eq!(child.kind(), StudioKind::Program);
         assert_eq!(child.editor_source(), "euclid(3,8) & euclid(5,8)");
@@ -4837,6 +5142,80 @@ mod tests {
         let roll = curve.piano_roll_text().expect("sung curve");
         assert!(roll.contains("1234567890"), "{roll}");
         assert!(roll.contains('x'), "{roll}");
+    }
+
+    #[test]
+    fn named_pitches_are_midi_steps_that_sing_and_read_as_a_roll() {
+        let melody = parse("note(\"c e g\")").expect("triad");
+        assert_eq!(eval(&melody, 0.0, 1.0), 60.0);
+        assert_eq!(eval(&melody, 1.0, 1.0), 64.0);
+        assert_eq!(eval(&melody, 2.0, 1.0), 67.0);
+        assert_eq!(eval(&melody, 3.0, 1.0), 60.0);
+        assert_eq!(eval(&melody, 0.75, 1.0), 60.0);
+        let sharp = parse("note(\"c#\")").expect("sharp");
+        assert_eq!(eval(&sharp, 0.0, 1.0), 61.0);
+        assert_eq!(
+            eval(&parse("note(\"cs\")").expect("s sharp"), 0.0, 1.0),
+            61.0
+        );
+        assert_eq!(eval(&parse("note(\"eb\")").expect("flat"), 0.0, 1.0), 63.0);
+        assert_eq!(
+            eval(&parse("note(\"c5\")").expect("octave"), 0.0, 1.0),
+            72.0
+        );
+        let rested = parse("note(\"c . g\")").expect("rest");
+        assert_eq!(eval(&rested, 0.0, 1.0), 60.0);
+        assert!(eval(&rested, 1.0, 1.0).is_nan());
+        assert_eq!(eval(&rested, 2.0, 1.0), 67.0);
+        let creation = StudioCreation::new("note(\"c e g\")", 0.0, 3.0, 1.0).expect("triad");
+        assert!(creation.pattern_rows().is_empty());
+        assert_eq!(
+            creation.piano_roll_text().expect("roll"),
+            "   123\n10 ..x\n 7 .x.\n 3 x.."
+        );
+        let sung = to_melody(&melody, 0.0, 3.0, 3, 1.0);
+        assert_eq!(sung.notes.len(), 3);
+        assert!((f64::from(sung.notes[0].freq) - 261.625565).abs() < 0.01);
+        assert!((f64::from(sung.notes[1].freq) - 329.627557).abs() < 0.01);
+        assert!((f64::from(sung.notes[2].freq) - 391.995436).abs() < 0.01);
+        let rested_creation =
+            StudioCreation::new("note(\"c . g\")", 0.0, 3.0, 1.0).expect("rested");
+        assert_eq!(
+            rested_creation.piano_roll_text().expect("rested roll"),
+            "   123\n10 ..x\n 3 x.."
+        );
+        let climb = studio_experiment("octave-climb").expect("climb");
+        assert_eq!(
+            climb.piano_roll_marks().expect("climb marks"),
+            ["...x", "..x.", ".x..", "x..."]
+        );
+        assert_eq!(
+            StudioCreation::from_num_file(&creation.to_num_file()).expect("file"),
+            creation
+        );
+        assert_eq!(
+            StudioCreation::from_link(&creation.to_link()).expect("link"),
+            creation
+        );
+        assert!(parse("note()").is_err());
+        assert!(parse("note").is_err());
+        assert!(parse("note(c e g)").is_err());
+        assert!(parse("note(\"\")").is_err());
+        assert!(parse("note(\"c").is_err());
+        assert!(parse("note(\"h\")").is_err());
+        assert!(parse("note(\"c e g\", 1)").is_err());
+        let too_long = format!("note(\"{}\")", "c ".repeat(MAX_EUCLID_STEPS + 1));
+        assert!(
+            parse(&too_long)
+                .expect_err("overlong note")
+                .contains("at most")
+        );
+        let mixed = StudioCreation::new_program(["note(\"c e g\")", "euclid(3,8)"], 0.0, 8.0, 1.0)
+            .expect("mixed");
+        assert_eq!(
+            mixed.piano_roll_marks().expect("lead melody"),
+            ["..x..x..", ".x..x..x", "x..x..x."]
+        );
     }
 
     #[test]

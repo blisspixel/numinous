@@ -257,6 +257,10 @@ fn packaged_player_docs_name_creation_next() {
                 && flattened.contains("two-voices")
                 && flattened.contains("closing-voices")
                 && flattened.contains("wandering-voices")
+                && flattened.contains("notes")
+                && flattened.contains("major-triad")
+                && flattened.contains("octave-climb")
+                && flattened.contains("note(")
                 && flattened.contains("pattern")
                 && flattened.contains("grid")
                 && flattened.contains("x..x..x.")
@@ -2884,6 +2888,55 @@ fn tracker_marks_plot_save_and_follow_next() {
     assert_eq!(
         forked["result"]["structuredContent"]["expression"],
         "pat(x..x..x.)"
+    );
+}
+
+#[test]
+fn named_pitches_plot_save_and_follow_next() {
+    let plotted = call(
+        "plot_expression",
+        json!({"expr": "note(\"c e g\")", "xmin": 0.0, "xmax": 3.0}),
+    );
+    assert_eq!(plotted["result"]["isError"], false, "{plotted}");
+    let next = &plotted["result"]["structuredContent"]["next"];
+    assert_eq!(next["tool"], "save_creation");
+    assert_eq!(next["arguments"]["expr"], "note(\"c e g\")");
+    let roll = plotted["result"]["structuredContent"]["roll"]
+        .as_str()
+        .expect("roll");
+    assert!(roll.contains("10 ..x"), "{roll}");
+    assert!(roll.contains("7 .x."), "{roll}");
+    assert!(roll.contains("3 x.."), "{roll}");
+    let saved = call("save_creation", next["arguments"].clone());
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let listed = call(
+        "plot_expression",
+        json!({"list_experiments": true, "family": "notes"}),
+    );
+    let listed = &listed["result"]["structuredContent"];
+    assert_eq!(listed["family"], "notes");
+    assert_eq!(listed["experimentCount"], 2);
+    let opened = call(
+        "open_creation",
+        listed["experiments"][0]["next"]["arguments"].clone(),
+    );
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert_eq!(
+        opened["result"]["structuredContent"]["title"],
+        "A major triad"
+    );
+    assert_eq!(
+        opened["result"]["structuredContent"]["expression"],
+        "note(\"c e g\")"
+    );
+    let forked = call(
+        "fork_creation",
+        saved["result"]["structuredContent"]["next"]["arguments"].clone(),
+    );
+    assert_eq!(forked["result"]["isError"], false, "{forked}");
+    assert_eq!(
+        forked["result"]["structuredContent"]["expression"],
+        "note(\"c e g\")"
     );
 }
 

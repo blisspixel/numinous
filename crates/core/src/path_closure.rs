@@ -339,7 +339,8 @@ fn constant(
         Expr::Call(_, _)
         | Expr::Bin(Op::Pow, _, _)
         | Expr::PairCall(_, _, _)
-        | Expr::Pattern(_) => None,
+        | Expr::Pattern(_)
+        | Expr::Notes(_) => None,
     }
 }
 

@@ -76,7 +76,7 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "OVERLAY: SIN(X) & COS(X)  SHARED WINDOW",
     "FIELD: Z, Y, I, RE IM ARG CONJ  SEEN FIRST",
     "ONE: SIN COS TAN EXP LN ABS SQRT FLOOR",
-    "TWO: MOD MIN MAX EUCLID  PAT(X..X..X.)",
+    "TWO: MOD MIN MAX EUCLID PAT(X..X..X.) NOTE(\"C E G\")",
     "F2: RANDOM RECIPE FROM THE BANK",
     "F3: AUTO SET  (~21S)",
     "F4: NAME + SHARE  .NUM + LINK + PNG + MIDI",
@@ -1335,7 +1335,15 @@ mod tests {
     #[test]
     fn help_names_the_complete_scalar_vocabulary() {
         let help = STUDIO_HELP_LINES.join("\n");
-        for name in ["FLOOR", "MOD", "MIN", "MAX", "EUCLID", "PAT(X..X..X.)"] {
+        for name in [
+            "FLOOR",
+            "MOD",
+            "MIN",
+            "MAX",
+            "EUCLID",
+            "PAT(X..X..X.)",
+            "NOTE(\"C E G\")",
+        ] {
             assert!(help.contains(name), "help must name {name}");
         }
         assert!(
@@ -1829,6 +1837,11 @@ mod tests {
         );
         let [_, (context, _)] = typed_panel.status_lines(InputMode::KeyboardMouse, 80);
         assert!(context.contains("ROLL 24 x..x..x."), "{context}");
+        let triad = numinous_core::studio_experiment("major-triad").expect("triad");
+        typed_panel.open_creation(&triad);
+        let [_, (context, _)] = typed_panel.status_lines(InputMode::KeyboardMouse, 80);
+        assert!(context.contains("ROLL 10 ..x"), "{context}");
+        assert_eq!(typed_panel.source_for_test(), "note(\"c e g\")");
     }
 
     #[test]

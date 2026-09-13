@@ -1,0 +1,6 @@
+NUMINOUS_STUDIO 2
+expr=note("c e g")
+xmin=0
+xmax=3
+a=1
+title=A major triad

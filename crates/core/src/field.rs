@@ -603,7 +603,8 @@ pub fn is_real_valued(expression: &Expr) -> bool {
         | Expr::VarIm
         | Expr::Param
         | Expr::Slider(_)
-        | Expr::Pattern(_) => true,
+        | Expr::Pattern(_)
+        | Expr::Notes(_) => true,
         Expr::Point | Expr::ImagUnit => false,
         Expr::Neg(inner) => is_real_valued(inner),
         Expr::Bin(op, lhs, rhs) => {
@@ -702,6 +703,7 @@ fn eval_enclosure(
             }
         }
         Expr::Pattern(hits) => pattern_enclosure(x, hits),
+        Expr::Notes(notes) => notes_enclosure(x, notes),
     }
 }
 
@@ -837,6 +839,79 @@ fn pattern_enclosure(x: Enclosure, hits: &[bool]) -> Enclosure {
         (false, true) => with_certainty(Enclosure::point(1.0)),
         (true, true) => Enclosure::span(0.0, 1.0).doubted(),
         (false, false) => Enclosure::WHOLE,
+    }
+}
+
+fn notes_enclosure(x: Enclosure, notes: &[Option<u8>]) -> Enclosure {
+    let n = notes.len();
+    if n == 0 || n > crate::studio::MAX_EUCLID_STEPS {
+        return Enclosure::WHOLE;
+    }
+    let finite: Vec<f64> = notes
+        .iter()
+        .filter_map(|note| note.map(f64::from))
+        .collect();
+    if finite.is_empty() {
+        return Enclosure::WHOLE;
+    }
+    let lo = finite.iter().copied().fold(f64::INFINITY, f64::min);
+    let hi = finite.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let constant = (finite.len() == n && lo == hi).then_some(lo);
+    let certainty = x.certainty();
+    let with_certainty = |value: Enclosure| {
+        if certainty == Certainty::Sound {
+            value
+        } else {
+            value.doubted()
+        }
+    };
+    let exact_int = (1u64 << 53) as f64;
+    if !x.lo().is_finite()
+        || !x.hi().is_finite()
+        || x.lo().abs() >= exact_int
+        || x.hi().abs() >= exact_int
+    {
+        return match constant {
+            Some(value) => with_certainty(Enclosure::point(value)),
+            None => Enclosure::span(lo, hi).doubted(),
+        };
+    }
+    if let Some(value) = constant {
+        return with_certainty(Enclosure::point(value));
+    }
+    let first = x.lo().floor();
+    let last = x.hi().floor();
+    if last < first {
+        return Enclosure::WHOLE;
+    }
+    let mut seen_lo = f64::INFINITY;
+    let mut seen_hi = f64::NEG_INFINITY;
+    let mut seen_rest = false;
+    let mut seen_pitch = false;
+    let mut index = first;
+    let mut inspected = 0usize;
+    while index <= last && inspected <= crate::studio::MAX_EUCLID_STEPS {
+        let value = crate::studio::notes_pulse(index, notes);
+        if value.is_finite() {
+            seen_pitch = true;
+            seen_lo = seen_lo.min(value);
+            seen_hi = seen_hi.max(value);
+        } else {
+            seen_rest = true;
+        }
+        index += 1.0;
+        inspected += 1;
+    }
+    if inspected > crate::studio::MAX_EUCLID_STEPS && index <= last {
+        return Enclosure::span(lo, hi).doubted();
+    }
+    if !seen_pitch {
+        return Enclosure::WHOLE;
+    }
+    if seen_rest || seen_lo != seen_hi {
+        Enclosure::span(seen_lo, seen_hi).doubted()
+    } else {
+        with_certainty(Enclosure::point(seen_lo))
     }
 }
 

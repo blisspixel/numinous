@@ -1,0 +1,6 @@
+NUMINOUS_STUDIO 2
+expr=note("c e g c5")
+xmin=0
+xmax=4
+a=1
+title=An octave climb

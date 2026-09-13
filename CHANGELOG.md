@@ -12,6 +12,14 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   proof, not a sample. CLI `numinous sing the-bowl`, MCP `sing_expression`
   with `reading`, and the App live voice share that core mapping. `PLAY.md`
   and the skill say so.
+- Named pitches in Studio. `note("c e g")` writes MIDI pitches as a graph
+  over steps: the sample is the MIDI number and a rest is `.`. Letters `c`
+  through `b`, `#` or `s` sharp, `b` flat, octaves `0` through `9`, default
+  4, at most 64 pitches. The voice sings those pitches and the piano roll
+  reads them on every face. CLI, MCP, and the App plot, save, reopen, and
+  fork them, and overlay layers a melody over a rhythm. Bundled family
+  `notes`: `major-triad` and `octave-climb`. `PLAY.md` and the skill name
+  the ids.
 
 ### Changed
 - Linux CI drops the image's unused Chrome apt source before `apt-get

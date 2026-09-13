@@ -43,7 +43,8 @@ refused. Named sliders write `NUMINOUS_STUDIO 6` as `slider=name:value:min:max`.
 Overlay programs write `NUMINOUS_STUDIO 7` as repeated `expr=` lines under
 `kind=program`. Euclidean rhythms are `euclid(hits, steps)` in the existing
 expression language, so they need no new header. Tracker marks are
-`pat(x..x..x.)` in that same language. The sung MIDI voice of that formula
+`pat(x..x..x.)` in that same language. Named pitches are `note("c e g")`
+in that same language. The sung MIDI voice of that formula
 reads as a piano roll. This is the Baba Is You and
 Doom-WAD model, and its safety record is perfect for a structural reason:
 there is no code to escape with.
