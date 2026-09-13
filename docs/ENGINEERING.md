@@ -10,7 +10,7 @@ in `QUALITY.md` and `.github/workflows/ci.yml`.
 
 The current baseline is deliberate and green. A newer major release is a review
 candidate, not an automatic upgrade. Compatible patch and minor lockfile
-updates are kept current through reviewed PRs and weekly Dependabot; they must
+updates are kept current through reviewed PRs opened by hand; they must
 pass the full gate. Direct major bumps stay measured roadmap work, not
 automatic merges.
 
@@ -21,7 +21,7 @@ automatic merges.
 | `wgpu` | **30.0.1** | Current GPU stack. The migration preserves unbucketed adapter limits and handles mapped-range failures as typed errors. This patch removes a per-frame Vulkan validation failure and resolves Metal color-space constants dynamically. |
 | `winit`, `softbuffer` | **0.30.x, 0.4.x** | Current native window and software presentation path. |
 | `cpal` | **0.18.2** | Current native audio I/O. Every PCM format is converted from the shared float mix; DSD remains explicitly unsupported. |
-| `png`, `pollster`, `ureq` | **0.18.1, 1.0.1, 3.3.0** | Current image, blocking-future, and synchronous HTTP baselines. HTTP redirects remain disabled for the credentialed music request and error bodies remain bounded. |
+| `png`, `pollster`, `ureq` | **0.18.1, 1.0.1, 3.4.1** | Current image, blocking-future, and synchronous HTTP baselines. HTTP redirects remain disabled for the credentialed music request and error bodies remain bounded. |
 | `gilrs` | **0.11.2** | Current cross-platform gamepad input. Linux CI installs `libudev-dev`. |
 | Study text | **cosmic-text 0.19.0**, **unicode-script 0.5.8**, **unicode-segmentation 1.13.3** | App-only shaping and grapheme handling, with explicit bundled Noto fonts. [Decision 1](decisions/0001-study-text.md) records costs and limits. |
 | Test runner | **cargo test** | Enforced today. `cargo-nextest` is a possible speed improvement, not a current dependency. |
@@ -33,17 +33,17 @@ centralize shared versions in `[workspace.dependencies]`, and update through
 reviewed changes. Direct stack lines above are on their current general-
 availability majors. Compatible transitive packages were refreshed on
 2026-07-24 (including wayland-scanner with quick-xml 0.41, which cleared the
-former temporary RUSTSEC ignores). Dependabot watches Cargo and GitHub Actions
-weekly (`.github/dependabot.yml`) without migration-era ignore rules.
+former temporary RUSTSEC ignores). No update bot runs on this repository:
+Cargo and GitHub Actions bumps are checked and opened by hand, so every
+commit on `main` has one human author.
 
 **CI action pins (current):** `actions/checkout` v7.0.1,
 `actions/upload-artifact` v7.0.1, `actions/download-artifact` v8.0.1,
-`actions/attest` v4.2.2, `taiki-e/install-action` v2.87.4,
-`actions/dependency-review-action` v5.0.0, `github/codeql-action` v4.37.9,
+`actions/attest` v4.2.2, `taiki-e/install-action` v2.87.10,
+`actions/dependency-review-action` v5.0.0, `github/codeql-action` v4.38.0,
 `EmbarkStudios/cargo-deny-action` v2.1.1, and `dtolnay/rust-toolchain` pinned
 to the 1.97.1 and 1.89.0 channel commits named in the workflows.
-Bump pins through review when Dependabot or a manual check shows a newer
-release.
+Bump pins through review when a manual check shows a newer release.
 
 The release evidence for the major stack lines comes from the official
 [`wgpu` 30.0.1 release](https://github.com/gfx-rs/wgpu/releases/tag/v30.0.1),
@@ -211,9 +211,7 @@ RustSec audit, CodeQL, coverage, and three-platform build jobs, and calls the
 release workflow to build and audit all four native packages. CodeQL analyzes
 Rust and workflow code with the extended security query suite. Its analysis and
 ordinary-run upload must complete, but the presence of an alert does not itself
-fail the action. A Dependabot-authored squash on `main` does not repeat the
-upload that already succeeded on its pull request because the later token can
-be downgraded to read-only. Each build runner also drives a deterministic,
+fail the action. Each build runner also drives a deterministic,
 fully composed App frame
 through the feature-gated production direct surface and retains a typed runtime
 receipt. Those timings are explicitly informational and do not replace physical
@@ -279,17 +277,19 @@ change to this topology must update and pass
   mean the alert set is empty. GitHub Actions analysis currently carries
   GitHub's public-preview support status, so each pin review must recheck its
   limitations rather than treating that support boundary as settled.
-- **Dependabot** opens weekly PRs for Cargo and GitHub Actions
-  (`.github/dependabot.yml`, limit five open PRs per ecosystem). Compatible
-  updates merge after the full CI gate. Breaking major bumps stay deliberate
-  reviews, not automatic landings.
+- **Dependency updates are opened by hand.** No update bot is configured
+  and Dependabot security updates are switched off at the repository, so no
+  automation authors commits here. `cargo audit` and `cargo deny` in CI, and
+  a periodic `cargo update --dry-run` plus a look at each pinned action's
+  releases, are how a newer release is noticed. Compatible updates merge
+  after the full CI gate. Breaking major bumps stay deliberate reviews.
 - **Current posture (2026-09-05):** public `main` is green on deny and audit
   with the single documented `ttf-parser` exception above and no other ignores.
   The release audit creates and verifies a deterministic
   SPDX 2.3 inventory from exact `Cargo.lock` and `cargo metadata --locked
   --all-features`; a separate keyless statement binds it to every tagged archive.
   The inventory is source-derived and does not claim binary-native analysis.
-  Standing Dependabot security alerts should stay at zero; if an alert appears,
+  Standing repository security alerts should stay at zero; if an alert appears,
   fix or document a temporary ignore with an exit condition before claiming a
   clean supply chain.
 - **Dependencies are minimal and vetted.** Each new dependency is justified in
