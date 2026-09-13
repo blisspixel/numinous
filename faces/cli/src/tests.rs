@@ -3986,6 +3986,45 @@ fn tracker_marks_plot_save_and_open() {
 }
 
 #[test]
+fn named_pitches_plot_save_and_open() {
+    let path = std::env::temp_dir().join("numinous_cli_note_save_test.num");
+    let _ = std::fs::remove_file(&path);
+    let plot =
+        super::plot_report_with("note(\"c e g\")", 0.0, 3.0, 1.0, 32, 10, &[]).expect("plot");
+    assert!(plot.contains('#'), "{plot}");
+    assert!(plot.contains("roll 10 ..x"), "{plot}");
+    assert!(plot.contains("roll  7 .x."), "{plot}");
+    assert!(plot.contains("roll  3 x.."), "{plot}");
+    let message = super::save_studio_creation_with_sliders(
+        "note(\"c e g\")",
+        super::StudioParameters {
+            minimum: 0.0,
+            maximum: 3.0,
+            a: 1.0,
+            scale: numinous_core::StudioScale::Continuous,
+        },
+        super::CreationIdentity {
+            title: Some("A triad"),
+            author: None,
+            credit: None,
+        },
+        &[],
+        &path,
+    )
+    .expect("save");
+    assert!(message.contains("numinous://studio?"));
+    let text = std::fs::read_to_string(&path).expect("saved");
+    assert!(text.contains("expr=note(\"c e g\")"), "{text}");
+    let opened = super::open_studio_report(&path.to_string_lossy(), 32, 10).expect("reopen");
+    assert!(opened.contains("roll=10 ..x"), "{opened}");
+    let listed = super::open_studio_report("major-triad", 32, 10).expect("bundle");
+    assert!(listed.contains("title=A major triad"), "{listed}");
+    let climb = super::open_studio_report("octave-climb", 32, 10).expect("climb");
+    assert!(climb.contains("title=An octave climb"), "{climb}");
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
 fn two_voices_open_returning_home_oscillators() {
     let closing = super::open_studio_report("closing-voices", 32, 10).expect("closing");
     assert!(closing.contains("title=Closing voices"), "{closing}");

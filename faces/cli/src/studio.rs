@@ -344,11 +344,14 @@ pub(super) fn creation_report(
 }
 
 fn pattern_caption(creation: &StudioCreation) -> String {
-    let rows = creation.pattern_rows();
-    if rows.is_empty() {
+    // The step readings belong to step graphs: 0/1 pattern rows and named
+    // pitches. A continuous graph keeps the curve as its only picture.
+    if creation.step_count().is_none() {
         return String::new();
     }
-    let mut caption = if creation.kind() == StudioKind::Program {
+    let rows = creation.pattern_rows();
+    let mut caption = String::new();
+    if creation.kind() == StudioKind::Program && !rows.is_empty() {
         let body = rows
             .iter()
             .enumerate()
@@ -359,10 +362,10 @@ fn pattern_caption(creation: &StudioCreation) -> String {
             })
             .collect::<Vec<_>>()
             .join("    ");
-        format!("\npattern {body}")
-    } else {
-        format!("\npattern {}", rows[0])
-    };
+        caption.push_str(&format!("\npattern {body}"));
+    } else if let Some(row) = rows.first() {
+        caption.push_str(&format!("\npattern {row}"));
+    }
     if let Some(grid) = numinous_core::pattern_grid_text(&rows) {
         for line in grid.lines() {
             caption.push_str("\ngrid ");

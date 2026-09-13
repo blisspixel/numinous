@@ -89,12 +89,13 @@ experiment id already bound, and no host file is read. `family` selects
 `the-circle`, `the-bowl`), `named-sliders` (`extra-knob`, `live-ratio`),
 or `overlay` (`the-parts`, `the-sum`), or `euclidean` (`tresillo`,
 `three-against-five`), or `two-voices` (`closing-voices`,
-`wandering-voices`).
+`wandering-voices`), or `notes` (`major-triad`, `octave-climb`).
 A formula may name extra knobs besides `a`; each is a slider with a value
 and a declared range. Type `sin(x) & cos(x)` to overlay graphs; every graph sings in WAV, and MIDI
 stays the first curve. Type
 `euclid(3,8)` for a Euclidean rhythm. Type `x..x..x.` or `pat(x..x..x.)`
-to write tracker marks. An integer 0/1 window reports
+to write tracker marks. Type `note("c e g")` for named MIDI pitches; a
+rest is `.`. An integer 0/1 window reports
 `pattern` as tracker text and `grid` as a numbered step grid: tresillo is
 `x..x..x.` under `12345678`. The sung MIDI voice reports `roll` as a
 piano-roll grid, pitch over time. A field expression (`z`, `y`, `i`, `re`, `im`,

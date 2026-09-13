@@ -66,6 +66,8 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
   and a period-1 starter to retune.
 - [Shape and scale](experiments/shape-and-scale.md) stretch a circle, compare
   proportions with fitted size, and share a named creation.
+- [Three readings](experiments/three-readings.md) one expression read as a
+  phase wheel, a pole, a proved curve, and a height map.
 - [Named sliders](experiments/named-sliders.md) one extra knob, then a live
   Lissajous ratio.
 - [Overlay](experiments/overlay.md) two graphs, then their sum on one window.
@@ -73,6 +75,8 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
   then three against five on one cycle.
 - [Two voices](experiments/two-voices.md) the oscillators of a closing path
   and of a wandering one, drawn as graphs.
+- [Named pitches](experiments/notes.md) a major triad, then a climb to the
+  octave, written as `note("c e g")`.
 - `ROUTE_LAB.md` the proposed visual route-planning room, with shortest paths,
   tours improved by hand, solver traces, and an exact small-map comparison.
 - `SYNESTHESIA.md` the sensory seam: the glow pipeline (the documented HDR look, not yet built) and the one-event-two-renderings model that binds sight and sound.

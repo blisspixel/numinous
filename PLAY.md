@@ -281,7 +281,8 @@ language includes `floor(value)`, Euclidean `mod(value, divisor)`,
 places three onsets as evenly as possible among eight steps. An integer
 0/1 window also reports `pattern` as tracker text and `grid` as a numbered
 step grid: tresillo is `x..x..x.` under `12345678`. Type `x..x..x.` or
-`pat(x..x..x.)` to write those marks. Overlay rows with `&`. A sung graph
+`pat(x..x..x.)` to write those marks. Overlay rows with `&`. Type
+`note("c e g")` for named MIDI pitches; a rest is `.`. A sung graph
 also names `roll` as the MIDI piano roll, pitch over time.
 
 A successful plot or song also carries `structuredContent.next`: a ready
@@ -298,13 +299,15 @@ open it. Pass `family: "returning-home"` for `full-return`, `almost-home`,
 for `extra-knob` and `live-ratio`, or `family: "overlay"` for `the-parts`
 and `the-sum`, or `family: "euclidean"` for `tresillo` and
 `three-against-five`, or `family: "two-voices"` for `closing-voices` and
-`wandering-voices`. A formula may name extra knobs besides `a`;
+`wandering-voices`, or `family: "notes"` for `major-triad` and
+`octave-climb`. A formula may name extra knobs besides `a`;
 each is a slider with a value and a declared range, and capsules write
 `NUMINOUS_STUDIO 6` only when those extra sliders exist. Type `sin(x) & cos(x)`
 to overlay graphs; every graph sings in WAV, and MIDI stays the first curve.
 Capsules write `NUMINOUS_STUDIO 7` only when more than one graph is present.
 Type `euclid(3,8)` for a Euclidean rhythm. Type `x..x..x.` or
-`pat(x..x..x.)` to write tracker marks. An integer 0/1 graph names
+`pat(x..x..x.)` to write tracker marks. Type `note("c e g")` for named
+MIDI pitches; a rest is `.`. An integer 0/1 graph names
 `pattern` as tracker text and `grid` as a numbered step grid. The sung
 MIDI voice names `roll` as a piano-roll grid, pitch over time. `open_creation`
 accepts those ids directly. They are Studio
