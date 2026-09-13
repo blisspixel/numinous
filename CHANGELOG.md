@@ -24,6 +24,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 ### Changed
 - Linux CI drops the image's unused Chrome apt source before `apt-get
   update`, so a hash mismatch there cannot fail the compile.
+- Dependency updates are opened by hand. The Dependabot configuration is
+  removed and its security updates are switched off, so no automation
+  authors commits on `main`. `taiki-e/install-action` moves to v2.87.10,
+  `github/codeql-action` to v4.38.0, and `ureq` to 3.4.1. The CodeQL
+  upload no longer special-cases any author.
 - Named sliders in Studio. A formula may bind extra identifiers besides `a`.
   Each is a finite value inside a declared closed range. Capsules write
   `NUMINOUS_STUDIO 6` only when extra sliders exist, so every older file still

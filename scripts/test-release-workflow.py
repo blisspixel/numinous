@@ -42,14 +42,14 @@ DEPENDENCY_REVIEW_ACTION = (
 )
 CODEQL_INIT_ACTION = (
     "github/codeql-action/init@"
-    "cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9"
+    "b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0"
 )
 CODEQL_ANALYZE_ACTION = (
     "github/codeql-action/analyze@"
-    "cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9"
+    "b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0"
 )
 INSTALL_ACTION = (
-    "taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4"
+    "taiki-e/install-action@fa23953489c080190314742a9b907f8e97c6767c # v2.87.10"
 )
 RUST_TOOLCHAIN_ACTION = (
     "dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1"
@@ -172,11 +172,10 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 "      security-events: write",
             },
         )
-        self.assertIn(
-            "          upload: ${{ github.event_name != 'push' || "
-            "github.event.head_commit.author.username != 'dependabot[bot]' }}\n",
-            self.codeql,
-        )
+        # Every analysis uploads. No author is special-cased, because no
+        # automation authors commits on this repository.
+        self.assertNotIn("upload:", self.codeql)
+        self.assertNotIn("dependabot", self.workflow.lower())
 
     def test_privileged_authority_and_publication_are_workflow_unique(self) -> None:
         self.assertIn("permissions:\n  contents: read\n", self.header)

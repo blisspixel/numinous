@@ -897,7 +897,7 @@ Detail below and in the version sections.
   has a finite timeout and every checkout disables credential persistence.
   Nineteen workflow contract regressions and nine action-policy regressions
   lock the pins, languages, permissions, dependency threshold, timeouts,
-  checkout boundary, Dependabot upload exception, and single protected
+  checkout boundary, and single protected
   `main CI` result. CodeQL alert presence remains a separate review decision;
   this evidence proves analysis completion and result publication. The first
   Rust baseline was subsequently traced result by result. Twelve
@@ -1280,7 +1280,7 @@ Detail below and in the version sections.
   stays Rust 1.97.1 with MSRV 1.89.0; `cargo deny` and `cargo audit` run with
   one documented advisory exception since alpha 20 (RUSTSEC-2026-0192,
   `ttf-parser` unmaintained behind `cosmic-text`, exit condition named in
-  `ENGINEERING.md`); Dependabot remains weekly on Cargo and GitHub Actions.
+  `ENGINEERING.md`); dependency updates are opened by hand, no update bot runs.
 - **Done (App `.num` reopen, the 0.7 creator floor):** the App now reopens a
   saved expression capsule exactly. A `.num` path or `numinous://` link as a
   launch argument, or a `.num` file dropped on the window, opens the Studio
@@ -1843,8 +1843,8 @@ the evidence remains a standing invariant for every later version.
   limitations, and one direct path to run the app.
 - Enforce formatting, Clippy with warnings denied, tests, locked builds,
   coverage, house style, supply-chain policy, and the three-OS test-and-build matrix.
-- Pin workflow actions immutably, minimize token permissions, and enable
-  dependency update automation.
+- Pin workflow actions immutably, minimize token permissions, and keep
+  dependency updates in reviewed pull requests opened by hand.
 - Scan the current tree and history for secrets and tool attribution before the
   first push.
 - Keep claims tied to Built, Measured, Observed, Designed, or Hypothesis as
@@ -2219,7 +2219,7 @@ peak energy.
 - **Done (July 18, 2026):** migrate every direct dependency with a newer stable
   line, including wgpu 30, cpal 0.18, png 0.18, pollster 1, and ureq 3; refresh
   compatible transitive packages; pin current CI action releases; remove stale
-  Dependabot migration ignores; and retain typed migration regressions. The
+  migration-era advisory ignores; and retain typed migration regressions. The
   migration notes are recorded in the changelog and engineering guide.
 - **Done (July 27, 2026):** deterministic GitHub release packaging builds
   Windows x64, Linux x64, macOS Intel, and macOS Apple silicon archives plus one

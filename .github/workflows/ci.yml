@@ -179,7 +179,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
-      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4
+      - uses: taiki-e/install-action@fa23953489c080190314742a9b907f8e97c6767c # v2.87.10
         with:
           tool: cargo-audit
       - name: RustSec audit
@@ -204,18 +204,15 @@ jobs:
       - if: matrix.language == 'rust'
         uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:
           build-mode: none
           languages: ${{ matrix.language }}
           queries: security-extended
       - name: Analyze
-        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:
           category: /language:${{ matrix.language }}
-          # A Dependabot-authored squash can receive a read-only token on the
-          # subsequent main push. Its pull request analysis already uploaded.
-          upload: ${{ github.event_name != 'push' || github.event.head_commit.author.username != 'dependabot[bot]' }}
 
   coverage:
     name: coverage (>= 80% lines)
@@ -230,7 +227,7 @@ jobs:
           components: llvm-tools-preview
       - name: Install Linux audio and input development libraries
         run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev
-      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4
+      - uses: taiki-e/install-action@fa23953489c080190314742a9b907f8e97c6767c # v2.87.10
         with:
           tool: cargo-llvm-cov
       # The gpu and audio crates plus the app event loop are integration-tested on
