@@ -644,8 +644,9 @@ sequence:
    and contrast-aware ordering; a curated front wing of the deepest rooms
    with playlists weighted toward them. Curation, not deletion.
 
-The creator rungs (named sliders, overlay programs, Euclidean rhythms, Pattern
-Studio views, MusicXML) continue behind these, each with its machine gates.
+Of the creator rungs, named sliders, overlay programs, Euclidean rhythms, the
+first Pattern Studio views, and named pitches are built, each with its machine
+gates; MusicXML continues behind these.
 MIDI export of the sung melody and editable prose credit are already built on
 the CLI, MCP, and the App. Overlay programs and Euclidean rhythms are built.
 The keep-or-cut scorecard moves after the Sensory Lift so all 355 rooms are
@@ -713,7 +714,7 @@ access.
    atomic parametric pair and five named pitch maps travel through every face
    in a version 3 capsule. MIDI export of the sung melody is built on CLI, MCP,
    and the App F4 share; editable prose credit is built on version 4 capsules.
-   Named sliders are built on version 6. MusicXML goes next. The Daily Seed (one deterministic
+   Named sliders are built on version 6, and overlay, Euclidean rhythms, the Pattern Studio readings, and named pitches followed. MusicXML remains. The Daily Seed (one deterministic
    provocation per day, the same for every human and agent) doubles as the
    generative loop and a return hook; the postcard prints its own link;
    the morph machinery points at two Gallery capsules.
@@ -784,7 +785,7 @@ Detail below and in the version sections.
 - **Done (soundtrack, Engine B v1):** Nick Seal made 42 tracks specifically for Numinous across NUMINA FM, THE ATTRACTOR, and EIGHT BIT SUNRISE. High-quality V0 MP3 assets ship in `assets/radio`, the app discovers them from a clean clone, and a bounded pure Rust decoder validates, decodes, and resamples them. The archival WAV masters remain outside the repository.
 - **Done (the app is the game, v1):** the chiptune scores the window (per-room seeded tunes with the room's voice riding on top); the quiz plays in-window (G: name the math, letters answer, the reveal follows); the Journey lives in the app (the CLI's own file: visits on entry, plays and wins from the quiz, explicit `JOURNEY LV` progress, `JOURNEY LEVEL UP` banners with lore, and J opens level, rank, trophies, and resonances); `NUMINOUS_MUTE=1` launches silent; the state machine is headlessly tested.
 - **Done (the window arcade):** Munch, Nim, and the full Gauntlet run play inside the app alongside the quiz, cursor-driven and keyboard-native, on the daily seeds, posting to the shared table and leveling the shared journey; Mobius and Zeno's Square join the catalog. Full Munch Arcade with Vexations.
-- **Done (poke + variation substrate):** Expanded pokes (all 354 catalog rooms with verbs + `render_poked`) and per-visit variation threading (registry `all_rooms_with`, app/CLI/MCP variation on each visit, default 0 exact). R now resets the current visit without silently changing its deal. Double Pendulum re-drops from both hand coordinates; Goldbach's Comet selects a real prime-pair witness; Galton Board draws bounded deterministic falling paths; Logistic Map seeds finite population orbits; and Cult of Pi repairs bounded faults in an exact-digit field. CLI `render --poke x,y` and MCP `play_room` `pokes: [[x,y]]` expose the same stateless hand-point path outside the App. All 354 catalog rooms are seed-aware today; hidden content is intentionally outside the catalog replay contract.
+- **Done (poke + variation substrate):** Expanded pokes (all 354 catalog rooms with verbs + `render_poked`) and per-visit variation threading (registry `all_rooms_with`, app/CLI/MCP variation on each visit, default 0 exact). R now resets the current visit without silently changing its deal. Double Pendulum re-drops from both hand coordinates; Goldbach's Comet selects a real prime-pair witness; Galton Board draws bounded deterministic falling paths; Logistic Map seeds finite population orbits; and Cult of Pi repairs bounded faults in an exact-digit field. CLI `render --poke x,y` and MCP `play_room` `pokes: [[x,y]]` expose the same stateless hand-point path outside the App. All 355 catalog rooms are seed-aware today; hidden content is intentionally outside the catalog replay contract.
 - **Done (Engine A2 motifs, catalog-wide):** all 354 catalog rooms now expose a structured `Motif` through `Room::motif`, so `listen_room` gets real notation and the app gets room-specific phrases instead of the generic fallback. A registry test enforces that every catalog room has a playable motif. The default `Room::sound` derives from the motif through `SoundSpec::from_motif`; rooms with a specialized mathematical sonification may intentionally override it. `listen_room` gives the ambient motif and mathematical sonification distinct text headings and maps those roles to its compatible `motif` and `notes` fields so it never presents one score as the other.
 - **Done (Engine A2 listening refinement):** the App no longer doubles motifs
   at mismatched loop lengths or restarts sources from render cadence. Every
@@ -1294,7 +1295,7 @@ Detail below and in the version sections.
   progress, non-capsule files are refused with a reason, and panel, App,
   core, and CLI regressions cover the pin lifecycle, the paused preview, both
   entry doors, and the cap refusals. The share bundle, gallery, fork,
-  lineage, and gallery increments are built below; general manifest growth
+  and lineage increments are built below; general manifest growth
   remains open 0.7 work.
 - **Done (Studio share trio, 0.7 item 2):** confirming F4's naming step in the
   App Studio emits the share bundle: `creation.num`, `postcard.png`, and a
@@ -1306,8 +1307,8 @@ Detail below and in the version sections.
   two saved windows. An unparsed formula is refused with a reason rather
   than shared as the last-good curve, a refusal writes nothing, and the
   action sits behind the same save gate as the other file-producing keys.
-  Gallery, fork, and lineage are built in the increments below. Named sliders,
-  general multi-expression programs, and MusicXML remain open.
+  Gallery, fork, and lineage are built in the increments below. Named sliders
+  and overlay programs are built in later increments; MusicXML remains open.
 - **Done (App MIDI in the share bundle):** F4 writes `melody.mid` beside
   `creation.num` and the postcard. The bytes are the same Standard MIDI File
   type 0 core already writes from the creation's sung SoundSpec: nearest
@@ -1321,8 +1322,8 @@ Detail below and in the version sections.
   The README stays `numinous-studio-share 1` and names that 12-TET loss. A
   failure still discards the fresh folder rather than leaving a half-written
   share. CLI `numinous sing 'sin(t)' --out song.mid` and MCP `midi: true` keep the same
-  projection. Editable prose credit is built on version 4. Named sliders,
-  general multi-expression programs, and MusicXML remain open.
+  projection. Editable prose credit is built on version 4. Named sliders
+  and overlay programs are built in later increments; MusicXML remains open.
 - **Done (local Gallery wall, 0.7 item 3 browse slice):** F5 in the Studio
   opens a wall of saved creations discovered from the home folder and its
   share bundles: top-level `.num` files plus each bundle's `creation.num`,
@@ -1374,8 +1375,8 @@ Detail below and in the version sections.
   the field rather than ignore it; a header past 4 is still named as newer.
   CLI `--credit`, MCP `credit`, the App F4 naming step, the share README, and
   native links share the same field. Title and author still identify the
-  child and are never inherited. Named sliders, general multi-expression
-  programs, and MusicXML remain open.
+  child and are never inherited. Named sliders and overlay programs are
+  built in later increments; MusicXML remains open.
 - **Immediate next (product, after 0.3 agent-and-machine exit):** the 0.4-am
   Understanding Alpha cohort is owner-blocked (decisions entry 1); the
   permanent CI locks on agent hallway and tactile already shipped (cycle 21).
@@ -1700,8 +1701,8 @@ the two collapse to one glyph, and 17 of those rooms draw both marks:
 `magnet-fractal`, `moser-debruijn`, `rabi`, `ruler-function`, `seifert`,
 `sinai-billiard`, `twin-primes`, `zipf`. The two causes pull opposite ways: a
 bright accent times 1.7 clamps, a dark one stays dark. So there is no single
-fix, and changing either the ink scale or the shade thresholds changes what all
-354 rooms look like. Kepler left this list during the September mathematical
+fix, and changing either the ink scale or the shade thresholds changes what
+every room looks like. Kepler left this list during the September mathematical
 review: its sectors now use orbital arcs instead of chords and no longer rely
 on the colliding pair of marks.
 
@@ -1728,8 +1729,8 @@ are degenerate in mono, so honoring the preference changes an artifact's
 contract. The radio cache is correctly stereo and must stay so: it caches
 licensed source.
 
-**7. Should MCP be able to open a saved `.num`?** Resolved yes for portable
-capsule data, not arbitrary paths. `open_creation` accepts canonical `.num`
+**7. MCP opening a saved `.num` (resolved).** Yes, for portable capsule
+data, not arbitrary paths. `open_creation` accepts canonical `.num`
 text or a native link, and `fork_creation` continues it with exact lineage.
 The caller decides whether to read a file and pass its contents. The pinned
 inventory is now 41 tools.
@@ -1863,7 +1864,7 @@ without relying on the founder's machine or undocumented context?"
 ### 0.2 Flagship Proof ("does it slap?")
 
 **Status:** exit met on the agent-and-machine bar (2026-07-24). The current
-`0.4.0-alpha.7` line preserves that evidence. Human stranger hallway is **not**
+0.4 line preserves that evidence. Human stranger hallway is **not**
 part of this exit; it is deferred to 0.8 / 1.0.
 
 **Goal:** Build **one** flagship room (and a second on the same pattern) to
@@ -2511,7 +2512,7 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-08-18)
+## Where we stand (reviewed 2026-09-13)
 
 The package is **0.4.0-alpha.25**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
@@ -2545,14 +2546,14 @@ subjective human taste gates, so this scorecard records evidence instead.
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,945-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
-### Agent-and-machine track scorecard (August 2, 2026)
+### Agent-and-machine track scorecard (September 13, 2026)
 
 | Am milestone | Status | Automated evidence now |
 |---|---|---|
 | 0.2 Flagship | Met + CI-locked | agent-hallway, ahas, goldens |
 | 0.3 Tactile | Met + CI-locked | agent-tactile, first-contact |
 | 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort open |
-| 0.5 Sensory | Partial | flagship visual/audio goldens; the App footer measured to truncate the status at the default 900 pixel window while a narrower 720 shows it whole, tracked with a test that pins the inversion and requires a marked cut that keeps the start of the status; scalable text and separate music, effect and room volume still unbuilt; reduced motion locked in CI across the terminal and the App, including The Show, which no longer auto-advances in the terminal when it is set and is proved so end to end by counting the rooms a held gallery shows; the reduced-motion gate has a test twin covering its judgment; NO_COLOR locked for the terminal face, chrome and games as well as picture, and swept across every advertised subcommand by a gate that reads the subcommand list from the binary so a new one cannot ship unchecked; WCAG 2.3.1 general-flash budget measured across all 354 rooms, with three known violations tracked; the 2.3.1 red-flash budget implemented and measured across the same sweep, no violations and no room reaching the saturated-red ratio; the 2.3.1 flashing-area rule declared unimplemented rather than assumed; mono audio selectable with a non-clipping downmix; all three switches documented in docs/PLAYING.md and reported by `numinous access`, with a test that fails if a switch is added and left undocumented; the Muncher's position marked by bracket shape rather than hue after an audit found it color-only in the terminal; the semantic warning ink held to being legible through the color-free renderer in every room that draws with it, with the room list read from the sources so a new user of the ink is picked up; 18 rooms measured to lose one of their two drawn brightness levels without color, tracked shrink-only because fixing it changes what all 354 rooms look like; cult-of-pi measured to show no fault marks at all on a character terminal, pinned by a test and tracked as an owner decision about what the room says; color-independence of touch response audited across all 354 rooms, 17 of 21 failures fixed by shading the color-free renderer and measuring its thresholds, 4 tracked; what a color-blind player sees measured for the first time, since NO_COLOR and the color-free renderer answer a different question, with protanopia, deuteranopia and tritanopia simulated per Vienot, Brettel and Mollon 1999, compared in CIELAB, and the simulation held to four properties it must satisfy rather than to its own output; the rule requires both halves, clear for ordinary vision and folded for a dichromat, so contrast defects are not mixed in; two rooms measured to hide their fault marks from a color-blind player and tracked shrink-only, one neighbouring case excluded as contrast rather than color blindness, and anomalous trichromacy declared unmodelled rather than assumed; the spectral palette swept the same way across every pairing an ink can form, 16 pairs in 10 rooms measured to fold for a dichromat while ordinary vision separates them, including the catalog's largest collapse at 95 down to under 1, tracked shrink-only with the three marks that paint the plain accent recorded once rather than three times; which of those ten rooms speak with the ink now read room by room from the draw code rather than left unread, four speaking and six decorating, with the readings locked to the collapse list both ways and each room required to be filed under its own verdict in the decisions section; the App's own surfaces swept the same way and measured clean, with its ten accents and its drawn marks both read from the sources so a new one cannot ship unchecked, one pair recorded as measured and benign because it is heading against body text where the words carry the meaning, and the sweep itself checked with two mutations that add a non-ink literal and require it to stay quiet; the whole room-by-room audit committed as evidence at docs/evidence/color-independence.json rather than only asserted, 354 rooms with the marks each draws, its closest pair and how far apart that pair is for ordinary vision and for the dichromat who sees it worst, generated and compared line by line so a failure names the room that moved; 19 rooms carry a pair a colour-blind player cannot separate, reconciling exactly with the three tracked groups, and a lock now requires every room the audit flags to be held by some list, which found seven that were measured, real and held by nothing; the MCP face held to emitting no colour at all, sweeping every tool with the list read from the binary and requiring three real calls to have succeeded so a mistyped argument cannot leave the render path unswept, which completes the sweep across all three faces; the colour work added to the nightly am-QA suite, and both nightly steps that pin a test by name moved behind a helper that requires exactly one test to have run, since cargo runs nothing and exits 0 for a name that matches nothing and such a step reports success while checking nothing; no full HDR/a11y stack yet |
+| 0.5 Sensory | Partial | flagship visual/audio goldens; the App footer measured to truncate the status at the default 900 pixel window while a narrower 720 shows it whole, tracked with a test that pins the inversion and requires a marked cut that keeps the start of the status; scalable text and separate music, effect and room volume still unbuilt; reduced motion locked in CI across the terminal and the App, including The Show, which no longer auto-advances in the terminal when it is set and is proved so end to end by counting the rooms a held gallery shows; the reduced-motion gate has a test twin covering its judgment; NO_COLOR locked for the terminal face, chrome and games as well as picture, and swept across every advertised subcommand by a gate that reads the subcommand list from the binary so a new one cannot ship unchecked; WCAG 2.3.1 general-flash budget measured across all 354 rooms, with three known violations tracked; the 2.3.1 red-flash budget implemented and measured across the same sweep, no violations and no room reaching the saturated-red ratio; the 2.3.1 flashing-area rule declared unimplemented rather than assumed; mono audio selectable with a non-clipping downmix; all three switches documented in docs/PLAYING.md and reported by `numinous access`, with a test that fails if a switch is added and left undocumented; the Muncher's position marked by bracket shape rather than hue after an audit found it color-only in the terminal; the semantic warning ink held to being legible through the color-free renderer in every room that draws with it, with the room list read from the sources so a new user of the ink is picked up; 17 rooms measured to lose one of their two drawn brightness levels without color (Kepler left the list in the September review), tracked shrink-only because fixing it changes what every room looks like; cult-of-pi measured to show no fault marks at all on a character terminal, pinned by a test and tracked as an owner decision about what the room says; color-independence of touch response audited across all 354 rooms, 17 of 21 failures fixed by shading the color-free renderer and measuring its thresholds, 4 tracked; what a color-blind player sees measured for the first time, since NO_COLOR and the color-free renderer answer a different question, with protanopia, deuteranopia and tritanopia simulated per Vienot, Brettel and Mollon 1999, compared in CIELAB, and the simulation held to four properties it must satisfy rather than to its own output; the rule requires both halves, clear for ordinary vision and folded for a dichromat, so contrast defects are not mixed in; two rooms measured to hide their fault marks from a color-blind player and tracked shrink-only, one neighbouring case excluded as contrast rather than color blindness, and anomalous trichromacy declared unmodelled rather than assumed; the spectral palette swept the same way across every pairing an ink can form, 16 pairs in 10 rooms measured to fold for a dichromat while ordinary vision separates them, including the catalog's largest collapse at 95 down to under 1, tracked shrink-only with the three marks that paint the plain accent recorded once rather than three times; which of those ten rooms speak with the ink now read room by room from the draw code rather than left unread, four speaking and six decorating, with the readings locked to the collapse list both ways and each room required to be filed under its own verdict in the decisions section; the App's own surfaces swept the same way and measured clean, with its ten accents and its drawn marks both read from the sources so a new one cannot ship unchecked, one pair recorded as measured and benign because it is heading against body text where the words carry the meaning, and the sweep itself checked with two mutations that add a non-ink literal and require it to stay quiet; the whole room-by-room audit committed as evidence at docs/evidence/color-independence.json rather than only asserted, 354 rooms with the marks each draws, its closest pair and how far apart that pair is for ordinary vision and for the dichromat who sees it worst, generated and compared line by line so a failure names the room that moved; 19 rooms carry a pair a colour-blind player cannot separate, reconciling exactly with the three tracked groups, and a lock now requires every room the audit flags to be held by some list, which found seven that were measured, real and held by nothing; the MCP face held to emitting no colour at all, sweeping every tool with the list read from the binary and requiring three real calls to have succeeded so a mistyped argument cannot leave the render path unswept, which completes the sweep across all three faces; the colour work added to the nightly am-QA suite, and both nightly steps that pin a test by name moved behind a helper that requires exactly one test to have run, since cargo runs nothing and exits 0 for a name that matches nothing and such a step reports success while checking nothing; no full HDR/a11y stack yet |
 | 0.6 Portable | Partial | release packaging, engagement smoke judged on signal and PNG geometry rather than file size and run against a freshly built binary rather than whichever one was on disk, with one shared resolver and a test that fails if a gate grows its own, provenance/SBOM, install/play/uninstall roundtrip with all three player-owned files preserved, not just the journey, run nightly against a freshly packaged archive as well as on the tagged artifact, and now on THREE operating systems rather than Linux alone, as a matrix job with fail-fast off so a green Linux leg cannot stand in for Windows, each platform packaging its own archive format and keeping its own summary; the Windows leg verified locally first at 4 of 4 with all three player-owned files byte-identical after uninstall, which nothing had previously checked; workflow actions gated for being pinned to a commit and pinned consistently across every workflow, after a pin written from memory rather than copied; all 42 bundled tracks now decoded and required to carry real audio rather than the first of each station being decoded and the other 39 checked against a header duration a truncated body also satisfies, run nightly on each of the three platforms; and every ignored test gated for being named by a workflow or a script, which found a catalog visual contract sweep that had never run anywhere |
 | 0.7 Creator | Partial | The CLI creator gate passes 12 save, reopen, drawing, voice, deterministic serialization, fork, and prose-credit checks, including a version 3 parametric pair with stored pitch map and atomic replacement. CLI and MCP parity passes 20 plot and 14 sing cases through face-neutral core types; the audio cases measure actual WAV pitch against MCP notation and cover all four quantized maps. App graph and parametric framing share the same bounded core program, including undefined-sample gap handling and two-axis parametric scaling. MCP can save, open, and fork portable `.num` text or native links with exact previews and lineage while rejecting host file paths; the App reopens a saved `.num` or link exactly through the launch argument and file drop, paused until confirmed; F4 shares the bundle from any parsed Studio state, including `melody.mid` as the same Standard MIDI File type 0 the CLI and MCP already write and prose credit in a version 4 capsule; F5 opens the local Gallery wall with exact graph or path thumbnails; Gallery F records descent; and the wall resolves its remix tree. Named sliders with declared ranges ship as version 6. Overlay programs ship as version 7. Euclidean rhythms ship as `euclid(hits, steps)`. Height and phase fields sing along the real axis; the zero reading stays silent. Pattern text and the numbered step-grid reading of 0/1 rows now ship. Tracker marks are a formula: `pat(x..x..x.)` or the editor form `x..x..x.`. The sung MIDI voice reads as a piano roll. Named pitches are `note("c e g")`. MusicXML remains |
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
@@ -2646,7 +2647,7 @@ five-persona MCP cohort under `.agent/tester-cohort/round-07-flagship-aha/`.
 This is the 0.2 proof bar for digital minds and automated play.
 
 **Out of scope for the slice and not the next high-leverage move.** HDR glow
-(Phase B, only if sensory ceiling binds), Constellation Rumor-Mode (Phase C),
+(Phase B, scheduled after the lift), Constellation Rumor-Mode (Phase C),
 gallery fork (Phase D), bulk densify, new rooms for breadth.
 
 - **Phase B, the glow pipeline.** The GPU post-stack (HDR bright-pass bloom,
@@ -2916,10 +2917,10 @@ on equal terms. This is a values commitment, not a feature, and it holds from
 - **Math correctness:** tests and cited references support current claims.
   Independent mathematical review remains a release gate and is not staffed.
 - **Accessibility:** hard mute and keyboard plus pointer operation ship today.
-  Reduce motion, color controls, controller certification, and assistive-technology
-  evidence remain open.
+  Reduced motion, NO_COLOR, and a mono downmix are built and CI-locked.
+  Controller certification and assistive-technology evidence remain open.
 - **Shareability:** PNG postcards, `.num` files and links, and WAV export exist.
-  Loop export and native reopening remain open.
+  Loop export and native reopening are built. MusicXML remains open.
 
 ## Definition of done for a 1.0 room (the checklist)
 
