@@ -97,24 +97,23 @@ Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 [`docs/MUSIC.md`](docs/MUSIC.md), [`docs/STUDIO.md`](docs/STUDIO.md),
 [`docs/INTERFACES.md`](docs/INTERFACES.md).
 
-Make something you can keep. [`PLAY.md`](PLAY.md) names bundled Studio paths
-you can open without a host file. Returning home: `full-return`,
-`almost-home`, `same-place`, `another-ratio`. Shape and scale: `circle-to-ellipse`,
-`uniform-circle`. Three readings: `simple-zero`, `a-pole`, `the-circle`,
-`the-bowl`. Named sliders: `extra-knob`, `live-ratio`. Overlay:
-`the-parts`, `the-sum`. Euclidean: `tresillo`, `three-against-five`. Two
-voices: `closing-voices`, `wandering-voices`. Notes: `major-triad`,
-`octave-climb`. The
-guides live in the repository:
-[Returning home](docs/experiments/returning-home.md),
-[Shape and scale](docs/experiments/shape-and-scale.md),
-[Three readings](docs/experiments/three-readings.md),
-[Named sliders](docs/experiments/named-sliders.md),
-[Overlay](docs/experiments/overlay.md),
-[Euclidean rhythms](docs/experiments/euclidean.md),
-[Two voices](docs/experiments/two-voices.md), and
-[Named pitches](docs/experiments/notes.md). The mathematical
-review and its limits live in [`docs/MATHEMATICS.md`](docs/MATHEMATICS.md).
+Make something you can keep. [`PLAY.md`](PLAY.md) names bundled Studio
+creations you can open by id without a host file. Each family has a short
+guide in the repository.
+
+| Family | `family` | Ids |
+|---|---|---|
+| [Returning home](docs/experiments/returning-home.md) | `returning-home` | `full-return`, `almost-home`, `same-place`, `another-ratio` |
+| [Shape and scale](docs/experiments/shape-and-scale.md) | `shape-and-scale` | `circle-to-ellipse`, `uniform-circle` |
+| [Three readings](docs/experiments/three-readings.md) | `three-readings` | `simple-zero`, `a-pole`, `the-circle`, `the-bowl` |
+| [Named sliders](docs/experiments/named-sliders.md) | `named-sliders` | `extra-knob`, `live-ratio` |
+| [Overlay](docs/experiments/overlay.md) | `overlay` | `the-parts`, `the-sum` |
+| [Euclidean rhythms](docs/experiments/euclidean.md) | `euclidean` | `tresillo`, `three-against-five` |
+| [Two voices](docs/experiments/two-voices.md) | `two-voices` | `closing-voices`, `wandering-voices` |
+| [Named pitches](docs/experiments/notes.md) | `notes` | `major-triad`, `octave-climb` |
+
+The mathematical review and its limits live in
+[`docs/MATHEMATICS.md`](docs/MATHEMATICS.md).
 
 ## Status
 
@@ -123,10 +122,9 @@ controllers, and Watch Agent. The **0.2** Flagship Proof and **0.3** Tactile
 Alpha agent-and-machine exits are met and CI-locked. **0.4 Understanding Alpha
 is active, not complete.**
 
-The Sensory Lift's Windows physical pair now passes on the reference laptop.
-macOS and Linux receipts remain before promotion. The authored opening waits
-on that light. Remaining structural cleanup and creator-ladder rungs continue
-in parallel. Humans may play; product exits do not wait on human QA panels.
+The Sensory Lift's Windows pair passes on the reference laptop; macOS and
+Linux receipts come before promotion, and the authored opening waits on that
+light. Humans may play; product exits do not wait on human QA panels.
 
 Map: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 Gates: [`VERIFY.md`](VERIFY.md).
