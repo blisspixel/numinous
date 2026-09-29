@@ -3635,6 +3635,14 @@ fn lissajous_construction_opens_returning_home_and_walks_the_family() {
     assert_eq!(
         app.studio_panel
             .current_creation()
+            .expect("shorter")
+            .title(),
+        Some("A shorter window")
+    );
+    assert!(app.walk_studio_experiment(1));
+    assert_eq!(
+        app.studio_panel
+            .current_creation()
             .expect("wandering")
             .title(),
         Some("Wandering voices")
@@ -3647,6 +3655,14 @@ fn lissajous_construction_opens_returning_home_and_walks_the_family() {
             .title(),
         Some("Wandering voices"),
         "the walk does not wrap past Wandering voices"
+    );
+    assert!(app.walk_studio_experiment(-1));
+    assert_eq!(
+        app.studio_panel
+            .current_creation()
+            .expect("shorter back")
+            .title(),
+        Some("A shorter window")
     );
     assert!(app.walk_studio_experiment(-1));
     assert_eq!(

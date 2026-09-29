@@ -184,7 +184,9 @@ pub use nim::{
     apply as nim_apply, finished as nim_finished, new_game as nim_new, order_move as nim_order,
     the_secret as nim_secret,
 };
-pub use path_closure::{AperiodicClosure, ClosureCheckpoint, PathClosure, PeriodicClosure};
+pub use path_closure::{
+    AperiodicClosure, ClosureCheckpoint, PathClosure, PeriodicClosure, VoiceClosure, VoiceFact,
+};
 pub use persistence::{
     LocalCacheInventory, LocalCairnInventory, LocalFileInventory, LocalJourneyInventory,
     LocalScoresInventory, LocalStateEraseError, LocalStateEraseSelection, LocalStateInventory,

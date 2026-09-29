@@ -591,7 +591,7 @@ enum Command {
         /// another-ratio, circle-to-ellipse, uniform-circle, simple-zero,
         /// a-pole, the-circle, the-bowl, extra-knob, live-ratio, the-parts,
         /// the-sum, tresillo, three-against-five, closing-voices,
-        /// wandering-voices).
+        /// shorter-window, wandering-voices).
         input: String,
         /// Plot width in columns.
         #[arg(long, default_value_t = 72)]

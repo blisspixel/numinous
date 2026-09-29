@@ -1868,6 +1868,9 @@ mod tests {
             panel.current_creation().expect("opened").title(),
             Some("Closing voices")
         );
+        let shorter = panel.adjacent_experiment(1).expect("shorter window");
+        assert_eq!(shorter.id, "shorter-window");
+        panel.open_creation(&shorter.creation());
         let wandering = panel.adjacent_experiment(1).expect("wandering");
         assert_eq!(wandering.id, "wandering-voices");
         assert_eq!(
@@ -2707,6 +2710,16 @@ mod tests {
         panel.open_creation(
             &panel
                 .adjacent_experiment(1)
+                .expect("shorter-window")
+                .creation(),
+        );
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("A shorter window")
+        );
+        panel.open_creation(
+            &panel
+                .adjacent_experiment(1)
                 .expect("wandering-voices")
                 .creation(),
         );
@@ -2716,6 +2729,11 @@ mod tests {
         );
         assert!(panel.adjacent_experiment(1).is_none());
         panel.open_creation(&panel.adjacent_experiment(-1).expect("back").creation());
+        assert_eq!(
+            panel.current_creation().expect("opened").title(),
+            Some("A shorter window")
+        );
+        panel.open_creation(&panel.adjacent_experiment(-1).expect("closing").creation());
         assert_eq!(
             panel.current_creation().expect("opened").title(),
             Some("Closing voices")

@@ -89,7 +89,8 @@ experiment id already bound, and no host file is read. `family` selects
 `the-circle`, `the-bowl`), `named-sliders` (`extra-knob`, `live-ratio`),
 or `overlay` (`the-parts`, `the-sum`), or `euclidean` (`tresillo`,
 `three-against-five`), or `two-voices` (`closing-voices`,
-`wandering-voices`), or `notes` (`major-triad`, `octave-climb`).
+`shorter-window`, `wandering-voices`), or `notes` (`major-triad`,
+`octave-climb`).
 A formula may name extra knobs besides `a`; each is a slider with a value
 and a declared range. Type `sin(x) & cos(x)` to overlay graphs; every graph sings in WAV, and MIDI
 stays the first curve. Type
@@ -105,9 +106,13 @@ silent. `open_creation`
 also accepts those ids directly. Opening a two-oscillator parametric path
 returns `structuredContent.closure`: an independently checked period, or
 an explicit aperiodic, including the half-period trap where position
-returns and state does not. Follow a Returning home row, then read
-`closure` rather than trusting the picture. After `another-ratio`, the App
-walk continues into `closing-voices`. The trial does not gate play.
+returns and state does not. An overlay of two harmonic oscillators returns
+`closure` with kind `voices`: ideal cycles in the window, and a common
+period when the model has one. `shorter-window` shows why those counts are
+not the period. `wandering-voices` has no positive common period. Follow a
+Returning home row, then read `closure` rather than trusting the picture.
+After `another-ratio`, the App walk continues into `closing-voices`, then
+`shorter-window`, then `wandering-voices`. The trial does not gate play.
 Use `save_creation` when you want that expression to become a
 portable titled or signed capsule, `open_creation` to reopen returned `.num`
 text or a native link, and `fork_creation` to make a child that names its exact

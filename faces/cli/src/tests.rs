@@ -4029,9 +4029,18 @@ fn two_voices_open_returning_home_oscillators() {
     let closing = super::open_studio_report("closing-voices", 32, 10).expect("closing");
     assert!(closing.contains("title=Closing voices"), "{closing}");
     assert!(closing.contains("kind=program"), "{closing}");
+    assert!(closing.contains("closure=voices"), "{closing}");
+    assert!(closing.contains("cycles_in_window=12"), "{closing}");
+    assert!(closing.contains("cycles_in_window=17"), "{closing}");
+    assert!(closing.contains("common_period=12"), "{closing}");
+    let shorter = super::open_studio_report("shorter-window", 32, 10).expect("shorter");
+    assert!(shorter.contains("cycles_in_window=17/12"), "{shorter}");
+    assert!(shorter.contains("common_period=12"), "{shorter}");
     let wandering = super::open_studio_report("wandering-voices", 32, 10).expect("wandering");
     assert!(wandering.contains("title=Wandering voices"), "{wandering}");
     assert!(wandering.contains("sqrt(2)"), "{wandering}");
+    assert!(wandering.contains("common_period=none"), "{wandering}");
+    assert!(wandering.contains("12*sqrt(2)"), "{wandering}");
 }
 
 #[test]

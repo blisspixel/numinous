@@ -1,9 +1,10 @@
-//! Independently checked closure of a parametric Studio path.
+//! Independently checked closure of harmonic oscillators in Studio.
 //!
-//! This is the first slice of the Returning home capability quest: a player
-//! who can construct two oscillators should be able to ask whether the motion
-//! repeats, without taking the picture as proof. It is a trial of the path,
-//! not a grade of the player, and it does not gate rooms, study, or creation.
+//! A parametric path can ask whether the motion repeats. An overlay of the
+//! same oscillators can ask how many cycles each graph completes, and whether
+//! those frequencies share a period. Both answers come from the ideal model.
+//! A picture is not the proof. The trial does not grade the player, and it
+//! does not gate rooms, study, or creation.
 
 use crate::studio::{Expr, Func, Op, StudioCreation, StudioKind, StudioProgram};
 
@@ -22,6 +23,36 @@ pub enum PathClosure {
     /// The two frequencies are incommensurate, so the ideal motion never
     /// repeats.
     Aperiodic(AperiodicClosure),
+    /// Two overlay graphs, each a harmonic oscillator. Counts are ideal
+    /// products over the saved window, not peaks in the picture.
+    Voices(VoiceClosure),
+}
+
+/// Ideal cycle counts for exactly two overlay oscillators.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VoiceClosure {
+    /// The two graphs, in source order.
+    pub voices: [VoiceFact; 2],
+    /// Least positive common period, when the frequencies are commensurate.
+    pub period_text: Option<String>,
+    /// Whether the saved window itself is a common period. Absent when the
+    /// window length is not an exact integer or quarter, so "not checked"
+    /// is not stored as false.
+    pub window_is_common_period: Option<bool>,
+    /// How many least periods the window covers, when that quotient is a
+    /// positive integer.
+    pub window_periods: Option<u32>,
+}
+
+/// One overlay oscillator.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VoiceFact {
+    /// Cycles per unit x, for example `1`, `17/12`, or `sqrt(2)`.
+    pub frequency_text: String,
+    /// Ideal cycles in the saved window, for example `12`, `17/12`, or
+    /// `12*sqrt(2)`. Absent when the window length is not an exact integer
+    /// or quarter.
+    pub window_cycles: Option<String>,
 }
 
 /// A repeating two-oscillator path.
@@ -79,7 +110,8 @@ impl PathClosure {
     #[must_use]
     pub fn of(creation: &StudioCreation) -> Self {
         match creation.kind() {
-            StudioKind::Graph | StudioKind::Program => Self::Graph,
+            StudioKind::Graph => Self::Graph,
+            StudioKind::Program => analyze_program(creation),
             StudioKind::Field => Self::Field,
             StudioKind::Parametric => analyze_parametric(creation),
         }
@@ -114,6 +146,7 @@ impl PathClosure {
                 "ideal motion has no positive common period".to_string(),
                 checkpoint_line("window-end", &aperiodic.window_end),
             ],
+            Self::Voices(voices) => voice_lines(voices),
         }
     }
 
@@ -131,8 +164,54 @@ impl PathClosure {
                 Some(line)
             }
             Self::Aperiodic(_) => Some("NO PERIOD".to_string()),
+            Self::Voices(voices) => Some(voice_caption(voices)),
         }
     }
+}
+
+fn voice_lines(voices: &VoiceClosure) -> Vec<String> {
+    let mut lines = vec!["closure=voices basis=ideal".to_string()];
+    for (index, voice) in voices.voices.iter().enumerate() {
+        let mut line = format!("voice {} freq={}", index + 1, voice.frequency_text);
+        if let Some(cycles) = &voice.window_cycles {
+            line.push_str(" cycles_in_window=");
+            line.push_str(cycles);
+        }
+        lines.push(line);
+    }
+    match &voices.period_text {
+        Some(period) => {
+            lines.push(format!("common_period={period}"));
+            if let Some(count) = voices.window_periods {
+                lines.push(format!("window covers {count} period(s)"));
+            }
+        }
+        None => {
+            lines.push("common_period=none".to_string());
+            lines.push("ideal motion has no positive common period".to_string());
+        }
+    }
+    lines
+}
+
+fn voice_caption(voices: &VoiceClosure) -> String {
+    let counts = voices
+        .voices
+        .iter()
+        .map(|voice| voice.window_cycles.as_deref().unwrap_or("UNCOUNTED"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let mut line = format!("CYCLES {counts}");
+    if let Some(period) = &voices.period_text {
+        line.push_str("  PERIOD ");
+        line.push_str(period);
+        if voices.window_is_common_period == Some(false) {
+            line.push_str("  NOT THIS WINDOW");
+        }
+    } else {
+        line.push_str("  NO PERIOD");
+    }
+    line
 }
 
 fn checkpoint_line(name: &str, checkpoint: &ClosureCheckpoint) -> String {
@@ -182,26 +261,98 @@ fn analyze_parametric(creation: &StudioCreation) -> PathClosure {
     }
     let start = state(&x_osc, &y_osc, tmin);
     let window_end = checkpoint(&x_osc, &y_osc, start, tmax);
-    if let Some(period) = common_period(&x_freq, &y_freq) {
-        let half_t = tmin + period.value / 2.0;
-        PathClosure::Periodic(PeriodicClosure {
-            period_text: period.text.clone(),
-            period: period.value,
-            x_frequency_text: x_freq.text(),
-            y_frequency_text: y_freq.text(),
-            x_cycles: integer_cycles(&x_freq, period.value),
-            y_cycles: integer_cycles(&y_freq, period.value),
-            window_periods: whole_periods_in(tmax - tmin, period.value),
-            half_period: checkpoint(&x_osc, &y_osc, start, half_t),
-            window_end,
-        })
-    } else {
-        PathClosure::Aperiodic(AperiodicClosure {
+    match common_period_all(&[x_freq, y_freq]) {
+        PeriodFinding::Unresolved => PathClosure::Unsupported,
+        PeriodFinding::Aperiodic => PathClosure::Aperiodic(AperiodicClosure {
             x_frequency_text: x_freq.text(),
             y_frequency_text: y_freq.text(),
             window_end,
-        })
+        }),
+        PeriodFinding::Periodic(period) => {
+            let half_t = tmin + period.value / 2.0;
+            PathClosure::Periodic(PeriodicClosure {
+                period_text: period.text.clone(),
+                period: period.value,
+                x_frequency_text: x_freq.text(),
+                y_frequency_text: y_freq.text(),
+                x_cycles: integer_cycles(&x_freq, &period),
+                y_cycles: integer_cycles(&y_freq, &period),
+                window_periods: whole_periods_exact(tmax - tmin, &period),
+                half_period: checkpoint(&x_osc, &y_osc, start, half_t),
+                window_end,
+            })
+        }
     }
+}
+
+fn analyze_program(creation: &StudioCreation) -> PathClosure {
+    let Ok(program) = creation.program() else {
+        return PathClosure::Graph;
+    };
+    let expressions = program.overlay_expressions();
+    // Three or four graphs are a different object. Guessing a period for a
+    // sum, a rhythm, or a third oscillator would teach the wrong question.
+    if expressions.len() != 2 {
+        return PathClosure::Graph;
+    }
+    let Some(parameter) = Exact::from_f64(creation.a()) else {
+        return PathClosure::Graph;
+    };
+    let sliders = creation.sliders();
+    let mut frequencies = Vec::with_capacity(2);
+    for expression in expressions {
+        let Some(oscillator) = oscillator(expression, parameter, sliders) else {
+            return PathClosure::Graph;
+        };
+        let Some(frequency) = frequency_cycles(&oscillator.omega) else {
+            return PathClosure::Graph;
+        };
+        frequencies.push(frequency);
+    }
+    let tmin = creation.xmin();
+    let tmax = creation.xmax();
+    if !tmin.is_finite() || !tmax.is_finite() || tmax <= tmin {
+        return PathClosure::Graph;
+    }
+    let span = tmax - tmin;
+    let left = voice_fact(&frequencies[0], span);
+    let right = voice_fact(&frequencies[1], span);
+    let window_is_common_period = match (&left.window_cycles, &right.window_cycles) {
+        (Some(left_cycles), Some(right_cycles)) => {
+            Some(is_integer_text(left_cycles) && is_integer_text(right_cycles))
+        }
+        _ => None,
+    };
+    match common_period_all(&frequencies) {
+        PeriodFinding::Unresolved => PathClosure::Graph,
+        PeriodFinding::Aperiodic => PathClosure::Voices(VoiceClosure {
+            voices: [left, right],
+            period_text: None,
+            window_is_common_period,
+            window_periods: None,
+        }),
+        PeriodFinding::Periodic(period) => PathClosure::Voices(VoiceClosure {
+            voices: [left, right],
+            window_periods: whole_periods_exact(span, &period),
+            window_is_common_period,
+            period_text: Some(period.text),
+        }),
+    }
+}
+
+fn voice_fact(frequency: &Frequency, span: f64) -> VoiceFact {
+    VoiceFact {
+        frequency_text: frequency.text(),
+        window_cycles: cycle_text(frequency, span),
+    }
+}
+
+fn is_integer_text(text: &str) -> bool {
+    !text.is_empty()
+        && text
+            .chars()
+            .all(|mark| mark.is_ascii_digit() || mark == '-')
+        && text != "-"
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -377,29 +528,51 @@ fn near(left: f64, right: f64) -> bool {
     (left - right).abs() <= 1e-8 * scale
 }
 
-fn whole_periods_in(span: f64, period: f64) -> Option<u32> {
-    if !(span.is_finite() && period.is_finite()) || span <= 0.0 || period <= 0.0 {
+fn whole_periods_exact(span: f64, period: &Period) -> Option<u32> {
+    // A shared square root makes the period irrational. A rational window
+    // then covers a whole number of periods only in cases this exact span
+    // cannot see, so the trial abstains instead of rounding.
+    if period.rad != 1 {
         return None;
     }
-    let ratio = span / period;
-    let rounded = ratio.round();
-    if rounded < 1.0 || (ratio - rounded).abs() > 1e-8 {
+    let span = rational_span(span)?;
+    let numer = span.num.checked_mul(i64::try_from(period.den).ok()?)?;
+    let denom = span.den.checked_mul(period.num.unsigned_abs())?;
+    let denom = i64::try_from(denom).ok()?;
+    if denom == 0 || numer % denom != 0 {
         return None;
     }
-    let count = rounded as u32;
-    (count as f64 == rounded).then_some(count)
+    let count = numer / denom;
+    u32::try_from(count).ok().filter(|count| *count >= 1)
 }
 
-fn integer_cycles(frequency: &Frequency, period: f64) -> Option<i64> {
-    let cycles = frequency.to_f64() * period;
-    let rounded = cycles.round();
-    if (cycles - rounded).abs() > 1e-8 {
+fn cycle_text(frequency: &Frequency, span: f64) -> Option<String> {
+    let span = rational_span(span)?;
+    let numer = frequency.num.checked_mul(span.num)?;
+    let denom = frequency.den.checked_mul(span.den)?;
+    let (numer, denom) = reduce(numer, denom);
+    Some(radical_text(numer, denom, frequency.rad))
+}
+
+fn rational_span(span: f64) -> Option<Exact> {
+    let span = Exact::from_f64(span)?;
+    if span.pi != 0 || span.rad != 1 || span.num <= 0 {
         return None;
     }
-    if rounded < i64::MIN as f64 || rounded > i64::MAX as f64 {
+    Some(span)
+}
+
+fn integer_cycles(frequency: &Frequency, period: &Period) -> Option<i64> {
+    if frequency.rad != period.rad {
         return None;
     }
-    Some(rounded as i64)
+    let numer = frequency.num.checked_mul(period.num)?;
+    let denom = frequency.den.checked_mul(period.den)?;
+    let denom = i64::try_from(denom).ok()?;
+    if denom == 0 || numer % denom != 0 {
+        return None;
+    }
+    Some(numer / denom)
 }
 
 /// Cycles per unit t: `(num/den) * sqrt(rad)`.
@@ -421,15 +594,24 @@ impl Frequency {
             format!("{body}*sqrt({})", self.rad)
         }
     }
-
-    fn to_f64(self) -> f64 {
-        (self.num as f64 / self.den as f64) * (self.rad as f64).sqrt()
-    }
 }
 
 struct Period {
     text: String,
     value: f64,
+    /// Rational coefficient `num/den`. The period is that coefficient divided
+    /// by `sqrt(rad)`.
+    num: i64,
+    den: u64,
+    rad: u64,
+}
+
+enum PeriodFinding {
+    Periodic(Period),
+    /// The frequency ratio is irrational in this one-radical model.
+    Aperiodic,
+    /// The arithmetic did not fit. This is not evidence of either answer.
+    Unresolved,
 }
 
 fn frequency_cycles(omega: &Exact) -> Option<Frequency> {
@@ -446,24 +628,90 @@ fn frequency_cycles(omega: &Exact) -> Option<Frequency> {
     })
 }
 
-fn common_period(x: &Frequency, y: &Frequency) -> Option<Period> {
-    if x.rad != y.rad {
-        return None;
+fn common_period_all(frequencies: &[Frequency]) -> PeriodFinding {
+    if frequencies.len() < 2 {
+        return PeriodFinding::Unresolved;
     }
-    if x.rad != 1 {
-        return None;
+    let rad = frequencies[0].rad;
+    if frequencies.iter().any(|frequency| frequency.rad != rad) {
+        return PeriodFinding::Aperiodic;
     }
-    let px = x.num.unsigned_abs();
-    let py = y.num.unsigned_abs();
-    if px == 0 || py == 0 {
-        return None;
+    if frequencies.iter().any(|frequency| frequency.num == 0) {
+        return PeriodFinding::Unresolved;
     }
-    let den = lcm_u64(x.den, y.den)?;
-    let gcd_nums = gcd_u64(px, py);
-    let period_num = den / gcd_nums;
-    let text = format_ratio(period_num as i64, 1);
-    let value = period_num as f64;
-    Some(Period { text, value })
+    let mut den = 1u64;
+    for frequency in frequencies {
+        match lcm_u64(den, frequency.den) {
+            Some(next) if next != 0 => den = next,
+            _ => return PeriodFinding::Unresolved,
+        }
+    }
+    let mut shared: Option<u64> = None;
+    for frequency in frequencies {
+        let scale = den / frequency.den;
+        let Some(cycles) = frequency.num.unsigned_abs().checked_mul(scale) else {
+            return PeriodFinding::Unresolved;
+        };
+        if cycles == 0 {
+            return PeriodFinding::Unresolved;
+        }
+        shared = Some(match shared {
+            Some(previous) => gcd_u64(previous, cycles),
+            None => cycles,
+        });
+    }
+    let Some(shared) = shared.filter(|shared| *shared != 0) else {
+        return PeriodFinding::Unresolved;
+    };
+    let Ok(den_i) = i64::try_from(den) else {
+        return PeriodFinding::Unresolved;
+    };
+    let (num, den) = reduce(den_i, shared);
+    if num <= 0 || den == 0 {
+        return PeriodFinding::Unresolved;
+    }
+    let mut value = num as f64 / den as f64;
+    if rad != 1 {
+        value /= (rad as f64).sqrt();
+    }
+    if !value.is_finite() || value <= 0.0 {
+        return PeriodFinding::Unresolved;
+    }
+    PeriodFinding::Periodic(Period {
+        text: period_text(num, den, rad),
+        value,
+        num,
+        den,
+        rad,
+    })
+}
+
+fn period_text(num: i64, den: u64, rad: u64) -> String {
+    if rad == 1 {
+        return format_ratio(num, den);
+    }
+    // (num/den)/sqrt(rad) = num*sqrt(rad)/(den*rad), then reduce the coefficient.
+    let Some(denom) = den.checked_mul(rad) else {
+        return format!("{num}/({den}*sqrt({rad}))");
+    };
+    let (num, denom) = reduce(num, denom);
+    radical_text(num, denom, rad)
+}
+
+fn radical_text(num: i64, den: u64, rad: u64) -> String {
+    if rad == 1 {
+        return format_ratio(num, den);
+    }
+    let radical = format!("sqrt({rad})");
+    if num == 1 && den == 1 {
+        radical
+    } else if den == 1 {
+        format!("{num}*{radical}")
+    } else if num == 1 {
+        format!("{radical}/{den}")
+    } else {
+        format!("{num}*{radical}/{den}")
+    }
 }
 
 fn format_ratio(num: i64, den: u64) -> String {
@@ -873,5 +1121,241 @@ mod tests {
             PathClosure::of(&unseen).status_caption(),
             Some("PERIOD 5".to_string())
         );
+    }
+
+    #[test]
+    fn a_fractional_least_period_is_not_truncated_to_zero() {
+        let creation =
+            StudioCreation::new_parametric("cos(2*pi*2*t)", "sin(2*pi*4*t)", 0.0, 1.0, 1.0)
+                .expect("double frequency");
+        match PathClosure::of(&creation) {
+            PathClosure::Periodic(periodic) => {
+                assert_eq!(periodic.period_text, "1/2");
+                assert_eq!(periodic.x_cycles, Some(1));
+                assert_eq!(periodic.y_cycles, Some(2));
+                assert_eq!(periodic.window_periods, Some(2));
+                assert!(periodic.window_end.state_returns);
+            }
+            other => panic!("2 and 4 should have period 1/2, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn commensurate_square_roots_have_a_period() {
+        let creation = StudioCreation::new_parametric(
+            "cos(2*pi*sqrt(2)*t)",
+            "sin(2*pi*2*sqrt(2)*t)",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("shared radical");
+        match PathClosure::of(&creation) {
+            PathClosure::Periodic(periodic) => {
+                assert_eq!(periodic.period_text, "sqrt(2)/2");
+                assert_eq!(periodic.x_frequency_text, "sqrt(2)");
+                assert_eq!(periodic.y_frequency_text, "2*sqrt(2)");
+                assert_eq!(periodic.x_cycles, Some(1));
+                assert_eq!(periodic.y_cycles, Some(2));
+                assert_eq!(periodic.window_periods, None);
+                assert!(
+                    !periodic.window_end.state_returns,
+                    "a window of length 1 is not the irrational period"
+                );
+            }
+            other => panic!("shared sqrt(2) should be periodic, got {other:?}"),
+        }
+    }
+
+    fn voices(id: &str) -> super::VoiceClosure {
+        match PathClosure::of(&bundled(id)) {
+            PathClosure::Voices(voices) => voices,
+            other => panic!("{id} should be an oscillator overlay, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn closing_voices_count_twelve_and_seventeen_cycles() {
+        let voices = voices("closing-voices");
+        assert_eq!(voices.voices[0].frequency_text, "1");
+        assert_eq!(voices.voices[0].window_cycles.as_deref(), Some("12"));
+        assert_eq!(voices.voices[1].frequency_text, "17/12");
+        assert_eq!(voices.voices[1].window_cycles.as_deref(), Some("17"));
+        assert_eq!(voices.period_text.as_deref(), Some("12"));
+        assert_eq!(voices.window_periods, Some(1));
+        assert_eq!(voices.window_is_common_period, Some(true));
+        assert_eq!(
+            PathClosure::of(&bundled("closing-voices")).status_caption(),
+            Some("CYCLES 12 17  PERIOD 12".to_string())
+        );
+    }
+
+    #[test]
+    fn a_shorter_window_keeps_the_period_and_refuses_the_counts() {
+        let voices = voices("shorter-window");
+        assert_eq!(voices.voices[0].window_cycles.as_deref(), Some("1"));
+        assert_eq!(voices.voices[1].window_cycles.as_deref(), Some("17/12"));
+        assert_eq!(voices.period_text.as_deref(), Some("12"));
+        assert_eq!(voices.window_periods, None);
+        assert_eq!(voices.window_is_common_period, Some(false));
+        assert_eq!(
+            PathClosure::of(&bundled("shorter-window")).status_caption(),
+            Some("CYCLES 1 17/12  PERIOD 12  NOT THIS WINDOW".to_string())
+        );
+    }
+
+    #[test]
+    fn wandering_voices_name_the_exact_product_and_no_period() {
+        let voices = voices("wandering-voices");
+        assert_eq!(voices.voices[0].window_cycles.as_deref(), Some("12"));
+        assert_eq!(voices.voices[1].frequency_text, "sqrt(2)");
+        assert_eq!(
+            voices.voices[1].window_cycles.as_deref(),
+            Some("12*sqrt(2)")
+        );
+        assert!(voices.period_text.is_none());
+        assert_eq!(voices.window_is_common_period, Some(false));
+        let lines = PathClosure::of(&bundled("wandering-voices")).report_lines();
+        assert!(
+            lines
+                .iter()
+                .any(|line| line == "ideal motion has no positive common period"),
+            "{lines:?}"
+        );
+        assert!(
+            lines
+                .iter()
+                .all(|line| !line.contains("16.97") && !line.contains("irrational")),
+            "{lines:?}"
+        );
+        assert_eq!(
+            PathClosure::of(&bundled("wandering-voices")).status_caption(),
+            Some("CYCLES 12 12*sqrt(2)  NO PERIOD".to_string())
+        );
+    }
+
+    #[test]
+    fn an_unseen_overlay_ratio_keeps_its_period_when_the_window_changes() {
+        let on_period =
+            StudioCreation::new_program(["cos(2*pi*x)", "sin(2*pi*(8/5)*x)"], 0.0, 5.0, 1.0)
+                .expect("unseen overlay");
+        match PathClosure::of(&on_period) {
+            PathClosure::Voices(voices) => {
+                assert_eq!(voices.period_text.as_deref(), Some("5"));
+                assert_eq!(voices.voices[0].window_cycles.as_deref(), Some("5"));
+                assert_eq!(voices.voices[1].window_cycles.as_deref(), Some("8"));
+                assert_eq!(voices.window_periods, Some(1));
+                assert_eq!(voices.window_is_common_period, Some(true));
+            }
+            other => panic!("8/5 overlay should have period 5, got {other:?}"),
+        }
+        let longer =
+            StudioCreation::new_program(["cos(2*pi*x)", "sin(2*pi*(8/5)*x)"], 0.0, 12.0, 1.0)
+                .expect("longer window");
+        match PathClosure::of(&longer) {
+            PathClosure::Voices(voices) => {
+                assert_eq!(voices.period_text.as_deref(), Some("5"));
+                assert_eq!(voices.voices[0].window_cycles.as_deref(), Some("12"));
+                assert_eq!(voices.voices[1].window_cycles.as_deref(), Some("96/5"));
+                assert_eq!(voices.window_is_common_period, Some(false));
+            }
+            other => panic!("a longer window does not change the period, got {other:?}"),
+        }
+        let reopened = StudioCreation::from_capsule(&on_period.to_num_file()).expect("reopen");
+        assert_eq!(PathClosure::of(&on_period), PathClosure::of(&reopened));
+        let from_link = StudioCreation::from_capsule(&on_period.to_link()).expect("link");
+        assert_eq!(PathClosure::of(&on_period), PathClosure::of(&from_link));
+    }
+
+    #[test]
+    fn two_windows_of_closing_voices_do_not_rename_the_period() {
+        let wide =
+            StudioCreation::new_program(["cos(2*pi*x)", "sin(2*pi*(17/12)*x)"], 0.0, 24.0, 1.0)
+                .expect("two periods");
+        match PathClosure::of(&wide) {
+            PathClosure::Voices(voices) => {
+                assert_eq!(voices.period_text.as_deref(), Some("12"));
+                assert_eq!(voices.voices[0].window_cycles.as_deref(), Some("24"));
+                assert_eq!(voices.voices[1].window_cycles.as_deref(), Some("34"));
+                assert_eq!(voices.window_periods, Some(2));
+                assert_eq!(voices.window_is_common_period, Some(true));
+                assert_eq!(
+                    PathClosure::of(&wide).status_caption().as_deref(),
+                    Some("CYCLES 24 34  PERIOD 12")
+                );
+            }
+            other => panic!("two windows still have period 12, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn an_overlay_fractional_period_matches_the_path() {
+        let overlay = StudioCreation::new_program(["cos(4*pi*x)", "sin(8*pi*x)"], 0.0, 1.0, 1.0)
+            .expect("overlay");
+        let path = StudioCreation::new_parametric("cos(4*pi*t)", "sin(8*pi*t)", 0.0, 1.0, 1.0)
+            .expect("path");
+        match (PathClosure::of(&overlay), PathClosure::of(&path)) {
+            (PathClosure::Voices(voices), PathClosure::Periodic(periodic)) => {
+                assert_eq!(voices.period_text.as_deref(), Some("1/2"));
+                assert_eq!(periodic.period_text, "1/2");
+                assert_eq!(voices.window_periods, Some(2));
+                assert_eq!(periodic.window_periods, Some(2));
+            }
+            other => panic!("overlay and path should agree on period 1/2, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn equal_radicals_are_not_called_aperiodic() {
+        let creation = StudioCreation::new_program(
+            ["cos(2*pi*sqrt(2)*x)", "sin(2*pi*sqrt(2)*x)"],
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("equal radicals");
+        match PathClosure::of(&creation) {
+            PathClosure::Voices(voices) => {
+                assert_eq!(voices.period_text.as_deref(), Some("sqrt(2)/2"));
+                assert_ne!(
+                    PathClosure::of(&creation).status_caption().as_deref(),
+                    Some("NO PERIOD")
+                );
+            }
+            other => panic!("equal sqrt(2) voices share a period, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn an_ordinary_overlay_does_not_invent_a_voice_trial() {
+        for id in ["the-parts", "the-sum", "tresillo", "full-return"] {
+            assert!(
+                matches!(
+                    PathClosure::of(&bundled(id)),
+                    PathClosure::Graph | PathClosure::Periodic(_)
+                ),
+                "{id} should not become a voice trial"
+            );
+            assert!(
+                !PathClosure::of(&bundled(id))
+                    .report_lines()
+                    .iter()
+                    .any(|line| line.contains("closure=voices")),
+                "{id}"
+            );
+        }
+        let mixed = StudioCreation::new_program(["sin(x)", "cos(2*pi*x)"], 0.0, 1.0, 1.0)
+            .expect("mixed overlay");
+        assert!(matches!(PathClosure::of(&mixed), PathClosure::Graph));
+        let three = StudioCreation::new_program(
+            ["cos(2*pi*x)", "sin(2*pi*x)", "cos(4*pi*x)"],
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("three oscillators");
+        assert!(matches!(PathClosure::of(&three), PathClosure::Graph));
+        let lone = StudioCreation::new("cos(2*pi*x)", 0.0, 1.0, 1.0).expect("one graph");
+        assert!(matches!(PathClosure::of(&lone), PathClosure::Graph));
     }
 }

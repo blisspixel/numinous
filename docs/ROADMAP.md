@@ -109,7 +109,8 @@ mastery, exploration, and company also remain complete reasons to play.
   check, not a complete accessibility assessment.
 - **Playable now:** [Returning home](experiments/returning-home.md) has four
   portable Studio contrasts with exact formulas and retained fork lineage.
-  These are current-tool experiments; a richer overlay quest stays open.
+  These are current-tool experiments. The overlay cycle reading is built;
+  the kept project that resumes the question is still designed.
 - **Designed:** [Route Lab](ROUTE_LAB.md) makes shortest-path search and
   traveling-salesman improvement visible on one small street map. Its first
   slice includes a complete four-stop comparison, an exact small-case solver,
@@ -162,10 +163,18 @@ mastery, exploration, and company also remain complete reasons to play.
   oscillators of A full return and Almost home as overlay graphs over
   `[0, 12]`. The path capsules stay in Returning home. A picture of two
   graphs is not a proof of period.
-- **Designed next:** a richer overlay quest around that walk, and
-  one explicitly kept and previewed project that resumes the selected question,
-  evidence, creation, and next action (`DIGITAL_DEVELOPMENT.md`). These are small
-  testable slices before a general quest engine or semantic memory system.
+- **Built, overlay closure:** an overlay of two harmonic oscillators reports
+  the same law as the path trial. `closing-voices` counts 12 and 17 cycles
+  on a period of 12. `shorter-window` keeps those formulas on `[0, 1]`, so
+  the counts are `1` and `17/12` while the period stays 12.
+  `wandering-voices` reports `12*sqrt(2)` and no positive common period.
+  Core, CLI, MCP, and the App status share that reading. A picture is not
+  the proof. The least period is no longer truncated: frequencies 2 and 4
+  have period `1/2`, and commensurate square roots keep a period.
+- **Designed next:** one explicitly kept and previewed project that resumes
+  the selected question, evidence, creation, and next action
+  (`DIGITAL_DEVELOPMENT.md`). This is a small testable slice before a general
+  quest engine or semantic memory system.
 - **Built in alpha 20, depth by choice:** room play is the default. E, ?, or
   Cabinet Explain opens a scrollable reader with immediately selectable
   Explanation, Notes, and Mathematics. Lissajous has the first authored

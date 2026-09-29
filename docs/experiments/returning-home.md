@@ -26,9 +26,11 @@ ideal motion repeats, and whether a half-period checkpoint is a full-state
 return or a position-only trap. The App Studio status names the same caption.
 From Lissajous, CONSTRUCT or `O` opens the first capsule; PageDown walks
 the family, including a period-1 starter titled Another ratio. After that
-capsule, PageDown opens Closing voices, the two oscillators drawn as
-graphs. Change the y frequency to try a new return. The picture is not the
-proof.
+capsule, PageDown opens Closing voices, then A shorter window, then
+Wandering voices. Those three draw the oscillators as graphs and report
+ideal cycle counts. The shorter window keeps the closing formulas and shows
+that the counts in view need not be the period. Change the y frequency to
+try a new return. The picture is not the proof.
 
 ## Four paths
 
@@ -84,7 +86,8 @@ These cases follow the standard periodic and quasiperiodic oscillator model.
 For a further mathematical treatment, see
 [MIT's Lissajous exercises, section 3](https://math.mit.edu/classes/18.353J/PSetAnswers/AnswerPSet_2024_07.pdf).
 This guide is a playable contrast, not evidence that a participant learned or
-enjoyed it. The optional walk and transfer are built; a richer overlay remains
-open in [PROGRESSION.md](../PROGRESSION.md).
+enjoyed it. The optional walk, the transfer, and the overlay cycle reading are
+built. A kept project that resumes the question remains open in
+[PROGRESSION.md](../PROGRESSION.md).
 
 </details>

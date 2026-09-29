@@ -5,6 +5,22 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Overlay closure for two harmonic oscillators. Opening `closing-voices`,
+  `shorter-window`, or `wandering-voices` reports ideal cycles in the window
+  and a common period when the model has one. `shorter-window` keeps the
+  closing formulas on `[0, 1]`, so the counts are not the period.
+  `wandering-voices` names `12*sqrt(2)` and no positive common period. The
+  same fact is on the App status line, CLI `open-studio`, and MCP `closure`
+  with kind `voices`. A picture is not the proof, and the trial does not
+  gate play.
+
+### Fixed
+- The least period of two commensurate oscillators is no longer truncated.
+  Frequencies 2 and 4 have period `1/2`, not `0`. Two rational multiples of
+  one shared square root have a period, for example `sqrt(2)/2`, rather than
+  an aperiodic label. Paths and overlays share that result.
+
 ## [0.4.0-alpha.26] - 2026-09-13
 
 ### Added
