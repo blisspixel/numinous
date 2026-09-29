@@ -6,6 +6,13 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- A checked two-oscillator path or overlay sounds the frequencies its
+  closure already names. Frequency `1` is 110 Hz, and each other named
+  frequency is 110 Hz times its cycles per unit time. The App plays those
+  sustained tones after Enter. CLI `open-studio` and MCP
+  `structuredContent.tones` report the same reading. The sung melody and
+  its MIDI file stay the sampled curve. `sqrt(2)` is not replaced by a
+  nearby ratio, and the capsule is unchanged.
 - A core project document, `NUMINOUS_PROJECT 1`. It keeps one question, a
   closed next call, catalog room ids, typed evidence links, and an optional
   Studio creation. Import and correct are separate from keep. Resume previews

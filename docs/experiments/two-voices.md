@@ -15,7 +15,9 @@ From a packaged install, open a capsule by id: `closing-voices`,
 ratio opens Closing voices, then A shorter window, then Wandering voices.
 PageUp returns. Opening one reports `closure` with kind `voices`: the
 ideal cycles in the window, and a common period when the model has one.
-That count is cycles, not peaks. A picture is not the proof.
+That count is cycles, not peaks. A picture is not the proof. The same
+frequencies sound as sustained tones: frequency 1 is 110 Hz, and the
+window counts are not the pitches. The sung melody stays the sampled curve.
 
 | Creation | Try this |
 | --- | --- |

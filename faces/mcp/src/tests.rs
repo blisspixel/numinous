@@ -279,6 +279,13 @@ fn packaged_player_docs_name_creation_next() {
             "{name} must name the Returning home closure trial a packaged player can read"
         );
         assert!(
+            flattened.contains("sustained tones")
+                && flattened.contains("110 Hz")
+                && flattened.contains("sampled curve")
+                && flattened.contains("nearby ratio"),
+            "{name} must name the oscillator tones a packaged player can hear"
+        );
+        assert!(
             flattened.contains("every graph sings in WAV")
                 && flattened.contains("MIDI stays the first curve"),
             "{name} must name overlay WAV mix and MIDI lead a packaged player can hear"
@@ -8160,6 +8167,15 @@ fn opening_returning_home_reports_independent_closure() {
     assert_eq!(closure["xCycles"], 12);
     assert_eq!(closure["yCycles"], 17);
     assert_eq!(closure["windowEnd"]["stateReturns"], true);
+    let tones = &full["result"]["structuredContent"]["tones"];
+    assert_eq!(tones["basis"], "ideal");
+    assert_eq!(tones["referenceHz"], 110.0);
+    assert_eq!(tones["voices"][0]["frequency"], "1");
+    assert_eq!(tones["voices"][0]["hz"], 110.0);
+    assert_eq!(tones["voices"][1]["frequency"], "17/12");
+    let full_ratio = tones["voices"][1]["hz"].as_f64().expect("upper hz")
+        / tones["voices"][0]["hz"].as_f64().expect("root hz");
+    assert!((full_ratio - 17.0 / 12.0).abs() < 1e-5);
 
     let same = call("open_creation", json!({"capsule": "same-place"}));
     let half = &same["result"]["structuredContent"]["closure"]["halfPeriod"];
@@ -8176,6 +8192,12 @@ fn opening_returning_home_reports_independent_closure() {
         almost["result"]["structuredContent"]["closure"]["yFrequency"],
         "sqrt(2)"
     );
+    let almost_tones = &almost["result"]["structuredContent"]["tones"];
+    assert_eq!(almost_tones["voices"][1]["frequency"], "sqrt(2)");
+    let almost_ratio = almost_tones["voices"][1]["hz"].as_f64().expect("upper hz")
+        / almost_tones["voices"][0]["hz"].as_f64().expect("root hz");
+    assert!((almost_ratio - 2f64.sqrt()).abs() < 1e-5);
+    assert!((almost_ratio - 17.0 / 12.0).abs() > 1e-3);
 
     let transfer = call("open_creation", json!({"capsule": "another-ratio"}));
     assert_eq!(transfer["result"]["isError"], false, "{transfer}");
@@ -8219,6 +8241,10 @@ fn opening_returning_home_reports_independent_closure() {
         graph["result"]["structuredContent"]
             .get("closure")
             .is_none()
+    );
+    assert!(
+        graph["result"]["structuredContent"].get("tones").is_none(),
+        "a graph invents no tones"
     );
 }
 

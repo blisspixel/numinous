@@ -190,21 +190,21 @@ mastery, exploration, and company also remain complete reasons to play.
   present creation opens paused. Enter starts it. Esc leaves. The project
   file, the journal, and the journey stay unchanged, and the next tool is
   not called.
-- **Hypothesis, hear the two frequencies:** a checked two-oscillator path
-  or two-voice overlay can sound the frequencies closure already names.
-  On a path those texts are `x_frequency_text` and `y_frequency_text`. On
-  an overlay each voice has `frequency_text`. The tones are those
-  oscillators. The sung samples of the curve stay a melody, and a melody
-  still does not establish a period. Closure remains the only period
-  claim. The half-period trap, place without state, stays a caption two
-  tones cannot show. The first slice is full-return, frequencies `1` and
-  `17/12` beside period `12`, and almost-home, frequencies `1` and
-  `sqrt(2)` beside no period. A graph, a field, a sum, or any unsupported
-  creation invents no tones. An audible pitch is an explicit map of that
-  named text. The map keeps an irrational frequency irrational, so
-  `sqrt(2)` is not replaced by a nearby ratio. The reading adds no
-  mathematical fact and does not change the capsule. The App, the CLI,
-  and MCP share it. Implementation and player evidence remain open.
+- **Built, oscillator tones:** a checked two-oscillator path or two-voice
+  overlay sounds the frequencies closure already names. On a path those
+  texts are `x_frequency_text` and `y_frequency_text`. On an overlay each
+  voice has `frequency_text`. Frequency `1` is 110 Hz, and each other
+  named frequency is 110 Hz times its cycles per unit time. Full return
+  sounds `1` and `17/12` beside period `12`. Almost home sounds `1` and
+  `sqrt(2)` beside no period. `closing-voices` and `shorter-window` share
+  those tones; the window counts stay on the closure line. The App plays
+  the two sustained sines after Enter. A paused reopen stays silent. CLI
+  `open-studio` and MCP `structuredContent.tones` report the same reading.
+  The sung melody and its MIDI file stay the sampled curve. Closure
+  remains the only period claim, and the half-period caption stays a
+  caption. A graph, a field, a sum, or any unsupported creation invents
+  no tones. `sqrt(2)` is not replaced by a nearby ratio. The capsule is
+  unchanged. Player evidence remains open.
 - **Hypothesis, hear the slope:** the open graph can grow a second curve,
   its symbolic derivative, plotted and sung beside it. The player's
   source stays the source. The first slice rewrites `sin(a*x)` to
@@ -1897,9 +1897,9 @@ world's determinism.
 So the useful half is native. Another reading of a capsule the player
 already wrote, replayed from core on the App, the CLI, and MCP together.
 Rock 6 has carried the instrument through named pitches. MusicXML remains
-there. The next readings are hypotheses in the critical path: hear the two
-frequencies a closure reading already states, hear a symbolic slope beside
-the open graph, and hear one harmonic term of a sum the player wrote.
+there. The frequency tones are built. Two readings remain hypotheses:
+hear a symbolic slope beside the open graph, and hear one harmonic term
+of a sum the player wrote.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
 already plans them. A natural-language question, step-by-step homework,
 and curated facts about the world stay out with the external call.

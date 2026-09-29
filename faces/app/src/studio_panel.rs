@@ -285,8 +285,9 @@ impl StudioPanel {
 
     /// Confirm the paused preview: the creation starts singing.
     ///
-    /// Returns the melody over the saved window at the saved knob, or `None`
-    /// when nothing is waiting to be confirmed.
+    /// A closure that names two frequencies returns those sustained tones.
+    /// Every other creation returns the melody over the saved window at the
+    /// saved knob. `None` means nothing is waiting to be confirmed.
     pub fn confirm_opened(&mut self) -> Option<SoundSpec> {
         let opened = self.opened.as_mut()?;
         if !opened.paused {
@@ -591,7 +592,19 @@ impl StudioPanel {
     /// The picture, voice, and portable creation use one window and parameter.
     /// A reopened creation supplies its saved window; a fresh formula uses the
     /// shared defaults. Gallery playback never changes these numbers.
+    /// Sustained tones when closure already named two frequencies.
+    /// The sampled melody stays on the creation and is not this sound.
+    fn oscillator_tone_sound(&self) -> Option<SoundSpec> {
+        let creation = self.current_creation().ok()?;
+        numinous_core::PathClosure::of(&creation)
+            .oscillator_tones()
+            .and_then(|tones| tones.sound())
+    }
+
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
+        if let Some(sound) = self.oscillator_tone_sound() {
+            return Some(sound);
+        }
         let (xmin, xmax, a) = self.window_and_knob();
         if let Some(program) = &self.program {
             return Some(program.to_melody(
@@ -2660,6 +2673,44 @@ mod tests {
         let fitted_columns = 900_usize.saturating_sub(20) / (6 * scale as usize);
         let [_, (drawn, mark)] = panel.status_lines(InputMode::KeyboardMouse, fitted_columns);
         assert_composed_text_line(&raster, &drawn, 10 + 44 * scale, scale, mark);
+    }
+
+    #[test]
+    fn returning_home_plays_named_frequencies_and_keeps_the_melody() {
+        let full = numinous_core::StudioCreation::from_capsule("full-return").expect("full-return");
+        let capsule = full.to_num_file();
+        let tones = numinous_core::PathClosure::of(&full)
+            .oscillator_tones()
+            .expect("tones");
+        assert_eq!(full.to_num_file(), capsule);
+        let mut panel = StudioPanel::default();
+        panel.open_creation(&full);
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 56);
+        assert!(context.contains("PERIOD 12"), "{context}");
+        assert!(context.contains("HALF: PLACE NOT STATE"), "{context}");
+        let live = panel.current_sound().expect("tones");
+        assert_eq!(live, tones.sound().expect("sound"));
+        assert_ne!(live, full.to_melody(32));
+        assert!(
+            panel.entry_sound().expect("paused").notes.is_empty(),
+            "a paused reopen stays silent"
+        );
+        assert_eq!(panel.confirm_opened().expect("confirmed"), live);
+        assert_eq!(
+            panel.current_creation().expect("creation").to_melody(32),
+            full.to_melody(32)
+        );
+
+        panel.open_creation(
+            &numinous_core::StudioCreation::from_capsule("almost-home").expect("almost-home"),
+        );
+        let almost = panel.current_sound().expect("almost-home tones");
+        assert_ne!(almost.notes[1].freq, live.notes[1].freq);
+        let graph = StudioPanel::new("sin(a*x)").expect("graph");
+        assert_eq!(
+            graph.current_sound().expect("melody"),
+            graph.current_creation().expect("graph").to_melody(32)
+        );
     }
 
     #[test]
