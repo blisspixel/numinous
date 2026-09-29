@@ -587,13 +587,9 @@ impl StudioPanel {
         false
     }
 
-    /// Render the last-good expression into the same deterministic Studio voice.
-    ///
-    /// The picture, voice, and portable creation use one window and parameter.
-    /// A reopened creation supplies its saved window; a fresh formula uses the
-    /// shared defaults. Gallery playback never changes these numbers.
-    /// Sustained tones when closure already named two frequencies.
-    /// The sampled melody stays on the creation and is not this sound.
+    /// Two sustained sines when closure already named two frequencies.
+    /// Absent for every other creation. The sampled melody stays on the
+    /// creation.
     fn oscillator_tone_sound(&self) -> Option<SoundSpec> {
         let creation = self.current_creation().ok()?;
         numinous_core::PathClosure::of(&creation)
@@ -601,6 +597,13 @@ impl StudioPanel {
             .and_then(|tones| tones.sound())
     }
 
+    /// Render the last-good expression into the Studio voice.
+    ///
+    /// The picture, voice, and portable creation use one window and parameter.
+    /// A reopened creation supplies its saved window; a fresh formula uses the
+    /// shared defaults. Gallery playback never changes these numbers. When
+    /// closure names two frequencies, the voice is those sustained tones.
+    /// Otherwise it is the sampled melody.
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
         if let Some(sound) = self.oscillator_tone_sound() {
             return Some(sound);
