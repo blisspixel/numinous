@@ -5041,3 +5041,219 @@ fn a_wing_route_carries_no_question_and_walks_the_catalog_order() {
     let next = route.step(doorway, 1, numinous_core::ROOM_CATALOG.len());
     assert_eq!(next, rooms[1], "a wing walks catalog order");
 }
+
+struct KeptQuestionFixture {
+    root: std::path::PathBuf,
+}
+
+impl KeptQuestionFixture {
+    fn new(name: &str) -> Self {
+        let root = std::env::temp_dir().join(format!(
+            "numinous-app-project-{name}-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("fixture directory");
+        Self { root }
+    }
+
+    fn project(&self) -> std::path::PathBuf {
+        self.root.join("project")
+    }
+
+    fn journal(&self) -> std::path::PathBuf {
+        self.root.join("journal")
+    }
+}
+
+impl Drop for KeptQuestionFixture {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.root);
+    }
+}
+
+fn keep_full_return(
+    path: &std::path::Path,
+    question: &str,
+    evidence: Vec<numinous_core::ProjectEvidence>,
+) {
+    numinous_core::keep_project_file(
+        path,
+        &numinous_core::ProjectDraft {
+            recorded_at_utc: 1_700_000_000,
+            question: question.to_string(),
+            next: numinous_core::ProjectNext::OpenCreation {
+                capsule: "full-return".to_string(),
+            },
+            rooms: vec!["lissajous".to_string()],
+            evidence,
+            creation: Some("full-return".to_string()),
+        },
+    )
+    .expect("keep the project");
+}
+
+fn plate_text(app: &App) -> String {
+    app.project_resume
+        .as_ref()
+        .expect("project plate")
+        .lines
+        .join("\n")
+}
+
+#[test]
+fn cabinet_question_of_an_empty_chain_refuses_without_creating_a_file() {
+    let mut app = headless("kept-question-empty");
+    let path = super::local_state_paths().project;
+    let _ = std::fs::remove_file(&path);
+    let journey = app.journey.clone();
+    app.apply_menu_intent(numinous_app::menu::MenuIntent::OpenKeptProject);
+    let banner = app.banner.expect("refusal").lines().join(" ");
+    assert!(banner.contains("PROJECT CHAIN IS EMPTY"), "{banner}");
+    assert!(!path.exists());
+    assert!(app.project_resume.is_none());
+    assert!(!app.studio);
+    assert!(!app.menu.is_open());
+    assert_eq!(app.journey, journey);
+    assert!(!app.journey_file.exists());
+}
+
+#[test]
+fn cabinet_question_lists_missing_evidence_and_leaves_paused_without_writing() {
+    let fixture = KeptQuestionFixture::new("missing");
+    keep_full_return(
+        &fixture.project(),
+        "Which room is this?",
+        vec![numinous_core::ProjectEvidence::Journal {
+            digest: [0x11; 32],
+            entry_id: None,
+        }],
+    );
+    let project_bytes = std::fs::read(fixture.project()).expect("project bytes");
+    let mut app = headless("kept-question-missing");
+    let journey = app.journey.clone();
+    app.open_kept_project_at(&fixture.project(), &fixture.journal());
+    let text = plate_text(&app);
+    assert!(text.contains("Question: Which room is this?"), "{text}");
+    assert!(text.contains("Will return: true"), "{text}");
+    assert!(text.contains("Next: open_creation"), "{text}");
+    assert!(text.contains("Creation: present"), "{text}");
+    assert!(text.contains("Period: 12"), "{text}");
+    assert!(text.contains("Evidence: journal missing"), "{text}");
+    assert!(text.contains("Enter starts the creation."), "{text}");
+    assert!(app.studio);
+    assert!(app.studio_panel.opened_paused());
+    let mut raster = numinous_core::Raster::with_accent(480, 320, [0, 0, 0]);
+    crate::project_resume::draw(
+        &mut raster,
+        &app.project_resume.as_ref().unwrap().lines,
+        480,
+        320,
+    );
+    app.dismiss_kept_project();
+    assert!(!app.studio);
+    assert!(app.project_resume.is_none());
+    assert_eq!(
+        std::fs::read(fixture.project()).expect("project"),
+        project_bytes
+    );
+    assert!(!fixture.journal().exists());
+    assert_eq!(app.journey, journey);
+    assert!(!app.journey_file.exists());
+    assert!(!app.scores_file.exists());
+}
+
+#[test]
+fn cabinet_question_names_a_corrected_handle_and_enter_starts_the_creation() {
+    let fixture = KeptQuestionFixture::new("corrected");
+    let cited = numinous_core::record_journal_file(
+        &fixture.journal(),
+        numinous_core::JournalRecord {
+            recorded_at_utc: 20,
+            event_at_utc: 10,
+            source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+            kind: "encounter",
+            subject: "lissajous",
+            text: "cited-quartz-token",
+            affect: None,
+        },
+    )
+    .expect("record");
+    numinous_core::correct_journal_file(
+        &fixture.journal(),
+        30,
+        None,
+        numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+        cited.entry_id,
+        "replacement-quartz-token",
+        None,
+    )
+    .expect("correct");
+    keep_full_return(
+        &fixture.project(),
+        "What still returns?",
+        vec![numinous_core::ProjectEvidence::Journal {
+            digest: cited.identity_digest(),
+            entry_id: Some(cited.entry_id),
+        }],
+    );
+    let project_bytes = std::fs::read(fixture.project()).expect("project bytes");
+    let journal_bytes = std::fs::read(fixture.journal()).expect("journal bytes");
+    let mut app = headless("kept-question-corrected");
+    let journey = app.journey.clone();
+    app.open_kept_project_at(&fixture.project(), &fixture.journal());
+    let text = plate_text(&app);
+    assert!(text.contains("Evidence: journal corrected"), "{text}");
+    assert!(!text.contains("cited-quartz-token"), "{text}");
+    assert!(!text.contains("replacement-quartz-token"), "{text}");
+    assert!(app.studio_panel.opened_paused());
+    app.confirm_kept_project();
+    assert!(app.studio);
+    assert!(!app.studio_panel.opened_paused());
+    assert!(app.project_resume.is_none());
+    assert_eq!(
+        std::fs::read(fixture.project()).expect("project"),
+        project_bytes
+    );
+    assert_eq!(
+        std::fs::read(fixture.journal()).expect("journal"),
+        journal_bytes
+    );
+    assert_eq!(app.journey, journey);
+    assert!(!app.journey_file.exists());
+}
+
+#[test]
+fn cabinet_question_refuses_to_start_an_incompatible_creation() {
+    let fixture = KeptQuestionFixture::new("incompatible");
+    keep_full_return(&fixture.project(), "Can this reopen?", Vec::new());
+    let original = std::fs::read_to_string(fixture.project()).expect("chain text");
+    assert!(
+        original.contains("NUMINOUS_STUDIO"),
+        "the stored creation should carry the studio header"
+    );
+    let broken = original.replacen("NUMINOUS_STUDIO", "NOT_A_STUDIO", 1);
+    std::fs::write(fixture.project(), &broken).expect("rewrite chain");
+    let project_bytes = std::fs::read(fixture.project()).expect("project bytes");
+    let mut app = headless("kept-question-incompatible");
+    let journey = app.journey.clone();
+    app.open_kept_project_at(&fixture.project(), &fixture.journal());
+    let text = plate_text(&app);
+    assert!(text.contains("Creation: incompatible"), "{text}");
+    assert!(text.contains("Esc leaves. Nothing is written."), "{text}");
+    assert!(!app.studio);
+    app.confirm_kept_project();
+    let banner = app.banner.as_ref().expect("refusal").lines().join(" ");
+    assert!(banner.contains("THIS CREATION CANNOT START"), "{banner}");
+    assert!(!app.studio);
+    assert!(app.project_resume.is_some());
+    app.dismiss_kept_project();
+    assert!(app.project_resume.is_none());
+    assert_eq!(
+        std::fs::read(fixture.project()).expect("project"),
+        project_bytes
+    );
+    assert!(!fixture.journal().exists());
+    assert_eq!(app.journey, journey);
+    assert!(!app.journey_file.exists());
+}

@@ -148,8 +148,12 @@ optional Studio creation at `NUMINOUS_PROJECT` (or `.numinous-project`).
 It does not copy journal text. `numinous project resume` prints the same
 preview. `numinous project resume --apply` writes the question and a present
 room into the process that runs the command. MCP resume still leaves the
-workspace unchanged. `forget` with `project: true` erases the chain and leaves
-the journal. `export_journal` format `portable-1` still does not
+workspace unchanged. When a human opens the App and a project chain is
+present, the Cabinet row The Question shows that preview. Enter starts a
+present creation. Esc leaves. The App does not write the chain, the journal,
+or the journey, and it does not call the next tool. `forget` with
+`project: true` erases the chain and leaves the journal. `export_journal`
+format `portable-1` still does not
 import a project. Use
 `forget` to inspect or erase Journey and other Numinous-managed local state.
 

@@ -64,10 +64,12 @@ exact save/reopen of the resulting creation, and an unobstructed leave path.
 Those are functional capabilities. Enjoyment and a feeling of expanded
 possibility require separately described participant evidence.
 
-The project capsule designed in `DIGITAL_DEVELOPMENT.md` would let the player
-keep a chosen question, evidence, artifact, and next experiment across visits.
-It must not turn every play into a stored lesson. A later experiment relay can
-let another player extend that creation, with each choosing what to share.
+A kept project can hold a chosen question, evidence links, a creation, and
+one next call across visits. MCP previews it, the CLI can apply that preview
+inside one process, and the Cabinet shows it paused. It must not turn every
+play into a stored lesson. A later experiment relay can let another player
+extend that creation, with each choosing what to share. A general quest
+engine remains unbuilt.
 
 ## Two players, one design
 

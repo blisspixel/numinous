@@ -1,4 +1,7 @@
-use super::{App, AudioProgram, append_crash_log_at, feedback, postcard, studio_panel};
+use super::{
+    App, AudioProgram, append_crash_log_at, feedback, local_state_paths, postcard, project_resume,
+    studio_panel,
+};
 use numinous_core::Raster;
 use winit::keyboard::{Key, NamedKey};
 
@@ -522,6 +525,9 @@ impl App {
     /// whatever program was playing does not keep sounding under a preview
     /// that has deliberately not started singing yet.
     pub(super) fn open_studio_creation(&mut self, creation: &numinous_core::StudioCreation) {
+        // A new creation replaces any kept-question plate. The project opener
+        // puts its own plate back after this returns.
+        self.project_resume = None;
         // A quiz is stateless and would otherwise keep owning the keyboard
         // over the newly opened Studio; scored runs are guarded at the door
         // in open_dropped_file instead of being silently abandoned here.
@@ -660,5 +666,96 @@ impl App {
             return;
         }
         self.open_num_file(std::path::Path::new(input));
+    }
+
+    /// Offer The Question only when a chain is present or unreadable.
+    pub(super) fn refresh_kept_project_menu(&mut self) {
+        let available = project_resume::chain_available(&local_state_paths().project);
+        self.menu.set_project_available(available);
+    }
+
+    /// Open the local project chain as a paused preview.
+    pub(super) fn open_kept_project(&mut self) {
+        let paths = local_state_paths();
+        self.open_kept_project_at(&paths.project, &paths.journal);
+    }
+
+    /// Open one explicit chain. Tests pass private paths so the player's
+    /// home directory is never read.
+    pub(super) fn open_kept_project_at(
+        &mut self,
+        project_path: &std::path::Path,
+        journal_path: &std::path::Path,
+    ) {
+        let project_before = std::fs::read(project_path).ok();
+        let journal_before = std::fs::read(journal_path).ok();
+        let loaded = project_resume::load(project_path, journal_path);
+        let unchanged = std::fs::read(project_path).ok() == project_before
+            && std::fs::read(journal_path).ok() == journal_before;
+        self.close_menu();
+        if !unchanged {
+            self.banner = Some(feedback::Banner::status(
+                "The project file changed during resume.",
+                feedback::REFUSAL_FRAMES,
+            ));
+            return;
+        }
+        match loaded {
+            Ok(loaded) => {
+                if let Some(creation) = loaded.creation.as_ref() {
+                    self.open_studio_creation(creation);
+                } else if self.studio {
+                    self.exit_studio();
+                }
+                self.project_resume = Some(loaded.plate);
+            }
+            Err(message) => {
+                self.banner = Some(feedback::Banner::status(message, feedback::REFUSAL_FRAMES));
+            }
+        }
+    }
+
+    /// Enter starts a present creation. Anything else stays unwritten.
+    pub(super) fn confirm_kept_project(&mut self) {
+        let Some(state) = self
+            .project_resume
+            .as_ref()
+            .map(|plate| plate.creation_state)
+        else {
+            return;
+        };
+        match state {
+            project_resume::CreationState::Present
+                if self.studio && self.studio_panel.opened_paused() =>
+            {
+                self.studio_confirm_opened();
+                self.project_resume = None;
+            }
+            project_resume::CreationState::Missing => {
+                self.banner = Some(feedback::Banner::status(
+                    "No creation is stored.",
+                    feedback::REFUSAL_FRAMES,
+                ));
+            }
+            project_resume::CreationState::Incompatible
+            | project_resume::CreationState::Present => {
+                self.banner = Some(feedback::Banner::status(
+                    "This creation cannot start.",
+                    feedback::REFUSAL_FRAMES,
+                ));
+            }
+        }
+    }
+
+    /// Leave the preview. A studio opened for it closes too. Nothing is written.
+    pub(super) fn dismiss_kept_project(&mut self) {
+        if self.project_resume.is_none() {
+            return;
+        }
+        if self.studio {
+            self.exit_studio();
+        } else {
+            self.project_resume = None;
+        }
     }
 }

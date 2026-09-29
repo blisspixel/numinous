@@ -19,6 +19,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   question into this process's workspace intention and, when the next call
   names a present room, that room into place. The workspace is not saved.
   Journal text stays in the journal. The next tool is not called.
+- The App Cabinet offers The Question when a project chain is present. It
+  shows the question and what is missing, corrected, collided, or
+  incompatible, and it withholds journal text. A present creation opens
+  paused. Enter starts that creation. Esc leaves. The project file, the
+  journal, and the journey stay unchanged, and the next tool is not called.
 - Overlay closure for two harmonic oscillators. Opening `closing-voices`,
   `shorter-window`, or `wandering-voices` reports ideal cycles in the window
   and a common period when the model has one. `shorter-window` keeps the

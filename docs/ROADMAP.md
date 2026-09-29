@@ -112,7 +112,9 @@ mastery, exploration, and company also remain complete reasons to play.
   These are current-tool experiments. The overlay cycle reading is built.
   A kept project can be resumed: MCP `project` previews the next call, and
   CLI `numinous project resume --apply` writes this process's intention and,
-  when that call names a present room, its place.
+  when that call names a present room, its place. The Cabinet offers that
+  question when a chain is present, opens a present creation paused, and
+  Enter starts it.
 - **Designed:** [Route Lab](ROUTE_LAB.md) makes shortest-path search and
   traveling-salesman improvement visible on one small street map. Its first
   slice includes a complete four-stop comparison, an exact small-case solver,
@@ -182,9 +184,15 @@ mastery, exploration, and company also remain complete reasons to play.
   when the next call names a present room, its place. The workspace is not
   saved, journal text stays in the journal, and the next tool is not called.
   `forget` can erase the chain without erasing the journal.
-- **Designed, still later:** the capability quest in `PROGRESSION.md` can
-  use a kept project. A general quest engine and a semantic memory system
-  remain unbuilt (`DIGITAL_DEVELOPMENT.md`).
+- **Built, App project preview:** when a project chain is present, the
+  Cabinet offers that one question. The plate names what is missing,
+  corrected, collided, or incompatible, and withholds journal text. A
+  present creation opens paused. Enter starts it. Esc leaves. The project
+  file, the journal, and the journey stay unchanged, and the next tool is
+  not called.
+- **Designed, still later:** a general quest engine and a semantic memory
+  system remain unbuilt (`DIGITAL_DEVELOPMENT.md`). The capability quest in
+  `PROGRESSION.md` can keep using a kept project.
 - **Built in alpha 20, depth by choice:** room play is the default. E, ?, or
   Cabinet Explain opens a scrollable reader with immediately selectable
   Explanation, Notes, and Mathematics. Lissajous has the first authored
