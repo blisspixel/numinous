@@ -15,6 +15,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   with kind `voices`. A picture is not the proof, and the trial does not
   gate play.
 
+### Security
+- `rustls` 0.23.42, reached through the CLI HTTP client, accepted a TLS 1.3
+  handshake message on the wrong encryption level (RUSTSEC-2026-0285). The
+  lockfile now uses `rustls` 0.23.45, which rejects that record, and
+  `rustls-webpki` 0.103.15 with it.
+
 ### Fixed
 - The least period of two commensurate oscillators is no longer truncated.
   Frequencies 2 and 4 have period `1/2`, not `0`. Two rational multiples of
