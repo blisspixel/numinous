@@ -350,6 +350,8 @@ times its cycles per unit time. The sung melody and `melody.mid` stay the
 sampled curve. `sqrt(2)` is not replaced by a nearby ratio. The half-period
 caption stays a caption. The trial does not gate play.
 
+An open graph `sin(a*x)` grows a second curve `a*cos(a*x)` on the same vertical axis. The App sings that shape beside the graph. The capsule, the text preview, and `melody.mid` stay the player's source. `floor`, `mod`, `min`, `max`, `euclid`, `pat`, and `note` have no slope reading.
+
 Keep that work when you choose. `save_creation` returns canonical `.num` text,
 a native link, and an exact preview; graph or paired parametric source, pitch
 scale, optional title, author, and era travel inside the capsule.

@@ -113,7 +113,12 @@ not the period. `wandering-voices` has no positive common period. When that clos
 two frequencies, `structuredContent.tones` names them as sustained tones.
 Frequency `1` is 110 Hz, and each other named frequency is 110 Hz times
 its cycles per unit time. The sung melody stays the sampled curve.
-`sqrt(2)` is not replaced by a nearby ratio. Follow a
+`sqrt(2)` is not replaced by a nearby ratio. An open graph `sin(a*x)`
+grows a second curve `a*cos(a*x)` on the same vertical axis. The App
+sings that shape beside the graph. `structuredContent.slope` names that
+source. The capsule, the text preview, and `melody.mid` stay the player's
+source. `floor`, `mod`, `min`, `max`, `euclid`, `pat`, and `note` have
+no slope reading. Follow a
 Returning home row, then read `closure` rather than trusting the picture.
 After `another-ratio`, the App walk continues into `closing-voices`, then
 `shorter-window`, then `wandering-voices`. The trial does not gate play.

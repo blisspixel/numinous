@@ -3499,35 +3499,116 @@ fn melody_from_norms(samples: &[f32], scale: StudioScale) -> SoundSpec {
     }
 }
 
+/// One step of the graph pitch map, in seconds.
+const MELODY_STEP: f32 = 0.12;
+
+fn melody_note(y: f64, index: usize, ymin: f64, ymax: f64, scale: StudioScale) -> Note {
+    let amplitude_scale = ymin.abs().max(ymax.abs()).max(1.0);
+    let scaled_min = ymin / amplitude_scale;
+    let span = (ymax / amplitude_scale - scaled_min).max(f64::EPSILON);
+    let norm = ((y / amplitude_scale - scaled_min) / span).clamp(0.0, 1.0) as f32;
+    let semitones = quantized_semitones(norm * 24.0, scale);
+    Note {
+        freq: 220.0 * 2.0_f32.powf(semitones / 12.0),
+        start: index as f32 * MELODY_STEP,
+        dur: MELODY_STEP * 1.4,
+        amp: 0.3,
+    }
+}
+
 fn spec_from_samples(samples: &[f64], scale: StudioScale) -> SoundSpec {
-    const STEP: f32 = 0.12;
     if samples.is_empty() {
         return SoundSpec {
-            duration: STEP,
+            duration: MELODY_STEP,
             notes: Vec::new(),
         };
     }
     let ymin = samples.iter().copied().fold(f64::INFINITY, f64::min);
     let ymax = samples.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let amplitude_scale = ymin.abs().max(ymax.abs()).max(1.0);
-    let scaled_min = ymin / amplitude_scale;
-    let span = (ymax / amplitude_scale - scaled_min).max(f64::EPSILON);
     let note_vec: Vec<Note> = samples
         .iter()
         .enumerate()
-        .map(|(i, &y)| {
-            let norm = ((y / amplitude_scale - scaled_min) / span).clamp(0.0, 1.0) as f32;
-            let semitones = quantized_semitones(norm * 24.0, scale);
-            Note {
-                freq: 220.0 * 2.0_f32.powf(semitones / 12.0),
-                start: i as f32 * STEP,
-                dur: STEP * 1.4,
-                amp: 0.3,
-            }
-        })
+        .map(|(index, &y)| melody_note(y, index, ymin, ymax, scale))
         .collect();
     SoundSpec {
-        duration: note_vec.len() as f32 * STEP + 0.3,
+        duration: note_vec.len() as f32 * MELODY_STEP + 0.3,
+        notes: note_vec,
+    }
+}
+
+fn push_axis_notes(
+    notes: &mut Vec<Note>,
+    samples: &[f64],
+    ymin: f64,
+    ymax: f64,
+    scale: StudioScale,
+) {
+    for (index, sample) in samples.iter().copied().enumerate() {
+        if sample.is_finite() {
+            notes.push(melody_note(sample, index, ymin, ymax, scale));
+        }
+    }
+}
+
+/// Sing a graph and its slope on one shared vertical axis.
+///
+/// Both columns are sampled on the same grid. Finite samples from either
+/// column set one `ymin` and `ymax`, and each voice uses the graph pitch
+/// map on that axis. A non-finite sample is omitted, and its grid index
+/// stays put, so the two voices do not drift. Graph notes are written
+/// first. The duration is one grid.
+///
+/// This is the live App voice for `sin(a*x)`. [`to_melody`] stays the
+/// player's source, as do the postcard, the text preview, CLI `sing`, and
+/// the MIDI file. Each sung voice uses the shared normalization. The pitch
+/// interval is that normalization.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a graph and its slope share one window, count, knob, slider table, and scale"
+)]
+#[must_use]
+pub fn graph_and_slope_melody(
+    graph: &Expr,
+    slope: &Expr,
+    xmin: f64,
+    xmax: f64,
+    notes: usize,
+    a: f64,
+    sliders: &[crate::slider::StudioSlider],
+    scale: StudioScale,
+) -> SoundSpec {
+    let notes = notes.clamp(1, MAX_MELODY_NOTES);
+    let denom = (notes as f64 - 1.0).max(1.0);
+    let mut graph_samples = Vec::with_capacity(notes);
+    let mut slope_samples = Vec::with_capacity(notes);
+    for index in 0..notes {
+        let x = xmin + (xmax - xmin) * index as f64 / denom;
+        graph_samples.push(eval_named(graph, x, a, sliders));
+        slope_samples.push(eval_named(slope, x, a, sliders));
+    }
+    let mut finite = graph_samples
+        .iter()
+        .chain(slope_samples.iter())
+        .copied()
+        .filter(|sample| sample.is_finite());
+    let Some(first) = finite.next() else {
+        return SoundSpec {
+            duration: MELODY_STEP,
+            notes: Vec::new(),
+        };
+    };
+    let mut ymin = first;
+    let mut ymax = first;
+    for sample in finite {
+        ymin = ymin.min(sample);
+        ymax = ymax.max(sample);
+    }
+    let mut note_vec = Vec::new();
+    push_axis_notes(&mut note_vec, &graph_samples, ymin, ymax, scale);
+    push_axis_notes(&mut note_vec, &slope_samples, ymin, ymax, scale);
+    note_vec.sort_by(|left, right| left.start.total_cmp(&right.start));
+    SoundSpec {
+        duration: notes as f32 * MELODY_STEP + 0.3,
         notes: note_vec,
     }
 }

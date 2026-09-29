@@ -929,6 +929,9 @@ fn studio_creation_result(
     if let Some(tones) = closure.oscillator_tones() {
         structured["tones"] = tones_json(&tones);
     }
+    if let Some(slope) = numinous_core::GraphSlope::of_creation(creation) {
+        structured["slope"] = slope_json(&slope);
+    }
     attach_pattern(&mut structured, creation);
     if creation.kind() == numinous_core::StudioKind::Field {
         structured["field"] = json!({
@@ -964,6 +967,10 @@ fn studio_creation_result(
     if let Some(tones) = closure.oscillator_tones() {
         text.push('\n');
         text.push_str(&tones.report_lines().join("\n"));
+    }
+    if let Some(slope) = numinous_core::GraphSlope::of_creation(creation) {
+        text.push('\n');
+        text.push_str(&slope.report_lines().join("\n"));
     }
     tool_structured(&text, structured)
 }
@@ -1016,6 +1023,17 @@ fn closure_json(closure: &numinous_core::PathClosure) -> Option<Value> {
             "yFrequency": aperiodic.y_frequency_text,
             "windowEnd": checkpoint_json(&aperiodic.window_end),
         })),
+    }
+}
+
+fn slope_json(slope: &numinous_core::GraphSlope) -> Value {
+    match slope {
+        numinous_core::GraphSlope::Derivative(derivative) => json!({
+            "kind": "derivative",
+            "basis": "symbolic",
+            "source": derivative.source,
+        }),
+        numinous_core::GraphSlope::Refused => json!({ "kind": "refused" }),
     }
 }
 

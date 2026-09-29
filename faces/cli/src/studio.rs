@@ -10,9 +10,10 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use numinous_core::{
-    DEFAULT_FIELD_MAX, DEFAULT_FIELD_MIN, FieldReading, FieldRequest, PathClosure, PlotRequest,
-    PlotSource, SingRequest, SoundSpec, StudioCreation, StudioKind, StudioRequestError,
-    StudioScale, StudioSlider, parse_field, sliders_from_specs, uses_field_vocabulary,
+    DEFAULT_FIELD_MAX, DEFAULT_FIELD_MIN, FieldReading, FieldRequest, GraphSlope, PathClosure,
+    PlotRequest, PlotSource, SingRequest, SoundSpec, StudioCreation, StudioKind,
+    StudioRequestError, StudioScale, StudioSlider, parse_field, sliders_from_specs,
+    uses_field_vocabulary,
 };
 
 use crate::render_input::validate_render_dimensions;
@@ -840,6 +841,9 @@ pub(super) fn open_studio_report(
     lines.extend(closure.report_lines());
     if let Some(tones) = closure.oscillator_tones() {
         lines.extend(tones.report_lines());
+    }
+    if let Some(slope) = GraphSlope::of_creation(&creation) {
+        lines.extend(slope.report_lines());
     }
     let pattern = creation.pattern_rows();
     for row in &pattern {

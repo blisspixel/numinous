@@ -1,8 +1,8 @@
 //! App-local Studio input, parsing, audio, and drawing helpers.
 
 use numinous_core::{
-    Expr, FieldReading, MAX_STUDIO_EDITOR_CHARS, PathClosure, Raster, SoundSpec, StudioCreation,
-    StudioKind, StudioProgram, StudioScale, StudioSlider, Surface,
+    Expr, FieldReading, GraphSlope, MAX_STUDIO_EDITOR_CHARS, PathClosure, Raster, SoundSpec,
+    StudioCreation, StudioKind, StudioProgram, StudioScale, StudioSlider, Surface,
 };
 
 use crate::input_legend::{self, InputMode};
@@ -597,15 +597,56 @@ impl StudioPanel {
             .and_then(|tones| tones.sound())
     }
 
+    /// Slope of the open graph, when this slice recognizes one.
+    ///
+    /// Fields, parametric paths, and overlays are omitted. A recipe morph
+    /// still names the destination formula here. The picture skips the
+    /// second curve until the blend ends, because the blend is not the
+    /// derivative.
+    fn graph_slope(&self) -> Option<GraphSlope> {
+        let program = self.program.as_ref()?;
+        if program.kind() != StudioKind::Graph {
+            return None;
+        }
+        GraphSlope::of_expression(program.voice_expression())
+    }
+
+    /// The graph and its slope on one shared vertical axis.
+    ///
+    /// A refusal stays on the sampled melody, so a rhythm is not scolded
+    /// by a second voice. The capsule and its MIDI file stay the source.
+    fn slope_beside_sound(&self) -> Option<SoundSpec> {
+        let GraphSlope::Derivative(derivative) = self.graph_slope()? else {
+            return None;
+        };
+        let program = self.program.as_ref()?;
+        let (xmin, xmax, a) = self.window_and_knob();
+        Some(numinous_core::graph_and_slope_melody(
+            program.voice_expression(),
+            &derivative.expression,
+            xmin,
+            xmax,
+            numinous_core::DEFAULT_MELODY_NOTES,
+            a,
+            &self.sliders,
+            self.scale,
+        ))
+    }
+
     /// Render the last-good expression into the Studio voice.
     ///
     /// The picture, voice, and portable creation use one window and parameter.
     /// A reopened creation supplies its saved window; a fresh formula uses the
     /// shared defaults. Gallery playback never changes these numbers. When
     /// closure names two frequencies, the voice is those sustained tones.
-    /// Otherwise it is the sampled melody.
+    /// When the open graph is `sin(a*x)`, the voice is that graph and its
+    /// slope on one shared axis. Otherwise it is the sampled melody. The
+    /// capsule, the postcard, and the MIDI file stay the player's source.
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
         if let Some(sound) = self.oscillator_tone_sound() {
+            return Some(sound);
+        }
+        if let Some(sound) = self.slope_beside_sound() {
             return Some(sound);
         }
         let (xmin, xmax, a) = self.window_and_knob();
@@ -918,6 +959,36 @@ impl StudioPanel {
         }
     }
 
+    fn draw_slope_curve(
+        &self,
+        raster: &mut Raster,
+        layout: numinous_app::studio_render::CurveLayout,
+        xmin: f64,
+        xmax: f64,
+        a: f64,
+        program: &StudioProgram,
+    ) -> bool {
+        if self.morph.is_some() {
+            return false;
+        }
+        let Some(GraphSlope::Derivative(derivative)) = self.graph_slope() else {
+            return false;
+        };
+        let graph = program.voice_expression().clone();
+        let slope = derivative.expression;
+        let graph_sliders = self.sliders.clone();
+        let slope_sliders = self.sliders.clone();
+        numinous_app::studio_render::draw_two_curves(
+            raster,
+            layout,
+            xmin,
+            xmax,
+            move |x| finite_sample(&graph, x, a, &graph_sliders),
+            move |x| finite_sample(&slope, x, a, &slope_sliders),
+        )
+        .is_some()
+    }
+
     fn curve_value(&self, x: f64, a: f64) -> Option<f64> {
         let current = self
             .expr
@@ -1021,6 +1092,14 @@ impl StudioPanel {
                 InputMode::Controller => "KEYBOARD F1: HELP  F6: SCALE".to_string(),
             }
         };
+        // The slope name sits ahead of the roll. The fitter drops the tail,
+        // and the roll is already that tail.
+        if self.morph.is_none()
+            && let Some(GraphSlope::Derivative(derivative)) = self.graph_slope()
+        {
+            context.push_str("  SLOPE ");
+            context.push_str(&derivative.source.to_ascii_uppercase());
+        }
         if let Ok(creation) = self.current_creation() {
             let rows = creation.pattern_rows();
             if !rows.is_empty() {
@@ -1141,13 +1220,15 @@ impl StudioPanel {
             if !self.paint_pattern_grid(raster, layout) {
                 match program.kind() {
                     StudioKind::Graph => {
-                        let _ = numinous_app::studio_render::draw_curve(
-                            raster,
-                            layout,
-                            xmin,
-                            xmax,
-                            |x| self.curve_value(x, a),
-                        );
+                        if !self.draw_slope_curve(raster, layout, xmin, xmax, a, program) {
+                            let _ = numinous_app::studio_render::draw_curve(
+                                raster,
+                                layout,
+                                xmin,
+                                xmax,
+                                |x| self.curve_value(x, a),
+                            );
+                        }
                     }
                     StudioKind::Parametric => {
                         let _ = numinous_app::studio_render::draw_parametric(
@@ -1238,6 +1319,12 @@ impl StudioPanel {
     }
 }
 
+/// Finite sample of one expression, or none when the value is not finite.
+fn finite_sample(expr: &Expr, x: f64, a: f64, sliders: &[StudioSlider]) -> Option<f64> {
+    let value = numinous_core::eval_named(expr, x, a, sliders);
+    value.is_finite().then_some(value)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -1249,6 +1336,30 @@ mod tests {
         self, ControllerAction, ControllerButton, ControllerCopy, ControllerFace, InputMode,
     };
     use numinous_core::{Raster, Surface};
+
+    fn beside_voice(panel: &StudioPanel) -> numinous_core::SoundSpec {
+        let (xmin, xmax, a) = panel.window_and_knob();
+        let graph = panel
+            .program
+            .as_ref()
+            .expect("last good graph")
+            .voice_expression();
+        let numinous_core::GraphSlope::Derivative(derivative) =
+            numinous_core::GraphSlope::of_expression(graph).expect("sin(a*x) slope")
+        else {
+            panic!("sin(a*x) is a derivative in this slice");
+        };
+        numinous_core::graph_and_slope_melody(
+            graph,
+            &derivative.expression,
+            xmin,
+            xmax,
+            numinous_core::DEFAULT_MELODY_NOTES,
+            a,
+            &panel.sliders,
+            panel.scale,
+        )
+    }
 
     #[test]
     fn default_panel_has_a_curve_and_a_voice() {
@@ -1494,7 +1605,6 @@ mod tests {
 
     #[test]
     fn a_reopened_creation_pins_window_and_knob_and_waits_paused() {
-        use std::f64::consts::TAU;
         let creation =
             numinous_core::StudioCreation::new("sin(a*x)", 0.0, 1.0, 0.25).expect("creation");
         let mut panel = StudioPanel::default();
@@ -1511,19 +1621,27 @@ mod tests {
         assert!(panel.opened_paused());
         assert_eq!(panel.source_for_test(), "sin(a*x)");
 
-        // Exact: the voice is the saved window at the saved knob, not the
-        // ambient default of either.
+        // The live voice is the saved window at the saved knob. The capsule
+        // melody stays the source alone.
         let expr = numinous_core::parse("sin(a*x)").expect("expr");
-        let exact = numinous_core::to_melody(&expr, 0.0, 1.0, 32, 0.25);
+        let solo = numinous_core::to_melody(&expr, 0.0, 1.0, 32, 0.25);
+        assert_eq!(creation.to_melody(32), solo);
+        let beside = beside_voice(&panel);
+        let ambient = StudioPanel::new("sin(a*x)").expect("ambient");
         assert_ne!(
-            exact,
-            numinous_core::to_melody(&expr, -TAU, TAU, 32, 1.0),
-            "fixture must expose the pin"
+            beside,
+            beside_voice(&ambient),
+            "the saved window is the one that sings"
         );
-        assert_eq!(panel.current_sound().expect("voice"), exact);
+        assert_ne!(beside, solo, "the live voice is the pair");
+        assert_eq!(panel.current_sound().expect("voice"), beside);
+        assert!(
+            panel.entry_sound().expect("paused").notes.is_empty(),
+            "a paused reopen stays silent"
+        );
 
         // Confirm starts the singing once; a second confirm has nothing left.
-        assert_eq!(panel.confirm_opened().expect("confirmed melody"), exact);
+        assert_eq!(panel.confirm_opened().expect("confirmed melody"), beside);
         assert!(!panel.opened_paused());
         assert!(panel.opened_active(), "confirming does not release the pin");
         assert!(panel.confirm_opened().is_none());
@@ -1546,7 +1664,11 @@ mod tests {
         let spec = panel.push_text("+0").expect("still parses");
         assert!(panel.opened_active());
         assert_eq!(spec, creation.to_melody(32));
-        assert_eq!(curve_band(&panel), before);
+        assert_ne!(
+            curve_band(&panel),
+            before,
+            "the slope curve leaves when the source is no longer sin(a*x)"
+        );
         let edited = panel.current_creation().expect("edited creation");
         assert_eq!(edited.source(), "sin(a*x)+0");
         assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
@@ -1574,7 +1696,7 @@ mod tests {
         let edited = panel.current_creation().expect("whitespace edit");
         assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
         assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
-        assert_eq!(panel.current_sound(), Some(creation.to_melody(32)));
+        assert_eq!(panel.current_sound(), Some(beside_voice(&panel)));
 
         // Recipe discovery intentionally replaces the complete creation.
         assert!(panel.load_random_recipe().is_some());
@@ -1595,20 +1717,27 @@ mod tests {
         assert!(panel.push_text("+").is_none());
         assert!(!panel.opened_paused());
         assert_eq!(panel.window_and_knob(), (0.0, 1.0, 0.25));
-        assert_eq!(panel.current_sound(), Some(creation.to_melody(32)));
+        assert_eq!(panel.current_sound(), Some(beside_voice(&panel)));
+        assert_ne!(
+            panel.current_sound(),
+            Some(creation.to_melody(32)),
+            "the last good graph still sings its slope"
+        );
         assert_eq!(
             panel.current_creation(),
             Err(super::ShareRefusal::UnparsedFormula)
         );
 
         let scaled = creation.clone().with_scale(creation.scale().next());
-        assert_eq!(panel.cycle_scale(), Some(scaled.to_melody(32)));
+        assert_eq!(panel.cycle_scale(), Some(beside_voice(&panel)));
+        assert_ne!(panel.current_sound(), Some(scaled.to_melody(32)));
         assert_eq!(
             panel.current_creation(),
             Err(super::ShareRefusal::UnparsedFormula),
             "changing scale does not repair an invalid formula"
         );
-        assert_eq!(panel.backspace(), Some(scaled.to_melody(32)));
+        assert_eq!(panel.backspace(), Some(beside_voice(&panel)));
+        assert_ne!(panel.current_sound(), Some(scaled.to_melody(32)));
         let repaired = panel.current_creation().expect("repaired formula");
         assert_eq!(
             (repaired.xmin(), repaired.xmax(), repaired.a()),
@@ -1628,7 +1757,8 @@ mod tests {
 
         let expected = creation.clone().with_scale(creation.scale().next());
         let sound = panel.cycle_scale().expect("scaled voice");
-        assert_eq!(sound, expected.to_melody(32));
+        assert_eq!(sound, beside_voice(&panel));
+        assert_ne!(sound, expected.to_melody(32));
         assert_ne!(sound, creation.to_melody(32));
         assert!(!panel.opened_paused());
         let edited = panel.current_creation().expect("scale edit");
@@ -1671,7 +1801,12 @@ mod tests {
         assert!((creation.xmin() + TAU).abs() < 1e-12);
         assert!((creation.xmax() - TAU).abs() < 1e-12);
         assert_eq!(creation.a(), numinous_core::DEFAULT_STUDIO_PARAMETER);
-        assert_eq!(panel.current_sound(), Some(creation.to_melody(32)));
+        assert_eq!(panel.current_sound(), Some(beside_voice(&panel)));
+        assert_ne!(
+            panel.current_sound(),
+            Some(creation.to_melody(32)),
+            "the live voice is the graph and its slope"
+        );
 
         // A reopened pin shares its own saved window and knob.
         let saved = numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5).expect("saved");
@@ -2709,7 +2844,7 @@ mod tests {
         );
         let almost = panel.current_sound().expect("almost-home tones");
         assert_ne!(almost.notes[1].freq, live.notes[1].freq);
-        let graph = StudioPanel::new("sin(a*x)").expect("graph");
+        let graph = StudioPanel::new("sin(x)").expect("graph");
         assert_eq!(
             graph.current_sound().expect("melody"),
             graph.current_creation().expect("graph").to_melody(32)
@@ -2801,11 +2936,71 @@ mod tests {
         let mut panel = StudioPanel::default();
         panel.toggle_help();
         panel.open_creation(&creation);
+        let [_, (wide, _)] = panel.status_lines(InputMode::KeyboardMouse, 200);
+        assert!(wide.starts_with("SCALE CONTINUOUS  REOPENED  X -2 TO 2  SLOPE A*COS(A*X)"));
+        assert!(wide.contains("ROLL"), "{wide}");
+        assert!(!wide.contains("REFUSED"), "{wide}");
+        assert!(
+            !wide.contains("PERIOD"),
+            "a graph is not a closing path: {wide}"
+        );
         let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 56);
+        assert!(context.contains("REOPENED"), "{context}");
+        assert!(context.contains("SLOPE"), "{context}");
+        assert!(context.contains("A*COS"), "{context}");
+        assert!(!context.contains("REFUSED"), "{context}");
         assert!(
             !context.contains("PERIOD"),
             "a graph is not a closing path: {context}"
         );
-        assert!(context.contains("REOPENED"), "{context}");
+    }
+
+    #[test]
+    fn sin_a_x_draws_its_slope_and_the_postcard_stays_the_source() {
+        let live_band = |source: &str| {
+            let mut panel = StudioPanel::new(source).expect(source);
+            panel.toggle_help();
+            let mut raster = Raster::new(200, 150);
+            panel.draw(&mut raster, InputMode::KeyboardMouse, 200, 150);
+            // Rows inside the curve band: status ends near row 60, the curve
+            // starts at 66, and the footer clear begins past 120.
+            raster.to_rgba()[200 * 4 * 80..200 * 4 * 110].to_vec()
+        };
+        assert_ne!(
+            live_band("sin(a*x)"),
+            live_band("sin(x)"),
+            "at a=1 the second curve is the difference"
+        );
+
+        let postcard_band = |source: &str| {
+            let panel = StudioPanel::new(source).expect(source);
+            let rgba = panel.postcard_rgba(200, numinous_core::Era::Modern, None, None);
+            // Formula text ends near row 54. The curve band is rows 120 to 152.
+            rgba[200 * 4 * 128..200 * 4 * 148].to_vec()
+        };
+        assert_eq!(
+            postcard_band("sin(a*x)"),
+            postcard_band("sin(x)"),
+            "the postcard draws the source, and at a=1 those sources match"
+        );
+
+        let panel = StudioPanel::new("sin(a*x)").expect("panel");
+        let creation = panel.current_creation().expect("creation");
+        let file = creation.to_num_file();
+        assert_eq!(creation.source(), "sin(a*x)");
+        assert!(!file.contains("cos"));
+        let live = panel.current_sound().expect("pair");
+        assert_eq!(live, beside_voice(&panel));
+        assert_ne!(live, creation.to_melody(32));
+        assert_eq!(creation.to_midi_melody(32), creation.to_melody(32));
+        assert_ne!(live.midi(), creation.to_midi_melody(32).midi());
+
+        for source in ["floor(x)", "euclid(3,8)"] {
+            let panel = StudioPanel::new(source).expect(source);
+            let creation = panel.current_creation().expect(source);
+            assert_eq!(panel.current_sound(), Some(creation.to_melody(32)));
+            let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 80);
+            assert!(!context.contains("SLOPE"), "{source}: {context}");
+        }
     }
 }

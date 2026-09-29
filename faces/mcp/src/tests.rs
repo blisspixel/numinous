@@ -286,6 +286,12 @@ fn packaged_player_docs_name_creation_next() {
             "{name} must name the oscillator tones a packaged player can hear"
         );
         assert!(
+            flattened.contains("a*cos(a*x)")
+                && flattened.contains("same vertical axis")
+                && flattened.contains("no slope reading"),
+            "{name} must name the slope of sin(a*x) a packaged player can read"
+        );
+        assert!(
             flattened.contains("every graph sings in WAV")
                 && flattened.contains("MIDI stays the first curve"),
             "{name} must name overlay WAV mix and MIDI lead a packaged player can hear"
@@ -8245,6 +8251,76 @@ fn opening_returning_home_reports_independent_closure() {
     assert!(
         graph["result"]["structuredContent"].get("tones").is_none(),
         "a graph invents no tones"
+    );
+    assert!(
+        graph["result"]["structuredContent"].get("slope").is_none(),
+        "sin(x) is outside this slope slice"
+    );
+}
+
+#[test]
+fn opening_sin_a_x_reports_its_slope() {
+    let saved = call(
+        "save_creation",
+        json!({"expr": "sin(a*x)", "xmin": -2.0, "xmax": 2.0, "a": 1.0}),
+    );
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let structured = &saved["result"]["structuredContent"];
+    assert_eq!(structured["slope"]["kind"], "derivative");
+    assert_eq!(structured["slope"]["basis"], "symbolic");
+    assert_eq!(structured["slope"]["source"], "a*cos(a*x)");
+    assert_eq!(structured["next"]["tool"], "fork_creation");
+    let num_file = structured["numFile"].as_str().expect("num file");
+    assert!(num_file.contains("sin(a*x)"));
+    assert!(!num_file.contains("cos"), "{num_file}");
+    let text = saved["result"]["content"][0]["text"]
+        .as_str()
+        .expect("text");
+    assert!(
+        text.contains("slope basis=symbolic source=a*cos(a*x)"),
+        "{text}"
+    );
+
+    let opened = call("open_creation", json!({"capsule": num_file}));
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert_eq!(
+        opened["result"]["structuredContent"]["slope"],
+        structured["slope"]
+    );
+    assert_eq!(
+        opened["result"]["structuredContent"]["next"]["tool"],
+        "fork_creation"
+    );
+
+    let refused = call("save_creation", json!({"expr": "floor(x)"}));
+    assert_eq!(refused["result"]["isError"], false, "{refused}");
+    assert_eq!(
+        refused["result"]["structuredContent"]["slope"],
+        json!({"kind": "refused"})
+    );
+
+    for expr in ["sin(x)", "sin(a*x)+x/3"] {
+        let plain = call("save_creation", json!({"expr": expr}));
+        assert_eq!(plain["result"]["isError"], false, "{expr}: {plain}");
+        assert!(
+            plain["result"]["structuredContent"].get("slope").is_none(),
+            "{expr}"
+        );
+    }
+
+    let plotted = call("plot_expression", json!({"expr": "sin(a*x)"}));
+    assert_eq!(plotted["result"]["isError"], false, "{plotted}");
+    assert!(
+        plotted["result"]["structuredContent"]
+            .get("slope")
+            .is_none(),
+        "a plot is not this reading"
+    );
+    let sung = call("sing_expression", json!({"expr": "sin(a*x)"}));
+    assert_eq!(sung["result"]["isError"], false, "{sung}");
+    assert!(
+        sung["result"]["structuredContent"].get("slope").is_none(),
+        "a song of the source is not this reading"
     );
 }
 

@@ -13,6 +13,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   `structuredContent.tones` report the same reading. The sung melody and
   its MIDI file stay the sampled curve. `sqrt(2)` is not replaced by a
   nearby ratio, and the capsule is unchanged.
+- An open graph `sin(a*x)` grows a second curve `a*cos(a*x)`, checked
+  against an independent slope. The App plots and sings both on one
+  vertical axis. CLI `open-studio` and MCP `structuredContent.slope`
+  report the same reading. `floor`, `mod`, `min`, `max`, `euclid`,
+  `pat`, and `note` are refused. The capsule, the postcard, the text
+  preview, and `melody.mid` stay the player's source.
 - A core project document, `NUMINOUS_PROJECT 1`. It keeps one question, a
   closed next call, catalog room ids, typed evidence links, and an optional
   Studio creation. Import and correct are separate from keep. Resume previews
@@ -41,12 +47,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   gate play.
 
 ### Changed
-- The roadmap records three Studio hypotheses. A checked closure can name
-  tones for the frequencies it already states. An open graph can grow a
-  symbolic derivative beside it, without replacing the player's source.
-  A sum of two recognized oscillators can show one term and then both.
-  None of this is built. A question box, homework steps, curated facts
-  about the world, and any call to an external answer engine stay out.
+- The roadmap records three Studio readings. The frequency tones are
+  built. The slope of `sin(a*x)` is built. One harmonic term of a sum
+  the player wrote remains a hypothesis. A question box, homework
+  steps, curated facts about the world, and any call to an external
+  answer engine stay out.
 
 ### Security
 - `rustls` 0.23.42, reached through the CLI HTTP client, accepted a TLS 1.3
