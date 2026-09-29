@@ -1,20 +1,28 @@
 //! A symbolic slope beside one open Studio graph.
 //!
-//! The first reading rewrites `sin(a*x)` to `a*cos(a*x)`. The capsule keeps
-//! the player's source. Samples of the rewritten source are checked, in
-//! tests, against an independent slope of `sin(a*x)`. `floor`, `mod`,
-//! `min`, `max`, `euclid`, `pat`, and `note` are refused. Every other
-//! graph in this slice is left without a reading.
+//! `sin(a*x)` rewrites to `a*cos(a*x)`. A sum or difference of that form,
+//! a line (`x`, a numeric or `a` multiple of `x`, or `x` divided by a
+//! numeric constant), and a non-negative integer power of `x` rewrites to
+//! the sum of those derivatives. The opening formula `sin(a*x) + x/3`
+//! becomes `a*cos(a*x)+1/3`. A constant term drops out, and `1/3` stays a
+//! quotient. The capsule keeps the player's source. Samples of the
+//! rewritten source are checked, in tests, against an independent slope
+//! where both are defined. `floor`, `mod`, `min`, `max`, `euclid`, `pat`,
+//! and `note` are refused. Every other graph is left without a reading.
 
-use crate::studio::{Expr, Func, Op, PairFunc, StudioCreation, StudioKind, eval, parse};
+use std::f64::consts::{E, PI};
 
-/// Source text of the derivative this slice knows.
-const DERIVATIVE_SOURCE: &str = "a*cos(a*x)";
+use crate::studio::{
+    Expr, Func, MAX_STUDIO_SOURCE_CHARS, Op, PairFunc, StudioCreation, StudioKind, eval, parse,
+};
+
+/// The largest integer a Studio number can hold exactly.
+const MAX_EXACT_INT: i128 = 1 << 53;
 
 /// The rewritten source and the expression parsed from it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GraphDerivative {
-    /// Canonical derivative source. This slice always uses `a*cos(a*x)`.
+    /// Canonical derivative source, in Studio expression text.
     pub source: String,
     /// Parsed form of [`Self::source`].
     pub expression: Expr,
@@ -30,20 +38,27 @@ pub enum GraphSlope {
 }
 
 impl GraphSlope {
-    /// Read one parsed graph. Refusal wins over the sine match.
+    /// Read one parsed graph. Refusal wins over a matching sum.
     ///
-    /// `sin(a*x)` and `sin(x*a)` return the derivative. A refused construct
-    /// anywhere in the tree returns [`Self::Refused`]. Every other shape
-    /// returns none: absence is not a secant and not a guess.
+    /// A recognized sum rewrites to its derivative. A refused construct
+    /// anywhere in the tree returns [`Self::Refused`]. A constant graph, and
+    /// every shape this slice does not rewrite exactly, returns none:
+    /// absence is not a secant and not a guess.
     #[must_use]
     pub fn of_expression(expr: &Expr) -> Option<Self> {
         if refuses_slope(expr) {
             return Some(Self::Refused);
         }
-        if is_sin_parameter_times_variable(expr) {
-            return derivative();
+        let terms = differentiate(expr)?;
+        if terms.is_empty() {
+            return None;
         }
-        None
+        let source = print_terms(&terms);
+        if source.chars().count() > MAX_STUDIO_SOURCE_CHARS {
+            return None;
+        }
+        let expression = parse(&source).ok()?;
+        Some(Self::Derivative(GraphDerivative { source, expression }))
     }
 
     /// Read a Studio creation. Only a graph is eligible.
@@ -91,19 +106,449 @@ pub fn central_slope(expr: &Expr, x: f64, parameter: f64, step: f64) -> Option<f
     slope.is_finite().then_some(slope)
 }
 
-fn derivative() -> Option<GraphSlope> {
-    let expression = parse(DERIVATIVE_SOURCE).ok()?;
-    Some(GraphSlope::Derivative(GraphDerivative {
-        source: DERIVATIVE_SOURCE.to_string(),
-        expression,
-    }))
+/// A coefficient that stays exact in source text: a reduced rational, times
+/// optional powers of `a`, `pi`, and `e`. `a` may not appear in a denominator,
+/// because the knob can be zero. A decimal literal is not a rational here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Factor {
+    num: i128,
+    den: i128,
+    a_power: i32,
+    pi_power: i32,
+    e_power: i32,
 }
 
-fn is_sin_parameter_times_variable(expr: &Expr) -> bool {
-    let Expr::Call(Func::Sin, argument) = expr else {
-        return false;
+impl Factor {
+    fn zero() -> Self {
+        Self {
+            num: 0,
+            den: 1,
+            a_power: 0,
+            pi_power: 0,
+            e_power: 0,
+        }
+    }
+
+    fn one() -> Self {
+        Self::from_int(1)
+    }
+
+    fn from_int(num: i128) -> Self {
+        Self {
+            num,
+            den: 1,
+            a_power: 0,
+            pi_power: 0,
+            e_power: 0,
+        }
+    }
+
+    fn named_a() -> Self {
+        Self {
+            num: 1,
+            den: 1,
+            a_power: 1,
+            pi_power: 0,
+            e_power: 0,
+        }
+    }
+
+    fn pi() -> Self {
+        Self {
+            num: 1,
+            den: 1,
+            a_power: 0,
+            pi_power: 1,
+            e_power: 0,
+        }
+    }
+
+    fn e() -> Self {
+        Self {
+            num: 1,
+            den: 1,
+            a_power: 0,
+            pi_power: 0,
+            e_power: 1,
+        }
+    }
+
+    fn is_zero(self) -> bool {
+        self.num == 0
+    }
+
+    fn from_number(value: f64) -> Option<Self> {
+        if value == 0.0 {
+            return Some(Self::zero());
+        }
+        if value == PI {
+            return Some(Self::pi());
+        }
+        if value == E {
+            return Some(Self::e());
+        }
+        if value < 0.0 {
+            return Self::from_number(-value)?.mul_int(-1);
+        }
+        Self::from_int(exact_int(value)?).reduced()
+    }
+
+    fn mul(self, other: Self) -> Option<Self> {
+        if self.is_zero() || other.is_zero() {
+            return Some(Self::zero());
+        }
+        Self {
+            num: self.num.checked_mul(other.num)?,
+            den: self.den.checked_mul(other.den)?,
+            a_power: self.a_power.checked_add(other.a_power)?,
+            pi_power: self.pi_power.checked_add(other.pi_power)?,
+            e_power: self.e_power.checked_add(other.e_power)?,
+        }
+        .reduced()
+    }
+
+    fn mul_int(self, value: i128) -> Option<Self> {
+        self.mul(Self::from_int(value))
+    }
+
+    /// Divide by a constant. `a` in the divisor is outside this slice.
+    fn div(self, other: Self) -> Option<Self> {
+        if other.is_zero() || other.a_power != 0 {
+            return None;
+        }
+        self.mul(Self {
+            num: other.den,
+            den: other.num,
+            a_power: 0,
+            pi_power: other.pi_power.checked_neg()?,
+            e_power: other.e_power.checked_neg()?,
+        })
+    }
+
+    fn pow(self, exp: u32) -> Option<Self> {
+        if exp == 0 {
+            return Some(Self::one());
+        }
+        let mut acc = Self::one();
+        let mut base = self;
+        let mut remaining = exp;
+        while remaining > 0 {
+            if remaining % 2 == 1 {
+                acc = acc.mul(base)?;
+            }
+            remaining /= 2;
+            if remaining > 0 {
+                base = base.mul(base)?;
+            }
+        }
+        Some(acc)
+    }
+
+    fn reduced(self) -> Option<Self> {
+        if self.num == 0 {
+            return Some(Self::zero());
+        }
+        let mut num = self.num;
+        let mut den = self.den;
+        if den < 0 {
+            num = num.checked_neg()?;
+            den = den.checked_neg()?;
+        }
+        if den == 0 {
+            return None;
+        }
+        let g = gcd(unsigned_mag(num)?, unsigned_mag(den)?);
+        let g = i128::try_from(g).ok()?;
+        num /= g;
+        den /= g;
+        if !fits_source_int(num) || !fits_source_int(den) {
+            return None;
+        }
+        Some(Self {
+            num,
+            den,
+            a_power: self.a_power,
+            pi_power: self.pi_power,
+            e_power: self.e_power,
+        })
+    }
+
+    fn add_rational(self, other: Self) -> Option<Self> {
+        let num = self
+            .num
+            .checked_mul(other.den)?
+            .checked_add(other.num.checked_mul(self.den)?)?;
+        let den = self.den.checked_mul(other.den)?;
+        Self {
+            num,
+            den,
+            a_power: self.a_power,
+            pi_power: self.pi_power,
+            e_power: self.e_power,
+        }
+        .reduced()
+    }
+}
+
+/// What a recognized term is, before it is differentiated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Body {
+    /// No `x`. Its derivative is zero.
+    Const,
+    /// `x` raised to a positive integer.
+    Power(u32),
+    /// `sin(a*x)` or `sin(x*a)`.
+    SinAx,
+}
+
+/// What remains after differentiation, besides the coefficient.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Rest {
+    Const,
+    /// `x` raised to a positive integer. `1` prints as `x`.
+    Power(u32),
+    /// `cos(a*x)`.
+    Cos,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Input {
+    factor: Factor,
+    body: Body,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct OutTerm {
+    factor: Factor,
+    rest: Rest,
+}
+
+impl OutTerm {
+    fn same_shape(self, other: Self) -> bool {
+        self.rest == other.rest
+            && self.factor.a_power == other.factor.a_power
+            && self.factor.pi_power == other.factor.pi_power
+            && self.factor.e_power == other.factor.e_power
+    }
+
+    fn add_same(self, other: Self) -> Option<Self> {
+        Some(Self {
+            factor: self.factor.add_rational(other.factor)?,
+            rest: self.rest,
+        })
+    }
+}
+
+fn differentiate(expr: &Expr) -> Option<Vec<OutTerm>> {
+    match expr {
+        Expr::Bin(Op::Add, left, right) => merge(differentiate(left)?, differentiate(right)?),
+        Expr::Bin(Op::Sub, left, right) => {
+            merge(differentiate(left)?, negate(differentiate(right)?)?)
+        }
+        Expr::Neg(inner) => negate(differentiate(inner)?),
+        other => match derive_one(peel(other)?)? {
+            Some(term) => Some(vec![term]),
+            None => Some(Vec::new()),
+        },
+    }
+}
+
+fn derive_one(input: Input) -> Option<Option<OutTerm>> {
+    let term = match input.body {
+        Body::Const | Body::Power(0) => return Some(None),
+        Body::Power(1) => OutTerm {
+            factor: input.factor,
+            rest: Rest::Const,
+        },
+        Body::Power(n) => OutTerm {
+            factor: input.factor.mul_int(i128::from(n))?,
+            rest: Rest::Power(n - 1),
+        },
+        Body::SinAx => OutTerm {
+            factor: input.factor.mul(Factor::named_a())?,
+            rest: Rest::Cos,
+        },
     };
-    let Expr::Bin(Op::Mul, left, right) = argument.as_ref() else {
+    if term.factor.is_zero() {
+        Some(None)
+    } else {
+        Some(Some(term))
+    }
+}
+
+fn peel(expr: &Expr) -> Option<Input> {
+    match expr {
+        Expr::Bin(Op::Mul, left, right) => {
+            if let Some(factor) = as_factor(left) {
+                let mut input = peel(right)?;
+                input.factor = input.factor.mul(factor)?;
+                Some(input)
+            } else if let Some(factor) = as_factor(right) {
+                let mut input = peel(left)?;
+                input.factor = input.factor.mul(factor)?;
+                Some(input)
+            } else {
+                None
+            }
+        }
+        Expr::Bin(Op::Div, left, right) => {
+            let mut input = peel(left)?;
+            input.factor = input.factor.div(as_factor(right)?)?;
+            Some(input)
+        }
+        Expr::Var => Some(Input {
+            factor: Factor::one(),
+            body: Body::Power(1),
+        }),
+        Expr::Bin(Op::Pow, base, exp) => {
+            if !matches!(base.as_ref(), Expr::Var) {
+                return Some(Input {
+                    factor: as_factor(expr)?,
+                    body: Body::Const,
+                });
+            }
+            let &Expr::Num(value) = exp.as_ref() else {
+                return None;
+            };
+            let n = exact_int(value)?;
+            if n < 0 {
+                return None;
+            }
+            if n == 0 {
+                return Some(Input {
+                    factor: Factor::one(),
+                    body: Body::Const,
+                });
+            }
+            Some(Input {
+                factor: Factor::one(),
+                body: Body::Power(u32::try_from(n).ok()?),
+            })
+        }
+        Expr::Call(Func::Sin, argument) if is_parameter_times_variable(argument) => Some(Input {
+            factor: Factor::one(),
+            body: Body::SinAx,
+        }),
+        other => Some(Input {
+            factor: as_factor(other)?,
+            body: Body::Const,
+        }),
+    }
+}
+
+fn as_factor(expr: &Expr) -> Option<Factor> {
+    match expr {
+        Expr::Num(value) => Factor::from_number(*value),
+        Expr::Param => Some(Factor::named_a()),
+        Expr::Neg(inner) => as_factor(inner)?.mul_int(-1),
+        Expr::Bin(Op::Mul, left, right) => as_factor(left)?.mul(as_factor(right)?),
+        Expr::Bin(Op::Div, left, right) => as_factor(left)?.div(as_factor(right)?),
+        Expr::Bin(Op::Pow, base, exp) => {
+            let &Expr::Num(value) = exp.as_ref() else {
+                return None;
+            };
+            let n = exact_int(value)?;
+            if n < 0 {
+                return None;
+            }
+            as_factor(base)?.pow(u32::try_from(n).ok()?)
+        }
+        _ => None,
+    }
+}
+
+fn merge(mut left: Vec<OutTerm>, right: Vec<OutTerm>) -> Option<Vec<OutTerm>> {
+    for term in right {
+        if term.factor.is_zero() {
+            continue;
+        }
+        if let Some(existing) = left.iter_mut().find(|item| item.same_shape(term)) {
+            *existing = existing.add_same(term)?;
+        } else {
+            left.push(term);
+        }
+    }
+    left.retain(|term| !term.factor.is_zero());
+    Some(left)
+}
+
+fn negate(terms: Vec<OutTerm>) -> Option<Vec<OutTerm>> {
+    terms
+        .into_iter()
+        .map(|mut term| {
+            term.factor = term.factor.mul_int(-1)?;
+            Some(term)
+        })
+        .collect()
+}
+
+fn print_terms(terms: &[OutTerm]) -> String {
+    let mut out = String::new();
+    for (index, term) in terms.iter().enumerate() {
+        let negative = term.factor.num < 0;
+        let magnitude = magnitude_source(term);
+        if index > 0 && !negative {
+            out.push('+');
+        }
+        if negative {
+            out.push('-');
+        }
+        out.push_str(&magnitude);
+    }
+    out
+}
+
+fn magnitude_source(term: &OutTerm) -> String {
+    let mut nums = Vec::new();
+    let mut dens = Vec::new();
+    if term.factor.a_power > 0 {
+        nums.push(powered("a", term.factor.a_power));
+    }
+    if term.factor.pi_power > 0 {
+        nums.push(powered("pi", term.factor.pi_power));
+    }
+    if term.factor.e_power > 0 {
+        nums.push(powered("e", term.factor.e_power));
+    }
+    match term.rest {
+        Rest::Const => {}
+        Rest::Power(1) => nums.push("x".to_string()),
+        Rest::Power(power) => nums.push(format!("x^{power}")),
+        Rest::Cos => nums.push("cos(a*x)".to_string()),
+    }
+    let mag = term.factor.num.unsigned_abs();
+    if mag != 1 || nums.is_empty() {
+        nums.insert(0, mag.to_string());
+    }
+    if term.factor.den != 1 {
+        dens.push(term.factor.den.to_string());
+    }
+    if term.factor.pi_power < 0 {
+        dens.push(powered("pi", -term.factor.pi_power));
+    }
+    if term.factor.e_power < 0 {
+        dens.push(powered("e", -term.factor.e_power));
+    }
+    let numerator = nums.join("*");
+    if dens.is_empty() {
+        numerator
+    } else if dens.len() == 1 {
+        format!("{numerator}/{}", dens[0])
+    } else {
+        format!("{numerator}/({})", dens.join("*"))
+    }
+}
+
+fn powered(name: &str, power: i32) -> String {
+    if power == 1 {
+        name.to_string()
+    } else {
+        format!("{name}^{power}")
+    }
+}
+
+fn is_parameter_times_variable(expr: &Expr) -> bool {
+    let Expr::Bin(Op::Mul, left, right) = expr else {
         return false;
     };
     matches!(
@@ -130,9 +575,34 @@ fn refuses_slope(expr: &Expr) -> bool {
     }
 }
 
+fn exact_int(value: f64) -> Option<i128> {
+    if !value.is_finite() || value.fract() != 0.0 || value.abs() > MAX_EXACT_INT as f64 {
+        return None;
+    }
+    let n = value as i128;
+    (n as f64 == value).then_some(n)
+}
+
+fn fits_source_int(value: i128) -> bool {
+    (-MAX_EXACT_INT..=MAX_EXACT_INT).contains(&value) && (value as f64) as i128 == value
+}
+
+fn unsigned_mag(value: i128) -> Option<u128> {
+    u128::try_from(value.checked_abs()?).ok()
+}
+
+fn gcd(mut a: u128, mut b: u128) -> u128 {
+    while b != 0 {
+        let next = a % b;
+        a = b;
+        b = next;
+    }
+    a
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{DERIVATIVE_SOURCE, GraphSlope, central_slope};
+    use super::{GraphSlope, central_slope};
     use crate::field::FieldReading;
     use crate::studio::{
         StudioCreation, StudioScale, eval, graph_and_slope_melody, parse, to_melody,
@@ -142,47 +612,122 @@ mod tests {
         GraphSlope::of_expression(&parse(source).expect(source))
     }
 
-    fn derivative(source: &str) -> GraphSlope {
-        let slope = reading(source).expect("reading");
-        assert!(
-            matches!(slope, GraphSlope::Derivative(_)),
-            "{source} should be the derivative"
-        );
-        let line = slope.report_lines().join("\n");
+    fn expect_slope(source: &str, expected: &str) {
+        let slope = reading(source).unwrap_or_else(|| panic!("{source} should have a slope"));
+        let GraphSlope::Derivative(found) = slope else {
+            panic!("{source} was refused");
+        };
+        assert_eq!(found.source, expected, "{source}");
         assert_eq!(
-            line,
-            format!("slope basis=symbolic source={DERIVATIVE_SOURCE}")
+            found.expression,
+            parse(expected).unwrap_or_else(|_| panic!("{expected} should parse")),
+            "{source}"
         );
-        slope
+        let line = GraphSlope::Derivative(found).report_lines().join("\n");
+        assert_eq!(line, format!("slope basis=symbolic source={expected}"));
+    }
+
+    fn assert_absent(source: &str) {
+        assert!(reading(source).is_none(), "{source} is outside this slice");
+    }
+
+    fn assert_agrees(source: &str, expected: &str) {
+        expect_slope(source, expected);
+        let graph = parse(source).expect(source);
+        let slope = parse(expected).expect(expected);
+        for parameter in [1.0, 2.5, -1.5] {
+            for x in [-1.0, -0.3, 0.0, 0.4, 1.0] {
+                let Some(numerical) = central_slope(&graph, x, parameter, 1e-4) else {
+                    continue;
+                };
+                let symbolic = eval(&slope, x, parameter);
+                if !symbolic.is_finite() {
+                    continue;
+                }
+                assert!(
+                    (numerical - symbolic).abs() < 1e-6,
+                    "{source} at x={x} a={parameter}: numerical {numerical}, symbolic {symbolic}"
+                );
+            }
+        }
     }
 
     #[test]
     fn sin_a_x_rewrites_to_a_cos_a_x() {
         for source in ["sin(a*x)", "sin(x*a)", "sin( a * x )", "sin((a)*(x))"] {
-            let GraphSlope::Derivative(found) = derivative(source) else {
-                unreachable!("asserted above");
-            };
-            assert_eq!(found.source, DERIVATIVE_SOURCE);
-            let again = parse(&found.source).expect("derivative source parses");
-            assert_eq!(found.expression, again);
-            assert_eq!(eval(&found.expression, 0.0, 2.0), 2.0);
+            expect_slope(source, "a*cos(a*x)");
+            let graph = parse(source).expect(source);
+            let slope = parse("a*cos(a*x)").expect("slope");
+            assert_eq!(eval(&slope, 0.0, 2.0), 2.0);
+            assert!((eval(&graph, 0.0, 2.0) - 0.0).abs() < 1e-12);
         }
     }
 
     #[test]
-    fn the_independent_slope_agrees_where_both_are_defined() {
-        let graph = parse("sin(a*x)").expect("graph");
-        let slope = parse(DERIVATIVE_SOURCE).expect("slope");
-        for parameter in [1.0, 2.5, -1.5] {
-            for x in [-1.0, -0.3, 0.0, 0.4, 1.0] {
-                let numerical = central_slope(&graph, x, parameter, 1e-4).expect("finite slope");
-                let symbolic = eval(&slope, x, parameter);
-                assert!(
-                    (numerical - symbolic).abs() < 1e-6,
-                    "x={x} a={parameter}: numerical {numerical}, symbolic {symbolic}"
-                );
-            }
+    fn the_opening_sum_grows_a_cos_a_x_plus_one_third() {
+        for source in [
+            "sin(a*x) + x/3",
+            "sin(a*x)+x/3",
+            "sin(a*x) + x/3 + 0",
+            "sin(a*x)+0+x/3",
+        ] {
+            assert_agrees(source, "a*cos(a*x)+1/3");
         }
+        assert_agrees("x/3+sin(a*x)", "1/3+a*cos(a*x)");
+        assert_agrees("sin(a*x)-x/3", "a*cos(a*x)-1/3");
+        assert_agrees("sin(a*x)+0", "a*cos(a*x)");
+        assert_agrees("sin(a*x)+x-x", "a*cos(a*x)");
+        assert_agrees("2*sin(a*x)", "2*a*cos(a*x)");
+        assert_agrees("sin(a*x)+sin(x*a)", "2*a*cos(a*x)");
+        assert_agrees("-sin(a*x)", "-a*cos(a*x)");
+
+        let creation = StudioCreation::new("sin(a*x) + x/3", -2.0, 2.0, 1.0).expect("creation");
+        let file = creation.to_num_file();
+        let GraphSlope::Derivative(found) =
+            GraphSlope::of_creation(&creation).expect("opening slope")
+        else {
+            panic!("the opening formula is a derivative");
+        };
+        assert_eq!(found.source, "a*cos(a*x)+1/3");
+        assert_eq!(creation.source(), "sin(a*x) + x/3");
+        assert!(!file.contains("cos"), "{file}");
+    }
+
+    #[test]
+    fn lines_and_integer_powers_rewrite_exactly() {
+        assert_agrees("x", "1");
+        assert_agrees("2*x", "2");
+        assert_agrees("x*2", "2");
+        assert_agrees("x/3", "1/3");
+        assert_agrees("x/4", "1/4");
+        assert_agrees("a*x", "a");
+        assert_agrees("x*a", "a");
+        assert_agrees("2*a*x", "2*a");
+        assert_agrees("x+x", "2");
+        assert_agrees("x^2", "2*x");
+        assert_agrees("x^2.0", "2*x");
+        assert_agrees("x^3", "3*x^2");
+        assert_agrees("3*x^2", "6*x");
+        assert_agrees("x^2*3", "6*x");
+        assert_agrees("x^2+x^2", "4*x");
+        assert_agrees("x^2/12 - 1", "x/6");
+        assert_agrees("x^2+x", "2*x+1");
+        assert_agrees("sin(a*x)+x", "a*cos(a*x)+1");
+        assert_agrees("x/(-2)", "-1/2");
+        assert_agrees("x^2/2", "x");
+        assert_agrees("-x^2", "-2*x");
+        assert_agrees("x^3/3", "x^2");
+        assert_agrees("2*pi*x", "2*pi");
+        assert_agrees("x/pi", "1/pi");
+        assert_agrees("x/(2*pi)", "1/(2*pi)");
+        assert_agrees("e*x", "e");
+        assert_agrees("a^2*x", "a^2");
+        assert_agrees("-(x/3)", "-1/3");
+    }
+
+    #[test]
+    fn the_independent_slope_rejects_a_bad_step() {
+        let graph = parse("sin(a*x)").expect("graph");
         assert!(central_slope(&graph, 0.0, 1.0, 0.0).is_none());
         assert!(central_slope(&graph, f64::NAN, 1.0, 1e-4).is_none());
         assert!(central_slope(&graph, 0.0, f64::INFINITY, 1e-4).is_none());
@@ -194,25 +739,42 @@ mod tests {
         else {
             panic!("negative a still names the same source");
         };
-        assert_eq!(found.source, DERIVATIVE_SOURCE);
+        assert_eq!(found.source, "a*cos(a*x)");
     }
 
     #[test]
     fn unrecognized_graphs_are_absent_and_rhythm_graphs_are_refused() {
         for source in [
             "sin(x)",
-            "sin(a*x)+0",
-            "sin(a*x)+x/3",
-            "x^2",
+            "sin(b*x)",
+            "cos(a*x)",
             "tan(x)",
             "ln(x)",
             "sqrt(x)",
             "abs(x)",
-            "sin(b*x)",
-            "cos(a*x)",
-            "a*x",
+            "x*x",
+            "0.5*x",
+            "sin(a*x)+0.1",
+            "x^2.5",
+            "x^(-1)",
+            "x^a",
+            "sin(a*x)*x",
+            "sin(a*x+x)",
+            "sin(2*a*x)",
+            "2*(x+1)",
+            "(a+1)*x",
+            "x/a",
+            "a*x/a",
+            "sin(a*x)/a",
+            "2^x",
+            "5",
+            "a",
+            "x-x",
+            "0*x",
+            "x/0",
+            "x^0",
         ] {
-            assert!(reading(source).is_none(), "{source} is outside this slice");
+            assert_absent(source);
         }
         for source in [
             "floor(x)",
@@ -224,12 +786,13 @@ mod tests {
             "note(\"c e g\")",
             "sin(floor(x))",
             "floor(x)+sin(a*x)",
+            "floor(x)+x",
         ] {
             let slope = reading(source).expect("refusal");
             assert!(matches!(slope, GraphSlope::Refused), "{source}");
             let line = slope.report_lines().join("\n");
             assert_eq!(line, "slope=refused");
-            assert!(!line.contains(DERIVATIVE_SOURCE), "{line}");
+            assert!(!line.contains("cos"), "{line}");
         }
     }
 
@@ -264,7 +827,7 @@ mod tests {
     #[test]
     fn the_beside_voice_shares_one_axis_and_keeps_grid_time() {
         let graph = parse("sin(a*x)").expect("graph");
-        let slope = parse(DERIVATIVE_SOURCE).expect("slope");
+        let slope = parse("a*cos(a*x)").expect("slope");
         let beside = graph_and_slope_melody(
             &graph,
             &slope,

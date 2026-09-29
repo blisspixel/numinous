@@ -648,11 +648,12 @@ impl StudioPanel {
     /// A reopened creation supplies its saved window; a fresh formula uses the
     /// shared defaults. Gallery playback never changes these numbers. When
     /// closure names two frequencies, the voice is those sustained tones.
-    /// When the open graph is `sin(a*x)`, the voice is that graph and its
-    /// slope on one shared axis. When both coordinates of a parametric path
-    /// are two-term sums closure already accepts, the voice is one tone per
-    /// recognized frequency. Otherwise it is the sampled melody. The
-    /// capsule, the postcard, and the MIDI file stay the player's source.
+    /// When the open graph has a slope this slice can name, the voice is
+    /// that graph and its slope on one shared axis. When both coordinates
+    /// of a parametric path are two-term sums closure already accepts, the
+    /// voice is one tone per recognized frequency. Otherwise it is the
+    /// sampled melody. The capsule, the postcard, and the MIDI file stay
+    /// the player's source.
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
         if let Some(sound) = self.oscillator_tone_sound() {
             return Some(sound);
@@ -1420,7 +1421,10 @@ mod tests {
         assert_eq!(panel.source, "sin(a*x) + x/3");
         assert!(panel.expr.is_some());
         assert!(panel.error.is_none());
-        assert_eq!(spec.notes.len(), 32);
+        let creation = panel.current_creation().expect("creation");
+        assert_eq!(creation.to_melody(32).notes.len(), 32);
+        assert_eq!(spec, beside_voice(&panel));
+        assert_eq!(spec.notes.len(), 64);
     }
 
     #[test]
@@ -1713,16 +1717,16 @@ mod tests {
         };
         let before = curve_band(&panel);
 
-        let spec = panel.push_text("+0").expect("still parses");
+        let spec = panel.push_text("+sin(x)").expect("still parses");
         assert!(panel.opened_active());
-        assert_eq!(spec, creation.to_melody(32));
+        let edited = panel.current_creation().expect("edited creation");
+        assert_eq!(spec, edited.to_melody(32));
         assert_ne!(
             curve_band(&panel),
             before,
-            "the slope curve leaves when the source is no longer sin(a*x)"
+            "the slope curve leaves when the source leaves the slope grammar"
         );
-        let edited = panel.current_creation().expect("edited creation");
-        assert_eq!(edited.source(), "sin(a*x)+0");
+        assert_eq!(edited.source(), "sin(a*x)+sin(x)");
         assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
         assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
         assert_eq!(Some(edited.to_melody(32)), panel.current_sound());
@@ -2089,8 +2093,14 @@ mod tests {
                 assert_eq!(creation.a(), a);
                 assert_eq!(creation.xmin(), numinous_core::DEFAULT_STUDIO_XMIN);
                 assert_eq!(creation.xmax(), numinous_core::DEFAULT_STUDIO_XMAX);
-                assert_eq!(voice, creation.to_melody(32));
-                assert_eq!(voice.midi(), creation.to_melody(32).midi());
+                if source.starts_with("sin") {
+                    assert_eq!(voice, beside_voice(&panel));
+                    assert_ne!(voice, creation.to_melody(32));
+                    assert_eq!(creation.to_midi_melody(32), creation.to_melody(32));
+                } else {
+                    assert_eq!(voice, creation.to_melody(32));
+                    assert_eq!(voice.midi(), creation.to_melody(32).midi());
+                }
                 let mut reopened = StudioPanel::default();
                 reopened.open_creation(&creation);
                 assert_eq!(
@@ -2147,7 +2157,8 @@ mod tests {
             assert_eq!(edited.title(), None);
             assert!(!panel.opened_paused());
             assert!(!panel.auto_active());
-            assert_eq!(voice, edited.to_melody(32));
+            assert_eq!(voice, beside_voice(&panel));
+            assert_ne!(voice, edited.to_melody(32));
         }
     }
 
@@ -3054,6 +3065,46 @@ mod tests {
             let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 80);
             assert!(!context.contains("SLOPE"), "{source}: {context}");
         }
+    }
+
+    #[test]
+    fn the_opening_sum_draws_its_slope_and_the_postcard_stays_the_source() {
+        let live_band = |source: &str| {
+            let mut panel = StudioPanel::new(source).expect(source);
+            panel.toggle_help();
+            let mut raster = Raster::new(200, 150);
+            panel.draw(&mut raster, InputMode::KeyboardMouse, 200, 150);
+            raster.to_rgba()[200 * 4 * 80..200 * 4 * 110].to_vec()
+        };
+        assert_ne!(
+            live_band("sin(a*x) + x/3"),
+            live_band("sin(x)+x/3"),
+            "at a=1 the graphs match and the slope is the difference"
+        );
+
+        let postcard_band = |source: &str| {
+            let panel = StudioPanel::new(source).expect(source);
+            let rgba = panel.postcard_rgba(200, numinous_core::Era::Modern, None, None);
+            rgba[200 * 4 * 128..200 * 4 * 148].to_vec()
+        };
+        assert_eq!(
+            postcard_band("sin(a*x) + x/3"),
+            postcard_band("sin(x)+x/3"),
+            "the postcard draws the source, and at a=1 those sources match"
+        );
+
+        let panel = StudioPanel::new("sin(a*x) + x/3").expect("panel");
+        let creation = panel.current_creation().expect("creation");
+        let file = creation.to_num_file();
+        assert_eq!(creation.source(), "sin(a*x) + x/3");
+        assert!(!file.contains("cos"));
+        let live = panel.current_sound().expect("pair");
+        assert_eq!(live, beside_voice(&panel));
+        assert_ne!(live, creation.to_melody(32));
+        assert_eq!(creation.to_midi_melody(32), creation.to_melody(32));
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 200);
+        assert!(context.contains("SLOPE A*COS(A*X)+1/3"), "{context}");
+        assert!(!context.contains("REFUSED"), "{context}");
     }
 
     #[test]

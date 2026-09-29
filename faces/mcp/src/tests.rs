@@ -8306,14 +8306,27 @@ fn opening_sin_a_x_reports_its_slope() {
         json!({"kind": "refused"})
     );
 
-    for expr in ["sin(x)", "sin(a*x)+x/3"] {
-        let plain = call("save_creation", json!({"expr": expr}));
-        assert_eq!(plain["result"]["isError"], false, "{expr}: {plain}");
-        assert!(
-            plain["result"]["structuredContent"].get("slope").is_none(),
-            "{expr}"
-        );
-    }
+    let opening = call(
+        "save_creation",
+        json!({"expr": "sin(a*x)+x/3", "xmin": -2.0, "xmax": 2.0, "a": 1.0}),
+    );
+    assert_eq!(opening["result"]["isError"], false, "{opening}");
+    assert_eq!(
+        opening["result"]["structuredContent"]["slope"]["source"],
+        "a*cos(a*x)+1/3"
+    );
+    let opening_file = opening["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(opening_file.contains("sin(a*x)+x/3"), "{opening_file}");
+    assert!(!opening_file.contains("cos"), "{opening_file}");
+
+    let plain = call("save_creation", json!({"expr": "sin(x)"}));
+    assert_eq!(plain["result"]["isError"], false, "{plain}");
+    assert!(
+        plain["result"]["structuredContent"].get("slope").is_none(),
+        "sin(x)"
+    );
 
     let plotted = call("plot_expression", json!({"expr": "sin(a*x)"}));
     assert_eq!(plotted["result"]["isError"], false, "{plotted}");

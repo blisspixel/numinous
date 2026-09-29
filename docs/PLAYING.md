@@ -141,8 +141,11 @@ two frequencies, Enter plays them as sustained tones. Frequency 1 is 110 Hz,
 and each other named frequency is 110 Hz times its cycles per unit time.
 The sung melody and melody.mid stay the sampled curve. An open graph
 `sin(a*x)` grows a second curve `a*cos(a*x)` on the same vertical axis.
-The App sings that shape beside the graph. The capsule, the text preview,
-and `melody.mid` stay the player's source. `floor`, `mod`, `min`, `max`,
+The opening formula `sin(a*x) + x/3` grows `a*cos(a*x)+1/3`, and an
+integer power of `x` grows by the power rule the same way. The App sings
+that shape beside the graph. The capsule, the text preview, and
+`melody.mid` stay the player's source. `sin(x)`, a product of two curves,
+and a named slider have no slope reading. `floor`, `mod`, `min`, `max`,
 `euclid`, `pat`, and `note` have no slope reading. A parametric path
 whose x and y are each a sum of two oscillators grows the first term
 beside the path, on the same frame. The App sounds one tone per
