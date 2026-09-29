@@ -118,7 +118,13 @@ grows a second curve `a*cos(a*x)` on the same vertical axis. The App
 sings that shape beside the graph. `structuredContent.slope` names that
 source. The capsule, the text preview, and `melody.mid` stay the player's
 source. `floor`, `mod`, `min`, `max`, `euclid`, `pat`, and `note` have
-no slope reading. Follow a
+no slope reading. A parametric path whose `x` and `y` are each a sum of
+two oscillators grows the first term beside the path, on the same frame.
+The App sounds one tone per recognized frequency.
+`structuredContent.partial` names those frequencies. Frequency `1` is
+110 Hz. The capsule, the text preview, and `melody.mid` stay the player's
+source. A third term, a graph, and a drawn path have no partial reading.
+Follow a
 Returning home row, then read `closure` rather than trusting the picture.
 After `another-ratio`, the App walk continues into `closing-voices`, then
 `shorter-window`, then `wandering-voices`. The trial does not gate play.

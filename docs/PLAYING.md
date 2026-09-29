@@ -143,7 +143,12 @@ The sung melody and melody.mid stay the sampled curve. An open graph
 `sin(a*x)` grows a second curve `a*cos(a*x)` on the same vertical axis.
 The App sings that shape beside the graph. The capsule, the text preview,
 and `melody.mid` stay the player's source. `floor`, `mod`, `min`, `max`,
-`euclid`, `pat`, and `note` have no slope reading. PageDown and PageUp walk
+`euclid`, `pat`, and `note` have no slope reading. A parametric path
+whose x and y are each a sum of two oscillators grows the first term
+beside the path, on the same frame. The App sounds one tone per
+recognized frequency. Frequency 1 is 110 Hz. The capsule, the text
+preview, and `melody.mid` stay the player's source. A third term, a
+graph, and a drawn path have no partial reading. PageDown and PageUp walk
 a bundled family when the current creation still matches one. After same-place,
 PageDown opens the bundled `another-ratio` capsule, a period-1 starter
 you can retune. After that, PageDown opens `closing-voices`, the two

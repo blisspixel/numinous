@@ -230,16 +230,26 @@ mastery, exploration, and company also remain complete reasons to play.
   leaves every other unrecognized graph without a slope. The reading
   is the player's formula. It is not an essay, an integral, or a search
   for a maximum. Implementation and player evidence remain open.
-- **Hypothesis, hear one harmonic term:** a parametric coordinate that is
-  a sum of two oscillators, each in the form closure already accepts, can
-  show the partial sums: the first term, then both, with one tone per
-  recognized frequency. The reading is exact only when each term is that
-  form, the speeds are recognized, and the recognition is tested. The
-  full sum must match the path samples Studio already draws. The player's
-  source stays the source. There is no series command, no infinite sum,
-  and no traced drawing turned into coefficients. The Fourier sketch in
-  `STUDIO.md` stays a sketch. Implementation and player evidence remain
-  open.
+- **Built, first term of a two-oscillator sum:** a parametric path whose
+  `x` and `y` are each a sum of two oscillators, in the form closure
+  already accepts, grows the first term beside the path. Both curves
+  share one frame, so the first circle stays inside the path instead of
+  filling the box. Samples of the two signed terms add to the path Studio
+  already draws. The App sounds one tone per recognized frequency, using
+  the same 110 Hz map as closure. CLI `open-studio` and MCP
+  `structuredContent.partial` report `partial basis=sum`. A subtraction
+  is that sum with the second term negated. `sqrt(2)` is not replaced by
+  a nearby ratio. One coordinate, a third term, a speed closure cannot
+  name, a graph, a field, and an overlay have no partial reading. Closure
+  remains the only period claim. The capsule, the postcard, the text
+  preview, CLI `sing`, and `melody.mid` stay the player's source. The
+  live App voice is the tones. Player evidence remains open.
+- **Hypothesis, the rest of the partial:** later slices may add a third
+  term, a sum on one coordinate, or a graph that is already a sum of two
+  recognized oscillators. A drawn path turned into coefficients stays
+  out. There is no series command and no infinite sum. The Fourier
+  sketch in `STUDIO.md` stays a sketch. Implementation and player
+  evidence remain open.
 - **Designed, still later:** a general quest engine and a semantic memory
   system remain unbuilt (`DIGITAL_DEVELOPMENT.md`). The capability quest in
   `PROGRESSION.md` can keep using a kept project.
@@ -1907,9 +1917,9 @@ world's determinism.
 So the useful half is native. Another reading of a capsule the player
 already wrote, replayed from core on the App, the CLI, and MCP together.
 Rock 6 has carried the instrument through named pitches. MusicXML remains
-there. The frequency tones are built. The slope of `sin(a*x)` is built. The rest
-of the slope grammar remains a hypothesis. One reading remains a
-hypothesis: hear one harmonic term of a sum the player wrote.
+there. The frequency tones are built. The slope of `sin(a*x)` is built. The first
+term of a two-oscillator sum is built. The rest of the slope grammar, and
+the rest of the partial, remain hypotheses.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
 already plans them. A natural-language question, step-by-step homework,
 and curated facts about the world stay out with the external call.

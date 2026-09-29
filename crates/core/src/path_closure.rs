@@ -9,9 +9,14 @@
 //! When that reading names two frequencies, those frequencies can also sound.
 //! The tones are the oscillators. The sampled melody is a different reading
 //! and is left untouched.
+//!
+//! A parametric path whose coordinates are each a sum of two such oscillators
+//! can show the first term beside the path and sound one tone per recognized
+//! frequency. That reading does not claim a period. The player's source stays
+//! the source.
 
 use crate::sound::SoundSpec;
-use crate::studio::{Expr, Func, Op, StudioCreation, StudioKind, StudioProgram};
+use crate::studio::{Expr, Func, Op, StudioCreation, StudioKind, StudioProgram, eval_named};
 
 /// One cycle per unit time, sounded at this many hertz.
 ///
@@ -86,6 +91,22 @@ pub struct OscillatorTone {
     /// Hertz after [`OSCILLATOR_TONE_REFERENCE_HZ`]. Absent when that
     /// product is not a positive finite `f32`.
     pub hz: Option<f32>,
+}
+
+/// The first partial sum of a two-term parametric path.
+///
+/// Both coordinates are sums of two oscillators in the form closure already
+/// accepts, and each speed is a frequency closure can name. Terms are in
+/// source order. A subtraction is stored as a sum with the second term
+/// negated, so the two terms add to the coordinate the player wrote.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HarmonicPartial {
+    /// First term of `x(t)`, then its signed second term.
+    pub x_terms: [Expr; 2],
+    /// First term of `y(t)`, then its signed second term.
+    pub y_terms: [Expr; 2],
+    /// Recognized frequencies in first-seen order. One tone each.
+    pub frequencies: Vec<OscillatorTone>,
 }
 
 /// The two sustained tones of a closure that named two frequencies.
@@ -285,6 +306,111 @@ impl OscillatorTones {
             lines.push(line);
         }
         lines
+    }
+}
+
+impl HarmonicPartial {
+    /// Read one parametric creation. Anything else is absent.
+    ///
+    /// A single oscillator pair stays with closure. A third term, a graph,
+    /// a field, and an overlay are absent. The parameter must be one of the
+    /// exact values closure already accepts. The capsule is not modified.
+    #[must_use]
+    pub fn of(creation: &StudioCreation) -> Option<Self> {
+        if creation.kind() != StudioKind::Parametric {
+            return None;
+        }
+        let Ok(program) = creation.program() else {
+            return None;
+        };
+        let StudioProgram::Parametric {
+            x_expression,
+            y_expression,
+            ..
+        } = program
+        else {
+            return None;
+        };
+        let parameter = Exact::from_f64(creation.a())?;
+        let sliders = creation.sliders();
+        let x_terms = split_terms(&x_expression, parameter, sliders)?;
+        let y_terms = split_terms(&y_expression, parameter, sliders)?;
+        let mut frequencies = Vec::new();
+        for term in x_terms.iter().chain(y_terms.iter()) {
+            if frequencies
+                .iter()
+                .any(|tone: &OscillatorTone| tone.frequency_text == term.frequency_text)
+            {
+                continue;
+            }
+            frequencies.push(oscillator_tone(&term.frequency_text, term.cycles));
+        }
+        Some(Self {
+            x_terms: [x_terms[0].expression.clone(), x_terms[1].expression.clone()],
+            y_terms: [y_terms[0].expression.clone(), y_terms[1].expression.clone()],
+            frequencies,
+        })
+    }
+
+    /// The first term as a point. Absent when either coordinate is non-finite.
+    #[must_use]
+    pub fn first_point(
+        &self,
+        t: f64,
+        a: f64,
+        sliders: &[crate::slider::StudioSlider],
+    ) -> Option<(f64, f64)> {
+        let x = eval_named(&self.x_terms[0], t, a, sliders);
+        let y = eval_named(&self.y_terms[0], t, a, sliders);
+        (x.is_finite() && y.is_finite()).then_some((x, y))
+    }
+
+    /// One sustained tone per recognized frequency.
+    ///
+    /// Absent when any tone has no hertz. This is the live App voice. The
+    /// sampled melody and its MIDI file stay the player's source. Type 0
+    /// MIDI keeps one note when several start together, so the chord is the
+    /// PCM hearing.
+    #[must_use]
+    pub fn sound(&self) -> Option<SoundSpec> {
+        let mut freqs = Vec::with_capacity(self.frequencies.len());
+        for tone in &self.frequencies {
+            freqs.push(tone.hz?);
+        }
+        if freqs.is_empty() {
+            return None;
+        }
+        Some(SoundSpec::chord(
+            &freqs,
+            OSCILLATOR_TONE_SECONDS,
+            OSCILLATOR_TONE_GAIN,
+        ))
+    }
+
+    /// Terminal lines for the reading. Empty of any period claim.
+    #[must_use]
+    pub fn report_lines(&self) -> Vec<String> {
+        let mut lines = vec!["partial basis=sum".to_string()];
+        for (index, tone) in self.frequencies.iter().enumerate() {
+            let mut line = format!("term {} freq={}", index + 1, tone.frequency_text);
+            if let Some(hz) = tone.hz {
+                line.push_str(" hz=");
+                line.push_str(&hz.to_string());
+            }
+            lines.push(line);
+        }
+        lines
+    }
+
+    /// Status text: `PARTIAL` and each frequency in first-seen order.
+    #[must_use]
+    pub fn status_caption(&self) -> String {
+        let mut line = String::from("PARTIAL");
+        for tone in &self.frequencies {
+            line.push_str("  ");
+            line.push_str(&tone.frequency_text);
+        }
+        line
     }
 }
 
@@ -565,6 +691,47 @@ fn oscillator(
         }
         _ => None,
     }
+}
+
+struct SignedTerm {
+    expression: Expr,
+    frequency_text: String,
+    cycles: f64,
+}
+
+fn split_terms(
+    expr: &Expr,
+    parameter: Exact,
+    sliders: &[crate::slider::StudioSlider],
+) -> Option<[SignedTerm; 2]> {
+    let (left, right, subtract) = match expr {
+        Expr::Bin(Op::Add, left, right) => (left.as_ref(), right.as_ref(), false),
+        Expr::Bin(Op::Sub, left, right) => (left.as_ref(), right.as_ref(), true),
+        _ => return None,
+    };
+    let right_expr = if subtract {
+        Expr::Neg(Box::new(right.clone()))
+    } else {
+        right.clone()
+    };
+    Some([
+        signed_term(left, parameter, sliders)?,
+        signed_term(&right_expr, parameter, sliders)?,
+    ])
+}
+
+fn signed_term(
+    expr: &Expr,
+    parameter: Exact,
+    sliders: &[crate::slider::StudioSlider],
+) -> Option<SignedTerm> {
+    let osc = oscillator(expr, parameter, sliders)?;
+    let frequency = frequency_cycles(&osc.omega)?;
+    Some(SignedTerm {
+        expression: expr.clone(),
+        frequency_text: frequency.text(),
+        cycles: cycles_per_unit(&frequency),
+    })
 }
 
 fn affine(
@@ -1151,7 +1318,10 @@ fn split_square(mut value: u64) -> (u64, u64) {
 
 #[cfg(test)]
 mod tests {
-    use super::{PathClosure, PeriodicClosure};
+    use super::{
+        HarmonicPartial, OSCILLATOR_TONE_REFERENCE_HZ, OSCILLATOR_TONE_SECONDS, PathClosure,
+        PeriodicClosure,
+    };
     use crate::studio::StudioCreation;
 
     fn bundled(id: &str) -> StudioCreation {
@@ -1613,5 +1783,106 @@ mod tests {
             StudioCreation::new_parametric("cos(2*pi*t)+cos(6*pi*t)", "sin(2*pi*t)", 0.0, 1.0, 1.0)
                 .expect("sum");
         assert!(PathClosure::of(&sum).oscillator_tones().is_none());
+    }
+
+    #[test]
+    fn a_two_term_path_names_its_first_partial_and_one_tone_per_frequency() {
+        let x = "cos(2*pi*t)+0.5*cos(6*pi*t)";
+        let y = "sin(2*pi*t)+0.5*sin(6*pi*t)";
+        let creation = StudioCreation::new_parametric(x, y, 0.0, 1.0, 1.0).expect("epicycle");
+        let file = creation.to_num_file();
+        let partial = HarmonicPartial::of(&creation).expect("partial");
+        assert_eq!(creation.to_num_file(), file);
+        assert!(matches!(
+            PathClosure::of(&creation),
+            PathClosure::Unsupported
+        ));
+        assert!(PathClosure::of(&creation).oscillator_tones().is_none());
+        assert_eq!(partial.status_caption(), "PARTIAL  1  3");
+        assert_eq!(
+            partial.report_lines(),
+            vec![
+                "partial basis=sum".to_string(),
+                "term 1 freq=1 hz=110".to_string(),
+                "term 2 freq=3 hz=330".to_string(),
+            ]
+        );
+        let sound = partial.sound().expect("tones");
+        assert_eq!(sound.duration, OSCILLATOR_TONE_SECONDS);
+        assert_eq!(sound.notes.len(), 2);
+        assert_eq!(sound.notes[0].freq, 110.0);
+        assert_eq!(sound.notes[1].freq, 330.0);
+        assert_ne!(sound, creation.to_melody(32));
+
+        let program = creation.program().expect("program");
+        for t in [0.0, 0.25, 0.5, 0.8] {
+            let point = program.point(t, 1.0).expect("path");
+            let x_sum = crate::studio::eval(&partial.x_terms[0], t, 1.0)
+                + crate::studio::eval(&partial.x_terms[1], t, 1.0);
+            let y_sum = crate::studio::eval(&partial.y_terms[0], t, 1.0)
+                + crate::studio::eval(&partial.y_terms[1], t, 1.0);
+            assert!((point.0 - x_sum).abs() < 1e-9, "t={t}");
+            assert!((point.1 - y_sum).abs() < 1e-9, "t={t}");
+            let first = partial.first_point(t, 1.0, &[]).expect("first term");
+            assert!((first.0 - t.mul_add(std::f64::consts::TAU, 0.0).cos()).abs() < 1e-9);
+            assert!((first.1 - t.mul_add(std::f64::consts::TAU, 0.0).sin()).abs() < 1e-9);
+        }
+
+        let subtracted = StudioCreation::new_parametric(
+            "cos(2*pi*t)-0.5*cos(6*pi*t)",
+            "sin(2*pi*t)-0.5*sin(6*pi*t)",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("difference");
+        let difference = HarmonicPartial::of(&subtracted).expect("signed partial");
+        assert_eq!(difference.frequencies.len(), 2);
+        assert_eq!(difference.frequencies[1].frequency_text, "3");
+        let program = subtracted.program().expect("program");
+        let point = program.point(0.2, 1.0).expect("path");
+        let x_sum = crate::studio::eval(&difference.x_terms[0], 0.2, 1.0)
+            + crate::studio::eval(&difference.x_terms[1], 0.2, 1.0);
+        let y_sum = crate::studio::eval(&difference.y_terms[0], 0.2, 1.0)
+            + crate::studio::eval(&difference.y_terms[1], 0.2, 1.0);
+        assert!((point.0 - x_sum).abs() < 1e-9);
+        assert!((point.1 - y_sum).abs() < 1e-9);
+
+        let irrational = StudioCreation::new_parametric(
+            "cos(2*pi*t)+cos(2*pi*sqrt(2)*t)",
+            "sin(2*pi*t)+sin(2*pi*sqrt(2)*t)",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("irrational");
+        let irrational = HarmonicPartial::of(&irrational).expect("sqrt partial");
+        assert_eq!(irrational.frequencies[0].frequency_text, "1");
+        assert_eq!(irrational.frequencies[1].frequency_text, "sqrt(2)");
+        let hz = irrational.frequencies[1].hz.expect("hz");
+        assert!(
+            (f64::from(hz) - f64::from(OSCILLATOR_TONE_REFERENCE_HZ) * 2f64.sqrt()).abs() < 1e-3
+        );
+        assert!((f64::from(hz) - 110.0 * 17.0 / 12.0).abs() > 0.2);
+
+        for (x_source, y_source) in [
+            ("cos(2*pi*t)", "sin(2*pi*t)"),
+            ("cos(2*pi*t)+cos(6*pi*t)", "sin(2*pi*t)"),
+            (
+                "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)",
+                "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)",
+            ),
+            ("cos(t)+cos(3*t)", "sin(t)+sin(3*t)"),
+            ("cos(2*pi*t)+t", "sin(2*pi*t)+t"),
+        ] {
+            let creation =
+                StudioCreation::new_parametric(x_source, y_source, 0.0, 1.0, 1.0).expect(x_source);
+            assert!(HarmonicPartial::of(&creation).is_none(), "{x_source}");
+        }
+        let graph = StudioCreation::new("sin(2*pi*x)+sin(6*pi*x)", 0.0, 1.0, 1.0).expect("graph");
+        assert!(HarmonicPartial::of(&graph).is_none());
+        assert!(HarmonicPartial::of(&bundled("full-return")).is_none());
+        let inexact = StudioCreation::new_parametric(x, y, 0.0, 1.0, 0.1).expect("knob");
+        assert!(HarmonicPartial::of(&inexact).is_none());
     }
 }

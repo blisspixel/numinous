@@ -4622,6 +4622,28 @@ fn open_studio_reports_the_slope_of_sin_a_x() {
 }
 
 #[test]
+fn open_studio_reports_the_partial_of_a_two_term_path() {
+    let report = |x: &str, y: &str| {
+        let creation =
+            numinous_core::StudioCreation::new_parametric(x, y, 0.0, 1.0, 1.0).expect("path");
+        open_studio_report(&creation.to_link(), 32, 12).expect("open")
+    };
+    let partial = report("cos(2*pi*t)+0.5*cos(6*pi*t)", "sin(2*pi*t)+0.5*sin(6*pi*t)");
+    assert!(partial.contains("partial basis=sum"), "{partial}");
+    assert!(partial.contains("term 1 freq=1 hz=110"), "{partial}");
+    assert!(partial.contains("term 2 freq=3 hz=330"), "{partial}");
+    assert!(
+        partial.contains("xexpr=cos(2*pi*t)+0.5*cos(6*pi*t)"),
+        "{partial}"
+    );
+    assert!(!partial.contains("closure="), "{partial}");
+    let plain = report("cos(2*pi*t)", "sin(2*pi*t)");
+    assert!(!plain.contains("partial "), "{plain}");
+    let one_sum = report("cos(2*pi*t)+cos(6*pi*t)", "sin(2*pi*t)");
+    assert!(!one_sum.contains("partial "), "{one_sum}");
+}
+
+#[test]
 fn failed_open_studio_does_not_record_progress() {
     let mut journey = numinous_core::Journey::default();
     let missing = std::env::temp_dir().join("numinous_cli_studio_missing_test.num");
