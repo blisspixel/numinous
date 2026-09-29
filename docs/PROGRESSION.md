@@ -26,9 +26,10 @@ This gives us a progression system that is:
 
 ## Next capability quest: make a relationship usable
 
-**Trial and App walk built; first overlay contrast built; richer overlay
-quest still open.** Family `two-voices` draws the two oscillators of A
-full return and Almost home as graphs. The path capsules stay in
+**Trial, App walk, and overlay cycle reading built.** Family `two-voices`
+draws the oscillators of A full return as graphs, then the same pair on a
+shorter window, then the irrational contrast. The reading reports ideal
+cycles and a common period, or none. The path capsules stay in
 Returning home. One bridge from
 Lissajous motion to a parametric Studio creation. The player chooses a
 repeating shape, compares frequency ratios, investigates closure, and makes a

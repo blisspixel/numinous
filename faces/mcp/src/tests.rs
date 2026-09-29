@@ -256,6 +256,7 @@ fn packaged_player_docs_name_creation_next() {
                 && flattened.contains("three-against-five")
                 && flattened.contains("two-voices")
                 && flattened.contains("closing-voices")
+                && flattened.contains("shorter-window")
                 && flattened.contains("wandering-voices")
                 && flattened.contains("notes")
                 && flattened.contains("major-triad")
@@ -2948,7 +2949,7 @@ fn two_voices_open_and_follow_next() {
     );
     let listed = &listed["result"]["structuredContent"];
     assert_eq!(listed["family"], "two-voices");
-    assert_eq!(listed["experimentCount"], 2);
+    assert_eq!(listed["experimentCount"], 3);
     let opened = call(
         "open_creation",
         listed["experiments"][0]["next"]["arguments"].clone(),
@@ -2963,11 +2964,40 @@ fn two_voices_open_and_follow_next() {
         opened["result"]["structuredContent"]["capsuleFormatVersion"],
         7
     );
+    let closure = &opened["result"]["structuredContent"]["closure"];
+    assert_eq!(closure["kind"], "voices");
+    assert_eq!(closure["basis"], "ideal");
+    assert_eq!(closure["commonPeriod"], "12");
+    assert_eq!(closure["windowIsCommonPeriod"], true);
+    assert_eq!(closure["voices"][0]["windowCycles"], "12");
+    assert_eq!(closure["voices"][1]["windowCycles"], "17");
+    let shorter = call("open_creation", json!({"capsule": "shorter-window"}));
+    assert_eq!(shorter["result"]["isError"], false, "{shorter}");
+    let shorter_closure = &shorter["result"]["structuredContent"]["closure"];
+    assert_eq!(shorter_closure["commonPeriod"], "12");
+    assert_eq!(shorter_closure["windowIsCommonPeriod"], false);
+    assert_eq!(shorter_closure["voices"][1]["windowCycles"], "17/12");
+    assert!(
+        shorter["result"]["structuredContent"]
+            .get("voices")
+            .is_none()
+    );
     let wandering = call("open_creation", json!({"capsule": "wandering-voices"}));
     assert_eq!(wandering["result"]["isError"], false, "{wandering}");
     assert_eq!(
         wandering["result"]["structuredContent"]["title"],
         "Wandering voices"
+    );
+    let wandering_closure = &wandering["result"]["structuredContent"]["closure"];
+    assert_eq!(wandering_closure["commonPeriod"], serde_json::Value::Null);
+    assert_eq!(wandering_closure["voices"][1]["windowCycles"], "12*sqrt(2)");
+    let followed = call(
+        "open_creation",
+        listed["experiments"][1]["next"]["arguments"].clone(),
+    );
+    assert_eq!(
+        followed["result"]["structuredContent"]["title"],
+        "A shorter window"
     );
 }
 

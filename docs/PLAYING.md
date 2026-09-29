@@ -139,7 +139,10 @@ trap where position returns and velocity reverses. PageDown and PageUp walk
 a bundled family when the current creation still matches one. After same-place,
 PageDown opens the bundled `another-ratio` capsule, a period-1 starter
 you can retune. After that, PageDown opens `closing-voices`, the two
-oscillators of A full return as graphs; one more step is `wandering-voices`.
+oscillators of A full return as graphs. The next step, `shorter-window`,
+keeps those oscillators and shortens the window, so the cycle counts are
+not the period. One more step is `wandering-voices`, which has no positive
+common period. Opening either overlay names `closure` with kind `voices`.
 PageUp walks back. Esc or Tab leaves. Lissajous offers CONSTRUCT in the Cabinet,
 or `O` in the room, to open the first Returning home capsule. The first edit begins a remix while
 keeping the saved window and knob. In alpha 18, Up/Down tune `a` by 0.25 per
@@ -411,7 +414,7 @@ input without hidden session state:
 | `plot_expression` | your own Studio function, including `floor`, Euclidean `mod`, `min`, `max`, and `euclid`, plotted. Named sliders besides `a` travel as `sliders`. An integer 0/1 graph also names `pattern` as tracker text and `grid` as a numbered step grid. Type `x..x..x.` or `pat(x..x..x.)` to write those marks. The sung MIDI voice also names `roll` as a piano-roll grid. A successful plot names `next` as `save_creation` with the expression and window already bound. `list_recipes` inspects the graph bank; `list_experiments` lists bundled capsules whose `next` is `open_creation`. `family` selects `returning-home`, `shape-and-scale`, `three-readings`, `named-sliders`, `overlay`, `euclidean`, or `two-voices` |
 | `sing_expression` | the same Studio grammar, as note-by-note melody. Overlay programs mix every graph in WAV; MIDI stays the first curve. Height and phase fields sing along the real axis; the zero reading is a proof and stays silent. A successful song names `next` as `save_creation` with the expression, window, and pitch map already bound |
 | `save_creation` | keep a graph or parametric pair as portable `.num` text and a native link, never a host file. The result names `next` as `fork_creation` with the capsule already bound as `parent` |
-| `open_creation` | reopen that text, a native link, or a bundled experiment id (`full-return`, `almost-home`, `same-place`, `another-ratio`, `circle-to-ellipse`, `uniform-circle`, `simple-zero`, `a-pole`, `the-circle`, `the-bowl`, `extra-knob`, `live-ratio`, `the-parts`, `the-sum`, `tresillo`, `three-against-five`, `closing-voices`, `wandering-voices`). Two-oscillator paths also return `closure`, an independently checked period or aperiodic. The same `next` pointer is a door back into remix |
+| `open_creation` | reopen that text, a native link, or a bundled experiment id (`full-return`, `almost-home`, `same-place`, `another-ratio`, `circle-to-ellipse`, `uniform-circle`, `simple-zero`, `a-pole`, `the-circle`, `the-bowl`, `extra-knob`, `live-ratio`, `the-parts`, `the-sum`, `tresillo`, `three-against-five`, `closing-voices`, `shorter-window`, `wandering-voices`). Two-oscillator paths also return `closure`, an independently checked period or aperiodic. An overlay of two harmonic oscillators returns `closure` kind `voices`: ideal cycles in the window, and a common period when one exists. The same `next` pointer is a door back into remix |
 | `fork_creation` | remix a parent capsule with recorded lineage and optional prose credit. The child is itself a door: its `next` is another `fork_creation` |
 | `explain_joke` | the humor, dissected structurally |
 | `nim` | beat the Order: pass your move history, replies are deterministic |

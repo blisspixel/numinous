@@ -241,14 +241,21 @@ pub const STUDIO_EXPERIMENTS: &[StudioExperiment] = &[
         id: "closing-voices",
         family: "two-voices",
         title: "Closing voices",
-        invitation: "These are the two oscillators of A full return. Count the peaks. How many does each make in this window?",
+        invitation: "These are the two oscillators of A full return. How many cycles does each complete in this window?",
         num_file: include_str!("../../../docs/experiments/closing-voices.num"),
+    },
+    StudioExperiment {
+        id: "shorter-window",
+        family: "two-voices",
+        title: "A shorter window",
+        invitation: "Same oscillators as Closing voices, on a shorter window. Do these cycle counts name the period?",
+        num_file: include_str!("../../../docs/experiments/shorter-window.num"),
     },
     StudioExperiment {
         id: "wandering-voices",
         family: "two-voices",
         title: "Wandering voices",
-        invitation: "Compare with Closing voices. What would a common period require of both counts?",
+        invitation: "Compare with Closing voices. What would a common period require of both cycle counts?",
         num_file: include_str!("../../../docs/experiments/wandering-voices.num"),
     },
     StudioExperiment {
@@ -335,7 +342,10 @@ pub fn first_studio_construction(room_id: &str) -> Option<StudioExperiment> {
         .and_then(|listed| listed.into_iter().next())
 }
 
-/// The bundled experiment whose formula matches this creation, if any.
+/// The bundled experiment whose formula and window match this creation, if any.
+///
+/// The window is part of the identity because Closing voices and A shorter
+/// window share one pair of oscillators and differ only by the interval.
 #[must_use]
 pub fn studio_experiment_matching(creation: &StudioCreation) -> Option<StudioExperiment> {
     STUDIO_EXPERIMENTS.iter().copied().find(|experiment| {
@@ -345,6 +355,8 @@ pub fn studio_experiment_matching(creation: &StudioCreation) -> Option<StudioExp
             && bundled.second_source() == creation.second_source()
             && bundled.extra_sources() == creation.extra_sources()
             && bundled.reading() == creation.reading()
+            && bundled.xmin() == creation.xmin()
+            && bundled.xmax() == creation.xmax()
     })
 }
 
@@ -4600,7 +4612,7 @@ mod tests {
 
     #[test]
     fn bundled_studio_experiments_parse_keep_lineage_and_open_by_id() {
-        assert_eq!(STUDIO_EXPERIMENTS.len(), 20);
+        assert_eq!(STUDIO_EXPERIMENTS.len(), 21);
         let full = studio_experiment("full-return").expect("full-return");
         assert_eq!(full.title(), Some("A full return"));
         assert_eq!(full.kind(), StudioKind::Parametric);
@@ -4690,7 +4702,7 @@ mod tests {
         assert_eq!(against.kind(), StudioKind::Program);
         assert_eq!(against.editor_source(), "euclid(3,8) & euclid(5,8)");
         let voices = studio_experiments_in(Some("two-voices")).expect("voices family");
-        assert_eq!(voices.len(), 2);
+        assert_eq!(voices.len(), 3);
         let closing = studio_experiment("closing-voices").expect("closing-voices");
         assert_eq!(closing.kind(), StudioKind::Program);
         assert_eq!(closing.editor_source(), "cos(2*pi*x) & sin(2*pi*(17/12)*x)");
@@ -4699,6 +4711,10 @@ mod tests {
         let wandering = studio_experiment("wandering-voices").expect("wandering-voices");
         assert_eq!(wandering.kind(), StudioKind::Program);
         assert!(wandering.editor_source().contains("sqrt(2)"));
+        let shorter = studio_experiment("shorter-window").expect("shorter-window");
+        assert_eq!(shorter.kind(), StudioKind::Program);
+        assert_eq!(shorter.editor_source(), "cos(2*pi*x) & sin(2*pi*(17/12)*x)");
+        assert_eq!((shorter.xmin(), shorter.xmax()), (0.0, 1.0));
         let notes = studio_experiments_in(Some("notes")).expect("notes family");
         assert_eq!(notes.len(), 2);
         let triad = studio_experiment("major-triad").expect("major-triad");
@@ -4794,6 +4810,14 @@ mod tests {
             adjacent_studio_experiment("closing-voices", -1).map(|experiment| experiment.id),
             Some("another-ratio")
         );
+        assert_eq!(
+            adjacent_studio_experiment("closing-voices", 1).map(|experiment| experiment.id),
+            Some("shorter-window")
+        );
+        assert_eq!(
+            adjacent_studio_experiment("shorter-window", 1).map(|experiment| experiment.id),
+            Some("wandering-voices")
+        );
         assert!(adjacent_studio_experiment("wandering-voices", 1).is_none());
         assert!(adjacent_studio_experiment("full-return", -1).is_none());
         assert_eq!(
@@ -4820,7 +4844,9 @@ mod tests {
             studio_experiment_matching(&voices).map(|experiment| experiment.id),
             Some("closing-voices")
         );
-        let wandering = adjacent_construction_creation(&voices, 1).expect("wandering-voices");
+        let shorter = adjacent_construction_creation(&voices, 1).expect("shorter-window");
+        assert_eq!(shorter.title(), Some("A shorter window"));
+        let wandering = adjacent_construction_creation(&shorter, 1).expect("wandering-voices");
         assert_eq!(wandering.title(), Some("Wandering voices"));
         assert_eq!(
             studio_experiment_matching(&wandering).map(|experiment| experiment.id),

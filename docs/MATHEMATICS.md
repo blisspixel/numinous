@@ -182,7 +182,13 @@ Source: [MIT 18.353, quasiperiodic functions and Lissajous figures, section 3](h
 Implementation and regressions: `crates/core/src/rooms/lissajous.rs`.
 [Returning home](experiments/returning-home.md) supplies four portable Studio
 contrasts with exact formulas, including an ideal irrational ratio and a
-period-1 starter to retune.
+period-1 starter to retune. The Studio closure trial uses the same condition
+on a parametric pair, and on an overlay of two harmonic oscillators: a least
+positive period exists exactly when the frequency ratio is rational, including
+when both frequencies are rational multiples of one shared square root. The
+reported period is that least value, which may be a fraction of the time unit
+or a rational multiple of a reciprocal square root. Window cycle counts are
+exact products. They are not peak counts, and a finite plot is not the proof.
 
 ### Standing Wave
 

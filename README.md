@@ -109,7 +109,7 @@ guide in the repository.
 | [Named sliders](docs/experiments/named-sliders.md) | `named-sliders` | `extra-knob`, `live-ratio` |
 | [Overlay](docs/experiments/overlay.md) | `overlay` | `the-parts`, `the-sum` |
 | [Euclidean rhythms](docs/experiments/euclidean.md) | `euclidean` | `tresillo`, `three-against-five` |
-| [Two voices](docs/experiments/two-voices.md) | `two-voices` | `closing-voices`, `wandering-voices` |
+| [Two voices](docs/experiments/two-voices.md) | `two-voices` | `closing-voices`, `shorter-window`, `wandering-voices` |
 | [Named pitches](docs/experiments/notes.md) | `notes` | `major-triad`, `octave-climb` |
 
 The mathematical review and its limits live in

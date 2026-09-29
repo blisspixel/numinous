@@ -966,6 +966,32 @@ fn closure_json(closure: &numinous_core::PathClosure) -> Option<Value> {
         numinous_core::PathClosure::Graph
         | numinous_core::PathClosure::Field
         | numinous_core::PathClosure::Unsupported => None,
+        numinous_core::PathClosure::Voices(voices) => {
+            let graphs: Vec<Value> = voices
+                .voices
+                .iter()
+                .map(|voice| {
+                    let mut item = json!({ "frequency": voice.frequency_text });
+                    if let Some(cycles) = &voice.window_cycles {
+                        item["windowCycles"] = json!(cycles);
+                    }
+                    item
+                })
+                .collect();
+            let mut value = json!({
+                "kind": "voices",
+                "basis": "ideal",
+                "commonPeriod": voices.period_text,
+                "voices": graphs,
+            });
+            if let Some(window_is_period) = voices.window_is_common_period {
+                value["windowIsCommonPeriod"] = json!(window_is_period);
+            }
+            if let Some(count) = voices.window_periods {
+                value["windowPeriods"] = json!(count);
+            }
+            Some(value)
+        }
         numinous_core::PathClosure::Periodic(periodic) => Some(json!({
             "kind": "periodic",
             "period": periodic.period_text,

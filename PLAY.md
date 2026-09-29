@@ -298,8 +298,8 @@ open it. Pass `family: "returning-home"` for `full-return`, `almost-home`,
 `simple-zero`, `a-pole`, `the-circle`, and `the-bowl`, or `family: "named-sliders"`
 for `extra-knob` and `live-ratio`, or `family: "overlay"` for `the-parts`
 and `the-sum`, or `family: "euclidean"` for `tresillo` and
-`three-against-five`, or `family: "two-voices"` for `closing-voices` and
-`wandering-voices`, or `family: "notes"` for `major-triad` and
+`three-against-five`, or `family: "two-voices"` for `closing-voices`,
+`shorter-window`, and `wandering-voices`, or `family: "notes"` for `major-triad` and
 `octave-climb`. A formula may name extra knobs besides `a`;
 each is a slider with a value and a declared range, and capsules write
 `NUMINOUS_STUDIO 6` only when those extra sliders exist. Type `sin(x) & cos(x)`
@@ -313,11 +313,16 @@ MIDI voice names `roll` as a piano-roll grid, pitch over time. `open_creation`
 accepts those ids directly. They are Studio
 doors after a touch of math, not a lobby in front of the rooms. Lissajous
 names Returning home when you describe it or study it. In the App,
-PageDown after `another-ratio` opens `closing-voices`. Opening a
-two-oscillator path reports `closure`: an independently checked period, or
-an explicit aperiodic, including the deceptive half-period where position
-returns and velocity reverses. A picture is not the proof. The trial does
-not gate play.
+PageDown after `another-ratio` opens `closing-voices`, then
+`shorter-window`, then `wandering-voices`. Opening a two-oscillator path
+reports `closure`: an independently checked period, or an explicit aperiodic,
+including the deceptive half-period where position returns and velocity
+reverses. An overlay of two harmonic oscillators reports `closure` with kind
+`voices`: each graph's ideal cycles in the window, and a common period when
+the model has one. `shorter-window` uses the same oscillators as
+`closing-voices` and shows that those counts need not be the period.
+`wandering-voices` has no positive common period. A picture is not the proof.
+The trial does not gate play.
 
 Keep that work when you choose. `save_creation` returns canonical `.num` text,
 a native link, and an exact preview; graph or paired parametric source, pitch
