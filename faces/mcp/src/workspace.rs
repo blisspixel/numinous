@@ -10,7 +10,6 @@ use numinous_core::{
     WorkspaceUnfinishedDraft, WorkspaceUpdate,
 };
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 
 use super::{journal::entry_json, tool_error, tool_structured};
 
@@ -256,7 +255,7 @@ fn bind_retrieved(handles: &mut [WorkspaceRetrievalDraft], journal: &numinous_co
 }
 
 fn record_digest(entry: &numinous_core::JournalEntry) -> [u8; 32] {
-    Sha256::digest(entry.identity_bytes()).into()
+    entry.identity_digest()
 }
 
 fn parse_update(args: &Value) -> Result<WorkspaceUpdate, WorkspaceError> {
@@ -623,6 +622,46 @@ mod tests {
             let _ = std::fs::remove_file(&self.path);
             let _ = std::fs::remove_dir(&self.directory);
         }
+    }
+
+    #[test]
+    fn journal_identity_digest_matches_the_face_sha256() {
+        use sha2::{Digest, Sha256};
+
+        let mut journal = numinous_core::Journal::new();
+        let first = journal
+            .record(numinous_core::JournalRecord {
+                recorded_at_utc: 3,
+                event_at_utc: 2,
+                source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "encounter",
+                subject: "lissajous",
+                text: "same bytes",
+                affect: None,
+            })
+            .expect("record");
+        let entry = journal.entry(first).expect("entry");
+        let hashed = <[u8; 32]>::from(Sha256::digest(entry.identity_bytes()));
+        assert_eq!(entry.identity_digest(), hashed);
+
+        let second = journal
+            .record(numinous_core::JournalRecord {
+                recorded_at_utc: 4,
+                event_at_utc: 2,
+                source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "encounter",
+                subject: "lissajous",
+                text: "same bytes",
+                affect: None,
+            })
+            .expect("second");
+        assert_ne!(
+            journal
+                .entry(second)
+                .expect("second entry")
+                .identity_digest(),
+            hashed
+        );
     }
 
     #[test]
