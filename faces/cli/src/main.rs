@@ -24,6 +24,7 @@ mod access;
 mod game_input;
 mod game_runtime;
 mod local_state;
+mod project;
 mod render_input;
 mod studio;
 mod study;
@@ -391,6 +392,11 @@ enum Command {
         #[arg(long)]
         all_local: bool,
     },
+    /// Preview the explicit project chain, and optionally apply it in this process.
+    Project {
+        #[command(subcommand)]
+        action: ProjectCommand,
+    },
     /// Crack the Code: defuse a math-clued bomb before your attempts run out.
     Crack {
         /// Seed (the same seed gives the same code).
@@ -708,6 +714,19 @@ enum Command {
         /// Extra named knob: name=value or name=value:min:max. Repeatable.
         #[arg(long = "slider", value_name = "SPEC")]
         slider: Vec<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum ProjectCommand {
+    /// Print what a resume would return. Pass --apply to write this process only.
+    Resume {
+        /// Local revision id. Omit this to preview the latest revision.
+        #[arg(long)]
+        revision: Option<u64>,
+        /// Write the question into this process's intention, and a present room into its place.
+        #[arg(long)]
+        apply: bool,
     },
 }
 
@@ -1828,6 +1847,26 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 }
             }
         }
+        Command::Project { action } => match action {
+            ProjectCommand::Resume { revision, apply } => {
+                let paths = local_state_paths();
+                match project::resume_report(&paths.project, &paths.journal, revision, apply) {
+                    Ok(outcome) => {
+                        print!("{}", outcome.text);
+                        if let Some(refusal) = outcome.refusal {
+                            report_diagnostic(&refusal);
+                            ExitCode::FAILURE
+                        } else {
+                            ExitCode::SUCCESS
+                        }
+                    }
+                    Err(message) => {
+                        report_diagnostic(&message);
+                        ExitCode::FAILURE
+                    }
+                }
+            }
+        },
         Command::Crack {
             seed,
             daily,

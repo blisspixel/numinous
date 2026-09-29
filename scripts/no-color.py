@@ -101,6 +101,7 @@ PROBES: tuple[Probe, ...] = (
     Probe(["scores"]),
     Probe(["trophies"]),
     Probe(["forget"]),
+    Probe(["project", "resume"]),
     Probe(["answer"]),
     Probe(["radio"]),
     Probe(["bench"]),
@@ -169,6 +170,7 @@ def isolated_env(home: Path, no_color: bool) -> dict[str, str]:
     env["NUMINOUS_JOURNEY"] = str(home / "journey")
     env["NUMINOUS_SCORES"] = str(home / "scores")
     env["NUMINOUS_JOURNAL"] = str(home / "journal")
+    env["NUMINOUS_PROJECT"] = str(home / "project")
     env["NUMINOUS_CAIRN"] = str(home / "cairn")
     if no_color:
         env["NO_COLOR"] = "1"

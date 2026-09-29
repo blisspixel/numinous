@@ -231,6 +231,8 @@ numinous watch lorenz --era phosphor
 numinous play times-tables        classic ASCII
 numinous describe times-tables    safe title, action, goal, and play doorway
 numinous study times-tables       read freely, with no play or wager required
+numinous project resume           preview the explicit project chain
+numinous project resume --apply   write this process's intention and room place
 numinous reveal times-tables      explanation after its wager is consolidated
 numinous render double-pendulum --poke 0.2,0.8
 numinous render double-pendulum --gesture down:0.3,0.4,0.1 --gesture up:0.6,0.5,0.15
@@ -404,7 +406,7 @@ input without hidden session state:
 | `correct_journal` | append an immutable correction that explicitly supersedes one current entry without rewriting it |
 | `export_journal` | return a bounded native page, an in-memory Open Knowledge Format v0.2 projection with `format: "okf-0.2"`, or a hashed typed handoff with `format: "portable-1"`. The portable form includes native and OKF evidence plus privacy and retention manifests, and can add one live-verified encounter receipt and one canonical Studio creation. It creates no file, accepts no path, and does not import |
 | `erase_journal` | permanently erase the journal and verify zero recoverable managed file or sidecar residue. This leaves the project chain |
-| `project` | keep, import, correct, or preview one explicit project: a question stored as data, one closed next call, one to four catalog rooms, up to four typed evidence links, and an optional Studio creation. The chain is `NUMINOUS_PROJECT`, or `.numinous-project` when that variable is unset. `resume` returns `structuredContent.preview.next` and does not apply it, change the workspace, or copy journal text. `import` writes only after `confirm: true`. This is not `portable-1`, and `portable-1` does not import a project. There is no CLI apply yet |
+| `project` | keep, import, correct, or preview one explicit project: a question stored as data, one closed next call, one to four catalog rooms, up to four typed evidence links, and an optional Studio creation. The chain is `NUMINOUS_PROJECT`, or `.numinous-project` when that variable is unset. `resume` returns `structuredContent.preview.next` and does not apply it, change the workspace, or copy journal text. `import` writes only after `confirm: true`. This is not `portable-1`, and `portable-1` does not import a project. CLI `numinous project resume --apply` writes this process's intention and, when the next call names a present room, its place. It saves no workspace file and calls no next tool |
 | `workspace` | inspect, edit, retrieve, defer, or clear a process-local visit workspace: place, intention, pending prediction, unfinished work, recent notes, and journal handles. `retrieve` names one room and returns at most four current exact-subject journal matches, newest first, with selection reason, correction status, and source explanation. It abstains when evidence is absent and never searches entry text or opaque receipt digests. Play does not write it. It is not a memory, and it does not survive process exit |
 | `listen_room` | the ambient motif, stable App room-bed summary, and input-aware mathematical sonification, with the same optional `pokes` or `gesture` as `play_room`; use `ambient_detail: "events"` for every bounded bed event and objective signal feature, never PCM or a local path |
 | `list_sims` | the simulations and their levers |

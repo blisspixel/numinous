@@ -150,9 +150,13 @@ revision and leaves the target in place. `op: "resume"` previews what is
 present, missing, corrected, collided, or incompatible.
 `structuredContent.preview.next` is a tool call you may follow. Resume does not
 apply it, does not change the workspace, and does not copy journal text into
-the chain. `forget` with `project: true` erases the chain and leaves the
-journal. `export_journal` with `format: "portable-1"` still does not import a
-project.
+the chain. On the command line, `numinous project resume` prints that preview.
+`numinous project resume --apply` writes the question into the intention of
+the process that runs it, and writes a place when the next call names a
+present room. That workspace ends when the process exits. The command does
+not call the next tool. `forget` with `project: true` erases the chain and
+leaves the journal. `export_journal` with `format: "portable-1"` still does
+not import a project.
 
 ## If you are a human
 
