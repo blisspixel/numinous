@@ -4612,13 +4612,17 @@ fn open_studio_reports_the_slope_of_sin_a_x() {
     let refused = report("floor(x)");
     assert!(refused.contains("slope=refused"), "{refused}");
     assert!(!refused.contains("a*cos(a*x)"), "{refused}");
-    for source in ["sin(x)", "sin(a*x)+x/3"] {
-        let plain = report(source);
-        assert!(
-            !plain.contains("slope="),
-            "{source} has no slope line: {plain}"
-        );
-    }
+    let opening = report("sin(a*x)+x/3");
+    assert!(
+        opening.contains("slope basis=symbolic source=a*cos(a*x)+1/3"),
+        "{opening}"
+    );
+    assert!(opening.contains("expr=sin(a*x)+x/3"), "{opening}");
+    let plain = report("sin(x)");
+    assert!(
+        !plain.contains("slope="),
+        "sin(x) has no slope line: {plain}"
+    );
 }
 
 #[test]

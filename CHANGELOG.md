@@ -19,6 +19,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   report the same reading. `floor`, `mod`, `min`, `max`, `euclid`,
   `pat`, and `note` are refused. The capsule, the postcard, the text
   preview, and `melody.mid` stay the player's source.
+- An open graph that sums `sin(a*x)` with a line or an integer power of
+  `x` grows that slope beside the graph. The opening formula
+  `sin(a*x) + x/3` grows `a*cos(a*x)+1/3`. `1/3` stays a quotient. The
+  App plots and sings both on one vertical axis. CLI `open-studio` and
+  MCP `structuredContent.slope` report the same source. The capsule, the
+  postcard, the text preview, and `melody.mid` stay the player's source.
 - A parametric path whose `x` and `y` are each a sum of two oscillators
   grows the first term beside the path, on the same frame. The App sounds
   one tone per recognized frequency. CLI `open-studio` and MCP
@@ -54,7 +60,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 ### Changed
 - The roadmap records the Studio readings that are built and the ones
   that remain open. The frequency tones are built. The slope of
-  `sin(a*x)` is built. The first term of a two-oscillator sum is built.
+  `sin(a*x)` is built, including a sum of that form with a line or an
+  integer power of `x`. The first term of a two-oscillator sum is built.
   The rest of the slope grammar, and the rest of the partial, remain
   hypotheses. A question box, homework steps, curated facts about the
   world, and any call to an external answer engine stay out.

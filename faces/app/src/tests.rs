@@ -3544,12 +3544,14 @@ fn returning_to_an_edited_capsule_keeps_its_draft_and_settings() {
         Err(crate::studio_panel::ShareRefusal::UnparsedFormula)
     );
 
-    assert_eq!(
-        app.studio_panel.push_text("0"),
-        Some(creation.to_melody(32))
-    );
+    let sound = app
+        .studio_panel
+        .push_text("sin(x)")
+        .expect("a recognized repair");
     let edited = app.studio_panel.current_creation().expect("repaired draft");
-    assert_eq!(edited.source(), "sin(a*x)+0");
+    assert_eq!(sound, edited.to_melody(32));
+    assert_ne!(sound, creation.to_melody(32));
+    assert_eq!(edited.source(), "sin(a*x)+sin(x)");
     assert_eq!((edited.xmin(), edited.xmax(), edited.a()), (0.0, 1.0, 0.25));
     assert_eq!(edited.descends(), Some(creation.to_link().as_str()));
 }
@@ -4233,7 +4235,7 @@ fn studio_parameter_keys_and_controller_buttons_share_one_edit_path() {
             );
             assert_eq!(
                 app.studio_panel.current_sound(),
-                Some(creation.to_melody(32))
+                Some(slope_beside(&creation))
             );
             assert_eq!(
                 app.audio_program,
@@ -4327,7 +4329,13 @@ fn fresh_studio_picture_live_voice_and_shared_midi_ignore_gallery_phase() {
             app.studio_panel.adjust_parameter(steps);
             let creation = app.studio_panel.current_creation().expect("creation");
             let voice = app.studio_panel.current_sound().expect("voice");
-            assert_eq!(voice, creation.to_melody(32));
+            let sung = creation.to_melody(32);
+            if source.starts_with("sin") {
+                assert_eq!(voice, slope_beside(&creation));
+                assert_ne!(voice, sung);
+            } else {
+                assert_eq!(voice, sung);
+            }
             let mut baseline = numinous_core::Raster::new(360, 240);
             app.draw_studio(&mut baseline, 360, 240);
             for phase in [0.0, 0.25, 0.75, 1.0, f64::NAN] {
@@ -4354,7 +4362,7 @@ fn fresh_studio_picture_live_voice_and_shared_midi_ignore_gallery_phase() {
             assert_eq!(saved, creation);
             assert_eq!(
                 std::fs::read(dir.join("melody.mid")).expect("MIDI"),
-                voice.midi()
+                creation.to_midi_melody(32).midi()
             );
         }
     }
@@ -4388,13 +4396,14 @@ fn one_action_shares_the_studio_bundle_or_refuses_with_a_reason() {
     assert_eq!(
         midi,
         reopened
-            .to_melody(numinous_core::DEFAULT_MELODY_NOTES)
+            .to_midi_melody(numinous_core::DEFAULT_MELODY_NOTES)
             .midi(),
-        "the shared MIDI is the same voice the Studio sings"
+        "the shared MIDI is the player's source"
     );
-    assert_eq!(
+    assert_ne!(
         midi,
-        app.studio_panel.current_sound().expect("live voice").midi()
+        app.studio_panel.current_sound().expect("live voice").midi(),
+        "the live voice is the graph and its slope"
     );
     let readme = std::fs::read_to_string(dir.join("README.share.txt")).expect("bundle readme");
     assert!(

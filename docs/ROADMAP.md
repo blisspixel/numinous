@@ -215,21 +215,36 @@ mastery, exploration, and company also remain complete reasons to play.
   `slope basis=symbolic source=a*cos(a*x)`. `floor`, `mod`, `min`, `max`,
   `euclid`, `pat`, and `note` are refused, including inside a larger
   expression: `slope=refused` on the CLI and MCP. The App stays quiet on
-  a refusal. `sin(x)`, sums, `tan`, `ln`, `sqrt`, `abs`, fields,
+  a refusal. `sin(x)`, `tan`, `ln`, `sqrt`, `abs`, fields,
   parametrics, overlays, and named sliders such as `sin(b*x)` have no
-  slope reading in this slice. The capsule, the postcard, the text
+  slope reading from this rule. A sum this slice can name is the next
+  paragraph. The capsule, the postcard, the text
   preview, CLI `sing`, and `melody.mid` stay the player's source. The
   live App voice is the pair. The text preview does not draw the second
   curve. Player evidence remains open.
-- **Hypothesis, the rest of the slope:** later slices may add
-  polynomials, `sin`, `cos`, `exp`, sums, products, quotients, and
-  constant parameters, including named sliders, only where the rewrite
-  is exact. A general power stays out. `tan`, `ln`, `sqrt`, and `abs`
-  keep the gaps the sampler already leaves. The secant label is the
-  later reading: this slice refuses the constructs named above and
-  leaves every other unrecognized graph without a slope. The reading
-  is the player's formula. It is not an essay, an integral, or a search
-  for a maximum. Implementation and player evidence remain open.
+- **Built, slope of a sum:** an open graph that is a sum or difference
+  of `sin(a*x)`, a line, and a non-negative integer power of `x` grows
+  the sum of those derivatives on the same vertical axis. The opening
+  formula `sin(a*x) + x/3` grows `a*cos(a*x)+1/3`. `x^2` grows `2*x`.
+  `x^2/12 - 1` grows `x/6`. A constant term, including `+0`, drops out.
+  `1/3` stays the quotient `1/3`. Samples of the rewritten source are
+  checked against an independent slope where both are defined. The App
+  plots and sings both on one vertical axis. CLI `open-studio` and MCP
+  `structuredContent.slope` report the same source. `x*x`, `sin(x)`,
+  `0.5*x`, a parenthesized sum inside a product, a power of anything
+  other than `x`, a negative or non-integer power, and `x/a` have no
+  slope reading. The refusal list is unchanged. The capsule, the
+  postcard, the text preview, CLI `sing`, and `melody.mid` stay the
+  player's source. Player evidence remains open.
+- **Hypothesis, the rest of the slope:** later slices may add `sin` of
+  a more general argument, `cos`, `exp`, products of two non-constant
+  factors, quotients of two non-constant factors, and constant
+  parameters beyond `a`, including named sliders, only where the
+  rewrite is exact. A general power stays out. `tan`, `ln`, `sqrt`,
+  and `abs` keep the gaps the sampler already leaves. The secant label
+  is the later reading. The reading is the player's formula. It is not
+  an essay, an integral, or a search for a maximum. Implementation and
+  player evidence remain open.
 - **Built, first term of a two-oscillator sum:** a parametric path whose
   `x` and `y` are each a sum of two oscillators, in the form closure
   already accepts, grows the first term beside the path. Both curves
@@ -1917,7 +1932,8 @@ world's determinism.
 So the useful half is native. Another reading of a capsule the player
 already wrote, replayed from core on the App, the CLI, and MCP together.
 Rock 6 has carried the instrument through named pitches. MusicXML remains
-there. The frequency tones are built. The slope of `sin(a*x)` is built. The first
+there. The frequency tones are built. The slope of `sin(a*x)` is built, including
+a sum of that form with a line or an integer power of `x`. The first
 term of a two-oscillator sum is built. The rest of the slope grammar, and
 the rest of the partial, remain hypotheses.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
