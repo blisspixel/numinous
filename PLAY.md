@@ -45,7 +45,7 @@ the same input returns the same result without recording anything. A protocol
 session that only renders rooms will therefore see stars grow while `plays`
 stays at zero, and that is the design rather than a dead field. The App shows a
 play count in its Journey overlay; there is no equivalent overlay on this face. `forget` previews Journey, scores, local Cairn drafts, the
-opt-in experience journal, generated radio cache, and the App crash diagnostic
+opt-in experience journal, the explicit project chain, generated radio cache, and the App crash diagnostic
 without changing them. Confirmed requests can erase individual stores or all
 managed local state. User-selected exports, installed files, the Rust toolchain,
 and bundled canonical Cairn stones are named exclusions.
@@ -139,6 +139,20 @@ first, with the reason and source of each match. It says it abstained when no
 such evidence exists; it never searches your entry text or opaque receipt
 digests. Play does not write the workspace. It is not a memory, and it dies
 when the process does.
+
+If you want one question to outlive the visit, call `project`. `op: "keep"`
+stores the question as data, one closed next call, one to four catalog rooms,
+up to four typed evidence links, and an optional Studio creation. The chain
+lives at `NUMINOUS_PROJECT`, or `.numinous-project` in your home directory when
+that variable is unset. `op: "import"` reads one portable `NUMINOUS_PROJECT 1`
+document and writes only after `confirm: true`. `op: "correct"` appends a
+revision and leaves the target in place. `op: "resume"` previews what is
+present, missing, corrected, collided, or incompatible.
+`structuredContent.preview.next` is a tool call you may follow. Resume does not
+apply it, does not change the workspace, and does not copy journal text into
+the chain. `forget` with `project: true` erases the chain and leaves the
+journal. `export_journal` with `format: "portable-1"` still does not import a
+project.
 
 ## If you are a human
 

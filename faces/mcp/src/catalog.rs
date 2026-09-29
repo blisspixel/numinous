@@ -39,6 +39,7 @@ fn server_instructions() -> &'static str {
         "Add from_t with an explicit destination t when you want two exact observations and their temporal delta in one stateless call; a static room can honestly report zero visible change. To stay in a room rather than move through it, pass dwell with several phases: the reply reports what refused to move across all of them, including how much stayed dark inside the region that did move. ",
         "Pass receipt true on play_room for a replay proof in structuredContent.encounter; a receipt is not a memory, and asking does not keep the play. To keep one, pass that object as receipt on record_journal; the server replays it and stores only a live match. ",
         "workspace holds a resettable visit state in this process only: inspect, edit, retrieve, defer, or clear place, intention, pending_prediction, unfinished work, recent notes, and journal handles. Retrieve names one room explicitly, selects at most four current exact-subject matches from the player-owned journal, explains every source, and abstains when no evidence exists. Play does not write the workspace. It is not a memory, and exiting or clearing drops it. ",
+        "Call project to keep one question, a closed next call, catalog rooms, typed evidence links, and an optional creation. resume previews structuredContent.preview.next and does not apply it. forget can erase that chain without erasing the journal. ",
         "plot_expression and sing_expression name next as save_creation with the expression and window already bound, so a glance is a door into keeping rather than a dead picture. Recipe lists and errors do not. Pass list_experiments true on plot_expression for bundled Studio capsules; each row names next as open_creation with the experiment id already bound, and no host file is read. family returning-home, shape-and-scale, three-readings, named-sliders, overlay, euclidean, two-voices, or notes selects one set. ",
         "save_creation, open_creation, and fork_creation return portable .num text and native links without reading or writing a host file. Each creation result names next as fork_creation with the capsule already bound as parent, so a keep is a door back into play rather than an archive entry. A creation result's journalSubject can be passed explicitly to record_journal with kind creation, so a signed creative arc remains player-owned. ",
         "On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. ",
@@ -470,6 +471,7 @@ fn build_tools_catalog() -> Value {
                     "additionalProperties": false
                 }
             },
+            super::project_tools::catalog_entry(),
             {
                 "name": "workspace",
                 "description": "Inspect, edit, retrieve, defer, or clear a compact visit workspace in this MCP process. Retrieval is deliberate and bounded: name one listed room to select up to four current journal entries whose subject exactly names that room, with provenance and a reason for every match. It abstains when evidence is absent and never searches entry text or opaque receipt digests. Play does not write the workspace. It is not a memory, not the journal, and it does not survive process exit. Default op is inspect.",
@@ -944,7 +946,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "forget",
-                "description": "Consent over local persistence. Without confirm: inventory Journey, scores, player-owned Cairn drafts, the opt-in experience journal, versioned App preferences, generated radio cache, and the App crash diagnostic, with paths, sizes, counts, and exclusions. With confirm true: erase the Journey plus explicitly selected stores. With all_local true: erase and verify all inventoried managed stores. User-selected exports, installed files, the Rust toolchain, and bundled canonical Cairn stones remain outside this command.",
+                "description": "Consent over local persistence. Without confirm: inventory Journey, scores, player-owned Cairn drafts, the opt-in experience journal, the explicit project chain, versioned App preferences, generated radio cache, and the App crash diagnostic, with paths, sizes, counts, and exclusions. With confirm true: erase the Journey plus explicitly selected stores. With all_local true: erase and verify all inventoried managed stores. Erasing the project leaves the journal, and erasing the journal leaves the project. User-selected exports, installed files, the Rust toolchain, and bundled canonical Cairn stones remain outside this command.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -952,6 +954,7 @@ fn build_tools_catalog() -> Value {
                         "scores": { "type": "boolean", "description": "Also erase the score table." },
                         "cairn": { "type": "boolean", "description": "Also erase player-owned local Cairn drafts." },
                         "journal": { "type": "boolean", "description": "Also erase the opt-in experience journal." },
+                        "project": { "type": "boolean", "description": "Also erase the explicit project chain. This does not erase the journal." },
                         "radio_cache": { "type": "boolean", "description": "Also erase the dedicated generated-radio cache directory and its residue." },
                         "crash_log": { "type": "boolean", "description": "Also erase the managed App crash diagnostic." },
                         "all_local": { "type": "boolean", "description": "Erase every inventoried Numinous-managed local store, including App preferences." }

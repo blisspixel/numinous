@@ -23,6 +23,7 @@ mod journey_tools;
 mod local_state;
 mod portable;
 mod progress;
+mod project_tools;
 mod protocol;
 mod puzzle_tools;
 mod response;
@@ -68,7 +69,8 @@ use numinous_broadcast::{
 use progress::{CAIRN_LEVEL, DAILY_DAY_KEY, TestStateRoot, test_state_path};
 use progress::{
     cairn_path, effective_seed, freeze_daily_day, journal_path, journey_path, load_journey,
-    local_state_paths_at, note_save_trouble, post_score, record_progress, scores_path,
+    local_state_paths_at, note_save_trouble, post_score, project_path, record_progress,
+    scores_path,
 };
 #[cfg(test)]
 use protocol::{
@@ -371,6 +373,12 @@ fn call_tool(
             })
         }
         "erase_journal" => journal::erase_tool(&domain_args, &journal_path()),
+        "project" => project_tools::project_tool(
+            &domain_args,
+            &project_path(),
+            &journal_path(),
+            |tool, replay_args| replay_encounter(tool, replay_args, journey_file),
+        ),
         "workspace" => workspace_tool(&domain_args, workspace, &journal_path()),
         "listen_room" => listen_room_tool(&domain_args),
         "list_sims" => tool_text(&list_sims_text()),

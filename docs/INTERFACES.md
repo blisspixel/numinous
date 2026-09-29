@@ -216,13 +216,13 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Current protocol surface:** modern clients use `server/discover`,
   `tools/list`, and `tools/call` over stdio with version and client capability
   metadata on every request. Legacy 2025-11-25 and 2025-06-18 clients retain
-  `initialize`, `tools/list`, `tools/call`, and `ping`. The 41 tools include
+  `initialize`, `tools/list`, `tools/call`, and `ping`. The 42 tools include
   `list_rooms`, `watch_show`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
   `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
   `sing_expression`, `save_creation`, `open_creation`, `fork_creation`,
   Journey operations, experience journal operations
   (`read_journal`, `record_journal`, `correct_journal`, `export_journal`,
-  `erase_journal`), the process-local `workspace` visit state, and the shared games. Journal entries have stable local
+  `erase_journal`), the explicit `project` chain, the process-local `workspace` visit state, and the shared games. `project` keeps, imports, corrects, and previews one question, a closed next call, catalog rooms, typed evidence links, and an optional Studio creation. Resume returns `structuredContent.preview.next` and does not apply it. `forget` can erase the chain without erasing the journal. There is no CLI apply yet. Journal entries have stable local
   identifiers, separate event and record times, declared provenance, immutable
   corrections, and bounded versioned export pages. `export_journal` returns the
   native journal schema by default or, when asked for `format: "okf-0.2"`, an

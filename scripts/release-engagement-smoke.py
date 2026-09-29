@@ -47,6 +47,7 @@ EXPECTED_TOOL_NAMES = frozenset(
         "play_room",
         "plot_expression",
         "predict",
+        "project",
         "quiz",
         "read_journal",
         "record_journal",
@@ -113,6 +114,7 @@ def isolated_environment(state_root: Path) -> dict[str, str]:
             "NUMINOUS_SCORES": str(state_root / "scores.txt"),
             "NUMINOUS_CAIRN": str(state_root / "cairn.txt"),
             "NUMINOUS_JOURNAL": str(state_root / "journal.txt"),
+            "NUMINOUS_PROJECT": str(state_root / "project.txt"),
             "NO_COLOR": "1",
             "TERM": "dumb",
         }

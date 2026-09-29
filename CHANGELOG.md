@@ -10,8 +10,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   closed next call, catalog room ids, typed evidence links, and an optional
   Studio creation. Import and correct are separate from keep. Resume previews
   what is present, missing, corrected, collided, or incompatible, and it does
-  not apply the project or copy journal text. The chain file is an explicit
-  path. There is no MCP tool and no default save location yet.
+  not apply the project or copy journal text.
+- MCP `project` keeps, imports, corrects, and previews one explicit project
+  chain at `NUMINOUS_PROJECT` (default `.numinous-project`). Resume does not
+  apply the next call. `forget` can erase the chain without erasing the
+  journal. There is no CLI apply yet.
 - Overlay closure for two harmonic oscillators. Opening `closing-voices`,
   `shorter-window`, or `wandering-voices` reports ideal cycles in the window
   and a common period when the model has one. `shorter-window` keeps the

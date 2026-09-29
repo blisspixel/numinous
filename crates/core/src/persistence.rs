@@ -52,6 +52,8 @@ pub struct LocalStatePaths {
     pub cairn: PathBuf,
     /// Player-owned opt-in MCP experience journal.
     pub journal: PathBuf,
+    /// Explicit project chain. This is not the journal.
+    pub project: PathBuf,
     /// Versioned App preferences file.
     pub preferences: PathBuf,
     /// Flat directory of generated radio WAV files.
@@ -67,7 +69,7 @@ pub struct LocalStatePaths {
 /// environment precedence rule.
 ///
 /// `NUMINOUS_JOURNEY`, `NUMINOUS_SCORES`, `NUMINOUS_CAIRN`,
-/// `NUMINOUS_JOURNAL`, and `NUMINOUS_PREFERENCES` override their individual
+/// `NUMINOUS_JOURNAL`, `NUMINOUS_PROJECT`, and `NUMINOUS_PREFERENCES` override their individual
 /// stores. Other paths are rooted at `HOME`, then `USERPROFILE`, then the
 /// current directory when neither home variable exists. `NUMINOUS_RADIO`
 /// selects a playable soundtrack pack. It is carried only as a protected path
@@ -92,6 +94,7 @@ fn resolve_local_state_paths_with(
         scores: managed_file("NUMINOUS_SCORES", ".numinous-scores"),
         cairn: managed_file("NUMINOUS_CAIRN", ".numinous-cairn"),
         journal: managed_file("NUMINOUS_JOURNAL", ".numinous-journal"),
+        project: managed_file("NUMINOUS_PROJECT", ".numinous-project"),
         preferences: managed_file("NUMINOUS_PREFERENCES", ".numinous-preferences"),
         radio_cache: home.join(".numinous-radio"),
         protected_radio_source,
@@ -187,6 +190,8 @@ pub struct LocalStateInventory {
     pub cairn: LocalCairnInventory,
     /// Opt-in experience journal inventory.
     pub journal: LocalFileInventory,
+    /// Explicit project chain inventory.
+    pub project: LocalFileInventory,
     /// Versioned App preferences inventory.
     pub preferences: LocalFileInventory,
     /// Generated-radio cache inventory.
@@ -209,6 +214,8 @@ impl LocalStateInventory {
             .saturating_add(self.cairn.file.sidecar_bytes)
             .saturating_add(self.journal.bytes)
             .saturating_add(self.journal.sidecar_bytes)
+            .saturating_add(self.project.bytes)
+            .saturating_add(self.project.sidecar_bytes)
             .saturating_add(self.preferences.bytes)
             .saturating_add(self.preferences.sidecar_bytes)
             .saturating_add(self.radio_cache.bytes)
@@ -226,6 +233,7 @@ impl LocalStateInventory {
             self.scores.file.exists || self.scores.file.sidecar_files != 0,
             self.cairn.file.exists || self.cairn.file.sidecar_files != 0,
             self.journal.exists || self.journal.sidecar_files != 0,
+            self.project.exists || self.project.sidecar_files != 0,
             self.preferences.exists || self.preferences.sidecar_files != 0,
             self.radio_cache.exists || self.radio_cache.sidecar_files != 0,
             self.crash_log.exists || self.crash_log.sidecar_files != 0,
@@ -247,6 +255,8 @@ pub struct LocalStateEraseSelection {
     pub cairn: bool,
     /// Erase the opt-in experience journal.
     pub journal: bool,
+    /// Erase the explicit project chain.
+    pub project: bool,
     /// Erase versioned App preferences.
     pub preferences: bool,
     /// Erase recognized generated radio tracks.
@@ -264,6 +274,7 @@ impl LocalStateEraseSelection {
             scores: true,
             cairn: true,
             journal: true,
+            project: true,
             preferences: true,
             radio_cache: true,
             crash_log: true,
@@ -588,6 +599,7 @@ fn validate_local_state_paths(paths: &LocalStatePaths) -> io::Result<()> {
         ("scores", &paths.scores),
         ("Cairn drafts", &paths.cairn),
         ("experience journal", &paths.journal),
+        ("project", &paths.project),
         ("App preferences", &paths.preferences),
         ("crash log", &paths.crash_log),
     ]
@@ -631,6 +643,7 @@ pub fn inspect_local_state(paths: &LocalStatePaths) -> io::Result<LocalStateInve
     let scores_file = inspect_managed_file(&paths.scores)?;
     let cairn_file = inspect_managed_file(&paths.cairn)?;
     let journal = inspect_managed_file(&paths.journal)?;
+    let project = inspect_managed_file(&paths.project)?;
     let preferences = inspect_managed_file(&paths.preferences)?;
     let journey = if journey_file.managed_file {
         load_journey_file(&paths.journey)
@@ -664,6 +677,7 @@ pub fn inspect_local_state(paths: &LocalStatePaths) -> io::Result<LocalStateInve
             local_drafts,
         },
         journal,
+        project,
         preferences,
         radio_cache: inspect_managed_cache(&paths.radio_cache)?,
         crash_log: inspect_managed_file(&paths.crash_log)?,
@@ -770,6 +784,7 @@ fn acquire_erasure_locks(
         (selection.scores, "scores", &paths.scores),
         (selection.cairn, "Cairn drafts", &paths.cairn),
         (selection.journal, "experience journal", &paths.journal),
+        (selection.project, "project", &paths.project),
         (selection.preferences, "App preferences", &paths.preferences),
         (selection.radio_cache, "radio cache", &paths.radio_cache),
         (selection.crash_log, "crash log", &paths.crash_log),
@@ -802,6 +817,7 @@ fn preflight_selected_state(
         (selection.scores, "scores", &paths.scores),
         (selection.cairn, "Cairn drafts", &paths.cairn),
         (selection.journal, "experience journal", &paths.journal),
+        (selection.project, "project", &paths.project),
         (selection.preferences, "App preferences", &paths.preferences),
         (selection.crash_log, "crash log", &paths.crash_log),
     ] {
@@ -848,6 +864,7 @@ pub fn erase_local_state(
     }
     erase_file_target(selection.crash_log, "crash log", &paths.crash_log)?;
     erase_file_target(selection.preferences, "App preferences", &paths.preferences)?;
+    erase_file_target(selection.project, "project", &paths.project)?;
     erase_file_target(selection.journal, "experience journal", &paths.journal)?;
     erase_file_target(selection.cairn, "Cairn drafts", &paths.cairn)?;
     erase_file_target(selection.scores, "scores", &paths.scores)?;
@@ -1050,7 +1067,8 @@ pub fn erase_journal_file(path: &Path) -> io::Result<LocalFileInventory> {
 /// Load a project chain from an explicit path.
 ///
 /// A missing file is an empty chain. A malformed file is an error, so a later
-/// keep cannot replace it. This path is not part of [`LocalStatePaths`].
+/// keep cannot replace it. The caller passes the path. The MCP default is
+/// [`LocalStatePaths::project`].
 ///
 /// # Errors
 ///
@@ -1878,6 +1896,7 @@ mod tests {
         assert_eq!(paths.scores, PathBuf::from("home/.numinous-scores"));
         assert_eq!(paths.cairn, PathBuf::from("home/.numinous-cairn"));
         assert_eq!(paths.journal, PathBuf::from("home/.numinous-journal"));
+        assert_eq!(paths.project, PathBuf::from("home/.numinous-project"));
         assert_eq!(
             paths.preferences,
             PathBuf::from("home/.numinous-preferences")
@@ -1900,6 +1919,7 @@ mod tests {
             ("NUMINOUS_SCORES", "custom/scores"),
             ("NUMINOUS_CAIRN", "custom/cairn"),
             ("NUMINOUS_JOURNAL", "custom/journal"),
+            ("NUMINOUS_PROJECT", "custom/project"),
             ("NUMINOUS_PREFERENCES", "custom/preferences"),
             ("NUMINOUS_RADIO", "user/soundtrack"),
         ]);
@@ -1907,6 +1927,7 @@ mod tests {
         assert_eq!(paths.scores, PathBuf::from("custom/scores"));
         assert_eq!(paths.cairn, PathBuf::from("custom/cairn"));
         assert_eq!(paths.journal, PathBuf::from("custom/journal"));
+        assert_eq!(paths.project, PathBuf::from("custom/project"));
         assert_eq!(paths.preferences, PathBuf::from("custom/preferences"));
         assert_eq!(paths.radio_cache, PathBuf::from("home/.numinous-radio"));
         assert_eq!(
@@ -2003,6 +2024,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            project: root.join("project.txt"),
             preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
@@ -2018,6 +2040,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            project: root.join("project.txt"),
             preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
@@ -2121,6 +2144,7 @@ mod tests {
             scores: relative_root.join("scores.txt"),
             cairn: relative_root.join("cairn.txt"),
             journal: relative_root.join("journal.txt"),
+            project: relative_root.join("project.txt"),
             preferences: relative_root.join("preferences.txt"),
             radio_cache: relative_root.join("radio"),
             protected_radio_source: None,
@@ -2151,6 +2175,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            project: root.join("project.txt"),
             preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
@@ -2253,6 +2278,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                project: false,
                 preferences: false,
                 radio_cache: true,
                 crash_log: false,
@@ -2319,6 +2345,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                project: false,
                 preferences: false,
                 radio_cache: true,
                 crash_log: false,
@@ -2351,6 +2378,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                project: false,
                 preferences: false,
                 radio_cache: false,
                 crash_log: false,
@@ -2404,6 +2432,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            project: root.join("project.txt"),
             preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
@@ -2426,6 +2455,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            project: root.join("project.txt"),
             preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
@@ -2452,6 +2482,7 @@ mod tests {
             scores: root.join("radio").join("trance-001.wav"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            project: root.join("project.txt"),
             preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
@@ -2467,6 +2498,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                project: false,
                 preferences: false,
                 radio_cache: true,
                 crash_log: false,
@@ -2493,6 +2525,7 @@ mod tests {
             scores: shared.clone(),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            project: root.join("project.txt"),
             preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
@@ -2505,6 +2538,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                project: false,
                 preferences: false,
                 radio_cache: false,
                 crash_log: false,
@@ -2536,6 +2570,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                project: false,
                 preferences: false,
                 radio_cache: false,
                 crash_log: false,
@@ -2576,6 +2611,7 @@ mod tests {
                 scores: false,
                 cairn: false,
                 journal: false,
+                project: false,
                 preferences: false,
                 radio_cache: false,
                 crash_log: false,
@@ -2662,6 +2698,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            project: root.join("project.txt"),
             preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
@@ -2710,6 +2747,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            project: root.join("project.txt"),
             preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
@@ -2730,6 +2768,7 @@ mod tests {
                     scores: false,
                     cairn: false,
                     journal: false,
+                    project: false,
                     preferences: false,
                     radio_cache: true,
                     crash_log: false,

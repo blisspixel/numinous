@@ -26,7 +26,7 @@ pub(super) fn viewer_policy(name: &str) -> Option<ViewerPolicy> {
         // Reading and language selection stay with the reading participant.
         "study_room" => Some(ViewerPolicy::Private),
         "cairn" | "forget" | "scores" | "journey" | "choose" | "trophies" | "read_journal"
-        | "record_journal" | "correct_journal" | "export_journal" | "erase_journal"
+        | "record_journal" | "correct_journal" | "export_journal" | "erase_journal" | "project"
         | "workspace" | "save_creation" | "open_creation" | "fork_creation" => {
             Some(ViewerPolicy::Private)
         }
