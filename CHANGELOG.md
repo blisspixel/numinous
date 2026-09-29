@@ -6,6 +6,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- A core project document, `NUMINOUS_PROJECT 1`. It keeps one question, a
+  closed next call, catalog room ids, typed evidence links, and an optional
+  Studio creation. Import and correct are separate from keep. Resume previews
+  what is present, missing, corrected, collided, or incompatible, and it does
+  not apply the project or copy journal text. The chain file is an explicit
+  path. There is no MCP tool and no default save location yet.
 - Overlay closure for two harmonic oscillators. Opening `closing-voices`,
   `shorter-window`, or `wandering-voices` reports ideal cycles in the window
   and a common period when the model has one. `shorter-window` keeps the

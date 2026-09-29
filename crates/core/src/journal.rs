@@ -76,6 +76,15 @@ impl JournalEntry {
         .to_text()
         .into_bytes()
     }
+
+    /// SHA-256 of [`Self::identity_bytes`].
+    ///
+    /// The same record bytes have the same digest. A new local id is a
+    /// different record, so it does not reuse this digest.
+    #[must_use]
+    pub fn identity_digest(&self) -> [u8; 32] {
+        crate::sha256::digest(&self.identity_bytes())
+    }
 }
 
 /// Borrowed fields for one original or corrective journal record.

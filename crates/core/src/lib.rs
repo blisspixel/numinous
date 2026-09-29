@@ -85,6 +85,7 @@ pub mod persistence;
 pub mod photosensitivity;
 pub mod predict;
 pub mod preferences;
+pub mod project;
 mod projection;
 pub mod quiz;
 pub mod radio;
@@ -100,6 +101,7 @@ pub mod scores;
 pub mod secret;
 pub mod session;
 pub mod seti;
+mod sha256;
 pub mod share;
 pub mod show;
 pub mod sim;
@@ -190,11 +192,13 @@ pub use path_closure::{
 pub use persistence::{
     LocalCacheInventory, LocalCairnInventory, LocalFileInventory, LocalJourneyInventory,
     LocalScoresInventory, LocalStateEraseError, LocalStateEraseSelection, LocalStateInventory,
-    LocalStateLock, LocalStatePaths, correct_journal_file, erase_journal_file, erase_local_state,
-    inspect_journal_file, inspect_local_state, load_journal_file, load_journey_file,
-    load_scoreboard_file, lock_local_state, persist_app_preferences_file, persist_journey_delta,
-    read_app_preferences_file, read_journey_file, record_journal_file, record_score_file,
-    remove_persisted_file, resolve_local_state_paths, try_load_journal_file,
+    LocalStateLock, LocalStatePaths, correct_journal_file, correct_project_file,
+    erase_journal_file, erase_local_state, erase_project_file, import_project_file,
+    inspect_journal_file, inspect_local_state, keep_project_file, load_journal_file,
+    load_journey_file, load_scoreboard_file, lock_local_state, persist_app_preferences_file,
+    persist_journey_delta, read_app_preferences_file, read_journey_file, record_journal_file,
+    record_score_file, remove_persisted_file, resolve_local_state_paths, try_load_journal_file,
+    try_load_project_file,
 };
 pub use photosensitivity::{
     DARK_CEILING, GENERAL_FLASH_DELTA, MAX_FLASHES_PER_SECOND, count_flashes, flashes_per_second,
@@ -207,6 +211,14 @@ pub use predict::{
 };
 pub use preferences::{
     AppPreferences, PREFERENCES_SCHEMA_VERSION, PreferencesError, WindowModePreference,
+};
+pub use project::{
+    CreationFact, CreationStatus, EvidenceFact, EvidenceStatus, IncompatibleNext,
+    MAX_PROJECT_EVIDENCE, MAX_PROJECT_FILE_BYTES, MAX_PROJECT_REVISIONS, MAX_PROJECT_ROOMS,
+    NextPreview, PROJECT_CHAIN_HEADER, PROJECT_DOCUMENT_HEADER, PROJECT_RESUME_PREVIEW_SCHEMA,
+    PROJECT_RESUME_PREVIEW_VERSION, ProjectArgument, ProjectArgumentValue, ProjectCall,
+    ProjectChain, ProjectDraft, ProjectError, ProjectEvidence, ProjectNext, ProjectRevision,
+    ProjectStore, ReceiptCheck, ResumePreview, RoomFact, RoomStatus,
 };
 pub use projection::PlanarProjection;
 pub use quiz::{ICONIC, QuizChoice, QuizRound, build_round, build_round_pool, build_round_sized};

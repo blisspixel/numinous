@@ -13,6 +13,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::project::{
+    MAX_PROJECT_FILE_BYTES, ProjectChain, ProjectDraft, ProjectError, ProjectStore,
+};
 use crate::{AppPreferences, Journal, JournalRecord, Journey, Scoreboard};
 
 const LOCK_RETRIES: usize = 2500;
@@ -1044,6 +1047,125 @@ pub fn erase_journal_file(path: &Path) -> io::Result<LocalFileInventory> {
     Ok(inventory)
 }
 
+/// Load a project chain from an explicit path.
+///
+/// A missing file is an empty chain. A malformed file is an error, so a later
+/// keep cannot replace it. This path is not part of [`LocalStatePaths`].
+///
+/// # Errors
+///
+/// Returns an error when the file is unreadable, oversized, or not a
+/// `numinous-project-v1` chain.
+pub fn try_load_project_file(path: &Path) -> io::Result<ProjectChain> {
+    match read_local_text_bounded(path, MAX_PROJECT_FILE_BYTES) {
+        Ok(text) => ProjectChain::parse(&text)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error)),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(ProjectChain::new()),
+        Err(error) => Err(error),
+    }
+}
+
+/// Append a kept revision to an explicit project file.
+///
+/// # Errors
+///
+/// Returns an error when the draft is refused, the chain cannot be read, or
+/// the write fails. An unchanged payload does not write.
+pub fn keep_project_file(path: &Path, draft: &ProjectDraft) -> io::Result<ProjectStore> {
+    let _lock = PersistLock::acquire(path)?;
+    let mut chain = try_load_project_file(path)?;
+    let outcome = chain
+        .keep(draft)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?;
+    if matches!(outcome, ProjectStore::Appended { .. }) {
+        write_project_file(path, &chain)?;
+    }
+    Ok(outcome)
+}
+
+/// Import one portable document into an explicit project file.
+///
+/// `confirm` must be set before a new revision is appended.
+///
+/// # Errors
+///
+/// Returns an error when the document is refused, the chain cannot be read,
+/// or the write fails.
+pub fn import_project_file(
+    path: &Path,
+    document: &str,
+    recorded_at_utc: u64,
+    origin: Option<u64>,
+    confirm: bool,
+) -> io::Result<ProjectStore> {
+    let _lock = PersistLock::acquire(path)?;
+    let mut chain = try_load_project_file(path)?;
+    let outcome = chain
+        .import(document, recorded_at_utc, origin, confirm)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?;
+    if matches!(outcome, ProjectStore::Appended { .. }) {
+        write_project_file(path, &chain)?;
+    }
+    Ok(outcome)
+}
+
+/// Append a correction to an explicit project file.
+///
+/// # Errors
+///
+/// Returns an error when the target is missing or already corrected, the
+/// draft is refused, or the write fails.
+pub fn correct_project_file(
+    path: &Path,
+    supersedes: u64,
+    draft: &ProjectDraft,
+) -> io::Result<ProjectStore> {
+    let _lock = PersistLock::acquire(path)?;
+    let mut chain = try_load_project_file(path)?;
+    let outcome = chain
+        .correct(supersedes, draft)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?;
+    if matches!(outcome, ProjectStore::Appended { .. }) {
+        write_project_file(path, &chain)?;
+    }
+    Ok(outcome)
+}
+
+/// Wipe one explicit project file and report the verified managed residue.
+///
+/// Journal files are a different store. Erasing a project does not erase a
+/// journal, and erasing a journal does not erase a project.
+///
+/// # Errors
+///
+/// Returns an error when the path is not a managed file or residue remains.
+pub fn erase_project_file(path: &Path) -> io::Result<LocalFileInventory> {
+    {
+        let lock = PersistLock::acquire(path)?;
+        preflight_managed_file(path)?;
+        remove_managed_file_locked(path)?;
+        lock.release()?;
+    }
+    let inventory = inspect_managed_file(path)?;
+    if inventory.exists || inventory.sidecar_files != 0 || inventory.sidecar_scan_capped {
+        return Err(io::Error::other(
+            "project erasure left recoverable managed residue",
+        ));
+    }
+    Ok(inventory)
+}
+
+fn write_project_file(path: &Path, chain: &ProjectChain) -> io::Result<()> {
+    let serialized = chain.to_text();
+    if serialized.len() as u64 > MAX_PROJECT_FILE_BYTES {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            ProjectError::TooLarge,
+        ));
+    }
+    atomic_write(path, serialized.as_bytes())
+}
+
 fn try_load_scoreboard_file(path: &Path) -> io::Result<Scoreboard> {
     match read_local_text_bounded(path, MAX_SCOREBOARD_FILE_BYTES) {
         Ok(text) => Ok(Scoreboard::from_text(&text)),
@@ -1720,10 +1842,10 @@ fn retry_atomic_replace_with(mut replace: impl FnMut() -> io::Result<()>) -> io:
 mod tests {
     use super::{
         Journey, LocalStateEraseSelection, LocalStatePaths, Scoreboard, erase_journal_file,
-        erase_local_state, inspect_local_state, load_journey_file, load_scoreboard_file,
-        persist_app_preferences_file, persist_journey_delta, read_app_preferences_file,
-        record_journal_file, record_score_file, remove_persisted_file,
-        resolve_local_state_paths_with,
+        erase_local_state, erase_project_file, import_project_file, inspect_local_state,
+        keep_project_file, load_journey_file, load_scoreboard_file, persist_app_preferences_file,
+        persist_journey_delta, read_app_preferences_file, record_journal_file, record_score_file,
+        remove_persisted_file, resolve_local_state_paths_with, try_load_project_file,
     };
     use crate::{AppPreferences, Era, WindowModePreference};
     use std::collections::BTreeMap;
@@ -1842,6 +1964,37 @@ mod tests {
             std::process::id(),
             TEST_COUNTER.fetch_add(1, Ordering::Relaxed)
         ))
+    }
+
+    /// A private directory, so erasure can bound its sibling scan.
+    struct IsolatedStore {
+        root: PathBuf,
+    }
+
+    impl IsolatedStore {
+        fn new(name: &str) -> Self {
+            let root = temp_file(name).with_extension("");
+            std::fs::create_dir(&root).expect("isolated store");
+            Self { root }
+        }
+
+        fn path(&self, name: &str) -> PathBuf {
+            self.root.join(name)
+        }
+    }
+
+    impl Drop for IsolatedStore {
+        fn drop(&mut self) {
+            if let Ok(entries) = std::fs::read_dir(&self.root) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_file() {
+                        let _ = std::fs::remove_file(path);
+                    }
+                }
+            }
+            let _ = std::fs::remove_dir(&self.root);
+        }
     }
 
     fn local_state_paths(root: &std::path::Path) -> LocalStatePaths {
@@ -3234,6 +3387,128 @@ mod tests {
             original.as_bytes()
         );
         remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn project_file_is_an_explicit_chain_and_erasure_leaves_the_journal() {
+        let store = IsolatedStore::new("project_store");
+        let project = store.path("project.txt");
+        let journal = store.path("journal.txt");
+        let hostile = store.path("hostile.txt");
+        let malformed = store.path("malformed.txt");
+        let oversized = store.path("oversized.txt");
+
+        let draft = crate::ProjectDraft {
+            recorded_at_utc: 30,
+            question: "What period do these two oscillators share?".to_string(),
+            next: crate::ProjectNext::StudyRoom {
+                room: "kepler-areas".to_string(),
+            },
+            rooms: vec!["kepler-areas".to_string()],
+            evidence: Vec::new(),
+            creation: None,
+        };
+        assert!(
+            try_load_project_file(&project)
+                .expect("missing is empty")
+                .is_empty()
+        );
+        let stored = keep_project_file(&project, &draft).expect("keep");
+        assert!(matches!(
+            stored,
+            crate::ProjectStore::Appended { revision_id: 1, .. }
+        ));
+        let bytes = std::fs::read(&project).expect("project bytes");
+        let again = keep_project_file(&project, &draft).expect("same payload");
+        assert!(matches!(
+            again,
+            crate::ProjectStore::AlreadyPresent { revision_id: 1, .. }
+        ));
+        assert_eq!(std::fs::read(&project).expect("unchanged"), bytes);
+        assert!(!super::lock_path_for(&project).exists());
+        assert_eq!(
+            try_load_project_file(&project)
+                .expect("load")
+                .revision(1)
+                .expect("row")
+                .rooms(),
+            &["kepler-laws".to_string()]
+        );
+
+        let mut other = crate::ProjectChain::new();
+        let mut different = draft.clone();
+        different.question = "A second question that still needs confirm.".to_string();
+        other.keep(&different).expect("other");
+        let held = import_project_file(
+            &project,
+            &other.revision(1).expect("row").to_document(),
+            40,
+            None,
+            false,
+        )
+        .expect("hold");
+        assert_eq!(held, crate::ProjectStore::NeedsConfirm);
+        assert_eq!(
+            std::fs::read(&project).expect("import wrote nothing"),
+            bytes
+        );
+
+        record_journal_file(
+            &journal,
+            crate::JournalRecord {
+                recorded_at_utc: 8,
+                event_at_utc: 7,
+                source: crate::JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "encounter",
+                subject: "lissajous",
+                text: "journal-stays",
+                affect: None,
+            },
+        )
+        .expect("journal");
+        let journal_bytes = std::fs::read(&journal).expect("journal bytes");
+        erase_project_file(&project).expect("erase project");
+        assert!(!project.exists());
+        assert!(!super::lock_path_for(&project).exists());
+        assert_eq!(
+            std::fs::read(&journal).expect("journal survives"),
+            journal_bytes
+        );
+
+        keep_project_file(&project, &draft).expect("restore project");
+        erase_journal_file(&journal).expect("erase journal");
+        assert!(!journal.exists());
+        assert!(
+            try_load_project_file(&project)
+                .expect("project survives")
+                .revision(1)
+                .is_some()
+        );
+
+        let mut bad = draft.clone();
+        bad.creation = Some("../secret.num".to_string());
+        assert!(keep_project_file(&hostile, &bad).is_err());
+        assert!(!hostile.exists());
+
+        std::fs::write(&malformed, b"not a chain\n").expect("malformed");
+        assert!(try_load_project_file(&malformed).is_err());
+        assert!(keep_project_file(&malformed, &draft).is_err());
+        assert_eq!(
+            std::fs::read(&malformed).expect("preserved"),
+            b"not a chain\n"
+        );
+
+        let file = std::fs::File::create(&oversized).expect("create oversized");
+        file.set_len(crate::MAX_PROJECT_FILE_BYTES + 1)
+            .expect("size");
+        drop(file);
+        let error = try_load_project_file(&oversized).expect_err("oversized");
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert!(keep_project_file(&oversized, &draft).is_err());
+        assert_eq!(
+            std::fs::metadata(&oversized).expect("metadata").len(),
+            crate::MAX_PROJECT_FILE_BYTES + 1
+        );
     }
 
     #[test]
