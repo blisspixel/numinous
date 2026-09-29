@@ -187,7 +187,8 @@ pub use nim::{
     the_secret as nim_secret,
 };
 pub use path_closure::{
-    AperiodicClosure, ClosureCheckpoint, PathClosure, PeriodicClosure, VoiceClosure, VoiceFact,
+    AperiodicClosure, ClosureCheckpoint, OSCILLATOR_TONE_REFERENCE_HZ, OscillatorTone,
+    OscillatorTones, PathClosure, PeriodicClosure, VoiceClosure, VoiceFact,
 };
 pub use persistence::{
     LocalCacheInventory, LocalCairnInventory, LocalFileInventory, LocalJourneyInventory,

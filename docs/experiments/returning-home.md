@@ -24,6 +24,9 @@ so a packaged player does not need these files. `plot_expression` with
 Opening a capsule reports an independently checked `closure`: whether the
 ideal motion repeats, and whether a half-period checkpoint is a full-state
 return or a position-only trap. The App Studio status names the same caption.
+When the closure names two frequencies, Enter plays them as sustained tones
+at 110 Hz times each frequency. The sung melody stays the sampled curve, and
+`sqrt(2)` is not replaced by a nearby ratio.
 From Lissajous, CONSTRUCT or `O` opens the first capsule; PageDown walks
 the family, including a period-1 starter titled Another ratio. After that
 capsule, PageDown opens Closing voices, then A shorter window, then

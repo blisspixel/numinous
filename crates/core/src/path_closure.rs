@@ -5,8 +5,26 @@
 //! those frequencies share a period. Both answers come from the ideal model.
 //! A picture is not the proof. The trial does not grade the player, and it
 //! does not gate rooms, study, or creation.
+//!
+//! When that reading names two frequencies, those frequencies can also sound.
+//! The tones are the oscillators. The sampled melody is a different reading
+//! and is left untouched.
 
+use crate::sound::SoundSpec;
 use crate::studio::{Expr, Func, Op, StudioCreation, StudioKind, StudioProgram};
+
+/// One cycle per unit time, sounded at this many hertz.
+///
+/// Every other named frequency is this reference times its cycles per unit
+/// time. The factor is the render map. It is not a new period and it does
+/// not replace an irrational frequency with a nearby ratio.
+pub const OSCILLATOR_TONE_REFERENCE_HZ: f32 = 110.0;
+
+/// How long the two sustained tones sound when rendered without a device.
+const OSCILLATOR_TONE_SECONDS: f32 = 1.5;
+
+/// Peak amplitude of each sustained tone. Two of these stay inside one sample.
+const OSCILLATOR_TONE_GAIN: f32 = 0.06;
 
 /// What a Studio creation does in time, when that question is well posed.
 #[derive(Debug, Clone, PartialEq)]
@@ -29,7 +47,7 @@ pub enum PathClosure {
 }
 
 /// Ideal cycle counts for exactly two overlay oscillators.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct VoiceClosure {
     /// The two graphs, in source order.
     pub voices: [VoiceFact; 2],
@@ -45,14 +63,38 @@ pub struct VoiceClosure {
 }
 
 /// One overlay oscillator.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct VoiceFact {
     /// Cycles per unit x, for example `1`, `17/12`, or `sqrt(2)`.
     pub frequency_text: String,
+    /// The same frequency as a finite float, for the tone map only.
+    /// The text is the exact claim.
+    pub cycles_per_unit: f64,
     /// Ideal cycles in the saved window, for example `12`, `17/12`, or
     /// `12*sqrt(2)`. Absent when the window length is not an exact integer
     /// or quarter.
     pub window_cycles: Option<String>,
+}
+
+/// One named frequency and the tone the render map gives it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct OscillatorTone {
+    /// The frequency text closure already named.
+    pub frequency_text: String,
+    /// Cycles per unit time as a finite float. The text remains exact.
+    pub cycles_per_unit: f64,
+    /// Hertz after [`OSCILLATOR_TONE_REFERENCE_HZ`]. Absent when that
+    /// product is not a positive finite `f32`.
+    pub hz: Option<f32>,
+}
+
+/// The two sustained tones of a closure that named two frequencies.
+#[derive(Debug, Clone, PartialEq)]
+pub struct OscillatorTones {
+    /// Hertz of frequency text `1`.
+    pub reference_hz: f32,
+    /// The x oscillator, then the y oscillator. An overlay keeps source order.
+    pub voices: [OscillatorTone; 2],
 }
 
 /// A repeating two-oscillator path.
@@ -64,8 +106,12 @@ pub struct PeriodicClosure {
     pub period: f64,
     /// Cycles of the x oscillator per unit t, for example `1` or `2`.
     pub x_frequency_text: String,
+    /// The x frequency as a finite float, for the tone map only.
+    pub x_cycles_per_unit: f64,
     /// Cycles of the y oscillator per unit t, for example `17/12`.
     pub y_frequency_text: String,
+    /// The y frequency as a finite float, for the tone map only.
+    pub y_cycles_per_unit: f64,
     /// How many x oscillations fit in one common period, when that count is
     /// an integer.
     pub x_cycles: Option<i64>,
@@ -87,8 +133,12 @@ pub struct PeriodicClosure {
 pub struct AperiodicClosure {
     /// Cycles of the x oscillator per unit t.
     pub x_frequency_text: String,
+    /// The x frequency as a finite float, for the tone map only.
+    pub x_cycles_per_unit: f64,
     /// Cycles of the y oscillator per unit t.
     pub y_frequency_text: String,
+    /// The y frequency as a finite float, for the tone map only.
+    pub y_cycles_per_unit: f64,
     /// State at the saved window end. A near return is still not a period.
     pub window_end: ClosureCheckpoint,
 }
@@ -166,6 +216,75 @@ impl PathClosure {
             Self::Aperiodic(_) => Some("NO PERIOD".to_string()),
             Self::Voices(voices) => Some(voice_caption(voices)),
         }
+    }
+
+    /// Sustained tones for the two frequencies this closure already named.
+    ///
+    /// Graphs, fields, and unrecognized creations invent none. The capsule
+    /// is not consulted again and is not changed.
+    #[must_use]
+    pub fn oscillator_tones(&self) -> Option<OscillatorTones> {
+        let pair = match self {
+            Self::Graph | Self::Field | Self::Unsupported => return None,
+            Self::Periodic(periodic) => [
+                oscillator_tone(&periodic.x_frequency_text, periodic.x_cycles_per_unit),
+                oscillator_tone(&periodic.y_frequency_text, periodic.y_cycles_per_unit),
+            ],
+            Self::Aperiodic(aperiodic) => [
+                oscillator_tone(&aperiodic.x_frequency_text, aperiodic.x_cycles_per_unit),
+                oscillator_tone(&aperiodic.y_frequency_text, aperiodic.y_cycles_per_unit),
+            ],
+            Self::Voices(voices) => [
+                oscillator_tone(
+                    &voices.voices[0].frequency_text,
+                    voices.voices[0].cycles_per_unit,
+                ),
+                oscillator_tone(
+                    &voices.voices[1].frequency_text,
+                    voices.voices[1].cycles_per_unit,
+                ),
+            ],
+        };
+        Some(OscillatorTones {
+            reference_hz: OSCILLATOR_TONE_REFERENCE_HZ,
+            voices: pair,
+        })
+    }
+}
+
+impl OscillatorTones {
+    /// Two held sines at the mapped hertz. Absent when either tone has no hz.
+    ///
+    /// The type 0 MIDI projection keeps one note when two start together,
+    /// so this chord is the PCM hearing. The melody file stays the sampled
+    /// curve.
+    #[must_use]
+    pub fn sound(&self) -> Option<SoundSpec> {
+        let left = self.voices[0].hz?;
+        let right = self.voices[1].hz?;
+        Some(SoundSpec::chord(
+            &[left, right],
+            OSCILLATOR_TONE_SECONDS,
+            OSCILLATOR_TONE_GAIN,
+        ))
+    }
+
+    /// Terminal lines for the tone reading. Empty of any period claim.
+    #[must_use]
+    pub fn report_lines(&self) -> Vec<String> {
+        let mut lines = vec![format!(
+            "tones basis=ideal reference_hz={}",
+            self.reference_hz
+        )];
+        for (index, voice) in self.voices.iter().enumerate() {
+            let mut line = format!("tone {} freq={}", index + 1, voice.frequency_text);
+            if let Some(hz) = voice.hz {
+                line.push_str(" hz=");
+                line.push_str(&hz.to_string());
+            }
+            lines.push(line);
+        }
+        lines
     }
 }
 
@@ -265,7 +384,9 @@ fn analyze_parametric(creation: &StudioCreation) -> PathClosure {
         PeriodFinding::Unresolved => PathClosure::Unsupported,
         PeriodFinding::Aperiodic => PathClosure::Aperiodic(AperiodicClosure {
             x_frequency_text: x_freq.text(),
+            x_cycles_per_unit: cycles_per_unit(&x_freq),
             y_frequency_text: y_freq.text(),
+            y_cycles_per_unit: cycles_per_unit(&y_freq),
             window_end,
         }),
         PeriodFinding::Periodic(period) => {
@@ -274,7 +395,9 @@ fn analyze_parametric(creation: &StudioCreation) -> PathClosure {
                 period_text: period.text.clone(),
                 period: period.value,
                 x_frequency_text: x_freq.text(),
+                x_cycles_per_unit: cycles_per_unit(&x_freq),
                 y_frequency_text: y_freq.text(),
+                y_cycles_per_unit: cycles_per_unit(&y_freq),
                 x_cycles: integer_cycles(&x_freq, &period),
                 y_cycles: integer_cycles(&y_freq, &period),
                 window_periods: whole_periods_exact(tmax - tmin, &period),
@@ -343,7 +466,34 @@ fn analyze_program(creation: &StudioCreation) -> PathClosure {
 fn voice_fact(frequency: &Frequency, span: f64) -> VoiceFact {
     VoiceFact {
         frequency_text: frequency.text(),
+        cycles_per_unit: cycles_per_unit(frequency),
         window_cycles: cycle_text(frequency, span),
+    }
+}
+
+fn cycles_per_unit(frequency: &Frequency) -> f64 {
+    if frequency.den == 0 {
+        return f64::NAN;
+    }
+    let mut value = frequency.num as f64 / frequency.den as f64;
+    if frequency.rad != 1 {
+        value *= (frequency.rad as f64).sqrt();
+    }
+    value
+}
+
+fn oscillator_tone(frequency_text: &str, cycles_per_unit: f64) -> OscillatorTone {
+    let hz = if cycles_per_unit.is_finite() && cycles_per_unit != 0.0 {
+        let hz = f64::from(OSCILLATOR_TONE_REFERENCE_HZ) * cycles_per_unit.abs();
+        let hz = hz as f32;
+        (hz.is_finite() && hz > 0.0).then_some(hz)
+    } else {
+        None
+    };
+    OscillatorTone {
+        frequency_text: frequency_text.to_string(),
+        cycles_per_unit,
+        hz,
     }
 }
 
@@ -1357,5 +1507,111 @@ mod tests {
         assert!(matches!(PathClosure::of(&three), PathClosure::Graph));
         let lone = StudioCreation::new("cos(2*pi*x)", 0.0, 1.0, 1.0).expect("one graph");
         assert!(matches!(PathClosure::of(&lone), PathClosure::Graph));
+    }
+
+    fn tone_ratio(tones: &super::OscillatorTones) -> f32 {
+        let left = tones.voices[0].hz.expect("left hz");
+        let right = tones.voices[1].hz.expect("right hz");
+        right / left
+    }
+
+    #[test]
+    fn named_frequencies_sound_without_replacing_the_melody_or_the_capsule() {
+        let full = bundled("full-return");
+        let capsule = full.to_num_file();
+        let closure = PathClosure::of(&full);
+        let tones = closure.oscillator_tones().expect("full-return tones");
+        assert_eq!(full.to_num_file(), capsule);
+        assert_eq!(tones.reference_hz, super::OSCILLATOR_TONE_REFERENCE_HZ);
+        assert_eq!(tones.voices[0].frequency_text, "1");
+        assert_eq!(tones.voices[0].hz, Some(110.0));
+        assert_eq!(tones.voices[1].frequency_text, "17/12");
+        assert!((tone_ratio(&tones) - 17.0 / 12.0).abs() < 1e-5);
+        let sound = tones.sound().expect("full-return sound");
+        assert_eq!(sound.notes.len(), 2);
+        assert_eq!(sound.notes[0].freq, tones.voices[0].hz.expect("root"));
+        assert_eq!(sound.notes[1].freq, tones.voices[1].hz.expect("upper"));
+        assert!(
+            sound
+                .notes
+                .iter()
+                .all(|note| note.start == 0.0 && note.dur == sound.duration)
+        );
+        let melody = full.to_melody(32);
+        assert!(melody.notes.len() > 2);
+        assert_ne!(melody, sound);
+        let upper_only =
+            crate::sound::SoundSpec::tone(sound.notes[1].freq, sound.duration, sound.notes[1].amp);
+        assert_eq!(
+            sound.midi(),
+            upper_only.midi(),
+            "two tones that start together are not a MIDI chord"
+        );
+        assert_ne!(melody.midi(), sound.midi());
+        let report = tones.report_lines().join("\n");
+        assert!(report.contains("reference_hz=110"), "{report}");
+        assert!(report.contains("freq=17/12"), "{report}");
+        assert!(!report.contains("period"), "{report}");
+        assert!(
+            closure
+                .report_lines()
+                .iter()
+                .all(|line| !line.contains("hz=")),
+            "the period report does not become a pitch"
+        );
+
+        let almost = PathClosure::of(&bundled("almost-home"))
+            .oscillator_tones()
+            .expect("almost-home tones");
+        assert_eq!(almost.voices[0].frequency_text, "1");
+        assert_eq!(almost.voices[1].frequency_text, "sqrt(2)");
+        let almost_ratio = tone_ratio(&almost);
+        assert!((almost_ratio - 2f32.sqrt()).abs() < 1e-5);
+        assert!((almost_ratio - 17.0 / 12.0).abs() > 1e-3);
+        assert!((almost_ratio - 7.0 / 5.0).abs() > 1e-2);
+        let full_upper = tones.voices[1].hz.expect("full upper");
+        let almost_upper = almost.voices[1].hz.expect("almost upper");
+        assert!((full_upper - almost_upper).abs() > 0.2);
+
+        let same = PathClosure::of(&bundled("same-place"));
+        assert!(
+            same.status_caption()
+                .expect("caption")
+                .contains("HALF: PLACE NOT STATE")
+        );
+        let same_tones = same.oscillator_tones().expect("same-place tones");
+        assert_eq!(same_tones.voices[0].frequency_text, "2");
+        assert_eq!(same_tones.voices[1].frequency_text, "3");
+
+        let closing = PathClosure::of(&bundled("closing-voices"))
+            .oscillator_tones()
+            .expect("closing tones");
+        let shorter = PathClosure::of(&bundled("shorter-window"))
+            .oscillator_tones()
+            .expect("shorter tones");
+        assert_eq!(closing.voices[0].frequency_text, "1");
+        assert_eq!(closing.voices[1].frequency_text, "17/12");
+        assert_eq!(closing.voices[1].hz, shorter.voices[1].hz);
+
+        let wandering = PathClosure::of(&bundled("wandering-voices"))
+            .oscillator_tones()
+            .expect("wandering tones");
+        assert_eq!(wandering.voices[1].frequency_text, "sqrt(2)");
+        assert!((tone_ratio(&wandering) - 2f32.sqrt()).abs() < 1e-5);
+
+        assert!(
+            PathClosure::of(&bundled("simple-zero"))
+                .oscillator_tones()
+                .is_none()
+        );
+        let graph = StudioCreation::new("sin(x)", -1.0, 1.0, 1.0).expect("graph");
+        assert!(PathClosure::of(&graph).oscillator_tones().is_none());
+        let plain = StudioCreation::new_parametric("cos(t)", "sin(2*t)", 0.0, 1.0, 1.0)
+            .expect("plain trig");
+        assert!(PathClosure::of(&plain).oscillator_tones().is_none());
+        let sum =
+            StudioCreation::new_parametric("cos(2*pi*t)+cos(6*pi*t)", "sin(2*pi*t)", 0.0, 1.0, 1.0)
+                .expect("sum");
+        assert!(PathClosure::of(&sum).oscillator_tones().is_none());
     }
 }

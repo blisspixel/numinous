@@ -344,7 +344,11 @@ reverses. An overlay of two harmonic oscillators reports `closure` with kind
 the model has one. `shorter-window` uses the same oscillators as
 `closing-voices` and shows that those counts need not be the period.
 `wandering-voices` has no positive common period. A picture is not the proof.
-The trial does not gate play.
+When that closure names two frequencies, the App plays them as sustained
+tones. Frequency `1` is 110 Hz, and each other named frequency is 110 Hz
+times its cycles per unit time. The sung melody and `melody.mid` stay the
+sampled curve. `sqrt(2)` is not replaced by a nearby ratio. The half-period
+caption stays a caption. The trial does not gate play.
 
 Keep that work when you choose. `save_creation` returns canonical `.num` text,
 a native link, and an exact preview; graph or paired parametric source, pitch

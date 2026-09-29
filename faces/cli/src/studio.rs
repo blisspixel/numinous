@@ -836,7 +836,11 @@ pub(super) fn open_studio_report(
         "remix it: numinous fork \"{}\" --out my-remix.num",
         creation.to_link()
     ));
-    lines.extend(PathClosure::of(&creation).report_lines());
+    let closure = PathClosure::of(&creation);
+    lines.extend(closure.report_lines());
+    if let Some(tones) = closure.oscillator_tones() {
+        lines.extend(tones.report_lines());
+    }
     let pattern = creation.pattern_rows();
     for row in &pattern {
         lines.push(format!("pattern={}", row));

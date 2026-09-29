@@ -926,6 +926,9 @@ fn studio_creation_result(
     if let Some(value) = closure_json(&closure) {
         structured["closure"] = value;
     }
+    if let Some(tones) = closure.oscillator_tones() {
+        structured["tones"] = tones_json(&tones);
+    }
     attach_pattern(&mut structured, creation);
     if creation.kind() == numinous_core::StudioKind::Field {
         structured["field"] = json!({
@@ -957,6 +960,10 @@ fn studio_creation_result(
     if !closure_lines.is_empty() {
         text.push_str("\n\n");
         text.push_str(&closure_lines.join("\n"));
+    }
+    if let Some(tones) = closure.oscillator_tones() {
+        text.push('\n');
+        text.push_str(&tones.report_lines().join("\n"));
     }
     tool_structured(&text, structured)
 }
@@ -1010,6 +1017,25 @@ fn closure_json(closure: &numinous_core::PathClosure) -> Option<Value> {
             "windowEnd": checkpoint_json(&aperiodic.window_end),
         })),
     }
+}
+
+fn tones_json(tones: &numinous_core::OscillatorTones) -> Value {
+    let voices: Vec<Value> = tones
+        .voices
+        .iter()
+        .map(|voice| {
+            let mut item = json!({ "frequency": voice.frequency_text });
+            if let Some(hz) = voice.hz {
+                item["hz"] = json!(hz);
+            }
+            item
+        })
+        .collect();
+    json!({
+        "basis": "ideal",
+        "referenceHz": tones.reference_hz,
+        "voices": voices,
+    })
 }
 
 fn checkpoint_json(checkpoint: &numinous_core::ClosureCheckpoint) -> Value {

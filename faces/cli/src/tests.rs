@@ -4567,6 +4567,12 @@ fn open_studio_reports_returning_home_closure() {
     let full = open_studio_report("full-return", 24, 8).expect("full-return");
     assert!(full.contains("closure=periodic period=12"), "{full}");
     assert!(full.contains("cycles_in_period x=12 y=17"), "{full}");
+    assert!(
+        full.contains("tones basis=ideal reference_hz=110"),
+        "{full}"
+    );
+    assert!(full.contains("tone 1 freq=1"), "{full}");
+    assert!(full.contains("tone 2 freq=17/12"), "{full}");
 
     let same = open_studio_report("same-place", 24, 8).expect("same-place");
     assert!(
@@ -4578,6 +4584,9 @@ fn open_studio_reports_returning_home_closure() {
     let almost = open_studio_report("almost-home", 24, 8).expect("almost-home");
     assert!(almost.contains("closure=aperiodic"), "{almost}");
     assert!(almost.contains("y_freq=sqrt(2)"), "{almost}");
+    assert!(almost.contains("tone 2 freq=sqrt(2)"), "{almost}");
+    assert!(!almost.contains("tone 2 freq=17/12"), "{almost}");
+    assert!(!almost.contains("tone 2 freq=7/5"), "{almost}");
     assert!(
         almost.contains("ideal motion has no positive common period"),
         "{almost}"

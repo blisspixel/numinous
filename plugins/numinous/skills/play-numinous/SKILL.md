@@ -109,7 +109,11 @@ an explicit aperiodic, including the half-period trap where position
 returns and state does not. An overlay of two harmonic oscillators returns
 `closure` with kind `voices`: ideal cycles in the window, and a common
 period when the model has one. `shorter-window` shows why those counts are
-not the period. `wandering-voices` has no positive common period. Follow a
+not the period. `wandering-voices` has no positive common period. When that closure names
+two frequencies, `structuredContent.tones` names them as sustained tones.
+Frequency `1` is 110 Hz, and each other named frequency is 110 Hz times
+its cycles per unit time. The sung melody stays the sampled curve.
+`sqrt(2)` is not replaced by a nearby ratio. Follow a
 Returning home row, then read `closure` rather than trusting the picture.
 After `another-ratio`, the App walk continues into `closing-voices`, then
 `shorter-window`, then `wandering-voices`. The trial does not gate play.
