@@ -138,7 +138,7 @@ pitch map changes, and when the player leaves and returns. An untouched return
 keeps preview and identity state. These are reproducible experiment parameters,
 not an inferred biography or a claim about lived experience.
 
-**Built for the core document, the MCP preview, and the CLI resume.**
+**Built for the core document, the MCP preview, the CLI resume, and the App preview.**
 `NUMINOUS_PROJECT 1` keeps a chosen question, one closed next call, exact
 room references, selected evidence links, and an optional canonical
 creation. Keeping, importing, and correcting are distinct explicit acts.
@@ -155,9 +155,11 @@ replay, local-ID collision handling, correction provenance, absence after
 erasure, untrusted text treated as data, and removal of the project file
 without taking the journal. `portable-1` remains export-only and does not
 import a project. The CLI resume is held by a process-local workspace
-write that leaves both files byte-for-byte. The capability quest in
-`PROGRESSION.md` remains later: a law the player can apply elsewhere,
-revise, or give to another player.
+write that leaves both files byte-for-byte. The App preview is held by a
+paused creation: Enter starts it, Esc leaves, and both the project file
+and the journal stay byte-for-byte, with no journey award. The capability
+quest in `PROGRESSION.md` remains later: a law the player can apply
+elsewhere, revise, or give to another player.
 
 Later, test an asynchronous experiment relay over the existing creation/fork
 boundary. Each participant chooses the artifact and context they share; a

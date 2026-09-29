@@ -39,6 +39,7 @@ mod overlays;
 mod playtest;
 mod postcard;
 mod presentation;
+mod project_resume;
 mod radio_cache;
 mod room_input;
 mod room_runtime;
@@ -358,6 +359,8 @@ struct App {
     studio: bool,
     /// The typed Studio expression and its last-good parse state.
     studio_panel: studio_panel::StudioPanel,
+    /// The kept question, while its preview is on screen.
+    project_resume: Option<project_resume::Plate>,
     /// The F4 naming step: a share waiting for its title and signature.
     share_naming: Option<ShareNaming>,
     /// The author name from the last named share, offered on the next one.
@@ -624,6 +627,7 @@ impl App {
             show_crossfade_frames: 0,
             studio: false,
             studio_panel: studio_panel::StudioPanel::default(),
+            project_resume: None,
             share_naming: None,
             remembered_author: String::new(),
             gallery: None,
@@ -696,6 +700,7 @@ impl App {
             .set_experiment_available(app.current_room_has_experiment());
         app.menu
             .set_construct_available(app.current_room_has_construction());
+        app.refresh_kept_project_menu();
         app
     }
 
@@ -1035,6 +1040,7 @@ impl App {
             .set_experiment_available(self.current_room_has_experiment() && !self.the_show);
         self.menu
             .set_construct_available(self.current_room_has_construction() && !self.the_show);
+        self.refresh_kept_project_menu();
     }
 
     fn open_activity_menu(&mut self, kind: menu::ActivityKind) {
@@ -1151,6 +1157,9 @@ impl App {
             menu::MenuIntent::ConstructRoom => {
                 self.close_menu();
                 self.open_room_construction();
+            }
+            menu::MenuIntent::OpenKeptProject => {
+                self.open_kept_project();
             }
             menu::MenuIntent::Close | menu::MenuIntent::ResumeActivity => self.close_menu(),
             menu::MenuIntent::Choose(choice) => self.activate_menu_choice(choice),
@@ -1478,6 +1487,7 @@ impl App {
     }
 
     fn exit_studio(&mut self) {
+        self.project_resume = None;
         self.studio = false;
         // Any route out of the Studio also leaves the Gallery and any open
         // naming step, so a menu or controller exit cannot strand either
@@ -2050,6 +2060,10 @@ impl App {
             );
         }
 
+        if let Some(plate) = &self.project_resume {
+            project_resume::draw(raster, &plate.lines, width, height);
+        }
+
         if self.console.is_open() {
             console::draw(raster, &self.console, width, height);
         }
@@ -2508,6 +2522,19 @@ impl ApplicationHandler for App {
                         Key::Named(NamedKey::ArrowDown) => self.gallery_move(0, 1),
                         _ => {}
                     }
+                } else if self.studio && self.project_resume.is_some() {
+                    // The kept question owns the keys until the player starts
+                    // the creation or leaves. Typing here would remix it.
+                    match logical_key {
+                        Key::Named(NamedKey::Escape) | Key::Named(NamedKey::Tab) => {
+                            self.dismiss_kept_project();
+                        }
+                        Key::Named(NamedKey::Enter) => self.confirm_kept_project(),
+                        Key::Named(NamedKey::F1) => {
+                            self.studio_panel.toggle_help();
+                        }
+                        _ => {}
+                    }
                 } else if self.studio && self.share_naming.is_some() {
                     // The naming step owns the keyboard until the share is
                     // named or abandoned; formula editing waits underneath.
@@ -2590,6 +2617,14 @@ impl ApplicationHandler for App {
                                 self.set_studio_edit_sound(spec);
                             }
                         }
+                        _ => {}
+                    }
+                } else if self.project_resume.is_some() {
+                    match logical_key {
+                        Key::Named(NamedKey::Escape) | Key::Named(NamedKey::Tab) => {
+                            self.dismiss_kept_project();
+                        }
+                        Key::Named(NamedKey::Enter) => self.confirm_kept_project(),
                         _ => {}
                     }
                 } else {

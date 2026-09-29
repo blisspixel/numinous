@@ -249,11 +249,6 @@ impl StudioPanel {
     }
 
     /// Whether a reopened creation is waiting in its paused preview.
-    ///
-    /// The run path reads the pin through the panel's own drawing and through
-    /// [`Self::confirm_opened`]; these observers exist for the tests that
-    /// prove the pin's lifecycle.
-    #[cfg(test)]
     pub(crate) fn opened_paused(&self) -> bool {
         self.opened.as_ref().is_some_and(|opened| opened.paused)
     }

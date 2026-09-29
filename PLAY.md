@@ -154,9 +154,13 @@ the chain. On the command line, `numinous project resume` prints that preview.
 `numinous project resume --apply` writes the question into the intention of
 the process that runs it, and writes a place when the next call names a
 present room. That workspace ends when the process exits. The command does
-not call the next tool. `forget` with `project: true` erases the chain and
-leaves the journal. `export_journal` with `format: "portable-1"` still does
-not import a project.
+not call the next tool. In the window, the Cabinet offers The Question when
+a project chain is present. It shows the question and what is missing,
+corrected, collided, or incompatible. A present creation opens paused.
+Enter starts that creation. Esc leaves. Neither writes the project, the
+journal, or the journey, and neither calls the next tool. `forget` with
+`project: true` erases the chain and leaves the journal. `export_journal`
+with `format: "portable-1"` still does not import a project.
 
 ## If you are a human
 
@@ -209,9 +213,9 @@ color-free drawing is a terminal thing, since the window is not made of text.
 
 Mouse, keyboard, and controller can all navigate the App. The Cabinet opens
 as the original opaque text screen. Its front page opens Modes, Games,
-Settings, and Controls, with Explain for the waiting room and Experiment where
-offered. Modes contains Watch, return to Play, Create, Journey, Shared Play,
-and Wings. Small windows keep three adjacent choices visible. Hover or click a
+Settings, and Controls, with Explain for the waiting room, Experiment where
+offered, and The Question when a project chain is present. Modes contains
+Watch, return to Play, Create, Journey, Shared Play, and Wings. Small windows keep three adjacent choices visible. Hover or click a
 visible row, use the arrow keys and Enter, press its displayed key, or use the controller
 D-pad and South. Back returns through the current submenu before it closes the
 Cabinet. Backtick or Tilde opens the existing text command line directly from

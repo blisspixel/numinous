@@ -87,7 +87,8 @@ For a further mathematical treatment, see
 [MIT's Lissajous exercises, section 3](https://math.mit.edu/classes/18.353J/PSetAnswers/AnswerPSet_2024_07.pdf).
 This guide is a playable contrast, not evidence that a participant learned or
 enjoyed it. The optional walk, the transfer, and the overlay cycle reading are
-built. A kept project that resumes the question remains open in
-[PROGRESSION.md](../PROGRESSION.md).
+built. A kept project can be resumed from MCP, the command line, and the
+Cabinet. The Cabinet opens a present creation paused. The wider quest stays
+open in [PROGRESSION.md](../PROGRESSION.md).
 
 </details>
