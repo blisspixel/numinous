@@ -611,7 +611,7 @@ impl StudioPanel {
         GraphSlope::of_expression(program.voice_expression())
     }
 
-    /// One tone per frequency of a two-term parametric sum.
+    /// One tone per frequency of a parametric sum this slice can name.
     ///
     /// A path closure already owns its own tones, and this reading does not
     /// replace them. The capsule and its MIDI file stay the source.
@@ -649,11 +649,10 @@ impl StudioPanel {
     /// shared defaults. Gallery playback never changes these numbers. When
     /// closure names two frequencies, the voice is those sustained tones.
     /// When the open graph has a slope this slice can name, the voice is
-    /// that graph and its slope on one shared axis. When both coordinates
-    /// of a parametric path are two-term sums closure already accepts, the
-    /// voice is one tone per recognized frequency. Otherwise it is the
-    /// sampled melody. The capsule, the postcard, and the MIDI file stay
-    /// the player's source.
+    /// that graph and its slope on one shared axis. When a parametric path
+    /// has a sum of oscillators this slice can name, the voice is one tone
+    /// per recognized frequency. Otherwise it is the sampled melody. The
+    /// capsule, the postcard, and the MIDI file stay the player's source.
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
         if let Some(sound) = self.oscillator_tone_sound() {
             return Some(sound);
@@ -3134,6 +3133,65 @@ mod tests {
         assert_ne!(live.midi(), creation.to_midi_melody(32).midi());
         let file = creation.to_num_file();
         assert!(file.contains("cos(2*pi*t)+0.5*cos(6*pi*t)"));
+        assert!(!file.contains("PARTIAL"));
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 200);
+        assert!(context.contains("PARTIAL"), "{context}");
+        assert!(context.contains("  1  3"), "{context}");
+        assert!(!context.contains("PERIOD"), "{context}");
+
+        let postcard = panel.postcard_rgba(200, numinous_core::Era::Modern, None, None);
+        let mut raster = Raster::new(200, 200);
+        let program = creation.program().expect("program");
+        let _ = numinous_app::studio_render::draw_parametric(
+            &mut raster,
+            numinous_app::studio_render::CurveLayout {
+                width: 200,
+                height: 200,
+                top: 120.0,
+                bottom_margin: 48.0,
+            },
+            creation.xmin(),
+            creation.xmax(),
+            |t| program.point(t, creation.a()),
+        );
+        let mut rgba = raster.to_rgba();
+        numinous_core::Era::Modern.apply(&mut rgba, 200, 200);
+        assert_eq!(
+            postcard[200 * 4 * 128..200 * 4 * 148],
+            rgba[200 * 4 * 128..200 * 4 * 148],
+            "the postcard draws the player's path"
+        );
+    }
+
+    #[test]
+    fn a_sum_on_one_coordinate_draws_its_first_term_and_the_postcard_stays_the_source() {
+        let source = "x(t)=cos(2*pi*t)+0.5*cos(6*pi*t); y(t)=sin(2*pi*t)";
+        let circle = "x(t)=cos(2*pi*t); y(t)=sin(2*pi*t)";
+        let live_band = |source: &str| {
+            let mut panel = StudioPanel::new(source).expect(source);
+            panel.toggle_help();
+            let mut raster = Raster::new(200, 150);
+            panel.draw(&mut raster, InputMode::KeyboardMouse, 200, 150);
+            raster.to_rgba()[200 * 4 * 80..200 * 4 * 110].to_vec()
+        };
+        assert_ne!(
+            live_band(source),
+            live_band(circle),
+            "the first circle and the wider path share a frame the plain circle does not"
+        );
+
+        let panel = StudioPanel::new(source).expect("panel");
+        let creation = panel.current_creation().expect("creation");
+        let partial = numinous_core::HarmonicPartial::of(&creation).expect("partial");
+        assert_eq!(partial.x_terms.len(), 2);
+        assert_eq!(partial.y_terms.len(), 1);
+        let live = panel.current_sound().expect("tones");
+        assert_eq!(live, partial.sound().expect("chord"));
+        assert_ne!(live, creation.to_melody(32));
+        assert_eq!(creation.to_midi_melody(32), creation.to_melody(32));
+        let file = creation.to_num_file();
+        assert!(file.contains("cos(2*pi*t)+0.5*cos(6*pi*t)"));
+        assert!(file.contains("sin(2*pi*t)"));
         assert!(!file.contains("PARTIAL"));
         let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 200);
         assert!(context.contains("PARTIAL"), "{context}");

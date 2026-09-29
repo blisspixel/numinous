@@ -4644,7 +4644,15 @@ fn open_studio_reports_the_partial_of_a_two_term_path() {
     let plain = report("cos(2*pi*t)", "sin(2*pi*t)");
     assert!(!plain.contains("partial "), "{plain}");
     let one_sum = report("cos(2*pi*t)+cos(6*pi*t)", "sin(2*pi*t)");
-    assert!(!one_sum.contains("partial "), "{one_sum}");
+    assert!(one_sum.contains("partial basis=sum"), "{one_sum}");
+    assert!(one_sum.contains("term 1 freq=1 hz=110"), "{one_sum}");
+    assert!(one_sum.contains("term 2 freq=3 hz=330"), "{one_sum}");
+    assert!(
+        one_sum.contains("xexpr=cos(2*pi*t)+cos(6*pi*t)"),
+        "{one_sum}"
+    );
+    assert!(one_sum.contains("yexpr=sin(2*pi*t)"), "{one_sum}");
+    assert!(!one_sum.contains("closure="), "{one_sum}");
 }
 
 #[test]

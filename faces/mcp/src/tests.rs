@@ -8382,6 +8382,71 @@ fn opening_a_two_term_path_reports_its_partial() {
         structured["partial"]
     );
 
+    let one_sum = call(
+        "save_creation",
+        json!({
+            "x_expr": "cos(2*pi*t)+0.5*cos(6*pi*t)",
+            "y_expr": "sin(2*pi*t)",
+            "tmin": 0.0,
+            "tmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(one_sum["result"]["isError"], false, "{one_sum}");
+    assert_eq!(
+        one_sum["result"]["structuredContent"]["partial"]["terms"][0]["frequency"],
+        "1"
+    );
+    assert_eq!(
+        one_sum["result"]["structuredContent"]["partial"]["terms"][1]["frequency"],
+        "3"
+    );
+    assert_eq!(
+        one_sum["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        one_sum["result"]["structuredContent"]["partial"]["terms"][0]["hz"],
+        110.0
+    );
+    assert_eq!(
+        one_sum["result"]["structuredContent"]["partial"]["terms"][1]["hz"],
+        330.0
+    );
+    assert!(
+        one_sum["result"]["structuredContent"]
+            .get("closure")
+            .is_none(),
+        "{one_sum}"
+    );
+    assert!(
+        one_sum["result"]["structuredContent"]
+            .get("tones")
+            .is_none(),
+        "{one_sum}"
+    );
+    assert!(
+        one_sum["result"]["structuredContent"]
+            .get("slope")
+            .is_none(),
+        "{one_sum}"
+    );
+    let one_file = one_sum["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(
+        one_file.contains("cos(2*pi*t)+0.5*cos(6*pi*t)"),
+        "{one_file}"
+    );
+    assert!(one_file.contains("sin(2*pi*t)"), "{one_file}");
+    assert!(!one_file.contains("PARTIAL"), "{one_file}");
+    let opened_one = call("open_creation", json!({"capsule": one_file}));
+    assert_eq!(opened_one["result"]["isError"], false, "{opened_one}");
+    assert_eq!(
+        opened_one["result"]["structuredContent"]["partial"],
+        one_sum["result"]["structuredContent"]["partial"]
+    );
+
     let plain = call(
         "save_creation",
         json!({"x_expr": "cos(2*pi*t)", "y_expr": "sin(2*pi*t)", "tmin": 0.0, "tmax": 1.0}),

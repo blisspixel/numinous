@@ -10,10 +10,11 @@
 //! The tones are the oscillators. The sampled melody is a different reading
 //! and is left untouched.
 //!
-//! A parametric path whose coordinates are each a sum of two such oscillators
-//! can show the first term beside the path and sound one tone per recognized
-//! frequency. That reading does not claim a period. The player's source stays
-//! the source.
+//! A parametric path whose coordinates are sums of such oscillators can show
+//! the first term beside the path and sound one tone per recognized
+//! frequency. One coordinate may be a single oscillator when the other is a
+//! two-term sum. That reading does not claim a period. The player's source
+//! stays the source.
 
 use crate::sound::SoundSpec;
 use crate::studio::{Expr, Func, Op, StudioCreation, StudioKind, StudioProgram, eval_named};
@@ -93,18 +94,20 @@ pub struct OscillatorTone {
     pub hz: Option<f32>,
 }
 
-/// The first partial sum of a two-term parametric path.
+/// The first partial of a parametric path that sums oscillators.
 ///
-/// Both coordinates are sums of two oscillators in the form closure already
-/// accepts, and each speed is a frequency closure can name. Terms are in
-/// source order. A subtraction is stored as a sum with the second term
-/// negated, so the two terms add to the coordinate the player wrote.
+/// At least one coordinate is a sum of two oscillators in the form closure
+/// already accepts. The other is that same kind of sum, or one oscillator.
+/// Each speed is a frequency closure can name. Terms are in source order. A
+/// subtraction is stored as a sum with the second term negated, so the
+/// stored terms add to the coordinate the player wrote. The drawn point is
+/// the first term of each coordinate.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HarmonicPartial {
-    /// First term of `x(t)`, then its signed second term.
-    pub x_terms: [Expr; 2],
-    /// First term of `y(t)`, then its signed second term.
-    pub y_terms: [Expr; 2],
+    /// Terms of `x(t)` in source order. One term, or two.
+    pub x_terms: Vec<Expr>,
+    /// Terms of `y(t)` in source order. One term, or two.
+    pub y_terms: Vec<Expr>,
     /// Recognized frequencies in first-seen order. One tone each.
     pub frequencies: Vec<OscillatorTone>,
 }
@@ -312,9 +315,11 @@ impl OscillatorTones {
 impl HarmonicPartial {
     /// Read one parametric creation. Anything else is absent.
     ///
-    /// A single oscillator pair stays with closure. A third term, a graph,
-    /// a field, and an overlay are absent. The parameter must be one of the
-    /// exact values closure already accepts. The capsule is not modified.
+    /// A single oscillator pair stays with closure. A third term, a product
+    /// of two oscillators, a graph, a field, and an overlay are absent. One
+    /// coordinate may be a single oscillator when the other is a two-term
+    /// sum. The parameter must be one of the exact values closure already
+    /// accepts. The capsule is not modified.
     #[must_use]
     pub fn of(creation: &StudioCreation) -> Option<Self> {
         if creation.kind() != StudioKind::Parametric {
@@ -333,8 +338,11 @@ impl HarmonicPartial {
         };
         let parameter = Exact::from_f64(creation.a())?;
         let sliders = creation.sliders();
-        let x_terms = split_terms(&x_expression, parameter, sliders)?;
-        let y_terms = split_terms(&y_expression, parameter, sliders)?;
+        let x_terms = coordinate_terms(&x_expression, parameter, sliders)?;
+        let y_terms = coordinate_terms(&y_expression, parameter, sliders)?;
+        if x_terms.len() < 2 && y_terms.len() < 2 {
+            return None;
+        }
         let mut frequencies = Vec::new();
         for term in x_terms.iter().chain(y_terms.iter()) {
             if frequencies
@@ -346,8 +354,8 @@ impl HarmonicPartial {
             frequencies.push(oscillator_tone(&term.frequency_text, term.cycles));
         }
         Some(Self {
-            x_terms: [x_terms[0].expression.clone(), x_terms[1].expression.clone()],
-            y_terms: [y_terms[0].expression.clone(), y_terms[1].expression.clone()],
+            x_terms: x_terms.into_iter().map(|term| term.expression).collect(),
+            y_terms: y_terms.into_iter().map(|term| term.expression).collect(),
             frequencies,
         })
     }
@@ -360,8 +368,8 @@ impl HarmonicPartial {
         a: f64,
         sliders: &[crate::slider::StudioSlider],
     ) -> Option<(f64, f64)> {
-        let x = eval_named(&self.x_terms[0], t, a, sliders);
-        let y = eval_named(&self.y_terms[0], t, a, sliders);
+        let x = eval_named(self.x_terms.first()?, t, a, sliders);
+        let y = eval_named(self.y_terms.first()?, t, a, sliders);
         (x.is_finite() && y.is_finite()).then_some((x, y))
     }
 
@@ -697,6 +705,17 @@ struct SignedTerm {
     expression: Expr,
     frequency_text: String,
     cycles: f64,
+}
+
+fn coordinate_terms(
+    expr: &Expr,
+    parameter: Exact,
+    sliders: &[crate::slider::StudioSlider],
+) -> Option<Vec<SignedTerm>> {
+    if let Some(pair) = split_terms(expr, parameter, sliders) {
+        return Some(pair.into_iter().collect());
+    }
+    Some(vec![signed_term(expr, parameter, sliders)?])
 }
 
 fn split_terms(
@@ -1322,7 +1341,7 @@ mod tests {
         HarmonicPartial, OSCILLATOR_TONE_REFERENCE_HZ, OSCILLATOR_TONE_SECONDS, PathClosure,
         PeriodicClosure,
     };
-    use crate::studio::StudioCreation;
+    use crate::studio::{Expr, StudioCreation};
 
     fn bundled(id: &str) -> StudioCreation {
         StudioCreation::from_capsule(id).expect("bundled experiment")
@@ -1867,13 +1886,16 @@ mod tests {
 
         for (x_source, y_source) in [
             ("cos(2*pi*t)", "sin(2*pi*t)"),
-            ("cos(2*pi*t)+cos(6*pi*t)", "sin(2*pi*t)"),
+            ("cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)", "sin(2*pi*t)"),
+            ("cos(2*pi*t)", "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)"),
             (
                 "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)",
                 "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)",
             ),
             ("cos(t)+cos(3*t)", "sin(t)+sin(3*t)"),
             ("cos(2*pi*t)+t", "sin(2*pi*t)+t"),
+            ("cos(2*pi*t)*cos(6*pi*t)", "sin(2*pi*t)"),
+            ("-(cos(2*pi*t)+cos(6*pi*t))", "sin(2*pi*t)"),
         ] {
             let creation =
                 StudioCreation::new_parametric(x_source, y_source, 0.0, 1.0, 1.0).expect(x_source);
@@ -1884,5 +1906,121 @@ mod tests {
         assert!(HarmonicPartial::of(&bundled("full-return")).is_none());
         let inexact = StudioCreation::new_parametric(x, y, 0.0, 1.0, 0.1).expect("knob");
         assert!(HarmonicPartial::of(&inexact).is_none());
+    }
+
+    #[test]
+    fn a_sum_on_one_coordinate_names_its_first_partial() {
+        let x = "cos(2*pi*t)+0.5*cos(6*pi*t)";
+        let y = "sin(2*pi*t)";
+        let creation = StudioCreation::new_parametric(x, y, 0.0, 1.0, 1.0).expect("one sum");
+        let file = creation.to_num_file();
+        let partial = HarmonicPartial::of(&creation).expect("partial");
+        assert_eq!(creation.to_num_file(), file);
+        assert!(file.contains(x));
+        assert!(!file.contains("PARTIAL"));
+        assert!(matches!(
+            PathClosure::of(&creation),
+            PathClosure::Unsupported
+        ));
+        assert!(PathClosure::of(&creation).oscillator_tones().is_none());
+        assert_eq!(partial.x_terms.len(), 2);
+        assert_eq!(partial.y_terms.len(), 1);
+        assert_eq!(partial.status_caption(), "PARTIAL  1  3");
+        assert_eq!(
+            partial.report_lines(),
+            vec![
+                "partial basis=sum".to_string(),
+                "term 1 freq=1 hz=110".to_string(),
+                "term 2 freq=3 hz=330".to_string(),
+            ]
+        );
+        let sound = partial.sound().expect("tones");
+        assert_eq!(sound.notes.len(), 2);
+        assert_eq!(sound.notes[0].freq, 110.0);
+        assert_eq!(sound.notes[1].freq, 330.0);
+        assert_ne!(sound, creation.to_melody(32));
+
+        let program = creation.program().expect("program");
+        for t in [0.0, 0.25, 0.5, 0.8] {
+            let point = program.point(t, 1.0).expect("path");
+            assert!(
+                (point.0 - term_sum(&partial.x_terms, t)).abs() < 1e-9,
+                "t={t}"
+            );
+            assert!(
+                (point.1 - term_sum(&partial.y_terms, t)).abs() < 1e-9,
+                "t={t}"
+            );
+            let first = partial.first_point(t, 1.0, &[]).expect("first term");
+            assert!((first.0 - t.mul_add(std::f64::consts::TAU, 0.0).cos()).abs() < 1e-9);
+            assert!((first.1 - t.mul_add(std::f64::consts::TAU, 0.0).sin()).abs() < 1e-9);
+        }
+
+        let subtracted =
+            StudioCreation::new_parametric("cos(2*pi*t)-0.5*cos(6*pi*t)", y, 0.0, 1.0, 1.0)
+                .expect("difference");
+        let difference = HarmonicPartial::of(&subtracted).expect("signed partial");
+        let point = subtracted
+            .program()
+            .expect("program")
+            .point(0.2, 1.0)
+            .expect("path");
+        assert!((point.0 - term_sum(&difference.x_terms, 0.2)).abs() < 1e-9);
+        assert!((point.1 - term_sum(&difference.y_terms, 0.2)).abs() < 1e-9);
+
+        let swapped = StudioCreation::new_parametric(
+            "cos(2*pi*t)",
+            "sin(2*pi*t)+0.5*sin(6*pi*t)",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("y sum");
+        let swapped = HarmonicPartial::of(&swapped).expect("y partial");
+        assert_eq!(swapped.x_terms.len(), 1);
+        assert_eq!(swapped.y_terms.len(), 2);
+        assert_eq!(swapped.frequencies[0].frequency_text, "1");
+        assert_eq!(swapped.frequencies[1].frequency_text, "3");
+
+        let leading =
+            StudioCreation::new_parametric("cos(6*pi*t)+cos(2*pi*t)", "sin(2*pi*t)", 0.0, 1.0, 1.0)
+                .expect("source order");
+        let leading = HarmonicPartial::of(&leading).expect("ordered partial");
+        assert_eq!(leading.status_caption(), "PARTIAL  3  1");
+        let first = leading.first_point(0.1, 1.0, &[]).expect("first written");
+        let written = crate::studio::eval(&leading.x_terms[0], 0.1, 1.0);
+        assert!((first.0 - written).abs() < 1e-9);
+        assert!((written - (6.0 * std::f64::consts::PI * 0.1).cos()).abs() < 1e-9);
+
+        let repeated = StudioCreation::new_parametric(
+            "cos(2*pi*t)+0.5*cos(2*pi*t)",
+            "sin(2*pi*t)",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("repeated");
+        let repeated_partial = HarmonicPartial::of(&repeated).expect("one tone");
+        assert_eq!(repeated_partial.frequencies.len(), 1);
+        assert_eq!(repeated_partial.frequencies[0].frequency_text, "1");
+        assert_eq!(repeated_partial.frequencies[0].hz, Some(110.0));
+        let at_zero = repeated
+            .program()
+            .expect("program")
+            .point(0.0, 1.0)
+            .expect("path");
+        assert!((at_zero.0 - 1.5).abs() < 1e-9);
+        let first = repeated_partial
+            .first_point(0.0, 1.0, &[])
+            .expect("first term");
+        assert!((first.0 - 1.0).abs() < 1e-9);
+        assert!((term_sum(&repeated_partial.x_terms, 0.0) - 1.5).abs() < 1e-9);
+    }
+
+    fn term_sum(terms: &[Expr], t: f64) -> f64 {
+        terms
+            .iter()
+            .map(|term| crate::studio::eval(term, t, 1.0))
+            .sum()
     }
 }
