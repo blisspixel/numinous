@@ -292,6 +292,13 @@ fn packaged_player_docs_name_creation_next() {
             "{name} must name the slope of sin(a*x) a packaged player can read"
         );
         assert!(
+            flattened.contains("first term")
+                && flattened.contains("same frame")
+                && flattened.contains("one tone per")
+                && flattened.contains("no partial reading"),
+            "{name} must name the two-term partial a packaged player can read"
+        );
+        assert!(
             flattened.contains("every graph sings in WAV")
                 && flattened.contains("MIDI stays the first curve"),
             "{name} must name overlay WAV mix and MIDI lead a packaged player can hear"
@@ -8321,6 +8328,72 @@ fn opening_sin_a_x_reports_its_slope() {
     assert!(
         sung["result"]["structuredContent"].get("slope").is_none(),
         "a song of the source is not this reading"
+    );
+}
+
+#[test]
+fn opening_a_two_term_path_reports_its_partial() {
+    let saved = call(
+        "save_creation",
+        json!({
+            "x_expr": "cos(2*pi*t)+0.5*cos(6*pi*t)",
+            "y_expr": "sin(2*pi*t)+0.5*sin(6*pi*t)",
+            "tmin": 0.0,
+            "tmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let structured = &saved["result"]["structuredContent"];
+    assert_eq!(structured["partial"]["basis"], "sum");
+    assert_eq!(structured["partial"]["terms"][0]["frequency"], "1");
+    assert_eq!(structured["partial"]["terms"][0]["hz"], 110.0);
+    assert_eq!(structured["partial"]["terms"][1]["frequency"], "3");
+    assert_eq!(structured["partial"]["terms"][1]["hz"], 330.0);
+    assert!(structured.get("slope").is_none(), "{structured}");
+    assert!(structured.get("closure").is_none(), "{structured}");
+    assert!(structured.get("tones").is_none(), "{structured}");
+    assert_eq!(structured["next"]["tool"], "fork_creation");
+    let num_file = structured["numFile"].as_str().expect("num file");
+    assert!(num_file.contains("cos(2*pi*t)+0.5*cos(6*pi*t)"));
+    let text = saved["result"]["content"][0]["text"]
+        .as_str()
+        .expect("text");
+    assert!(text.contains("partial basis=sum"), "{text}");
+    assert!(text.contains("term 2 freq=3 hz=330"), "{text}");
+
+    let opened = call("open_creation", json!({"capsule": num_file}));
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert_eq!(
+        opened["result"]["structuredContent"]["partial"],
+        structured["partial"]
+    );
+
+    let plain = call(
+        "save_creation",
+        json!({"x_expr": "cos(2*pi*t)", "y_expr": "sin(2*pi*t)", "tmin": 0.0, "tmax": 1.0}),
+    );
+    assert_eq!(plain["result"]["isError"], false, "{plain}");
+    assert!(
+        plain["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "{plain}"
+    );
+
+    let plotted = call(
+        "plot_expression",
+        json!({
+            "x_expr": "cos(2*pi*t)+0.5*cos(6*pi*t)",
+            "y_expr": "sin(2*pi*t)+0.5*sin(6*pi*t)"
+        }),
+    );
+    assert_eq!(plotted["result"]["isError"], false, "{plotted}");
+    assert!(
+        plotted["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "a plot is not this reading"
     );
 }
 

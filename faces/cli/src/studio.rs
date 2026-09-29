@@ -10,8 +10,8 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use numinous_core::{
-    DEFAULT_FIELD_MAX, DEFAULT_FIELD_MIN, FieldReading, FieldRequest, GraphSlope, PathClosure,
-    PlotRequest, PlotSource, SingRequest, SoundSpec, StudioCreation, StudioKind,
+    DEFAULT_FIELD_MAX, DEFAULT_FIELD_MIN, FieldReading, FieldRequest, GraphSlope, HarmonicPartial,
+    PathClosure, PlotRequest, PlotSource, SingRequest, SoundSpec, StudioCreation, StudioKind,
     StudioRequestError, StudioScale, StudioSlider, parse_field, sliders_from_specs,
     uses_field_vocabulary,
 };
@@ -844,6 +844,9 @@ pub(super) fn open_studio_report(
     }
     if let Some(slope) = GraphSlope::of_creation(&creation) {
         lines.extend(slope.report_lines());
+    }
+    if let Some(partial) = HarmonicPartial::of(&creation) {
+        lines.extend(partial.report_lines());
     }
     let pattern = creation.pattern_rows();
     for row in &pattern {

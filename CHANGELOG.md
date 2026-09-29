@@ -19,6 +19,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   report the same reading. `floor`, `mod`, `min`, `max`, `euclid`,
   `pat`, and `note` are refused. The capsule, the postcard, the text
   preview, and `melody.mid` stay the player's source.
+- A parametric path whose `x` and `y` are each a sum of two oscillators
+  grows the first term beside the path, on the same frame. The App sounds
+  one tone per recognized frequency. CLI `open-studio` and MCP
+  `structuredContent.partial` report the same reading. The capsule, the
+  postcard, the text preview, and `melody.mid` stay the player's source.
 - A core project document, `NUMINOUS_PROJECT 1`. It keeps one question, a
   closed next call, catalog room ids, typed evidence links, and an optional
   Studio creation. Import and correct are separate from keep. Resume previews
@@ -47,11 +52,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   gate play.
 
 ### Changed
-- The roadmap records three Studio readings. The frequency tones are
-  built. The slope of `sin(a*x)` is built. One harmonic term of a sum
-  the player wrote remains a hypothesis. A question box, homework
-  steps, curated facts about the world, and any call to an external
-  answer engine stay out.
+- The roadmap records the Studio readings that are built and the ones
+  that remain open. The frequency tones are built. The slope of
+  `sin(a*x)` is built. The first term of a two-oscillator sum is built.
+  The rest of the slope grammar, and the rest of the partial, remain
+  hypotheses. A question box, homework steps, curated facts about the
+  world, and any call to an external answer engine stay out.
 
 ### Security
 - `rustls` 0.23.42, reached through the CLI HTTP client, accepted a TLS 1.3

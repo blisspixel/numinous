@@ -932,6 +932,9 @@ fn studio_creation_result(
     if let Some(slope) = numinous_core::GraphSlope::of_creation(creation) {
         structured["slope"] = slope_json(&slope);
     }
+    if let Some(partial) = numinous_core::HarmonicPartial::of(creation) {
+        structured["partial"] = partial_json(&partial);
+    }
     attach_pattern(&mut structured, creation);
     if creation.kind() == numinous_core::StudioKind::Field {
         structured["field"] = json!({
@@ -971,6 +974,10 @@ fn studio_creation_result(
     if let Some(slope) = numinous_core::GraphSlope::of_creation(creation) {
         text.push('\n');
         text.push_str(&slope.report_lines().join("\n"));
+    }
+    if let Some(partial) = numinous_core::HarmonicPartial::of(creation) {
+        text.push('\n');
+        text.push_str(&partial.report_lines().join("\n"));
     }
     tool_structured(&text, structured)
 }
@@ -1024,6 +1031,24 @@ fn closure_json(closure: &numinous_core::PathClosure) -> Option<Value> {
             "windowEnd": checkpoint_json(&aperiodic.window_end),
         })),
     }
+}
+
+fn partial_json(partial: &numinous_core::HarmonicPartial) -> Value {
+    let terms: Vec<Value> = partial
+        .frequencies
+        .iter()
+        .map(|tone| {
+            let mut item = json!({ "frequency": tone.frequency_text });
+            if let Some(hz) = tone.hz {
+                item["hz"] = json!(hz);
+            }
+            item
+        })
+        .collect();
+    json!({
+        "basis": "sum",
+        "terms": terms,
+    })
 }
 
 fn slope_json(slope: &numinous_core::GraphSlope) -> Value {

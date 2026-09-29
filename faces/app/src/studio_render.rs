@@ -404,6 +404,16 @@ pub fn draw_parametric_rect(
         (xmin, xmax),
         (ymin, ymax),
     )?;
+    paint_parametric(raster, projection, &points, '#');
+    Some((xmin, xmax, ymin, ymax))
+}
+
+fn paint_parametric(
+    raster: &mut Raster,
+    projection: PlanarProjection,
+    points: &[Option<(f64, f64)>],
+    mark: char,
+) {
     let mut previous = None;
     for point in points {
         let Some((px, py)) = point.and_then(|(x, y)| projection.point(x, y)) else {
@@ -411,11 +421,70 @@ pub fn draw_parametric_rect(
             continue;
         };
         if let Some((previous_x, previous_y)) = previous {
-            raster.line(previous_x, previous_y, px, py, '#');
+            raster.line(previous_x, previous_y, px, py, mark);
         } else {
-            raster.plot(px, py, '#');
+            raster.plot(px, py, mark);
         }
         previous = Some((px, py));
+    }
+}
+
+/// Draw a parametric path and its first partial sum on one shared frame.
+///
+/// Separate auto-scale would stretch the first term until it filled the
+/// same box as the whole path. The path mark is `#`. The first term is `+`.
+/// When the first term has no finite samples, the path is drawn alone.
+pub fn draw_parametric_pair(
+    raster: &mut Raster,
+    layout: CurveLayout,
+    tmin: f64,
+    tmax: f64,
+    full_at: impl FnMut(f64) -> Option<(f64, f64)>,
+    partial_at: impl FnMut(f64) -> Option<(f64, f64)>,
+) -> Option<(f64, f64, f64, f64)> {
+    let width = layout.width.min(raster.width());
+    let height = layout.height.min(raster.height());
+    let plot_height = height as f64 - layout.top - layout.bottom_margin;
+    if !layout.top.is_finite()
+        || !layout.bottom_margin.is_finite()
+        || layout.top < 0.0
+        || layout.bottom_margin < 0.0
+        || plot_height < 8.0
+    {
+        return None;
+    }
+    let rect = CurveRect {
+        left: 0,
+        top: layout.top.round() as usize,
+        width,
+        height: plot_height.round() as usize,
+    };
+    let width = rect.width.min(raster.width().saturating_sub(rect.left));
+    let height = rect.height.min(raster.height().saturating_sub(rect.top));
+    if width < 2 || height < 2 {
+        return None;
+    }
+    let full = sample_parametric(width, tmin, tmax, full_at)?;
+    let partial = sample_parametric(width, tmin, tmax, partial_at);
+    let (xmin, xmax, ymin, ymax) = if let Some(partial) = &partial {
+        (
+            full.xmin.min(partial.xmin),
+            full.xmax.max(partial.xmax),
+            full.ymin.min(partial.ymin),
+            full.ymax.max(partial.ymax),
+        )
+    } else {
+        (full.xmin, full.xmax, full.ymin, full.ymax)
+    };
+    let projection = PlanarProjection::fit(
+        raster,
+        (rect.left, rect.top, width, height),
+        (xmin, xmax),
+        (ymin, ymax),
+    )?;
+    paint_parametric(raster, projection, &full.points, '#');
+    if let Some(partial) = &partial {
+        paint_parametric(raster, projection, &partial.points, '+');
     }
     Some((xmin, xmax, ymin, ymax))
 }
@@ -1005,6 +1074,71 @@ mod tests {
         .expect("graph alone");
         draw_curve(&mut reference, layout, -2.0, 2.0, |x| {
             finite(numinous_core::eval(&graph, x, 2.0))
+        })
+        .expect("reference");
+        assert_eq!(fallback.to_rgba(), reference.to_rgba());
+    }
+
+    #[test]
+    fn two_parametric_paths_share_one_frame() {
+        let full_x = numinous_core::parse("cos(2*pi*t)+0.5*cos(6*pi*t)").expect("x");
+        let full_y = numinous_core::parse("sin(2*pi*t)+0.5*sin(6*pi*t)").expect("y");
+        let first_x = numinous_core::parse("cos(2*pi*t)").expect("first x");
+        let first_y = numinous_core::parse("sin(2*pi*t)").expect("first y");
+        let layout = CurveLayout {
+            width: 80,
+            height: 40,
+            top: 0.0,
+            bottom_margin: 1.0,
+        };
+        let point = |x: &numinous_core::Expr, y: &numinous_core::Expr, t: f64| {
+            let px = numinous_core::eval(x, t, 1.0);
+            let py = numinous_core::eval(y, t, 1.0);
+            (px.is_finite() && py.is_finite()).then_some((px, py))
+        };
+        let mut paired = Raster::new(80, 40);
+        let mut full_only = Raster::new(80, 40);
+        let mut first_only = Raster::new(80, 40);
+        let shared = draw_parametric_pair(
+            &mut paired,
+            layout,
+            0.0,
+            1.0,
+            |t| point(&full_x, &full_y, t),
+            |t| point(&first_x, &first_y, t),
+        )
+        .expect("pair");
+        let full_bounds = draw_parametric(&mut full_only, layout, 0.0, 1.0, |t| {
+            point(&full_x, &full_y, t)
+        })
+        .expect("full");
+        let first_bounds = draw_parametric(&mut first_only, layout, 0.0, 1.0, |t| {
+            point(&first_x, &first_y, t)
+        })
+        .expect("first");
+        assert!(
+            shared.1 > first_bounds.1 + 0.2,
+            "the full path sticks out past the first circle: shared {shared:?}, first {first_bounds:?}"
+        );
+        assert!((shared.0 - full_bounds.0).abs() < 1e-9);
+        assert!((shared.1 - full_bounds.1).abs() < 1e-9);
+        assert!((shared.2 - full_bounds.2).abs() < 1e-9);
+        assert!((shared.3 - full_bounds.3).abs() < 1e-9);
+        assert_ne!(paired.to_rgba(), full_only.to_rgba());
+
+        let mut fallback = Raster::new(80, 40);
+        let mut reference = Raster::new(80, 40);
+        draw_parametric_pair(
+            &mut fallback,
+            layout,
+            0.0,
+            1.0,
+            |t| point(&full_x, &full_y, t),
+            |_| None,
+        )
+        .expect("path alone");
+        draw_parametric(&mut reference, layout, 0.0, 1.0, |t| {
+            point(&full_x, &full_y, t)
         })
         .expect("reference");
         assert_eq!(fallback.to_rgba(), reference.to_rgba());
