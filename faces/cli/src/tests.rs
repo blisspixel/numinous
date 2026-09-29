@@ -4598,6 +4598,30 @@ fn open_studio_reports_returning_home_closure() {
 }
 
 #[test]
+fn open_studio_reports_the_slope_of_sin_a_x() {
+    let report = |source: &str| {
+        let creation = numinous_core::StudioCreation::new(source, -2.0, 2.0, 1.0).expect(source);
+        open_studio_report(&creation.to_link(), 32, 12).expect(source)
+    };
+    let slope = report("sin(a*x)");
+    assert!(
+        slope.contains("slope basis=symbolic source=a*cos(a*x)"),
+        "{slope}"
+    );
+    assert!(slope.contains("expr=sin(a*x)"), "{slope}");
+    let refused = report("floor(x)");
+    assert!(refused.contains("slope=refused"), "{refused}");
+    assert!(!refused.contains("a*cos(a*x)"), "{refused}");
+    for source in ["sin(x)", "sin(a*x)+x/3"] {
+        let plain = report(source);
+        assert!(
+            !plain.contains("slope="),
+            "{source} has no slope line: {plain}"
+        );
+    }
+}
+
+#[test]
 fn failed_open_studio_does_not_record_progress() {
     let mut journey = numinous_core::Journey::default();
     let missing = std::env::temp_dir().join("numinous_cli_studio_missing_test.num");

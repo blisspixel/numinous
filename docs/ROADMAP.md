@@ -205,21 +205,31 @@ mastery, exploration, and company also remain complete reasons to play.
   caption. A graph, a field, a sum, or any unsupported creation invents
   no tones. `sqrt(2)` is not replaced by a nearby ratio. The capsule is
   unchanged. Player evidence remains open.
-- **Hypothesis, hear the slope:** the open graph can grow a second curve,
-  its symbolic derivative, plotted and sung beside it. The player's
-  source stays the source. The first slice rewrites `sin(a*x)` to
-  `a*cos(a*x)` and checks samples of that new source against an
-  independent slope of `sin(a*x)` where both are defined. It does not
-  write that source into the capsule.
-  Later slices may add polynomials, `sin`, `cos`, `exp`, sums, products,
-  quotients, and constant parameters, including named sliders, only where
-  the rewrite is exact. A general power stays out of the first slice.
-  `floor`, `mod`, `min`, `max`, `euclid`, `pat`, and `note` have no
-  derivative reading: the act refuses them. `tan`, `ln`, `sqrt`, and
-  `abs` keep the gaps the sampler already leaves. A grammar that cannot
-  be differentiated is labeled a secant. The reading is the player's
-  formula. It is not an essay, an integral, or a search for a maximum.
-  Implementation and player evidence remain open.
+- **Built, slope of `sin(a*x)`:** an open graph `sin(a*x)`, including
+  `sin(x*a)` and the spaced form, grows a second curve `a*cos(a*x)`.
+  Samples of that source are checked against an independent slope of
+  `sin(a*x)` where both are defined. The App plots both on one vertical
+  axis, so a larger slope stays taller, and sings both through the graph
+  pitch map on that shared axis. The status line names the slope. CLI
+  `open-studio` and MCP `structuredContent.slope` report
+  `slope basis=symbolic source=a*cos(a*x)`. `floor`, `mod`, `min`, `max`,
+  `euclid`, `pat`, and `note` are refused, including inside a larger
+  expression: `slope=refused` on the CLI and MCP. The App stays quiet on
+  a refusal. `sin(x)`, sums, `tan`, `ln`, `sqrt`, `abs`, fields,
+  parametrics, overlays, and named sliders such as `sin(b*x)` have no
+  slope reading in this slice. The capsule, the postcard, the text
+  preview, CLI `sing`, and `melody.mid` stay the player's source. The
+  live App voice is the pair. The text preview does not draw the second
+  curve. Player evidence remains open.
+- **Hypothesis, the rest of the slope:** later slices may add
+  polynomials, `sin`, `cos`, `exp`, sums, products, quotients, and
+  constant parameters, including named sliders, only where the rewrite
+  is exact. A general power stays out. `tan`, `ln`, `sqrt`, and `abs`
+  keep the gaps the sampler already leaves. The secant label is the
+  later reading: this slice refuses the constructs named above and
+  leaves every other unrecognized graph without a slope. The reading
+  is the player's formula. It is not an essay, an integral, or a search
+  for a maximum. Implementation and player evidence remain open.
 - **Hypothesis, hear one harmonic term:** a parametric coordinate that is
   a sum of two oscillators, each in the form closure already accepts, can
   show the partial sums: the first term, then both, with one tone per
@@ -1897,9 +1907,9 @@ world's determinism.
 So the useful half is native. Another reading of a capsule the player
 already wrote, replayed from core on the App, the CLI, and MCP together.
 Rock 6 has carried the instrument through named pitches. MusicXML remains
-there. The frequency tones are built. Two readings remain hypotheses:
-hear a symbolic slope beside the open graph, and hear one harmonic term
-of a sum the player wrote.
+there. The frequency tones are built. The slope of `sin(a*x)` is built. The rest
+of the slope grammar remains a hypothesis. One reading remains a
+hypothesis: hear one harmonic term of a sum the player wrote.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
 already plans them. A natural-language question, step-by-step homework,
 and curated facts about the world stay out with the external call.

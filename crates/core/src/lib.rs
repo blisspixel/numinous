@@ -62,6 +62,7 @@ pub mod field;
 pub mod fifteen;
 pub mod font;
 pub mod gauntlet;
+pub mod graph_slope;
 pub mod hackenbush;
 pub mod humor;
 pub mod insights;
@@ -158,6 +159,7 @@ pub use gauntlet::{
     GauntletStageGrade, GauntletWireGrade, gauntlet_choice_grade, gauntlet_score_key,
     gauntlet_total, gauntlet_wire_grade,
 };
+pub use graph_slope::{GraphDerivative, GraphSlope, central_slope};
 pub use humor::{Joke, explain_joke, jokes};
 pub use journal::{
     JOURNAL_SCHEMA_VERSION, JOURNAL_SOURCE_LEGACY_IMPORT, JOURNAL_SOURCE_NUMINOUS_RESULT,
@@ -279,12 +281,12 @@ pub use studio::{
     NumFileError, PATTERN_HIT, PATTERN_REST, PIANO_ROLL_COLUMNS, PROGRAM_MARKS, STUDIO_EXPERIMENTS,
     STUDIO_RECIPES, StudioCreation, StudioExperiment, StudioKind, StudioPlot, StudioProgram,
     StudioScale, adjacent_construction_creation, adjacent_studio_experiment, eval, eval_field,
-    eval_field_named, eval_named, first_studio_construction, is_returning_home_transfer, parse,
-    parse_field, pattern_grid_text, pattern_row, piano_roll_text, plot_text,
-    returning_home_transfer, studio_auto_recipe, studio_construction_family, studio_experiment,
-    studio_experiment_matching, studio_experiment_meta, studio_experiments_in, studio_recipe,
-    studio_recipe_count, to_melody, to_melody_with_scale, to_melody_with_scale_named,
-    uses_field_vocabulary,
+    eval_field_named, eval_named, first_studio_construction, graph_and_slope_melody,
+    is_returning_home_transfer, parse, parse_field, pattern_grid_text, pattern_row,
+    piano_roll_text, plot_text, returning_home_transfer, studio_auto_recipe,
+    studio_construction_family, studio_experiment, studio_experiment_matching,
+    studio_experiment_meta, studio_experiments_in, studio_recipe, studio_recipe_count, to_melody,
+    to_melody_with_scale, to_melody_with_scale_named, uses_field_vocabulary,
 };
 pub use studio_request::{
     DEFAULT_FIELD_MAX, DEFAULT_FIELD_MIN, DEFAULT_MELODY_NOTES, DEFAULT_PLOT_HEIGHT,

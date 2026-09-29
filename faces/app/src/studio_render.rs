@@ -90,17 +90,8 @@ pub(crate) fn curve_range(
     Some((samples.ymin, samples.ymax))
 }
 
-/// Draws one auto-scaled deterministic curve into a bounded vertical band.
-pub fn draw_curve(
-    raster: &mut Raster,
-    layout: CurveLayout,
-    xmin: f64,
-    xmax: f64,
-    value_at: impl FnMut(f64) -> Option<f64>,
-) -> Option<(f64, f64)> {
-    let width = layout.width.min(raster.width());
+fn band_plot_height(raster: &Raster, layout: CurveLayout) -> Option<f64> {
     let height = layout.height.min(raster.height());
-    let samples = sample_curve(width, xmin, xmax, value_at)?;
     let plot_height = height as f64 - layout.top - layout.bottom_margin;
     if !layout.top.is_finite()
         || !layout.bottom_margin.is_finite()
@@ -110,17 +101,102 @@ pub fn draw_curve(
     {
         return None;
     }
-    let yspan = (samples.ymax - samples.ymin).max(1e-9);
+    Some(plot_height)
+}
+
+fn paint_samples(
+    raster: &mut Raster,
+    top: f64,
+    plot_height: f64,
+    points: &[(usize, f64)],
+    ymin: f64,
+    ymax: f64,
+    mark: char,
+) {
+    let yspan = (ymax - ymin).max(1e-9);
     let mut previous = None;
-    for (column, value) in samples.points {
-        let x = column as i32;
-        let y = (layout.top + (1.0 - (value - samples.ymin) / yspan) * plot_height) as i32;
+    for (column, value) in points {
+        let x = *column as i32;
+        let y = (top + (1.0 - (value - ymin) / yspan) * plot_height) as i32;
         if let Some((previous_x, previous_y)) = previous {
-            raster.line(previous_x, previous_y, x, y, '#');
+            raster.line(previous_x, previous_y, x, y, mark);
         }
         previous = Some((x, y));
     }
+}
+
+/// Draws one auto-scaled deterministic curve into a bounded vertical band.
+pub fn draw_curve(
+    raster: &mut Raster,
+    layout: CurveLayout,
+    xmin: f64,
+    xmax: f64,
+    value_at: impl FnMut(f64) -> Option<f64>,
+) -> Option<(f64, f64)> {
+    let width = layout.width.min(raster.width());
+    let samples = sample_curve(width, xmin, xmax, value_at)?;
+    let plot_height = band_plot_height(raster, layout)?;
+    paint_samples(
+        raster,
+        layout.top,
+        plot_height,
+        &samples.points,
+        samples.ymin,
+        samples.ymax,
+        '#',
+    );
     Some((samples.ymin, samples.ymax))
+}
+
+/// Draw a graph and its slope on one shared vertical axis.
+///
+/// Separate auto-scale would give both curves the same height when their
+/// ranges differ. The graph mark is `#`. The slope mark is `+`. When the
+/// slope has no finite samples, the graph is drawn alone on its own range.
+pub fn draw_two_curves(
+    raster: &mut Raster,
+    layout: CurveLayout,
+    xmin: f64,
+    xmax: f64,
+    graph_at: impl FnMut(f64) -> Option<f64>,
+    slope_at: impl FnMut(f64) -> Option<f64>,
+) -> Option<(f64, f64)> {
+    let width = layout.width.min(raster.width());
+    let graph = sample_curve(width, xmin, xmax, graph_at);
+    let slope = sample_curve(width, xmin, xmax, slope_at);
+    let (ymin, ymax, paint_slope) = match (&graph, &slope) {
+        (Some(graph_samples), Some(slope_samples)) => (
+            graph_samples.ymin.min(slope_samples.ymin),
+            graph_samples.ymax.max(slope_samples.ymax),
+            true,
+        ),
+        (Some(graph_samples), None) => (graph_samples.ymin, graph_samples.ymax, false),
+        _ => return None,
+    };
+    let plot_height = band_plot_height(raster, layout)?;
+    if let Some(graph_samples) = &graph {
+        paint_samples(
+            raster,
+            layout.top,
+            plot_height,
+            &graph_samples.points,
+            ymin,
+            ymax,
+            '#',
+        );
+    }
+    if paint_slope && let Some(slope_samples) = &slope {
+        paint_samples(
+            raster,
+            layout.top,
+            plot_height,
+            &slope_samples.points,
+            ymin,
+            ymax,
+            '+',
+        );
+    }
+    Some((ymin, ymax))
 }
 
 /// Draw several graphs over one shared vertical range.
@@ -147,28 +223,18 @@ pub fn draw_overlay(
         .iter()
         .map(|curve| curve.ymax)
         .fold(f64::NEG_INFINITY, f64::max);
-    let height = layout.height.min(raster.height());
-    let plot_height = height as f64 - layout.top - layout.bottom_margin;
-    if !layout.top.is_finite()
-        || !layout.bottom_margin.is_finite()
-        || layout.top < 0.0
-        || layout.bottom_margin < 0.0
-        || plot_height < 8.0
-    {
-        return None;
-    }
-    let yspan = (ymax - ymin).max(1e-9);
+    let plot_height = band_plot_height(raster, layout)?;
     for (index, samples) in sampled.iter().enumerate() {
         let mark = numinous_core::PROGRAM_MARKS[index.min(numinous_core::PROGRAM_MARKS.len() - 1)];
-        let mut previous = None;
-        for (column, value) in &samples.points {
-            let x = *column as i32;
-            let y = (layout.top + (1.0 - (value - ymin) / yspan) * plot_height) as i32;
-            if let Some((previous_x, previous_y)) = previous {
-                raster.line(previous_x, previous_y, x, y, mark);
-            }
-            previous = Some((x, y));
-        }
+        paint_samples(
+            raster,
+            layout.top,
+            plot_height,
+            &samples.points,
+            ymin,
+            ymax,
+            mark,
+        );
     }
     Some((ymin, ymax))
 }
@@ -895,5 +961,52 @@ mod tests {
             );
             assert_eq!(raster.lit_count(), 0);
         }
+    }
+
+    #[test]
+    fn two_curves_share_one_vertical_axis() {
+        let graph = numinous_core::parse("sin(a*x)").expect("graph");
+        let slope = numinous_core::parse("a*cos(a*x)").expect("slope");
+        let layout = CurveLayout {
+            width: 80,
+            height: 40,
+            top: 0.0,
+            bottom_margin: 1.0,
+        };
+        let finite = |value: f64| value.is_finite().then_some(value);
+        let mut paired = Raster::new(80, 40);
+        let mut alone = Raster::new(80, 40);
+        let shared = draw_two_curves(
+            &mut paired,
+            layout,
+            -2.0,
+            2.0,
+            |x| finite(numinous_core::eval(&graph, x, 2.0)),
+            |x| finite(numinous_core::eval(&slope, x, 2.0)),
+        )
+        .expect("pair");
+        let graph_only = draw_curve(&mut alone, layout, -2.0, 2.0, |x| {
+            finite(numinous_core::eval(&graph, x, 2.0))
+        })
+        .expect("graph");
+        assert!(shared.1 - shared.0 > graph_only.1 - graph_only.0);
+        assert_ne!(paired.to_rgba(), alone.to_rgba());
+
+        let mut fallback = Raster::new(80, 40);
+        let mut reference = Raster::new(80, 40);
+        draw_two_curves(
+            &mut fallback,
+            layout,
+            -2.0,
+            2.0,
+            |x| finite(numinous_core::eval(&graph, x, 2.0)),
+            |_| None,
+        )
+        .expect("graph alone");
+        draw_curve(&mut reference, layout, -2.0, 2.0, |x| {
+            finite(numinous_core::eval(&graph, x, 2.0))
+        })
+        .expect("reference");
+        assert_eq!(fallback.to_rgba(), reference.to_rgba());
     }
 }

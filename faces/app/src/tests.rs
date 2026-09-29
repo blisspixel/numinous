@@ -3454,6 +3454,25 @@ fn a_dropped_num_creation_reopens_exactly_paused_then_enter_sings() {
     let _ = std::fs::remove_file(&path);
 }
 
+fn slope_beside(creation: &numinous_core::StudioCreation) -> numinous_core::SoundSpec {
+    let graph = numinous_core::parse(creation.source()).expect("graph");
+    let numinous_core::GraphSlope::Derivative(derivative) =
+        numinous_core::GraphSlope::of_expression(&graph).expect("slope")
+    else {
+        panic!("sin(a*x) is a derivative in this slice");
+    };
+    numinous_core::graph_and_slope_melody(
+        &graph,
+        &derivative.expression,
+        creation.xmin(),
+        creation.xmax(),
+        numinous_core::DEFAULT_MELODY_NOTES,
+        creation.a(),
+        creation.sliders(),
+        creation.scale(),
+    )
+}
+
 #[test]
 fn returning_to_an_untouched_capsule_preserves_identity_and_preview() {
     let ancestor = numinous_core::StudioCreation::new("sin(x)", -1.0, 1.0, 0.0).expect("ancestor");
@@ -3490,7 +3509,8 @@ fn returning_to_an_untouched_capsule_preserves_identity_and_preview() {
         );
         let resumed = app.studio_panel.entry_sound().expect("entry audio");
         if confirmed {
-            assert_eq!(resumed, creation.to_melody(32));
+            assert_eq!(resumed, slope_beside(&creation));
+            assert_ne!(resumed, creation.to_melody(32));
         } else {
             assert!(resumed.notes.is_empty(), "the preview remains silent");
         }
@@ -3510,7 +3530,15 @@ fn returning_to_an_edited_capsule_keeps_its_draft_and_settings() {
 
     assert_eq!(app.studio_panel.source_for_test(), "sin(a*x)+");
     assert!(!app.studio_panel.opened_paused());
-    assert_eq!(app.studio_panel.entry_sound(), Some(creation.to_melody(32)));
+    assert_eq!(
+        app.studio_panel.entry_sound(),
+        Some(slope_beside(&creation))
+    );
+    assert_ne!(
+        app.studio_panel.entry_sound(),
+        Some(creation.to_melody(32)),
+        "the last good graph still sings its slope"
+    );
     assert_eq!(
         app.studio_panel.current_creation(),
         Err(crate::studio_panel::ShareRefusal::UnparsedFormula)
