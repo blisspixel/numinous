@@ -254,10 +254,10 @@ mastery, exploration, and company also remain complete reasons to play.
   the same 110 Hz map as closure. CLI `open-studio` and MCP
   `structuredContent.partial` report `partial basis=sum`. A subtraction
   is that sum with the second term negated. `sqrt(2)` is not replaced by
-  a nearby ratio. A third term, a speed closure cannot name, a graph,
-  a field, and an overlay have no partial reading from this rule. A sum
-  on one coordinate is the next paragraph. Closure remains the only
-  period claim. The capsule, the postcard, the text preview, CLI
+  a nearby ratio. A speed closure cannot name, a graph, a field, and
+  an overlay have no partial reading from this rule. A sum on one
+  coordinate, and a third term, are the next paragraphs. Closure remains
+  the only period claim. The capsule, the postcard, the text preview, CLI
   `sing`, and `melody.mid` stay the player's source. The live App voice
   is the tones. Player evidence remains open.
 - **Built, a sum on one coordinate:** a parametric path with a
@@ -269,13 +269,26 @@ mastery, exploration, and company also remain complete reasons to play.
   subtraction stores the second term negated. Source order is the order
   of the reading, so the first term is the first term written, and a
   repeated frequency is one tone. Both coordinates as single oscillators
-  stay with closure. A third term, a product of two oscillators, a
-  graph, a field, and an overlay have no partial reading. CLI
-  `open-studio` and MCP `structuredContent.partial` report
-  `partial basis=sum`. The capsule, the postcard, the text preview, CLI
-  `sing`, and `melody.mid` stay the player's source. Player evidence
-  remains open.
-- **Hypothesis, the rest of the partial:** later slices may add a third
+  stay with closure. A product of two oscillators, a graph, a field,
+  and an overlay have no partial reading from this rule. A third term
+  is the next paragraph. CLI `open-studio` and MCP
+  `structuredContent.partial` report `partial basis=sum`. The capsule,
+  the postcard, the text preview, CLI `sing`, and `melody.mid` stay the
+  player's source. Player evidence remains open.
+- **Built, a third term:** a coordinate may be a sum of three oscillators
+  in the form closure already accepts. The other coordinate is one, two,
+  or three of those oscillators, and at least one coordinate is a sum.
+  `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)` beside `sin(2*pi*t)`
+  grows the circle of frequency `1` and sounds frequencies `1`, `3`, and
+  `5`. Parentheses keep that reading. A subtraction distributes,
+  and the stored terms add back to the coordinate the player wrote. Source
+  order is the order of the reading. A fourth term, a leading minus on a
+  whole sum, a product of two oscillators, a graph, a field, and an
+  overlay have no partial reading. CLI `open-studio` and MCP
+  `structuredContent.partial` report `partial basis=sum`. The capsule,
+  the postcard, the text preview, CLI `sing`, and `melody.mid` stay the
+  player's source. Player evidence remains open.
+- **Hypothesis, the rest of the partial:** later slices may add a fourth
   term, or a graph that is already a sum of two recognized oscillators.
   A drawn path turned into coefficients stays out. There is no series
   command and no infinite sum. The Fourier sketch in `STUDIO.md` stays
@@ -1950,8 +1963,9 @@ Rock 6 has carried the instrument through named pitches. MusicXML remains
 there. The frequency tones are built. The slope of `sin(a*x)` is built, including
 a sum of that form with a line or an integer power of `x`. The first
 term of a two-oscillator sum is built, including a sum on only one
-coordinate. The rest of the slope grammar remains a hypothesis. A third
-term, and a graph that is already a sum, remain hypotheses.
+coordinate and a third term. The rest of the slope grammar remains a
+hypothesis. A fourth term, and a graph that is already a sum, remain
+hypotheses.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
 already plans them. A natural-language question, step-by-step homework,
 and curated facts about the world stay out with the external call.
