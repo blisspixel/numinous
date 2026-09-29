@@ -190,6 +190,46 @@ mastery, exploration, and company also remain complete reasons to play.
   present creation opens paused. Enter starts it. Esc leaves. The project
   file, the journal, and the journey stay unchanged, and the next tool is
   not called.
+- **Hypothesis, hear the two frequencies:** a checked two-oscillator path
+  or two-voice overlay can sound the frequencies closure already names.
+  On a path those texts are `x_frequency_text` and `y_frequency_text`. On
+  an overlay each voice has `frequency_text`. The tones are those
+  oscillators. The sung samples of the curve stay a melody, and a melody
+  still does not establish a period. Closure remains the only period
+  claim. The half-period trap, place without state, stays a caption two
+  tones cannot show. The first slice is full-return, frequencies `1` and
+  `17/12` beside period `12`, and almost-home, frequencies `1` and
+  `sqrt(2)` beside no period. A graph, a field, a sum, or any unsupported
+  creation invents no tones. An audible pitch is an explicit map of that
+  named text. The map keeps an irrational frequency irrational, so
+  `sqrt(2)` is not replaced by a nearby ratio. The reading adds no
+  mathematical fact and does not change the capsule. The App, the CLI,
+  and MCP share it. Implementation and player evidence remain open.
+- **Hypothesis, hear the slope:** the open graph can grow a second curve,
+  its symbolic derivative, plotted and sung beside it. The player's
+  source stays the source. The first slice rewrites `sin(a*x)` to
+  `a*cos(a*x)` and checks samples of that new source against an
+  independent slope of `sin(a*x)` where both are defined. It does not
+  write that source into the capsule.
+  Later slices may add polynomials, `sin`, `cos`, `exp`, sums, products,
+  quotients, and constant parameters, including named sliders, only where
+  the rewrite is exact. A general power stays out of the first slice.
+  `floor`, `mod`, `min`, `max`, `euclid`, `pat`, and `note` have no
+  derivative reading: the act refuses them. `tan`, `ln`, `sqrt`, and
+  `abs` keep the gaps the sampler already leaves. A grammar that cannot
+  be differentiated is labeled a secant. The reading is the player's
+  formula. It is not an essay, an integral, or a search for a maximum.
+  Implementation and player evidence remain open.
+- **Hypothesis, hear one harmonic term:** a parametric coordinate that is
+  a sum of two oscillators, each in the form closure already accepts, can
+  show the partial sums: the first term, then both, with one tone per
+  recognized frequency. The reading is exact only when each term is that
+  form, the speeds are recognized, and the recognition is tested. The
+  full sum must match the path samples Studio already draws. The player's
+  source stays the source. There is no series command, no infinite sum,
+  and no traced drawing turned into coefficients. The Fourier sketch in
+  `STUDIO.md` stays a sketch. Implementation and player evidence remain
+  open.
 - **Designed, still later:** a general quest engine and a semantic memory
   system remain unbuilt (`DIGITAL_DEVELOPMENT.md`). The capability quest in
   `PROGRESSION.md` can keep using a kept project.
@@ -1854,9 +1894,15 @@ and play in the other. That is what the protocol is for, and it means the
 benefit is already available to the player who wants it, at no cost to the
 world's determinism.
 
-So the useful half is native: more grammar in the Studio, which is where
-freestyle math already lives and where the ceiling is currently vocabulary
-rather than rendering. That work is rock 6 and is already scheduled.
+So the useful half is native. Another reading of a capsule the player
+already wrote, replayed from core on the App, the CLI, and MCP together.
+Rock 6 has carried the instrument through named pitches. MusicXML remains
+there. The next readings are hypotheses in the critical path: hear the two
+frequencies a closure reading already states, hear a symbolic slope beside
+the open graph, and hear one harmonic term of a sum the player wrote.
+Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
+already plans them. A natural-language question, step-by-step homework,
+and curated facts about the world stay out with the external call.
 
 ### 0.1 Public Foundation
 

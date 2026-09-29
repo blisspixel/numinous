@@ -33,6 +33,14 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   with kind `voices`. A picture is not the proof, and the trial does not
   gate play.
 
+### Changed
+- The roadmap records three Studio hypotheses. A checked closure can name
+  tones for the frequencies it already states. An open graph can grow a
+  symbolic derivative beside it, without replacing the player's source.
+  A sum of two recognized oscillators can show one term and then both.
+  None of this is built. A question box, homework steps, curated facts
+  about the world, and any call to an external answer engine stay out.
+
 ### Security
 - `rustls` 0.23.42, reached through the CLI HTTP client, accepted a TLS 1.3
   handshake message on the wrong encryption level (RUSTSEC-2026-0285). The
