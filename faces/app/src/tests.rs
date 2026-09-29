@@ -5076,6 +5076,7 @@ fn keep_full_return(
     path: &std::path::Path,
     question: &str,
     evidence: Vec<numinous_core::ProjectEvidence>,
+    creation: Option<&str>,
 ) {
     numinous_core::keep_project_file(
         path,
@@ -5087,7 +5088,7 @@ fn keep_full_return(
             },
             rooms: vec!["lissajous".to_string()],
             evidence,
-            creation: Some("full-return".to_string()),
+            creation: creation.map(str::to_string),
         },
     )
     .expect("keep the project");
@@ -5128,6 +5129,7 @@ fn cabinet_question_lists_missing_evidence_and_leaves_paused_without_writing() {
             digest: [0x11; 32],
             entry_id: None,
         }],
+        Some("full-return"),
     );
     let project_bytes = std::fs::read(fixture.project()).expect("project bytes");
     let mut app = headless("kept-question-missing");
@@ -5196,6 +5198,7 @@ fn cabinet_question_names_a_corrected_handle_and_enter_starts_the_creation() {
             digest: cited.identity_digest(),
             entry_id: Some(cited.entry_id),
         }],
+        Some("full-return"),
     );
     let project_bytes = std::fs::read(fixture.project()).expect("project bytes");
     let journal_bytes = std::fs::read(fixture.journal()).expect("journal bytes");
@@ -5226,7 +5229,12 @@ fn cabinet_question_names_a_corrected_handle_and_enter_starts_the_creation() {
 #[test]
 fn cabinet_question_refuses_to_start_an_incompatible_creation() {
     let fixture = KeptQuestionFixture::new("incompatible");
-    keep_full_return(&fixture.project(), "Can this reopen?", Vec::new());
+    keep_full_return(
+        &fixture.project(),
+        "Can this reopen?",
+        Vec::new(),
+        Some("full-return"),
+    );
     let original = std::fs::read_to_string(fixture.project()).expect("chain text");
     assert!(
         original.contains("NUMINOUS_STUDIO"),
@@ -5245,6 +5253,106 @@ fn cabinet_question_refuses_to_start_an_incompatible_creation() {
     app.confirm_kept_project();
     let banner = app.banner.as_ref().expect("refusal").lines().join(" ");
     assert!(banner.contains("THIS CREATION CANNOT START"), "{banner}");
+    assert!(!app.studio);
+    assert!(app.project_resume.is_some());
+    app.dismiss_kept_project();
+    assert!(app.project_resume.is_none());
+    assert_eq!(
+        std::fs::read(fixture.project()).expect("project"),
+        project_bytes
+    );
+    assert!(!fixture.journal().exists());
+    assert_eq!(app.journey, journey);
+    assert!(!app.journey_file.exists());
+}
+
+#[test]
+fn cabinet_question_names_a_collided_handle_and_still_starts_the_creation() {
+    let fixture = KeptQuestionFixture::new("collided");
+    let cited = numinous_core::record_journal_file(
+        &fixture.journal(),
+        numinous_core::JournalRecord {
+            recorded_at_utc: 20,
+            event_at_utc: 10,
+            source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+            kind: "encounter",
+            subject: "lissajous",
+            text: "cited-quartz-token",
+            affect: None,
+        },
+    )
+    .expect("cited");
+    let other = numinous_core::record_journal_file(
+        &fixture.journal(),
+        numinous_core::JournalRecord {
+            recorded_at_utc: 21,
+            event_at_utc: 11,
+            source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+            kind: "encounter",
+            subject: "lissajous",
+            text: "other-quartz-token",
+            affect: None,
+        },
+    )
+    .expect("other");
+    keep_full_return(
+        &fixture.project(),
+        "Whose note is this?",
+        vec![numinous_core::ProjectEvidence::Journal {
+            digest: other.identity_digest(),
+            entry_id: Some(cited.entry_id),
+        }],
+        Some("full-return"),
+    );
+    let project_bytes = std::fs::read(fixture.project()).expect("project bytes");
+    let journal_bytes = std::fs::read(fixture.journal()).expect("journal bytes");
+    let mut app = headless("kept-question-collided");
+    let journey = app.journey.clone();
+    app.open_kept_project_at(&fixture.project(), &fixture.journal());
+    let text = plate_text(&app);
+    assert!(text.contains("Evidence: journal collided"), "{text}");
+    assert!(text.contains("Will return: false"), "{text}");
+    assert!(!text.contains("cited-quartz-token"), "{text}");
+    assert!(!text.contains("other-quartz-token"), "{text}");
+    assert!(app.studio_panel.opened_paused());
+    app.confirm_kept_project();
+    assert!(app.studio);
+    assert!(!app.studio_panel.opened_paused());
+    assert!(app.project_resume.is_none());
+    assert_eq!(
+        std::fs::read(fixture.project()).expect("project"),
+        project_bytes
+    );
+    assert_eq!(
+        std::fs::read(fixture.journal()).expect("journal"),
+        journal_bytes
+    );
+    assert_eq!(app.journey, journey);
+    assert!(!app.journey_file.exists());
+}
+
+#[test]
+fn cabinet_question_refuses_to_invent_a_missing_creation() {
+    let fixture = KeptQuestionFixture::new("no-creation");
+    keep_full_return(
+        &fixture.project(),
+        "Where is the creation?",
+        Vec::new(),
+        None,
+    );
+    let project_bytes = std::fs::read(fixture.project()).expect("project bytes");
+    let mut app = headless("kept-question-missing-creation");
+    let journey = app.journey.clone();
+    app.open_kept_project_at(&fixture.project(), &fixture.journal());
+    let text = plate_text(&app);
+    assert!(text.contains("Creation: missing"), "{text}");
+    assert!(text.contains("Will return: true"), "{text}");
+    assert!(text.contains("Next: open_creation"), "{text}");
+    assert!(text.contains("Esc leaves. Nothing is written."), "{text}");
+    assert!(!app.studio);
+    app.confirm_kept_project();
+    let banner = app.banner.as_ref().expect("refusal").lines().join(" ");
+    assert!(banner.contains("NO CREATION IS STORED"), "{banner}");
     assert!(!app.studio);
     assert!(app.project_resume.is_some());
     app.dismiss_kept_project();
