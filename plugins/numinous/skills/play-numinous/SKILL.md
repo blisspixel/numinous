@@ -140,7 +140,14 @@ room. To recall, use `op: "retrieve"` with one listed `room`; at most four
 current journal entries whose subject exactly names that room return, newest
 first, with source and selection reason. An empty result says it abstained.
 Entry text and opaque receipt digests are not searched. Play does not write the
-workspace. It dies when the process does. It is not a memory. Use
+workspace. It dies when the process does. It is not a memory. Call `project`
+when one question should outlive the visit. `op: "keep"` stores that question
+as data, one closed next call, catalog rooms, typed evidence links, and an
+optional Studio creation at `NUMINOUS_PROJECT` (or `.numinous-project`).
+`op: "resume"` previews `structuredContent.preview.next` and does not apply it.
+It does not copy journal text. `forget` with `project: true` erases the chain
+and leaves the journal. `export_journal` format `portable-1` still does not
+import a project. Use
 `forget` to inspect or erase Journey and other Numinous-managed local state.
 
 Do not read `journey.plays` as a count of rooms you have rendered. `play_room`

@@ -3127,6 +3127,7 @@ fn local_state_paths() -> numinous_core::LocalStatePaths {
             scores: test_state_path("scores"),
             cairn: test_state_path("cairn"),
             journal: test_state_path("journal"),
+            project: test_state_path("project"),
             preferences: test_state_path("preferences"),
             radio_cache: test_state_path("radio"),
             protected_radio_source: None,

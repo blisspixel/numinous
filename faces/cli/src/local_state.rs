@@ -74,6 +74,7 @@ fn inventory_report(
         selection.scores.then_some("scores"),
         selection.cairn.then_some("Cairn drafts"),
         selection.journal.then_some("experience journal"),
+        selection.project.then_some("explicit project chain"),
         selection.preferences.then_some("App preferences"),
         selection.radio_cache.then_some("radio cache"),
         selection.crash_log.then_some("crash log"),
@@ -83,7 +84,7 @@ fn inventory_report(
     .collect::<Vec<_>>()
     .join(", ");
     format!(
-        "Numinous-managed local state:\n\n{}\n{}\n{}\n{}\n{}\n  {:<12} {}; path {}\n{}\n\nSelected for confirmed erasure: {}.\nNo state was erased by this preview. Use `numinous forget --confirm` for the Journey, add individual flags for other stores, or use `numinous forget --confirm --all-local` for every store above.\n\nNot inventoried or erased: user-selected exports such as PNG, APNG, WAV, and `.num` files; installed application files; the Rust toolchain; and bundled canonical Cairn stones. Local Cairn drafts store author and message as bounded plaintext until erased or separately submitted.",
+        "Numinous-managed local state:\n\n{}\n{}\n{}\n{}\n{}\n{}\n  {:<12} {}; path {}\n{}\n\nSelected for confirmed erasure: {}.\nNo state was erased by this preview. Use `numinous forget --confirm` for the Journey, add individual flags for other stores, or use `numinous forget --confirm --all-local` for every store above.\n\nNot inventoried or erased: user-selected exports such as PNG, APNG, WAV, and `.num` files; installed application files; the Rust toolchain; and bundled canonical Cairn stones. Local Cairn drafts store author and message as bounded plaintext until erased or separately submitted.",
         managed_file_line(
             "journey",
             &inventory.journey.file,
@@ -110,6 +111,7 @@ fn inventory_report(
             &format!("{} local plaintext drafts", inventory.cairn.local_drafts)
         ),
         managed_file_line("journal", &inventory.journal, "opt-in experience records"),
+        managed_file_line("project", &inventory.project, "explicit project chain"),
         managed_file_line(
             "preferences",
             &inventory.preferences,
@@ -181,6 +183,7 @@ mod tests {
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
             journal: root.join("journal.txt"),
+            project: root.join("project.txt"),
             preferences: root.join("preferences.txt"),
             radio_cache: root.join("radio"),
             protected_radio_source: None,
@@ -205,6 +208,7 @@ mod tests {
             "scores",
             "Cairn",
             "journal",
+            "project",
             "preferences",
             "radio cache",
             "crash log",

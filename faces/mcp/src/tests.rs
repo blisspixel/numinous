@@ -437,7 +437,7 @@ fn modern_tool_catalog_is_cacheable_deterministic_and_explicitly_2020_12() {
     assert_eq!(result["ttlMs"], super::TOOLS_CACHE_TTL_MS);
     assert_eq!(result["cacheScope"], "public");
     let tools = result["tools"].as_array().expect("tool array");
-    assert_eq!(tools.len(), 41);
+    assert_eq!(tools.len(), 42);
     assert!(
         tools
             .iter()
@@ -786,7 +786,7 @@ fn tools_list_has_the_expected_tools() {
     let tools = resp["result"]["tools"]
         .as_array()
         .expect("tools is an array");
-    assert_eq!(tools.len(), 41);
+    assert_eq!(tools.len(), 42);
     assert!(
         tools
             .iter()
@@ -820,6 +820,7 @@ fn tools_list_has_the_expected_tools() {
     assert!(names.contains(&"correct_journal"));
     assert!(names.contains(&"export_journal"));
     assert!(names.contains(&"erase_journal"));
+    assert!(names.contains(&"project"));
     assert!(names.contains(&"workspace"));
     let save_creation = tools
         .iter()
@@ -1154,7 +1155,7 @@ fn every_declared_tool_has_one_exhaustive_viewer_policy() {
         }
     }
     assert_eq!(public, numinous_broadcast::ALL_PUBLIC_TOOLS.len());
-    assert_eq!(private, 16);
+    assert_eq!(private, 17);
     assert_eq!(
         super::viewer_policy("study_room"),
         Some(super::ViewerPolicy::Private)

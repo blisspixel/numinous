@@ -138,18 +138,20 @@ pitch map changes, and when the player leaves and returns. An untouched return
 keeps preview and identity state. These are reproducible experiment parameters,
 not an inferred biography or a claim about lived experience.
 
-**Designed, not built.** One versioned project capsule should contain a chosen
-question, next intended action, exact room references, selected evidence, and
-an optional canonical creation with lineage. Keeping, importing, and resuming
-are distinct explicit acts. A resume preview shows what will return and what
-is missing, corrected, or incompatible. Typed links connect a room to its
-receipt and creation without searching opaque digests or interpreting personal
-text. No automatic biography, hidden summarizer, or inferred identity is needed.
+**Built for the core document and the MCP preview.** `NUMINOUS_PROJECT 1`
+keeps a chosen question, one closed next call, exact room references,
+selected evidence links, and an optional canonical creation. Keeping,
+importing, and correcting are distinct explicit acts. MCP `project` resume
+shows what will return and what is missing, corrected, collided, or
+incompatible. It does not call the next tool, and it does not copy journal
+text. CLI apply is not built. No automatic biography, hidden summarizer,
+or inferred identity is part of this slice.
 
-Acceptance must include a two-process roundtrip, exact construction replay,
-local-ID collision handling, correction provenance, absence after erasure,
-untrusted text treated as data, and removal of project-owned derivatives.
-Existing export-only capsules must not be described as implementing this import.
+The MCP contract is held by a two-process roundtrip, exact construction
+replay, local-ID collision handling, correction provenance, absence after
+erasure, untrusted text treated as data, and removal of the project file
+without taking the journal. `portable-1` remains export-only and does not
+import a project. CLI apply is the remaining part of this increment.
 The next capability quest in `PROGRESSION.md` supplies a concrete use for the
 project: a law the player can apply elsewhere, revise, or give to another player.
 

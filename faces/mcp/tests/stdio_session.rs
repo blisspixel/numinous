@@ -31,11 +31,19 @@ fn run_session_with_barrier(
     barrier: impl FnMut() -> bool,
     after_barrier: &[Value],
 ) -> Vec<Value> {
-    run_session_with_state_barrier(before_barrier, barrier, after_barrier, None, None)
+    run_session_with_state_barrier(
+        before_barrier,
+        barrier,
+        after_barrier,
+        None,
+        None,
+        None,
+        None,
+    )
 }
 
 fn run_session_with_journal(requests: &[Value], journal: &std::path::Path) -> Vec<Value> {
-    run_session_with_state_barrier(requests, || true, &[], Some(journal), None)
+    run_session_with_state_barrier(requests, || true, &[], Some(journal), None, None, None)
 }
 
 fn run_session_with_state(
@@ -43,7 +51,15 @@ fn run_session_with_state(
     journey: &std::path::Path,
     journal: &std::path::Path,
 ) -> Vec<Value> {
-    run_session_with_state_barrier(requests, || true, &[], Some(journal), Some(journey))
+    run_session_with_state_barrier(
+        requests,
+        || true,
+        &[],
+        Some(journal),
+        Some(journey),
+        None,
+        None,
+    )
 }
 
 fn run_session_with_state_barrier(
@@ -52,6 +68,8 @@ fn run_session_with_state_barrier(
     after_barrier: &[Value],
     journal: Option<&std::path::Path>,
     journey: Option<&std::path::Path>,
+    project: Option<&std::path::Path>,
+    home: Option<&std::path::Path>,
 ) -> Vec<Value> {
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
     let suffix = format!("{}-{session}", std::process::id());
@@ -60,19 +78,45 @@ fn run_session_with_state_barrier(
         || std::env::temp_dir().join(format!("numinous_mcp_e2e_journey_{suffix}.txt")),
         std::path::Path::to_path_buf,
     );
-    let scores = std::env::temp_dir().join(format!("numinous_mcp_e2e_scores_{suffix}.txt"));
-    if ephemeral_journey {
-        let _ = std::fs::remove_file(&journey);
-    }
-    let _ = std::fs::remove_file(&scores);
+    let scores_in_home = home.is_some();
+    let scores = home.map_or_else(
+        || std::env::temp_dir().join(format!("numinous_mcp_e2e_scores_{suffix}.txt")),
+        |home| home.join("scores.txt"),
+    );
+    let ephemeral_project = project.is_none() && home.is_none();
+    let project = project.map_or_else(
+        || {
+            home.map_or_else(
+                || std::env::temp_dir().join(format!("numinous_mcp_e2e_project_{suffix}.txt")),
+                |home| home.join(".numinous-project"),
+            )
+        },
+        std::path::Path::to_path_buf,
+    );
+    let cleanup_ephemeral = || {
+        if ephemeral_journey {
+            let _ = std::fs::remove_file(&journey);
+        }
+        if !scores_in_home {
+            let _ = std::fs::remove_file(&scores);
+        }
+        if ephemeral_project {
+            let _ = std::fs::remove_file(&project);
+        }
+    };
+    cleanup_ephemeral();
 
     let mut command = Command::new(env!("CARGO_BIN_EXE_numinous-mcp"));
     command
         .env("NUMINOUS_JOURNEY", &journey)
         .env("NUMINOUS_SCORES", &scores)
+        .env("NUMINOUS_PROJECT", &project)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
+    if let Some(home) = home {
+        command.env("HOME", home).env("USERPROFILE", home);
+    }
     if let Some(journal) = journal {
         command.env("NUMINOUS_JOURNAL", journal);
     }
@@ -97,10 +141,7 @@ fn run_session_with_state_barrier(
             let _ = child.kill();
             let _ = child.wait();
             let _ = output_reader.join();
-            if ephemeral_journey {
-                let _ = std::fs::remove_file(&journey);
-            }
-            let _ = std::fs::remove_file(&scores);
+            cleanup_ephemeral();
             panic!("MCP session barrier did not resolve within {SESSION_BARRIER_TIMEOUT:?}");
         }
         thread::sleep(Duration::from_millis(5));
@@ -123,10 +164,7 @@ fn run_session_with_state_barrier(
             let _ = child.kill();
             let _ = child.wait();
             let _ = output_reader.join();
-            if ephemeral_journey {
-                let _ = std::fs::remove_file(&journey);
-            }
-            let _ = std::fs::remove_file(&scores);
+            cleanup_ephemeral();
             panic!("MCP server did not exit within {exit_timeout:?}");
         }
         thread::sleep(Duration::from_millis(5));
@@ -134,10 +172,7 @@ fn run_session_with_state_barrier(
     let stdout = output_reader.join().expect("MCP output reader");
 
     assert!(status.success(), "server exited with an error");
-    if ephemeral_journey {
-        let _ = std::fs::remove_file(&journey);
-    }
-    let _ = std::fs::remove_file(&scores);
+    cleanup_ephemeral();
 
     String::from_utf8(stdout)
         .expect("utf8 output")
@@ -1116,7 +1151,7 @@ fn modern_stateless_discovery_tools_and_prediction_work_over_real_stdio() {
     assert_eq!(by_id(2)["result"]["resultType"], "complete");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(41)
+        Some(42)
     );
     assert_eq!(by_id(3)["result"]["resultType"], "input_required");
     assert_eq!(
@@ -2302,7 +2337,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(41)
+        Some(42)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));
@@ -2643,7 +2678,7 @@ fn creation_capsules_cross_real_stdio_with_lineage_and_v2_journal_migration() {
         reply_by_id(&replies, 2)["result"]["tools"]
             .as_array()
             .map(Vec::len),
-        Some(41)
+        Some(42)
     );
     let saved = &reply_by_id(&replies, 3)["result"]["structuredContent"];
     assert_eq!(saved["numFile"], parent.to_num_file());
@@ -3010,4 +3045,163 @@ fn returning_home_experiments_open_from_an_id_without_a_host_path() {
     assert_eq!(child["next"]["tool"], "fork_creation");
 
     let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn project_chain_survives_two_processes_and_resume_next_opens() {
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous_mcp_project_{}_{}",
+        std::process::id(),
+        session
+    ));
+    std::fs::create_dir(&root).expect("private project root");
+    let journal = root.join("journal.txt");
+    let journey = root.join("journey.txt");
+    let project = root.join(".numinous-project");
+    numinous_core::record_journal_file(
+        &journal,
+        numinous_core::JournalRecord {
+            recorded_at_utc: 10,
+            event_at_utc: 10,
+            source: numinous_core::JOURNAL_SOURCE_SELF_AUTHORED,
+            kind: "encounter",
+            subject: "lissajous",
+            text: "quartz-journal-token",
+            affect: None,
+        },
+    )
+    .expect("journal fixture");
+    let journal_bytes = std::fs::read(&journal).expect("journal bytes");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{"name":name,"arguments":arguments}
+        })
+    };
+    let initialize = || {
+        json!({
+            "jsonrpc":"2.0", "id":1, "method":"initialize", "params":{
+                "protocolVersion":"2025-11-25",
+                "capabilities":{},
+                "clientInfo":{"name":"project-acceptance","version":"1.0"}
+            }
+        })
+    };
+    let run = |requests: &[Value]| {
+        run_session_with_state_barrier(
+            requests,
+            || true,
+            &[],
+            Some(&journal),
+            Some(&journey),
+            Some(&project),
+            Some(&root),
+        )
+    };
+
+    let kept = run(&[
+        initialize(),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(
+            2,
+            "project",
+            json!({
+                "op":"keep",
+                "question":"What period do these two oscillators share?",
+                "next":{"tool":"open_creation","arguments":{"capsule":"closing-voices"}},
+                "rooms":["lissajous"]
+            }),
+        ),
+    ]);
+    let kept = reply_by_id(&kept, 2);
+    assert_eq!(kept["result"]["isError"], false, "{kept}");
+    assert_eq!(kept["result"]["structuredContent"]["outcome"], "appended");
+    assert_eq!(kept["result"]["structuredContent"]["applied"], false);
+    assert!(project.exists(), "the chain survives the first process");
+    assert_eq!(
+        std::fs::read(&journal).expect("journal after keep"),
+        journal_bytes
+    );
+    assert!(
+        !std::fs::read_to_string(&project)
+            .expect("chain text")
+            .contains("quartz-journal-token")
+    );
+
+    let resumed = run(&[
+        initialize(),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(2, "project", json!({"op":"resume"})),
+    ]);
+    let resumed = reply_by_id(&resumed, 2);
+    assert_eq!(resumed["result"]["isError"], false, "{resumed}");
+    let preview = &resumed["result"]["structuredContent"]["preview"];
+    assert_eq!(preview["notApplied"], true);
+    assert_eq!(preview["interpreted"], false);
+    assert_eq!(preview["willReturn"], true);
+    assert_eq!(preview["journalChanged"], false);
+    assert_eq!(preview["workspaceChanged"], false);
+    assert_eq!(preview["next"]["tool"], "open_creation");
+    assert_eq!(preview["next"]["arguments"]["capsule"], "closing-voices");
+    let rendered = serde_json::to_string(resumed).expect("resume json");
+    assert!(!rendered.contains(&root.display().to_string()));
+    assert!(!rendered.contains("learned"));
+    assert_eq!(
+        std::fs::read(&journal).expect("journal after resume"),
+        journal_bytes
+    );
+    let next_tool = preview["next"]["tool"].as_str().expect("tool").to_string();
+    let next_arguments = preview["next"]["arguments"].clone();
+
+    let followed = run(&[
+        initialize(),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(2, &next_tool, next_arguments),
+    ]);
+    let followed = reply_by_id(&followed, 2);
+    assert_eq!(followed["result"]["isError"], false, "{followed}");
+    assert_eq!(
+        followed["result"]["structuredContent"]["closure"]["kind"],
+        "voices"
+    );
+    assert_eq!(
+        std::fs::read(&journal).expect("journal after follow"),
+        journal_bytes
+    );
+
+    let erased = run(&[
+        initialize(),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(2, "forget", json!({"confirm": true, "project": true})),
+    ]);
+    let erased = reply_by_id(&erased, 2);
+    assert_eq!(erased["result"]["isError"], false, "{erased}");
+    assert_eq!(
+        erased["result"]["structuredContent"]["project_erased"],
+        true
+    );
+    assert_eq!(
+        erased["result"]["structuredContent"]["journal_erased"],
+        false
+    );
+    assert!(!project.exists(), "project erasure removes the chain");
+    assert_eq!(
+        std::fs::read(&journal).expect("journal remains"),
+        journal_bytes
+    );
+
+    let cleared = run(&[
+        initialize(),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(2, "forget", json!({"confirm": true, "all_local": true})),
+    ]);
+    let cleared = reply_by_id(&cleared, 2);
+    assert_eq!(cleared["result"]["isError"], false, "{cleared}");
+    assert_eq!(
+        cleared["result"]["structuredContent"]["residue"]["managed_store_residue"],
+        0
+    );
+    assert!(!journal.exists());
+    std::fs::remove_dir_all(&root).expect("remove project root");
 }

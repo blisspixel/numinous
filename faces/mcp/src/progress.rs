@@ -70,6 +70,7 @@ pub(super) fn local_state_paths() -> numinous_core::LocalStatePaths {
             scores: test_state_path("scores"),
             cairn: test_state_path("cairn"),
             journal: test_state_path("journal"),
+            project: test_state_path("project"),
             preferences: test_state_path("preferences"),
             radio_cache: test_state_path("radio"),
             protected_radio_source: None,
@@ -178,6 +179,10 @@ pub(super) fn cairn_path() -> std::path::PathBuf {
 
 pub(super) fn journal_path() -> std::path::PathBuf {
     local_state_paths().journal
+}
+
+pub(super) fn project_path() -> std::path::PathBuf {
+    local_state_paths().project
 }
 
 /// The level at which the cairn opens for leaving: the journey's cap, so a

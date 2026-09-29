@@ -378,6 +378,9 @@ enum Command {
         /// Also erase the opt-in experience journal.
         #[arg(long)]
         journal: bool,
+        /// Also erase the explicit project chain.
+        #[arg(long)]
+        project: bool,
         /// Also erase generated radio tracks in the managed cache.
         #[arg(long)]
         radio_cache: bool,
@@ -1258,6 +1261,7 @@ fn local_state_paths() -> numinous_core::LocalStatePaths {
             scores: test_state_path("scores"),
             cairn: test_state_path("cairn"),
             journal: test_state_path("journal"),
+            project: test_state_path("project"),
             preferences: test_state_path("preferences"),
             radio_cache: test_state_path("radio"),
             protected_radio_source: None,
@@ -1794,6 +1798,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             scores,
             cairn,
             journal,
+            project,
             radio_cache,
             crash_log,
             all_local,
@@ -1806,6 +1811,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                     scores,
                     cairn,
                     journal,
+                    project,
                     preferences: false,
                     radio_cache,
                     crash_log,
