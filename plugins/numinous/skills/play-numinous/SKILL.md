@@ -123,10 +123,11 @@ product of two curves, and a named slider have no slope reading. `floor`,
 `mod`, `min`, `max`, `euclid`, `pat`, and `note` have no slope reading. A parametric path whose `x` and `y` are each a sum of
 two oscillators grows the first term beside the path, on the same frame.
 A sum on only one coordinate grows that same first term.
+A third term grows that same first term.
 The App sounds one tone per recognized frequency.
 `structuredContent.partial` names those frequencies. Frequency `1` is
 110 Hz. The capsule, the text preview, and `melody.mid` stay the player's
-source. A third term, a graph, and a drawn path have no partial reading.
+source. A fourth term, a graph, and a drawn path have no partial reading.
 Follow a
 Returning home row, then read `closure` rather than trusting the picture.
 After `another-ratio`, the App walk continues into `closing-voices`, then

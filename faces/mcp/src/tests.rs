@@ -8447,6 +8447,50 @@ fn opening_a_two_term_path_reports_its_partial() {
         one_sum["result"]["structuredContent"]["partial"]
     );
 
+    let three = call(
+        "save_creation",
+        json!({
+            "x_expr": "cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)",
+            "y_expr": "sin(2*pi*t)",
+            "tmin": 0.0,
+            "tmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(three["result"]["isError"], false, "{three}");
+    assert_eq!(
+        three["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        three["result"]["structuredContent"]["partial"]["terms"][2]["frequency"],
+        "5"
+    );
+    assert_eq!(
+        three["result"]["structuredContent"]["partial"]["terms"][2]["hz"],
+        550.0
+    );
+    assert!(
+        three["result"]["structuredContent"]
+            .get("closure")
+            .is_none(),
+        "{three}"
+    );
+    let three_file = three["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(
+        three_file.contains("cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)"),
+        "{three_file}"
+    );
+    assert!(!three_file.contains("PARTIAL"), "{three_file}");
+    let opened_three = call("open_creation", json!({"capsule": three_file}));
+    assert_eq!(opened_three["result"]["isError"], false, "{opened_three}");
+    assert_eq!(
+        opened_three["result"]["structuredContent"]["partial"],
+        three["result"]["structuredContent"]["partial"]
+    );
+
     let plain = call(
         "save_creation",
         json!({"x_expr": "cos(2*pi*t)", "y_expr": "sin(2*pi*t)", "tmin": 0.0, "tmax": 1.0}),
