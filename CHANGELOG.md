@@ -14,7 +14,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 - MCP `project` keeps, imports, corrects, and previews one explicit project
   chain at `NUMINOUS_PROJECT` (default `.numinous-project`). Resume does not
   apply the next call. `forget` can erase the chain without erasing the
-  journal. There is no CLI apply yet.
+  journal.
+- CLI `numinous project resume` prints that preview. `--apply` writes the
+  question into this process's workspace intention and, when the next call
+  names a present room, that room into place. The workspace is not saved.
+  Journal text stays in the journal. The next tool is not called.
 - Overlay closure for two harmonic oscillators. Opening `closing-voices`,
   `shorter-window`, or `wandering-voices` reports ideal cycles in the window
   and a common period when the model has one. `shorter-window` keeps the

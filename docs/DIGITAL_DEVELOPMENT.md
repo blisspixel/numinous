@@ -138,22 +138,26 @@ pitch map changes, and when the player leaves and returns. An untouched return
 keeps preview and identity state. These are reproducible experiment parameters,
 not an inferred biography or a claim about lived experience.
 
-**Built for the core document and the MCP preview.** `NUMINOUS_PROJECT 1`
-keeps a chosen question, one closed next call, exact room references,
-selected evidence links, and an optional canonical creation. Keeping,
-importing, and correcting are distinct explicit acts. MCP `project` resume
-shows what will return and what is missing, corrected, collided, or
-incompatible. It does not call the next tool, and it does not copy journal
-text. CLI apply is not built. No automatic biography, hidden summarizer,
-or inferred identity is part of this slice.
+**Built for the core document, the MCP preview, and the CLI resume.**
+`NUMINOUS_PROJECT 1` keeps a chosen question, one closed next call, exact
+room references, selected evidence links, and an optional canonical
+creation. Keeping, importing, and correcting are distinct explicit acts.
+MCP `project` resume shows what will return and what is missing, corrected,
+collided, or incompatible. It does not call the next tool, and it does not
+copy journal text. CLI `numinous project resume` prints that preview.
+`--apply` writes the process-local workspace intention and, when the next
+call names a present room, its place. The workspace is not saved. No
+automatic biography, hidden summarizer, or inferred identity is part of
+this slice.
 
 The MCP contract is held by a two-process roundtrip, exact construction
 replay, local-ID collision handling, correction provenance, absence after
 erasure, untrusted text treated as data, and removal of the project file
 without taking the journal. `portable-1` remains export-only and does not
-import a project. CLI apply is the remaining part of this increment.
-The next capability quest in `PROGRESSION.md` supplies a concrete use for the
-project: a law the player can apply elsewhere, revise, or give to another player.
+import a project. The CLI resume is held by a process-local workspace
+write that leaves both files byte-for-byte. The capability quest in
+`PROGRESSION.md` remains later: a law the player can apply elsewhere,
+revise, or give to another player.
 
 Later, test an asynchronous experiment relay over the existing creation/fork
 boundary. Each participant chooses the artifact and context they share; a

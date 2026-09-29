@@ -199,3 +199,98 @@ fn public_forget_previews_fails_closed_and_erases_isolated_state() {
     }
     std::fs::remove_dir_all(root).expect("fixture cleanup");
 }
+
+#[test]
+fn public_project_resume_apply_stays_inside_the_process() {
+    let root =
+        std::env::temp_dir().join(format!("numinous-cli-project-smoke-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).expect("fixture root");
+    let project = root.join("project.txt");
+    let journal = root.join("journal.txt");
+    let journey = root.join("journey.txt");
+    numinous_core::keep_project_file(
+        &project,
+        &numinous_core::ProjectDraft {
+            recorded_at_utc: 1_700_000_000,
+            question: "Which room is this?".to_string(),
+            next: numinous_core::ProjectNext::PlayRoom {
+                room: "lissajous".to_string(),
+                phase: Some("0.25".to_string()),
+            },
+            rooms: vec!["lissajous".to_string()],
+            evidence: Vec::new(),
+            creation: None,
+        },
+    )
+    .expect("keep");
+    let project_bytes = std::fs::read(&project).expect("project bytes");
+    let output = Command::new(env!("CARGO_BIN_EXE_numinous"))
+        .args(["project", "resume", "--apply"])
+        .env("HOME", &root)
+        .env("USERPROFILE", &root)
+        .env("NUMINOUS_PROJECT", &project)
+        .env("NUMINOUS_JOURNAL", &journal)
+        .env("NUMINOUS_JOURNEY", &journey)
+        .env("NUMINOUS_SCORES", root.join("scores.txt"))
+        .env("NUMINOUS_CAIRN", root.join("cairn.txt"))
+        .env("NUMINOUS_PREFERENCES", root.join("preferences.txt"))
+        .env_remove("NUMINOUS_RADIO")
+        .output()
+        .expect("launch the public CLI binary");
+    assert!(
+        output.status.success(),
+        "resume failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("resume is UTF-8");
+    assert!(stdout.contains("Intention: Which room is this?"));
+    assert!(stdout.contains("Place: lissajous t=0.25"));
+    assert!(stdout.contains("Preview workspace changed: false"));
+    assert!(stdout.contains("Preview journal changed: false"));
+    assert!(
+        output.stderr.is_empty(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        std::fs::read(&project).expect("project after"),
+        project_bytes
+    );
+    assert!(!journal.exists(), "resume must not create a journal");
+    assert!(!journey.exists(), "resume must not create a journey");
+    std::fs::remove_dir_all(root).expect("fixture cleanup");
+}
+
+#[test]
+fn public_project_resume_of_an_empty_chain_fails_without_creating_files() {
+    let root =
+        std::env::temp_dir().join(format!("numinous-cli-project-empty-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).expect("fixture root");
+    let project = root.join("project.txt");
+    let output = Command::new(env!("CARGO_BIN_EXE_numinous"))
+        .args(["project", "resume", "--apply"])
+        .env("HOME", &root)
+        .env("USERPROFILE", &root)
+        .env("NUMINOUS_PROJECT", &project)
+        .env("NUMINOUS_JOURNAL", root.join("journal.txt"))
+        .env("NUMINOUS_JOURNEY", root.join("journey.txt"))
+        .env("NUMINOUS_SCORES", root.join("scores.txt"))
+        .env_remove("NUMINOUS_RADIO")
+        .output()
+        .expect("launch the public CLI binary");
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("diagnostic is UTF-8");
+    assert!(stderr.contains("project chain is empty"), "{stderr}");
+    assert!(
+        output.stdout.is_empty(),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    assert!(
+        !project.exists(),
+        "a failed resume must not create the chain"
+    );
+    std::fs::remove_dir_all(root).expect("fixture cleanup");
+}

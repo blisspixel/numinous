@@ -109,8 +109,10 @@ mastery, exploration, and company also remain complete reasons to play.
   check, not a complete accessibility assessment.
 - **Playable now:** [Returning home](experiments/returning-home.md) has four
   portable Studio contrasts with exact formulas and retained fork lineage.
-  These are current-tool experiments. The overlay cycle reading is built;
-  the kept project that resumes the question is still designed.
+  These are current-tool experiments. The overlay cycle reading is built.
+  A kept project can be resumed: MCP `project` previews the next call, and
+  CLI `numinous project resume --apply` writes this process's intention and,
+  when that call names a present room, its place.
 - **Designed:** [Route Lab](ROUTE_LAB.md) makes shortest-path search and
   traveling-salesman improvement visible on one small street map. Its first
   slice includes a complete four-stop comparison, an exact small-case solver,
@@ -171,16 +173,18 @@ mastery, exploration, and company also remain complete reasons to play.
   Core, CLI, MCP, and the App status share that reading. A picture is not
   the proof. The least period is no longer truncated: frequencies 2 and 4
   have period `1/2`, and commensurate square roots keep a period.
-- **Built, project document and MCP preview:** one explicit project keeps a
-  question, a closed next call, catalog rooms, typed evidence links, and an
-  optional Studio creation. MCP `project` can keep, import, correct, and
-  resume. Resume previews what is present, missing, corrected, collided, or
-  incompatible, and it does not apply the next call. `forget` can erase the
-  chain without erasing the journal.
-- **Designed next:** CLI resume that can apply that preview. Applying it
-  writes the process-local workspace intention and place only. This stays a
-  small slice before a general quest engine or semantic memory system
-  (`DIGITAL_DEVELOPMENT.md`).
+- **Built, project resume:** one explicit project keeps a question, a closed
+  next call, catalog rooms, typed evidence links, and an optional Studio
+  creation. MCP `project` can keep, import, correct, and resume. Resume
+  previews what is present, missing, corrected, collided, or incompatible,
+  and it does not apply the next call. CLI `numinous project resume` prints
+  that preview. `--apply` writes this process's workspace intention and,
+  when the next call names a present room, its place. The workspace is not
+  saved, journal text stays in the journal, and the next tool is not called.
+  `forget` can erase the chain without erasing the journal.
+- **Designed, still later:** the capability quest in `PROGRESSION.md` can
+  use a kept project. A general quest engine and a semantic memory system
+  remain unbuilt (`DIGITAL_DEVELOPMENT.md`).
 - **Built in alpha 20, depth by choice:** room play is the default. E, ?, or
   Cabinet Explain opens a scrollable reader with immediately selectable
   Explanation, Notes, and Mathematics. Lissajous has the first authored

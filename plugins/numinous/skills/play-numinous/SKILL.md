@@ -145,8 +145,11 @@ when one question should outlive the visit. `op: "keep"` stores that question
 as data, one closed next call, catalog rooms, typed evidence links, and an
 optional Studio creation at `NUMINOUS_PROJECT` (or `.numinous-project`).
 `op: "resume"` previews `structuredContent.preview.next` and does not apply it.
-It does not copy journal text. `forget` with `project: true` erases the chain
-and leaves the journal. `export_journal` format `portable-1` still does not
+It does not copy journal text. `numinous project resume` prints the same
+preview. `numinous project resume --apply` writes the question and a present
+room into the process that runs the command. MCP resume still leaves the
+workspace unchanged. `forget` with `project: true` erases the chain and leaves
+the journal. `export_journal` format `portable-1` still does not
 import a project. Use
 `forget` to inspect or erase Journey and other Numinous-managed local state.
 

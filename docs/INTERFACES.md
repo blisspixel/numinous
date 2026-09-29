@@ -222,7 +222,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   `sing_expression`, `save_creation`, `open_creation`, `fork_creation`,
   Journey operations, experience journal operations
   (`read_journal`, `record_journal`, `correct_journal`, `export_journal`,
-  `erase_journal`), the explicit `project` chain, the process-local `workspace` visit state, and the shared games. `project` keeps, imports, corrects, and previews one question, a closed next call, catalog rooms, typed evidence links, and an optional Studio creation. Resume returns `structuredContent.preview.next` and does not apply it. `forget` can erase the chain without erasing the journal. There is no CLI apply yet. Journal entries have stable local
+  `erase_journal`), the explicit `project` chain, the process-local `workspace` visit state, and the shared games. `project` keeps, imports, corrects, and previews one question, a closed next call, catalog rooms, typed evidence links, and an optional Studio creation. Resume returns `structuredContent.preview.next` and does not apply it. `forget` can erase the chain without erasing the journal. CLI `numinous project resume --apply` writes this process's intention and, when the next call names a present room, its place. It saves no workspace file and calls no next tool. Journal entries have stable local
   identifiers, separate event and record times, declared provenance, immutable
   corrections, and bounded versioned export pages. `export_journal` returns the
   native journal schema by default or, when asked for `format: "okf-0.2"`, an
