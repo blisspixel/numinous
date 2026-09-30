@@ -283,16 +283,31 @@ mastery, exploration, and company also remain complete reasons to play.
   `5`. Parentheses keep that reading. A subtraction distributes,
   and the stored terms add back to the coordinate the player wrote. Source
   order is the order of the reading. A fourth term, a leading minus on a
-  whole sum, a product of two oscillators, a graph, a field, and an
-  overlay have no partial reading. CLI `open-studio` and MCP
+  whole sum, a product of two oscillators, a field, and an overlay have
+  no partial reading from this rule. A graph that sums exactly two
+  oscillators is the next paragraph. CLI `open-studio` and MCP
   `structuredContent.partial` report `partial basis=sum`. The capsule,
   the postcard, the text preview, CLI `sing`, and `melody.mid` stay the
   player's source. Player evidence remains open.
+- **Built, first term of a two-oscillator graph:** an open graph that
+  sums exactly two oscillators, in the form closure already accepts,
+  grows the first term on the same vertical axis.
+  `sin(2*pi*x)+0.5*sin(6*pi*x)` grows `sin(2*pi*x)` and sounds
+  frequencies `1` and `3`. The stored terms add back to the graph the
+  player wrote. A subtraction stores the second term negated. Source
+  order is the order of the reading. The App sounds one tone per
+  recognized frequency, using the same 110 Hz map. CLI `open-studio`
+  and MCP `structuredContent.partial` report `partial basis=sum`. One
+  term, a third term, a path, a field, and an overlay have no partial
+  reading from this rule. A slope this slice can name stays that slope.
+  The capsule, the postcard, the text preview, CLI `sing`, and
+  `melody.mid` stay the player's source. The live App voice is the
+  tones. Player evidence remains open.
 - **Hypothesis, the rest of the partial:** later slices may add a fourth
-  term, or a graph that is already a sum of two recognized oscillators.
-  A drawn path turned into coefficients stays out. There is no series
-  command and no infinite sum. The Fourier sketch in `STUDIO.md` stays
-  a sketch. Implementation and player evidence remain open.
+  term on a path, or a third term on a graph. A drawn path turned into
+  coefficients stays out. There is no series command and no infinite
+  sum. The Fourier sketch in `STUDIO.md` stays a sketch. Implementation
+  and player evidence remain open.
 - **Designed, still later:** a general quest engine and a semantic memory
   system remain unbuilt (`DIGITAL_DEVELOPMENT.md`). The capability quest in
   `PROGRESSION.md` can keep using a kept project.
@@ -1963,8 +1978,9 @@ Rock 6 has carried the instrument through named pitches. MusicXML remains
 there. The frequency tones are built. The slope of `sin(a*x)` is built, including
 a sum of that form with a line or an integer power of `x`. The first
 term of a two-oscillator sum is built, including a sum on only one
-coordinate and a third term. The rest of the slope grammar remains a
-hypothesis. A fourth term, and a graph that is already a sum, remain
+coordinate, a third term, and a graph that sums exactly two
+oscillators. The rest of the slope grammar remains a
+hypothesis. A fourth term on a path, and a third term on a graph, remain
 hypotheses.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
 already plans them. A natural-language question, step-by-step homework,

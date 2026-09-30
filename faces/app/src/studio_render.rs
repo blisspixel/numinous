@@ -148,11 +148,13 @@ pub fn draw_curve(
     Some((samples.ymin, samples.ymax))
 }
 
-/// Draw a graph and its slope on one shared vertical axis.
+/// Draw two curves on one shared vertical axis.
 ///
 /// Separate auto-scale would give both curves the same height when their
-/// ranges differ. The graph mark is `#`. The slope mark is `+`. When the
-/// slope has no finite samples, the graph is drawn alone on its own range.
+/// ranges differ. The first mark is `#`. The second mark is `+`. When the
+/// second curve has no finite samples, the first is drawn alone on its own
+/// range. Callers use this for a slope, and for the first term of a
+/// two-oscillator graph.
 pub fn draw_two_curves(
     raster: &mut Raster,
     layout: CurveLayout,

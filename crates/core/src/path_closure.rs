@@ -13,8 +13,10 @@
 //! A parametric path whose coordinates are sums of such oscillators can show
 //! the first term beside the path and sound one tone per recognized
 //! frequency. A coordinate may be one, two, or three of those oscillators,
-//! and at least one coordinate is a sum. That reading does not claim a
-//! period. The player's source stays the source.
+//! and at least one coordinate is a sum. A graph that sums exactly two of
+//! those oscillators can show the first term on the same vertical axis and
+//! sound the same tones. That reading does not claim a period. The player's
+//! source stays the source.
 
 use crate::sound::SoundSpec;
 use crate::studio::{Expr, Func, Op, StudioCreation, StudioKind, StudioProgram, eval_named};
@@ -109,6 +111,20 @@ pub struct HarmonicPartial {
     pub x_terms: Vec<Expr>,
     /// Terms of `y(t)` in source order. One, two, or three.
     pub y_terms: Vec<Expr>,
+    /// Recognized frequencies in first-seen order. One tone each.
+    pub frequencies: Vec<OscillatorTone>,
+}
+
+/// The first term of a graph that sums exactly two oscillators.
+///
+/// The oscillators are the ones closure already accepts. Terms are in source
+/// order. A subtraction stores the second term negated, so the stored terms
+/// add to the graph the player wrote. The drawn value is the first term.
+/// One term, a third term, a path, a field, and an overlay are absent.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GraphPartial {
+    /// Terms of the graph in source order. Exactly two.
+    pub terms: Vec<Expr>,
     /// Recognized frequencies in first-seen order. One tone each.
     pub frequencies: Vec<OscillatorTone>,
 }
@@ -317,10 +333,11 @@ impl HarmonicPartial {
     /// Read one parametric creation. Anything else is absent.
     ///
     /// A single oscillator pair stays with closure. A fourth term, a product
-    /// of two oscillators, a graph, a field, and an overlay are absent. One
-    /// coordinate may be a single oscillator when the other is a sum of two
-    /// or three. The parameter must be one of the exact values closure
-    /// already accepts. The capsule is not modified.
+    /// of two oscillators, a graph, a field, and an overlay are absent here.
+    /// A graph sum of two oscillators is [`GraphPartial`]. One coordinate
+    /// may be a single oscillator when the other is a sum of two or three.
+    /// The parameter must be one of the exact values closure already
+    /// accepts. The capsule is not modified.
     #[must_use]
     pub fn of(creation: &StudioCreation) -> Option<Self> {
         if creation.kind() != StudioKind::Parametric {
@@ -344,16 +361,7 @@ impl HarmonicPartial {
         if x_terms.len() < 2 && y_terms.len() < 2 {
             return None;
         }
-        let mut frequencies = Vec::new();
-        for term in x_terms.iter().chain(y_terms.iter()) {
-            if frequencies
-                .iter()
-                .any(|tone: &OscillatorTone| tone.frequency_text == term.frequency_text)
-            {
-                continue;
-            }
-            frequencies.push(oscillator_tone(&term.frequency_text, term.cycles));
-        }
+        let frequencies = recognized_tones(x_terms.iter().chain(y_terms.iter()));
         Some(Self {
             x_terms: x_terms.into_iter().map(|term| term.expression).collect(),
             y_terms: y_terms.into_iter().map(|term| term.expression).collect(),
@@ -382,45 +390,135 @@ impl HarmonicPartial {
     /// PCM hearing.
     #[must_use]
     pub fn sound(&self) -> Option<SoundSpec> {
-        let mut freqs = Vec::with_capacity(self.frequencies.len());
-        for tone in &self.frequencies {
-            freqs.push(tone.hz?);
-        }
-        if freqs.is_empty() {
-            return None;
-        }
-        Some(SoundSpec::chord(
-            &freqs,
-            OSCILLATOR_TONE_SECONDS,
-            OSCILLATOR_TONE_GAIN,
-        ))
+        partial_sound(&self.frequencies)
     }
 
     /// Terminal lines for the reading. Empty of any period claim.
     #[must_use]
     pub fn report_lines(&self) -> Vec<String> {
-        let mut lines = vec!["partial basis=sum".to_string()];
-        for (index, tone) in self.frequencies.iter().enumerate() {
-            let mut line = format!("term {} freq={}", index + 1, tone.frequency_text);
-            if let Some(hz) = tone.hz {
-                line.push_str(" hz=");
-                line.push_str(&hz.to_string());
-            }
-            lines.push(line);
-        }
-        lines
+        partial_report(&self.frequencies)
     }
 
     /// Status text: `PARTIAL` and each frequency in first-seen order.
     #[must_use]
     pub fn status_caption(&self) -> String {
-        let mut line = String::from("PARTIAL");
-        for tone in &self.frequencies {
-            line.push_str("  ");
-            line.push_str(&tone.frequency_text);
-        }
-        line
+        partial_caption(&self.frequencies)
     }
+}
+
+impl GraphPartial {
+    /// Read one graph. Anything else is absent.
+    ///
+    /// The graph must be a sum of exactly two oscillators closure already
+    /// accepts. One term, a third term, a path, a field, and an overlay are
+    /// absent. The parameter must be one of the exact values closure already
+    /// accepts. The capsule is not modified. A slope reading is a different
+    /// fact and is left untouched.
+    #[must_use]
+    pub fn of(creation: &StudioCreation) -> Option<Self> {
+        if creation.kind() != StudioKind::Graph {
+            return None;
+        }
+        let Ok(program) = creation.program() else {
+            return None;
+        };
+        let parameter = Exact::from_f64(creation.a())?;
+        let sliders = creation.sliders();
+        let terms = coordinate_terms(program.voice_expression(), parameter, sliders)?;
+        if terms.len() != 2 {
+            return None;
+        }
+        let frequencies = recognized_tones(terms.iter());
+        Some(Self {
+            terms: terms.into_iter().map(|term| term.expression).collect(),
+            frequencies,
+        })
+    }
+
+    /// The first term as a height. Absent when that height is non-finite.
+    #[must_use]
+    pub fn first_value(
+        &self,
+        x: f64,
+        a: f64,
+        sliders: &[crate::slider::StudioSlider],
+    ) -> Option<f64> {
+        let y = eval_named(self.terms.first()?, x, a, sliders);
+        y.is_finite().then_some(y)
+    }
+
+    /// One sustained tone per recognized frequency.
+    ///
+    /// Absent when any tone has no hertz. This is the live App voice when
+    /// the graph has no slope this slice can name. The sampled melody and
+    /// its MIDI file stay the player's source.
+    #[must_use]
+    pub fn sound(&self) -> Option<SoundSpec> {
+        partial_sound(&self.frequencies)
+    }
+
+    /// Terminal lines for the reading. Empty of any period claim.
+    #[must_use]
+    pub fn report_lines(&self) -> Vec<String> {
+        partial_report(&self.frequencies)
+    }
+
+    /// Status text: `PARTIAL` and each frequency in first-seen order.
+    #[must_use]
+    pub fn status_caption(&self) -> String {
+        partial_caption(&self.frequencies)
+    }
+}
+
+fn recognized_tones<'a>(terms: impl IntoIterator<Item = &'a SignedTerm>) -> Vec<OscillatorTone> {
+    let mut frequencies = Vec::new();
+    for term in terms {
+        if frequencies
+            .iter()
+            .any(|tone: &OscillatorTone| tone.frequency_text == term.frequency_text)
+        {
+            continue;
+        }
+        frequencies.push(oscillator_tone(&term.frequency_text, term.cycles));
+    }
+    frequencies
+}
+
+fn partial_sound(frequencies: &[OscillatorTone]) -> Option<SoundSpec> {
+    let mut freqs = Vec::with_capacity(frequencies.len());
+    for tone in frequencies {
+        freqs.push(tone.hz?);
+    }
+    if freqs.is_empty() {
+        return None;
+    }
+    Some(SoundSpec::chord(
+        &freqs,
+        OSCILLATOR_TONE_SECONDS,
+        OSCILLATOR_TONE_GAIN,
+    ))
+}
+
+fn partial_report(frequencies: &[OscillatorTone]) -> Vec<String> {
+    let mut lines = vec!["partial basis=sum".to_string()];
+    for (index, tone) in frequencies.iter().enumerate() {
+        let mut line = format!("term {} freq={}", index + 1, tone.frequency_text);
+        if let Some(hz) = tone.hz {
+            line.push_str(" hz=");
+            line.push_str(&hz.to_string());
+        }
+        lines.push(line);
+    }
+    lines
+}
+
+fn partial_caption(frequencies: &[OscillatorTone]) -> String {
+    let mut line = String::from("PARTIAL");
+    for tone in frequencies {
+        line.push_str("  ");
+        line.push_str(&tone.frequency_text);
+    }
+    line
 }
 
 fn voice_lines(voices: &VoiceClosure) -> Vec<String> {
@@ -1355,9 +1453,10 @@ fn split_square(mut value: u64) -> (u64, u64) {
 #[cfg(test)]
 mod tests {
     use super::{
-        HarmonicPartial, OSCILLATOR_TONE_REFERENCE_HZ, OSCILLATOR_TONE_SECONDS, PathClosure,
-        PeriodicClosure,
+        GraphPartial, HarmonicPartial, OSCILLATOR_TONE_REFERENCE_HZ, OSCILLATOR_TONE_SECONDS,
+        PathClosure, PeriodicClosure,
     };
+    use crate::GraphSlope;
     use crate::studio::{Expr, StudioCreation};
 
     fn bundled(id: &str) -> StudioCreation {
@@ -2153,6 +2252,88 @@ mod tests {
         assert!((term_sum(&both.x_terms, 0.0) - path.0).abs() < 1e-9);
         let first = both.first_point(0.0, 1.0, &[]).expect("first of both");
         assert!((first.0 - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_two_oscillator_graph_names_its_first_partial() {
+        let source = "sin(2*pi*x)+0.5*sin(6*pi*x)";
+        let creation = StudioCreation::new(source, 0.0, 1.0, 1.0).expect("graph");
+        let file = creation.to_num_file();
+        let partial = GraphPartial::of(&creation).expect("partial");
+        assert_eq!(creation.to_num_file(), file);
+        assert!(file.contains(source));
+        assert!(!file.contains("PARTIAL"));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(HarmonicPartial::of(&creation).is_none());
+        assert!(GraphSlope::of_creation(&creation).is_none());
+        assert_eq!(partial.terms.len(), 2);
+        assert_eq!(partial.status_caption(), "PARTIAL  1  3");
+        assert_eq!(
+            partial.report_lines(),
+            vec![
+                "partial basis=sum".to_string(),
+                "term 1 freq=1 hz=110".to_string(),
+                "term 2 freq=3 hz=330".to_string(),
+            ]
+        );
+        let sound = partial.sound().expect("tones");
+        assert_eq!(sound.notes[0].freq, 110.0);
+        assert_eq!(sound.notes[1].freq, 330.0);
+        assert_ne!(sound, creation.to_melody(32));
+
+        let expr = creation
+            .program()
+            .expect("program")
+            .voice_expression()
+            .clone();
+        for x in [0.0, 0.2, 0.55, 0.9] {
+            let height = crate::studio::eval(&expr, x, 1.0);
+            assert!((height - term_sum(&partial.terms, x)).abs() < 1e-9, "x={x}");
+            let first = partial.first_value(x, 1.0, &[]).expect("first term");
+            assert!((first - (x * std::f64::consts::TAU).sin()).abs() < 1e-9);
+        }
+
+        let subtracted =
+            StudioCreation::new("sin(2*pi*x)-0.5*sin(6*pi*x)", 0.0, 1.0, 1.0).expect("difference");
+        let difference = GraphPartial::of(&subtracted).expect("signed partial");
+        let height = crate::studio::eval(
+            subtracted.program().expect("program").voice_expression(),
+            0.3,
+            1.0,
+        );
+        assert!((height - term_sum(&difference.terms, 0.3)).abs() < 1e-9);
+
+        let ordered = StudioCreation::new("sin(6*pi*x)+sin(2*pi*x)", 0.0, 1.0, 1.0).expect("order");
+        let ordered = GraphPartial::of(&ordered).expect("ordered partial");
+        assert_eq!(ordered.status_caption(), "PARTIAL  3  1");
+        let first = ordered.first_value(0.1, 1.0, &[]).expect("first written");
+        assert!((first - (6.0 * std::f64::consts::PI * 0.1).sin()).abs() < 1e-9);
+
+        let slope = StudioCreation::new("sin(a*x)+x/3", -2.0, 2.0, 1.0).expect("slope");
+        assert!(GraphPartial::of(&slope).is_none());
+        assert!(matches!(
+            GraphSlope::of_creation(&slope),
+            Some(GraphSlope::Derivative(_))
+        ));
+
+        for absent in [
+            "sin(2*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)",
+            "-(sin(2*pi*x)+sin(6*pi*x))",
+            "sin(2*pi*x)*sin(6*pi*x)",
+            "sin(a*x)",
+            "floor(x)+x",
+        ] {
+            let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
+            assert!(GraphPartial::of(&creation).is_none(), "{absent}");
+        }
+        let path =
+            StudioCreation::new_parametric("cos(2*pi*t)+cos(6*pi*t)", "sin(2*pi*t)", 0.0, 1.0, 1.0)
+                .expect("path");
+        assert!(GraphPartial::of(&path).is_none());
+        assert!(HarmonicPartial::of(&path).is_some());
+        let inexact = StudioCreation::new(source, 0.0, 1.0, 0.1).expect("knob");
+        assert!(GraphPartial::of(&inexact).is_none());
     }
 
     fn term_sum(terms: &[Expr], t: f64) -> f64 {

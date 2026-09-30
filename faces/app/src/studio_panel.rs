@@ -1,8 +1,9 @@
 //! App-local Studio input, parsing, audio, and drawing helpers.
 
 use numinous_core::{
-    Expr, FieldReading, GraphSlope, HarmonicPartial, MAX_STUDIO_EDITOR_CHARS, PathClosure, Raster,
-    SoundSpec, StudioCreation, StudioKind, StudioProgram, StudioScale, StudioSlider, Surface,
+    Expr, FieldReading, GraphPartial, GraphSlope, HarmonicPartial, MAX_STUDIO_EDITOR_CHARS,
+    PathClosure, Raster, SoundSpec, StudioCreation, StudioKind, StudioProgram, StudioScale,
+    StudioSlider, Surface,
 };
 
 use crate::input_legend::{self, InputMode};
@@ -620,6 +621,14 @@ impl StudioPanel {
         HarmonicPartial::of(&creation)?.sound()
     }
 
+    /// One tone per frequency of a two-oscillator graph this slice can name.
+    ///
+    /// A slope this slice can name keeps its own voice. The capsule and its
+    /// MIDI file stay the source.
+    fn graph_partial_sound(&self) -> Option<SoundSpec> {
+        self.graph_partial()?.sound()
+    }
+
     /// The graph and its slope on one shared vertical axis.
     ///
     /// A refusal stays on the sampled melody, so a rhythm is not scolded
@@ -648,11 +657,13 @@ impl StudioPanel {
     /// A reopened creation supplies its saved window; a fresh formula uses the
     /// shared defaults. Gallery playback never changes these numbers. When
     /// closure names two frequencies, the voice is those sustained tones.
-    /// When the open graph has a slope this slice can name, the voice is
-    /// that graph and its slope on one shared axis. When a parametric path
-    /// has a sum of oscillators this slice can name, the voice is one tone
-    /// per recognized frequency. Otherwise it is the sampled melody. The
-    /// capsule, the postcard, and the MIDI file stay the player's source.
+    /// When a parametric path has a sum of oscillators this slice can name,
+    /// the voice is one tone per recognized frequency. When the open graph
+    /// has a slope this slice can name, the voice is that graph and its
+    /// slope on one shared axis. When the open graph sums exactly two
+    /// oscillators and has no slope, the voice is one tone per recognized
+    /// frequency. Otherwise it is the sampled melody. The capsule, the
+    /// postcard, and the MIDI file stay the player's source.
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
         if let Some(sound) = self.oscillator_tone_sound() {
             return Some(sound);
@@ -661,6 +672,9 @@ impl StudioPanel {
             return Some(sound);
         }
         if let Some(sound) = self.slope_beside_sound() {
+            return Some(sound);
+        }
+        if let Some(sound) = self.graph_partial_sound() {
             return Some(sound);
         }
         let (xmin, xmax, a) = self.window_and_knob();
@@ -1034,6 +1048,46 @@ impl StudioPanel {
         .is_some()
     }
 
+    fn graph_partial(&self) -> Option<GraphPartial> {
+        if self.graph_slope().is_some() {
+            return None;
+        }
+        let creation = self.current_creation().ok()?;
+        GraphPartial::of(&creation)
+    }
+
+    fn draw_graph_partial(
+        &self,
+        raster: &mut Raster,
+        layout: numinous_app::studio_render::CurveLayout,
+        xmin: f64,
+        xmax: f64,
+        a: f64,
+        program: &StudioProgram,
+    ) -> bool {
+        if self.morph.is_some() {
+            return false;
+        }
+        let Some(partial) = self.graph_partial() else {
+            return false;
+        };
+        let Some(first) = partial.terms.first().cloned() else {
+            return false;
+        };
+        let graph = program.voice_expression().clone();
+        let graph_sliders = self.sliders.clone();
+        let first_sliders = self.sliders.clone();
+        numinous_app::studio_render::draw_two_curves(
+            raster,
+            layout,
+            xmin,
+            xmax,
+            move |x| finite_sample(&graph, x, a, &graph_sliders),
+            move |x| finite_sample(&first, x, a, &first_sliders),
+        )
+        .is_some()
+    }
+
     fn curve_value(&self, x: f64, a: f64) -> Option<f64> {
         let current = self
             .expr
@@ -1144,6 +1198,12 @@ impl StudioPanel {
         {
             context.push_str("  SLOPE ");
             context.push_str(&derivative.source.to_ascii_uppercase());
+        } else if self.morph.is_none()
+            && let Some(partial) = self.graph_partial()
+        {
+            context.push(' ');
+            context.push(' ');
+            context.push_str(&partial.status_caption().to_ascii_uppercase());
         }
         if let Some(partial) = self.harmonic_partial() {
             context.push(' ');
@@ -1270,7 +1330,9 @@ impl StudioPanel {
             if !self.paint_pattern_grid(raster, layout) {
                 match program.kind() {
                     StudioKind::Graph => {
-                        if !self.draw_slope_curve(raster, layout, xmin, xmax, a, program) {
+                        if !self.draw_slope_curve(raster, layout, xmin, xmax, a, program)
+                            && !self.draw_graph_partial(raster, layout, xmin, xmax, a, program)
+                        {
                             let _ = numinous_app::studio_render::draw_curve(
                                 raster,
                                 layout,
@@ -3104,6 +3166,7 @@ mod tests {
         let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 200);
         assert!(context.contains("SLOPE A*COS(A*X)+1/3"), "{context}");
         assert!(!context.contains("REFUSED"), "{context}");
+        assert!(!context.contains("PARTIAL"), "{context}");
     }
 
     #[test]
@@ -3279,6 +3342,104 @@ mod tests {
             postcard[200 * 4 * 128..200 * 4 * 148],
             rgba[200 * 4 * 128..200 * 4 * 148],
             "the postcard draws the player's path"
+        );
+    }
+
+    #[test]
+    fn a_two_oscillator_graph_draws_its_first_term_and_the_postcard_stays_the_source() {
+        let source = "sin(2*pi*x)+0.5*sin(6*pi*x)";
+        let mut panel = StudioPanel::new(source).expect(source);
+        panel.toggle_help();
+        let mut live = Raster::new(200, 150);
+        panel.draw(&mut live, InputMode::KeyboardMouse, 200, 150);
+        let creation = panel.current_creation().expect("creation");
+        let scale = studio_scale(200);
+        let columns = 200usize.saturating_sub(20) / (6 * scale as usize);
+        let footer = studio_footer_lines(
+            InputMode::KeyboardMouse,
+            ControllerFace::Generic.into(),
+            columns,
+        );
+        let footer_height = (16 + 10 * footer.len().saturating_sub(1) as i32) * scale;
+        let mut source_only = Raster::new(200, 150);
+        let expr = creation
+            .program()
+            .expect("program")
+            .voice_expression()
+            .clone();
+        let _ = numinous_app::studio_render::draw_curve(
+            &mut source_only,
+            numinous_app::studio_render::CurveLayout {
+                width: 200,
+                height: 150,
+                top: f64::from(10 + 56 * scale),
+                bottom_margin: f64::from(footer_height + 8 * scale),
+            },
+            creation.xmin(),
+            creation.xmax(),
+            |x| {
+                let value = numinous_core::eval_named(&expr, x, creation.a(), &[]);
+                value.is_finite().then_some(value)
+            },
+        );
+        assert_ne!(
+            live.to_rgba()[200 * 4 * 80..200 * 4 * 110],
+            source_only.to_rgba()[200 * 4 * 80..200 * 4 * 110],
+            "the first term shares the graph's vertical axis"
+        );
+
+        let partial = numinous_core::GraphPartial::of(&creation).expect("partial");
+        assert_eq!(partial.terms.len(), 2);
+        let live = panel.current_sound().expect("tones");
+        assert_eq!(live, partial.sound().expect("chord"));
+        assert_eq!(live.notes.len(), 2);
+        assert_ne!(live, creation.to_melody(32));
+        assert_eq!(creation.to_midi_melody(32), creation.to_melody(32));
+        let file = creation.to_num_file();
+        assert!(file.contains(source));
+        assert!(!file.contains("PARTIAL"));
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 200);
+        assert!(context.contains("PARTIAL"), "{context}");
+        assert!(context.contains("  1  3"), "{context}");
+        assert!(!context.contains("SLOPE"), "{context}");
+        assert!(!context.contains("PERIOD"), "{context}");
+
+        let postcard = panel.postcard_rgba(200, numinous_core::Era::Modern, None, None);
+        let mut raster = Raster::new(200, 200);
+        let expr = creation
+            .program()
+            .expect("program")
+            .voice_expression()
+            .clone();
+        let _ = numinous_app::studio_render::draw_curve(
+            &mut raster,
+            numinous_app::studio_render::CurveLayout {
+                width: 200,
+                height: 200,
+                top: 120.0,
+                bottom_margin: 48.0,
+            },
+            creation.xmin(),
+            creation.xmax(),
+            |x| {
+                let value = numinous_core::eval_named(&expr, x, creation.a(), &[]);
+                value.is_finite().then_some(value)
+            },
+        );
+        let mut rgba = raster.to_rgba();
+        numinous_core::Era::Modern.apply(&mut rgba, 200, 200);
+        assert_eq!(
+            postcard[200 * 4 * 128..200 * 4 * 148],
+            rgba[200 * 4 * 128..200 * 4 * 148],
+            "the postcard draws the player's graph"
+        );
+
+        let three = StudioPanel::new("sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)").expect("three");
+        let [_, (context, _)] = three.status_lines(InputMode::KeyboardMouse, 200);
+        assert!(!context.contains("PARTIAL"), "{context}");
+        assert_eq!(
+            three.current_sound(),
+            Some(three.current_creation().expect("creation").to_melody(32))
         );
     }
 }

@@ -931,9 +931,11 @@ fn studio_creation_result(
     }
     if let Some(slope) = numinous_core::GraphSlope::of_creation(creation) {
         structured["slope"] = slope_json(&slope);
+    } else if let Some(partial) = numinous_core::GraphPartial::of(creation) {
+        structured["partial"] = partial_json(&partial.frequencies);
     }
     if let Some(partial) = numinous_core::HarmonicPartial::of(creation) {
-        structured["partial"] = partial_json(&partial);
+        structured["partial"] = partial_json(&partial.frequencies);
     }
     attach_pattern(&mut structured, creation);
     if creation.kind() == numinous_core::StudioKind::Field {
@@ -974,6 +976,9 @@ fn studio_creation_result(
     if let Some(slope) = numinous_core::GraphSlope::of_creation(creation) {
         text.push('\n');
         text.push_str(&slope.report_lines().join("\n"));
+    } else if let Some(partial) = numinous_core::GraphPartial::of(creation) {
+        text.push('\n');
+        text.push_str(&partial.report_lines().join("\n"));
     }
     if let Some(partial) = numinous_core::HarmonicPartial::of(creation) {
         text.push('\n');
@@ -1033,9 +1038,8 @@ fn closure_json(closure: &numinous_core::PathClosure) -> Option<Value> {
     }
 }
 
-fn partial_json(partial: &numinous_core::HarmonicPartial) -> Value {
-    let terms: Vec<Value> = partial
-        .frequencies
+fn partial_json(frequencies: &[numinous_core::OscillatorTone]) -> Value {
+    let terms: Vec<Value> = frequencies
         .iter()
         .map(|tone| {
             let mut item = json!({ "frequency": tone.frequency_text });

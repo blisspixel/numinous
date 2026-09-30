@@ -4666,6 +4666,35 @@ fn open_studio_reports_the_partial_of_a_two_term_path() {
 }
 
 #[test]
+fn open_studio_reports_the_partial_of_a_two_oscillator_graph() {
+    let report = |source: &str| {
+        let creation = numinous_core::StudioCreation::new(source, 0.0, 1.0, 1.0).expect(source);
+        open_studio_report(&creation.to_link(), 32, 12).expect(source)
+    };
+    let partial = report("sin(2*pi*x)+0.5*sin(6*pi*x)");
+    assert!(partial.contains("partial basis=sum"), "{partial}");
+    assert!(partial.contains("term 1 freq=1 hz=110"), "{partial}");
+    assert!(partial.contains("term 2 freq=3 hz=330"), "{partial}");
+    assert!(
+        partial.contains("expr=sin(2*pi*x)+0.5*sin(6*pi*x)"),
+        "{partial}"
+    );
+    assert!(!partial.contains("closure="), "{partial}");
+    assert!(!partial.contains("slope="), "{partial}");
+    assert!(!partial.contains("slope basis="), "{partial}");
+    let alone = report("sin(2*pi*x)");
+    assert!(!alone.contains("partial "), "{alone}");
+    let three = report("sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)");
+    assert!(!three.contains("partial "), "{three}");
+    let slope = report("sin(a*x)+x/3");
+    assert!(
+        slope.contains("slope basis=symbolic source=a*cos(a*x)+1/3"),
+        "{slope}"
+    );
+    assert!(!slope.contains("partial "), "{slope}");
+}
+
+#[test]
 fn failed_open_studio_does_not_record_progress() {
     let mut journey = numinous_core::Journey::default();
     let missing = std::env::temp_dir().join("numinous_cli_studio_missing_test.num");
