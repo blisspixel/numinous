@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.27] - 2026-09-30
+
 ### Added
 - A checked two-oscillator path or overlay sounds the frequencies its
   closure already names. Frequency `1` is 110 Hz, and each other named
