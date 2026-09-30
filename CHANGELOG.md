@@ -110,9 +110,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   integer power of `x`. The first term of a two-oscillator sum is built,
   including a sum on only one coordinate, a third term, a fourth term,
   a fifth term, a sixth term, a seventh term, an eighth term, a ninth term, and a graph
-  that sums two, three, four, five, six, seven, or eight oscillators. The rest of
+  that sums two, three, four, five, six, seven, eight, or nine oscillators. The rest of
   the slope grammar remains a hypothesis. A tenth term on a path, and a
-  ninth term on a graph, remain hypotheses.
+  tenth term on a graph, remain hypotheses.
   A question box, homework steps, curated facts about
   the world, and any call to an external answer engine stay out.
 
