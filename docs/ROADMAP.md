@@ -2228,7 +2228,7 @@ a sum of that form with a line or an integer power of `x`. The first
 term of a two-oscillator sum is built, including a sum on only one
 coordinate, a third term, a fourth term, a fifth term, a sixth term,
 a seventh term, an eighth term, a ninth term, a tenth term, an eleventh term, and a graph that sums two,
-three, four, five, six, seven, eight, nine, or eleven oscillators. The rest of the slope
+three, four, five, six, seven, eight, nine, ten, or eleven oscillators. The rest of the slope
 grammar remains a hypothesis. A twelfth term on a path, and a twelfth term on
 a graph, remain hypotheses.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
