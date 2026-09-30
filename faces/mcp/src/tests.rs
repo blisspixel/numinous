@@ -8918,18 +8918,62 @@ fn opening_a_two_oscillator_graph_reports_its_partial() {
     let seven = call(
         "save_creation",
         json!({
-            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)",
+            "expr": "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)",
             "xmin": 0.0,
             "xmax": 1.0,
             "a": 1.0
         }),
     );
     assert_eq!(seven["result"]["isError"], false, "{seven}");
+    assert_eq!(
+        seven["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        seven["result"]["structuredContent"]["partial"]["terms"][6]["frequency"],
+        "13"
+    );
+    assert_eq!(
+        seven["result"]["structuredContent"]["partial"]["terms"][6]["hz"],
+        1430.0
+    );
     assert!(
         seven["result"]["structuredContent"]
-            .get("partial")
+            .get("closure")
             .is_none(),
         "{seven}"
+    );
+    assert!(
+        seven["result"]["structuredContent"].get("slope").is_none(),
+        "{seven}"
+    );
+    let seven_file = seven["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(seven_file.contains("0.25*sin(26*pi*x)"), "{seven_file}");
+    assert!(!seven_file.contains("PARTIAL"), "{seven_file}");
+    let opened_seven = call("open_creation", json!({"capsule": seven_file}));
+    assert_eq!(opened_seven["result"]["isError"], false, "{opened_seven}");
+    assert_eq!(
+        opened_seven["result"]["structuredContent"]["partial"],
+        seven["result"]["structuredContent"]["partial"]
+    );
+
+    let eight = call(
+        "save_creation",
+        json!({
+            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)",
+            "xmin": 0.0,
+            "xmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(eight["result"]["isError"], false, "{eight}");
+    assert!(
+        eight["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "{eight}"
     );
 
     let slope = call(
