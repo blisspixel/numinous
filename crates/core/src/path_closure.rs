@@ -14,9 +14,9 @@
 //! the first term beside the path and sound one tone per recognized
 //! frequency. A coordinate may be one, two, three, four, five, six,
 //! seven, eight, nine, ten, eleven, or twelve of those oscillators, and at least one coordinate is a sum. A
-//! thirteenth term is absent. A graph that sums two, three, four, five, six, seven, eight, nine, ten, or eleven of those
+//! thirteenth term is absent. A graph that sums two, three, four, five, six, seven, eight, nine, ten, eleven, or twelve of those
 //! oscillators can show the first term on the same vertical axis and sound
-//! the same tones. A twelfth term on a graph is absent. That reading does not claim a
+//! the same tones. A thirteenth term on a graph is absent. That reading does not claim a
 //! period.
 //! The player's source stays the source.
 
@@ -117,15 +117,15 @@ pub struct HarmonicPartial {
     pub frequencies: Vec<OscillatorTone>,
 }
 
-/// The first term of a graph that sums two, three, four, five, six, seven, eight, nine, ten, or eleven oscillators.
+/// The first term of a graph that sums two, three, four, five, six, seven, eight, nine, ten, eleven, or twelve oscillators.
 ///
 /// The oscillators are the ones closure already accepts. Terms are in source
 /// order. A subtraction stores the subtracted terms negated, so the stored
 /// terms add to the graph the player wrote. The drawn value is the first
-/// term. One term, a twelfth term, a path, a field, and an overlay are absent.
+/// term. One term, a thirteenth term, a path, a field, and an overlay are absent.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GraphPartial {
-    /// Terms of the graph in source order. Two, three, four, five, six, seven, eight, nine, ten, or eleven.
+    /// Terms of the graph in source order. Two, three, four, five, six, seven, eight, nine, ten, eleven, or twelve.
     pub terms: Vec<Expr>,
     /// Recognized frequencies in first-seen order. One tone each.
     pub frequencies: Vec<OscillatorTone>,
@@ -336,9 +336,9 @@ impl HarmonicPartial {
     ///
     /// A single oscillator pair stays with closure. A thirteenth term, a product
     /// of two oscillators, a graph, a field, and an overlay are absent here.
-    /// A graph sum of two, three, four, five, six, seven, eight, nine, ten, or eleven oscillators is [`GraphPartial`].
+    /// A graph sum of two, three, four, five, six, seven, eight, nine, ten, eleven, or twelve oscillators is [`GraphPartial`].
     /// One coordinate may be a single oscillator when the other is a sum of
-    /// two, three, four, five, six, seven, eight, nine, ten, eleven, or twelve. A twelfth term on a graph stays absent.
+    /// two, three, four, five, six, seven, eight, nine, ten, eleven, or twelve. A thirteenth term on a graph stays absent.
     /// The parameter must be one of the exact values closure already
     /// accepts. The capsule is not modified.
     #[must_use]
@@ -412,8 +412,8 @@ impl HarmonicPartial {
 impl GraphPartial {
     /// Read one graph. Anything else is absent.
     ///
-    /// The graph must be a sum of two, three, four, five, six, seven, eight, nine, ten, or eleven oscillators closure
-    /// already accepts. One term, a twelfth term, a path, a field, and an
+    /// The graph must be a sum of two, three, four, five, six, seven, eight, nine, ten, eleven, or twelve oscillators closure
+    /// already accepts. One term, a thirteenth term, a path, a field, and an
     /// overlay are absent. The parameter must be one of the exact values
     /// closure already accepts. The capsule is not modified. A slope reading is a different
     /// fact and is left untouched.
@@ -429,7 +429,7 @@ impl GraphPartial {
         let sliders = creation.sliders();
         let terms = coordinate_terms(program.voice_expression(), parameter, sliders)?;
         // Two is the first graph partial. Three, four, five, six, seven,
-        // eight, nine, ten, and eleven are the same reading. One stays a plain graph, and a twelfth term
+        // eight, nine, ten, eleven, and twelve are the same reading. One stays a plain graph, and a thirteenth term
         // is absence rather than a shorter partial. The path cap is separate,
         // so a later path term does not widen this reading by itself.
         if !(2..=MAX_GRAPH_PARTIAL_TERMS).contains(&terms.len()) {
@@ -818,8 +818,8 @@ struct SignedTerm {
 /// A graph partial keeps its own cap, so this limit does not widen one.
 const MAX_PARTIAL_TERMS: usize = 12;
 
-/// A graph partial names two, three, four, five, six, seven, eight, nine, ten, or eleven oscillators. One more is absence.
-const MAX_GRAPH_PARTIAL_TERMS: usize = 11;
+/// A graph partial names two, three, four, five, six, seven, eight, nine, ten, eleven, or twelve oscillators. One more is absence.
+const MAX_GRAPH_PARTIAL_TERMS: usize = 12;
 
 /// `coordinate_terms` serves both readings. The path cap must not hide a
 /// graph term the graph cap still names.
@@ -2393,7 +2393,7 @@ mod tests {
         assert!((first.0 - 1.0).abs() < 1e-9);
 
         let graph = StudioCreation::new(
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
             0.0,
             1.0,
             1.0,
@@ -2548,7 +2548,7 @@ mod tests {
         assert!((first.0 - 1.0).abs() < 1e-9);
 
         let graph = StudioCreation::new(
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
             0.0,
             1.0,
             1.0,
@@ -2735,7 +2735,7 @@ mod tests {
             5
         );
         let ten_graph = StudioCreation::new(
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
             0.0,
             1.0,
             1.0,
@@ -2927,7 +2927,7 @@ mod tests {
             6
         );
         let ten_graph = StudioCreation::new(
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
             0.0,
             1.0,
             1.0,
@@ -3127,7 +3127,7 @@ mod tests {
             7
         );
         let ten_graph = StudioCreation::new(
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
             0.0,
             1.0,
             1.0,
@@ -3329,7 +3329,7 @@ mod tests {
             8
         );
         let ten_graph = StudioCreation::new(
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
             0.0,
             1.0,
             1.0,
@@ -3533,7 +3533,7 @@ mod tests {
             9
         );
         let ten_graph = StudioCreation::new(
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
             0.0,
             1.0,
             1.0,
@@ -3739,7 +3739,7 @@ mod tests {
             10
         );
         let eleven_graph = StudioCreation::new(
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
             0.0,
             1.0,
             1.0,
@@ -3947,7 +3947,7 @@ mod tests {
             11
         );
         let twelve_graph = StudioCreation::new(
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
             0.0,
             1.0,
             1.0,
@@ -4043,7 +4043,7 @@ mod tests {
 
         for absent in [
             "sin(2*pi*x)",
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
             "-(sin(2*pi*x)+sin(6*pi*x))",
             "sin(2*pi*x)*sin(6*pi*x)",
             "sin(a*x)",
@@ -4127,7 +4127,7 @@ mod tests {
 
         for absent in [
             "-(sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x))",
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
         ] {
             let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
             assert!(GraphPartial::of(&creation).is_none(), "{absent}");
@@ -4222,7 +4222,7 @@ mod tests {
 
         for absent in [
             "-(sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x))",
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
         ] {
             let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
             assert!(GraphPartial::of(&creation).is_none(), "{absent}");
@@ -4333,7 +4333,7 @@ mod tests {
 
         for absent in [
             "-(sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x))",
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
         ] {
             let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
             assert!(GraphPartial::of(&creation).is_none(), "{absent}");
@@ -4466,7 +4466,7 @@ mod tests {
 
         for absent in [
             "-(sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x))",
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
         ] {
             let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
             assert!(GraphPartial::of(&creation).is_none(), "{absent}");
@@ -4601,7 +4601,7 @@ mod tests {
 
         for absent in [
             "-(sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x))",
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
         ] {
             let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
             assert!(GraphPartial::of(&creation).is_none(), "{absent}");
@@ -4745,7 +4745,7 @@ mod tests {
 
         for absent in [
             "-(sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x))",
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
         ] {
             let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
             assert!(GraphPartial::of(&creation).is_none(), "{absent}");
@@ -4891,7 +4891,7 @@ mod tests {
 
         for absent in [
             "-(sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x))",
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
         ] {
             let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
             assert!(GraphPartial::of(&creation).is_none(), "{absent}");
@@ -5039,7 +5039,7 @@ mod tests {
 
         for absent in [
             "-(sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x))",
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
         ] {
             let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
             assert!(GraphPartial::of(&creation).is_none(), "{absent}");
@@ -5189,7 +5189,159 @@ mod tests {
 
         for absent in [
             "-(sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x))",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
+        ] {
+            let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
+            assert!(GraphPartial::of(&creation).is_none(), "{absent}");
+            assert!(HarmonicPartial::of(&creation).is_none(), "{absent}");
+        }
+    }
+
+    #[test]
+    fn a_twelve_oscillator_graph_names_its_first_partial() {
+        let source = "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)+0.25*sin(34*pi*x)+0.25*sin(38*pi*x)+0.25*sin(42*pi*x)+0.25*sin(46*pi*x)";
+        let creation = StudioCreation::new(source, 0.0, 1.0, 1.0).expect("graph");
+        let file = creation.to_num_file();
+        let partial = GraphPartial::of(&creation).expect("partial");
+        assert_eq!(creation.to_num_file(), file);
+        assert!(file.contains(source));
+        assert!(!file.contains("PARTIAL"));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(HarmonicPartial::of(&creation).is_none());
+        assert!(GraphSlope::of_creation(&creation).is_none());
+        assert_eq!(partial.terms.len(), 12);
+        assert_eq!(
+            partial.status_caption(),
+            "PARTIAL  1  3  5  7  9  11  13  15  17  19  21  23"
+        );
+        assert_eq!(
+            partial.report_lines(),
+            vec![
+                "partial basis=sum".to_string(),
+                "term 1 freq=1 hz=110".to_string(),
+                "term 2 freq=3 hz=330".to_string(),
+                "term 3 freq=5 hz=550".to_string(),
+                "term 4 freq=7 hz=770".to_string(),
+                "term 5 freq=9 hz=990".to_string(),
+                "term 6 freq=11 hz=1210".to_string(),
+                "term 7 freq=13 hz=1430".to_string(),
+                "term 8 freq=15 hz=1650".to_string(),
+                "term 9 freq=17 hz=1870".to_string(),
+                "term 10 freq=19 hz=2090".to_string(),
+                "term 11 freq=21 hz=2310".to_string(),
+                "term 12 freq=23 hz=2530".to_string(),
+            ]
+        );
+        let sound = partial.sound().expect("tones");
+        assert_eq!(sound.notes.len(), 12);
+        assert_eq!(sound.notes[0].freq, 110.0);
+        assert_eq!(sound.notes[1].freq, 330.0);
+        assert_eq!(sound.notes[2].freq, 550.0);
+        assert_eq!(sound.notes[3].freq, 770.0);
+        assert_eq!(sound.notes[4].freq, 990.0);
+        assert_eq!(sound.notes[5].freq, 1210.0);
+        assert_eq!(sound.notes[6].freq, 1430.0);
+        assert_eq!(sound.notes[7].freq, 1650.0);
+        assert_eq!(sound.notes[8].freq, 1870.0);
+        assert_eq!(sound.notes[9].freq, 2090.0);
+        assert_eq!(sound.notes[10].freq, 2310.0);
+        assert_eq!(sound.notes[11].freq, 2530.0);
+        assert_ne!(sound, creation.to_melody(32));
+        let rendered = sound.render(8_000);
+        assert!(rendered.iter().all(|sample| sample.abs() <= 1.0));
+
+        let expr = creation
+            .program()
+            .expect("program")
+            .voice_expression()
+            .clone();
+        for x in [0.0, 0.2, 0.55, 0.9] {
+            let height = crate::studio::eval(&expr, x, 1.0);
+            assert!((height - term_sum(&partial.terms, x)).abs() < 1e-9, "x={x}");
+            let first = partial.first_value(x, 1.0, &[]).expect("first term");
+            assert!((first - (x * std::f64::consts::TAU).sin()).abs() < 1e-9);
+        }
+        assert!(term_sum(&partial.terms, 0.0).abs() < 1e-9);
+
+        let grouped = StudioCreation::new(
+            "sin(2*pi*x)+(0.5*sin(6*pi*x)+(0.25*sin(10*pi*x)+(0.25*sin(14*pi*x)+(0.25*sin(18*pi*x)+(0.25*sin(22*pi*x)+(0.25*sin(26*pi*x)+(0.25*sin(30*pi*x)+(0.25*sin(34*pi*x)+(0.25*sin(38*pi*x)+(0.25*sin(42*pi*x)+0.25*sin(46*pi*x)))))))))))",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("grouped");
+        let grouped = GraphPartial::of(&grouped).expect("grouped partial");
+        assert_eq!(grouped.status_caption(), partial.status_caption());
+        assert_eq!(grouped.terms.len(), 12);
+        assert!((term_sum(&grouped.terms, 0.3) - term_sum(&partial.terms, 0.3)).abs() < 1e-9);
+
+        let subtracted = StudioCreation::new(
+            "sin(2*pi*x)-(sin(6*pi*x)-(0.25*sin(10*pi*x)-(0.25*sin(14*pi*x)-(0.25*sin(18*pi*x)-(0.25*sin(22*pi*x)-(0.25*sin(26*pi*x)-(0.25*sin(30*pi*x)-(0.25*sin(34*pi*x)-(0.25*sin(38*pi*x)-(0.25*sin(42*pi*x)-0.25*sin(46*pi*x)))))))))))",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("distributed");
+        let difference = GraphPartial::of(&subtracted).expect("signed partial");
+        let height = crate::studio::eval(
+            subtracted.program().expect("program").voice_expression(),
+            0.3,
+            1.0,
+        );
+        assert!((height - term_sum(&difference.terms, 0.3)).abs() < 1e-9);
+        assert_eq!(difference.terms.len(), 12);
+
+        let ordered = StudioCreation::new(
+            "sin(46*pi*x)+sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("order");
+        let ordered = GraphPartial::of(&ordered).expect("ordered partial");
+        assert_eq!(
+            ordered.status_caption(),
+            "PARTIAL  23  1  3  5  7  9  11  13  15  17  19  21"
+        );
+        let first = ordered.first_value(0.1, 1.0, &[]).expect("first written");
+        assert!((first - (46.0 * std::f64::consts::PI * 0.1).sin()).abs() < 1e-9);
+
+        let path = StudioCreation::new_parametric(
+            "cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)+0.25*cos(34*pi*t)+0.25*cos(38*pi*t)+0.25*cos(42*pi*t)+0.25*cos(46*pi*t)",
+            "sin(2*pi*t)",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("path");
+        assert!(GraphPartial::of(&path).is_none());
+        assert_eq!(
+            HarmonicPartial::of(&path)
+                .expect("path partial")
+                .x_terms
+                .len(),
+            12
+        );
+        let inexact = StudioCreation::new(source, 0.0, 1.0, 0.1).expect("knob");
+        assert!(GraphPartial::of(&inexact).is_none());
+
+        let unit = StudioCreation::new(
             "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("unit");
+        assert_eq!(
+            GraphPartial::of(&unit)
+                .expect("unit partial")
+                .status_caption(),
+            "PARTIAL  1  3  5  7  9  11  13  15  17  19  21  23"
+        );
+
+        for absent in [
+            "-(sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x))",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)+sin(50*pi*x)",
         ] {
             let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
             assert!(GraphPartial::of(&creation).is_none(), "{absent}");
