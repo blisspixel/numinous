@@ -9254,18 +9254,62 @@ fn opening_a_two_oscillator_graph_reports_its_partial() {
     let eleven = call(
         "save_creation",
         json!({
-            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)",
+            "expr": "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)+0.25*sin(34*pi*x)+0.25*sin(38*pi*x)+0.25*sin(42*pi*x)",
             "xmin": 0.0,
             "xmax": 1.0,
             "a": 1.0
         }),
     );
     assert_eq!(eleven["result"]["isError"], false, "{eleven}");
+    assert_eq!(
+        eleven["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        eleven["result"]["structuredContent"]["partial"]["terms"][10]["frequency"],
+        "21"
+    );
+    assert_eq!(
+        eleven["result"]["structuredContent"]["partial"]["terms"][10]["hz"],
+        2310.0
+    );
     assert!(
         eleven["result"]["structuredContent"]
-            .get("partial")
+            .get("closure")
             .is_none(),
         "{eleven}"
+    );
+    assert!(
+        eleven["result"]["structuredContent"].get("slope").is_none(),
+        "{eleven}"
+    );
+    let eleven_file = eleven["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(eleven_file.contains("0.25*sin(42*pi*x)"), "{eleven_file}");
+    assert!(!eleven_file.contains("PARTIAL"), "{eleven_file}");
+    let opened_eleven = call("open_creation", json!({"capsule": eleven_file}));
+    assert_eq!(opened_eleven["result"]["isError"], false, "{opened_eleven}");
+    assert_eq!(
+        opened_eleven["result"]["structuredContent"]["partial"],
+        eleven["result"]["structuredContent"]["partial"]
+    );
+
+    let twelve = call(
+        "save_creation",
+        json!({
+            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)+sin(46*pi*x)",
+            "xmin": 0.0,
+            "xmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(twelve["result"]["isError"], false, "{twelve}");
+    assert!(
+        twelve["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "{twelve}"
     );
 
     let slope = call(
