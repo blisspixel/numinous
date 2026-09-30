@@ -8835,16 +8835,60 @@ fn opening_a_two_oscillator_graph_reports_its_partial() {
     let six = call(
         "save_creation",
         json!({
-            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)",
+            "expr": "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)",
             "xmin": 0.0,
             "xmax": 1.0,
             "a": 1.0
         }),
     );
     assert_eq!(six["result"]["isError"], false, "{six}");
+    assert_eq!(
+        six["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        six["result"]["structuredContent"]["partial"]["terms"][5]["frequency"],
+        "11"
+    );
+    assert_eq!(
+        six["result"]["structuredContent"]["partial"]["terms"][5]["hz"],
+        1210.0
+    );
     assert!(
-        six["result"]["structuredContent"].get("partial").is_none(),
+        six["result"]["structuredContent"].get("closure").is_none(),
         "{six}"
+    );
+    assert!(
+        six["result"]["structuredContent"].get("slope").is_none(),
+        "{six}"
+    );
+    let six_file = six["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(six_file.contains("0.25*sin(22*pi*x)"), "{six_file}");
+    assert!(!six_file.contains("PARTIAL"), "{six_file}");
+    let opened_six = call("open_creation", json!({"capsule": six_file}));
+    assert_eq!(opened_six["result"]["isError"], false, "{opened_six}");
+    assert_eq!(
+        opened_six["result"]["structuredContent"]["partial"],
+        six["result"]["structuredContent"]["partial"]
+    );
+
+    let seven = call(
+        "save_creation",
+        json!({
+            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)",
+            "xmin": 0.0,
+            "xmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(seven["result"]["isError"], false, "{seven}");
+    assert!(
+        seven["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "{seven}"
     );
 
     let slope = call(

@@ -4775,7 +4775,26 @@ fn open_studio_reports_the_partial_of_a_two_oscillator_graph() {
     assert!(!five.contains("slope="), "{five}");
     assert!(!five.contains("slope basis="), "{five}");
     let six = report("sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)");
-    assert!(!six.contains("partial "), "{six}");
+    assert!(six.contains("partial basis=sum"), "{six}");
+    assert!(six.contains("term 1 freq=1 hz=110"), "{six}");
+    assert!(six.contains("term 2 freq=3 hz=330"), "{six}");
+    assert!(six.contains("term 3 freq=5 hz=550"), "{six}");
+    assert!(six.contains("term 4 freq=7 hz=770"), "{six}");
+    assert!(six.contains("term 5 freq=9 hz=990"), "{six}");
+    assert!(six.contains("term 6 freq=11 hz=1210"), "{six}");
+    assert!(
+        six.contains(
+            "expr=sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)"
+        ),
+        "{six}"
+    );
+    assert!(!six.contains("closure="), "{six}");
+    assert!(!six.contains("slope="), "{six}");
+    assert!(!six.contains("slope basis="), "{six}");
+    let seven = report(
+        "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)",
+    );
+    assert!(!seven.contains("partial "), "{seven}");
     let slope = report("sin(a*x)+x/3");
     assert!(
         slope.contains("slope basis=symbolic source=a*cos(a*x)+1/3"),
