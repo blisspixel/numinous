@@ -135,10 +135,11 @@ first term. A fourth term on that graph grows that same first term.
 A fifth term on that graph grows that same first term.
 A sixth term on that graph grows that same first term.
 A seventh term on that graph grows that same first term.
+An eighth term on that graph grows that same first term.
 The App sounds one tone per recognized frequency.
 `structuredContent.partial` names those frequencies. Frequency `1` is
 110 Hz. The capsule, the text preview, and `melody.mid` stay the player's
-source. A ninth term on a path, an eighth term on a graph, and a drawn path have no partial reading.
+source. A ninth term on a path, a ninth term on a graph, and a drawn path have no partial reading.
 Follow a
 Returning home row, then read `closure` rather than trusting the picture.
 After `another-ratio`, the App walk continues into `closing-voices`, then

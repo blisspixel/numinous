@@ -154,7 +154,7 @@ pub fn draw_curve(
 /// ranges differ. The first mark is `#`. The second mark is `+`. When the
 /// second curve has no finite samples, the first is drawn alone on its own
 /// range. Callers use this for a slope, and for the first term of a
-/// two-, three-, four-, five-, six-, or seven-oscillator graph.
+/// two-, three-, four-, five-, six-, seven-, or eight-oscillator graph.
 pub fn draw_two_curves(
     raster: &mut Raster,
     layout: CurveLayout,

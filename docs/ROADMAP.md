@@ -443,12 +443,26 @@ mastery, exploration, and company also remain complete reasons to play.
   back to the coordinate the player wrote. Source order is the order of
   the reading. A ninth term, a leading minus on a whole sum, a product of
   two oscillators, a field, and an overlay have no partial reading from
-  this rule. An eighth term on a graph stays absent. CLI `open-studio`
+  this rule. An eighth term on a graph is the next paragraph. CLI `open-studio`
   and MCP `structuredContent.partial` report `partial basis=sum`. The
   capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
   stay the player's source. Player evidence remains open.
+- **Built, an eighth term on a graph:** an open graph may sum eight
+  oscillators in the form closure already accepts.
+  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)`
+  grows `sin(2*pi*x)` and sounds frequencies `1`, `3`, `5`, `7`, `9`,
+  `11`, `13`, and `15`. Parentheses keep that reading. A subtraction
+  distributes, and the stored terms add back to the graph the player wrote.
+  Source order is the order of the reading. CLI `open-studio` and MCP
+  `structuredContent.partial` report `partial basis=sum`. One term, a
+  ninth term, a leading minus on a whole sum, a product of two
+  oscillators, a path, a field, and an overlay have no partial reading
+  from this rule. A ninth term on a path stays absent. A slope
+  this slice can name stays that slope. The
+  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
+  stay the player's source. Player evidence remains open.
 - **Hypothesis, the rest of the partial:** later slices may add a
-  ninth term on a path, or an eighth term on a graph. A drawn path turned into
+  ninth term on a path, or a ninth term on a graph. A drawn path turned into
   coefficients stays out. There is no series command and no infinite
   sum. The Fourier sketch in `STUDIO.md` stays a sketch. Implementation
   and player evidence remain open.
@@ -2124,8 +2138,8 @@ a sum of that form with a line or an integer power of `x`. The first
 term of a two-oscillator sum is built, including a sum on only one
 coordinate, a third term, a fourth term, a fifth term, a sixth term,
 a seventh term, an eighth term, and a graph that sums two, three, four,
-five, six, or seven oscillators. The rest of the slope grammar remains a
-hypothesis. A ninth term on a path, and an eighth term on a graph, remain
+five, six, seven, or eight oscillators. The rest of the slope grammar remains a
+hypothesis. A ninth term on a path, and a ninth term on a graph, remain
 hypotheses.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
 already plans them. A natural-language question, step-by-step homework,
