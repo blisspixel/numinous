@@ -4684,8 +4684,19 @@ fn open_studio_reports_the_partial_of_a_two_oscillator_graph() {
     assert!(!partial.contains("slope basis="), "{partial}");
     let alone = report("sin(2*pi*x)");
     assert!(!alone.contains("partial "), "{alone}");
-    let three = report("sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)");
-    assert!(!three.contains("partial "), "{three}");
+    let three = report("sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)");
+    assert!(three.contains("partial basis=sum"), "{three}");
+    assert!(three.contains("term 1 freq=1 hz=110"), "{three}");
+    assert!(three.contains("term 2 freq=3 hz=330"), "{three}");
+    assert!(three.contains("term 3 freq=5 hz=550"), "{three}");
+    assert!(
+        three.contains("expr=sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)"),
+        "{three}"
+    );
+    assert!(!three.contains("closure="), "{three}");
+    assert!(!three.contains("slope="), "{three}");
+    let four = report("sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)");
+    assert!(!four.contains("partial "), "{four}");
     let slope = report("sin(a*x)+x/3");
     assert!(
         slope.contains("slope basis=symbolic source=a*cos(a*x)+1/3"),

@@ -13,7 +13,7 @@
 //! A parametric path whose coordinates are sums of such oscillators can show
 //! the first term beside the path and sound one tone per recognized
 //! frequency. A coordinate may be one, two, or three of those oscillators,
-//! and at least one coordinate is a sum. A graph that sums exactly two of
+//! and at least one coordinate is a sum. A graph that sums two or three of
 //! those oscillators can show the first term on the same vertical axis and
 //! sound the same tones. That reading does not claim a period. The player's
 //! source stays the source.
@@ -115,15 +115,15 @@ pub struct HarmonicPartial {
     pub frequencies: Vec<OscillatorTone>,
 }
 
-/// The first term of a graph that sums exactly two oscillators.
+/// The first term of a graph that sums two or three oscillators.
 ///
 /// The oscillators are the ones closure already accepts. Terms are in source
 /// order. A subtraction stores the second term negated, so the stored terms
 /// add to the graph the player wrote. The drawn value is the first term.
-/// One term, a third term, a path, a field, and an overlay are absent.
+/// One term, a fourth term, a path, a field, and an overlay are absent.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GraphPartial {
-    /// Terms of the graph in source order. Exactly two.
+    /// Terms of the graph in source order. Two or three.
     pub terms: Vec<Expr>,
     /// Recognized frequencies in first-seen order. One tone each.
     pub frequencies: Vec<OscillatorTone>,
@@ -334,7 +334,7 @@ impl HarmonicPartial {
     ///
     /// A single oscillator pair stays with closure. A fourth term, a product
     /// of two oscillators, a graph, a field, and an overlay are absent here.
-    /// A graph sum of two oscillators is [`GraphPartial`]. One coordinate
+    /// A graph sum of two or three oscillators is [`GraphPartial`]. One coordinate
     /// may be a single oscillator when the other is a sum of two or three.
     /// The parameter must be one of the exact values closure already
     /// accepts. The capsule is not modified.
@@ -409,8 +409,8 @@ impl HarmonicPartial {
 impl GraphPartial {
     /// Read one graph. Anything else is absent.
     ///
-    /// The graph must be a sum of exactly two oscillators closure already
-    /// accepts. One term, a third term, a path, a field, and an overlay are
+    /// The graph must be a sum of two or three oscillators closure already
+    /// accepts. One term, a fourth term, a path, a field, and an overlay are
     /// absent. The parameter must be one of the exact values closure already
     /// accepts. The capsule is not modified. A slope reading is a different
     /// fact and is left untouched.
@@ -425,7 +425,10 @@ impl GraphPartial {
         let parameter = Exact::from_f64(creation.a())?;
         let sliders = creation.sliders();
         let terms = coordinate_terms(program.voice_expression(), parameter, sliders)?;
-        if terms.len() != 2 {
+        // Two is the first graph partial. Three is the same reading. One
+        // stays a plain graph, and a fourth term is absence rather than a
+        // shorter partial. The path cap is separate.
+        if !(2..=MAX_GRAPH_PARTIAL_TERMS).contains(&terms.len()) {
             return None;
         }
         let frequencies = recognized_tones(terms.iter());
@@ -808,6 +811,9 @@ struct SignedTerm {
 
 /// One more oscillator than this is absence, not a shorter partial.
 const MAX_PARTIAL_TERMS: usize = 3;
+
+/// A graph partial names two or three oscillators. One more is absence.
+const MAX_GRAPH_PARTIAL_TERMS: usize = 3;
 
 fn coordinate_terms(
     expr: &Expr,
@@ -2318,7 +2324,7 @@ mod tests {
 
         for absent in [
             "sin(2*pi*x)",
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)",
             "-(sin(2*pi*x)+sin(6*pi*x))",
             "sin(2*pi*x)*sin(6*pi*x)",
             "sin(a*x)",
@@ -2334,6 +2340,79 @@ mod tests {
         assert!(HarmonicPartial::of(&path).is_some());
         let inexact = StudioCreation::new(source, 0.0, 1.0, 0.1).expect("knob");
         assert!(GraphPartial::of(&inexact).is_none());
+    }
+
+    #[test]
+    fn a_three_oscillator_graph_names_its_first_partial() {
+        let source = "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)";
+        let creation = StudioCreation::new(source, 0.0, 1.0, 1.0).expect("graph");
+        let file = creation.to_num_file();
+        let partial = GraphPartial::of(&creation).expect("partial");
+        assert_eq!(creation.to_num_file(), file);
+        assert!(file.contains(source));
+        assert!(!file.contains("PARTIAL"));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(HarmonicPartial::of(&creation).is_none());
+        assert!(GraphSlope::of_creation(&creation).is_none());
+        assert_eq!(partial.terms.len(), 3);
+        assert_eq!(partial.status_caption(), "PARTIAL  1  3  5");
+        assert_eq!(
+            partial.report_lines(),
+            vec![
+                "partial basis=sum".to_string(),
+                "term 1 freq=1 hz=110".to_string(),
+                "term 2 freq=3 hz=330".to_string(),
+                "term 3 freq=5 hz=550".to_string(),
+            ]
+        );
+        let sound = partial.sound().expect("tones");
+        assert_eq!(sound.notes[0].freq, 110.0);
+        assert_eq!(sound.notes[1].freq, 330.0);
+        assert_eq!(sound.notes[2].freq, 550.0);
+        assert_ne!(sound, creation.to_melody(32));
+
+        let expr = creation
+            .program()
+            .expect("program")
+            .voice_expression()
+            .clone();
+        for x in [0.0, 0.2, 0.55, 0.9] {
+            let height = crate::studio::eval(&expr, x, 1.0);
+            assert!((height - term_sum(&partial.terms, x)).abs() < 1e-9, "x={x}");
+            let first = partial.first_value(x, 1.0, &[]).expect("first term");
+            assert!((first - (x * std::f64::consts::TAU).sin()).abs() < 1e-9);
+        }
+
+        let grouped = StudioCreation::new(
+            "sin(2*pi*x)+(0.5*sin(6*pi*x)+0.25*sin(10*pi*x))",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("grouped");
+        let grouped = GraphPartial::of(&grouped).expect("grouped partial");
+        assert_eq!(grouped.status_caption(), partial.status_caption());
+        assert!((term_sum(&grouped.terms, 0.3) - term_sum(&partial.terms, 0.3)).abs() < 1e-9);
+
+        let subtracted =
+            StudioCreation::new("sin(2*pi*x)-(sin(6*pi*x)-0.25*sin(10*pi*x))", 0.0, 1.0, 1.0)
+                .expect("distributed");
+        let difference = GraphPartial::of(&subtracted).expect("signed partial");
+        let height = crate::studio::eval(
+            subtracted.program().expect("program").voice_expression(),
+            0.3,
+            1.0,
+        );
+        assert!((height - term_sum(&difference.terms, 0.3)).abs() < 1e-9);
+        assert_eq!(difference.terms.len(), 3);
+
+        for absent in [
+            "-(sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x))",
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)",
+        ] {
+            let creation = StudioCreation::new(absent, 0.0, 1.0, 1.0).expect(absent);
+            assert!(GraphPartial::of(&creation).is_none(), "{absent}");
+        }
     }
 
     fn term_sum(terms: &[Expr], t: f64) -> f64 {

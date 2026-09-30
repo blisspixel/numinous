@@ -8572,18 +8572,60 @@ fn opening_a_two_oscillator_graph_reports_its_partial() {
     let three = call(
         "save_creation",
         json!({
-            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)",
+            "expr": "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)",
             "xmin": 0.0,
             "xmax": 1.0,
             "a": 1.0
         }),
     );
     assert_eq!(three["result"]["isError"], false, "{three}");
+    assert_eq!(
+        three["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        three["result"]["structuredContent"]["partial"]["terms"][2]["frequency"],
+        "5"
+    );
+    assert_eq!(
+        three["result"]["structuredContent"]["partial"]["terms"][2]["hz"],
+        550.0
+    );
     assert!(
         three["result"]["structuredContent"]
-            .get("partial")
+            .get("closure")
             .is_none(),
         "{three}"
+    );
+    assert!(
+        three["result"]["structuredContent"].get("slope").is_none(),
+        "{three}"
+    );
+    let three_file = three["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(three_file.contains("0.25*sin(10*pi*x)"), "{three_file}");
+    assert!(!three_file.contains("PARTIAL"), "{three_file}");
+    let opened_three = call("open_creation", json!({"capsule": three_file}));
+    assert_eq!(opened_three["result"]["isError"], false, "{opened_three}");
+    assert_eq!(
+        opened_three["result"]["structuredContent"]["partial"],
+        three["result"]["structuredContent"]["partial"]
+    );
+
+    let four = call(
+        "save_creation",
+        json!({
+            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)",
+            "xmin": 0.0,
+            "xmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(four["result"]["isError"], false, "{four}");
+    assert!(
+        four["result"]["structuredContent"].get("partial").is_none(),
+        "{four}"
     );
 
     let slope = call(

@@ -298,13 +298,26 @@ mastery, exploration, and company also remain complete reasons to play.
   order is the order of the reading. The App sounds one tone per
   recognized frequency, using the same 110 Hz map. CLI `open-studio`
   and MCP `structuredContent.partial` report `partial basis=sum`. One
-  term, a third term, a path, a field, and an overlay have no partial
-  reading from this rule. A slope this slice can name stays that slope.
+  term, a path, a field, and an overlay have no partial reading from
+  this rule. A third term on the graph is the next paragraph. A slope
+  this slice can name stays that slope.
   The capsule, the postcard, the text preview, CLI `sing`, and
   `melody.mid` stay the player's source. The live App voice is the
   tones. Player evidence remains open.
+- **Built, a third term on a graph:** an open graph may sum three
+  oscillators in the form closure already accepts.
+  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)` grows `sin(2*pi*x)`
+  and sounds frequencies `1`, `3`, and `5`. Parentheses keep that
+  reading. A subtraction distributes, and the stored terms add back to
+  the graph the player wrote. Source order is the order of the reading.
+  CLI `open-studio` and MCP `structuredContent.partial` report
+  `partial basis=sum`. One term, a fourth term, a path, a field, and an
+  overlay have no partial reading from this rule. A slope this slice
+  can name stays that slope. The capsule, the postcard, the text
+  preview, CLI `sing`, and `melody.mid` stay the player's source.
+  Player evidence remains open.
 - **Hypothesis, the rest of the partial:** later slices may add a fourth
-  term on a path, or a third term on a graph. A drawn path turned into
+  term on a path, or a fourth term on a graph. A drawn path turned into
   coefficients stays out. There is no series command and no infinite
   sum. The Fourier sketch in `STUDIO.md` stays a sketch. Implementation
   and player evidence remain open.
@@ -1978,9 +1991,9 @@ Rock 6 has carried the instrument through named pitches. MusicXML remains
 there. The frequency tones are built. The slope of `sin(a*x)` is built, including
 a sum of that form with a line or an integer power of `x`. The first
 term of a two-oscillator sum is built, including a sum on only one
-coordinate, a third term, and a graph that sums exactly two
+coordinate, a third term, and a graph that sums two or three
 oscillators. The rest of the slope grammar remains a
-hypothesis. A fourth term on a path, and a third term on a graph, remain
+hypothesis. A fourth term on a path, and a fourth term on a graph, remain
 hypotheses.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
 already plans them. A natural-language question, step-by-step homework,
