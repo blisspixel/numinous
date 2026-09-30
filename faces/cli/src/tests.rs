@@ -4937,9 +4937,32 @@ fn open_studio_reports_the_partial_of_a_two_oscillator_graph() {
     assert!(!nine.contains("slope="), "{nine}");
     assert!(!nine.contains("slope basis="), "{nine}");
     let ten = report(
-        "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)",
+        "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)+0.25*sin(34*pi*x)+0.25*sin(38*pi*x)",
     );
-    assert!(!ten.contains("partial "), "{ten}");
+    assert!(ten.contains("partial basis=sum"), "{ten}");
+    assert!(ten.contains("term 1 freq=1 hz=110"), "{ten}");
+    assert!(ten.contains("term 2 freq=3 hz=330"), "{ten}");
+    assert!(ten.contains("term 3 freq=5 hz=550"), "{ten}");
+    assert!(ten.contains("term 4 freq=7 hz=770"), "{ten}");
+    assert!(ten.contains("term 5 freq=9 hz=990"), "{ten}");
+    assert!(ten.contains("term 6 freq=11 hz=1210"), "{ten}");
+    assert!(ten.contains("term 7 freq=13 hz=1430"), "{ten}");
+    assert!(ten.contains("term 8 freq=15 hz=1650"), "{ten}");
+    assert!(ten.contains("term 9 freq=17 hz=1870"), "{ten}");
+    assert!(ten.contains("term 10 freq=19 hz=2090"), "{ten}");
+    assert!(
+        ten.contains(
+            "expr=sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)+0.25*sin(34*pi*x)+0.25*sin(38*pi*x)"
+        ),
+        "{ten}"
+    );
+    assert!(!ten.contains("closure="), "{ten}");
+    assert!(!ten.contains("slope="), "{ten}");
+    assert!(!ten.contains("slope basis="), "{ten}");
+    let eleven = report(
+        "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)",
+    );
+    assert!(!eleven.contains("partial "), "{eleven}");
     let slope = report("sin(a*x)+x/3");
     assert!(
         slope.contains("slope basis=symbolic source=a*cos(a*x)+1/3"),
