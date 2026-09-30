@@ -9167,16 +9167,60 @@ fn opening_a_two_oscillator_graph_reports_its_partial() {
     let ten = call(
         "save_creation",
         json!({
-            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)",
+            "expr": "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)+0.25*sin(34*pi*x)+0.25*sin(38*pi*x)",
             "xmin": 0.0,
             "xmax": 1.0,
             "a": 1.0
         }),
     );
     assert_eq!(ten["result"]["isError"], false, "{ten}");
+    assert_eq!(
+        ten["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        ten["result"]["structuredContent"]["partial"]["terms"][9]["frequency"],
+        "19"
+    );
+    assert_eq!(
+        ten["result"]["structuredContent"]["partial"]["terms"][9]["hz"],
+        2090.0
+    );
     assert!(
-        ten["result"]["structuredContent"].get("partial").is_none(),
+        ten["result"]["structuredContent"].get("closure").is_none(),
         "{ten}"
+    );
+    assert!(
+        ten["result"]["structuredContent"].get("slope").is_none(),
+        "{ten}"
+    );
+    let ten_file = ten["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(ten_file.contains("0.25*sin(38*pi*x)"), "{ten_file}");
+    assert!(!ten_file.contains("PARTIAL"), "{ten_file}");
+    let opened_ten = call("open_creation", json!({"capsule": ten_file}));
+    assert_eq!(opened_ten["result"]["isError"], false, "{opened_ten}");
+    assert_eq!(
+        opened_ten["result"]["structuredContent"]["partial"],
+        ten["result"]["structuredContent"]["partial"]
+    );
+
+    let eleven = call(
+        "save_creation",
+        json!({
+            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)+sin(38*pi*x)+sin(42*pi*x)",
+            "xmin": 0.0,
+            "xmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(eleven["result"]["isError"], false, "{eleven}");
+    assert!(
+        eleven["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "{eleven}"
     );
 
     let slope = call(
