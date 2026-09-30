@@ -8693,7 +8693,7 @@ fn opening_a_two_term_path_reports_its_partial() {
     let nine = call(
         "save_creation",
         json!({
-            "x_expr": "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)+cos(34*pi*t)",
+            "x_expr": "cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)+0.25*cos(34*pi*t)",
             "y_expr": "sin(2*pi*t)",
             "tmin": 0.0,
             "tmax": 1.0,
@@ -8701,9 +8701,48 @@ fn opening_a_two_term_path_reports_its_partial() {
         }),
     );
     assert_eq!(nine["result"]["isError"], false, "{nine}");
+    assert_eq!(
+        nine["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        nine["result"]["structuredContent"]["partial"]["terms"][8]["frequency"],
+        "17"
+    );
+    assert_eq!(
+        nine["result"]["structuredContent"]["partial"]["terms"][8]["hz"],
+        1870.0
+    );
     assert!(
-        nine["result"]["structuredContent"].get("partial").is_none(),
+        nine["result"]["structuredContent"].get("closure").is_none(),
         "{nine}"
+    );
+    let nine_file = nine["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(nine_file.contains("0.25*cos(34*pi*t)"), "{nine_file}");
+    assert!(!nine_file.contains("PARTIAL"), "{nine_file}");
+    let opened_nine = call("open_creation", json!({"capsule": nine_file}));
+    assert_eq!(opened_nine["result"]["isError"], false, "{opened_nine}");
+    assert_eq!(
+        opened_nine["result"]["structuredContent"]["partial"],
+        nine["result"]["structuredContent"]["partial"]
+    );
+
+    let ten = call(
+        "save_creation",
+        json!({
+            "x_expr": "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)+cos(34*pi*t)+cos(38*pi*t)",
+            "y_expr": "sin(2*pi*t)",
+            "tmin": 0.0,
+            "tmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(ten["result"]["isError"], false, "{ten}");
+    assert!(
+        ten["result"]["structuredContent"].get("partial").is_none(),
+        "{ten}"
     );
 
     let plain = call(
