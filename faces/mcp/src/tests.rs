@@ -8671,16 +8671,58 @@ fn opening_a_two_oscillator_graph_reports_its_partial() {
     let four = call(
         "save_creation",
         json!({
-            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)",
+            "expr": "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)",
             "xmin": 0.0,
             "xmax": 1.0,
             "a": 1.0
         }),
     );
     assert_eq!(four["result"]["isError"], false, "{four}");
+    assert_eq!(
+        four["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        four["result"]["structuredContent"]["partial"]["terms"][3]["frequency"],
+        "7"
+    );
+    assert_eq!(
+        four["result"]["structuredContent"]["partial"]["terms"][3]["hz"],
+        770.0
+    );
     assert!(
-        four["result"]["structuredContent"].get("partial").is_none(),
+        four["result"]["structuredContent"].get("closure").is_none(),
         "{four}"
+    );
+    assert!(
+        four["result"]["structuredContent"].get("slope").is_none(),
+        "{four}"
+    );
+    let four_file = four["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(four_file.contains("0.25*sin(14*pi*x)"), "{four_file}");
+    assert!(!four_file.contains("PARTIAL"), "{four_file}");
+    let opened_four = call("open_creation", json!({"capsule": four_file}));
+    assert_eq!(opened_four["result"]["isError"], false, "{opened_four}");
+    assert_eq!(
+        opened_four["result"]["structuredContent"]["partial"],
+        four["result"]["structuredContent"]["partial"]
+    );
+
+    let five = call(
+        "save_creation",
+        json!({
+            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)",
+            "xmin": 0.0,
+            "xmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(five["result"]["isError"], false, "{five}");
+    assert!(
+        five["result"]["structuredContent"].get("partial").is_none(),
+        "{five}"
     );
 
     let slope = call(
