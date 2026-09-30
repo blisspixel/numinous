@@ -116,10 +116,12 @@ its cycles per unit time. The sung melody stays the sampled curve.
 `sqrt(2)` is not replaced by a nearby ratio. An open graph `sin(a*x)`
 grows a second curve `a*cos(a*x)` on the same vertical axis. The opening
 formula `sin(a*x) + x/3` grows `a*cos(a*x)+1/3`, and an integer power of
-`x` grows by the power rule the same way. The App sings that shape beside
+`x` grows by the power rule the same way. An open graph `cos(a*x)` grows
+`-a*sin(a*x)` on that same axis. The App sings that shape beside
 the graph. `structuredContent.slope` names that source. The capsule, the
-text preview, and `melody.mid` stay the player's source. `sin(x)`, a
-product of two curves, and a named slider have no slope reading. `floor`,
+text preview, and `melody.mid` stay the player's source. `sin(x)`,
+`cos(x)`, a product of two curves, and a named slider have no slope
+reading. `floor`,
 `mod`, `min`, `max`, `euclid`, `pat`, and `note` have no slope reading. A parametric path whose `x` and `y` are each a sum of
 two oscillators grows the first term beside the path, on the same frame.
 A sum on only one coordinate grows that same first term.

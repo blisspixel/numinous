@@ -25,6 +25,12 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   App plots and sings both on one vertical axis. CLI `open-studio` and
   MCP `structuredContent.slope` report the same source. The capsule, the
   postcard, the text preview, and `melody.mid` stay the player's source.
+- An open graph `cos(a*x)` grows a second curve `-a*sin(a*x)`, checked
+  against an independent slope. A sum with a line or an integer power of
+  `x` rewrites the same way. The App plots and sings both on one vertical
+  axis. CLI `open-studio` and MCP `structuredContent.slope` report the
+  same source. The capsule, the postcard, the text preview, and
+  `melody.mid` stay the player's source.
 - A parametric path whose `x` and `y` are each a sum of two oscillators
   grows the first term beside the path, on the same frame. The App sounds
   one tone per recognized frequency. CLI `open-studio` and MCP
@@ -107,12 +113,14 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 - The roadmap records the Studio readings that are built and the ones
   that remain open. The frequency tones are built. The slope of
   `sin(a*x)` is built, including a sum of that form with a line or an
-  integer power of `x`. The first term of a two-oscillator sum is built,
+  integer power of `x`. The slope of `cos(a*x)` is built. The first term of a two-oscillator sum is built,
   including a sum on only one coordinate, a third term, a fourth term,
   a fifth term, a sixth term, a seventh term, an eighth term, a ninth term, a tenth term, an eleventh term, a twelfth term, and a graph
   that sums two, three, four, five, six, seven, eight, nine, ten, eleven, or twelve oscillators. The rest of
   the slope grammar remains a hypothesis. A thirteenth term on a path, and a
   thirteenth term on a graph, remain hypotheses.
+  The winding of a closed path remains a hypothesis. One triangle in
+  three geometries remains a hypothesis behind the commissioned five.
   A question box, homework steps, curated facts about
   the world, and any call to an external answer engine stay out.
 
