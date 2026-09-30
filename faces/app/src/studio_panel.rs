@@ -3170,6 +3170,47 @@ mod tests {
     }
 
     #[test]
+    fn cos_a_x_draws_its_slope_and_the_postcard_stays_the_source() {
+        let live_band = |source: &str| {
+            let mut panel = StudioPanel::new(source).expect(source);
+            panel.toggle_help();
+            let mut raster = Raster::new(200, 150);
+            panel.draw(&mut raster, InputMode::KeyboardMouse, 200, 150);
+            raster.to_rgba()[200 * 4 * 80..200 * 4 * 110].to_vec()
+        };
+        assert_ne!(
+            live_band("cos(a*x)"),
+            live_band("cos(x)"),
+            "at a=1 the graphs match and the slope is the difference"
+        );
+
+        let postcard_band = |source: &str| {
+            let panel = StudioPanel::new(source).expect(source);
+            let rgba = panel.postcard_rgba(200, numinous_core::Era::Modern, None, None);
+            rgba[200 * 4 * 128..200 * 4 * 148].to_vec()
+        };
+        assert_eq!(
+            postcard_band("cos(a*x)"),
+            postcard_band("cos(x)"),
+            "the postcard draws the source, and at a=1 those sources match"
+        );
+
+        let panel = StudioPanel::new("cos(a*x)").expect("panel");
+        let creation = panel.current_creation().expect("creation");
+        let file = creation.to_num_file();
+        assert_eq!(creation.source(), "cos(a*x)");
+        assert!(!file.contains("sin"), "{file}");
+        let live = panel.current_sound().expect("pair");
+        assert_eq!(live, beside_voice(&panel));
+        assert_ne!(live, creation.to_melody(32));
+        assert_eq!(creation.to_midi_melody(32), creation.to_melody(32));
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 200);
+        assert!(context.contains("SLOPE -A*SIN(A*X)"), "{context}");
+        assert!(!context.contains("REFUSED"), "{context}");
+        assert!(!context.contains("PARTIAL"), "{context}");
+    }
+
+    #[test]
     fn a_two_term_path_draws_its_first_term_and_the_postcard_stays_the_source() {
         let source = "x(t)=cos(2*pi*t)+0.5*cos(6*pi*t); y(t)=sin(2*pi*t)+0.5*sin(6*pi*t)";
         let circle = "x(t)=cos(2*pi*t); y(t)=sin(2*pi*t)";

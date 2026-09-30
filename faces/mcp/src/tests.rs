@@ -8328,6 +8328,28 @@ fn opening_sin_a_x_reports_its_slope() {
         "sin(x)"
     );
 
+    let cosine = call(
+        "save_creation",
+        json!({"expr": "cos(a*x)", "xmin": -2.0, "xmax": 2.0, "a": 1.0}),
+    );
+    assert_eq!(cosine["result"]["isError"], false, "{cosine}");
+    assert_eq!(
+        cosine["result"]["structuredContent"]["slope"]["source"],
+        "-a*sin(a*x)"
+    );
+    let cosine_file = cosine["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(cosine_file.contains("cos(a*x)"), "{cosine_file}");
+    assert!(!cosine_file.contains("sin"), "{cosine_file}");
+    let cosine_plain = call("save_creation", json!({"expr": "cos(x)"}));
+    assert!(
+        cosine_plain["result"]["structuredContent"]
+            .get("slope")
+            .is_none(),
+        "cos(x)"
+    );
+
     let plotted = call("plot_expression", json!({"expr": "sin(a*x)"}));
     assert_eq!(plotted["result"]["isError"], false, "{plotted}");
     assert!(

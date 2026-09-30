@@ -236,8 +236,20 @@ mastery, exploration, and company also remain complete reasons to play.
   slope reading. The refusal list is unchanged. The capsule, the
   postcard, the text preview, CLI `sing`, and `melody.mid` stay the
   player's source. Player evidence remains open.
+- **Built, slope of `cos(a*x)`:** an open graph `cos(a*x)`, including
+  `cos(x*a)` and the spaced form, grows a second curve `-a*sin(a*x)`.
+  Samples of that source are checked against an independent slope where
+  both are defined. The App plots and sings both on one vertical axis.
+  CLI `open-studio` and MCP `structuredContent.slope` report
+  `slope basis=symbolic source=-a*sin(a*x)`. A sum with a line or an
+  integer power of `x` rewrites the same way: `cos(a*x)+x/3` grows
+  `-a*sin(a*x)+1/3`. `cos(x)`, `cos(2*a*x)`, a product of two curves,
+  a field, a path, and an overlay have no slope reading from this rule.
+  The refusal list is unchanged. The capsule, the postcard, the text
+  preview, CLI `sing`, and `melody.mid` stay the player's source.
+  Player evidence remains open.
 - **Hypothesis, the rest of the slope:** later slices may add `sin` of
-  a more general argument, `cos`, `exp`, products of two non-constant
+  a more general argument, `exp`, products of two non-constant
   factors, quotients of two non-constant factors, and constant
   parameters beyond `a`, including named sliders, only where the
   rewrite is exact. A general power stays out. `tan`, `ln`, `sqrt`,
@@ -245,6 +257,13 @@ mastery, exploration, and company also remain complete reasons to play.
   is the later reading. The reading is the player's formula. It is not
   an essay, an integral, or a search for a maximum. Implementation and
   player evidence remain open.
+- **Hypothesis, the winding of a closed path:** a path the player
+  already wrote may later report how many times it winds the origin,
+  one integer on the App, on CLI `open-studio`, and on MCP. The capsule,
+  the postcard, the text preview, and `melody.mid` stay the player's
+  source. A path that does not close, a graph, a field, and an overlay
+  stay without that reading. There is no topology command.
+  Implementation and player evidence remain open.
 - **Built, first term of a two-oscillator sum:** a parametric path whose
   `x` and `y` are each a sum of two oscillators, in the form closure
   already accepts, grows the first term beside the path. Both curves
@@ -1145,7 +1164,10 @@ access.
 5. **New rooms wait for the keep-or-cut wave**, then the commissioned five
    lead the next cohort: the Braid, the Calm Axes, the Seventeen Stamps,
    the Seven Bridges, and Noether's Mirror, each carrying a wager-shaped
-   aha designed before a line of rendering.
+   aha designed before a line of rendering. One triangle under three
+   parallel postulates stays a hypothesis behind that cohort. The player
+   would predict whether the angles pass a straight line. The Poincare
+   disc, the sphere, and the hyperbolic tiling stay the rooms they are.
 
 The 0.3 agent-and-machine exit is met. The next incomplete milestone is 0.4
 understanding and retention, but its formal collection is intentionally after
@@ -2255,13 +2277,14 @@ So the useful half is native. Another reading of a capsule the player
 already wrote, replayed from core on the App, the CLI, and MCP together.
 Rock 6 has carried the instrument through named pitches. MusicXML remains
 there. The frequency tones are built. The slope of `sin(a*x)` is built, including
-a sum of that form with a line or an integer power of `x`. The first
-term of a two-oscillator sum is built, including a sum on only one
+a sum of that form with a line or an integer power of `x`. The slope of
+`cos(a*x)` is built. The first term of a two-oscillator sum is built, including a sum on only one
 coordinate, a third term, a fourth term, a fifth term, a sixth term,
 a seventh term, an eighth term, a ninth term, a tenth term, an eleventh term, a twelfth term, and a graph that sums two,
 three, four, five, six, seven, eight, nine, ten, eleven, or twelve oscillators. The rest of the slope
 grammar remains a hypothesis. A thirteenth term on a path, and a thirteenth term on
-a graph, remain hypotheses.
+a graph, remain hypotheses. The winding of a closed path remains a
+hypothesis: one integer, and no topology command.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
 already plans them. A natural-language question, step-by-step homework,
 and curated facts about the world stay out with the external call.

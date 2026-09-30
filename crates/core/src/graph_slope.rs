@@ -1,10 +1,11 @@
 //! A symbolic slope beside one open Studio graph.
 //!
-//! `sin(a*x)` rewrites to `a*cos(a*x)`. A sum or difference of that form,
-//! a line (`x`, a numeric or `a` multiple of `x`, or `x` divided by a
-//! numeric constant), and a non-negative integer power of `x` rewrites to
-//! the sum of those derivatives. The opening formula `sin(a*x) + x/3`
-//! becomes `a*cos(a*x)+1/3`. A constant term drops out, and `1/3` stays a
+//! `sin(a*x)` rewrites to `a*cos(a*x)`. `cos(a*x)` rewrites to
+//! `-a*sin(a*x)`. A sum or difference of those forms, a line (`x`, a
+//! numeric or `a` multiple of `x`, or `x` divided by a numeric constant),
+//! and a non-negative integer power of `x` rewrites to the sum of those
+//! derivatives. The opening formula `sin(a*x) + x/3` becomes
+//! `a*cos(a*x)+1/3`. A constant term drops out, and `1/3` stays a
 //! quotient. The capsule keeps the player's source. Samples of the
 //! rewritten source are checked, in tests, against an independent slope
 //! where both are defined. `floor`, `mod`, `min`, `max`, `euclid`, `pat`,
@@ -299,6 +300,8 @@ enum Body {
     Power(u32),
     /// `sin(a*x)` or `sin(x*a)`.
     SinAx,
+    /// `cos(a*x)` or `cos(x*a)`.
+    CosAx,
 }
 
 /// What remains after differentiation, besides the coefficient.
@@ -309,6 +312,8 @@ enum Rest {
     Power(u32),
     /// `cos(a*x)`.
     Cos,
+    /// `sin(a*x)`.
+    Sin,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -367,6 +372,10 @@ fn derive_one(input: Input) -> Option<Option<OutTerm>> {
         Body::SinAx => OutTerm {
             factor: input.factor.mul(Factor::named_a())?,
             rest: Rest::Cos,
+        },
+        Body::CosAx => OutTerm {
+            factor: input.factor.mul(Factor::named_a())?.mul_int(-1)?,
+            rest: Rest::Sin,
         },
     };
     if term.factor.is_zero() {
@@ -428,6 +437,10 @@ fn peel(expr: &Expr) -> Option<Input> {
         Expr::Call(Func::Sin, argument) if is_parameter_times_variable(argument) => Some(Input {
             factor: Factor::one(),
             body: Body::SinAx,
+        }),
+        Expr::Call(Func::Cos, argument) if is_parameter_times_variable(argument) => Some(Input {
+            factor: Factor::one(),
+            body: Body::CosAx,
         }),
         other => Some(Input {
             factor: as_factor(other)?,
@@ -515,6 +528,7 @@ fn magnitude_source(term: &OutTerm) -> String {
         Rest::Power(1) => nums.push("x".to_string()),
         Rest::Power(power) => nums.push(format!("x^{power}")),
         Rest::Cos => nums.push("cos(a*x)".to_string()),
+        Rest::Sin => nums.push("sin(a*x)".to_string()),
     }
     let mag = term.factor.num.unsigned_abs();
     if mag != 1 || nums.is_empty() {
@@ -743,11 +757,42 @@ mod tests {
     }
 
     #[test]
+    fn cos_a_x_rewrites_to_minus_a_sin_a_x() {
+        for source in ["cos(a*x)", "cos(x*a)", "cos( a * x )", "cos((a)*(x))"] {
+            assert_agrees(source, "-a*sin(a*x)");
+        }
+        assert_agrees("2*cos(a*x)", "-2*a*sin(a*x)");
+        assert_agrees("-cos(a*x)", "a*sin(a*x)");
+        assert_agrees("cos(a*x)+cos(x*a)", "-2*a*sin(a*x)");
+        assert_agrees("cos(a*x)+0", "-a*sin(a*x)");
+        assert_agrees("cos(a*x)+x/3", "-a*sin(a*x)+1/3");
+        assert_agrees("cos(a*x)+sin(a*x)", "-a*sin(a*x)+a*cos(a*x)");
+        assert_agrees("sin(a*x)+cos(a*x)", "a*cos(a*x)-a*sin(a*x)");
+        assert_agrees("cos(a*x)/2", "-a*sin(a*x)/2");
+        assert_absent("cos(a*x)-cos(a*x)");
+
+        let creation = StudioCreation::new("cos(a*x)", -2.0, 2.0, 1.0).expect("creation");
+        let file = creation.to_num_file();
+        let GraphSlope::Derivative(found) =
+            GraphSlope::of_creation(&creation).expect("cosine slope")
+        else {
+            panic!("cos(a*x) is a derivative");
+        };
+        assert_eq!(found.source, "-a*sin(a*x)");
+        assert_eq!(creation.source(), "cos(a*x)");
+        assert!(!file.contains("sin"), "{file}");
+    }
+
+    #[test]
     fn unrecognized_graphs_are_absent_and_rhythm_graphs_are_refused() {
         for source in [
             "sin(x)",
             "sin(b*x)",
-            "cos(a*x)",
+            "cos(x)",
+            "cos(b*x)",
+            "cos(2*a*x)",
+            "cos(a*x+x)",
+            "sin(x)+cos(a*x)/2",
             "tan(x)",
             "ln(x)",
             "sqrt(x)",

@@ -4623,6 +4623,17 @@ fn open_studio_reports_the_slope_of_sin_a_x() {
         !plain.contains("slope="),
         "sin(x) has no slope line: {plain}"
     );
+    let cosine = report("cos(a*x)");
+    assert!(
+        cosine.contains("slope basis=symbolic source=-a*sin(a*x)"),
+        "{cosine}"
+    );
+    assert!(cosine.contains("expr=cos(a*x)"), "{cosine}");
+    let cosine_plain = report("cos(x)");
+    assert!(
+        !cosine_plain.contains("slope="),
+        "cos(x) has no slope line: {cosine_plain}"
+    );
 }
 
 #[test]
