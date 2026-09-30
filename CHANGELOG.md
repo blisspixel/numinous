@@ -46,6 +46,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   frequency. CLI `open-studio` and MCP `structuredContent.partial`
   report the same reading. The capsule, the postcard, the text
   preview, and `melody.mid` stay the player's source.
+- An open graph with a third oscillator grows that same first term on
+  the same vertical axis. The App sounds one tone per recognized
+  frequency. CLI `open-studio` and MCP `structuredContent.partial`
+  report the same reading. The capsule, the postcard, the text
+  preview, and `melody.mid` stay the player's source.
 - A core project document, `NUMINOUS_PROJECT 1`. It keeps one question, a
   closed next call, catalog room ids, typed evidence links, and an optional
   Studio creation. Import and correct are separate from keep. Resume previews
@@ -79,9 +84,9 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   `sin(a*x)` is built, including a sum of that form with a line or an
   integer power of `x`. The first term of a two-oscillator sum is built,
   including a sum on only one coordinate, a third term, and a graph
-  that sums exactly two oscillators. The rest of
+  that sums two or three oscillators. The rest of
   the slope grammar remains a hypothesis. A fourth term on a path, and
-  a third term on a graph, remain hypotheses. A question box, homework steps, curated facts about
+  a fourth term on a graph, remain hypotheses. A question box, homework steps, curated facts about
   the world, and any call to an external answer engine stay out.
 
 ### Security
