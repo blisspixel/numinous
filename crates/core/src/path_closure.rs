@@ -12,9 +12,9 @@
 //!
 //! A parametric path whose coordinates are sums of such oscillators can show
 //! the first term beside the path and sound one tone per recognized
-//! frequency. A coordinate may be one, two, three, four, five, or six of
-//! those oscillators, and at least one coordinate is a sum. A seventh term
-//! is absent. A graph that sums two, three, four, five, or six of those
+//! frequency. A coordinate may be one, two, three, four, five, six, or
+//! seven of those oscillators, and at least one coordinate is a sum. An
+//! eighth term is absent. A graph that sums two, three, four, five, or six of those
 //! oscillators can show the first term on the same vertical axis and sound
 //! the same tones. A seventh term on a graph is absent. That reading does not claim a
 //! period.
@@ -100,18 +100,18 @@ pub struct OscillatorTone {
 
 /// The first partial of a parametric path that sums oscillators.
 ///
-/// At least one coordinate is a sum of two, three, four, five, or six
-/// oscillators in the form closure already accepts. The other is that
-/// same kind of sum, or one oscillator. A seventh term is absent. Each
+/// At least one coordinate is a sum of two, three, four, five, six, or
+/// seven oscillators in the form closure already accepts. The other is that
+/// same kind of sum, or one oscillator. An eighth term is absent. Each
 /// speed is a frequency closure can name. Terms are in source order. A
 /// subtraction is stored as a sum with the subtracted terms negated, so
 /// the stored terms add to the coordinate the player wrote. The drawn
 /// point is the first term of each coordinate.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HarmonicPartial {
-    /// Terms of `x(t)` in source order. One, two, three, four, five, or six.
+    /// Terms of `x(t)` in source order. One, two, three, four, five, six, or seven.
     pub x_terms: Vec<Expr>,
-    /// Terms of `y(t)` in source order. One, two, three, four, five, or six.
+    /// Terms of `y(t)` in source order. One, two, three, four, five, six, or seven.
     pub y_terms: Vec<Expr>,
     /// Recognized frequencies in first-seen order. One tone each.
     pub frequencies: Vec<OscillatorTone>,
@@ -334,11 +334,11 @@ impl OscillatorTones {
 impl HarmonicPartial {
     /// Read one parametric creation. Anything else is absent.
     ///
-    /// A single oscillator pair stays with closure. A seventh term, a product
+    /// A single oscillator pair stays with closure. An eighth term, a product
     /// of two oscillators, a graph, a field, and an overlay are absent here.
     /// A graph sum of two, three, four, five, or six oscillators is [`GraphPartial`].
     /// One coordinate may be a single oscillator when the other is a sum of
-    /// two, three, four, five, or six. A seventh term on a graph stays absent.
+    /// two, three, four, five, six, or seven. A seventh term on a graph stays absent.
     /// The parameter must be one of the exact values closure already
     /// accepts. The capsule is not modified.
     #[must_use]
@@ -816,7 +816,7 @@ struct SignedTerm {
 /// One more oscillator than this is absence, not a shorter partial.
 ///
 /// A graph partial keeps its own cap, so this limit does not widen one.
-const MAX_PARTIAL_TERMS: usize = 6;
+const MAX_PARTIAL_TERMS: usize = 7;
 
 /// A graph partial names two, three, four, five, or six oscillators. One more is absence.
 const MAX_GRAPH_PARTIAL_TERMS: usize = 6;
@@ -2019,12 +2019,12 @@ mod tests {
         for (x_source, y_source) in [
             ("cos(2*pi*t)", "sin(2*pi*t)"),
             (
-                "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)",
+                "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)",
                 "sin(2*pi*t)",
             ),
             (
                 "cos(2*pi*t)",
-                "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)+sin(14*pi*t)+sin(18*pi*t)+sin(22*pi*t)+sin(26*pi*t)",
+                "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)+sin(14*pi*t)+sin(18*pi*t)+sin(22*pi*t)+sin(26*pi*t)+sin(30*pi*t)",
             ),
             ("cos(2*pi*t)+cos(6*pi*t)+t", "sin(2*pi*t)"),
             ("cos(t)+cos(3*t)", "sin(t)+sin(3*t)"),
@@ -2404,12 +2404,12 @@ mod tests {
 
         for (x_source, y_source) in [
             (
-                "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)",
+                "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)",
                 "sin(2*pi*t)",
             ),
             (
                 "cos(2*pi*t)",
-                "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)+sin(14*pi*t)+sin(18*pi*t)+sin(22*pi*t)+sin(26*pi*t)",
+                "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)+sin(14*pi*t)+sin(18*pi*t)+sin(22*pi*t)+sin(26*pi*t)+sin(30*pi*t)",
             ),
             (
                 "-(cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t))",
@@ -2559,12 +2559,12 @@ mod tests {
 
         for (x_source, y_source) in [
             (
-                "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)",
+                "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)",
                 "sin(2*pi*t)",
             ),
             (
                 "cos(2*pi*t)",
-                "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)+sin(14*pi*t)+sin(18*pi*t)+sin(22*pi*t)+sin(26*pi*t)",
+                "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)+sin(14*pi*t)+sin(18*pi*t)+sin(22*pi*t)+sin(26*pi*t)+sin(30*pi*t)",
             ),
             (
                 "-(cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t))",
@@ -2752,12 +2752,204 @@ mod tests {
                 "sin(2*pi*t)",
             ),
             (
-                "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)",
+                "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)",
                 "sin(2*pi*t)",
             ),
             (
                 "cos(2*pi*t)",
-                "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)+sin(14*pi*t)+sin(18*pi*t)+sin(22*pi*t)+sin(26*pi*t)",
+                "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)+sin(14*pi*t)+sin(18*pi*t)+sin(22*pi*t)+sin(26*pi*t)+sin(30*pi*t)",
+            ),
+        ] {
+            let creation =
+                StudioCreation::new_parametric(x_source, y_source, 0.0, 1.0, 1.0).expect(x_source);
+            assert!(HarmonicPartial::of(&creation).is_none(), "{x_source}");
+            assert!(GraphPartial::of(&creation).is_none(), "{x_source}");
+        }
+    }
+
+    #[test]
+    fn a_seven_oscillator_path_names_its_first_partial() {
+        let x = "cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)";
+        let y = "sin(2*pi*t)";
+        let creation = StudioCreation::new_parametric(x, y, 0.0, 1.0, 1.0).expect("seven");
+        let file = creation.to_num_file();
+        let partial = HarmonicPartial::of(&creation).expect("partial");
+        assert_eq!(creation.to_num_file(), file);
+        assert!(file.contains(x));
+        assert!(!file.contains("PARTIAL"));
+        assert!(matches!(
+            PathClosure::of(&creation),
+            PathClosure::Unsupported
+        ));
+        assert!(PathClosure::of(&creation).oscillator_tones().is_none());
+        assert!(GraphPartial::of(&creation).is_none());
+        assert_eq!(partial.x_terms.len(), 7);
+        assert_eq!(partial.y_terms.len(), 1);
+        assert_eq!(partial.status_caption(), "PARTIAL  1  3  5  7  9  11  13");
+        assert_eq!(
+            partial.report_lines(),
+            vec![
+                "partial basis=sum".to_string(),
+                "term 1 freq=1 hz=110".to_string(),
+                "term 2 freq=3 hz=330".to_string(),
+                "term 3 freq=5 hz=550".to_string(),
+                "term 4 freq=7 hz=770".to_string(),
+                "term 5 freq=9 hz=990".to_string(),
+                "term 6 freq=11 hz=1210".to_string(),
+                "term 7 freq=13 hz=1430".to_string(),
+            ]
+        );
+        let sound = partial.sound().expect("tones");
+        assert_eq!(sound.notes.len(), 7);
+        assert_eq!(sound.notes[0].freq, 110.0);
+        assert_eq!(sound.notes[1].freq, 330.0);
+        assert_eq!(sound.notes[2].freq, 550.0);
+        assert_eq!(sound.notes[3].freq, 770.0);
+        assert_eq!(sound.notes[4].freq, 990.0);
+        assert_eq!(sound.notes[5].freq, 1210.0);
+        assert_eq!(sound.notes[6].freq, 1430.0);
+        assert_ne!(sound, creation.to_melody(32));
+        let rendered = sound.render(8_000);
+        assert!(rendered.iter().all(|sample| sample.abs() <= 1.0));
+
+        let program = creation.program().expect("program");
+        for t in [0.0, 0.2, 0.55, 0.9] {
+            let point = program.point(t, 1.0).expect("path");
+            assert!(
+                (point.0 - term_sum(&partial.x_terms, t)).abs() < 1e-9,
+                "t={t}"
+            );
+            assert!(
+                (point.1 - term_sum(&partial.y_terms, t)).abs() < 1e-9,
+                "t={t}"
+            );
+            let first = partial.first_point(t, 1.0, &[]).expect("first term");
+            assert!((first.0 - t.mul_add(std::f64::consts::TAU, 0.0).cos()).abs() < 1e-9);
+            assert!((first.1 - t.mul_add(std::f64::consts::TAU, 0.0).sin()).abs() < 1e-9);
+        }
+        let at_zero = program.point(0.0, 1.0).expect("origin");
+        assert!((at_zero.0 - 2.75).abs() < 1e-9);
+        assert!((term_sum(&partial.x_terms, 0.0) - 2.75).abs() < 1e-9);
+
+        let grouped = StudioCreation::new_parametric(
+            "cos(2*pi*t)+(0.5*cos(6*pi*t)+(0.25*cos(10*pi*t)+(0.25*cos(14*pi*t)+(0.25*cos(18*pi*t)+(0.25*cos(22*pi*t)+0.25*cos(26*pi*t))))))",
+            y,
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("grouped");
+        let grouped = HarmonicPartial::of(&grouped).expect("grouped partial");
+        assert_eq!(grouped.status_caption(), partial.status_caption());
+        assert_eq!(grouped.x_terms.len(), 7);
+        assert!((term_sum(&grouped.x_terms, 0.3) - term_sum(&partial.x_terms, 0.3)).abs() < 1e-9);
+
+        let subtracted = StudioCreation::new_parametric(
+            "cos(2*pi*t)-(cos(6*pi*t)-(0.25*cos(10*pi*t)-(0.25*cos(14*pi*t)-(0.25*cos(18*pi*t)-(0.25*cos(22*pi*t)-0.25*cos(26*pi*t))))))",
+            y,
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("distributed");
+        let difference = HarmonicPartial::of(&subtracted).expect("signed partial");
+        let point = subtracted
+            .program()
+            .expect("program")
+            .point(0.3, 1.0)
+            .expect("path");
+        assert!((point.0 - term_sum(&difference.x_terms, 0.3)).abs() < 1e-9);
+        assert_eq!(difference.x_terms.len(), 7);
+
+        let ordered = StudioCreation::new_parametric(
+            "cos(26*pi*t)+cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)",
+            y,
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("order");
+        let ordered = HarmonicPartial::of(&ordered).expect("ordered partial");
+        assert_eq!(ordered.status_caption(), "PARTIAL  13  1  3  5  7  9  11");
+        let first = ordered.first_point(0.1, 1.0, &[]).expect("first written");
+        assert!((first.0 - (26.0 * std::f64::consts::PI * 0.1).cos()).abs() < 1e-9);
+
+        let both_creation = StudioCreation::new_parametric(
+            x,
+            "sin(2*pi*t)+0.5*sin(6*pi*t)+0.25*sin(10*pi*t)+0.25*sin(14*pi*t)+0.25*sin(18*pi*t)+0.25*sin(22*pi*t)+0.25*sin(26*pi*t)",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("both");
+        let both = HarmonicPartial::of(&both_creation).expect("both partial");
+        assert_eq!(both.x_terms.len(), 7);
+        assert_eq!(both.y_terms.len(), 7);
+        assert_eq!(both.frequencies.len(), 7);
+        let path = both_creation
+            .program()
+            .expect("program")
+            .point(0.0, 1.0)
+            .expect("path");
+        assert!((path.0 - 2.75).abs() < 1e-9);
+        assert!((term_sum(&both.x_terms, 0.0) - path.0).abs() < 1e-9);
+        let first = both.first_point(0.0, 1.0, &[]).expect("first of both");
+        assert!((first.0 - 1.0).abs() < 1e-9);
+
+        let unit = StudioCreation::new_parametric(
+            "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)",
+            y,
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("unit");
+        assert_eq!(
+            HarmonicPartial::of(&unit)
+                .expect("unit partial")
+                .status_caption(),
+            "PARTIAL  1  3  5  7  9  11  13"
+        );
+
+        let six_graph = StudioCreation::new(
+            "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("six graph");
+        assert!(HarmonicPartial::of(&six_graph).is_none());
+        assert_eq!(
+            GraphPartial::of(&six_graph)
+                .expect("graph partial")
+                .terms
+                .len(),
+            6
+        );
+        let seven_graph = StudioCreation::new(
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)",
+            0.0,
+            1.0,
+            1.0,
+        )
+        .expect("seven graph");
+        assert!(HarmonicPartial::of(&seven_graph).is_none());
+        assert!(GraphPartial::of(&seven_graph).is_none());
+        let inexact = StudioCreation::new_parametric(x, y, 0.0, 1.0, 0.1).expect("knob");
+        assert!(HarmonicPartial::of(&inexact).is_none());
+
+        for (x_source, y_source) in [
+            (
+                "-(cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t))",
+                "sin(2*pi*t)",
+            ),
+            (
+                "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)",
+                "sin(2*pi*t)",
+            ),
+            (
+                "cos(2*pi*t)",
+                "sin(2*pi*t)+sin(6*pi*t)+sin(10*pi*t)+sin(14*pi*t)+sin(18*pi*t)+sin(22*pi*t)+sin(26*pi*t)+sin(30*pi*t)",
             ),
         ] {
             let creation =
