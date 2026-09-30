@@ -8816,7 +8816,7 @@ fn opening_a_two_term_path_reports_its_partial() {
     let twelve = call(
         "save_creation",
         json!({
-            "x_expr": "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)+cos(34*pi*t)+cos(38*pi*t)+cos(42*pi*t)+cos(46*pi*t)",
+            "x_expr": "cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)+0.25*cos(34*pi*t)+0.25*cos(38*pi*t)+0.25*cos(42*pi*t)+0.25*cos(46*pi*t)",
             "y_expr": "sin(2*pi*t)",
             "tmin": 0.0,
             "tmax": 1.0,
@@ -8824,11 +8824,56 @@ fn opening_a_two_term_path_reports_its_partial() {
         }),
     );
     assert_eq!(twelve["result"]["isError"], false, "{twelve}");
+    assert_eq!(
+        twelve["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        twelve["result"]["structuredContent"]["partial"]["terms"][11]["frequency"],
+        "23"
+    );
+    assert_eq!(
+        twelve["result"]["structuredContent"]["partial"]["terms"][11]["hz"],
+        2530.0
+    );
     assert!(
         twelve["result"]["structuredContent"]
-            .get("partial")
+            .get("closure")
             .is_none(),
         "{twelve}"
+    );
+    assert!(
+        twelve["result"]["structuredContent"].get("slope").is_none(),
+        "{twelve}"
+    );
+    let twelve_file = twelve["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(twelve_file.contains("0.25*cos(46*pi*t)"), "{twelve_file}");
+    assert!(!twelve_file.contains("PARTIAL"), "{twelve_file}");
+    let opened_twelve = call("open_creation", json!({"capsule": twelve_file}));
+    assert_eq!(opened_twelve["result"]["isError"], false, "{opened_twelve}");
+    assert_eq!(
+        opened_twelve["result"]["structuredContent"]["partial"],
+        twelve["result"]["structuredContent"]["partial"]
+    );
+
+    let thirteen = call(
+        "save_creation",
+        json!({
+            "x_expr": "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)+cos(34*pi*t)+cos(38*pi*t)+cos(42*pi*t)+cos(46*pi*t)+cos(50*pi*t)",
+            "y_expr": "sin(2*pi*t)",
+            "tmin": 0.0,
+            "tmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(thirteen["result"]["isError"], false, "{thirteen}");
+    assert!(
+        thirteen["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "{thirteen}"
     );
 
     let plain = call(

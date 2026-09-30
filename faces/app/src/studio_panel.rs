@@ -3497,15 +3497,15 @@ mod tests {
             "the postcard draws the player's path"
         );
 
-        let twelve = StudioPanel::new(
-            "x(t)=cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)+cos(34*pi*t)+cos(38*pi*t)+cos(42*pi*t)+cos(46*pi*t); y(t)=sin(2*pi*t)",
+        let thirteen = StudioPanel::new(
+            "x(t)=cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)+cos(34*pi*t)+cos(38*pi*t)+cos(42*pi*t)+cos(46*pi*t)+cos(50*pi*t); y(t)=sin(2*pi*t)",
         )
-        .expect("twelve");
-        let [_, (context, _)] = twelve.status_lines(InputMode::KeyboardMouse, 200);
+        .expect("thirteen");
+        let [_, (context, _)] = thirteen.status_lines(InputMode::KeyboardMouse, 200);
         assert!(!context.contains("PARTIAL"), "{context}");
         assert_eq!(
-            twelve.current_sound(),
-            Some(twelve.current_creation().expect("creation").to_melody(32))
+            thirteen.current_sound(),
+            Some(thirteen.current_creation().expect("creation").to_melody(32))
         );
     }
 
@@ -4045,6 +4045,102 @@ mod tests {
             "{context}"
         );
         assert!(!context.contains("  23"), "{context}");
+        assert!(!context.contains("SLOPE"), "{context}");
+        assert!(!context.contains("PERIOD"), "{context}");
+
+        let postcard = panel.postcard_rgba(200, numinous_core::Era::Modern, None, None);
+        let mut raster = Raster::new(200, 200);
+        let _ = numinous_app::studio_render::draw_parametric(
+            &mut raster,
+            numinous_app::studio_render::CurveLayout {
+                width: 200,
+                height: 200,
+                top: 120.0,
+                bottom_margin: 48.0,
+            },
+            creation.xmin(),
+            creation.xmax(),
+            |t| program.point(t, creation.a()),
+        );
+        let mut rgba = raster.to_rgba();
+        numinous_core::Era::Modern.apply(&mut rgba, 200, 200);
+        assert_eq!(
+            postcard[200 * 4 * 128..200 * 4 * 148],
+            rgba[200 * 4 * 128..200 * 4 * 148],
+            "the postcard draws the player's path"
+        );
+    }
+
+    #[test]
+    fn a_twelve_oscillator_path_draws_its_first_term_and_the_postcard_stays_the_source() {
+        let source = "x(t)=cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)+0.25*cos(34*pi*t)+0.25*cos(38*pi*t)+0.25*cos(42*pi*t)+0.25*cos(46*pi*t); y(t)=sin(2*pi*t)";
+        let circle = "x(t)=cos(2*pi*t); y(t)=sin(2*pi*t)";
+        let live_band = |source: &str| {
+            let mut panel = StudioPanel::new(source).expect(source);
+            panel.toggle_help();
+            let mut raster = Raster::new(200, 150);
+            panel.draw(&mut raster, InputMode::KeyboardMouse, 200, 150);
+            raster.to_rgba()[200 * 4 * 80..200 * 4 * 110].to_vec()
+        };
+        assert_ne!(
+            live_band(source),
+            live_band(circle),
+            "the first circle and the wider path share a frame the plain circle does not"
+        );
+
+        let mut panel = StudioPanel::new(source).expect("panel");
+        panel.toggle_help();
+        let mut live = Raster::new(200, 150);
+        panel.draw(&mut live, InputMode::KeyboardMouse, 200, 150);
+        let creation = panel.current_creation().expect("creation");
+        let scale = studio_scale(200);
+        let columns = 200usize.saturating_sub(20) / (6 * scale as usize);
+        let footer = studio_footer_lines(
+            InputMode::KeyboardMouse,
+            ControllerFace::Generic.into(),
+            columns,
+        );
+        let footer_height = (16 + 10 * footer.len().saturating_sub(1) as i32) * scale;
+        let mut source_only = Raster::new(200, 150);
+        let program = creation.program().expect("program");
+        let _ = numinous_app::studio_render::draw_parametric(
+            &mut source_only,
+            numinous_app::studio_render::CurveLayout {
+                width: 200,
+                height: 150,
+                top: f64::from(10 + 56 * scale),
+                bottom_margin: f64::from(footer_height + 8 * scale),
+            },
+            creation.xmin(),
+            creation.xmax(),
+            |t| program.point(t, creation.a()),
+        );
+        assert_ne!(
+            live.to_rgba()[200 * 4 * 80..200 * 4 * 110],
+            source_only.to_rgba()[200 * 4 * 80..200 * 4 * 110],
+            "the first term shares the path's frame"
+        );
+
+        let partial = numinous_core::HarmonicPartial::of(&creation).expect("partial");
+        assert_eq!(partial.x_terms.len(), 12);
+        assert_eq!(partial.y_terms.len(), 1);
+        let live_sound = panel.current_sound().expect("tones");
+        assert_eq!(live_sound, partial.sound().expect("chord"));
+        assert_eq!(live_sound.notes.len(), 12);
+        assert_eq!(live_sound.notes[11].freq, 2530.0);
+        assert_ne!(live_sound, creation.to_melody(32));
+        assert_eq!(creation.to_midi_melody(32), creation.to_melody(32));
+        let file = creation.to_num_file();
+        assert!(file.contains("0.25*cos(46*pi*t)"));
+        assert!(file.contains("sin(2*pi*t)"));
+        assert!(!file.contains("PARTIAL"));
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 200);
+        assert!(context.contains("PARTIAL"), "{context}");
+        assert!(
+            context.contains("  1  3  5  7  9  11  13  15  17  19  21  23"),
+            "{context}"
+        );
+        assert!(!context.contains("  25"), "{context}");
         assert!(!context.contains("SLOPE"), "{context}");
         assert!(!context.contains("PERIOD"), "{context}");
 
