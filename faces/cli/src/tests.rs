@@ -4730,10 +4730,30 @@ fn open_studio_reports_the_partial_of_a_two_term_path() {
     );
     assert!(!seven.contains("closure="), "{seven}");
     let eight = report(
-        "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)",
+        "cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)",
         "sin(2*pi*t)",
     );
-    assert!(!eight.contains("partial "), "{eight}");
+    assert!(eight.contains("partial basis=sum"), "{eight}");
+    assert!(eight.contains("term 1 freq=1 hz=110"), "{eight}");
+    assert!(eight.contains("term 2 freq=3 hz=330"), "{eight}");
+    assert!(eight.contains("term 3 freq=5 hz=550"), "{eight}");
+    assert!(eight.contains("term 4 freq=7 hz=770"), "{eight}");
+    assert!(eight.contains("term 5 freq=9 hz=990"), "{eight}");
+    assert!(eight.contains("term 6 freq=11 hz=1210"), "{eight}");
+    assert!(eight.contains("term 7 freq=13 hz=1430"), "{eight}");
+    assert!(eight.contains("term 8 freq=15 hz=1650"), "{eight}");
+    assert!(
+        eight.contains(
+            "xexpr=cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)"
+        ),
+        "{eight}"
+    );
+    assert!(!eight.contains("closure="), "{eight}");
+    let nine = report(
+        "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)+cos(34*pi*t)",
+        "sin(2*pi*t)",
+    );
+    assert!(!nine.contains("partial "), "{nine}");
 }
 
 #[test]
