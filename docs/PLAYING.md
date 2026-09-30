@@ -167,11 +167,12 @@ term on that graph grows that same first term. An eighth
 term on that graph grows that same first term. A ninth
 term on that graph grows that same first term. A tenth
 term on that graph grows that same first term. An eleventh
+term on that graph grows that same first term. A twelfth
 term on that graph grows that same first term. The App
 sounds one tone per recognized frequency.
 Frequency 1 is 110 Hz. The
 capsule, the text preview, and `melody.mid` stay the player's source.
-A thirteenth term on a path, a twelfth term on a graph, and a drawn path have no partial reading. PageDown and PageUp walk
+A thirteenth term on a path, a thirteenth term on a graph, and a drawn path have no partial reading. PageDown and PageUp walk
 a bundled family when the current creation still matches one. After same-place,
 PageDown opens the bundled `another-ratio` capsule, a period-1 starter
 you can retune. After that, PageDown opens `closing-voices`, the two
