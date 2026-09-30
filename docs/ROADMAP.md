@@ -487,12 +487,28 @@ mastery, exploration, and company also remain complete reasons to play.
   `structuredContent.partial` report `partial basis=sum`. One term, a
   tenth term, a leading minus on a whole sum, a product of two
   oscillators, a path, a field, and an overlay have no partial reading
-  from this rule. A tenth term on a path stays a hypothesis. A slope
+  from this rule. A tenth term on a path is the next paragraph. A slope
   this slice can name stays that slope. The
   capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
   stay the player's source. Player evidence remains open.
-- **Hypothesis, the rest of the partial:** later slices may add a
-  tenth term on a path, or a tenth term on a graph. A drawn path turned into
+- **Built, a tenth term:** a coordinate may be a sum of ten oscillators
+  in the form closure already accepts. The other coordinate is one, two,
+  three, four, five, six, seven, eight, nine, or ten of those oscillators,
+  and at least one coordinate is a sum.
+  `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)+0.25*cos(34*pi*t)+0.25*cos(38*pi*t)`
+  beside `sin(2*pi*t)` grows the circle of frequency `1` and sounds
+  frequencies `1`, `3`, `5`, `7`, `9`, `11`, `13`, `15`, `17`, and `19`.
+  Parentheses keep that reading. A subtraction distributes, and the stored
+  terms add back to the coordinate the player wrote. Source order is the
+  order of the reading. An eleventh term, a leading minus on a whole sum, a
+  product of two oscillators, a field, and an overlay have no partial
+  reading from this rule. A tenth term on a graph stays absent. CLI
+  `open-studio` and MCP `structuredContent.partial` report
+  `partial basis=sum`. The capsule, the postcard, the text preview, CLI
+  `sing`, and `melody.mid` stay the player's source. Player evidence
+  remains open.
+- **Hypothesis, the rest of the partial:** later slices may add an
+  eleventh term on a path, or a tenth term on a graph. A drawn path turned into
   coefficients stays out. There is no series command and no infinite
   sum. The Fourier sketch in `STUDIO.md` stays a sketch. Implementation
   and player evidence remain open.
@@ -2167,9 +2183,9 @@ there. The frequency tones are built. The slope of `sin(a*x)` is built, includin
 a sum of that form with a line or an integer power of `x`. The first
 term of a two-oscillator sum is built, including a sum on only one
 coordinate, a third term, a fourth term, a fifth term, a sixth term,
-a seventh term, an eighth term, a ninth term, and a graph that sums two,
+a seventh term, an eighth term, a ninth term, a tenth term, and a graph that sums two,
 three, four, five, six, seven, eight, or nine oscillators. The rest of the slope
-grammar remains a hypothesis. A tenth term on a path, and a tenth term on
+grammar remains a hypothesis. An eleventh term on a path, and a tenth term on
 a graph, remain hypotheses.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
 already plans them. A natural-language question, step-by-step homework,
