@@ -127,6 +127,7 @@ A third term grows that same first term.
 A fourth term grows that same first term.
 A fifth term grows that same first term.
 A sixth term grows that same first term.
+A seventh term grows that same first term.
 An open graph that sums exactly two oscillators grows the first term
 on the same vertical axis. A third term on that graph grows that same
 first term. A fourth term on that graph grows that same first term.
@@ -135,7 +136,7 @@ A sixth term on that graph grows that same first term.
 The App sounds one tone per recognized frequency.
 `structuredContent.partial` names those frequencies. Frequency `1` is
 110 Hz. The capsule, the text preview, and `melody.mid` stay the player's
-source. A seventh term on a path, a seventh term on a graph, and a drawn path have no partial reading.
+source. An eighth term on a path, a seventh term on a graph, and a drawn path have no partial reading.
 Follow a
 Returning home row, then read `closure` rather than trusting the picture.
 After `another-ratio`, the App walk continues into `closing-voices`, then
