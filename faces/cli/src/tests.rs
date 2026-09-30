@@ -4793,10 +4793,35 @@ fn open_studio_reports_the_partial_of_a_two_term_path() {
     );
     assert!(!ten.contains("closure="), "{ten}");
     let eleven = report(
-        "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)+cos(34*pi*t)+cos(38*pi*t)+cos(42*pi*t)",
+        "cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)+0.25*cos(34*pi*t)+0.25*cos(38*pi*t)+0.25*cos(42*pi*t)",
         "sin(2*pi*t)",
     );
-    assert!(!eleven.contains("partial "), "{eleven}");
+    assert!(eleven.contains("partial basis=sum"), "{eleven}");
+    assert!(eleven.contains("term 1 freq=1 hz=110"), "{eleven}");
+    assert!(eleven.contains("term 2 freq=3 hz=330"), "{eleven}");
+    assert!(eleven.contains("term 3 freq=5 hz=550"), "{eleven}");
+    assert!(eleven.contains("term 4 freq=7 hz=770"), "{eleven}");
+    assert!(eleven.contains("term 5 freq=9 hz=990"), "{eleven}");
+    assert!(eleven.contains("term 6 freq=11 hz=1210"), "{eleven}");
+    assert!(eleven.contains("term 7 freq=13 hz=1430"), "{eleven}");
+    assert!(eleven.contains("term 8 freq=15 hz=1650"), "{eleven}");
+    assert!(eleven.contains("term 9 freq=17 hz=1870"), "{eleven}");
+    assert!(eleven.contains("term 10 freq=19 hz=2090"), "{eleven}");
+    assert!(eleven.contains("term 11 freq=21 hz=2310"), "{eleven}");
+    assert!(
+        eleven.contains(
+            "xexpr=cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)+0.25*cos(34*pi*t)+0.25*cos(38*pi*t)+0.25*cos(42*pi*t)"
+        ),
+        "{eleven}"
+    );
+    assert!(!eleven.contains("closure="), "{eleven}");
+    assert!(!eleven.contains("slope="), "{eleven}");
+    assert!(!eleven.contains("slope basis="), "{eleven}");
+    let twelve = report(
+        "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)+cos(30*pi*t)+cos(34*pi*t)+cos(38*pi*t)+cos(42*pi*t)+cos(46*pi*t)",
+        "sin(2*pi*t)",
+    );
+    assert!(!twelve.contains("partial "), "{twelve}");
 }
 
 #[test]
