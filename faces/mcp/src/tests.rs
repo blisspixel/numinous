@@ -8491,6 +8491,61 @@ fn opening_a_two_term_path_reports_its_partial() {
         three["result"]["structuredContent"]["partial"]
     );
 
+    let four = call(
+        "save_creation",
+        json!({
+            "x_expr": "cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)",
+            "y_expr": "sin(2*pi*t)",
+            "tmin": 0.0,
+            "tmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(four["result"]["isError"], false, "{four}");
+    assert_eq!(
+        four["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        four["result"]["structuredContent"]["partial"]["terms"][3]["frequency"],
+        "7"
+    );
+    assert_eq!(
+        four["result"]["structuredContent"]["partial"]["terms"][3]["hz"],
+        770.0
+    );
+    assert!(
+        four["result"]["structuredContent"].get("closure").is_none(),
+        "{four}"
+    );
+    let four_file = four["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(four_file.contains("0.25*cos(14*pi*t)"), "{four_file}");
+    assert!(!four_file.contains("PARTIAL"), "{four_file}");
+    let opened_four = call("open_creation", json!({"capsule": four_file}));
+    assert_eq!(opened_four["result"]["isError"], false, "{opened_four}");
+    assert_eq!(
+        opened_four["result"]["structuredContent"]["partial"],
+        four["result"]["structuredContent"]["partial"]
+    );
+
+    let five = call(
+        "save_creation",
+        json!({
+            "x_expr": "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)",
+            "y_expr": "sin(2*pi*t)",
+            "tmin": 0.0,
+            "tmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(five["result"]["isError"], false, "{five}");
+    assert!(
+        five["result"]["structuredContent"].get("partial").is_none(),
+        "{five}"
+    );
+
     let plain = call(
         "save_creation",
         json!({"x_expr": "cos(2*pi*t)", "y_expr": "sin(2*pi*t)", "tmin": 0.0, "tmax": 1.0}),
