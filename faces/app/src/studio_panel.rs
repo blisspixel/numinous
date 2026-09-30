@@ -621,7 +621,7 @@ impl StudioPanel {
         HarmonicPartial::of(&creation)?.sound()
     }
 
-    /// One tone per frequency of a two-, three-, four-, five-, six-, or seven-oscillator graph this slice can name.
+    /// One tone per frequency of a two-, three-, four-, five-, six-, seven-, or eight-oscillator graph this slice can name.
     ///
     /// A slope this slice can name keeps its own voice. The capsule and its
     /// MIDI file stay the source.
@@ -661,7 +661,7 @@ impl StudioPanel {
     /// the voice is one tone per recognized frequency. When the open graph
     /// has a slope this slice can name, the voice is that graph and its
     /// slope on one shared axis. When the open graph sums two, three, four,
-    /// five, six, or seven oscillators and has no slope, the voice is one tone per recognized
+    /// five, six, seven, or eight oscillators and has no slope, the voice is one tone per recognized
     /// frequency. Otherwise it is the sampled melody. The capsule, the
     /// postcard, and the MIDI file stay the player's source.
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
@@ -3874,15 +3874,15 @@ mod tests {
             "the postcard draws the player's graph"
         );
 
-        let eight = StudioPanel::new(
-            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)",
+        let nine = StudioPanel::new(
+            "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)",
         )
-        .expect("eight");
-        let [_, (context, _)] = eight.status_lines(InputMode::KeyboardMouse, 200);
+        .expect("nine");
+        let [_, (context, _)] = nine.status_lines(InputMode::KeyboardMouse, 200);
         assert!(!context.contains("PARTIAL"), "{context}");
         assert_eq!(
-            eight.current_sound(),
-            Some(eight.current_creation().expect("creation").to_melody(32))
+            nine.current_sound(),
+            Some(nine.current_creation().expect("creation").to_melody(32))
         );
     }
 
@@ -4287,6 +4287,93 @@ mod tests {
         assert!(context.contains("PARTIAL"), "{context}");
         assert!(context.contains("  1  3  5  7  9  11  13"), "{context}");
         assert!(!context.contains("  15"), "{context}");
+        assert!(!context.contains("SLOPE"), "{context}");
+        assert!(!context.contains("PERIOD"), "{context}");
+
+        let postcard = panel.postcard_rgba(200, numinous_core::Era::Modern, None, None);
+        let mut raster = Raster::new(200, 200);
+        let _ = numinous_app::studio_render::draw_curve(
+            &mut raster,
+            numinous_app::studio_render::CurveLayout {
+                width: 200,
+                height: 200,
+                top: 120.0,
+                bottom_margin: 48.0,
+            },
+            creation.xmin(),
+            creation.xmax(),
+            |x| {
+                let value = numinous_core::eval_named(&expr, x, creation.a(), &[]);
+                value.is_finite().then_some(value)
+            },
+        );
+        let mut rgba = raster.to_rgba();
+        numinous_core::Era::Modern.apply(&mut rgba, 200, 200);
+        assert_eq!(
+            postcard[200 * 4 * 128..200 * 4 * 148],
+            rgba[200 * 4 * 128..200 * 4 * 148],
+            "the postcard draws the player's graph"
+        );
+    }
+
+    #[test]
+    fn an_eight_oscillator_graph_draws_its_first_term_and_the_postcard_stays_the_source() {
+        let source = "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)";
+        let mut panel = StudioPanel::new(source).expect(source);
+        panel.toggle_help();
+        let mut live = Raster::new(200, 150);
+        panel.draw(&mut live, InputMode::KeyboardMouse, 200, 150);
+        let creation = panel.current_creation().expect("creation");
+        let scale = studio_scale(200);
+        let columns = 200usize.saturating_sub(20) / (6 * scale as usize);
+        let footer = studio_footer_lines(
+            InputMode::KeyboardMouse,
+            ControllerFace::Generic.into(),
+            columns,
+        );
+        let footer_height = (16 + 10 * footer.len().saturating_sub(1) as i32) * scale;
+        let mut source_only = Raster::new(200, 150);
+        let expr = creation
+            .program()
+            .expect("program")
+            .voice_expression()
+            .clone();
+        let _ = numinous_app::studio_render::draw_curve(
+            &mut source_only,
+            numinous_app::studio_render::CurveLayout {
+                width: 200,
+                height: 150,
+                top: f64::from(10 + 56 * scale),
+                bottom_margin: f64::from(footer_height + 8 * scale),
+            },
+            creation.xmin(),
+            creation.xmax(),
+            |x| {
+                let value = numinous_core::eval_named(&expr, x, creation.a(), &[]);
+                value.is_finite().then_some(value)
+            },
+        );
+        assert_ne!(
+            live.to_rgba()[200 * 4 * 80..200 * 4 * 110],
+            source_only.to_rgba()[200 * 4 * 80..200 * 4 * 110],
+            "the first term shares the graph's vertical axis"
+        );
+
+        let partial = numinous_core::GraphPartial::of(&creation).expect("partial");
+        assert_eq!(partial.terms.len(), 8);
+        let sound = panel.current_sound().expect("tones");
+        assert_eq!(sound, partial.sound().expect("chord"));
+        assert_eq!(sound.notes.len(), 8);
+        assert_eq!(sound.notes[7].freq, 1650.0);
+        assert_ne!(sound, creation.to_melody(32));
+        assert_eq!(creation.to_midi_melody(32), creation.to_melody(32));
+        let file = creation.to_num_file();
+        assert!(file.contains("0.25*sin(30*pi*x)"));
+        assert!(!file.contains("PARTIAL"));
+        let [_, (context, _)] = panel.status_lines(InputMode::KeyboardMouse, 200);
+        assert!(context.contains("PARTIAL"), "{context}");
+        assert!(context.contains("  1  3  5  7  9  11  13  15"), "{context}");
+        assert!(!context.contains("  17"), "{context}");
         assert!(!context.contains("SLOPE"), "{context}");
         assert!(!context.contains("PERIOD"), "{context}");
 

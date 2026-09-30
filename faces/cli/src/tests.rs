@@ -4851,9 +4851,30 @@ fn open_studio_reports_the_partial_of_a_two_oscillator_graph() {
     assert!(!seven.contains("slope="), "{seven}");
     assert!(!seven.contains("slope basis="), "{seven}");
     let eight = report(
-        "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)",
+        "sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)",
     );
-    assert!(!eight.contains("partial "), "{eight}");
+    assert!(eight.contains("partial basis=sum"), "{eight}");
+    assert!(eight.contains("term 1 freq=1 hz=110"), "{eight}");
+    assert!(eight.contains("term 2 freq=3 hz=330"), "{eight}");
+    assert!(eight.contains("term 3 freq=5 hz=550"), "{eight}");
+    assert!(eight.contains("term 4 freq=7 hz=770"), "{eight}");
+    assert!(eight.contains("term 5 freq=9 hz=990"), "{eight}");
+    assert!(eight.contains("term 6 freq=11 hz=1210"), "{eight}");
+    assert!(eight.contains("term 7 freq=13 hz=1430"), "{eight}");
+    assert!(eight.contains("term 8 freq=15 hz=1650"), "{eight}");
+    assert!(
+        eight.contains(
+            "expr=sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)"
+        ),
+        "{eight}"
+    );
+    assert!(!eight.contains("closure="), "{eight}");
+    assert!(!eight.contains("slope="), "{eight}");
+    assert!(!eight.contains("slope basis="), "{eight}");
+    let nine = report(
+        "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)+sin(14*pi*x)+sin(18*pi*x)+sin(22*pi*x)+sin(26*pi*x)+sin(30*pi*x)+sin(34*pi*x)",
+    );
+    assert!(!nine.contains("partial "), "{nine}");
     let slope = report("sin(a*x)+x/3");
     assert!(
         slope.contains("slope basis=symbolic source=a*cos(a*x)+1/3"),
