@@ -8533,7 +8533,7 @@ fn opening_a_two_term_path_reports_its_partial() {
     let five = call(
         "save_creation",
         json!({
-            "x_expr": "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)",
+            "x_expr": "cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)",
             "y_expr": "sin(2*pi*t)",
             "tmin": 0.0,
             "tmax": 1.0,
@@ -8541,9 +8541,48 @@ fn opening_a_two_term_path_reports_its_partial() {
         }),
     );
     assert_eq!(five["result"]["isError"], false, "{five}");
+    assert_eq!(
+        five["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        five["result"]["structuredContent"]["partial"]["terms"][4]["frequency"],
+        "9"
+    );
+    assert_eq!(
+        five["result"]["structuredContent"]["partial"]["terms"][4]["hz"],
+        990.0
+    );
     assert!(
-        five["result"]["structuredContent"].get("partial").is_none(),
+        five["result"]["structuredContent"].get("closure").is_none(),
         "{five}"
+    );
+    let five_file = five["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(five_file.contains("0.25*cos(18*pi*t)"), "{five_file}");
+    assert!(!five_file.contains("PARTIAL"), "{five_file}");
+    let opened_five = call("open_creation", json!({"capsule": five_file}));
+    assert_eq!(opened_five["result"]["isError"], false, "{opened_five}");
+    assert_eq!(
+        opened_five["result"]["structuredContent"]["partial"],
+        five["result"]["structuredContent"]["partial"]
+    );
+
+    let six = call(
+        "save_creation",
+        json!({
+            "x_expr": "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)",
+            "y_expr": "sin(2*pi*t)",
+            "tmin": 0.0,
+            "tmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(six["result"]["isError"], false, "{six}");
+    assert!(
+        six["result"]["structuredContent"].get("partial").is_none(),
+        "{six}"
     );
 
     let plain = call(

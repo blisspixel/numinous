@@ -4681,7 +4681,22 @@ fn open_studio_reports_the_partial_of_a_two_term_path() {
         "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)",
         "sin(2*pi*t)",
     );
-    assert!(!five.contains("partial "), "{five}");
+    assert!(five.contains("partial basis=sum"), "{five}");
+    assert!(five.contains("term 1 freq=1 hz=110"), "{five}");
+    assert!(five.contains("term 2 freq=3 hz=330"), "{five}");
+    assert!(five.contains("term 3 freq=5 hz=550"), "{five}");
+    assert!(five.contains("term 4 freq=7 hz=770"), "{five}");
+    assert!(five.contains("term 5 freq=9 hz=990"), "{five}");
+    assert!(
+        five.contains("xexpr=cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)"),
+        "{five}"
+    );
+    assert!(!five.contains("closure="), "{five}");
+    let six = report(
+        "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)",
+        "sin(2*pi*t)",
+    );
+    assert!(!six.contains("partial "), "{six}");
 }
 
 #[test]
