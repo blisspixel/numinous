@@ -339,8 +339,8 @@ mastery, exploration, and company also remain complete reasons to play.
   stored terms add back to the graph the player wrote. Source order is
   the order of the reading. CLI `open-studio` and MCP
   `structuredContent.partial` report `partial basis=sum`. One term, a
-  fifth term on that graph, a path, a field, and an overlay have no
-  partial reading from this rule. A fifth term on a path is the next
+  path, a field, and an overlay have no partial reading from this
+  rule. A fifth term on a path is the next
   paragraph. A slope this slice can name stays that slope. The
   capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
   stay the player's source. Player evidence remains open.
@@ -354,13 +354,26 @@ mastery, exploration, and company also remain complete reasons to play.
   A subtraction distributes, and the stored terms add back to the
   coordinate the player wrote. Source order is the order of the reading.
   A sixth term, a leading minus on a whole sum, a product of two
-  oscillators, a fifth term on a graph, a field, and an overlay have no
-  partial reading from this rule. CLI `open-studio` and MCP
+  oscillators, a field, and an overlay have no partial reading from
+  this rule. A fifth term on a graph is the next paragraph. CLI
+  `open-studio` and MCP
   `structuredContent.partial` report `partial basis=sum`. The capsule,
   the postcard, the text preview, CLI `sing`, and `melody.mid` stay the
   player's source. Player evidence remains open.
+- **Built, a fifth term on a graph:** an open graph may sum five
+  oscillators in the form closure already accepts.
+  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)`
+  grows `sin(2*pi*x)` and sounds frequencies `1`, `3`, `5`, `7`, and
+  `9`. Parentheses keep that reading. A subtraction distributes, and
+  the stored terms add back to the graph the player wrote. Source order
+  is the order of the reading. CLI `open-studio` and MCP
+  `structuredContent.partial` report `partial basis=sum`. One term, a
+  sixth term, a path, a field, and an overlay have no partial reading
+  from this rule. A slope this slice can name stays that slope. The
+  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
+  stay the player's source. Player evidence remains open.
 - **Hypothesis, the rest of the partial:** later slices may add a sixth
-  term on a path, or a fifth term on a graph. A drawn path turned into
+  term on a path, or a sixth term on a graph. A drawn path turned into
   coefficients stays out. There is no series command and no infinite
   sum. The Fourier sketch in `STUDIO.md` stays a sketch. Implementation
   and player evidence remain open.
@@ -2035,9 +2048,9 @@ there. The frequency tones are built. The slope of `sin(a*x)` is built, includin
 a sum of that form with a line or an integer power of `x`. The first
 term of a two-oscillator sum is built, including a sum on only one
 coordinate, a third term, a fourth term, a fifth term, and a graph that
-sums two, three, or four oscillators. The rest of the slope grammar
-remains a hypothesis. A sixth term on a path, and a fifth term on a
-graph, remain hypotheses.
+sums two, three, four, or five oscillators. The rest of the slope
+grammar remains a hypothesis. A sixth term on a path, and a sixth term
+on a graph, remain hypotheses.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
 already plans them. A natural-language question, step-by-step homework,
 and curated facts about the world stay out with the external call.
