@@ -152,6 +152,7 @@ beside the path, on the same frame. A sum on only one coordinate grows
 that same first term. A third term grows that same first term. A fourth
 term grows that same first term. A fifth term grows that same first
 term. A sixth term grows that same first term. A seventh
+term grows that same first term. An eighth
 term grows that same first term. An open
 graph that sums exactly two oscillators grows the first term on the
 same vertical axis. A third term on that graph grows that same first
@@ -162,7 +163,7 @@ term on that graph grows that same first term. The App
 sounds one tone per recognized frequency.
 Frequency 1 is 110 Hz. The
 capsule, the text preview, and `melody.mid` stay the player's source.
-An eighth term on a path, an eighth term on a graph, and a drawn path have no partial reading. PageDown and PageUp walk
+A ninth term on a path, an eighth term on a graph, and a drawn path have no partial reading. PageDown and PageUp walk
 a bundled family when the current creation still matches one. After same-place,
 PageDown opens the bundled `another-ratio` capsule, a period-1 starter
 you can retune. After that, PageDown opens `closing-voices`, the two

@@ -109,10 +109,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   `sin(a*x)` is built, including a sum of that form with a line or an
   integer power of `x`. The first term of a two-oscillator sum is built,
   including a sum on only one coordinate, a third term, a fourth term,
-  a fifth term, a sixth term, a seventh term, and a graph that sums
-  two, three, four, five, six, or seven oscillators. The rest of the slope
-  grammar remains a hypothesis. An eighth term on a path, and an eighth
-  term on a graph, remain hypotheses.
+  a fifth term, a sixth term, a seventh term, an eighth term, and a graph
+  that sums two, three, four, five, six, or seven oscillators. The rest of
+  the slope grammar remains a hypothesis. A ninth term on a path, and an
+  eighth term on a graph, remain hypotheses.
   A question box, homework steps, curated facts about
   the world, and any call to an external answer engine stay out.
 
