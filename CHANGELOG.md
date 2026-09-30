@@ -71,6 +71,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   frequency. CLI `open-studio` and MCP `structuredContent.partial`
   report the same reading. The capsule, the postcard, the text
   preview, and `melody.mid` stay the player's source.
+- A parametric path with a sixth oscillator on a coordinate grows the
+  first term of each coordinate on the same frame. The App sounds one
+  tone per recognized frequency. CLI `open-studio` and MCP
+  `structuredContent.partial` report the same reading. The capsule, the
+  postcard, the text preview, and `melody.mid` stay the player's source.
 - A core project document, `NUMINOUS_PROJECT 1`. It keeps one question, a
   closed next call, catalog room ids, typed evidence links, and an optional
   Studio creation. Import and correct are separate from keep. Resume previews
@@ -104,9 +109,10 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   `sin(a*x)` is built, including a sum of that form with a line or an
   integer power of `x`. The first term of a two-oscillator sum is built,
   including a sum on only one coordinate, a third term, a fourth term,
-  a fifth term, and a graph that sums two, three, four, or five
-  oscillators. The rest of the slope grammar remains a hypothesis. A
-  sixth term on a path, and a sixth term on a graph, remain hypotheses.
+  a fifth term, a sixth term, and a graph that sums two, three, four,
+  or five oscillators. The rest of the slope grammar remains a
+  hypothesis. A seventh term on a path, and a sixth term on a graph,
+  remain hypotheses.
   A question box, homework steps, curated facts about
   the world, and any call to an external answer engine stay out.
 

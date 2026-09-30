@@ -8572,7 +8572,7 @@ fn opening_a_two_term_path_reports_its_partial() {
     let six = call(
         "save_creation",
         json!({
-            "x_expr": "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)",
+            "x_expr": "cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)",
             "y_expr": "sin(2*pi*t)",
             "tmin": 0.0,
             "tmax": 1.0,
@@ -8580,9 +8580,50 @@ fn opening_a_two_term_path_reports_its_partial() {
         }),
     );
     assert_eq!(six["result"]["isError"], false, "{six}");
+    assert_eq!(
+        six["result"]["structuredContent"]["partial"]["basis"],
+        "sum"
+    );
+    assert_eq!(
+        six["result"]["structuredContent"]["partial"]["terms"][5]["frequency"],
+        "11"
+    );
+    assert_eq!(
+        six["result"]["structuredContent"]["partial"]["terms"][5]["hz"],
+        1210.0
+    );
     assert!(
-        six["result"]["structuredContent"].get("partial").is_none(),
+        six["result"]["structuredContent"].get("closure").is_none(),
         "{six}"
+    );
+    let six_file = six["result"]["structuredContent"]["numFile"]
+        .as_str()
+        .expect("num file");
+    assert!(six_file.contains("0.25*cos(22*pi*t)"), "{six_file}");
+    assert!(!six_file.contains("PARTIAL"), "{six_file}");
+    let opened_six = call("open_creation", json!({"capsule": six_file}));
+    assert_eq!(opened_six["result"]["isError"], false, "{opened_six}");
+    assert_eq!(
+        opened_six["result"]["structuredContent"]["partial"],
+        six["result"]["structuredContent"]["partial"]
+    );
+
+    let seven = call(
+        "save_creation",
+        json!({
+            "x_expr": "cos(2*pi*t)+cos(6*pi*t)+cos(10*pi*t)+cos(14*pi*t)+cos(18*pi*t)+cos(22*pi*t)+cos(26*pi*t)",
+            "y_expr": "sin(2*pi*t)",
+            "tmin": 0.0,
+            "tmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(seven["result"]["isError"], false, "{seven}");
+    assert!(
+        seven["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "{seven}"
     );
 
     let plain = call(
