@@ -8520,6 +8520,111 @@ fn opening_a_two_term_path_reports_its_partial() {
 }
 
 #[test]
+fn opening_a_two_oscillator_graph_reports_its_partial() {
+    let saved = call(
+        "save_creation",
+        json!({
+            "expr": "sin(2*pi*x)+0.5*sin(6*pi*x)",
+            "xmin": 0.0,
+            "xmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(saved["result"]["isError"], false, "{saved}");
+    let structured = &saved["result"]["structuredContent"];
+    assert_eq!(structured["partial"]["basis"], "sum");
+    assert_eq!(structured["partial"]["terms"][0]["frequency"], "1");
+    assert_eq!(structured["partial"]["terms"][0]["hz"], 110.0);
+    assert_eq!(structured["partial"]["terms"][1]["frequency"], "3");
+    assert_eq!(structured["partial"]["terms"][1]["hz"], 330.0);
+    assert!(structured.get("slope").is_none(), "{structured}");
+    assert!(structured.get("closure").is_none(), "{structured}");
+    assert!(structured.get("tones").is_none(), "{structured}");
+    assert_eq!(structured["next"]["tool"], "fork_creation");
+    let num_file = structured["numFile"].as_str().expect("num file");
+    assert!(num_file.contains("sin(2*pi*x)+0.5*sin(6*pi*x)"));
+    assert!(!num_file.contains("PARTIAL"));
+    let text = saved["result"]["content"][0]["text"]
+        .as_str()
+        .expect("text");
+    assert!(text.contains("partial basis=sum"), "{text}");
+    assert!(text.contains("term 2 freq=3 hz=330"), "{text}");
+
+    let opened = call("open_creation", json!({"capsule": num_file}));
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert_eq!(
+        opened["result"]["structuredContent"]["partial"],
+        structured["partial"]
+    );
+
+    let alone = call(
+        "save_creation",
+        json!({"expr": "sin(2*pi*x)", "xmin": 0.0, "xmax": 1.0, "a": 1.0}),
+    );
+    assert_eq!(alone["result"]["isError"], false, "{alone}");
+    assert!(
+        alone["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "{alone}"
+    );
+
+    let three = call(
+        "save_creation",
+        json!({
+            "expr": "sin(2*pi*x)+sin(6*pi*x)+sin(10*pi*x)",
+            "xmin": 0.0,
+            "xmax": 1.0,
+            "a": 1.0
+        }),
+    );
+    assert_eq!(three["result"]["isError"], false, "{three}");
+    assert!(
+        three["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "{three}"
+    );
+
+    let slope = call(
+        "save_creation",
+        json!({"expr": "sin(a*x)+x/3", "xmin": -2.0, "xmax": 2.0, "a": 1.0}),
+    );
+    assert_eq!(slope["result"]["isError"], false, "{slope}");
+    assert!(
+        slope["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "{slope}"
+    );
+    assert_eq!(
+        slope["result"]["structuredContent"]["slope"]["source"],
+        "a*cos(a*x)+1/3"
+    );
+
+    let plotted = call(
+        "plot_expression",
+        json!({"expr": "sin(2*pi*x)+0.5*sin(6*pi*x)"}),
+    );
+    assert_eq!(plotted["result"]["isError"], false, "{plotted}");
+    assert!(
+        plotted["result"]["structuredContent"]
+            .get("partial")
+            .is_none(),
+        "a plot is not this reading"
+    );
+    let sung = call(
+        "sing_expression",
+        json!({"expr": "sin(2*pi*x)+0.5*sin(6*pi*x)"}),
+    );
+    assert_eq!(sung["result"]["isError"], false, "{sung}");
+    assert!(
+        sung["result"]["structuredContent"].get("partial").is_none(),
+        "a song of the source is not this reading"
+    );
+}
+
+#[test]
 fn studying_lissajous_names_the_returning_home_construction() {
     let studied = call(
         "study_room",
