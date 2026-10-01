@@ -457,7 +457,7 @@ fn modern_tool_catalog_is_cacheable_deterministic_and_explicitly_2020_12() {
     assert_eq!(result["ttlMs"], super::TOOLS_CACHE_TTL_MS);
     assert_eq!(result["cacheScope"], "public");
     let tools = result["tools"].as_array().expect("tool array");
-    assert_eq!(tools.len(), 42);
+    assert_eq!(tools.len(), 43);
     assert!(
         tools
             .iter()
@@ -500,7 +500,10 @@ fn modern_tool_results_carry_result_type_and_server_identity() {
         response["result"]["_meta"][super::SERVER_INFO_META_KEY]["name"],
         "numinous"
     );
-    assert_eq!(response["result"]["structuredContent"]["count"], 355);
+    assert_eq!(
+        response["result"]["structuredContent"]["count"],
+        numinous_core::ROOM_CATALOG.len()
+    );
 
     let retired_ping = handle_request(&json!({
         "jsonrpc": "2.0",
@@ -806,7 +809,7 @@ fn tools_list_has_the_expected_tools() {
     let tools = resp["result"]["tools"]
         .as_array()
         .expect("tools is an array");
-    assert_eq!(tools.len(), 42);
+    assert_eq!(tools.len(), 43);
     assert!(
         tools
             .iter()
@@ -1175,14 +1178,147 @@ fn every_declared_tool_has_one_exhaustive_viewer_policy() {
         }
     }
     assert_eq!(public, numinous_broadcast::ALL_PUBLIC_TOOLS.len());
-    assert_eq!(private, 17);
+    assert_eq!(private, 18);
     assert_eq!(
         super::viewer_policy("study_room"),
         Some(super::ViewerPolicy::Private)
     );
     assert_eq!(control, 1);
+    assert_eq!(
+        super::viewer_policy("route_lab"),
+        Some(super::ViewerPolicy::Private)
+    );
+    let packaged = include_str!("../../../VERIFY.md");
+    assert!(packaged.contains(&numinous_core::counted(tools.len(), "MCP tool")));
+    assert!(packaged.contains(&numinous_core::counted(public, "public play tool")));
+    assert!(packaged.contains(&numinous_core::counted(private, "private tool")));
+    let interfaces = include_str!("../../../docs/INTERFACES.md");
+    assert!(interfaces.contains(&format!(
+        "The {} include",
+        numinous_core::counted(tools.len(), "tool")
+    )));
+    let roadmap = include_str!("../../../docs/ROADMAP.md");
+    assert!(roadmap.contains(&numinous_core::counted(tools.len(), "MCP tool")));
+    assert!(roadmap.contains(&numinous_core::counted(private, "private tool")));
     assert_eq!(public + private + control, tools.len());
     assert!(super::viewer_policy("future_unreviewed_tool").is_none());
+}
+
+#[test]
+fn route_workbench_next_improves_then_opens_and_steps_a_real_trace() {
+    let first = call("route_lab", json!({}));
+    let first = &first["result"]["structuredContent"];
+    assert_eq!(first["comparison"]["current"]["cost"], 9);
+    assert_eq!(first["comparison"]["exact"]["tour"]["cost"], 8);
+    assert_eq!(first["snapshot"]["current"]["order"], json!([0, 1, 2, 3]));
+    assert_eq!(first["next"]["arguments"]["action"]["type"], "improve");
+    let improve = call(
+        first["next"]["tool"].as_str().unwrap(),
+        first["next"]["arguments"].clone(),
+    );
+    let improve = &improve["result"]["structuredContent"];
+    assert_eq!(improve["comparison"]["current"]["cost"], 8);
+    assert_eq!(improve["snapshot"]["undo"].as_array().unwrap().len(), 1);
+    assert_eq!(improve["next"]["arguments"]["action"]["type"], "trace");
+    let trace = call(
+        improve["next"]["tool"].as_str().unwrap(),
+        improve["next"]["arguments"].clone(),
+    );
+    let mut trace = trace["result"]["structuredContent"].clone();
+    assert_eq!(trace["trace"]["cursor"], 0);
+    assert_eq!(trace["trace"]["events"], json!([]));
+    assert!(trace["trace"]["result"].is_null());
+    assert_eq!(
+        trace["snapshot"]["trace"]["townIdentity"]
+            .as_array()
+            .unwrap()
+            .len(),
+        32
+    );
+    let count = trace["trace"]["eventCount"].as_u64().unwrap();
+    for cursor in 1..=count {
+        let followed = call(
+            trace["next"]["tool"].as_str().unwrap(),
+            trace["next"]["arguments"].clone(),
+        );
+        assert_ne!(followed["result"]["isError"], true, "{followed}");
+        trace = followed["result"]["structuredContent"].clone();
+        assert_eq!(trace["trace"]["cursor"], cursor);
+        assert_eq!(
+            trace["trace"]["events"].as_array().unwrap().len() as u64,
+            cursor
+        );
+        assert_eq!(trace["trace"]["result"].is_null(), cursor < count);
+    }
+    assert_eq!(trace["trace"]["result"]["status"], "reachable");
+    assert_eq!(trace["trace"]["result"]["junctions"], json!([0, 1]));
+    assert_eq!(trace["trace"]["result"]["cost"], 1);
+    let undone = call(
+        "route_lab",
+        json!({"snapshot":improve["snapshot"],"action":{"type":"undo"}}),
+    );
+    assert_eq!(
+        undone["result"]["structuredContent"]["comparison"]["current"]["cost"],
+        9
+    );
+}
+
+#[test]
+fn route_workbench_retains_disconnection_and_refuses_stale_trace_claims() {
+    let first = call("route_lab", json!({}));
+    let mut snapshot = first["result"]["structuredContent"]["snapshot"].clone();
+    for destination in [1, 2] {
+        let closed = call(
+            "route_lab",
+            json!({"snapshot":snapshot,"action":{"type":"road_open","from":0,"to":destination,"open":false}}),
+        );
+        assert_ne!(closed["result"]["isError"], true, "{closed}");
+        snapshot = closed["result"]["structuredContent"]["snapshot"].clone();
+    }
+    let disconnected = call("route_lab", json!({"snapshot":snapshot}));
+    let content = &disconnected["result"]["structuredContent"];
+    assert_eq!(content["comparison"]["status"], "infeasible");
+    assert_eq!(
+        content["comparison"]["diagnostic"],
+        json!({"code":"unreachable","from":0,"to":1})
+    );
+    assert_eq!(content["snapshot"]["current"]["roads"][0]["cost"], 1);
+    let traced = call(
+        "route_lab",
+        json!({"snapshot":snapshot,"action":{"type":"trace","from":0,"to":1}}),
+    );
+    let content = &traced["result"]["structuredContent"];
+    let mut trace_snapshot = content["snapshot"].clone();
+    let count = content["trace"]["eventCount"].clone();
+    let completed = call(
+        "route_lab",
+        json!({"snapshot":trace_snapshot,"action":{"type":"step","cursor":count}}),
+    );
+    assert_eq!(
+        completed["result"]["structuredContent"]["trace"]["result"]["diagnostic"],
+        json!({"code":"unreachable","from":0,"to":1})
+    );
+    trace_snapshot["current"]["roads"][0]["cost"] = json!(7);
+    let stale = call(
+        "route_lab",
+        json!({"snapshot":trace_snapshot,"action":{"type":"step"}}),
+    );
+    assert_eq!(stale["result"]["isError"], true);
+    assert!(tool_error_text(&stale).contains("different street network"));
+    let too_few = call("route_lab", json!({"action":{"type":"stops","stops":[0]}}));
+    assert_eq!(
+        too_few["result"]["structuredContent"]["comparison"]["diagnostic"],
+        json!({"code":"size"})
+    );
+    for arguments in [
+        json!({"action":{"type":"depot","depot":31}}),
+        json!({"action":{"type":"road_cost","from":0,"to":1,"cost":true}}),
+        json!({"action":{"type":"step","steps":1,"cursor":0}}),
+        json!({"action":{"type":"order","order":[0,1,1,3]}}),
+    ] {
+        let rejected = call("route_lab", arguments);
+        assert_eq!(rejected["result"]["isError"], true, "{rejected}");
+    }
 }
 
 #[test]
@@ -4600,6 +4736,67 @@ fn play_room_returns_ascii_the_agent_can_see() {
         .expect("structuredContent carries the render");
     assert!(render.contains('*'), "the structured render has ink too");
     assert_eq!(resp["result"]["isError"], false);
+}
+
+#[test]
+fn route_lab_door_and_replayed_exchange_share_the_exact_street_result() {
+    let described = call("describe_room", json!({"id": "route-lab"}));
+    assert_eq!(described["result"]["isError"], false, "{described}");
+    let door = &described["result"]["structuredContent"]["next"];
+    let opened = call(
+        door["tool"].as_str().expect("a followable room tool"),
+        door["arguments"].clone(),
+    );
+    assert_eq!(opened["result"]["isError"], false, "{opened}");
+    assert!(
+        opened["result"]["structuredContent"]["status"]
+            .as_str()
+            .expect("route status")
+            .contains("ORDER=ABCD cost=9 opt=8 save=1 BD=3")
+    );
+
+    let play = |pokes: Value, expected: &str| {
+        let arguments = json!({
+            "id": "route-lab", "t": 0.25, "pokes": pokes,
+            "width": 64, "height": 28, "receipt": true,
+        });
+        let result = call("play_room", arguments.clone());
+        assert_eq!(result["result"]["isError"], false, "{result}");
+        let structured = &result["result"]["structuredContent"];
+        assert!(
+            structured["status"]
+                .as_str()
+                .expect("route status")
+                .contains(expected),
+            "{structured}"
+        );
+        assert!(structured["encounter"].is_object(), "{structured}");
+        let render = structured["render"].as_str().expect("route picture");
+        assert!(render.contains('A') && render.contains('D'), "{render}");
+        let replay = call("play_room", arguments);
+        assert_eq!(
+            replay["result"]["structuredContent"]["render"],
+            structured["render"]
+        );
+        assert_eq!(
+            replay["result"]["structuredContent"]["status"],
+            structured["status"]
+        );
+        assert_eq!(
+            replay["result"]["structuredContent"]["encounter"], structured["encounter"],
+            "identical input must issue the identical encounter receipt"
+        );
+    };
+    play(json!([[0.75, 0.92]]), "ORDER=ABDC cost=8 opt=8 save=0 BD=3");
+    play(
+        json!([[0.75, 0.92], [0.75, 0.92]]),
+        "ORDER=ABDC cost=8 opt=8 save=0 BD=3",
+    );
+    play(
+        json!([[0.75, 0.92], [0.25, 0.92]]),
+        "ORDER=ABCD cost=9 opt=8 save=1 BD=3",
+    );
+    play(json!([[0.5, 0.78]]), "ORDER=ABCD cost=9 opt=9 save=0 BD=5");
 }
 
 #[test]
@@ -8048,9 +8245,9 @@ fn list_rooms_tool_returns_the_catalog() {
     assert!(!text.contains("tetractys"));
     assert_eq!(resp["result"]["isError"], false);
     let structured = &resp["result"]["structuredContent"];
-    assert_eq!(structured["count"], 355);
+    assert_eq!(structured["count"], numinous_core::ROOM_CATALOG.len());
     let rooms = structured["rooms"].as_array().expect("room catalog");
-    assert_eq!(rooms.len(), 355);
+    assert_eq!(rooms.len(), numinous_core::ROOM_CATALOG.len());
     assert!(rooms.iter().all(|room| room["id"] != "tetractys"));
     assert!(rooms.iter().all(|room| {
         room["id"].is_string() && room["title"].is_string() && room["wing"].is_string()
@@ -8077,7 +8274,7 @@ fn list_rooms_offers_a_typed_starter_doorway() {
     let catalog = structured["rooms"].as_array().expect("room catalog");
     for starter in starters {
         // A starter carries the same shape as a catalog row, so a player
-        // can choose and name it without reading the 354-room array the
+        // can choose and name it without reading the complete catalog the
         // doorway exists to spare them.
         let id = starter["id"].as_str().expect("starter rows carry an id");
         assert!(
@@ -9579,7 +9776,7 @@ fn every_room_supports_structured_describe_reveal_and_listen() {
     ));
     let _ = std::fs::remove_file(&journey);
     let rooms = numinous_core::all_rooms();
-    assert_eq!(rooms.len(), 355);
+    assert_eq!(rooms.len(), numinous_core::ROOM_CATALOG.len());
     let mut earned = numinous_core::Journey::default();
     for room in &rooms {
         earned.visit(room.meta().id);

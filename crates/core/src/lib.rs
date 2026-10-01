@@ -98,6 +98,9 @@ pub mod rng;
 pub mod room;
 pub mod room_walk;
 pub mod rooms;
+pub mod route;
+pub mod route_creation;
+pub mod route_workbench;
 pub mod scores;
 pub mod secret;
 pub mod session;
@@ -217,12 +220,13 @@ pub use preferences::{
     AppPreferences, PREFERENCES_SCHEMA_VERSION, PreferencesError, WindowModePreference,
 };
 pub use project::{
-    CreationFact, CreationStatus, EvidenceFact, EvidenceStatus, IncompatibleNext,
+    CreationFact, CreationKind, CreationStatus, EvidenceFact, EvidenceStatus, IncompatibleNext,
     MAX_PROJECT_EVIDENCE, MAX_PROJECT_FILE_BYTES, MAX_PROJECT_REVISIONS, MAX_PROJECT_ROOMS,
-    NextPreview, PROJECT_CHAIN_HEADER, PROJECT_DOCUMENT_HEADER, PROJECT_RESUME_PREVIEW_SCHEMA,
-    PROJECT_RESUME_PREVIEW_VERSION, ProjectArgument, ProjectArgumentValue, ProjectCall,
-    ProjectChain, ProjectDraft, ProjectError, ProjectEvidence, ProjectNext, ProjectRevision,
-    ProjectStore, ReceiptCheck, ResumePreview, RoomFact, RoomStatus,
+    NextPreview, PROJECT_CHAIN_HEADER, PROJECT_CHAIN_HEADER_V2, PROJECT_DOCUMENT_HEADER,
+    PROJECT_DOCUMENT_HEADER_V2, PROJECT_RESUME_PREVIEW_SCHEMA, PROJECT_RESUME_PREVIEW_VERSION,
+    ProjectArgument, ProjectArgumentValue, ProjectCall, ProjectChain, ProjectDraft, ProjectError,
+    ProjectEvidence, ProjectNext, ProjectRevision, ProjectStore, ReceiptCheck, ResumePreview,
+    RoomFact, RoomStatus,
 };
 pub use projection::PlanarProjection;
 pub use quiz::{ICONIC, QuizChoice, QuizRound, build_round, build_round_pool, build_round_sized};
@@ -244,6 +248,9 @@ pub use room::{
 };
 pub use room_walk::{RoomWalk, RoomWalkStep, STRANGE_LOOP_WALK};
 pub use rooms::{ROOM_CATALOG, canonical_room_id, catalog_index, room_meta_by_id};
+pub use route_creation::{
+    MAX_ROUTE_CAPSULE_BYTES, ROUTE_CAPSULE_HEADER, RouteCreation, RouteCreationError,
+};
 pub use scores::Scoreboard;
 pub use secret::{akousma, behind_the_veil, deep_akousma};
 pub use session::{

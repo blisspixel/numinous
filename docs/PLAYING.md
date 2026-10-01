@@ -9,6 +9,36 @@ same journey to level 42, because that is the point.
 
 ## For humans
 
+**Route Lab:** deliver to B, C, and D, then return to A. Drag the map to choose
+the delivery order and the BD strip to change that road's cost. **NEAREST NEXT**
+constructs an order; **USE SHORTER** accepts the cheaper order on offer. The
+readout gives your round-trip cost, the exact best cost, and any offered saving.
+Each leg follows the cheapest open road path, which may pass a stop before its
+delivery or revisit a junction. The delivery order and street walk are distinct.
+
+In ordinary App play, 1 through 6 select an order, G uses nearest-next, I accepts
+the offer, and J/L lower or raise BD. Comma and period select a road, C closes or
+reopens it, Z undoes an edit, and T opens A-to-D **SEARCH** playback. Comma and
+period then move through its recorded decisions. Costs are cumulative from A;
+tentative costs can improve, and finalized costs are the cheapest to their
+junctions. Pointer and controller users have the same labeled controls. Edits
+clear the old search, while unreachable deliveries remain visible with reopen
+and undo guidance. Journey is available through the Cabinet.
+
+CLI `numinous route-lab` gives a readable comparison; `numinous render route-lab`
+draws the room. `--poke 0.75,0.92` accepts the opening saving, while
+`--poke 0.5,0.78` changes BD to 5 and makes nearest-next optimal. MCP uses the
+same coordinates in `pokes`. Each call replays its supplied history.
+CLI `route-lab --json` and MCP `route_lab` carry working state for custom street
+networks, with explicit actions and followable next calls. [PLAY.md](../PLAY.md)
+documents the request shape and portable route/project commands; [Route
+Lab](ROUTE_LAB.md) explains the mathematics and native editor. O or Cabinet
+CONSTRUCT opens network authoring. Its View, Roads, Stops, Order, Search, and
+Keep pages share pointer, keyboard, and controller controls. KEEP QUESTION
+stores a chosen question and network in the existing project chain. THE QUESTION
+previews that exact network paused; Enter activates editing. Unsaved session
+history stays in process, while portable creations reopen with fresh undo/search.
+
 **Install once.** One command downloads and verifies the latest published
 release, then puts `numinous`, `numinous-app`, and `numinous-mcp` on your PATH.
 No Rust toolchain is needed. macOS or Linux:
@@ -45,7 +75,7 @@ your hands already know it:
 | | |
 |---|---|
 | A / D or arrows | previous / next room |
-| 1 - 9, 0 | jump straight to a room (0 is the tenth slot); while a chosen Times Tables, Buffon, Double Pendulum, Kepler, Parrondo, or Nontransitive Dice experiment asks for a call, the relevant digits place it instead |
+| 1 - 9, 0 | jump straight to a room (0 is the tenth slot); Route Lab uses 1 through 6 for delivery order; while a chosen Times Tables, Buffon, Double Pendulum, Kepler, Parrondo, or Nontransitive Dice experiment asks for a call, the relevant digits place it instead |
 | K | keep the pack: still + loop + README in one share folder |
 | O | cycle the visualizer source |
 | W / S | run time faster / slower |
@@ -271,6 +301,11 @@ numinous describe times-tables    safe title, action, goal, and play doorway
 numinous study times-tables       read freely, with no play or wager required
 numinous project resume           preview the explicit project chain
 numinous project resume --apply   write this process's intention and room place
+numinous project resume --json    return the structured preview and next call
+numinous route-lab --out delivery.route  export a route creation to a new file
+numinous project keep --question "Your question" --route delivery.route
+numinous project export --out delivery.project
+numinous project import delivery.project --confirm
 numinous reveal times-tables      explanation after its wager is consolidated
 numinous render double-pendulum --poke 0.2,0.8
 numinous render double-pendulum --gesture down:0.3,0.4,0.1 --gesture up:0.6,0.5,0.15
@@ -444,7 +479,7 @@ input without hidden session state:
 | `correct_journal` | append an immutable correction that explicitly supersedes one current entry without rewriting it |
 | `export_journal` | return a bounded native page, an in-memory Open Knowledge Format v0.2 projection with `format: "okf-0.2"`, or a hashed typed handoff with `format: "portable-1"`. The portable form includes native and OKF evidence plus privacy and retention manifests, and can add one live-verified encounter receipt and one canonical Studio creation. It creates no file, accepts no path, and does not import |
 | `erase_journal` | permanently erase the journal and verify zero recoverable managed file or sidecar residue. This leaves the project chain |
-| `project` | keep, import, correct, or preview one explicit project: a question stored as data, one closed next call, one to four catalog rooms, up to four typed evidence links, and an optional Studio creation. The chain is `NUMINOUS_PROJECT`, or `.numinous-project` when that variable is unset. `resume` returns `structuredContent.preview.next` and does not apply it, change the workspace, or copy journal text. `import` writes only after `confirm: true`. This is not `portable-1`, and `portable-1` does not import a project. CLI `numinous project resume --apply` writes this process's intention and, when the next call names a present room, its place. It saves no workspace file and calls no next tool. The App Cabinet offers the same preview when a chain is present: a present creation opens paused, Enter starts it, and Esc leaves without writing |
+| `project` | keep, import, correct, or preview one explicit project: a question stored as data, one closed next call, one to four catalog rooms, up to four typed evidence links, and an optional Studio or authored route creation. A route next calls route_lab with scalar action open or remix; keeping a remix intention creates no child until that next call is followed. CLI project keep, import, export, and JSON resume use the same chain. The chain is `NUMINOUS_PROJECT`, or `.numinous-project` when that variable is unset. `resume` returns `structuredContent.preview.next` and does not apply it, change the workspace, or copy journal text. `import` writes only after `confirm: true`. This is not `portable-1`, and `portable-1` does not import a project. CLI `numinous project resume --apply` writes this process's intention and, when the next call names a present room, its place. It saves no workspace file and calls no next tool. The App Cabinet offers the same preview when a chain is present: a present Studio creation or exact kept route opens paused, Enter starts playing or editing, and Esc leaves without writing |
 | `workspace` | inspect, edit, retrieve, defer, or clear a process-local visit workspace: place, intention, pending prediction, unfinished work, recent notes, and journal handles. `retrieve` names one room and returns at most four current exact-subject journal matches, newest first, with selection reason, correction status, and source explanation. It abstains when evidence is absent and never searches entry text or opaque receipt digests. Play does not write it. It is not a memory, and it does not survive process exit |
 | `listen_room` | the ambient motif, stable App room-bed summary, and input-aware mathematical sonification, with the same optional `pokes` or `gesture` as `play_room`; use `ambient_detail: "events"` for every bounded bed event and objective signal feature, never PCM or a local path |
 | `list_sims` | the simulations and their levers |
@@ -470,6 +505,7 @@ input without hidden session state:
 | `trophies` | the case: earned and silhouetted, computed from your record |
 | `forget` | preview managed local state; explicitly erase selected stores or all |
 | `journey` | your level, XP, constellation, and locks |
+| `route_lab` | edit or atomically replace a street network, compare round-trip costs, undo, and step through a shortest-path search with caller-carried snapshots. Scalar save, open, and remix exchange authored route capsules. Opening starts a fresh workbench; ordinary save preserves existing parent identity, and explicit remix creates a child. The returned next calls are followable. Native Keep and the project chain retain the chosen question and authored network; CLI --out exports to a new file |
 | `scores` | the shared high-score table |
 | `broadcast_session` | explicitly start, inspect, pause, resume, or stop a public Watch Agent stream using a human-provided one-use code |
 

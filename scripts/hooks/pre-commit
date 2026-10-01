@@ -28,6 +28,24 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
+# Match the documented Windows gate and its dependency installation interpreter.
+python_for_gate() {
+  local candidates=(python3 python)
+  if [[ "${OS:-}" == "Windows_NT" ]]; then
+    candidates=(python python3)
+  fi
+  local candidate
+  for candidate in "${candidates[@]}"; do
+    if command -v "$candidate" >/dev/null 2>&1 \
+      && "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 11))' >/dev/null 2>&1; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  echo "pre-commit: Python 3.11 or newer is required for Python gates" >&2
+  return 1
+}
+
 # House style applies to every file type and is near-instant.
 bash scripts/check-style.sh
 
@@ -55,14 +73,7 @@ fi
 
 if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
     | grep -zqE '^scripts/(mcp-play\.py|local-agent-playtest\.py|agent-(hallway|tactile|first-contact)\.py|flagship-goldens\.py|understanding-(source|study|collect)\.py|understanding-(encounters|probes\.fixture)\.json|test-(mcp-play|local-agent-playtest|agent-cohort|understanding-(study|collect))\.py)$|^docs/evidence/goldens/'; then
-  if command -v python3 >/dev/null 2>&1; then
-    study_python=python3
-  elif command -v python >/dev/null 2>&1; then
-    study_python=python
-  else
-    echo "pre-commit: Python 3.11 or newer is required for the 0.4 study gate" >&2
-    exit 1
-  fi
+  study_python="$(python_for_gate)"
   echo "== MCP play driver =="
   "$study_python" scripts/test-mcp-play.py
   echo "== local agent playtest contract =="
@@ -82,14 +93,7 @@ fi
 
 if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
     | grep -zqE '^(\.github/workflows/(ci|nightly|release|release-attest|release-packages)\.yml|docs/evidence/dependency-migration-[0-9-]+\.json|scripts/(check|verify)\.(ps1|sh)|scripts/hooks/pre-commit|scripts/(package-release|test-package-release|release-engagement-smoke|test-release-engagement-smoke|input-hardware-session|test-input-hardware-session|sensory-platform-set|test-sensory-platform-(proof|set)|release-sbom|test-release-sbom|test-release-workflow|test-workflow-pins|dependency-migration-performance|test-dependency-migration-performance)\.py)$'; then
-  if command -v python3 >/dev/null 2>&1; then
-    release_python=python3
-  elif command -v python >/dev/null 2>&1; then
-    release_python=python
-  else
-    echo "pre-commit: Python 3.11 or newer is required for the release evidence gates" >&2
-    exit 1
-  fi
+  release_python="$(python_for_gate)"
   echo "== release packaging =="
   "$release_python" scripts/test-package-release.py
   echo "== release engagement contract =="
@@ -114,14 +118,7 @@ fi
 
 if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
     | grep -zqE '^plugins/numinous/|^requirements-interoperability\.txt$|^scripts/fixtures/interoperability/|^scripts/(validate-agent-plugin|test-agent-plugin|agent-interoperability|test-agent-interoperability)\.py$'; then
-  if command -v python3 >/dev/null 2>&1; then
-    interoperability_python=python3
-  elif command -v python >/dev/null 2>&1; then
-    interoperability_python=python
-  else
-    echo "pre-commit: Python 3.11 or newer is required for interoperability checks" >&2
-    exit 1
-  fi
+  interoperability_python="$(python_for_gate)"
   echo "== portable plugin and interoperability =="
   "$interoperability_python" scripts/test-agent-plugin.py
   "$interoperability_python" scripts/test-agent-interoperability.py

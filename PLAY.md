@@ -106,6 +106,103 @@ names the answer.
 The existing `reveal_room` keeps its play and consolidation rules;
 `study_room` is always the direct reading path.
 
+**Route Lab:** deliver to B, C, and D, then return to A. Choose the delivery
+order and see how much the round trip costs. Each leg follows the cheapest open
+road path, which may pass a stop before its scheduled delivery or revisit it
+later. The order of deliveries and the street path are different things. Road
+labels are travel costs; drawn length does not determine cost.
+
+Open `route-lab` in the App, or call `play_room` with `id: "route-lab"`.
+Drag the main map to choose an order and the separate BD strip to change that
+road's cost. **NEAREST NEXT** constructs a route by choosing the cheapest next
+delivery. **USE SHORTER** accepts the cheaper order shown above the controls;
+**NO OFFER** means that particular reorder search found no saving, which alone
+does not prove the minimum. The readout separately shows the exact best
+round-trip cost.
+
+In the App, 1 through 6 choose an order, G uses nearest-next, I accepts the
+offered shorter route, and J/L lower or raise BD's cost. Comma and period select
+a road; C closes or reopens it, and Z undoes an edit. T opens A-to-D **SEARCH**
+playback. **BACK** and **STEP**, or comma and period, reveal its recorded
+decisions. A tentative cost can improve; a finalized cost is the cheapest cost
+from A to that junction. Editing clears the old search; STEP starts a new one.
+Pointer and controller users have the same labeled controls. Unreachable
+deliveries stay visible so you can reopen roads or undo. Journey remains
+available through the Cabinet.
+
+To make your own network in the App, press O in Route Lab or choose **CONSTRUCT**
+in the Cabinet. The editor has View, Roads, Stops, Order, Search, and Keep pages.
+Add or remove roads and junctions, set road costs and closures, choose deliveries
+and a depot, and move deliveries earlier or later. Tab and arrow keys select
+controls; Enter acts. Pointer and controller input use the same controls.
+Invalid changes leave the network intact. Undo restores a previous edit;
+Baseline returns to the network you opened. Leaving retains this editing session
+until the App exits. On Keep, enter a question and choose **KEEP QUESTION** to
+store it with the network. The controller can compose the question with the
+character controls. **THE QUESTION** in the Cabinet previews the kept route;
+Enter opens it for editing. Remix is a separate deliberate action.
+
+From the CLI, `numinous route-lab` gives a readable comparison.
+`numinous render route-lab` draws the room; `--poke 0.75,0.92` accepts the
+opening saving. MCP uses `pokes: [[0.75, 0.92]]` for the same action.
+`pokes: [[0.5, 0.78]]` changes BD to 5, where nearest-next is optimal.
+Include earlier pokes before later actions to continue the same experiment.
+
+For custom street networks, call **`route_lab`** with no arguments, or run
+`numinous route-lab --json`. The response returns working state (`snapshot`),
+comparisons, and a followable `next` call. Carry that snapshot into the next
+request to continue. For example:
+
+```json
+{"action":{"type":"trace","from":0,"to":3}}
+```
+
+This starts a real recorded calculation at cursor zero. Follow `next` to reveal
+one event, or send the returned snapshot with `action: {"type":"step",
+"cursor":0}` to rewind. Other action types are `evaluate`, `road_cost`
+(`from`, `to`, `cost`), `road_open` (`from`, `to`, `open`), `stops` (`stops`,
+depot first), `depot` (`depot`), `order` (`order`), `greedy`, `improve`, and
+`undo`. `network` replaces the entire network atomically using `current` with
+the same fields as `snapshot.current`. CLI accepts the same request JSON with
+`--request '<JSON>'`, or reads
+it from stdin with `--request -`. Custom snapshots admit positive integer
+street costs. `junctions` is a count, with IDs from zero through `junctions - 1`.
+`roads` declares the connections and their costs. Each road can be traveled in
+either direction; declare each connection once. `stops` includes the depot as
+its first entry, and `order` schedules those same stops starting at the depot.
+Evaluation preserves your order. Malformed snapshots fail. If required stops
+cannot reach one another, comparison is unavailable but the network remains
+editable; an unused isolated junction does not prevent a round trip. Search
+event costs are cumulative from the starting junction. Working state is carried
+between calls without a profile write.
+
+To make a portable route creation, send your snapshot with `action: "save"`.
+The response's `creation.capsule` is bounded `NUMINOUS_ROUTE 1` text. Pass that
+text as `capsule` with `action: "open"` to reopen, or `action: "remix"` to make
+a child while leaving the parent intact. Reopening preserves authored roads,
+closures, stops, and order, and begins fresh undo and search state. To keep edits
+to an existing creation, send both its capsule and the edited snapshot with
+`action: "save"`; ordinary saves preserve its parent. These calls create no file.
+Their returned `next` calls can be followed verbatim.
+
+From the CLI, this keeps a question beside the route and exports a portable
+project. Export targets must be new files:
+
+```text
+numinous route-lab --out delivery.route
+numinous project keep --question "What changes when a road closes?" --route delivery.route
+numinous project export --out delivery.project
+numinous project resume --json
+```
+
+Use `numinous project import delivery.project --confirm` to import deliberately.
+Route-containing projects use `NUMINOUS_PROJECT 2`; Studio-only projects keep
+their version 1 format. From MCP, keep the route capsule with `project`:
+`op: "keep"`, your `question`, `rooms: ["route-lab"]`, `creation: <capsule>`, and
+`next: {"tool":"route_lab","arguments":{"capsule":<capsule>,"action":"open"}}`.
+Replace `<capsule>` with the returned text. `op: "resume"` previews that exact
+next call without executing it.
+
 That is the whole game. Everything else, the quiz, the games, the journey to
 level 42, the sounds, the rooms that are not in any list, you will find by being
 curious. Curiosity is the intended interface; there is no map because finding
@@ -142,10 +239,11 @@ when the process does.
 
 If you want one question to outlive the visit, call `project`. `op: "keep"`
 stores the question as data, one closed next call, one to four catalog rooms,
-up to four typed evidence links, and an optional Studio creation. The chain
+up to four typed evidence links, and an optional Studio or route creation. The chain
 lives at `NUMINOUS_PROJECT`, or `.numinous-project` in your home directory when
 that variable is unset. `op: "import"` reads one portable `NUMINOUS_PROJECT 1`
-document and writes only after `confirm: true`. `op: "correct"` appends a
+document, or version 2 for route-containing projects, and writes only after
+`confirm: true`. `op: "correct"` appends a
 revision and leaves the target in place. `op: "resume"` previews what is
 present, missing, corrected, collided, or incompatible.
 `structuredContent.preview.next` is a tool call you may follow. Resume does not

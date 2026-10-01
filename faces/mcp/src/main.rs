@@ -23,6 +23,8 @@ mod journey_tools;
 mod local_state;
 mod portable;
 mod progress;
+#[path = "../../shared/project_json.rs"]
+mod project_json;
 mod project_tools;
 mod protocol;
 mod puzzle_tools;
@@ -30,6 +32,9 @@ mod response;
 mod room_door;
 mod room_input;
 mod room_tools;
+#[path = "../../shared/route_json.rs"]
+mod route_json;
+mod route_tools;
 mod schema;
 mod show;
 mod sim_tools;
@@ -356,6 +361,7 @@ fn call_tool(
         "describe_room" => describe_room_tool(&domain_args, journey_file),
         "reveal_room" => reveal_room_tool(&domain_args, journey_file),
         "study_room" => study::tool(&domain_args),
+        "route_lab" => route_tools::tool(&domain_args),
         "play_room" => play_room_tool(&domain_args, journey_file),
         "challenge" => challenge_tool(&domain_args),
         "predict" => predict_tool(&domain_args),

@@ -25,7 +25,12 @@ mod game_input;
 mod game_runtime;
 mod local_state;
 mod project;
+#[path = "../../shared/project_json.rs"]
+mod project_json;
 mod render_input;
+#[path = "../../shared/route_json.rs"]
+mod route_json;
+mod route_lab;
 mod studio;
 mod study;
 #[path = "../../shared/study_json.rs"]
@@ -83,6 +88,18 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Edit and compare a bounded street town with caller-carried JSON state.
+    RouteLab {
+        /// JSON request literal, or - to read bounded UTF-8 JSON from stdin.
+        #[arg(long)]
+        request: Option<String>,
+        /// Emit the typed snapshot, comparisons, trace and next call as JSON.
+        #[arg(long)]
+        json: bool,
+        /// Export the current authored route capsule to a new file.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
     /// Show the accessibility switches and which of them are on right now.
     Access,
     /// Install the latest verified GitHub release without touching play history.
@@ -719,6 +736,38 @@ enum Command {
 
 #[derive(Subcommand)]
 enum ProjectCommand {
+    /// Keep an authored route capsule and its question in the project chain.
+    Keep {
+        #[arg(long)]
+        question: String,
+        /// Portable route capsule file, or - for bounded UTF-8 stdin.
+        #[arg(long)]
+        route: PathBuf,
+        /// Set the next intention to remix. Keeping does not create that child.
+        #[arg(long)]
+        remix: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Import a portable project document into the existing chain.
+    Import {
+        /// Document file, or - for bounded UTF-8 stdin.
+        input: PathBuf,
+        #[arg(long)]
+        confirm: bool,
+        #[arg(long)]
+        origin: Option<u64>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Export one project revision as a portable document.
+    Export {
+        #[arg(long)]
+        revision: Option<u64>,
+        /// New output file. Omit to print the document.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
     /// Print what a resume would return. Pass --apply to write this process only.
     Resume {
         /// Local revision id. Omit this to preview the latest revision.
@@ -727,6 +776,9 @@ enum ProjectCommand {
         /// Write the question into this process's intention, and a present room into its place.
         #[arg(long)]
         apply: bool,
+        /// Emit the canonical preview and its followable next call as JSON.
+        #[arg(long, conflicts_with = "apply")]
+        json: bool,
     },
 }
 
@@ -797,6 +849,13 @@ fn cli_main() -> ExitCode {
     // Direct study has no progression dependency, including reading the
     // profile. Keep this route ahead of Journey and score loading.
     let command = match cli.command {
+        Some(Command::RouteLab { request, json, out }) => {
+            return emit(route_lab::report_with_output(
+                request.as_deref(),
+                json,
+                out.as_deref(),
+            ));
+        }
         Some(Command::Study {
             room,
             locale,
@@ -1472,6 +1531,11 @@ fn find_room_with_variation(id: &str, allow_hidden: bool, variation: u64) -> Opt
 fn run(command: Command, journey: &mut Journey) -> ExitCode {
     let allow_hidden = numinous_core::behind_the_veil(journey);
     match command {
+        Command::RouteLab { request, json, out } => emit(route_lab::report_with_output(
+            request.as_deref(),
+            json,
+            out.as_deref(),
+        )),
         Command::Access => {
             print!(
                 "{}",
@@ -1848,7 +1912,52 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             }
         }
         Command::Project { action } => match action {
-            ProjectCommand::Resume { revision, apply } => {
+            ProjectCommand::Keep {
+                question,
+                route,
+                remix,
+                json,
+            } => emit(project::keep_route_report(
+                &local_state_paths().project,
+                &question,
+                &route,
+                remix,
+                json,
+            )),
+            ProjectCommand::Import {
+                input,
+                confirm,
+                origin,
+                json,
+            } => emit(project::import_report(
+                &local_state_paths().project,
+                &input,
+                confirm,
+                origin,
+                json,
+            )),
+            ProjectCommand::Export { revision, out } => emit(project::export_report(
+                &local_state_paths().project,
+                revision,
+                out.as_deref(),
+            )),
+            ProjectCommand::Resume {
+                revision,
+                json: true,
+                ..
+            } => {
+                let paths = local_state_paths();
+                emit(project::resume_json_report(
+                    &paths.project,
+                    &paths.journal,
+                    revision,
+                ))
+            }
+            ProjectCommand::Resume {
+                revision,
+                apply,
+                json: false,
+            } => {
                 let paths = local_state_paths();
                 match project::resume_report(&paths.project, &paths.journal, revision, apply) {
                     Ok(outcome) => {

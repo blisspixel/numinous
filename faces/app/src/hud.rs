@@ -122,6 +122,17 @@ fn displayed_room_action(
     input_mode: InputMode,
     copy: impl Into<ControllerCopy> + Copy,
 ) -> String {
+    if room.meta().id == "route-lab" {
+        return if input_mode == InputMode::KeyboardMouse {
+            "1..6 ORDER  G NEAREST  I SHORTER  J/L BD  C ROAD  Z UNDO  T SEARCH".to_string()
+        } else {
+            input_legend::room_action_with_controller(
+                input_mode,
+                "DRAG: ORDER / BD COST",
+                copy.into(),
+            )
+        };
+    }
     input_legend::room_action_with_controller(input_mode, room_action(room), copy.into())
 }
 
@@ -171,8 +182,16 @@ struct FooterBudget {
     controls_x: i32,
 }
 
-fn footer_budget(width: usize, controls: &str) -> FooterBudget {
-    let scale = footer_scale(width);
+fn footer_budget(width: usize, height: usize, controls: &str, status: &str) -> FooterBudget {
+    // The two-row band uses at most a tenth of an ordinary viewport. A wide,
+    // short window must not grow its footer over the room's own controls.
+    let mut scale = footer_scale(width).min((height / 240).clamp(1, 4) as i32);
+    // Grow the text only when both fields still fit. Otherwise a wider
+    // window can hide information that was visible at the previous scale.
+    let cells = controls.chars().count() + status.chars().count();
+    while scale > 1 && cells * 6 * scale as usize + 30 > width {
+        scale -= 1;
+    }
     let controls_width = controls.chars().count() as i32 * 6 * scale;
     let controls_x = width as i32 - controls_width - 10;
     FooterBudget {
@@ -213,6 +232,17 @@ fn footer_copy(
 ) -> FooterCopy {
     let status = status_override.map_or_else(
         || {
+            if room.meta().id == "route-lab" {
+                return if input_mode == InputMode::KeyboardMouse {
+                    ",/. SELECT ROAD OR STEP SEARCH".to_string()
+                } else {
+                    input_legend::room_action_with_controller(
+                        input_mode,
+                        "AIM + CLICK: CONTROLS",
+                        copy.into(),
+                    )
+                };
+            }
             room.status_input(t, inputs).unwrap_or_else(|| {
                 input_legend::room_inspect_with_controller(input_mode, copy.into())
             })
@@ -244,6 +274,20 @@ pub(crate) fn draw_room_chrome(
     height: usize,
 ) {
     let scale = footer_scale(width);
+    let footer = (!state.the_show && !state.studio && !state.show_help).then(|| {
+        let footer = footer_copy(
+            room,
+            state.t,
+            inputs,
+            state.muted,
+            state.input_mode,
+            state.controller_face,
+            status_override,
+        );
+        let budget = footer_budget(width, height, &footer.controls, &footer.status);
+        (footer, budget)
+    });
+    let footer_scale = footer.as_ref().map_or(scale, |(_, budget)| budget.scale);
     let reveal_lines = if state.show_info && !state.the_show && !state.studio {
         let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
         // Optional concept first, then the room reveal: both only on EXPLAIN.
@@ -282,7 +326,7 @@ pub(crate) fn draw_room_chrome(
             );
         }
         let card_lines = arrival.len() as i32;
-        let footer_top = height as i32 - (24 + card_lines * 9) * scale;
+        let footer_top = height as i32 - 24 * footer_scale - card_lines * 9 * scale;
         raster.clear_rows(footer_top, height as i32);
         raster.line(0, footer_top, width as i32 - 1, footer_top, '-');
     }
@@ -351,7 +395,7 @@ pub(crate) fn draw_room_chrome(
             '#',
         );
         if !arrival.is_empty() {
-            let footer_band_top = height as i32 - 24 * scale;
+            let footer_band_top = height as i32 - 24 * footer_scale;
             let line_count = arrival.len() as i32;
             for (i, line) in arrival.iter().enumerate() {
                 numinous_core::draw_text(
@@ -385,17 +429,8 @@ pub(crate) fn draw_room_chrome(
         }
     }
 
-    if !state.show_help && !state.the_show && !state.studio {
-        let footer = footer_copy(
-            room,
-            state.t,
-            inputs,
-            state.muted,
-            state.input_mode,
-            state.controller_face,
-            status_override,
-        );
-        let budget = footer_budget(width, &footer.controls);
+    if let Some((footer, budget)) = &footer {
+        let scale = budget.scale;
         let controls_x = budget.controls_x;
         let action = fit_footer_text(&footer.action, budget.action, budget.scale);
         let status = fit_footer_text(&footer.status, budget.status, budget.scale);
@@ -428,52 +463,26 @@ mod tests {
 
     #[test]
     fn a_wider_window_never_shows_less_of_the_status() {
-        // Measured with the footer's own budget, which is the point: the status
-        // does not get the window, it gets what the controls label leaves, and
-        // both it and the label grow with `footer_scale`. Working the numbers
-        // out separately is how the first version of this test came to describe
-        // the action's budget instead and report a guarantee that was not there.
-        //
-        // What the real budget shows is a defect. Widening the window can show
-        // LESS of the status, because each character costs 6 * scale pixels
-        // while the budget grows only with width:
-        //
-        //   720 px, scale 1  ->  the whole status
-        //   900 px, scale 2  ->  cut, and 900 is the size the window opens at
-        //
-        // Fixing it means changing how the footer chooses its scale or divides
-        // its row, which changes what every screen looks like, so it is tracked
-        // rather than patched here. This pins the shape so it cannot worsen
-        // quietly, and fails the day it is fixed, which is when this note
-        // should be rewritten.
         let controls = "MOVE WASD   INSPECT E   BACK Q";
         let status = "DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4";
         let shown = |width: usize| {
-            let budget = footer_budget(width, controls);
+            let budget = footer_budget(width, 700, controls, status);
             fit_footer_text(status, budget.status, budget.scale)
         };
 
-        // The band that shows everything, and the default window which does not.
-        for width in [480usize, 640, 720] {
+        for width in [480usize, 640, 720, 800, 900, 1280, 1600] {
             assert_eq!(
                 shown(width),
                 status,
                 "{width} px should show the status whole"
             );
         }
-        assert_ne!(
-            shown(900),
-            status,
-            "900 px now shows the whole status; the defect below is fixed and this test              should be rewritten to require it at every width instead"
-        );
-
-        // The inversion itself, stated as a measurement rather than a guess.
-        assert!(
-            shown(720).chars().count() > shown(900).chars().count(),
-            "720 px shows {} characters and 900 px shows {}",
-            shown(720).chars().count(),
-            shown(900).chars().count()
-        );
+        let mut previous = 0;
+        for width in 280..=1920 {
+            let visible = shown(width).trim_end_matches('.').chars().count();
+            assert!(visible >= previous, "status shrank at {width} px");
+            previous = visible;
+        }
 
         // Whatever is shown must still be usable: the start of the status, and
         // a marked cut. Never a row of dots, which says nothing at all.
@@ -490,6 +499,204 @@ mod tests {
                     kept.len() >= 4 && status.starts_with(kept),
                     "{width} px kept {kept:?}, which is not the start of the status"
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn composed_footer_keeps_the_complete_status_and_controls_at_the_default_size() {
+        let room = room("times-tables");
+        let status = "DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4";
+        for width in [720, 900, 1280, 1600] {
+            let height = 700;
+            for mode in [InputMode::KeyboardMouse, InputMode::Controller] {
+                let copy = ControllerFace::Generic.into();
+                let footer = footer_copy(room.as_ref(), 0.0, &[], false, mode, copy, Some(status));
+                let budget = footer_budget(width, height, &footer.controls, status);
+                assert_eq!(fit_footer_text(status, budget.status, budget.scale), status);
+                assert!(budget.controls_x >= 10 + status.len() as i32 * 6 * budget.scale + 10);
+                let mut raster = Raster::new(width, height);
+                draw_room_chrome(
+                    &mut raster,
+                    room.as_ref(),
+                    &RoomChrome {
+                        t: 0.0,
+                        room_card: 0,
+                        show_info: false,
+                        show_help: false,
+                        show_journey: false,
+                        banner_active: false,
+                        the_show: false,
+                        studio: false,
+                        muted: false,
+                        level: 1,
+                        input_mode: mode,
+                        controller_face: copy,
+                    },
+                    &[],
+                    Some(status),
+                    width,
+                    height,
+                );
+                let mut expected = Raster::new(width, height);
+                let y = height as i32 - 10 * budget.scale;
+                numinous_core::draw_text(&mut expected, status, 10, y, budget.scale, '.');
+                numinous_core::draw_text(
+                    &mut expected,
+                    &footer.controls,
+                    budget.controls_x,
+                    y,
+                    budget.scale,
+                    '.',
+                );
+                let actual = raster.to_rgba();
+                let blank = Raster::new(width, height).to_rgba();
+                for (index, (wanted, empty)) in expected
+                    .to_rgba()
+                    .chunks_exact(4)
+                    .zip(blank.chunks_exact(4))
+                    .enumerate()
+                {
+                    if wanted != empty {
+                        assert_eq!(
+                            &actual[index * 4..index * 4 + 4],
+                            wanted,
+                            "footer text pixel clipped at {width} px in {mode:?}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn route_lab_readings_and_buttons_remain_visible_after_room_chrome() {
+        let room = room("route-lab");
+        for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
+            let mut raster = Raster::new(width, height);
+            room.render_input(&mut raster, 0.0, &[]);
+            let raw = raster.to_rgba();
+            let mut readings = Vec::new();
+            for (text, fraction, header) in [
+                ("ABCD-A  ROUND TRIP 9  EXACT BEST 8", 0.03, true),
+                ("DELIVER B C D. RETURN TO A.", 0.03, true),
+                ("NEAREST NEXT 9", 0.05, false),
+                ("USE SHORTER: -1", 0.55, false),
+                ("ROAD <", 0.025, false),
+                ("CLOSE", 0.225, false),
+                ("UNDO", 0.425, false),
+                ("SEARCH", 0.625, false),
+                ("ROAD >", 0.825, false),
+                ("DRAG BD COST: 3 (1..9)", 0.03, false),
+                ("SELECTED ROAD AB: OPEN  COST 1", 0.03, false),
+            ] {
+                let scale = ((width / 360).min(height / 320)).max(1);
+                let mut glyphs = Raster::new(text.len() * 6 * scale, 7 * scale);
+                numinous_core::draw_text(&mut glyphs, text, 0, 0, scale as i32, '#');
+                let blank = Raster::new(text.len() * 6 * scale, 7 * scale).to_rgba();
+                let pixels: Vec<_> = glyphs
+                    .to_rgba()
+                    .chunks_exact(4)
+                    .zip(blank.chunks_exact(4))
+                    .enumerate()
+                    .filter_map(|(index, (pixel, empty))| {
+                        (pixel != empty).then_some((
+                            index % glyphs.width(),
+                            index / glyphs.width(),
+                            pixel.to_vec(),
+                        ))
+                    })
+                    .collect();
+                let x = (fraction * width.saturating_sub(1) as f64).round() as usize;
+                let mut rows = if header {
+                    0..height / 4
+                } else {
+                    height * 3 / 5..height.saturating_sub(7 * scale - 1)
+                };
+                let y = rows
+                    .find(|&y| {
+                        pixels.iter().all(|(dx, dy, pixel)| {
+                            let offset = ((y + dy) * width + x + dx) * 4;
+                            raw[offset..offset + 4] == *pixel
+                        })
+                    })
+                    .unwrap_or_else(|| panic!("raw {width}x{height} room is missing {text}"));
+                readings.push((text, x, y, pixels));
+            }
+            for mode in [InputMode::KeyboardMouse, InputMode::Controller] {
+                let mut raster = Raster::new(width, height);
+                room.render_input(&mut raster, 0.0, &[]);
+                draw_room_chrome(
+                    &mut raster,
+                    room.as_ref(),
+                    &RoomChrome {
+                        t: 0.0,
+                        room_card: 0,
+                        show_info: false,
+                        show_help: false,
+                        show_journey: false,
+                        banner_active: false,
+                        the_show: false,
+                        studio: false,
+                        muted: false,
+                        level: 1,
+                        input_mode: mode,
+                        controller_face: ControllerFace::Generic.into(),
+                    },
+                    &[],
+                    None,
+                    width,
+                    height,
+                );
+                let composed = raster.to_rgba();
+                for (text, x, y, pixels) in &readings {
+                    for (dx, dy, pixel) in pixels {
+                        let offset = ((y + dy) * width + x + dx) * 4;
+                        assert_eq!(
+                            &composed[offset..offset + 4],
+                            pixel,
+                            "room chrome erased {text} at {width}x{height} in {mode:?}"
+                        );
+                    }
+                }
+                let footer = footer_copy(
+                    room.as_ref(),
+                    0.0,
+                    &[],
+                    false,
+                    mode,
+                    ControllerFace::Generic,
+                    None,
+                );
+                let budget = footer_budget(width, height, &footer.controls, &footer.status);
+                assert_eq!(
+                    fit_footer_text(&footer.status, budget.status, budget.scale),
+                    footer.status
+                );
+                let mut expected = Raster::new(width, height);
+                numinous_core::draw_text(
+                    &mut expected,
+                    &footer.status,
+                    10,
+                    height as i32 - 10 * budget.scale,
+                    budget.scale,
+                    '.',
+                );
+                let blank = Raster::new(width, height).to_rgba();
+                for (index, (wanted, empty)) in expected
+                    .to_rgba()
+                    .chunks_exact(4)
+                    .zip(blank.chunks_exact(4))
+                    .enumerate()
+                {
+                    if wanted != empty {
+                        assert_eq!(
+                            &composed[index * 4..index * 4 + 4],
+                            wanted,
+                            "Route Lab input hint clipped at {width}x{height} in {mode:?}"
+                        );
+                    }
+                }
             }
         }
     }
@@ -820,6 +1027,118 @@ mod tests {
             "LEFT STICK + SOUTH: PLACE A 5-CELL GLIDER"
         );
         assert_eq!(controller.controls, "SELECT EXPLAIN   START MENU");
+    }
+
+    #[test]
+    fn route_lab_action_copy_names_native_keyboard_editing_and_controller_touch() {
+        let room = room("route-lab");
+        let keyboard = displayed_room_action(
+            room.as_ref(),
+            InputMode::KeyboardMouse,
+            ControllerFace::Generic,
+        );
+        for command in [
+            "1..6 ORDER",
+            "G NEAREST",
+            "I SHORTER",
+            "J/L BD",
+            "C ROAD",
+            "Z UNDO",
+            "T SEARCH",
+        ] {
+            assert!(keyboard.contains(command), "{keyboard}");
+        }
+        let controller = displayed_room_action(
+            room.as_ref(),
+            InputMode::Controller,
+            ControllerFace::Generic,
+        );
+        assert!(controller.contains("LEFT STICK"), "{controller}");
+        assert!(controller.contains("SOUTH"), "{controller}");
+        assert!(!controller.contains("J/L"));
+    }
+
+    #[test]
+    fn route_lab_footer_guides_input_without_repeating_the_numeric_room_readout() {
+        let room = room("route-lab");
+        for inputs in [
+            vec![],
+            vec![RoomInput::Key { ch: 'c' }],
+            vec![RoomInput::Key { ch: 't' }, RoomInput::Key { ch: '.' }],
+        ] {
+            let raw = room.status_input(0.0, &inputs);
+            let footer = footer_copy(
+                room.as_ref(),
+                0.0,
+                &inputs,
+                false,
+                InputMode::KeyboardMouse,
+                ControllerFace::Generic,
+                None,
+            );
+            assert_eq!(footer.status, ",/. SELECT ROAD OR STEP SEARCH");
+            assert!(!footer.status.contains("ORDER="));
+            assert!(!footer.status.contains("opt="));
+            assert_eq!(room.status_input(0.0, &inputs), raw);
+        }
+        assert_eq!(
+            room.status_input(0.0, &[]).as_deref(),
+            Some("DRAG:  ORDER=ABCD cost=9 opt=8 save=1 BD=3")
+        );
+        let explicit = footer_copy(
+            room.as_ref(),
+            0.0,
+            &[],
+            true,
+            InputMode::KeyboardMouse,
+            ControllerFace::Generic,
+            Some("CALL: LOWER COST"),
+        );
+        assert_eq!(explicit.status, "CALL: LOWER COST   MUTED");
+    }
+
+    #[test]
+    fn route_lab_controller_footer_uses_actual_primary_mapping_and_no_keyboard_keys() {
+        use crate::input_legend::{ControllerAction, ControllerButton};
+        let room = room("route-lab");
+        let mut remapped = ControllerCopy::empty(ControllerFace::Xbox);
+        remapped.bind(ControllerAction::Primary, ControllerButton::West);
+        remapped.bind(ControllerAction::Inspect, ControllerButton::North);
+        remapped.bind(ControllerAction::Menu, ControllerButton::Select);
+        for (copy, primary) in [
+            (ControllerFace::Generic.into(), "SOUTH"),
+            (ControllerFace::PlayStation.into(), "CROSS"),
+            (remapped, "X"),
+        ] {
+            let footer = footer_copy(
+                room.as_ref(),
+                0.0,
+                &[],
+                false,
+                InputMode::Controller,
+                copy,
+                None,
+            );
+            assert_eq!(
+                footer.action,
+                format!("HOLD {primary} + LEFT STICK: ORDER / BD COST")
+            );
+            assert_eq!(footer.status, format!("LEFT STICK + {primary}: CONTROLS"));
+            for unavailable in [",/.", "J/L", "1..6", "Z UNDO", "T SEARCH"] {
+                assert!(!footer.action.contains(unavailable));
+                assert!(!footer.status.contains(unavailable));
+            }
+        }
+        let footer = footer_copy(
+            room.as_ref(),
+            0.0,
+            &[],
+            false,
+            InputMode::Controller,
+            remapped,
+            None,
+        );
+        assert_eq!(footer.controls, "Y EXPLAIN   SELECT MENU");
     }
 
     #[test]

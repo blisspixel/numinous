@@ -10,8 +10,8 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
-**Implementation boundary, 2026-09-05:** all three faces are shipped from the
-same headless core in 0.4.0-alpha.27. Descriptions below mix current behavior
+**Implementation boundary, 2026-09-30:** all three faces are shipped from the
+same headless core in 0.4.0-alpha.28. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -216,13 +216,26 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Current protocol surface:** modern clients use `server/discover`,
   `tools/list`, and `tools/call` over stdio with version and client capability
   metadata on every request. Legacy 2025-11-25 and 2025-06-18 clients retain
-  `initialize`, `tools/list`, `tools/call`, and `ping`. The 42 tools include
+  `initialize`, `tools/list`, `tools/call`, and `ping`. The 43 tools include
   `list_rooms`, `watch_show`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
   `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
-  `sing_expression`, `save_creation`, `open_creation`, `fork_creation`,
+  `sing_expression`, `save_creation`, `open_creation`, `fork_creation`, `route_lab`,
   Journey operations, experience journal operations
   (`read_journal`, `record_journal`, `correct_journal`, `export_journal`,
-  `erase_journal`), the explicit `project` chain, the process-local `workspace` visit state, and the shared games. `project` keeps, imports, corrects, and previews one question, a closed next call, catalog rooms, typed evidence links, and an optional Studio creation. Resume returns `structuredContent.preview.next` and does not apply it. `forget` can erase the chain without erasing the journal. CLI `numinous project resume --apply` writes this process's intention and, when the next call names a present room, its place. It saves no workspace file and calls no next tool. The App Cabinet offers the same preview when a chain is present: a present creation opens paused, Enter starts it, and Esc leaves without writing. Journal entries have stable local
+  `erase_journal`), the explicit `project` chain, the process-local `workspace`
+  visit state, and the shared games. `project` keeps, imports, corrects, and
+  previews one question, a closed next call, catalog rooms, typed evidence
+  links, and an optional Studio or authored route creation. Resume returns
+  `structuredContent.preview.next` and does not apply it. A route next names
+  `route_lab` with scalar `action: "open"` or `"remix"`; following remix creates
+  the child, while keeping its intention does not. CLI project keep, import,
+  and export use the same chain; `project resume --json` returns its structured
+  preview. `forget` can erase the chain without erasing the journal. CLI
+  `numinous project resume --apply` writes this process's intention and, when
+  the next call names a present room, its place. It saves no workspace file and
+  calls no next tool. The App Cabinet offers the same preview when a chain is
+  present: a Studio creation or exact kept route opens paused, Enter starts
+  playing or editing, and Esc leaves without writing. Journal entries have stable local
   identifiers, separate event and record times, declared provenance, immutable
   corrections, and bounded versioned export pages. `export_journal` returns the
   native journal schema by default or, when asked for `format: "okf-0.2"`, an
@@ -237,6 +250,30 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   parsed and emitted as canonical `.num` text with identity and lineage intact.
   Export creates no file, accepts no filesystem path, returns no host path, and
   does not implement import. `PLAYING.md` carries the complete user-facing list.
+- **Route Lab workbench (built):** private `route_lab` and CLI `route-lab` use
+  one shared JSON adapter over the canonical bounded street-network model.
+  Requests carry working state (`snapshot`) and an explicit action; evaluation
+  preserves the player's order, while road, required-stop, depot, and order
+  edits, atomic network replacement, greedy construction,
+  improvement, and bounded undo are deliberate. Networks with unreachable
+  required stops remain editable and return a typed diagnostic. Unused isolated
+  junctions do not prevent comparison. Search event costs are cumulative from
+  the starting junction. Imported cursor metadata binds revision and canonical
+  network content, and events are regenerated. The existing `townIdentity` wire
+  field identifies that network content. Every returned `next` is a followable
+  tool call. Scalar creation actions save, open, and remix exchange bounded
+  capsule text. A portable creation holds its authored network, delivery order,
+  and declared parent; opening recomputes comparisons in a fresh workbench
+  without session undo or search playback. Saving edits with an existing
+  capsule preserves its parent, and a capsule-only save preserves that
+  creation's network. Explicit remix creates a child. MCP requests remain
+  stateless and accept no filesystem path. CLI `route-lab --out` writes an
+  explicit new export file without replacing an existing file. Kept questions
+  and route creations use the existing project chain. Native authoring exposes
+  the same edits and comparisons, with in-process undo and playback; Keep and
+  Cabinet THE QUESTION save and preview the chosen network.
+  [Route Lab](ROUTE_LAB.md) owns the contract, native controls, portable
+  creation boundary, and remaining larger-network scope.
 - **Portable creation and lineage parity (built):** `save_creation` produces a
   canonical Studio capsule from one graph or one atomic parametric pair,
   a named pitch map, optional title and author, visual era, canvas, and

@@ -5,10 +5,10 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.4.0-alpha.27.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
+Status: **0.4.0-alpha.28.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
 0.3 Tactile Alpha agent-and-machine exits are met. Understanding Alpha is the
 active line, and its 0.4 exit remains open. The
-headless core, CLI, MCP server, windowed App, GPU and audio adapters, 355 catalog
+headless core, CLI, MCP server, windowed App, GPU and audio adapters, 356 catalog
 rooms plus hidden content, 6 sims, 11+ games, Journey, standard-controller
 input, Studio, and a built-in 42-track radio are built.
 
@@ -77,8 +77,9 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
   and of a wandering one, drawn as graphs.
 - [Named pitches](experiments/notes.md) a major triad, then a climb to the
   octave, written as `note("c e g")`.
-- `ROUTE_LAB.md` the proposed visual route-planning room, with shortest paths,
-  tours improved by hand, solver traces, and an exact small-map comparison.
+- `ROUTE_LAB.md` the playable delivery experiment, shared shortest-path and
+  exact-tour solvers, native network authoring, portable route creations, and
+  kept questions, with larger-network extensions still planned.
 - `SYNESTHESIA.md` the sensory seam: the glow pipeline (the documented HDR look, not yet built) and the one-event-two-renderings model that binds sight and sound.
 - `CREATOR.md` the creator platform: closing the make-share-remix loop on the `.num` capsule, the gallery, and the arc to a living world.
 
@@ -117,6 +118,8 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 - `ENGINEERING.md` code-quality standards: pinned toolchain and dependency versions, lint/test/unsafe/doc policy, CI gates.
 - [Shared study content and text rendering](decisions/0001-study-text.md), the
   decision behind bundled fonts, explicit language selection, and native reflow.
+- [Route state and caller-paced calculation](decisions/0002-route-workbench.md),
+  the decision behind editable snapshots, retained infeasibility, and trace replay.
 
 ## Single source of truth (the anti-redundancy map)
 

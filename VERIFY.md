@@ -19,8 +19,17 @@ the from-source verification path for contributors and the curious.
 - Optional, for the local coverage gate: `cargo install cargo-llvm-cov`.
 - Optional, for the local supply-chain gate: `cargo install cargo-deny`.
 - **Python 3.11 or newer**, for the 0.4 study runner and collector regressions.
+  Windows commit hooks prefer `python`, matching the PowerShell gate and its
+  dependency installation. Other hosts prefer `python3`; both reject an older
+  interpreter before running Python checks.
   The same dependency runs release engagement and physical input receipt
   contract tests.
+- In a source checkout, install the pinned plugin, JSON Schema, and YAML
+  validators with
+  `python -m pip install -r requirements-interoperability.txt`. The local gates
+  validate against repository fixtures and production exports without fetching
+  schemas or calling a hosted service. For Python lint and strict typing, also
+  install `requirements-quality.txt`.
 - For release-attestation verification, GitHub CLI with `gh attestation verify`
   support for `--source-ref`, `--source-digest`, `--signer-digest`, and
   `--deny-self-hosted-runners`. These instructions are checked with GitHub CLI
@@ -38,7 +47,8 @@ Run the full gate and regenerate every artifact:
 - macOS / Linux: `bash scripts/verify.sh`
 
 It runs format, clippy and rustdoc with warnings denied, Rust, 0.4 study runner
-and collector, portable Agent Plugins, both Sensory Lift platform contracts, and
+and collector, portable Agent Plugins, canonical schema and skill conformance,
+production knowledge-export YAML validation, both Sensory Lift platform contracts, and
 deterministic release-packaging tests, the 1.89 MSRV check (if that toolchain is
 installed), locked build, coverage (if `cargo-llvm-cov` is present),
 supply-chain policy (if `cargo-deny` is present), the house-style guard, and the
@@ -155,7 +165,7 @@ with the script's `verify` mode and the same receipt paths.
 
 The four-target release workflow runs `scripts/release-engagement-smoke.py`
 against every disposable packaged install. It requires a substantive Times
-Tables CLI render and modern MCP discovery, the exact 41-tool list, and one
+Tables CLI render and modern MCP discovery, the exact current tool list, and one
 structured `play_room` result from an isolated temporary profile. Version-only
 execution is not treated as engagement proof.
 
@@ -298,7 +308,7 @@ content identifier detects a change only until someone deliberately recomputes
 it. It is not a signature or evidence of external custody; release decisions
 that need that property must register or sign the receipt outside this runner.
 
-The release scripts also regenerate `renders/qa-app/`, a 2,945-screen app matrix.
+The release scripts also regenerate `renders/qa-app/`, currently 2989 screens.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture
 responses that follow its declared interaction verb. The generator checks pure
@@ -307,6 +317,16 @@ room receipts are 900 by 700; compact room receipts are 360
 by 240. Dedicated Cult of Pi receipts also cover a Journey threshold banner
 and the untouched first frame after it closes. The generator holds an exclusive
 single-writer guard before removing stale receipts.
+For iteration, `cargo run -p numinous-app --example screens -- --room route-lab`
+uses the same composed rendering and domain checks for one catalog room. It
+writes a separate manifest under `renders/qa-room/route-lab/` and leaves the
+complete release matrix in place.
+`cargo run -p numinous-app --example screens -- --route-editor` writes 72
+native authoring receipts under `renders/qa-route-editor/`: nine states,
+keyboard and controller hints, and four window sizes. These cover custom and
+dense networks, road drafts, disconnected deliveries, search playback, question
+editing, and a paused remix. The complete release matrix includes the default
+and compact versions of those same states.
 The matrix also covers every app game state, default and compact overlays,
 production Studio rendering, both ends of The Show, Times Tables K=2, K=3,
 K=pi, K=4, K=5, and earned-goal flows at both sizes, the Mandelbrot reset flow,
@@ -555,7 +575,7 @@ before JSON decoding.
 
 ## 5. Where things are
 
-- `crates/core` the headless engine: rooms (355 catalog rooms plus hidden
+- `crates/core` the headless engine: rooms (356 catalog rooms plus hidden
   content), sims, games (including nim and the chiptune composer), the Studio
   expression engine, the journey, scores, trophies, resonances, sound, eras,
   and the drawing surfaces.
@@ -567,15 +587,15 @@ before JSON decoding.
 
 ## 6. What is done vs pending
 
-Done and verifiable now: 355 catalog rooms plus hidden content, 6 sims, 11+
+Done and verifiable now: 356 catalog rooms plus hidden content, 6 sims, 11+
 games with a shared high-score table and daily seeds, the complete RPG spine
 (levels to 42 with lore, locks, 18 trophies with pings, the Gauntlet run,
 boons, daily streaks, resonances), the Studio (plot, animate, sing, in the
 terminal and the window), Visual Eras (including PNG output), Music Engine A
 (the seeded chiptune, `numinous tune`), GPU real-time fractals, live sound in
 the app and CLI plus structured notation over MCP, the `forget` right for
-players who are minds, and 41 MCP tools: 24 public play tools, sixteen private
-progression, creation, study, or local-state tools, and one local broadcast
+players who are minds, and 43 MCP tools: 24 public play tools, 18 private tools
+for progression, creation, study, or local state, and one local broadcast
 consent control.
 Products 0.2 Flagship Proof and 0.3 Tactile Alpha are exit-met on the
 agent-and-machine bar. Their evidence includes the engineered flagship ahas,

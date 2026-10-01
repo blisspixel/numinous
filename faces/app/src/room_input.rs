@@ -138,6 +138,12 @@ pub(crate) fn record_pointer_move(inputs: &mut Vec<RoomInput>, point: (f64, f64)
     true
 }
 
+/// Retain one native key as the same bounded event other faces replay.
+pub(crate) fn record_key(inputs: &mut Vec<RoomInput>, ch: char) {
+    inputs.push(RoomInput::Key { ch });
+    keep_newest_inputs(inputs);
+}
+
 /// How a room should treat the lift that ends a pointer gesture.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ReleaseMode {
@@ -145,7 +151,7 @@ pub(crate) enum ReleaseMode {
     Dial,
     /// Click plant: micro-moves collapse to one plant at the release point.
     Plant,
-    /// Fling / drop: keep the full down / move / up sequence.
+    /// Fling, drop, or persistent edit: keep the full down / move / up sequence.
     Fling,
 }
 
@@ -238,7 +244,7 @@ fn strip_last_open_gesture(inputs: &mut Vec<RoomInput>) {
     }
 }
 
-/// Rooms whose release itself is the math (fling, drop, needle throw).
+/// Rooms whose completed gestures must persist, including flings and edits.
 #[must_use]
 pub(crate) fn room_keeps_drag_after_release(room_id: &str) -> bool {
     matches!(
@@ -254,6 +260,7 @@ pub(crate) fn room_keeps_drag_after_release(room_id: &str) -> bool {
             | "phantom-jam"
             | "sphere-eversion"
             | "starbow"
+            | "route-lab"
     )
 }
 
@@ -525,6 +532,65 @@ mod tests {
         ));
         assert_eq!(inputs.len(), 3);
         assert!(matches!(inputs[2], RoomInput::PointerUp { .. }));
+    }
+
+    #[test]
+    fn route_lab_completed_drags_preserve_the_road_edit_and_delivery_order() {
+        let room = numinous_core::rooms::route_lab::RouteLab::new();
+        let mode = release_mode("route-lab", room.verb().expect("route controls"));
+        assert_eq!(mode, ReleaseMode::Fling);
+        let mut inputs = Vec::new();
+        record_pointer_down(&mut inputs, (0.1, 0.75), 0.0);
+        record_pointer_move(&mut inputs, (0.99, 0.75), 0.1);
+        let edited = room.status_input(0.1, &inputs).expect("edited road");
+        assert!(edited.contains("BD=9"), "{edited}");
+        record_pointer_up(&mut inputs, (0.99, 0.75), 0.2, mode);
+        assert_eq!(
+            room.status_input(0.2, &inputs).as_deref(),
+            Some(edited.as_str())
+        );
+
+        record_pointer_down(&mut inputs, (0.05, 0.40), 0.3);
+        record_pointer_move(&mut inputs, (0.25, 0.40), 0.4);
+        let selected = room.status_input(0.4, &inputs).expect("selected order");
+        assert!(selected.contains("ORDER=ABDC"), "{selected}");
+        assert!(selected.contains("BD=9"), "{selected}");
+        record_pointer_up(&mut inputs, (0.25, 0.40), 0.5, mode);
+        assert_eq!(
+            room.status_input(0.5, &inputs).as_deref(),
+            Some(selected.as_str())
+        );
+        assert_eq!(inputs.len(), 6);
+    }
+
+    #[test]
+    fn route_lab_bottom_buttons_act_once_on_click_and_never_on_a_held_move() {
+        let room = numinous_core::rooms::route_lab::RouteLab::new();
+        let mode = release_mode("route-lab", room.verb().expect("route controls"));
+        let mut inputs = Vec::new();
+        record_pointer_down(&mut inputs, (0.05, 0.40), 0.0);
+        let initial = room.status_input(0.0, &inputs);
+        record_pointer_move(&mut inputs, (0.75, 0.90), 0.1);
+        record_pointer_up(&mut inputs, (0.75, 0.90), 0.2, mode);
+        assert_eq!(room.status_input(0.2, &inputs), initial);
+        assert!(!room.goal_met(0.2, &inputs));
+
+        record_pointer_down(&mut inputs, (0.75, 0.90), 0.3);
+        let improved = room.status_input(0.3, &inputs);
+        assert!(room.goal_met(0.3, &inputs));
+        record_pointer_move(&mut inputs, (0.25, 0.90), 0.4);
+        record_pointer_up(&mut inputs, (0.25, 0.90), 0.5, mode);
+        assert_eq!(room.status_input(0.5, &inputs), improved);
+
+        record_pointer_down(&mut inputs, (0.75, 0.90), 0.6);
+        record_pointer_up(&mut inputs, (0.75, 0.90), 0.7, mode);
+        assert_eq!(room.status_input(0.7, &inputs), improved);
+
+        record_pointer_down(&mut inputs, (0.25, 0.90), 0.8);
+        record_pointer_move(&mut inputs, (0.75, 0.90), 0.9);
+        record_pointer_up(&mut inputs, (0.75, 0.90), 1.0, mode);
+        assert_eq!(room.status_input(1.0, &inputs), initial);
+        assert!(!room.goal_met(1.0, &inputs));
     }
 
     #[test]

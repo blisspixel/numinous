@@ -1,15 +1,170 @@
 # Route Lab
 
-**Status: designed, not built.** Founder direction, 2026-09-05. This develops
+**Status: the opening delivery experiment, native network authoring, portable
+route creations, kept questions, bounded undo, and search playback are built.**
+Founder direction, 2026-09-05. This develops
 the Traveling Salesman idea in [ROOMS.md](ROOMS.md), with the pleasure of
 watching a route calculation become visible on a map. It is a candidate for
 the capability work in [PROGRESSION.md](PROGRESSION.md), with the existing
-release gates still applying. The controls, solver, portable route project,
-and experience evidence below remain proposals.
+release gates still applying. The current room and bounded solvers are described
+below. Deliberate diagram positioning, richer comparison presentation, authored
+challenges, and participant experience evidence remain open.
+
+## Choose a delivery order
+
+Open `route-lab` in the App, CLI, or MCP. The same roads, stop order, integer
+costs, and exact comparison belong to core in every face. Deliver to B, C, and D,
+then return to A. The opening order is A-B-C-D-A. Drag across the main map to
+choose another order; the separate BD strip changes that road's cost.
+**NEAREST NEXT** builds an order by choosing the cheapest next delivery.
+**USE SHORTER** accepts the cheaper order shown above the controls; **NO OFFER**
+means the local reorder search found no saving, which alone does not prove the
+minimum. The readout separately gives the exact best round-trip cost. Moving
+across a button does not accept it. There is no penalty for a longer round trip.
+
+The delivery order schedules the stops. The street walk connects them: each leg
+uses the cheapest open road path and may pass another delivery before its turn,
+or revisit a junction. Returning to A is part of the cost. This distinction
+matters when interpreting the highlighted roads or a shortest-path search.
+
+In ordinary App play, keys 1 through 6 choose an order, G uses nearest-next,
+I accepts the offered shorter order, and J/L decrease or increase BD's cost within
+its bounds. These local keys take priority over their ordinary shortcuts while
+this room is active. Study, Cabinet, Studio, games, and The Show retain their
+own input. Reset restores the visit's opening network and order.
+Long App sessions preserve the selected order, road costs and closures, bounded
+undo, and trace cursor through a core-owned replay checkpoint. Old pointer
+samples can expire without resetting the experiment. Checkpoint events describe
+state, not a physical-input receipt.
+
+The ordinary feasible route view reports the current order, its complete
+round-trip cost, the exact minimum, the saving offered by the next reorder, and
+BD's cost. Search playback reports a recorded decision or result; unreachable
+required stops prevent comparison. An unused isolated junction does not.
+The map labels integer road costs and draws the expanded route along actual
+streets. The proposal names its candidate order and saving before acceptance.
+Changing BD recomputes distances, proposals, and the exact optimum; it cannot
+reuse a certificate for an earlier network.
+
+From the CLI:
+
+```text
+numinous render route-lab --width 64 --height 28
+numinous render route-lab --poke 0.75,0.92
+numinous render route-lab --poke 0.5,0.78
+```
+
+From MCP, call `play_room` with `id: "route-lab"`. Add
+`pokes: [[0.75, 0.92]]` to accept the opening saving, or
+`pokes: [[0.5, 0.78]]` to change BD to 5. Calls replay their supplied history;
+to keep a previous edit, include it before the next action. The latter edit
+makes the opening greedy route optimal, so greedy is a candidate to inspect,
+not a universal mistake. `study_room` provides the room's explanation; the
+longer treatment and recurrence below remain available to clone readers.
+
+The native room keeps its depot and deliveries fixed. Comma and period select
+a road, C closes or reopens it, Z undoes an edit, and T opens A-to-D **SEARCH**
+playback. While that panel is open, comma and period move back or forward
+through the recorded decisions. The visible ROAD, CLOSE/OPEN, UNDO, SEARCH/HIDE,
+and BACK/STEP controls give pointer and controller users the same actions.
+Costs in the search are cumulative from A: tentative costs can improve;
+finalized costs are the cheapest costs to their junctions. A closed road keeps
+its cost and is visibly labeled. Unreachable deliveries remain visible with
+reopen and undo guidance. An edit or undo clears the old calculation; STEP
+records a fresh one if the search panel is still open.
+
+`crates/core/src/route.rs` supplies bounded positive-cost Dijkstra,
+actual street reconstruction, nearest-neighbor, checked two-edge exchanges,
+and exact subset dynamic programming. Its tests compare shortest paths with
+Floyd-Warshall and tour optima with independent permutation enumeration,
+including a case where two-edge local optimality is not global optimality.
+Room, App release, CLI process, and MCP door/receipt tests cover the playable
+boundary. These are correctness and functional evidence, not measured enjoyment.
+
+## Custom street networks and continuation, built
+
+CLI `numinous route-lab --json` and private MCP `route_lab` open the canonical
+workbench. Plain `numinous route-lab` instead gives a readable comparison and
+street walk. Both faces use `faces/shared/route_json.rs`; core owns every validation,
+edit, route comparison, and solver event. [PLAY.md](../PLAY.md) and the packaged
+skill document the request actions and followable next calls for installed players.
+
+A request optionally supplies `snapshot` and an explicit `action`. The snapshot
+contains `revision`, `current`, `undo`, and `trace`. `current` describes junctions,
+roads with explicit open flags, required stops with the depot first, and the
+player's delivery order. `junctions` is a count, with junction IDs from zero
+through `junctions - 1`. Evaluation leaves the order intact. Road cost and closure,
+required-stop, depot, and order actions advance a checked revision when state
+changes. Greedy and improve deliberately construct a route. Undo restores the
+last retained network under a new revision; a no-op creates no historical edit.
+
+Structurally malformed or oversized state is refused. Structurally valid networks
+with too few deliveries or unreachable stops are retained and report infeasible
+comparison, so a later edit can repair the question. Closed streets are absent
+from search rather than assigned a large finite cost. The native room uses the
+same model for its supported edits.
+
+Search playback starts at cursor zero and reveals recorded settling and strict relaxation
+events only on a step or seek. Dijkstra completes its bounded source search when
+recording; cursor movement is presentation, not work avoided. The path or an
+unreachable result appears at completion. Imported cursor metadata must match
+both revision and the canonical network digest, and the events are regenerated.
+The digest detects inconsistent state, not authorship or independent custody.
+
+The snapshot is caller-carried continuation across requests or processes.
+It carries session history without a profile write. [Route state and
+caller-paced calculation](decisions/0002-route-workbench.md) owns that boundary.
+
+## Native network authoring and kept routes, built
+
+Press O in Route Lab or choose Cabinet CONSTRUCT to enter the native editor.
+View, Roads, Stops, Order, Search, and Keep use one core workbench. Add and remove
+roads, adjust the junction count, change explicit costs and closures, choose
+deliveries and their depot, and move deliveries earlier or later. Pointer,
+keyboard, and controller input share the visible controls and hit layout.
+The diagram is schematic. Road inspection reports the selected connection's
+actual cost and availability; the delivery route follows core-reconstructed
+streets. Invalid structural drafts are refused without replacing the network.
+Each successful structural change has one undo step and clears stale search.
+
+Leaving and returning retain the in-process workbench, including bounded undo
+and playback. Baseline restores the network originally opened. Those behaviors
+do not persist an unsaved editor across App exit. On Keep, enter a question and
+choose KEEP QUESTION to store it beside the route in the existing project chain.
+The Cabinet's THE QUESTION opens an exact kept network paused. Enter activates
+editing; leaving the preview does not execute its next call or write a project.
+Ordinary edits preserve a creation's existing parent, and explicit Remix creates
+a child without changing its source.
+
+Core `RouteCreation` accepts bounded `NUMINOUS_ROUTE 1` data, preserving the
+authored roads, closures, required stops, depot, and selected order. Its 8 KiB
+limit applies before parsing. Opening starts revision zero with fresh undo and
+search, and comparisons are recomputed. A disconnected authored network remains
+portable. Canonical content and a declared parent determine identity; this is
+not an authorship or custody attestation.
+
+CLI and MCP creation actions use scalar `action: "save"`, `"open"`, or `"remix"`.
+Save accepts a workbench snapshot and returns `creation.capsule`; opening and
+remixing accept that capsule text. Saving edits to an existing creation accepts
+both capsule and snapshot, preserving its parent. A capsule-only save preserves
+that creation's network. The transport remains stateless and writes no file.
+CLI `route-lab --out delivery.route` writes an explicit new export file.
+CLI project keep, import, export, and JSON resume use the existing chain; MCP
+`project` previews followable route calls. [PLAY.md](../PLAY.md) gives installed
+players the literal commands and request fields.
+
+Route-containing project documents and chains use version 2 headers. Studio-only
+version 1 bytes and identities remain unchanged; both supported versions reopen.
+Questions, evidence links, corrections, capacity limits, locking, and atomic
+writes stay in the existing project and persistence owners. [Portable route
+creations](decisions/0003-route-creations.md) records that choice. Core capsule,
+legacy identity, mixed-chain, and persistence regressions; real CLI/MCP round
+trips; followed resume calls; native lifecycle/input checks; and composed
+default and compact frames support these functional claims.
 
 ## The experience
 
-A small town lights up. Choose a depot and some deliveries, sketch their order,
+A street network lights up. Choose a depot and some deliveries, sketch their order,
 and watch a courier follow the streets. Then let a search unfold beside your
 route: tentative paths spread, a cheaper connection replaces an earlier one,
 and the whole journey tightens. Pause at the decision that changed it. Move a
@@ -18,7 +173,7 @@ delivery across the river or close a bridge and try your new understanding.
 The acquired capability is concrete: see why the nearest next stop can make
 the whole trip longer, compare a proposed change before accepting it, and
 distinguish a good route from a proven optimum. A player can use that insight
-to create a town that defeats a particular greedy choice and share the
+to create a network that defeats a particular greedy choice and share the
 challenge. Watching, tinkering, and revisiting a favorite route are also
 complete ways to play. These are design intentions, not measured enjoyment.
 
@@ -50,28 +205,22 @@ strategies; their documentation explicitly says its routing solver can return
 a nonoptimal TSP tour.
 [OR-Tools TSP guide, updated 2024-08-28](https://developers.google.com/optimization/routing/tsp).
 
-## First playable slice
+## Further presentation, designed
 
-Use a fictional, static street map with at most 32 junctions and 96 undirected
-roads. Every open road has an explicit integer cost from 1 to 999 travel units.
+The typed model already admits a fictional, static street map with at most 32
+junctions and 96 undirected roads. Every open road has an explicit integer cost
+from 1 to 999 travel units.
 The drawing is a map diagram; screen length does not determine travel cost.
 Offer three to ten distinct required stops, including the depot. A small
-curated town can start with fewer junctions than the cap.
+curated network can start with fewer junctions than the cap.
 
-The initial controls should support these actions through pointer, keyboard,
-controller, and typed digital input:
-
-- Choose the depot and add, remove, or move deliveries between marked junctions.
-  Select stops in order or rearrange a visible order list to make your tour.
-- Close or reopen an existing road, or change its displayed cost. Keep the map
-  in place so the player can compare the consequence of one change.
-- Watch a nearest-neighbor tour form, then step through proposed two-edge
-  exchanges. Show the old connections, replacement connections, and cost
-  difference before the player accepts an exchange.
-- Play, pause, single-step, scrub the recorded calculation, and undo an edit.
-  Offer an exact comparison on request, with the player's route preserved.
-- Keep the problem, route, question, and next experiment as one project. Reopen
-  or remix that project without silently changing its roads or cost model.
+The bounded editor and portable project above establish the initial controls.
+Further presentation can add deliberate junction positioning, richer road tables,
+simultaneous current/proposed/best street walks, and arbitrary-source native
+search. Watching nearest-next form and inspecting the specific exchanged delivery
+legs should use actual recorded decisions, with a cost difference before
+acceptance. Authored challenge exchange and participant experience evidence
+remain separate work.
 
 Draw the player's route, the algorithm's current candidate, and its best route
 with distinct line styles and labels. A searched junction is different from a
@@ -183,7 +332,8 @@ saves one unit; the second tour is provably best because the table is complete.
 The original tour is `12.5%` above optimum. The saving from its original cost
 is `1/9`, about `11.1%`; those are different denominators and different claims.
 All matrix entries and three totals were independently checked by direct
-arithmetic for this design. No production solver has been implemented here.
+arithmetic. The production solver now reproduces them, with shortest-path and
+exhaustive-tour reference checks in `crates/core/src/route.rs`.
 
 The optional discovery sequence is: make a route, watch greedy, call an
 exchange, compare the completed tours, then create a new instance where that
@@ -192,12 +342,15 @@ does not mean expecting it to fail every time.
 
 ## Delivery and evidence
 
-Start with the bounded problem, solver events, exact comparison, and one
-playable map. Then add deliberate continuation and authored challenge exchange.
-Reuse the existing shared core and face adapters. A route problem needs its
-own validated representation; the current Studio expression capsule does not
-encode a road graph. Do not advertise portable route projects until their
-save, reopen, and remix contract exists across the supported faces.
+The bounded problem, solver events, exact comparison, native authoring,
+portable route creations, and kept questions now use the shared core and face
+adapters. Route creations have their own validated network representation;
+Studio expression capsules retain their existing meaning. Save, reopen, and
+explicit remix are built across the supported faces, with project persistence
+owned by the existing chain. Session snapshots carry undo and playback;
+portable creations reopen the authored network in a fresh workbench. Core and
+process regressions establish those boundaries. Deliberate challenge exchange
+and whether players want to continue remain experience questions to observe.
 
 The initial correctness and interaction gates should establish:
 

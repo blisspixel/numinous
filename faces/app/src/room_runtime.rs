@@ -86,7 +86,9 @@ impl App {
     }
 
     pub(super) fn current_room_has_construction(&self) -> bool {
-        numinous_core::studio_construction_family(self.rooms[self.current].meta().id).is_some()
+        self.rooms[self.current].meta().id == "route-lab"
+            || numinous_core::studio_construction_family(self.rooms[self.current].meta().id)
+                .is_some()
     }
 
     pub(super) fn chosen_experiment_active(&self) -> bool {
@@ -929,6 +931,7 @@ impl App {
     }
 
     pub(super) fn record_room_touch(&mut self, point: (f64, f64)) -> bool {
+        self.compact_room_inputs();
         let poke_added = room_input::push_poke(&mut self.pokes, point);
         let input_added = room_input::record_pointer_down(&mut self.inputs, point, self.t);
         if poke_added && input_added && self.current_room_is_life() {
@@ -946,6 +949,11 @@ impl App {
             self.play_room_interaction_audio(true);
         }
         accepted
+    }
+
+    /// Give the room a chance to preserve replay state before bounded appends.
+    pub(super) fn compact_room_inputs(&mut self) {
+        self.rooms[self.current].compact_inputs(&mut self.inputs);
     }
 
     pub(super) fn maybe_announce_room_goal(&mut self) {

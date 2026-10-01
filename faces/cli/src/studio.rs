@@ -886,7 +886,7 @@ fn next_free_sibling(path: &Path) -> Option<PathBuf> {
         .find(|candidate| !candidate.exists())
 }
 
-fn write_create_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
+pub(super) fn write_create_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
     let base = path.file_name().unwrap_or_else(|| OsStr::new("studio.num"));
     let mut last_error = None;

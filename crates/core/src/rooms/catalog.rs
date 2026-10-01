@@ -4045,6 +4045,17 @@ macro_rules! catalog_rooms {
                 accent: [100, 200, 255],
             }
         ),
+        (
+            route_lab,
+            RouteLab,
+            RoomMeta {
+                id: "route-lab",
+                title: "Route Lab",
+                wing: "Chance & Order",
+                blurb: "Choose a delivery order, change the streets, and find a cheaper round trip.",
+                accent: [70, 180, 160],
+            }
+        ),
         }
     };
 }
@@ -4258,11 +4269,10 @@ pub(crate) fn construct_hidden_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::*;
 
-    // The alpha 18 catalog with Kepler's amber raised for small interface text,
-    // and the two accidental wings merged into the documented wings they sat
-    // beside. Order, ids, titles and blurbs stay fixed across all 355 entries;
-    // nine of them changed the wing they are filed under and nothing else.
-    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x5191_3c14_e461_c347;
+    // The reviewed catalog with Route Lab appended and its opening invitation
+    // focused on delivery order and round-trip cost. Existing doorways retain
+    // their order and metadata.
+    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x334a_95e3_b59f_c76c;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {

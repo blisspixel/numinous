@@ -22,6 +22,59 @@ alpha 17 candidate. The added checks include direct room study across the App
 reader, CLI, and MCP, typed numerical grading channels, keys held at reader
 entry and return, and the study observer policy. The NO_COLOR sweep grew to
 40 checks with the study subcommand.
+The 2026-09-30 development round passed the full Windows verification gate,
+including feature-enabled App and GPU tests, strict Python checks, production
+export conformance, MSRV, supply-chain policy, and the catalog-derived App
+screen matrix. Coverage measured 94.38% regions and 94.36% lines under the
+existing exclusions. An isolated unchanged-HEAD run at
+`92335174b3bd0bfb8dec4f90a1f10522f3ed6333` measured 94.30% regions and 94.27%
+lines with the same command and exclusions, so this round improved coverage.
+The route engine measured 97.56% lines and the first-town module 99.58%.
+Default and compact Route Lab and Studio frames were inspected, and the README
+screenshots were regenerated. These are local machine and rendering checks;
+participant evidence, genuine external-host discovery, and physical
+cross-platform evidence remain open.
+The continuation on 2026-09-30 passed 4,470 all-target Rust test cases with the
+same three expensive diagnostics excluded from the ordinary run. Final-source
+coverage measured 94.36% regions and 94.38% lines under the existing exclusions;
+the canonical route workbench measured 98.80% lines. The NO_COLOR sweep passed
+43 checks, including text and JSON route-workbench output. Twenty focused
+first-town tests cover edits, trace pacing, undo, checkpoint continuity, and
+malformed-frame isolation through compaction and oversized input admission.
+The focused App generator passed 22 Route Lab views, including closures,
+disconnected towns, undo, and partial, completed, and unreachable traces.
+Default trace playback and compact disconnected views were inspected.
+All Windows verification checks completed across resumed runs, with Rust
+checks and coverage repeated after the final replay hardening. The complete
+2,953-frame App matrix passed, and study plates, the gallery, contact sheet,
+and audio artifacts were regenerated.
+The Route Lab polish pass on 2026-09-30 passed 4,482 all-target Rust test
+cases with the same three expensive diagnostics excluded. Coverage measured
+94.41% regions and 94.43% lines under the existing exclusions, improving the
+continuation's workspace coverage. Twenty-three focused room tests cover the
+delivery task, named roads, cumulative search costs, and disconnected deliveries.
+The composed App checks cover keyboard and controller hints at four window
+sizes, including remapped controls. All 22 focused Route Lab views were
+regenerated; default and compact opening, search, and disconnected frames were
+inspected. The CLI and shared transport tests distinguish delivery order from
+street walk, preserve structured results, and allow unused disconnected
+junctions. The Windows local gate completed across resumed runs, including
+goldens, accessibility, creator parity, packaging, production export conformance,
+interoperability, and release workflow contracts. These are local functional
+and rendering checks, not participant
+comprehension or usability measurements.
+The alpha 28 authoring pass on 2026-09-30 completed the Windows verification
+gate across resumed runs. Final-source coverage measured 94.53% regions and
+94.57% lines with the same command and exclusions, improving the preceding
+polish baseline. Twenty-five focused native authoring tests cover pointer,
+keyboard, controller, pause, saved questions, explicit remix, and refusal
+without mutation. Core and real CLI process regressions cover portable route
+identity, mixed project versions, malformed imports, corrections, and privacy.
+The complete 2,989-frame App matrix and 72 focused authoring frames passed;
+representative opening, custom-network, dense-network, compact draft, question,
+search, and remix views were inspected. Study plates, gallery, contact sheet,
+and audio artifacts were regenerated. Participant comprehension, real-host
+discovery, and physical cross-platform evidence remain open.
 The broader dated baseline below retains its original counts.
 
 ## Evidence snapshot, 2026-09-01

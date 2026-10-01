@@ -29,6 +29,7 @@ pub enum ActivityKind {
     Arcade,
     Studio,
     SharedPlay,
+    Route,
 }
 
 impl ActivityKind {
@@ -41,6 +42,7 @@ impl ActivityKind {
             Self::Arcade => "THE ARCADE",
             Self::Studio => "THE STUDIO",
             Self::SharedPlay => "SHARED PLAY",
+            Self::Route => "ROUTE LAB",
         }
     }
 }
@@ -462,7 +464,7 @@ fn items(
                     MenuItem {
                         id: MenuItemId::Construct,
                         title: "CONSTRUCT",
-                        description: "THIS ROOM'S STUDIO CONTRASTS. OPTIONAL.",
+                        description: "CREATE WITH THIS ROOM'S MATHEMATICS. OPTIONAL.",
                         shortcut: Some('o'),
                         action: MenuAction::Intent(MenuIntent::ConstructRoom),
                     },

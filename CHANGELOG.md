@@ -5,7 +5,44 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.28] - 2026-09-30
+
 ### Added
+- Route Lab is a playable street-map room on the App, CLI, and MCP. Choose a
+  delivery order, change a road cost, compare nearest-neighbor with the exact
+  minimum round-trip cost, and accept a displayed strictly improving two-edge
+  exchange. The App supports mouse, controller pointer, and local keyboard
+  actions, retaining edits after a completed gesture and across bounded input
+  history rollover. Core owns bounded positive-cost shortest paths, actual
+  street reconstruction, and exact subset dynamic programming. Independent
+  shortest-path and exhaustive tour oracles cover the mathematical contract.
+  The native room also supports closing and reopening roads, bounded undo, and
+  caller-paced inspection of recorded shortest-path decisions. Visible pointer
+  controls and local keys share the same operations; invalidated traces restart
+  against the edited network, and unreachable deliveries remain inspectable.
+- A canonical Route Lab workbench supports custom bounded street networks,
+  required-stop and depot changes, preserved player orders, road costs and
+  closures, bounded undo, and exact comparisons. CLI `route-lab` and private
+  MCP `route_lab` share validated caller-carried snapshots and one JSON adapter.
+  Recorded trace cursors bind to the current revision and canonical network digest,
+  and imported events are regenerated. Followable next calls reveal real solver
+  steps or accept a strictly improving exchange. Atomic network replacement uses
+  the same checked revision, bounded undo, and trace invalidation contract.
+- Route Lab has native network authoring through Cabinet CONSTRUCT. Road,
+  junction, delivery, depot, order, search, and Keep controls share core behavior
+  across pointer, keyboard, and controller input. Failed changes leave the
+  experiment intact; leaving and returning retain its in-process session.
+- Portable route creations preserve authored roads, closures, stops, and order.
+  The existing project chain keeps their chosen questions and reopens exact
+  networks from the Cabinet or followable CLI/MCP previews. Explicit remix
+  records a parent; ordinary edits and saves preserve existing lineage.
+  Reopening begins fresh undo and playback. Route-containing projects use
+  version 2, with legacy Studio version 1 bytes and identities unchanged.
+  CLI adds route capsule export and project keep, import, export, and JSON resume.
+- Focused App screenshot generation accepts `--room <id>` and uses the same
+  composed rendering and domain checks in a separate output directory.
+  `--route-editor` adds native authoring views with keyboard and controller
+  hints at four window sizes; default and compact views join the release matrix.
 - Portable plugin validation uses pinned official JSON Schema fixtures and
   the reference skill validator. Real YAML parsing rejects duplicate keys and
   unsafe tags. A production MCP conformance gate checks knowledge-export
@@ -18,7 +55,32 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   on opposite sides of a domain gap are no longer joined into a false curve.
 - Studio shows slope and partial readings before navigation context and keeps
   the insertion cursor visible when a long formula exceeds the editing row.
+- Room footers choose their text scale from the available content budget, so
+  widening the window no longer hides a status that fit at a narrower size.
+- Route Lab scales its map labels for ordinary windows while preserving compact
+  controls beneath the composed App chrome.
+- Route Lab explains the delivery task, labels selected roads separately from
+  the BD cost control, narrates cumulative search costs, and gives repair
+  guidance for unreachable deliveries. Player-facing copy distinguishes
+  delivery order, street walk, and round-trip cost. Plain CLI output presents
+  a readable comparison; JSON working state remains available with `--json`.
+- Direction and room documentation describe the built project-resume loop and
+  search playback accurately.
+- Native route editing retains the saved question on reopening, selects an
+  added road after canonical sorting, binds search narration to the recorded
+  endpoints, and releases controller input across pause. Capsule-only saves
+  preserve a custom network. New-road drafts cannot edit a hidden old road.
+- Route Lab keeps malformed replay payloads isolated through history compaction
+  and oversized input admission, without discarding real commands after a
+  closing frame marker.
 - The portable plugin identifies Nick Seal as its author.
+- Windows commit hooks select the same Python interpreter as the documented
+  local gate, so installing its pinned validators also satisfies the hook.
+
+### Changed
+- The roadmap summarizes the current finite oscillator-sum capability in one
+  entry and leaves incremental history in this changelog. Entry-document
+  catalog counts and the App QA inventory are checked against live metadata.
 
 ## [0.4.0-alpha.27] - 2026-09-30
 

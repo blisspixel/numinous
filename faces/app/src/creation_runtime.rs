@@ -480,6 +480,10 @@ impl App {
 
     /// Optional construction from a room that owns a Studio family.
     pub(super) fn open_room_construction(&mut self) {
+        if self.rooms[self.current].meta().id == "route-lab" {
+            self.open_route_authoring();
+            return;
+        }
         let Some(experiment) =
             numinous_core::first_studio_construction(self.rooms[self.current].meta().id)
         else {
@@ -505,6 +509,7 @@ impl App {
     /// Enter Studio mode without touching the panel's formula or voice, so a
     /// reopened creation is not resung by the entry itself.
     fn enter_studio_shell(&mut self) {
+        self.route_active = false;
         self.the_show = false;
         self.paused = false;
         self.close_menu();
@@ -526,7 +531,11 @@ impl App {
     /// that has deliberately not started singing yet.
     pub(super) fn open_studio_creation(&mut self, creation: &numinous_core::StudioCreation) {
         // A new creation replaces any kept-question plate. The project opener
-        // puts its own plate back after this returns.
+        // puts its own plate back after this returns. A route preview has not
+        // replaced the prior editing session until explicitly opened.
+        if self.route_active && self.project_resume.is_some() {
+            self.route_authoring = self.route_preview_previous.take();
+        }
         self.project_resume = None;
         // A quiz is stateless and would otherwise keep owning the keyboard
         // over the newly opened Studio; scored runs are guarded at the door
@@ -703,7 +712,19 @@ impl App {
         match loaded {
             Ok(loaded) => {
                 if let Some(creation) = loaded.creation.as_ref() {
-                    self.open_studio_creation(creation);
+                    match creation {
+                        project_resume::LoadedCreation::Studio(creation) => {
+                            self.open_studio_creation(creation)
+                        }
+                        project_resume::LoadedCreation::Route(creation) => {
+                            self.open_route_creation(creation.clone());
+                            if let Some(panel) = self.route_authoring.as_mut() {
+                                panel.question = loaded.question.clone();
+                            }
+                        }
+                    }
+                } else if self.route_active {
+                    self.close_route_authoring();
                 } else if self.studio {
                     self.exit_studio();
                 }
@@ -724,6 +745,15 @@ impl App {
         else {
             return;
         };
+        if state == project_resume::CreationState::Present
+            && self.route_active
+            && let Some(panel) = self.route_authoring.as_mut()
+        {
+            panel.act(super::route_authoring::Action::Confirm);
+            self.project_resume = None;
+            self.route_preview_previous = None;
+            return;
+        }
         match state {
             project_resume::CreationState::Present
                 if self.studio && self.studio_panel.opened_paused() =>
@@ -752,7 +782,9 @@ impl App {
         if self.project_resume.is_none() {
             return;
         }
-        if self.studio {
+        if self.route_active {
+            self.close_route_authoring();
+        } else if self.studio {
             self.exit_studio();
         } else {
             self.project_resume = None;

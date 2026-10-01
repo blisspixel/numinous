@@ -115,9 +115,17 @@ guide in the repository.
 The mathematical review and its limits live in
 [`docs/MATHEMATICS.md`](docs/MATHEMATICS.md).
 
+**Route Lab.** Choose a delivery order and find a cheaper round trip. Change
+a road cost or close a road, then see how the route responds. Compare your cost
+with the exact minimum, or step through a shortest-path search. Open `route-lab`
+through any face. Construct a custom network in the App, or use CLI and MCP
+for typed edits. Keep its question, reopen the same roads and deliveries, and
+make a deliberate remix through the existing project chain.
+[`PLAY.md`](PLAY.md) explains the controls and how to continue an experiment.
+
 ## Status
 
-**0.4.0-alpha.27** is playable: 355 catalog rooms, games, Journey, Studio,
+**0.4.0-alpha.28** is playable: 356 catalog rooms, games, Journey, Studio,
 controllers, and Watch Agent. The **0.2** Flagship Proof and **0.3** Tactile
 Alpha agent-and-machine exits are met and CI-locked. **0.4 Understanding Alpha
 is active, not complete.**

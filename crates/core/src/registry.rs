@@ -369,6 +369,23 @@ mod tests {
     }
 
     #[test]
+    fn current_catalog_counts_in_entry_docs_match_live_metadata() {
+        let expected = counted(crate::rooms::ROOM_CATALOG.len(), "catalog room");
+        for (name, text) in [
+            ("README.md", include_str!("../../../README.md")),
+            ("VERIFY.md", include_str!("../../../VERIFY.md")),
+            ("docs/README.md", include_str!("../../../docs/README.md")),
+            ("docs/ROOMS.md", include_str!("../../../docs/ROOMS.md")),
+        ] {
+            let prose = text.split_whitespace().collect::<Vec<_>>().join(" ");
+            assert!(
+                prose.contains(&expected),
+                "{name} must describe the live catalog as {expected}"
+            );
+        }
+    }
+
+    #[test]
     fn registry_is_non_empty() {
         assert!(!all_rooms().is_empty());
     }

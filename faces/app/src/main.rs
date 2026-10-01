@@ -43,6 +43,7 @@ mod project_resume;
 mod radio_cache;
 mod room_input;
 mod room_runtime;
+mod route_runtime;
 mod save_gate;
 mod session_audio;
 mod studio_panel;
@@ -52,7 +53,7 @@ mod wager;
 use crate::audio_state::Program as AudioProgram;
 use crate::creation_runtime::{NamingField, ShareNaming};
 use crate::session_audio::SessionAudio;
-use numinous_app::{controls, game_draw, input_legend, menu, play, room_phase};
+use numinous_app::{controls, game_draw, input_legend, menu, play, room_phase, route_authoring};
 use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay};
 use room_phase::{effective_room_phase, has_finite_parameter_input};
 
@@ -361,6 +362,10 @@ struct App {
     studio_panel: studio_panel::StudioPanel,
     /// The kept question, while its preview is on screen.
     project_resume: Option<project_resume::Plate>,
+    route_authoring: Option<route_authoring::Panel>,
+    route_active: bool,
+    route_preview_previous: Option<route_authoring::Panel>,
+    route_primary_held: bool,
     /// The F4 naming step: a share waiting for its title and signature.
     share_naming: Option<ShareNaming>,
     /// The author name from the last named share, offered on the next one.
@@ -628,6 +633,10 @@ impl App {
             studio: false,
             studio_panel: studio_panel::StudioPanel::default(),
             project_resume: None,
+            route_authoring: None,
+            route_active: false,
+            route_preview_previous: None,
+            route_primary_held: false,
             share_naming: None,
             remembered_author: String::new(),
             gallery: None,
@@ -998,6 +1007,7 @@ impl App {
         self.study.is_some()
             || self.session_viewer.is_open()
             || self.studio
+            || self.route_active
             || self.quiz.is_some()
             || self.munch.is_some()
             || self.nim.is_some()
@@ -1016,6 +1026,8 @@ impl App {
     fn activity_kind(&self) -> Option<menu::ActivityKind> {
         if self.session_viewer.is_open() {
             Some(menu::ActivityKind::SharedPlay)
+        } else if self.route_active {
+            Some(menu::ActivityKind::Route)
         } else if self.studio {
             Some(menu::ActivityKind::Studio)
         } else if self.arcade.is_some() {
@@ -1127,6 +1139,7 @@ impl App {
                     self.post_score(&format!("arcade seed:{}", play.seed), play.run.score);
                 }
             }
+            menu::ActivityKind::Route => self.close_route_authoring(),
             menu::ActivityKind::Studio => self.exit_studio(),
             menu::ActivityKind::SharedPlay => self.close_session_viewer(),
         }
@@ -1140,6 +1153,11 @@ impl App {
             menu::ActivityKind::Nim => self.nim_start(),
             menu::ActivityKind::Gauntlet => self.gauntlet_start(),
             menu::ActivityKind::Arcade => self.arcade_start(),
+            menu::ActivityKind::Route => {
+                if let Some(panel) = self.route_authoring.as_mut() {
+                    panel.act(route_authoring::Action::Reset);
+                }
+            }
             menu::ActivityKind::Studio | menu::ActivityKind::SharedPlay => {}
         }
     }
@@ -1335,6 +1353,7 @@ impl App {
         // opening) closes its gesture gently; releases record their lift
         // first, which makes this cancel a no-op.
         if self.poking && !state.poking {
+            self.compact_room_inputs();
             room_input::cancel_open_gesture(&mut self.inputs, self.t);
         }
         self.dragging = state.dragging;
@@ -1342,6 +1361,7 @@ impl App {
     }
 
     fn clear_pointer_state(&mut self) {
+        self.route_primary_held = false;
         self.set_pointer_state(mouse_input::PointerState::default());
     }
 
@@ -1799,7 +1819,29 @@ impl App {
 
     fn modal_frame(&self, width: usize, height: usize) -> Option<Raster> {
         let copy = self.gamepad.controller_copy();
-        if let Some(play) = &self.arcade {
+        if self.route_active
+            && let Some(panel) = &self.route_authoring
+        {
+            let hint = if self.input_mode == input_legend::InputMode::Controller {
+                Some(format!(
+                    "DPAD SELECT. {} ACTS. {} LEAVES.",
+                    copy.token(input_legend::Control::Primary),
+                    copy.token(input_legend::Control::Back)
+                ))
+            } else {
+                None
+            };
+            let mut raster = panel.draw(width, height, hint.as_deref());
+            if let Some(plate) = &self.project_resume {
+                project_resume::draw(&mut raster, &plate.lines, width, height);
+            }
+            if self.input_mode == input_legend::InputMode::Controller
+                && let Some(point) = self.gamepad.cursor()
+            {
+                gamepad::draw_cursor(&mut raster, point, width, height);
+            }
+            Some(raster)
+        } else if let Some(play) = &self.arcade {
             Some(game_draw::draw_arcade(
                 play,
                 self.input_mode,
@@ -2375,6 +2417,9 @@ impl ApplicationHandler for App {
                 if self.handle_study_key(&logical_key, repeat) {
                     return;
                 }
+                if self.handle_route_authoring_key(&logical_key, repeat) {
+                    return;
+                }
                 if self.handle_chosen_experiment_key(&logical_key, repeat) {
                     return;
                 }
@@ -2628,6 +2673,9 @@ impl ApplicationHandler for App {
                         _ => {}
                     }
                 } else {
+                    if self.handle_route_lab_key(&logical_key, repeat) {
+                        return;
+                    }
                     let logical_key = controls::normalized_command_key(&logical_key);
                     match logical_key {
                         // A posed call takes Esc first: dismissing the band
@@ -2674,11 +2722,7 @@ impl ApplicationHandler for App {
                             self.toggle_room_wager();
                         }
                         Key::Character(c)
-                            if c.as_str() == "o"
-                                && numinous_core::studio_construction_family(
-                                    self.rooms[self.current].meta().id,
-                                )
-                                .is_some() =>
+                            if c.as_str() == "o" && self.current_room_has_construction() =>
                         {
                             self.open_room_construction();
                         }
@@ -3043,6 +3087,7 @@ impl ApplicationHandler for App {
                     } else {
                         // The window lost its size mid-drag: the gesture
                         // ends without a lift, so close it gently.
+                        self.compact_room_inputs();
                         room_input::cancel_open_gesture(&mut self.inputs, self.t);
                         self.poking = false;
                     }

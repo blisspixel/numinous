@@ -157,6 +157,18 @@ pub trait Room: RoomMetadata {
         }
     }
 
+    /// Preserve this room's replay state before a face records more input.
+    ///
+    /// Faces call this before appending or truncating a bounded input history.
+    /// The default leaves it unchanged. A stateful replay may replace an old
+    /// prefix with equivalent existing input events while retaining the newest
+    /// gesture suffix. Such synthesized events are state checkpoints, not
+    /// evidence of physical gestures. Implementations must keep work bounded
+    /// by [`MAX_ROOM_INPUTS`] and leave room for the face's next events.
+    fn compact_inputs(&self, inputs: &mut Vec<RoomInput>) {
+        let _ = inputs;
+    }
+
     /// Deeper cuts, in order of depth: true, retellable, math-teacher-grade
     /// gems that unlock as the journey deepens (the faces choose thresholds;
     /// see `docs/PLAYFUL.md`). The knowledge is the loot. Empty by default.

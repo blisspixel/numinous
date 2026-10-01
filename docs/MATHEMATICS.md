@@ -587,6 +587,53 @@ silently selecting another number. A challenge also checks its room identity.
 The compatibility parser remains for other rooms; [Rosetta](ROSETTA.md) owns
 that migration boundary.
 
+## Route Lab: exact finite street costs
+
+The opening example fixes depot A and deliveries B, C, and D. Open undirected roads
+are AB=1, AC=2, BC=2, CD=2, and editable BD in 1..9. There is no AD road.
+Screen length does not determine cost. Every tour includes the return to the
+depot and expands each shortest-path leg into actual open streets; a walk may
+revisit a junction or pass another delivery before its chosen service order.
+
+Core validates positive integer costs, unique non-looping roads, distinct
+required stops, connectivity, and declared work bounds before comparison.
+Dijkstra settles equal-cost junctions by identifier and records real settling
+and relaxation decisions. Nearest-neighbor is a feasible heuristic. A complete
+two-edge pass with no negative delta proves local optimality for that exchange
+family, while the separate subset recurrence certifies the global optimum for
+the immutable finite integer-cost problem. An edit builds a new metric and
+comparison, preserving only the selected stop order as a candidate.
+
+At BD=3, the three tours up to reversal cost 9, 8, and 11. Greedy chooses 9;
+an exchange saves one unit. At BD=5, greedy is optimal, so the room does not
+teach that greed is always wrong. The live parameter voice measures current
+cost divided by exact optimum and reaches unison at an optimum; this is a
+declared detour ratio, not a claim that routing mathematics supplies a tuning.
+
+`route.rs` tests use independent Floyd-Warshall distances and exhaustive stop
+permutations, then check the actual expanded road sum and every exchange delta.
+Scaling, relabeling, edited and removed roads, tied alternatives, malformed and
+unreachable inputs, and the largest admitted problem are covered. A fixed
+counterexample has a two-edge local optimum of 46 and global optimum of 44.
+`route_workbench.rs` separates structural admission from feasibility so an edit
+can retain unreachable deliveries or too few stops for a tour. A closed road
+keeps its authored identity and cost but is absent from search. Every changed
+edit and undo advances a checked revision and clears stale playback. Imported
+trace cursors must match the canonical network digest as well as the revision;
+their settling and relaxation events are regenerated, and the final result is
+revealed only at completion. Cursor movement changes presentation, not the
+amount of mathematical work performed. The digest is consistency binding,
+not authorship or custody evidence.
+
+Room, native input, shared wire adapter, CLI process, and MCP followable-next
+regressions cover the native room and custom street-network continuation. Solver
+correctness does not establish learning or enjoyment.
+
+The full recurrence and primary references to Dijkstra and Held-Karp are in
+[Route Lab](ROUTE_LAB.md). Implementation and regressions:
+`crates/core/src/route.rs`, `crates/core/src/route_workbench.rs`, and
+`crates/core/src/rooms/route_lab.rs`.
+
 ## What remains open
 
 Independent mathematical review before 1.0 remains unstaffed. The rest of the
