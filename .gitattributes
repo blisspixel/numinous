@@ -14,3 +14,9 @@ assets/fonts/**/*.otf binary
 assets/fonts/noto-sans/OFL.txt -text
 assets/fonts/noto-sans-jp/LICENSE -text
 assets/fonts/noto-sans-math/OFL.txt -text
+
+# Pinned upstream interoperability sources keep their exact provenance bytes.
+scripts/fixtures/interoperability/*.schema.json -text
+scripts/fixtures/interoperability/Apache-2.0.txt -text
+# The authored conformance example is hashed in its canonical LF form.
+scripts/fixtures/interoperability/okf-0.2-minimal.json text eol=lf
