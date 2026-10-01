@@ -118,8 +118,12 @@ fn paint_samples(
     for (column, value) in points {
         let x = *column as i32;
         let y = (top + (1.0 - (value - ymin) / yspan) * plot_height) as i32;
-        if let Some((previous_x, previous_y)) = previous {
+        if let Some((previous_x, previous_y)) = previous
+            && previous_x + 1 == x
+        {
             raster.line(previous_x, previous_y, x, y, mark);
+        } else {
+            raster.plot(x, y, mark);
         }
         previous = Some((x, y));
     }
@@ -210,24 +214,28 @@ pub fn draw_overlay(
     curves: &mut [impl FnMut(f64) -> Option<f64>],
 ) -> Option<(f64, f64)> {
     let width = layout.width.min(raster.width());
-    let sampled: Vec<CurveSamples> = curves
+    let sampled: Vec<(usize, CurveSamples)> = curves
         .iter_mut()
-        .filter_map(|value_at| sample_curve(width, xmin, xmax, value_at))
+        .enumerate()
+        .filter_map(|(index, value_at)| {
+            sample_curve(width, xmin, xmax, value_at).map(|samples| (index, samples))
+        })
         .collect();
     if sampled.is_empty() {
         return None;
     }
     let ymin = sampled
         .iter()
-        .map(|curve| curve.ymin)
+        .map(|(_, curve)| curve.ymin)
         .fold(f64::INFINITY, f64::min);
     let ymax = sampled
         .iter()
-        .map(|curve| curve.ymax)
+        .map(|(_, curve)| curve.ymax)
         .fold(f64::NEG_INFINITY, f64::max);
     let plot_height = band_plot_height(raster, layout)?;
-    for (index, samples) in sampled.iter().enumerate() {
-        let mark = numinous_core::PROGRAM_MARKS[index.min(numinous_core::PROGRAM_MARKS.len() - 1)];
+    for (index, samples) in &sampled {
+        let mark =
+            numinous_core::PROGRAM_MARKS[(*index).min(numinous_core::PROGRAM_MARKS.len() - 1)];
         paint_samples(
             raster,
             layout.top,
@@ -574,6 +582,111 @@ mod tests {
         assert!(curve_range(8, -1.0, 1.0, |_| None).is_none());
     }
 
+    #[test]
+    fn graph_views_leave_undefined_columns_blank_on_the_shared_axis() {
+        let layout = CurveLayout {
+            width: 9,
+            height: 20,
+            top: 0.0,
+            bottom_margin: 1.0,
+        };
+        let islands = |x: f64| {
+            let value = (x * x - 0.25).sqrt();
+            value.is_finite().then_some(value)
+        };
+        for view in 0..3 {
+            let mut raster = Raster::new(9, 20);
+            let bounds = match view {
+                0 => draw_curve(&mut raster, layout, -1.0, 1.0, islands),
+                1 => draw_two_curves(&mut raster, layout, -1.0, 1.0, islands, |x| {
+                    islands(x).map(|y| -y)
+                }),
+                _ => {
+                    let mut curves = [islands, islands];
+                    draw_overlay(&mut raster, layout, -1.0, 1.0, &mut curves)
+                }
+            };
+            assert!(bounds.is_some(), "view {view} must draw its finite islands");
+            let ink = lit_points(&raster);
+            for column in [0, 1, 2, 6, 7, 8] {
+                assert!(
+                    ink.iter().any(|&(x, _)| x == column),
+                    "view {view}, {column}"
+                );
+            }
+            assert!(
+                ink.iter().all(|&(x, _)| !(3..=5).contains(&x)),
+                "view {view} joined across undefined samples: {ink:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn graph_finite_isolated_samples_are_drawn_without_a_bridge() {
+        let mut raster = Raster::new(9, 20);
+        let bounds = draw_curve(
+            &mut raster,
+            CurveLayout {
+                width: 9,
+                height: 20,
+                top: 0.0,
+                bottom_margin: 1.0,
+            },
+            -1.0,
+            1.0,
+            |x| match x {
+                -1.0 => Some(0.0),
+                1.0 => Some(1.0),
+                _ => None,
+            },
+        );
+        assert_eq!(bounds, Some((0.0, 1.0)));
+        assert_eq!(lit_points(&raster), [(8, 0), (0, 19)]);
+    }
+
+    #[test]
+    fn undefined_overlay_voices_keep_each_defined_curves_original_mark() {
+        for index in 1..numinous_core::PROGRAM_MARKS.len() {
+            let mut curves: [fn(f64) -> Option<f64>; 4] = [|_| None; 4];
+            // Isolated samples test palette identity without line endpoints
+            // adding a second dose of ink to the same raster pixel.
+            curves[index] = |x| {
+                if x == -0.5 {
+                    Some(0.0)
+                } else if x == 0.5 {
+                    Some(1.0)
+                } else {
+                    None
+                }
+            };
+            let mut raster = Raster::new(9, 20);
+            assert_eq!(
+                draw_overlay(
+                    &mut raster,
+                    CurveLayout {
+                        width: 9,
+                        height: 20,
+                        top: 0.0,
+                        bottom_margin: 1.0,
+                    },
+                    -1.0,
+                    1.0,
+                    &mut curves,
+                ),
+                Some((0.0, 1.0))
+            );
+            let mut expected = Raster::new(9, 20);
+            expected.plot(2, 19, numinous_core::PROGRAM_MARKS[index]);
+            expected.plot(6, 0, numinous_core::PROGRAM_MARKS[index]);
+            assert_eq!(raster.to_rgba(), expected.to_rgba(), "voice {index}");
+        }
+        let creation =
+            numinous_core::StudioCreation::new_program(["sqrt(-1)", "0"], -1.0, 1.0, 1.0)
+                .expect("one defined voice");
+        let text = creation.plot_text(9, 20).expect("text view").text;
+        assert_eq!(text.trim(), "*********");
+    }
+
     /// The columns the core's character plot puts a mark in.
     ///
     /// Lines are trimmed of trailing space, so a column is marked when some row
@@ -593,10 +706,8 @@ mod tests {
 
     /// The columns the App's raster ends up with ink in, for the same curve.
     ///
-    /// Drawn rather than sampled, because the core's plot joins its samples
-    /// with a line and so marks the columns between two distant points too.
-    /// Comparing the App's raw sample columns against that would report a
-    /// difference that is only the two faces filling a gap the same way.
+    /// Inspect the rendered picture rather than the sampler, so a line that
+    /// incorrectly fills an undefined column cannot satisfy the parity check.
     fn drawn_columns(
         width: usize,
         xmin: f64,
@@ -708,6 +819,12 @@ mod tests {
                     discarded_somewhere,
                     "no width put a column on the singularity, so the discard path \
                      was never taken and this case proves nothing"
+                );
+                let columns =
+                    drawn_columns(41, xmin, xmax, |x| Some(numinous_core::eval(&expr, x, a)));
+                assert!(
+                    !columns.contains(&20),
+                    "the sampled singularity must stay blank in the picture"
                 );
             }
         }

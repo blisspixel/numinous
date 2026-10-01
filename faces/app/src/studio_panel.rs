@@ -32,6 +32,20 @@ fn fit_studio_line(text: &str, columns: usize) -> String {
     format!("{kept}{}", ".".repeat(columns.min(3)))
 }
 
+/// Keep the insertion point visible when an appended formula outgrows its row.
+fn fit_editor_line(text: &str, columns: usize) -> String {
+    let length = text.chars().count();
+    if length <= columns {
+        return text.to_string();
+    }
+    let prefix = ".".repeat(columns.min(3));
+    let tail: String = text
+        .chars()
+        .skip(length.saturating_sub(columns.saturating_sub(prefix.len())))
+        .collect();
+    format!("{prefix}{tail}")
+}
+
 fn studio_footer_lines(
     mode: InputMode,
     copy: input_legend::ControllerCopy,
@@ -1191,24 +1205,24 @@ impl StudioPanel {
                 InputMode::Controller => "KEYBOARD F1: HELP  F6: SCALE".to_string(),
             }
         };
-        // The reading name sits ahead of the roll. The fitter drops the tail,
-        // and the roll is already that tail.
-        if self.morph.is_none()
+        // The mathematical reading comes before navigation and roll context,
+        // so a compact window can still name the second curve it draws.
+        let reading = if self.morph.is_none()
             && let Some(GraphSlope::Derivative(derivative)) = self.graph_slope()
         {
-            context.push_str("  SLOPE ");
-            context.push_str(&derivative.source.to_ascii_uppercase());
+            Some(format!("SLOPE {}", derivative.source.to_ascii_uppercase()))
         } else if self.morph.is_none()
             && let Some(partial) = self.graph_partial()
         {
-            context.push(' ');
-            context.push(' ');
-            context.push_str(&partial.status_caption().to_ascii_uppercase());
-        }
-        if let Some(partial) = self.harmonic_partial() {
-            context.push(' ');
-            context.push(' ');
-            context.push_str(&partial.status_caption().to_ascii_uppercase());
+            Some(partial.status_caption().to_ascii_uppercase())
+        } else {
+            self.harmonic_partial()
+                .map(|partial| partial.status_caption().to_ascii_uppercase())
+        };
+        if self.error.is_none()
+            && let Some(reading) = reading
+        {
+            context = format!("{reading}  {context}");
         }
         if let Ok(creation) = self.current_creation() {
             let rows = creation.pattern_rows();
@@ -1307,6 +1321,8 @@ impl StudioPanel {
         } else {
             format!("Y = {}_", self.source.to_uppercase())
         };
+        let editor_columns = width.saturating_sub(20) / (6 * (scale + 1) as usize);
+        let typed = fit_editor_line(&typed, editor_columns);
         numinous_core::draw_text(raster, &typed, 10, 10 + 12 * scale, scale + 1, '#');
         for (index, (line, mark)) in self.status_lines(mode, columns).iter().enumerate() {
             numinous_core::draw_text(
@@ -1443,8 +1459,8 @@ fn finite_sample(expr: &Expr, x: f64, a: f64, sliders: &[StudioSlider]) -> Optio
 mod tests {
     use super::{
         AUTO_DWELL_SECONDS, MAX_STUDIO_EDITOR_CHARS, RECIPE_MORPH_SECONDS, STUDIO_HELP_LINES,
-        STUDIO_RECIPES, StudioPanel, compact_number, fit_studio_line, studio_footer_lines,
-        studio_scale,
+        STUDIO_RECIPES, StudioPanel, compact_number, fit_editor_line, fit_studio_line,
+        studio_footer_lines, studio_scale,
     };
     use crate::input_legend::{
         self, ControllerAction, ControllerButton, ControllerCopy, ControllerFace, InputMode,
@@ -2786,6 +2802,51 @@ mod tests {
     }
 
     #[test]
+    fn compact_studio_keeps_the_mathematical_reading_before_navigation() {
+        for (source, reading) in [
+            ("sin(a*x)+x/3", "SLOPE A*COS(A*X)+1/3"),
+            ("sin(2*pi*x)+0.5*sin(6*pi*x)", "PARTIAL"),
+        ] {
+            let mut panel = StudioPanel::new(source).expect("formula");
+            panel.toggle_help();
+            for (width, height) in [(360, 240), (900, 700), (1280, 720)] {
+                let scale = studio_scale(width);
+                let columns = width.saturating_sub(20) / (6 * scale as usize);
+                let [_, (context, mark)] = panel.status_lines(InputMode::KeyboardMouse, columns);
+                assert!(context.starts_with(reading), "{width} px: {context}");
+                let mut raster = Raster::new(width, height);
+                panel.draw(&mut raster, InputMode::KeyboardMouse, width, height);
+                assert_composed_text_line(&raster, &context, 10 + 44 * scale, scale, mark);
+            }
+        }
+    }
+
+    #[test]
+    fn long_formula_rows_keep_the_insertion_point_visible_without_changing_source() {
+        let source = "sin(a*x)+x/3+x^2/12+cos(a*x)+x^3/36";
+        let mut panel = StudioPanel::new(source).expect("formula");
+        panel.toggle_help();
+        let (width, height) = (360, 240);
+        let scale = studio_scale(width);
+        let columns = width.saturating_sub(20) / (6 * (scale + 1) as usize);
+        let typed = format!("Y = {}_", source.to_uppercase());
+        let shown = fit_editor_line(&typed, columns);
+        assert!(shown.starts_with("..."));
+        assert!(shown.ends_with("+X^3/36_"));
+        assert_eq!(shown.chars().count(), columns);
+        let mut raster = Raster::new(width, height);
+        panel.draw(&mut raster, InputMode::KeyboardMouse, width, height);
+        assert_composed_text_line(&raster, &shown, 10 + 12 * scale, scale + 1, '#');
+        assert_eq!(
+            panel.current_creation().expect("source intact").source(),
+            source
+        );
+        for columns in 0..=3 {
+            assert_eq!(fit_editor_line(&typed, columns), ".".repeat(columns));
+        }
+    }
+
+    #[test]
     fn keyboard_footer_keeps_share_visible_beside_the_creation() {
         for (width, height) in [(360, 240), (900, 700)] {
             let panel = StudioPanel::default();
@@ -3061,7 +3122,7 @@ mod tests {
         panel.toggle_help();
         panel.open_creation(&creation);
         let [_, (wide, _)] = panel.status_lines(InputMode::KeyboardMouse, 200);
-        assert!(wide.starts_with("SCALE CONTINUOUS  REOPENED  X -2 TO 2  SLOPE A*COS(A*X)"));
+        assert!(wide.starts_with("SLOPE A*COS(A*X)  SCALE CONTINUOUS  REOPENED  X -2 TO 2"));
         assert!(wide.contains("ROLL"), "{wide}");
         assert!(!wide.contains("REFUSED"), "{wide}");
         assert!(

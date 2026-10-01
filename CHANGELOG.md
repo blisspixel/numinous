@@ -13,6 +13,11 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
   These checks run locally and in CI; real-host discovery remains open.
 
 ### Fixed
+- Studio graph and overlay pictures preserve sampled undefined gaps in both
+  the App and core text preview. Isolated finite points remain visible; samples
+  on opposite sides of a domain gap are no longer joined into a false curve.
+- Studio shows slope and partial readings before navigation context and keeps
+  the insertion cursor visible when a long formula exceeds the editing row.
 - The portable plugin identifies Nick Seal as its author.
 
 ## [0.4.0-alpha.27] - 2026-09-30

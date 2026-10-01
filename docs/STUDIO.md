@@ -52,6 +52,13 @@ undefined-function refusal. All three faces use a 32-note default melody. A
 face still owns transport parsing and presentation, but it does not resample or
 reinterpret the formula.
 
+Graph and overlay drawings preserve sampled undefined gaps in the App and text
+preview. A finite sample on its own is still drawn; two samples separated by an
+undefined column are not joined. This is a sampling guarantee, not analytic
+detection of every discontinuity between finite samples. The App puts slope and
+partial readings before navigation context, and a long formula's editing row
+keeps its tail and insertion cursor visible without changing its source.
+
 **Alpha 18 correction:** fresh App formulas use the same default `a = 1` as
 their melody. Up/Down change `a` by 0.25 per press; Home restores 1. Controller
 Up/Down and Reset use the same actions and honor the effective button bindings.
