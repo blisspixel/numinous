@@ -10,8 +10,8 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
-**Implementation boundary, 2026-09-30:** all three faces are shipped from the
-same headless core in 0.4.0-alpha.28. Descriptions below mix current behavior
+**Implementation boundary, 2026-10-01:** all three faces are shipped from the
+same headless core in 0.4.0-alpha.29. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -258,7 +258,11 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   improvement, and bounded undo are deliberate. Networks with unreachable
   required stops remain editable and return a typed diagnostic. Unused isolated
   junctions do not prevent comparison. Search event costs are cumulative from
-  the starting junction. Imported cursor metadata binds revision and canonical
+  the starting junction. Additive `trace.view` projects only the revealed prefix:
+  per-junction cost, predecessor, and unseen, tentative, settled, or unreachable
+  state, plus the latest revealed event. Backward seeks remove later knowledge;
+  final results remain withheld until completion. The source alone begins with
+  tentative cost zero. Imported cursor metadata binds revision and canonical
   network content, and events are regenerated. The existing `townIdentity` wire
   field identifies that network content. Every returned `next` is a followable
   tool call. Scalar creation actions save, open, and remix exchange bounded

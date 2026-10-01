@@ -110,6 +110,24 @@ recording; cursor movement is presentation, not work avoided. The path or an
 unreachable result appears at completion. Imported cursor metadata must match
 both revision and the canonical network digest, and the events are regenerated.
 The digest detects inconsistent state, not authorship or independent custody.
+Core `RouteTracePlayback::view` folds only the revealed prefix into current
+junction costs, predecessors, and unseen, tentative, settled, or unreachable
+states. The source starts with tentative zero. A settlement establishes its
+minimum cost; a strict relaxation can replace an earlier tentative predecessor.
+Only a completed source search establishes that an unseen junction is
+unreachable. Backward seeks reconstruct the earlier view without future costs.
+CLI text and additive MCP `trace.view` use that projection. The existing snapshot
+format and portable creation identity stay unchanged.
+
+Both the ordinary room and native authoring draw the search on the network.
+Tentative predecessor links differ from settled connections and the final path;
+the latest relaxation is emphasized. Junction shapes and labels distinguish
+state without depending on color. Native authoring retains a selected-junction
+inspector on dense and compact maps. Click a node or use the junction controls
+to inspect it without advancing or restarting the recorded search. The path
+appears only when playback
+completes. These are bounded functional and presentation capabilities;
+participant comprehension has not been measured.
 
 The snapshot is caller-carried continuation across requests or processes.
 It carries session history without a profile write. [Route state and

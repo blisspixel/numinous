@@ -13,7 +13,8 @@ use crate::room::{MAX_ROOM_INPUTS, Room, RoomInput, inputs_from_pokes};
 use crate::route::{RouteError, RouteExchange, RouteTour};
 use crate::route::{RouteEvent, shortest_street_trace};
 use crate::route_workbench::{
-    MAX_ROUTE_UNDO, RouteEdit, RouteTownSnapshot, RouteWorkbench, RouteWorkbenchSnapshot,
+    MAX_ROUTE_UNDO, RouteEdit, RouteSearchState, RouteTownSnapshot, RouteWorkbench,
+    RouteWorkbenchSnapshot,
 };
 use crate::sound::{ParametricSound, SoundSpec};
 use crate::surface::Surface;
@@ -498,20 +499,37 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
         )
     };
     let node = |id: usize| point(POINTS[id].0, POINTS[id].1);
-    let route = experiment.map_or_else(
-        || disconnected_line(session),
-        |experiment| {
-            format!(
-                "{}-A  ROUND TRIP {}  EXACT BEST {}",
-                order_text(&experiment.current.order),
-                experiment.current.cost,
-                experiment.optimum.cost
-            )
-        },
-    );
+    let search_view = session
+        .trace_visible
+        .then(|| session.workbench.trace().map(|trace| trace.view()))
+        .flatten();
+    let search_path = session
+        .trace_visible
+        .then(|| session.workbench.trace().and_then(|trace| trace.result()))
+        .flatten()
+        .and_then(|result| result.as_ref().ok());
+    let route = if session.trace_visible {
+        "A>D SEARCH. JUNCTION COSTS ARE FROM A.".to_string()
+    } else {
+        experiment.map_or_else(
+            || disconnected_line(session),
+            |experiment| {
+                format!(
+                    "{}-A  ROUND TRIP {}  EXACT BEST {}",
+                    order_text(&experiment.current.order),
+                    experiment.current.cost,
+                    experiment.optimum.cost
+                )
+            },
+        )
+    };
     label(
         surface,
-        "DELIVER B C D. RETURN TO A.",
+        if session.trace_visible {
+            "? UNSEEN  ~ TENTATIVE  = FINAL  X UNREACHED"
+        } else {
+            "DELIVER B C D. RETURN TO A."
+        },
         point(0.03, 0.18).0,
         point(0.03, 0.18).1,
         scale,
@@ -526,17 +544,40 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
         '#',
     );
 
-    // All street walks expand through real edges. A double stroke encodes use
-    // without relying on color, and a dot marks streets outside this tour.
+    // Every highlighted connection is a real road. Search distinguishes
+    // revealed predecessor links from its completed path; ordinary play
+    // instead highlights the current delivery walk. Dots retain other roads.
     for (road_index, editable) in session.workbench.town().roads.iter().enumerate() {
         let road = &editable.road;
+        let on_road =
+            |from, to| (from == road.from && to == road.to) || (from == road.to && to == road.from);
         let used = editable.open
-            && experiment.is_some_and(|experiment| {
-                experiment.current.walk.windows(2).any(|pair| {
-                    (pair[0] == road.from && pair[1] == road.to)
-                        || (pair[0] == road.to && pair[1] == road.from)
+            && if session.trace_visible {
+                search_path.is_some_and(|path| {
+                    path.junctions
+                        .windows(2)
+                        .any(|pair| on_road(pair[0], pair[1]))
                 })
-            });
+            } else {
+                experiment.is_some_and(|experiment| {
+                    experiment
+                        .current
+                        .walk
+                        .windows(2)
+                        .any(|pair| on_road(pair[0], pair[1]))
+                })
+            };
+        let predecessor = search_view.as_ref().and_then(|view| {
+            view.junctions.iter().find(|junction| {
+                junction
+                    .predecessor
+                    .is_some_and(|from| on_road(from, junction.junction))
+            })
+        });
+        let active = search_view.as_ref().is_some_and(|view| {
+            matches!(view.active_event,
+            Some(RouteEvent::Relaxed { from, to, .. }) if on_road(from, to))
+        });
         let (ax, ay) = node(road.from);
         let (bx, by) = node(road.to);
         if editable.open {
@@ -564,6 +605,28 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
         }
         if used {
             surface.line(ax, ay + scale + 1, bx, by + scale + 1, '=');
+            if session.trace_visible {
+                surface.line(ax, ay - scale - 1, bx, by - scale - 1, '#');
+            }
+        } else if let Some(junction) = predecessor {
+            if junction.state == RouteSearchState::Settled {
+                surface.line(ax, ay, bx, by, '=');
+                surface.line(ax, ay + scale + 1, bx, by + scale + 1, '=');
+            } else {
+                for segment in (0..8).step_by(2) {
+                    surface.line(
+                        ax + (bx - ax) * segment / 8,
+                        ay + (by - ay) * segment / 8,
+                        ax + (bx - ax) * (segment + 1) / 8,
+                        ay + (by - ay) * (segment + 1) / 8,
+                        '+',
+                    );
+                }
+            }
+        }
+        if active {
+            surface.line(ax, ay, bx, by, '*');
+            surface.line(ax + scale, ay, bx + scale, by, '*');
         }
         let cost_label = format!(
             "{}{} {}",
@@ -605,15 +668,57 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
     }
     for id in 0..4 {
         let (x, y) = node(id);
+        let name = char::from(b'A' + id as u8);
+        let projected = search_view.as_ref().map(|view| &view.junctions[id]);
+        let node_label = if session.trace_visible {
+            projected.map_or_else(
+                || format!("{name}?"),
+                |junction| {
+                    let cost = junction
+                        .cost
+                        .map_or_else(|| "?".to_string(), |cost| cost.to_string());
+                    match junction.state {
+                        RouteSearchState::Unseen => format!("{name}?"),
+                        RouteSearchState::Unreachable => format!("{name}X"),
+                        RouteSearchState::Tentative => format!("{name}~{cost}"),
+                        RouteSearchState::Settled => format!("{name}={cost}"),
+                    }
+                },
+            )
+        } else {
+            name.to_string()
+        };
         label(
             surface,
-            &char::from(b'A' + id as u8).to_string(),
+            &node_label,
             x + if text_cells { 2 } else { 3 * scale },
             y - if text_cells { 1 } else { 3 * scale },
             scale,
             '@',
         );
-        surface.plot(x, y, '@');
+        if !text_cells {
+            let radius = 3 * scale;
+            match projected.map(|junction| junction.state) {
+                Some(RouteSearchState::Tentative) => {
+                    surface.line(x, y - radius, x + radius, y, '+');
+                    surface.line(x + radius, y, x, y + radius, '+');
+                    surface.line(x, y + radius, x - radius, y, '+');
+                    surface.line(x - radius, y, x, y - radius, '+');
+                }
+                Some(RouteSearchState::Settled) => {
+                    surface.line(x - radius, y - radius, x + radius, y - radius, '#');
+                    surface.line(x + radius, y - radius, x + radius, y + radius, '#');
+                    surface.line(x + radius, y + radius, x - radius, y + radius, '#');
+                    surface.line(x - radius, y + radius, x - radius, y - radius, '#');
+                }
+                Some(RouteSearchState::Unreachable) => {
+                    surface.line(x - radius, y - radius, x + radius, y + radius, 'x');
+                    surface.line(x - radius, y + radius, x + radius, y - radius, 'x');
+                }
+                _ => {}
+            }
+        }
+        surface.plot(x, y, if session.trace_visible { '.' } else { '@' });
     }
     // A path may traverse a delivery before its scheduled service. The visible
     // stop order, not an invented straight-line AD street, identifies the tour.
@@ -954,7 +1059,7 @@ impl Room for RouteLab {
 
     fn deep_cuts(&self) -> &'static [&'static str] {
         &[
-            "Every required delivery must be reachable from the depot for a round trip. An unused isolated junction need not prevent that trip. Dijkstra settles junctions by their smallest tentative cost; positive road costs make a settled distance final. Search shows actual decisions from A to D. Its costs are cumulative distances from A, not single-road costs. A tentative value may improve; a final value will not. Editing a road invalidates the calculation. Delivery legs follow open roads, including the return to A, and may pass or revisit other deliveries.",
+            "Every required delivery must be reachable from the depot for a round trip. An unused isolated junction need not prevent that trip. Dijkstra settles junctions by their smallest tentative cost; positive road costs make a settled distance final. Search shows actual decisions from A to D. Its costs are cumulative distances from A, not single-road costs. A tentative value may improve; a final value will not. Dashed connections are tentative predecessors; doubled connections support settled junction costs. The latest improved road is emphasized, and the completed path has a separate heavier stroke. Backward steps remove later knowledge. Unseen junctions become unreachable only after the source search completes. Editing a road invalidates the calculation. Delivery legs follow open roads, including the return to A, and may pass or revisit other deliveries.",
             "For nonadjacent edges (a,b) and (c,d), reversing the intervening segment changes cost by d(a,c)+d(b,d)-d(a,b)-d(c,d). This formula needs symmetric distances: one-way roads would also change internal costs.",
             "Subset dynamic programming keeps the cheapest depot-to-j route for each set of visited deliveries. Extending every smaller set and adding the final return proves the optimum for the declared finite integer-cost problem. Its state count is not the number of complete tours searched.",
         ]
@@ -1428,6 +1533,142 @@ mod tests {
         session.command('l');
         assert!(trace_line(&session).contains("STEP TO START"));
         assert!(!trace_line(&session).contains("PATH"));
+    }
+
+    #[test]
+    fn search_map_shows_only_revealed_costs_and_rewinds_without_future_paths() {
+        let room = RouteLab::new();
+        let mut session = room.session_from(&keys("t"));
+        let experiment = room.experiment(&keys("t")).unwrap();
+        let states = [
+            (0, ["A~0", "B?", "C?", "D?"]),
+            (2, ["A=0", "B~1", "C?", "D?"]),
+            (5, ["A=0", "B=1", "C~2", "D~4"]),
+            (7, ["A=0", "B=1", "C=2", "D=4"]),
+            (2, ["A=0", "B~1", "C?", "D?"]),
+        ];
+        for (cursor, expected) in states {
+            session.workbench.seek_trace(cursor).unwrap();
+            let mut canvas = Canvas::new(100, 50);
+            draw(&mut canvas, &session, Some(&experiment));
+            let text = canvas.to_text();
+            for cost in expected {
+                assert!(
+                    text.contains(cost),
+                    "cursor {cursor}: missing {cost}: {text}"
+                );
+            }
+            assert!(text.contains("JUNCTION COSTS ARE FROM A"));
+            assert_eq!(text.contains("PATH ABD COST 4"), cursor == 7);
+            assert!(!text.contains("DELIVER B C D. RETURN TO A."));
+        }
+        session.command('c');
+        let mut edited = Canvas::new(100, 50);
+        draw(&mut edited, &session, None);
+        for unseen in ["A?", "B?", "C?", "D?"] {
+            assert!(edited.to_text().contains(unseen));
+        }
+        assert!(!edited.to_text().contains("D~4"));
+    }
+
+    #[test]
+    fn search_map_marks_unreachable_only_when_source_search_finishes() {
+        let room = RouteLab::new();
+        let mut session = room.session_from(&keys("c.ct"));
+        for (cursor, reached) in [(0, false), (1, true), (0, false)] {
+            session.workbench.seek_trace(cursor).unwrap();
+            let mut canvas = Canvas::new(100, 50);
+            draw(&mut canvas, &session, None);
+            let text = canvas.to_text();
+            for name in ["B", "C", "D"] {
+                assert!(text.contains(&format!("{name}{}", if reached { "X" } else { "?" })));
+            }
+            assert_eq!(text.contains("NO OPEN PATH"), reached);
+        }
+    }
+
+    #[test]
+    fn search_raster_geometry_reveals_prefixes_paths_and_unreachability_then_rewinds() {
+        let room = RouteLab::new();
+        let mut session = room.session_from(&keys("t"));
+        let experiment = room.experiment(&keys("t")).unwrap();
+        let frame = |session: &Session, experiment: Option<&Experiment>| {
+            let mut raster = Raster::with_accent(1001, 1001, [30, 30, 30]);
+            draw(&mut raster, session, experiment);
+            raster.to_rgba()
+        };
+        let pixel = |frame: &[u8], x: usize, y: usize| {
+            let index = (y * 1001 + x) * 4;
+            [frame[index], frame[index + 1], frame[index + 2]]
+        };
+        let lit = |frame: &[u8], x, y| pixel(frame, x, y) != [10, 11, 15];
+        // Fixed map coordinates on this surface are A=(180,400), B=(450,230),
+        // C=(450,600), D=(820,400). These probes avoid labels and crossings.
+        // D's left corners distinguish a final square from a tentative diamond;
+        // its left midpoint distinguishes a final square from an unreachable X.
+        let initial = frame(&session, Some(&experiment));
+        assert!(lit(&initial, 152, 184), "tentative legend marker must render");
+        assert!(lit(&initial, 150, 186), "tentative legend marker must render");
+        assert!(!lit(&initial, 174, 394));
+        for (x, y) in [(814, 394), (814, 400), (814, 406)] {
+            assert!(!lit(&initial, x, y));
+        }
+        assert!(lit(&initial, 315, 315));
+        let mut tentative = Vec::new();
+        for cursor in 1..=7 {
+            session.workbench.seek_trace(cursor).unwrap();
+            let revealed = frame(&session, Some(&experiment));
+            assert!(
+                lit(&revealed, 174, 394),
+                "source settled at the first decision"
+            );
+            // AB's upper parallel stroke belongs only to the completed A-B-D
+            // path. A revealed final distance to B alone does not reveal it.
+            assert_eq!(lit(&revealed, 315, 312), cursor == 7);
+            if cursor == 2 {
+                tentative = revealed.clone();
+            }
+            if cursor == 4 {
+                assert!(!lit(&tentative, 315, 318));
+                assert!(lit(&revealed, 315, 318), "AB is now a settled predecessor");
+                assert_ne!(pixel(&revealed, 315, 500), pixel(&tentative, 315, 500));
+                assert_eq!(
+                    pixel(&revealed, 360, 533),
+                    pixel(&tentative, 360, 533),
+                    "tentative AC predecessor retains gaps"
+                );
+            }
+            if cursor == 5 {
+                assert!(!lit(&revealed, 814, 394));
+                assert!(lit(&revealed, 814, 400));
+                assert!(!lit(&revealed, 814, 406));
+            }
+            if cursor == 7 {
+                for (x, y) in [(814, 394), (814, 400), (814, 406)] {
+                    assert!(lit(&revealed, x, y), "completed destination square");
+                }
+            }
+        }
+        session.workbench.seek_trace(2).unwrap();
+        assert_eq!(frame(&session, Some(&experiment)), tentative);
+        session.workbench.seek_trace(0).unwrap();
+        assert_eq!(frame(&session, Some(&experiment)), initial);
+        session.command('c');
+        let edited = frame(&session, None);
+        assert!(!lit(&edited, 315, 312));
+        assert!(!lit(&edited, 814, 406));
+
+        let mut isolated = room.session_from(&keys("c.ct"));
+        let unseen = frame(&isolated, None);
+        assert!(!lit(&unseen, 814, 406));
+        isolated.workbench.seek_trace(1).unwrap();
+        let unreachable = frame(&isolated, None);
+        assert!(lit(&unreachable, 814, 394));
+        assert!(!lit(&unreachable, 814, 400));
+        assert!(lit(&unreachable, 814, 406));
+        assert!(!lit(&unreachable, 315, 312));
+        isolated.workbench.seek_trace(0).unwrap();
+        assert_eq!(frame(&isolated, None), unseen);
     }
 
     #[test]

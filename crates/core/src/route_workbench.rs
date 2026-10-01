@@ -173,11 +173,62 @@ pub struct RouteComparison {
     pub proposal: Option<RouteExchange>,
 }
 
+/// What the revealed shortest-path decisions establish about one junction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RouteSearchState {
+    /// No revealed road relaxation has reached this junction.
+    Unseen,
+    /// A distance is known, but its minimum has not yet been established.
+    Tentative,
+    /// A revealed settlement establishes the minimum distance from the source.
+    Settled,
+    /// The complete search establishes that this junction cannot be reached.
+    Unreachable,
+}
+
+/// One junction's distance and predecessor established by a revealed prefix.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RouteSearchJunction {
+    /// Junction identifier in the current street network.
+    pub junction: usize,
+    /// Distance from the source, absent when unseen or unreachable.
+    pub cost: Option<u32>,
+    /// Predecessor from the most recent strict improvement, absent at source.
+    pub predecessor: Option<usize>,
+    /// Whether the revealed decisions establish a tentative or final distance.
+    pub state: RouteSearchState,
+}
+
+/// Search state inferred only from decisions the caller has already revealed.
+///
+/// Rows are in junction identifier order. At cursor zero the source alone has
+/// tentative distance zero. Unseen rows become unreachable only when the full
+/// search has been revealed. The final path remains separate in
+/// [`RouteTracePlayback::result`], which withholds it until completion.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RouteSearchView {
+    /// Recorded search source, independent of a face's inspected junction.
+    pub from: usize,
+    /// Recorded destination, independent of a face's next target selection.
+    pub to: usize,
+    /// Number of recorded decisions the caller has revealed.
+    pub cursor: usize,
+    /// Total recorded decision count, without exposing their unseen contents.
+    pub event_count: usize,
+    /// Whether every recorded decision has been revealed.
+    pub completed: bool,
+    /// Current distance, predecessor, and state for every network junction.
+    pub junctions: Vec<RouteSearchJunction>,
+    /// Latest revealed decision, or none before the first step.
+    pub active_event: Option<RouteEvent>,
+}
+
 /// A genuine recorded calculation whose presentation advances only on request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RouteTracePlayback {
     snapshot: RouteTraceSnapshot,
     calculation: StreetTrace,
+    junctions: usize,
 }
 
 impl RouteTracePlayback {
@@ -210,6 +261,54 @@ impl RouteTracePlayback {
     #[must_use]
     pub fn result(&self) -> Option<&Result<StreetPath, RouteError>> {
         self.completed().then_some(&self.calculation.result)
+    }
+
+    /// Project the caller-visible prefix without exposing future decisions.
+    ///
+    /// Rebuilding from the prefix makes backward seeks erase later knowledge.
+    /// This folds recorded decisions; it performs no search or comparison.
+    #[must_use]
+    pub fn view(&self) -> RouteSearchView {
+        let mut junctions = (0..self.junctions)
+            .map(|junction| RouteSearchJunction {
+                junction,
+                cost: None,
+                predecessor: None,
+                state: RouteSearchState::Unseen,
+            })
+            .collect::<Vec<_>>();
+        junctions[self.snapshot.from].cost = Some(0);
+        junctions[self.snapshot.from].state = RouteSearchState::Tentative;
+        for event in self.visible_events() {
+            match *event {
+                RouteEvent::Settled { junction, cost } => {
+                    junctions[junction].cost = Some(cost);
+                    junctions[junction].state = RouteSearchState::Settled;
+                }
+                RouteEvent::Relaxed { from, to, cost } => {
+                    junctions[to].cost = Some(cost);
+                    junctions[to].predecessor = Some(from);
+                    junctions[to].state = RouteSearchState::Tentative;
+                }
+            }
+        }
+        let completed = self.completed();
+        if completed {
+            for junction in &mut junctions {
+                if junction.state == RouteSearchState::Unseen {
+                    junction.state = RouteSearchState::Unreachable;
+                }
+            }
+        }
+        RouteSearchView {
+            from: self.snapshot.from,
+            to: self.snapshot.to,
+            cursor: self.cursor(),
+            event_count: self.events().len(),
+            completed,
+            junctions,
+            active_event: self.visible_events().last().copied(),
+        }
     }
 }
 
@@ -517,6 +616,7 @@ impl RouteWorkbench {
                 cursor: 0,
             },
             calculation,
+            junctions: self.current.junctions,
         });
         Ok(())
     }
@@ -1100,5 +1200,365 @@ mod tests {
         );
         workbench.undo().unwrap();
         assert_eq!(workbench.compare().unwrap().exact.tour.cost, 20);
+    }
+
+    fn search_town(junctions: usize, roads: &[(usize, usize, u32)]) -> RouteWorkbench {
+        RouteWorkbench::from_snapshot(RouteWorkbenchSnapshot {
+            revision: 0,
+            current: RouteTownSnapshot {
+                junctions,
+                roads: roads
+                    .iter()
+                    .map(|&(from, to, cost)| EditableRoad {
+                        road: Road { from, to, cost },
+                        open: true,
+                    })
+                    .collect(),
+                stops: vec![0],
+                order: vec![0],
+            },
+            undo: Vec::new(),
+            trace: None,
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn search_view_has_independent_prefix_truth_and_erases_later_knowledge_on_seek() {
+        use RouteSearchState::{Settled, Tentative, Unreachable, Unseen};
+        let mut workbench =
+            search_town(5, &[(0, 1, 8), (0, 2, 2), (1, 2, 3), (1, 3, 1), (2, 3, 9)]);
+        workbench.start_trace(0, 3).unwrap();
+        // The cheaper 0-2-1 path replaces cost 8 with 5; its extension through
+        // 1 replaces 0-2-3 cost 11 with 6. Junction 4 is isolated throughout.
+        let decisions = [
+            RouteEvent::Settled {
+                junction: 0,
+                cost: 0,
+            },
+            RouteEvent::Relaxed {
+                from: 0,
+                to: 1,
+                cost: 8,
+            },
+            RouteEvent::Relaxed {
+                from: 0,
+                to: 2,
+                cost: 2,
+            },
+            RouteEvent::Settled {
+                junction: 2,
+                cost: 2,
+            },
+            RouteEvent::Relaxed {
+                from: 2,
+                to: 1,
+                cost: 5,
+            },
+            RouteEvent::Relaxed {
+                from: 2,
+                to: 3,
+                cost: 11,
+            },
+            RouteEvent::Settled {
+                junction: 1,
+                cost: 5,
+            },
+            RouteEvent::Relaxed {
+                from: 1,
+                to: 3,
+                cost: 6,
+            },
+            RouteEvent::Settled {
+                junction: 3,
+                cost: 6,
+            },
+        ];
+        let unknown = (None, None, Unseen);
+        let zero = (Some(0), None, Settled);
+        let states = [
+            [
+                (Some(0), None, Tentative),
+                unknown,
+                unknown,
+                unknown,
+                unknown,
+            ],
+            [zero, unknown, unknown, unknown, unknown],
+            [
+                zero,
+                (Some(8), Some(0), Tentative),
+                unknown,
+                unknown,
+                unknown,
+            ],
+            [
+                zero,
+                (Some(8), Some(0), Tentative),
+                (Some(2), Some(0), Tentative),
+                unknown,
+                unknown,
+            ],
+            [
+                zero,
+                (Some(8), Some(0), Tentative),
+                (Some(2), Some(0), Settled),
+                unknown,
+                unknown,
+            ],
+            [
+                zero,
+                (Some(5), Some(2), Tentative),
+                (Some(2), Some(0), Settled),
+                unknown,
+                unknown,
+            ],
+            [
+                zero,
+                (Some(5), Some(2), Tentative),
+                (Some(2), Some(0), Settled),
+                (Some(11), Some(2), Tentative),
+                unknown,
+            ],
+            [
+                zero,
+                (Some(5), Some(2), Settled),
+                (Some(2), Some(0), Settled),
+                (Some(11), Some(2), Tentative),
+                unknown,
+            ],
+            [
+                zero,
+                (Some(5), Some(2), Settled),
+                (Some(2), Some(0), Settled),
+                (Some(6), Some(1), Tentative),
+                unknown,
+            ],
+            [
+                zero,
+                (Some(5), Some(2), Settled),
+                (Some(2), Some(0), Settled),
+                (Some(6), Some(1), Settled),
+                (None, None, Unreachable),
+            ],
+        ];
+        assert_eq!(workbench.trace().unwrap().events(), decisions);
+        for cursor in (0..=decisions.len()).chain([8, 5, 0, 3, 9]) {
+            workbench.seek_trace(cursor).unwrap();
+            let playback = workbench.trace().unwrap();
+            let view = playback.view();
+            let expected = states[cursor]
+                .iter()
+                .enumerate()
+                .map(
+                    |(junction, &(cost, predecessor, state))| RouteSearchJunction {
+                        junction,
+                        cost,
+                        predecessor,
+                        state,
+                    },
+                )
+                .collect();
+            assert_eq!(
+                view,
+                RouteSearchView {
+                    from: 0,
+                    to: 3,
+                    cursor,
+                    event_count: 9,
+                    completed: cursor == 9,
+                    junctions: expected,
+                    active_event: cursor.checked_sub(1).map(|index| decisions[index]),
+                }
+            );
+            assert_eq!(playback.result().is_some(), cursor == 9);
+        }
+        let path = workbench
+            .trace()
+            .unwrap()
+            .result()
+            .unwrap()
+            .as_ref()
+            .unwrap();
+        assert_eq!(path.junctions, vec![0, 2, 1, 3]);
+        assert_eq!(path.cost, 6);
+    }
+
+    #[test]
+    fn equal_cost_search_alternatives_retain_the_first_revealed_predecessor() {
+        let mut workbench = search_town(5, &[(0, 1, 2), (0, 2, 2), (1, 3, 3), (2, 3, 3)]);
+        workbench.start_trace(0, 3).unwrap();
+        let count = workbench.trace().unwrap().events().len();
+        assert_eq!(count, 7);
+        workbench.seek_trace(5).unwrap();
+        let before = workbench.trace().unwrap().view();
+        assert_eq!(
+            before.junctions[3],
+            RouteSearchJunction {
+                junction: 3,
+                cost: Some(5),
+                predecessor: Some(1),
+                state: RouteSearchState::Tentative,
+            }
+        );
+        workbench.seek_trace(6).unwrap();
+        let after = workbench.trace().unwrap().view();
+        assert_eq!(after.junctions[3], before.junctions[3]);
+        assert_eq!(after.junctions[2].state, RouteSearchState::Settled);
+        assert_eq!(
+            after.active_event,
+            Some(RouteEvent::Settled {
+                junction: 2,
+                cost: 2
+            })
+        );
+        assert!(workbench.trace().unwrap().result().is_none());
+        workbench.seek_trace(count).unwrap();
+        assert_eq!(
+            workbench.trace().unwrap().view().junctions[3].predecessor,
+            Some(1)
+        );
+        assert_eq!(
+            workbench
+                .trace()
+                .unwrap()
+                .result()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .junctions,
+            vec![0, 1, 3]
+        );
+    }
+
+    #[test]
+    fn search_view_completion_distinguishes_unknown_from_proven_unreachable() {
+        for target in [31, 0] {
+            let mut workbench = search_town(crate::route::MAX_ROUTE_JUNCTIONS, &[]);
+            workbench.start_trace(31, target).unwrap();
+            let initial = workbench.trace().unwrap().view();
+            assert_eq!(initial.junctions.len(), crate::route::MAX_ROUTE_JUNCTIONS);
+            assert_eq!(
+                initial.junctions[31],
+                RouteSearchJunction {
+                    junction: 31,
+                    cost: Some(0),
+                    predecessor: None,
+                    state: RouteSearchState::Tentative,
+                }
+            );
+            assert!(
+                initial.junctions[..31]
+                    .iter()
+                    .all(|junction| junction.state == RouteSearchState::Unseen
+                        && junction.cost.is_none()
+                        && junction.predecessor.is_none())
+            );
+            assert!(!initial.completed);
+            assert!(initial.active_event.is_none());
+            assert!(workbench.trace().unwrap().result().is_none());
+            workbench.seek_trace(1).unwrap();
+            let playback = workbench.trace().unwrap();
+            let final_view = playback.view();
+            assert!(final_view.completed);
+            assert_eq!(final_view.junctions[31].state, RouteSearchState::Settled);
+            assert!(
+                final_view.junctions[..31]
+                    .iter()
+                    .all(|junction| junction.state == RouteSearchState::Unreachable
+                        && junction.cost.is_none()
+                        && junction.predecessor.is_none())
+            );
+            if target == 31 {
+                let path = playback.result().unwrap().as_ref().unwrap();
+                assert_eq!(path.cost, 0);
+                assert_eq!(path.junctions, vec![31]);
+            } else {
+                assert_eq!(
+                    playback.result(),
+                    Some(&Err(RouteError::Unreachable { from: 31, to: 0 }))
+                );
+            }
+            workbench.seek_trace(0).unwrap();
+            assert_eq!(workbench.trace().unwrap().view(), initial);
+        }
+        let mut connected = RouteWorkbench::first_town();
+        connected.start_trace(0, 0).unwrap();
+        connected.seek_trace(1).unwrap();
+        let playback = connected.trace().unwrap();
+        assert_eq!(
+            playback.view().junctions[0].state,
+            RouteSearchState::Settled
+        );
+        assert!(!playback.view().completed);
+        assert!(playback.result().is_none());
+        let count = playback.events().len();
+        connected.seek_trace(count).unwrap();
+        let playback = connected.trace().unwrap();
+        assert!(
+            playback
+                .view()
+                .junctions
+                .iter()
+                .all(|junction| junction.state == RouteSearchState::Settled)
+        );
+        let path = playback.result().unwrap().as_ref().unwrap();
+        assert_eq!(path.junctions, vec![0]);
+        assert_eq!(path.cost, 0);
+    }
+
+    #[test]
+    fn search_view_reimport_rebuilds_prefix_and_edits_invalidate_it_atomically() {
+        let mut workbench =
+            search_town(5, &[(0, 1, 8), (0, 2, 2), (1, 2, 3), (1, 3, 1), (2, 3, 9)]);
+        workbench.start_trace(0, 3).unwrap();
+        workbench.seek_trace(5).unwrap();
+        let snapshot = workbench.snapshot();
+        let view = workbench.trace().unwrap().view();
+        let restored = RouteWorkbench::from_snapshot(snapshot.clone()).unwrap();
+        assert_eq!(restored.snapshot(), snapshot);
+        assert_eq!(restored.trace().unwrap().view(), view);
+        let mut stale = snapshot.clone();
+        stale.current.roads[0].road.cost = 7;
+        assert_eq!(
+            RouteWorkbench::from_snapshot(stale),
+            Err(RouteWorkbenchError::TraceIdentity)
+        );
+        assert!(
+            !workbench
+                .apply(RouteEdit::RoadCost {
+                    from: 0,
+                    to: 1,
+                    cost: 8
+                })
+                .unwrap()
+        );
+        assert!(
+            workbench
+                .apply(RouteEdit::RoadCost {
+                    from: 0,
+                    to: 1,
+                    cost: 0
+                })
+                .is_err()
+        );
+        assert_eq!(workbench.trace().unwrap().view(), view);
+        workbench
+            .apply(RouteEdit::RoadOpen {
+                from: 0,
+                to: 2,
+                open: false,
+            })
+            .unwrap();
+        assert!(workbench.trace().is_none());
+        workbench.start_trace(0, 3).unwrap();
+        assert_eq!(workbench.trace().unwrap().view().cursor, 0);
+        workbench.seek_trace(2).unwrap();
+        assert_eq!(workbench.trace().unwrap().view().junctions[1].cost, Some(8));
+        workbench.undo().unwrap();
+        assert!(workbench.trace().is_none());
+        workbench.start_trace(0, 3).unwrap();
+        workbench.seek_trace(5).unwrap();
+        assert_eq!(workbench.trace().unwrap().view(), view);
     }
 }

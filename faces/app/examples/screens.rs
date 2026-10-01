@@ -96,7 +96,7 @@ mod studio_panel;
 const OUTPUT: &str = "renders/qa-app";
 const README_SCREENS: &str = "assets/screens";
 const DEFAULT_SIZE: (usize, usize) = (900, 700);
-const README_PLATES: [&str; 8] = [
+const README_PLATES: [&str; 9] = [
     "menu.png",
     "times-tables.png",
     "golden-angle.png",
@@ -105,6 +105,7 @@ const README_PLATES: [&str; 8] = [
     "studio.png",
     "kepler-laws.png",
     "lissajous.png",
+    "route-lab.png",
 ];
 const FULLSCREEN_SIZE: (usize, usize) = (1920, 1080);
 const ROOM_SIZE: (usize, usize) = DEFAULT_SIZE;
@@ -118,14 +119,19 @@ const MIN_SUPPORT_DENSITY_PERMILLE: usize = 1;
 const SPATIAL_TILE_SIZE: usize = 32;
 const MIN_COHERENT_TILES: usize = 2;
 const MIN_MEAN_CHANNEL_DELTA: usize = 4;
-const ROUTE_AUTHORING_STATES: [&str; 9] = [
+const ROUTE_AUTHORING_STATES: [&str; 14] = [
     "opening",
     "custom-network",
     "dense-network",
     "new-road-draft",
     "disconnected",
+    "search-opening",
     "search-prefix",
+    "search-improved",
+    "search-rewind",
     "search-complete",
+    "search-disconnected",
+    "search-dense",
     "keep-question",
     "remix-preview",
 ];
@@ -1565,6 +1571,16 @@ fn write_readme_screens(output: &Path) {
         &present_readme_plate(&studio, "studio.png"),
         &output.join("studio.png"),
     );
+    let search = route_authoring_panels()
+        .into_iter()
+        .find(|(state, _)| *state == "search-improved")
+        .expect("authored search improvement fixture")
+        .1;
+    let route = search.draw(DEFAULT_SIZE.0, DEFAULT_SIZE.1, None);
+    write_png(
+        &present_readme_plate(&route, "route-lab.png"),
+        &output.join("route-lab.png"),
+    );
 }
 
 fn gauntlet(seed: u64) -> play::GauntletPlay {
@@ -1629,7 +1645,8 @@ fn authored_route_workbench() -> numinous_core::route_workbench::RouteWorkbench 
 }
 
 fn route_authoring_panels() -> Vec<(&'static str, RoutePanel)> {
-    use numinous_core::route::{MAX_ROUTE_JUNCTIONS, MAX_ROUTE_ROADS, Road};
+    use numinous_core::route::{MAX_ROUTE_JUNCTIONS, MAX_ROUTE_ROADS, Road, RouteEvent};
+    use numinous_core::route_workbench::RouteSearchState;
     use numinous_core::route_workbench::{EditableRoad, RouteEdit, RouteWorkbench};
     let custom = authored_route_workbench();
     let comparison = custom.compare().expect("connected authored route fixture");
@@ -1672,6 +1689,7 @@ fn route_authoring_panels() -> Vec<(&'static str, RoutePanel)> {
             .unwrap();
     }
     assert!(disconnected.compare().is_err());
+    let disconnected_workbench = disconnected.clone();
     let mut disconnected = RoutePanel::new(disconnected);
     disconnected.act(RouteAction::Page(RoutePage::Roads));
     let search_panel = |complete: bool| {
@@ -1692,6 +1710,84 @@ fn route_authoring_panels() -> Vec<(&'static str, RoutePanel)> {
         assert_eq!(panel.workbench().trace().unwrap().completed(), complete);
         panel
     };
+    let start_search = |workbench: RouteWorkbench, target: usize| {
+        let mut panel = RoutePanel::new(workbench);
+        panel.act(RouteAction::Page(RoutePage::Search));
+        for _ in 0..target {
+            panel.act(RouteAction::Next);
+        }
+        panel.act(RouteAction::Search);
+        panel
+    };
+    let opening_search = start_search(RouteWorkbench::first_town(), 3);
+    let opening = opening_search.workbench().trace().unwrap().view();
+    assert_eq!(opening.cursor, 0);
+    assert_eq!(opening.junctions[0].cost, Some(0));
+    assert!(
+        opening.junctions[1..]
+            .iter()
+            .all(|junction| junction.cost.is_none())
+    );
+    let mut improved_search = start_search(custom.clone(), 5);
+    let improvement_cursor = improved_search
+        .workbench()
+        .trace()
+        .unwrap()
+        .events()
+        .iter()
+        .position(|event| {
+            matches!(
+                event,
+                RouteEvent::Relaxed {
+                    from: 4,
+                    to: 5,
+                    cost: 20
+                }
+            )
+        })
+        .expect("line route replaces the expensive direct tentative cost")
+        + 1;
+    for _ in 0..improvement_cursor {
+        improved_search.act(RouteAction::Step);
+    }
+    let improved = improved_search.workbench().trace().unwrap().view();
+    assert_eq!(improved.junctions[5].cost, Some(20));
+    assert_eq!(improved.junctions[5].predecessor, Some(4));
+    assert_eq!(improved.junctions[5].state, RouteSearchState::Tentative);
+    assert!(!improved.completed);
+    let mut rewound_search = RoutePanel::new(improved_search.workbench().clone());
+    rewound_search.act(RouteAction::Page(RoutePage::Search));
+    for _ in 0..5 {
+        rewound_search.act(RouteAction::Next);
+    }
+    rewound_search.act(RouteAction::Back);
+    let rewound = rewound_search.workbench().trace().unwrap().view();
+    assert_eq!(rewound.junctions[5].cost, Some(25));
+    assert_eq!(rewound.junctions[5].predecessor, Some(0));
+    assert_eq!(rewound.cursor + 1, improved.cursor);
+    let mut disconnected_search = start_search(disconnected_workbench, 5);
+    disconnected_search.act(RouteAction::Step);
+    let isolated = disconnected_search.workbench().trace().unwrap().view();
+    assert!(isolated.completed);
+    assert!(
+        isolated.junctions[1..]
+            .iter()
+            .all(|junction| junction.state == RouteSearchState::Unreachable)
+    );
+    let mut dense_search = start_search(dense.clone(), 31);
+    for _ in 0..12 {
+        dense_search.act(RouteAction::Step);
+    }
+    assert_eq!(
+        dense_search
+            .workbench()
+            .trace()
+            .unwrap()
+            .view()
+            .junctions
+            .len(),
+        MAX_ROUTE_JUNCTIONS
+    );
     let source = numinous_core::RouteCreation::new(custom.town().clone()).unwrap();
     let mut question = RoutePanel::opened(source.clone());
     question.act(RouteAction::Confirm);
@@ -1705,8 +1801,13 @@ fn route_authoring_panels() -> Vec<(&'static str, RoutePanel)> {
         ("dense-network", RoutePanel::new(dense)),
         ("new-road-draft", draft),
         ("disconnected", disconnected),
+        ("search-opening", opening_search),
         ("search-prefix", search_panel(false)),
+        ("search-improved", improved_search),
+        ("search-rewind", rewound_search),
         ("search-complete", search_panel(true)),
+        ("search-disconnected", disconnected_search),
+        ("search-dense", dense_search),
         ("keep-question", question),
         ("remix-preview", RoutePanel::opened(child)),
     ];

@@ -95,6 +95,58 @@ fn quantity(value: &Value, noun: &str) -> Result<String, String> {
     Ok(numinous_core::counted(count, noun))
 }
 
+fn event_text(event: &Value, source: &Value) -> Result<String, String> {
+    match event["type"].as_str() {
+        Some("settled") => Ok(format!(
+            "Final cost from {} to {}: {}.",
+            source, event["junction"], event["cost"]
+        )),
+        Some("relaxed") => Ok(format!(
+            "Tentative cost from {} to {} via {}: {}.",
+            source, event["to"], event["from"], event["cost"]
+        )),
+        _ => Err("Route report contains an unknown recorded event.".into()),
+    }
+}
+
+fn search_view_lines(view: &Value) -> Result<Vec<String>, String> {
+    let source = &view["from"];
+    let mut lines = vec![format!("Junction search state (costs from {source}):")];
+    for row in view["junctions"]
+        .as_array()
+        .ok_or("Route report lacks its junction search state.")?
+    {
+        let state = match row["state"].as_str() {
+            Some("unseen") => "unseen; no cost revealed".to_string(),
+            Some("unreachable") => format!("unreachable from {source}; no street path"),
+            Some(state @ ("tentative" | "settled")) => {
+                let label = if state == "settled" {
+                    "final"
+                } else {
+                    "tentative"
+                };
+                let predecessor = if row["predecessor"].is_null() {
+                    "no predecessor".into()
+                } else {
+                    format!("predecessor {}", row["predecessor"])
+                };
+                format!("{label} cost {} from {source}; {predecessor}", row["cost"])
+            }
+            _ => return Err("Route report contains an unknown junction search state.".into()),
+        };
+        lines.push(format!("  Junction {}: {state}.", row["junction"]));
+    }
+    if view["activeEvent"].is_null() {
+        lines.push("Active event: none revealed.".into());
+    } else {
+        lines.push(format!(
+            "Active event: {}",
+            event_text(&view["activeEvent"], source)?
+        ));
+    }
+    Ok(lines)
+}
+
 /// Render the shared result without exposing state envelopes in human output.
 fn readable(result: &Value) -> Result<String, String> {
     let network = &result["snapshot"]["current"];
@@ -183,21 +235,12 @@ fn readable(result: &Value) -> Result<String, String> {
                 "paused"
             }
         ));
+        lines.extend(search_view_lines(&trace["view"])?);
         for event in trace["events"]
             .as_array()
             .ok_or("Route report lacks its recorded events.")?
         {
-            lines.push(match event["type"].as_str() {
-                Some("settled") => format!(
-                    "  Final cost from {} to {}: {}.",
-                    trace["from"], event["junction"], event["cost"]
-                ),
-                Some("relaxed") => format!(
-                    "  Tentative cost from {} to {} via {}: {}.",
-                    trace["from"], event["to"], event["from"], event["cost"]
-                ),
-                _ => return Err("Route report contains an unknown recorded event.".into()),
-            });
+            lines.push(format!("  {}", event_text(event, &trace["from"])?));
         }
         let outcome = &trace["result"];
         if outcome.is_null() {
@@ -306,12 +349,25 @@ mod tests {
         assert!(text.contains("events revealed (paused)"));
         assert!(text.contains("Search playback 0 -> 3:"));
         assert!(text.contains("Next: reveal one recorded solver event."));
+        assert!(text.contains("Junction 0: tentative cost 0 from 0; no predecessor."));
+        assert!(text.contains("Junction 3: unseen; no cost revealed."));
+        assert!(text.contains("Active event: none revealed."));
         assert!(!text.contains("Shortest path:"));
         let step = route_json::response(&start["next"]["arguments"]).unwrap();
         assert!(
             readable(&step)
                 .unwrap()
                 .contains("Final cost from 0 to 0: 0.")
+        );
+        assert!(
+            readable(&step)
+                .unwrap()
+                .contains("Junction 0: final cost 0 from 0; no predecessor.")
+        );
+        assert!(
+            readable(&step)
+                .unwrap()
+                .contains("Active event: Final cost from 0 to 0: 0.")
         );
         let finish=route_json::response(&json!({"snapshot":step["snapshot"],"action":{"type":"step","cursor":step["trace"]["eventCount"]}})).unwrap();
         let text = readable(&finish).unwrap();
@@ -320,6 +376,12 @@ mod tests {
         assert!(text.contains("Tentative cost from 0 to 3 via 1: 4."));
         assert!(text.contains("Final cost from 0 to 3: 4."));
         assert!(text.contains("Shortest path: 0 -> 1 -> 3; 4 travel units."));
+        assert!(text.contains("Junction 3: final cost 4 from 0; predecessor 1."));
+        let rewind = route_json::response(
+            &json!({"snapshot":finish["snapshot"],"action":{"type":"step","cursor":0}}),
+        )
+        .unwrap();
+        assert_eq!(readable(&rewind).unwrap(), readable(&start).unwrap());
         let short =
             route_json::response(&json!({"action":{"type":"trace","from":0,"to":1}})).unwrap();
         let short=route_json::response(&json!({"snapshot":short["snapshot"],"action":{"type":"step","cursor":short["trace"]["eventCount"]}})).unwrap();
@@ -347,6 +409,11 @@ mod tests {
             readable(&complete)
                 .unwrap()
                 .contains("1 of 1 event revealed (complete)")
+        );
+        assert!(
+            readable(&complete)
+                .unwrap()
+                .contains("Junction 3: unreachable from 0; no street path.")
         );
     }
 }

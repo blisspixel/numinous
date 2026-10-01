@@ -240,6 +240,7 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use numinous_core::Surface;
 
     #[test]
     fn route_authoring_nested_previews_and_studio_entry_preserve_original_session() {
@@ -544,6 +545,178 @@ mod tests {
         assert_eq!(
             app.route_authoring.as_ref().unwrap().workbench().snapshot(),
             before
+        );
+    }
+    #[test]
+    fn route_authoring_search_real_pointer_keyboard_controller_and_draw_do_not_autoplay() {
+        use numinous_core::route_workbench::RouteSearchState;
+        let mut app = crate::tests::headless("route-search-alpha29-native");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "route-lab")
+            .unwrap();
+        app.apply_menu_intent(menu::MenuIntent::ConstructRoom);
+        assert!(app.route_active);
+        let initial_inputs = app.inputs.clone();
+        let original_town = app
+            .route_authoring
+            .as_ref()
+            .unwrap()
+            .workbench()
+            .town()
+            .clone();
+        let click = |app: &mut App, action: Action| {
+            let point = button_point(app, action);
+            app.begin_pointer_at(point);
+            app.end_pointer_at(point);
+        };
+        click(&mut app, Action::Page(Page::Search));
+        for _ in 0..3 {
+            click(&mut app, Action::Next);
+        }
+        click(&mut app, Action::Search);
+        let initial = app
+            .route_authoring
+            .as_ref()
+            .unwrap()
+            .workbench()
+            .trace()
+            .unwrap()
+            .view();
+        assert_eq!(initial.cursor, 0);
+        assert_eq!((initial.from, initial.to), (0, 3));
+        let initial_map = app.modal_frame(360, 240).unwrap().to_rgba();
+        let step = button_point(&app, Action::Step);
+        app.move_pointer_to(step, true);
+        assert_eq!(
+            app.route_authoring
+                .as_ref()
+                .unwrap()
+                .workbench()
+                .trace()
+                .unwrap()
+                .cursor(),
+            0
+        );
+        let index = app
+            .route_authoring
+            .as_ref()
+            .unwrap()
+            .buttons()
+            .iter()
+            .position(|button| button.action == Action::Step)
+            .unwrap();
+        let panel = app.route_authoring.as_mut().unwrap();
+        panel.act(Action::Page(Page::Search));
+        panel.navigate(index as i32);
+        app.handle_route_authoring_key(&Key::Named(NamedKey::Enter), false);
+        app.handle_route_authoring_key(&Key::Named(NamedKey::Enter), true);
+        assert_eq!(
+            app.route_authoring
+                .as_ref()
+                .unwrap()
+                .workbench()
+                .trace()
+                .unwrap()
+                .cursor(),
+            1
+        );
+        app.gamepad.set_cursor_for_test(step);
+        app.handle_gamepad_command(gamepad::Command::PointerMoved {
+            point: step,
+            held: true,
+        });
+        app.handle_gamepad_command(gamepad::Command::PrimaryDown);
+        app.handle_gamepad_command(gamepad::Command::PrimaryDown);
+        app.handle_gamepad_command(gamepad::Command::PrimaryUp);
+        let partial = app
+            .route_authoring
+            .as_ref()
+            .unwrap()
+            .workbench()
+            .trace()
+            .unwrap()
+            .view();
+        assert_eq!(partial.cursor, 2);
+        assert_eq!(partial.junctions[1].state, RouteSearchState::Tentative);
+        assert_ne!(app.modal_frame(360, 240).unwrap().to_rgba(), initial_map);
+        app.handle_gamepad_command(gamepad::Command::Menu);
+        assert!(app.show_help);
+        app.begin_pointer_at(step);
+        app.end_pointer_at(step);
+        assert_eq!(
+            app.route_authoring
+                .as_ref()
+                .unwrap()
+                .workbench()
+                .trace()
+                .unwrap()
+                .view(),
+            partial
+        );
+        app.handle_gamepad_command(gamepad::Command::Back);
+        assert!(!app.show_help);
+        for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
+            let raster = app.modal_frame(width, height).unwrap();
+            assert_eq!((raster.width(), raster.height()), (width, height));
+            assert_eq!(
+                app.route_authoring
+                    .as_ref()
+                    .unwrap()
+                    .workbench()
+                    .trace()
+                    .unwrap()
+                    .view(),
+                partial
+            );
+        }
+        let back = button_point(&app, Action::Back);
+        app.gamepad.set_cursor_for_test(back);
+        app.handle_gamepad_command(gamepad::Command::PointerMoved {
+            point: back,
+            held: false,
+        });
+        app.handle_gamepad_command(gamepad::Command::PrimaryDown);
+        app.handle_gamepad_command(gamepad::Command::PrimaryUp);
+        assert_eq!(
+            app.route_authoring
+                .as_ref()
+                .unwrap()
+                .workbench()
+                .trace()
+                .unwrap()
+                .view()
+                .junctions[1]
+                .state,
+            RouteSearchState::Unseen
+        );
+        click(&mut app, Action::Page(Page::Roads));
+        click(&mut app, Action::Cost(1));
+        click(&mut app, Action::Page(Page::Search));
+        assert!(
+            app.route_authoring
+                .as_ref()
+                .unwrap()
+                .workbench()
+                .trace()
+                .is_none()
+        );
+        app.modal_frame(360, 240).unwrap();
+        assert_eq!(app.inputs, initial_inputs);
+        assert_ne!(
+            app.route_authoring.as_ref().unwrap().workbench().town(),
+            &original_town
+        );
+        app.close_route_authoring();
+        app.open_route_authoring();
+        assert!(
+            app.route_authoring
+                .as_ref()
+                .unwrap()
+                .workbench()
+                .trace()
+                .is_none()
         );
     }
 }

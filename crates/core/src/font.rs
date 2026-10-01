@@ -58,6 +58,7 @@ fn glyph(c: char) -> [u8; GLYPH_H] {
         ',' => [0b00000,0b00000,0b00000,0b00000,0b01100,0b00100,0b01000],
         '\'' => [0b01100,0b00100,0b01000,0b00000,0b00000,0b00000,0b00000],
         '-' => [0b00000,0b00000,0b00000,0b11111,0b00000,0b00000,0b00000],
+        '~' => [0b00000,0b00000,0b01001,0b10110,0b00000,0b00000,0b00000],
         '+' => [0b00000,0b00100,0b00100,0b11111,0b00100,0b00100,0b00000],
         '*' => [0b00000,0b10101,0b01110,0b11111,0b01110,0b10101,0b00000],
         '=' => [0b00000,0b00000,0b11111,0b00000,0b11111,0b00000,0b00000],
@@ -190,12 +191,14 @@ mod tests {
 
     #[test]
     fn every_supported_glyph_draws_something() {
-        let charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,'-!?:()/+*=^<>[]%π·";
-        let mut c = Canvas::new(charset.chars().count() * 6, 8);
-        draw_text(&mut c, charset, 0, 0, 1, '*');
-        assert!(
-            c.ink_count() > 100,
-            "the full charset should draw many pixels"
-        );
+        let charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,'~-!?:()/+*=^<>[]%π·";
+        for character in charset.chars() {
+            let mut c = Canvas::new(6, 8);
+            draw_text(&mut c, &character.to_string(), 0, 0, 1, '*');
+            assert!(
+                c.ink_count() > 0,
+                "supported glyph {character} must be visible"
+            );
+        }
     }
 }

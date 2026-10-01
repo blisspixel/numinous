@@ -121,11 +121,18 @@ with the exact minimum, or step through a shortest-path search. Open `route-lab`
 through any face. Construct a custom network in the App, or use CLI and MCP
 for typed edits. Keep its question, reopen the same roads and deliveries, and
 make a deliberate remix through the existing project chain.
+Search draws tentative connections and final junction costs on the network.
+Step backward to revisit a decision; the completed path appears only after
+the recorded search finishes. Dense networks retain a junction inspector.
 [`PLAY.md`](PLAY.md) explains the controls and how to continue an experiment.
+
+![Route Lab search](assets/screens/route-lab.png)
+
+**Route Lab search.** A cheaper connection replaces an earlier tentative path.
 
 ## Status
 
-**0.4.0-alpha.28** is playable: 356 catalog rooms, games, Journey, Studio,
+**0.4.0-alpha.29** is playable: 356 catalog rooms, games, Journey, Studio,
 controllers, and Watch Agent. The **0.2** Flagship Proof and **0.3** Tactile
 Alpha agent-and-machine exits are met and CI-locked. **0.4 Understanding Alpha
 is active, not complete.**
