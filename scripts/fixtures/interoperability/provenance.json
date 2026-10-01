@@ -1,0 +1,54 @@
+{
+  "agentPluginsVersion": "1.0.0",
+  "okfVersion": "0.2",
+  "retrievedAt": "2026-09-30",
+  "artifacts": [
+    {
+      "path": "plugin.schema.json",
+      "source": "https://raw.githubusercontent.com/agentplugins/agent-plugins-spec/ff8ab5e392cc87bd88d87c060815a87490e51003/schemas/1.0.0/plugin.schema.json",
+      "sha256": "0a4aad95ce337878ad38802ebf0daa3fde76abe3f65400c86bcbb1ec0b3ab883",
+      "upstreamRevision": "ff8ab5e392cc87bd88d87c060815a87490e51003",
+      "canonicalSchemaId": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+    },
+    {
+      "path": "mcp.schema.json",
+      "source": "https://raw.githubusercontent.com/agentplugins/agent-plugins-spec/ff8ab5e392cc87bd88d87c060815a87490e51003/schemas/1.0.0/mcp.schema.json",
+      "sha256": "6539175bfcdf43085855183e86da40ea94b166547a72b47ae9a0a390516d3acb",
+      "upstreamRevision": "ff8ab5e392cc87bd88d87c060815a87490e51003",
+      "canonicalSchemaId": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"
+    },
+    {
+      "path": "Apache-2.0.txt",
+      "source": "https://raw.githubusercontent.com/agentplugins/agent-plugins-spec/ff8ab5e392cc87bd88d87c060815a87490e51003/LICENSES/Apache-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "upstreamRevision": "ff8ab5e392cc87bd88d87c060815a87490e51003"
+    },
+    {
+      "standard": "OKF",
+      "version": "0.2",
+      "source": "https://raw.githubusercontent.com/GoogleCloudPlatform/open-knowledge-format/ad30107c31c06aec8a7d5636e0d1058118604e6f/SPEC.md",
+      "sha256": "26aa5da029278939f914e578107242d9607d4f2dc5fe153272b82f9ed1030101",
+      "upstreamRevision": "ad30107c31c06aec8a7d5636e0d1058118604e6f"
+    },
+    {
+      "path": "okf-0.2-minimal.json",
+      "source": "https://raw.githubusercontent.com/GoogleCloudPlatform/open-knowledge-format/ad30107c31c06aec8a7d5636e0d1058118604e6f/SPEC.md",
+      "upstreamRevision": "ad30107c31c06aec8a7d5636e0d1058118604e6f",
+      "sourceSections": [
+        "4.1",
+        "6.1",
+        "8",
+        "11",
+        "12"
+      ],
+      "fixtureKind": "authored conformance example",
+      "sha256": "be37f06d3c347a262a0759a7396d81c98d296ba38a205e289038d3403b75fdb8"
+    }
+  ],
+  "agentSkillsReference": {
+    "package": "skills-ref",
+    "version": "0.1.1",
+    "source": "https://github.com/agentskills/agentskills/tree/main/skills-ref",
+    "wheelSha256": "d35db5bb8de71ae301daf5ca9cb71f8a555e8c6f83a6d40e46a5bc09f8f461b5"
+  }
+}

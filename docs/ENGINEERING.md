@@ -131,6 +131,15 @@ that evidence.
 
 ### The Python gates are linted, and typed by ratchet
 
+Portable plugin and knowledge-export conformance use the exact validator
+versions in `requirements-interoperability.txt`. Official plugin schemas are
+kept as repository fixtures with source revision and digest metadata, so the
+gate can validate offline. Canonical schema validation supplements the local
+semantic contracts. A real YAML parser checks skill frontmatter and the
+production MCP knowledge export, including escaping and correction lineage.
+Protocol conformance does not establish that a particular host can discover
+and load the plugin.
+
 The scripts in `scripts/` decide whether a release ships, and for a long time
 they were the least-checked code in the repository: no linter, no type checker.
 Both now run in the local gate and in CI as `python-quality`.

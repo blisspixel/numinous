@@ -4,14 +4,24 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Hashable
+import hashlib
 import json
 from pathlib import Path
 import re
+import subprocess
+import sys
 from typing import Any
+
+from jsonschema import Draft202012Validator
+from referencing import Registry
+from referencing.exceptions import Unresolvable
+import yaml
 
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PLUGIN_ROOT = ROOT / "plugins" / "numinous"
+FIXTURE_ROOT = ROOT / "scripts" / "fixtures" / "interoperability"
 PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
 MCP_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"
 NAME_RE = re.compile(r"^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$")
@@ -50,6 +60,91 @@ class PluginValidationError(ValueError):
     """A portable package violates the pinned contract."""
 
 
+class UniqueSafeLoader(yaml.SafeLoader):
+    """Read ordinary YAML mappings without ambiguous duplicate keys."""
+
+    def construct_mapping(
+        self, node: yaml.nodes.MappingNode, deep: bool = False
+    ) -> dict[Hashable, Any]:
+        result: dict[Hashable, Any] = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if not isinstance(key, str):
+                raise PluginValidationError("YAML mapping keys must be strings")
+            if key in result:
+                raise PluginValidationError(f"YAML repeats field {key!r}")
+            result[key] = self.construct_object(value_node, deep=deep)
+        return result
+
+
+def parse_frontmatter(text: str, label: str) -> tuple[dict[str, Any], str]:
+    """Parse bounded YAML safely, refusing aliases, duplicates, and extra documents."""
+    if len(text.encode("utf-8")) > 64 * 1024:
+        raise PluginValidationError(f"{label} exceeds 64 KiB")
+    lines = text.splitlines()
+    if not lines or lines[0] != "---":
+        raise PluginValidationError(f"{label} has no opening frontmatter delimiter")
+    try:
+        closing = lines.index("---", 1)
+    except ValueError as error:
+        raise PluginValidationError(
+            f"{label} has no closing frontmatter delimiter"
+        ) from error
+    document = "\n".join(lines[1:closing])
+    try:
+        for token in yaml.scan(document):
+            if isinstance(token, (yaml.tokens.AliasToken, yaml.tokens.AnchorToken)):
+                raise PluginValidationError(f"{label} YAML aliases are unsupported")
+        fields = yaml.load(document, Loader=UniqueSafeLoader)
+    except (yaml.YAMLError, RecursionError) as error:
+        raise PluginValidationError(
+            f"{label} has malformed YAML frontmatter"
+        ) from error
+    if not isinstance(fields, dict):
+        raise PluginValidationError(f"{label} frontmatter must be a mapping")
+    return fields, "\n".join(lines[closing + 1 :]).strip()
+
+
+def validate_schema(value: dict[str, Any], filename: str) -> None:
+    """Validate against a hashed canonical schema fixture without network access."""
+    provenance = read_json(FIXTURE_ROOT / "provenance.json")
+    records = provenance.get("artifacts")
+    if not isinstance(records, list):
+        raise PluginValidationError("schema provenance has no artifact list")
+    record = next(
+        (
+            item
+            for item in records
+            if isinstance(item, dict) and item.get("path") == filename
+        ),
+        None,
+    )
+    path = FIXTURE_ROOT / filename
+    if record is None or not path.is_file() or path.is_symlink():
+        raise PluginValidationError(f"missing pinned schema fixture: {filename}")
+    if hashlib.sha256(path.read_bytes()).hexdigest() != record.get("sha256"):
+        raise PluginValidationError(f"pinned schema digest differs: {filename}")
+    schema = read_json(path)
+    Draft202012Validator.check_schema(schema)
+    # The library's default registry can retrieve an unknown reference over
+    # HTTP. These fixtures resolve internal JSON pointers only; an empty
+    # registry makes that offline boundary explicit even if a fixture changes.
+    try:
+        errors = list(
+            Draft202012Validator(schema, registry=Registry()).iter_errors(value)
+        )
+    except Unresolvable as reference_error:
+        raise PluginValidationError(
+            f"pinned schema has an unresolved offline reference: {filename}"
+        ) from reference_error
+    if errors:
+        error = errors[0]
+        location = ".".join(str(part) for part in error.absolute_path) or "root"
+        raise PluginValidationError(
+            f"canonical {filename} rejects {location}: {error.message}"
+        )
+
+
 def object_without_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     """Build one JSON object while refusing ambiguous duplicate fields."""
     result: dict[str, Any] = {}
@@ -68,7 +163,8 @@ def read_json(path: Path) -> dict[str, Any]:
         raise PluginValidationError(f"JSON file exceeds 64 KiB: {path}")
     try:
         value = json.loads(
-            path.read_text(encoding="utf-8"), object_pairs_hook=object_without_duplicates
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=object_without_duplicates,
         )
     except (UnicodeError, json.JSONDecodeError) as error:
         raise PluginValidationError(f"malformed JSON: {path}") from error
@@ -117,13 +213,21 @@ def validate_manifest(manifest: dict[str, Any], expected_version: str) -> None:
     if NAME_RE.fullmatch(name) is None or name != "numinous":
         raise PluginValidationError("plugin name is not the canonical 'numinous' name")
     if manifest.get("version") != expected_version:
-        raise PluginValidationError("plugin version does not match the workspace release")
+        raise PluginValidationError(
+            "plugin version does not match the workspace release"
+        )
     require_string(manifest.get("description"), "plugin description")
     author = manifest.get("author")
     if not isinstance(author, dict) or not author or set(author) - AUTHOR_FIELDS:
         raise PluginValidationError("plugin author object is malformed")
     for field, value in author.items():
         require_string(value, f"plugin author {field}")
+    if author != {
+        "name": "Nick Seal",
+        "email": "32712898+blisspixel@users.noreply.github.com",
+        "url": "https://github.com/blisspixel",
+    }:
+        raise PluginValidationError("plugin author must match the repository identity")
     for field in ("homepage", "repository", "license"):
         require_string(manifest.get(field), f"plugin {field}")
     if manifest["repository"] != "https://github.com/blisspixel/numinous":
@@ -134,13 +238,16 @@ def validate_manifest(manifest: dict[str, Any], expected_version: str) -> None:
     if not isinstance(keywords, list) or not keywords:
         raise PluginValidationError("plugin keywords must be a nonempty string list")
     if any(not isinstance(keyword, str) or not keyword for keyword in keywords):
-        raise PluginValidationError("plugin keywords contain a non-string or empty value")
+        raise PluginValidationError(
+            "plugin keywords contain a non-string or empty value"
+        )
     extensions = manifest.get("extensions")
     if extensions is not None and (
         not isinstance(extensions, dict)
         or any(not isinstance(value, dict) for value in extensions.values())
     ):
         raise PluginValidationError("plugin extensions must map names to objects")
+    validate_schema(manifest, "plugin.schema.json")
 
 
 def validate_mcp(configuration: dict[str, Any]) -> None:
@@ -159,48 +266,20 @@ def validate_mcp(configuration: dict[str, Any]) -> None:
         raise PluginValidationError(
             "Numinous MCP must launch the installed binary as one bare token"
         )
+    validate_schema(configuration, "mcp.schema.json")
 
 
 def parse_skill_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
-    """Parse the deliberately small Agent Skills frontmatter subset in use."""
+    """Read one ordinary Agent Skills file through a real YAML parser."""
     if not path.is_file() or path.is_symlink():
         raise PluginValidationError(f"missing ordinary skill file: {path}")
     if path.stat().st_size > 64 * 1024:
         raise PluginValidationError("SKILL.md exceeds 64 KiB")
-    text = path.read_text(encoding="utf-8")
-    lines = text.splitlines()
-    if not lines or lines[0] != "---":
-        raise PluginValidationError("SKILL.md has no opening frontmatter delimiter")
     try:
-        closing = lines.index("---", 1)
-    except ValueError as error:
-        raise PluginValidationError("SKILL.md has no closing frontmatter delimiter") from error
-    fields: dict[str, Any] = {}
-    current_mapping: str | None = None
-    for line in lines[1:closing]:
-        if not line.strip():
-            continue
-        if line.startswith("  "):
-            if current_mapping != "metadata" or ":" not in line:
-                raise PluginValidationError("SKILL.md has unsupported nested frontmatter")
-            key, raw = line.strip().split(":", maxsplit=1)
-            metadata = fields.setdefault("metadata", {})
-            if key in metadata:
-                raise PluginValidationError(f"SKILL.md repeats metadata field {key!r}")
-            metadata[key] = raw.strip().strip('"')
-            continue
-        current_mapping = None
-        if ":" not in line:
-            raise PluginValidationError("SKILL.md has malformed frontmatter")
-        key, raw = line.split(":", maxsplit=1)
-        if key in fields:
-            raise PluginValidationError(f"SKILL.md repeats field {key!r}")
-        if key == "metadata" and not raw.strip():
-            fields[key] = {}
-            current_mapping = key
-        else:
-            fields[key] = raw.strip().strip('"')
-    return fields, "\n".join(lines[closing + 1 :]).strip()
+        text = path.read_text(encoding="utf-8")
+    except UnicodeError as error:
+        raise PluginValidationError("SKILL.md must be UTF-8 text") from error
+    return parse_frontmatter(text, "SKILL.md")
 
 
 def validate_skill(path: Path) -> None:
@@ -244,13 +323,34 @@ def validate_skill(path: Path) -> None:
         "prompts, private reasoning",
     ):
         if required not in body:
-            raise PluginValidationError(f"SKILL.md omits required boundary {required!r}")
+            raise PluginValidationError(
+                f"SKILL.md omits required boundary {required!r}"
+            )
+    try:
+        reference = subprocess.run(
+            [sys.executable, "-m", "skills_ref.cli", "validate", str(path.parent)],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise PluginValidationError(
+            "Agent Skills reference validator could not complete"
+        ) from error
+    if reference.returncode != 0:
+        detail = (reference.stdout + reference.stderr).strip()[:2048]
+        raise PluginValidationError(
+            f"Agent Skills reference validation failed: {detail}"
+        )
 
 
 def validate_package(plugin_root: Path, expected_version: str | None = None) -> None:
     """Validate every portable component and refuse an ambiguous package root."""
     if not plugin_root.is_dir() or plugin_root.is_symlink():
-        raise PluginValidationError(f"plugin root is not an ordinary directory: {plugin_root}")
+        raise PluginValidationError(
+            f"plugin root is not an ordinary directory: {plugin_root}"
+        )
     resolved_root = plugin_root.resolve()
     actual_files: set[str] = set()
     for path in plugin_root.rglob("*"):
@@ -260,7 +360,9 @@ def validate_package(plugin_root: Path, expected_version: str | None = None) -> 
             try:
                 relative = path.resolve().relative_to(resolved_root).as_posix()
             except ValueError as error:
-                raise PluginValidationError(f"plugin path escapes its root: {path}") from error
+                raise PluginValidationError(
+                    f"plugin path escapes its root: {path}"
+                ) from error
             actual_files.add(relative)
     if actual_files != EXPECTED_PLUGIN_FILES:
         missing = sorted(EXPECTED_PLUGIN_FILES - actual_files)
@@ -276,7 +378,9 @@ def validate_package(plugin_root: Path, expected_version: str | None = None) -> 
 def main() -> int:
     """CLI entry point."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("plugin_root", nargs="?", type=Path, default=DEFAULT_PLUGIN_ROOT)
+    parser.add_argument(
+        "plugin_root", nargs="?", type=Path, default=DEFAULT_PLUGIN_ROOT
+    )
     parser.add_argument("--expected-version")
     args = parser.parse_args()
     try:

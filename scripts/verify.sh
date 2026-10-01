@@ -75,6 +75,10 @@ echo "== release packaging =="
 python3 scripts/test-package-release.py
 echo "== portable agent plugin =="
 python3 scripts/test-agent-plugin.py
+echo "== interoperability validator contracts =="
+python3 scripts/test-agent-interoperability.py
+echo "== production knowledge export conformance =="
+python3 scripts/agent-interoperability.py
 echo "== Sensory Lift platform proof contract =="
 python3 scripts/test-sensory-platform-proof.py
 echo "== Sensory Lift physical set contract =="
@@ -133,7 +137,7 @@ bash scripts/install.sh --self-test
 
 echo "== regenerate study reader plates =="
 cargo run -q -p numinous-app --example study_screens --locked
-echo "== regenerate 2,945-screen app QA matrix =="
+echo "== regenerate complete app QA matrix =="
 cargo run -q -p numinous-app --example screens
 echo "== regenerate remaining artifacts into renders/ =="
 cargo run -q --bin numinous -- gallery --dir renders --width 600 --height 600

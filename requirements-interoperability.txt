@@ -1,0 +1,8 @@
+# Offline schema, YAML, and reference skill checks. Installation is the only
+# network step; neither the conformance harness nor its validators fetch data.
+jsonschema==4.26.0
+referencing==0.37.0
+PyYAML==6.0.3
+skills-ref==0.1.1
+types-jsonschema==4.26.0.20260518
+types-PyYAML==6.0.12.20260906

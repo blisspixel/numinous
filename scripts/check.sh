@@ -63,6 +63,10 @@ echo "== release packaging =="
 python3 scripts/test-package-release.py
 echo "== portable agent plugin =="
 python3 scripts/test-agent-plugin.py
+echo "== interoperability validator contracts =="
+python3 scripts/test-agent-interoperability.py
+echo "== production knowledge export conformance =="
+python3 scripts/agent-interoperability.py
 echo "== Sensory Lift platform proof contract =="
 python3 scripts/test-sensory-platform-proof.py
 echo "== Sensory Lift physical set contract =="

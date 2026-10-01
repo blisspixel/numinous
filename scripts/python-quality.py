@@ -55,6 +55,7 @@ STRICT: Final[frozenset[str]] = frozenset(
     {
         "agent-first-contact.py",
         "agent-hallway.py",
+        "agent-interoperability.py",
         "agent-tactile.py",
         "clean-machine-release.py",
         "gate_cli.py",
@@ -62,6 +63,7 @@ STRICT: Final[frozenset[str]] = frozenset(
         "release-engagement-smoke.py",
         "run-exact-test.py",
         "sensory-platform-set.py",
+        "test-agent-interoperability.py",
         "test-agent-plugin.py",
         "test-am-soak.py",
         "test-clean-machine-release.py",
