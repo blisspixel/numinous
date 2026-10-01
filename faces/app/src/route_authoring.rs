@@ -2,7 +2,8 @@
 
 use numinous_core::route::{Road, RouteEvent};
 use numinous_core::route_workbench::{
-    EditableRoad, RouteEdit, RouteWorkbench, RouteWorkbenchSnapshot,
+    EditableRoad, RouteEdit, RouteSearchState, RouteSearchView, RouteWorkbench,
+    RouteWorkbenchSnapshot,
 };
 use numinous_core::{ProjectDraft, ProjectNext, Raster, RouteCreation, Surface};
 
@@ -239,8 +240,8 @@ impl Panel {
                     ("UNDO", Action::Undo),
                 ],
                 Page::Search => vec![
-                    ("TARGET <", Action::Previous),
-                    ("TARGET >", Action::Next),
+                    ("JUNCTION <", Action::Previous),
+                    ("JUNCTION >", Action::Next),
                     ("START SEARCH", Action::Search),
                     ("BACK", Action::Back),
                     ("STEP", Action::Step),
@@ -283,7 +284,13 @@ impl Panel {
                     let row = index / 3;
                     (
                         0.02 + column as f64 * 0.325,
-                        (if self.page == Page::Keep { 0.60 } else { 0.40 }) + row as f64 * 0.075,
+                        (if self.page == Page::Keep {
+                            0.60
+                        } else if self.page == Page::Search {
+                            0.72
+                        } else {
+                            0.40
+                        }) + row as f64 * 0.075,
                         0.315,
                         0.065,
                     )
@@ -311,6 +318,23 @@ impl Panel {
             self.focus = index;
             if activate {
                 return self.act(button.action);
+            }
+            return Effect::None;
+        }
+        if self.page == Page::Search && activate && !self.paused {
+            let nearest = self
+                .network_locations()
+                .into_iter()
+                .enumerate()
+                .filter_map(|(junction, center)| {
+                    let dx = (point.0 - center.0) / 0.025;
+                    let dy = (point.1 - center.1) / 0.018;
+                    let distance = dx * dx + dy * dy;
+                    (distance <= 1.0).then_some((junction, distance))
+                })
+                .min_by(|a, b| a.1.total_cmp(&b.1));
+            if let Some((junction, _)) = nearest {
+                self.junction = junction;
             }
         }
         Effect::None
@@ -606,12 +630,34 @@ impl Panel {
 
     pub fn lines(&self) -> Vec<String> {
         let town = self.workbench.town();
-        let comparison = match self.workbench.compare() {
-            Ok(comparison) => format!(
-                "ROUND TRIP {}  EXACT BEST {}",
-                comparison.current.cost, comparison.exact.tour.cost
-            ),
-            Err(error) => format!("NO COMPARISON: {error}"),
+        let comparison = if self.page == Page::Search {
+            self.workbench.trace().map_or_else(
+                || {
+                    format!(
+                        "SEARCH {}>{}: START, THEN STEP",
+                        town.stops[0], self.junction
+                    )
+                },
+                |trace| {
+                    let view = trace.view();
+                    format!(
+                        "SEARCH {}>{}: {}/{} DECISIONS {}",
+                        view.from,
+                        view.to,
+                        view.cursor,
+                        view.event_count,
+                        if view.completed { "COMPLETE" } else { "MANUAL" }
+                    )
+                },
+            )
+        } else {
+            match self.workbench.compare() {
+                Ok(comparison) => format!(
+                    "ROUND TRIP {}  EXACT BEST {}",
+                    comparison.current.cost, comparison.exact.tour.cost
+                ),
+                Err(error) => format!("NO COMPARISON: {error}"),
+            }
         };
         let order = town
             .order
@@ -689,6 +735,62 @@ impl Panel {
         ]
     }
 
+    fn search_narration(&self) -> String {
+        let Some(trace) = self.workbench.trace() else {
+            return format!(
+                "START RECORDS DEPOT {} TO JUNCTION {}",
+                self.workbench.town().stops[0],
+                self.junction
+            );
+        };
+        if let Some(result) = trace.result() {
+            return match result {
+                Ok(path) => format!(
+                    "FINAL PATH COST {} FROM {} TO {}",
+                    path.cost,
+                    trace.snapshot().from,
+                    trace.snapshot().to
+                ),
+                Err(_) => "NO PATH. REOPEN ROADS OR CHANGE THE TARGET.".into(),
+            };
+        }
+        match trace.view().active_event {
+            Some(RouteEvent::Settled { junction, cost }) => {
+                format!("{junction} FINAL: COST {cost} FROM SOURCE")
+            }
+            Some(RouteEvent::Relaxed { from, to, cost }) => {
+                format!("{from}->{to} IMPROVED: TENTATIVE COST {cost}")
+            }
+            None => "STEP REVEALS ONE RECORDED DECISION. BACK HIDES IT.".into(),
+        }
+    }
+
+    fn search_inspector(&self, view: Option<&RouteSearchView>) -> String {
+        let Some(reading) = view.and_then(|view| view.junctions.get(self.junction)) else {
+            return format!(
+                "JUNCTION {}: UNSEEN. START USES THIS TARGET.",
+                self.junction
+            );
+        };
+        let state = match reading.state {
+            RouteSearchState::Unseen => "UNSEEN",
+            RouteSearchState::Tentative => "TENTATIVE",
+            RouteSearchState::Settled => "FINAL",
+            RouteSearchState::Unreachable => "UNREACHABLE",
+        };
+        format!(
+            "JUNCTION {}: {} COST {} VIA {}",
+            self.junction,
+            state,
+            reading
+                .cost
+                .map_or_else(|| "?".into(), |cost| cost.to_string()),
+            reading
+                .predecessor
+                .map_or_else(|| "-".into(), |from| from.to_string())
+        )
+    }
+
     fn search_line(&self) -> String {
         let Some(trace) = self.workbench.trace() else {
             return "START, THEN STEP RECORDED EVENTS".into();
@@ -713,7 +815,7 @@ impl Panel {
         );
         match trace.visible_events().last() {
             Some(RouteEvent::Settled { junction, cost }) => {
-                format!("{prefix} {junction} SETTLED FROM SOURCE {cost}")
+                format!("{prefix} {junction} FINAL FROM SOURCE {cost}")
             }
             Some(RouteEvent::Relaxed { from, to, cost }) => {
                 format!("{prefix} {to} TENTATIVE {cost} VIA {from}")
@@ -724,6 +826,7 @@ impl Panel {
 
     pub fn draw(&self, width: usize, height: usize, controller_hint: Option<&str>) -> Raster {
         let mut raster = Raster::with_accent(width, height, [240, 180, 110]);
+        let (width, height) = (raster.width(), raster.height());
         let scale = ((width / 400).min(height / 240)).clamp(1, 3) as i32;
         let columns = width.saturating_sub(12) / (6 * scale as usize);
         let text = |raster: &mut Raster, line: &str, y: f64| {
@@ -772,6 +875,21 @@ impl Panel {
                 ),
                 0.55,
             );
+        } else if self.page == Page::Search {
+            text(&mut raster, &self.search_narration(), 0.29);
+            text(
+                &mut raster,
+                "[] FINAL <> TENTATIVE . UNSEEN X CUT OFF",
+                0.34,
+            );
+            text(
+                &mut raster,
+                "DASH: VIA  DOUBLE: LATEST  TRIPLE: PATH. CLICK NODE",
+                0.38,
+            );
+            let view = self.workbench.trace().map(|trace| trace.view());
+            self.draw_network(&mut raster, width, height, scale, view.as_ref());
+            text(&mut raster, &self.search_inspector(view.as_ref()), 0.675);
         } else {
             for (index, line) in wrapped(&lines[1], columns).iter().take(3).enumerate() {
                 text(
@@ -798,7 +916,7 @@ impl Panel {
                     0.56,
                 );
             }
-            self.draw_network(&mut raster, width, height, scale);
+            self.draw_network(&mut raster, width, height, scale, None);
         }
         for (index, button) in self.buttons().iter().enumerate() {
             let (x, y, w, h) = button.bounds;
@@ -847,54 +965,266 @@ impl Panel {
         raster
     }
 
-    fn draw_network(&self, raster: &mut Raster, width: usize, height: usize, scale: i32) {
-        let town = self.workbench.town();
-        let points = (0..town.junctions)
+    fn network_locations(&self) -> Vec<(f64, f64)> {
+        let search = self.page == Page::Search;
+        (0..self.workbench.town().junctions)
             .map(|id| {
-                let angle = std::f64::consts::TAU * id as f64 / town.junctions as f64
+                let angle = std::f64::consts::TAU * id as f64
+                    / self.workbench.town().junctions as f64
                     - std::f64::consts::FRAC_PI_2;
                 (
-                    (width as f64 * (0.5 + 0.35 * angle.cos())) as i32,
-                    (height as f64 * (0.73 + 0.11 * angle.sin())) as i32,
+                    0.5 + 0.35 * angle.cos(),
+                    if search {
+                        0.55 + 0.065 * angle.sin()
+                    } else {
+                        0.73 + 0.11 * angle.sin()
+                    },
                 )
             })
-            .collect::<Vec<_>>();
+            .collect()
+    }
+
+    fn network_points(&self, width: usize, height: usize) -> Vec<(i32, i32)> {
+        self.network_locations()
+            .into_iter()
+            .map(|(x, y)| ((width as f64 * x) as i32, (height as f64 * y) as i32))
+            .collect()
+    }
+
+    fn draw_network(
+        &self,
+        raster: &mut Raster,
+        width: usize,
+        height: usize,
+        scale: i32,
+        view: Option<&RouteSearchView>,
+    ) {
+        let town = self.workbench.town();
+        let points = self.network_points(width, height);
         for road in &town.roads {
             let (a, b) = (points[road.road.from], points[road.road.to]);
+            let mut background = BackgroundRoads {
+                raster,
+                quiet: self.page == Page::Search,
+            };
             if road.open {
-                raster.line(a.0, a.1, b.0, b.1, '.');
+                background.line(a.0, a.1, b.0, b.1, '.');
             } else {
                 let mid = ((a.0 + b.0) / 2, (a.1 + b.1) / 2);
-                raster.line(a.0, a.1, (a.0 + mid.0) / 2, (a.1 + mid.1) / 2, '.');
-                raster.line(b.0, b.1, (b.0 + mid.0) / 2, (b.1 + mid.1) / 2, '.');
-                numinous_core::draw_text(raster, "X", mid.0, mid.1, scale, '#');
+                background.line(a.0, a.1, (a.0 + mid.0) / 2, (a.1 + mid.1) / 2, '.');
+                background.line(b.0, b.1, (b.0 + mid.0) / 2, (b.1 + mid.1) / 2, '.');
             }
         }
-        if let Ok(comparison) = self.workbench.compare() {
-            for pair in comparison.current.walk.windows(2) {
-                let (a, b) = (points[pair[0]], points[pair[1]]);
-                raster.line(a.0, a.1, b.0, b.1, '#');
-                raster.line(a.0 + 1, a.1, b.0 + 1, b.1, '#');
-            }
+        for road in town.roads.iter().filter(|road| !road.open) {
+            let (a, b) = (points[road.road.from], points[road.road.to]);
+            numinous_core::draw_text(raster, "X", (a.0 + b.0) / 2, (a.1 + b.1) / 2, scale, '#');
         }
-        for (id, point) in points.iter().enumerate() {
-            numinous_core::draw_text(
-                raster,
-                &format!(
-                    "{id}{}",
-                    if id == town.stops[0] {
-                        "D"
-                    } else if town.stops.contains(&id) {
-                        "*"
-                    } else {
-                        ""
+        if self.page == Page::Search {
+            if let Some(view) = view {
+                for junction in &view.junctions {
+                    if let Some(from) = junction.predecessor {
+                        draw_predecessor(raster, points[from], points[junction.junction], scale);
                     }
-                ),
-                point.0,
-                point.1,
+                }
+                if let Some(RouteEvent::Relaxed { from, to, .. }) = view.active_event {
+                    draw_stroke(raster, points[from], points[to], 2);
+                }
+                if let Some(Ok(path)) = self.workbench.trace().and_then(|trace| trace.result()) {
+                    for pair in path.junctions.windows(2) {
+                        draw_stroke(raster, points[pair[0]], points[pair[1]], 3);
+                    }
+                }
+            }
+            let dense = town.junctions > 8;
+            let active = view.and_then(|view| match view.active_event {
+                Some(RouteEvent::Settled { junction, .. }) => Some(junction),
+                Some(RouteEvent::Relaxed { to, .. }) => Some(to),
+                None => None,
+            });
+            let inspected_label = format!(">{}", self.junction);
+            let inspected_width = inspected_label.len() as i32 * 6 * scale;
+            let inspected_origin = search_label_origin(
+                points[self.junction],
+                inspected_width,
+                1,
                 scale,
+                width,
+                height,
+            );
+            for (id, &point) in points.iter().enumerate() {
+                let reading = view.and_then(|view| view.junctions.get(id));
+                let state = reading.map_or(RouteSearchState::Unseen, |reading| reading.state);
+                let radius = if dense { 1 } else { 3 * scale };
+                if dense && id == self.junction {
+                    draw_inspection_brackets(raster, point, 3 * scale);
+                }
+                draw_search_node(raster, point, radius, state);
+                if !dense || id == self.junction || active == Some(id) {
+                    let label = if !dense || id != self.junction {
+                        format!(
+                            "{id}:{}",
+                            reading
+                                .and_then(|reading| reading.cost)
+                                .map_or_else(|| "?".into(), |cost| cost.to_string())
+                        )
+                    } else {
+                        inspected_label.clone()
+                    };
+                    let text_width = label.len() as i32 * 6 * scale;
+                    let (x, mut y) =
+                        search_label_origin(point, text_width, radius, scale, width, height);
+                    if dense
+                        && id != self.junction
+                        && x < inspected_origin.0 + inspected_width + 2
+                        && x + text_width + 2 > inspected_origin.0
+                        && y < inspected_origin.1 + 7 * scale + 2
+                        && y + 7 * scale + 2 > inspected_origin.1
+                    {
+                        y = inspected_origin.1 + 7 * scale + 3;
+                    }
+                    numinous_core::draw_text(raster, &label, x, y, scale, '#');
+                }
+            }
+        } else {
+            if let Ok(comparison) = self.workbench.compare() {
+                for pair in comparison.current.walk.windows(2) {
+                    draw_stroke(raster, points[pair[0]], points[pair[1]], 2);
+                }
+            }
+            for (id, point) in points.iter().enumerate() {
+                numinous_core::draw_text(
+                    raster,
+                    &format!(
+                        "{id}{}",
+                        if id == town.stops[0] {
+                            "D"
+                        } else if town.stops.contains(&id) {
+                            "*"
+                        } else {
+                            ""
+                        }
+                    ),
+                    point.0,
+                    point.1,
+                    scale,
+                    '#',
+                );
+            }
+        }
+    }
+}
+
+struct BackgroundRoads<'a> {
+    raster: &'a mut Raster,
+    quiet: bool,
+}
+
+impl Surface for BackgroundRoads<'_> {
+    fn width(&self) -> usize {
+        self.raster.width()
+    }
+    fn height(&self) -> usize {
+        self.raster.height()
+    }
+    fn plot(&mut self, x: i32, y: i32, mark: char) {
+        if self.quiet {
+            // Replace the background ink so dense crossings cannot outshine
+            // the recorded search. Surface owns line geometry and clipping.
+            self.raster.shade_rect(x, y, 1, 1, 0.0);
+        } else {
+            self.raster.plot(x, y, mark);
+        }
+    }
+}
+
+fn search_label_origin(
+    point: (i32, i32),
+    text_width: i32,
+    radius: i32,
+    scale: i32,
+    width: usize,
+    height: usize,
+) -> (i32, i32) {
+    let (x, y) = if point.1 < (height as f64 * 0.515) as i32 {
+        (point.0 - text_width / 2, point.1 - radius - 2 - 7 * scale)
+    } else if point.1 > (height as f64 * 0.585) as i32 {
+        (point.0 - text_width / 2, point.1 + radius + 2)
+    } else if point.0 < width as i32 / 2 {
+        (point.0 - radius - 2 - text_width, point.1 - 3 * scale)
+    } else {
+        (point.0 + radius + 2, point.1 - 3 * scale)
+    };
+    (x.clamp(2, (width as i32 - text_width - 2).max(2)), y)
+}
+
+fn draw_inspection_brackets(raster: &mut Raster, point: (i32, i32), radius: i32) {
+    let (x, y) = point;
+    for side in [-1, 1] {
+        let edge = x + side * radius;
+        raster.line(edge, y - radius, edge, y + radius, '#');
+        raster.line(edge, y - radius, edge - side * radius / 2, y - radius, '#');
+        raster.line(edge, y + radius, edge - side * radius / 2, y + radius, '#');
+    }
+}
+
+fn draw_stroke(raster: &mut Raster, a: (i32, i32), b: (i32, i32), thickness: i32) {
+    let horizontal = (b.0 - a.0).abs() >= (b.1 - a.1).abs();
+    for offset in 0..thickness {
+        let (x, y) = if horizontal { (0, offset) } else { (offset, 0) };
+        raster.line(a.0 + x, a.1 + y, b.0 + x, b.1 + y, '#');
+    }
+}
+
+fn draw_predecessor(raster: &mut Raster, a: (i32, i32), b: (i32, i32), scale: i32) {
+    let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+    let length = dx.abs().max(dy.abs()).max(1);
+    let dash = 4 * scale;
+    for start in (0..length).step_by((dash * 2) as usize) {
+        let end = (start + dash).min(length);
+        raster.line(
+            a.0 + dx * start / length,
+            a.1 + dy * start / length,
+            a.0 + dx * end / length,
+            a.1 + dy * end / length,
+            '#',
+        );
+    }
+    let norm = ((dx * dx + dy * dy) as f64).sqrt();
+    if norm > 0.0 {
+        let (ux, uy) = (dx as f64 / norm, dy as f64 / norm);
+        let tip = (a.0 + dx * 3 / 4, a.1 + dy * 3 / 4);
+        let arm = (3 * scale) as f64;
+        for side in [-1.0, 1.0] {
+            raster.line(
+                tip.0,
+                tip.1,
+                tip.0 + (-ux * arm - uy * arm * side) as i32,
+                tip.1 + (-uy * arm + ux * arm * side) as i32,
                 '#',
             );
+        }
+    }
+}
+
+fn draw_search_node(raster: &mut Raster, point: (i32, i32), radius: i32, state: RouteSearchState) {
+    let (x, y) = point;
+    match state {
+        RouteSearchState::Unseen => raster.plot(x, y, '#'),
+        RouteSearchState::Tentative => {
+            raster.line(x, y - radius, x + radius, y, '#');
+            raster.line(x + radius, y, x, y + radius, '#');
+            raster.line(x, y + radius, x - radius, y, '#');
+            raster.line(x - radius, y, x, y - radius, '#');
+        }
+        RouteSearchState::Settled => {
+            raster.line(x - radius, y - radius, x + radius, y - radius, '#');
+            raster.line(x + radius, y - radius, x + radius, y + radius, '#');
+            raster.line(x + radius, y + radius, x - radius, y + radius, '#');
+            raster.line(x - radius, y + radius, x - radius, y - radius, '#');
+        }
+        RouteSearchState::Unreachable => {
+            raster.line(x - radius, y - radius, x + radius, y + radius, '#');
+            raster.line(x - radius, y + radius, x + radius, y - radius, '#');
         }
     }
 }
@@ -1372,5 +1702,543 @@ mod tests {
         let partial = panel.workbench.snapshot();
         panel.draw(900, 700, None);
         assert_eq!(panel.workbench.snapshot(), partial);
+    }
+    fn search_panel() -> Panel {
+        let mut panel = Panel::new(RouteWorkbench::first_town());
+        panel.act(Action::Page(Page::Search));
+        for _ in 0..3 {
+            panel.act(Action::Next);
+        }
+        panel.act(Action::Search);
+        panel
+    }
+    fn step_search(panel: &mut Panel) {
+        let before = panel.workbench.trace().unwrap().cursor();
+        panel.act(Action::Step);
+        assert_eq!(panel.workbench.trace().unwrap().cursor(), before + 1);
+    }
+    fn finish_search(panel: &mut Panel) {
+        let limit = panel.workbench.trace().unwrap().events().len();
+        for _ in 0..limit {
+            if panel.workbench.trace().unwrap().completed() {
+                break;
+            }
+            step_search(panel);
+        }
+        assert!(panel.workbench.trace().unwrap().completed());
+    }
+    fn step_until_cost(panel: &mut Panel, junction: usize, cost: u32) {
+        let limit = panel.workbench.trace().unwrap().events().len();
+        for _ in 0..limit {
+            if panel.workbench.trace().unwrap().view().junctions[junction].cost == Some(cost) {
+                break;
+            }
+            step_search(panel);
+        }
+        assert_eq!(
+            panel.workbench.trace().unwrap().view().junctions[junction].cost,
+            Some(cost)
+        );
+    }
+    fn pixel(raster: &Raster, x: usize, y: usize) -> [u8; 3] {
+        let rgba = raster.to_rgba();
+        let offset = (y * raster.width() + x) * 4;
+        rgba[offset..offset + 3].try_into().unwrap()
+    }
+    fn marked_pixel(mark: char) -> [u8; 3] {
+        let mut raster = Raster::with_accent(1, 1, [240, 180, 110]);
+        raster.plot(0, 0, mark);
+        pixel(&raster, 0, 0)
+    }
+    fn quiet_road_pixel() -> [u8; 3] {
+        let mut raster = Raster::with_accent(1, 1, [240, 180, 110]);
+        raster.shade_rect(0, 0, 1, 1, 0.0);
+        pixel(&raster, 0, 0)
+    }
+    fn assert_text_pixels(actual: &Raster, text: &str, x: i32, y: i32, scale: i32) {
+        let mut expected = Raster::with_accent(actual.width(), actual.height(), [240, 180, 110]);
+        numinous_core::draw_text(&mut expected, text, x, y, scale, '#');
+        let expected = expected.to_rgba();
+        let actual = actual.to_rgba();
+        let blank = Raster::with_accent(1, 1, [240, 180, 110]).to_rgba();
+        let mut found = 0;
+        for (a, e) in actual.chunks_exact(4).zip(expected.chunks_exact(4)) {
+            if e[..3] != blank[..3] {
+                assert!(a[..3].iter().zip(&e[..3]).all(|(a, e)| a >= e));
+                found += 1;
+            }
+        }
+        assert!(found > 5);
+    }
+    #[test]
+    fn route_authoring_search_raster_does_not_leak_tour_or_final_path_before_completion() {
+        let mut panel = search_panel();
+        let untouched = panel.workbench.snapshot();
+        let zero = panel.draw(360, 240, None);
+        assert_eq!(
+            pixel(&zero, 225, 132),
+            quiet_road_pixel(),
+            "unrevealed search keeps the actual road plain, rather than painting the tour"
+        );
+        assert_eq!(panel.workbench.snapshot(), untouched);
+        for _ in 0..5 {
+            panel.act(Action::Step);
+        }
+        let relaxed = panel.workbench.trace().unwrap().view();
+        assert_eq!(
+            relaxed.active_event,
+            Some(RouteEvent::Relaxed {
+                from: 1,
+                to: 3,
+                cost: 4
+            })
+        );
+        assert!(panel.workbench.trace().unwrap().result().is_none());
+        let partial = panel.draw(360, 240, None);
+        assert_eq!(pixel(&partial, 225, 133), marked_pixel('#'));
+        assert_ne!(pixel(&partial, 225, 134), marked_pixel('#'));
+        finish_search(&mut panel);
+        let complete = panel.draw(360, 240, None);
+        assert_eq!(pixel(&complete, 225, 134), marked_pixel('#'));
+        assert!(panel.search_narration().contains("FINAL PATH COST 4"));
+        panel.act(Action::Back);
+        let backed = panel.draw(360, 240, None);
+        assert_ne!(pixel(&backed, 225, 134), marked_pixel('#'));
+        assert!(!panel.search_narration().contains("FINAL PATH"));
+        panel.act(Action::Page(Page::Roads));
+        panel.act(Action::Cost(1));
+        panel.act(Action::Page(Page::Search));
+        assert!(panel.workbench.trace().is_none());
+        let invalidated = panel.draw(360, 240, None);
+        assert_eq!(pixel(&invalidated, 225, 132), quiet_road_pixel());
+        assert!(panel.search_narration().contains("START RECORDS"));
+    }
+    #[test]
+    fn route_authoring_search_node_shapes_costs_and_inspector_follow_the_visible_prefix() {
+        let mut panel = search_panel();
+        panel.act(Action::Step);
+        panel.act(Action::Step);
+        panel.act(Action::Previous);
+        panel.act(Action::Previous);
+        let view = panel.workbench.trace().unwrap().view();
+        let selected = panel.search_inspector(Some(&view));
+        assert!(selected.contains("JUNCTION 1: TENTATIVE COST 1"));
+        assert!(selected.contains("VIA 0"));
+        let tentative = panel.draw(360, 240, None);
+        assert_ne!(
+            pixel(&tentative, 303, 129),
+            marked_pixel('#'),
+            "tentative diamond has no settled-square corner"
+        );
+        panel.act(Action::Step);
+        panel.act(Action::Step);
+        let settled = panel.draw(360, 240, None);
+        assert!(
+            pixel(&settled, 303, 129)
+                .iter()
+                .zip(marked_pixel('#'))
+                .all(|(a, e)| *a >= e)
+        );
+        let view = panel.workbench.trace().unwrap().view();
+        assert_eq!(view.junctions[1].state, RouteSearchState::Settled);
+        assert!(panel.workbench.trace().unwrap().result().is_none());
+        assert_eq!(panel.search_narration(), "1 FINAL: COST 1 FROM SOURCE");
+        assert!(
+            panel
+                .search_inspector(Some(&view))
+                .contains("JUNCTION 1: FINAL COST 1")
+        );
+        assert_text_pixels(&settled, "1 FINAL: COST 1 FROM SOURCE", 6, 69, 1);
+        panel.act(Action::Back);
+        let backward = panel.draw(360, 240, None);
+        assert_ne!(pixel(&backward, 303, 129), marked_pixel('#'));
+        assert_eq!(
+            panel.workbench.trace().unwrap().view().junctions[1].state,
+            RouteSearchState::Tentative
+        );
+        assert!(panel.lines()[1].contains("SEARCH 0>3"));
+        assert!(
+            panel
+                .search_inspector(Some(&panel.workbench.trace().unwrap().view()))
+                .contains("JUNCTION 1")
+        );
+    }
+    #[test]
+    fn route_authoring_search_dense_disconnected_inspector_and_controls_survive_composition() {
+        let mut town = RouteWorkbench::first_town().town().clone();
+        town.junctions = 32;
+        town.roads.clear();
+        let creation = RouteCreation::new(town).unwrap();
+        let mut panel = Panel::opened(creation);
+        panel.act(Action::Confirm);
+        panel.act(Action::Page(Page::Search));
+        for _ in 0..31 {
+            panel.act(Action::Next);
+        }
+        panel.act(Action::Search);
+        let initial = panel.workbench.trace().unwrap().view();
+        assert_eq!(initial.junctions[31].state, RouteSearchState::Unseen);
+        panel.act(Action::Step);
+        let view = panel.workbench.trace().unwrap().view();
+        assert_eq!(view.junctions[31].state, RouteSearchState::Unreachable);
+        assert!(panel.search_narration().contains("NO PATH"));
+        for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
+            let raster = panel.draw(width, height, None);
+            let scale = ((width / 400).min(height / 240)).clamp(1, 3) as i32;
+            assert_text_pixels(
+                &raster,
+                &panel.search_inspector(Some(&view)),
+                6,
+                (height as f64 * 0.675) as i32,
+                scale,
+            );
+            assert_text_pixels(
+                &raster,
+                "DASH: VIA  DOUBLE: LATEST  TRIPLE: PATH. CLICK NODE",
+                6,
+                (height as f64 * 0.38) as i32,
+                scale,
+            );
+            for action in [
+                Action::Previous,
+                Action::Next,
+                Action::Search,
+                Action::Back,
+                Action::Step,
+            ] {
+                let button = panel
+                    .buttons()
+                    .into_iter()
+                    .find(|button| button.action == action)
+                    .unwrap();
+                let (x, y, w, h) = button.bounds;
+                assert!(y >= 0.72 && y + h < 0.87);
+                assert!(x + w < 1.0);
+                panel.pointer_at((x + w / 2.0, y + h / 2.0), false);
+            }
+            assert_eq!(panel.workbench.trace().unwrap().view(), view);
+        }
+        panel.act(Action::Back);
+        assert_eq!(
+            panel.workbench.trace().unwrap().view().junctions[31].state,
+            RouteSearchState::Unseen
+        );
+    }
+    #[test]
+    fn route_authoring_search_sparse_cost_labels_fit_each_supported_viewport() {
+        let mut town = RouteWorkbench::first_town().town().clone();
+        town.junctions = 8;
+        town.roads = (0..7)
+            .map(|from| EditableRoad {
+                road: Road {
+                    from,
+                    to: from + 1,
+                    cost: 999,
+                },
+                open: true,
+            })
+            .collect();
+        let mut panel = Panel::opened(RouteCreation::new(town).unwrap());
+        panel.act(Action::Confirm);
+        panel.act(Action::Page(Page::Search));
+        for _ in 0..7 {
+            panel.act(Action::Next);
+        }
+        panel.act(Action::Search);
+        finish_search(&mut panel);
+        let view = panel.workbench.trace().unwrap().view();
+        assert_eq!(view.junctions[7].cost, Some(6993));
+        for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
+            let raster = panel.draw(width, height, None);
+            let scale = ((width / 400).min(height / 240)).clamp(1, 3) as i32;
+            assert_text_pixels(
+                &raster,
+                "FINAL PATH COST 6993 FROM 0 TO 7",
+                6,
+                (height as f64 * 0.29) as i32,
+                scale,
+            );
+            assert_text_pixels(
+                &raster,
+                &panel.search_inspector(Some(&view)),
+                6,
+                (height as f64 * 0.675) as i32,
+                scale,
+            );
+        }
+    }
+    #[test]
+    fn route_authoring_search_imported_non_depot_source_and_zero_length_path_stay_exact() {
+        let mut workbench = RouteWorkbench::first_town();
+        workbench.start_trace(2, 2).unwrap();
+        let mut panel = Panel::new(workbench);
+        panel.act(Action::Page(Page::Search));
+        let initial = panel.workbench.trace().unwrap().view();
+        assert_eq!(initial.junctions[2].cost, Some(0));
+        assert_eq!(initial.junctions[0].cost, None);
+        assert!(panel.lines()[0].contains("SEARCH 2>2"));
+        finish_search(&mut panel);
+        let path = panel
+            .workbench
+            .trace()
+            .unwrap()
+            .result()
+            .unwrap()
+            .as_ref()
+            .unwrap();
+        assert_eq!(path.junctions, [2]);
+        assert_eq!(path.cost, 0);
+        assert_eq!(panel.search_narration(), "FINAL PATH COST 0 FROM 2 TO 2");
+        let complete = panel.draw(360, 240, None);
+        assert_ne!(
+            pixel(&complete, 225, 134),
+            marked_pixel('#'),
+            "zero-length result adds no final road"
+        );
+        panel.act(Action::Back);
+        assert!(!panel.search_narration().contains("FINAL PATH"));
+        panel.act(Action::Next);
+        assert!(panel.lines()[0].contains("SEARCH 2>2"));
+        panel.act(Action::Search);
+        let restarted = panel.workbench.trace().unwrap().view();
+        assert_eq!((restarted.from, restarted.to, restarted.cursor), (0, 1, 0));
+    }
+    #[test]
+    fn route_authoring_search_improved_predecessor_is_replaced_and_restored_by_back() {
+        let town = numinous_core::route_workbench::RouteTownSnapshot {
+            junctions: 4,
+            roads: vec![
+                EditableRoad {
+                    road: Road {
+                        from: 0,
+                        to: 1,
+                        cost: 10,
+                    },
+                    open: true,
+                },
+                EditableRoad {
+                    road: Road {
+                        from: 0,
+                        to: 2,
+                        cost: 25,
+                    },
+                    open: true,
+                },
+                EditableRoad {
+                    road: Road {
+                        from: 1,
+                        to: 2,
+                        cost: 10,
+                    },
+                    open: true,
+                },
+                EditableRoad {
+                    road: Road {
+                        from: 2,
+                        to: 3,
+                        cost: 5,
+                    },
+                    open: true,
+                },
+            ],
+            stops: vec![0, 1, 2],
+            order: vec![0, 1, 2],
+        };
+        let mut panel = Panel::opened(RouteCreation::new(town).unwrap());
+        panel.act(Action::Confirm);
+        panel.act(Action::Page(Page::Search));
+        panel.act(Action::Next);
+        panel.act(Action::Next);
+        panel.act(Action::Search);
+        step_until_cost(&mut panel, 2, 25);
+        let first = panel.workbench.trace().unwrap().view();
+        assert_eq!(first.junctions[2].predecessor, Some(0));
+        assert!(panel.search_inspector(Some(&first)).contains("COST 25"));
+        step_until_cost(&mut panel, 2, 20);
+        let improved = panel.workbench.trace().unwrap().view();
+        assert_eq!(improved.junctions[2].predecessor, Some(1));
+        assert_eq!(
+            improved.active_event,
+            Some(RouteEvent::Relaxed {
+                from: 1,
+                to: 2,
+                cost: 20
+            })
+        );
+        panel.act(Action::Back);
+        let restored = panel.workbench.trace().unwrap().view();
+        assert_eq!(restored.junctions[2].cost, Some(25));
+        assert_eq!(restored.junctions[2].predecessor, Some(0));
+        panel.act(Action::Step);
+        assert_eq!(panel.workbench.trace().unwrap().view(), improved);
+        let image = panel.draw(360, 240, None);
+        assert_text_pixels(&image, &panel.search_inspector(Some(&improved)), 6, 162, 1);
+    }
+
+    #[test]
+    fn route_authoring_search_node_click_inspects_without_editing_or_advancing() {
+        let mut panel = search_panel();
+        panel.act(Action::Step);
+        panel.act(Action::Step);
+        let before = panel.workbench.snapshot();
+        let locations = panel.network_locations();
+        assert_eq!(panel.junction, 3);
+        assert_eq!(panel.pointer_at(locations[1], false), Effect::None);
+        assert_eq!(
+            panel.junction, 3,
+            "hover leaves inspection selection unchanged"
+        );
+        assert_eq!(panel.pointer_at(locations[1], true), Effect::None);
+        assert_eq!(panel.junction, 1);
+        let view = panel.workbench.trace().unwrap().view();
+        assert!(
+            panel
+                .search_inspector(Some(&view))
+                .contains("TENTATIVE COST 1")
+        );
+        assert_eq!(panel.workbench.snapshot(), before);
+        panel.pointer_at(locations[3], true);
+        assert_eq!(panel.junction, 3);
+        panel.pointer_at((f64::NAN, f64::INFINITY), true);
+        panel.pointer_at((0.01, 0.62), true);
+        assert_eq!(panel.junction, 3);
+        assert_eq!(panel.workbench.snapshot(), before);
+        let mut paused = Panel::opened(RouteCreation::new(panel.workbench.town().clone()).unwrap());
+        paused.page = Page::Search;
+        paused.pointer_at(locations[1], true);
+        assert_eq!(paused.junction, 0);
+    }
+
+    #[test]
+    fn route_authoring_dense_search_keeps_every_background_road_quiet_and_latest_endpoint_visible()
+    {
+        let town = numinous_core::route_workbench::RouteTownSnapshot {
+            junctions: 32,
+            roads: (0..32)
+                .flat_map(|from| ((from + 1)..32).map(move |to| (from, to)))
+                .take(96)
+                .map(|(from, to)| EditableRoad {
+                    road: Road {
+                        from,
+                        to,
+                        cost: ((from + to) % 9 + 1) as u32,
+                    },
+                    open: true,
+                })
+                .collect(),
+            stops: vec![0, 4, 9, 15, 22, 31],
+            order: vec![0, 31, 9, 22, 4, 15],
+        };
+        let mut panel = Panel::opened(RouteCreation::new(town).unwrap());
+        panel.act(Action::Confirm);
+        panel.act(Action::Page(Page::Search));
+        for _ in 0..31 {
+            panel.act(Action::Next);
+        }
+        panel.act(Action::Search);
+        for _ in 0..12 {
+            panel.act(Action::Step);
+        }
+        let before = panel.workbench.snapshot();
+        assert_eq!(
+            panel.workbench.trace().unwrap().view().active_event,
+            Some(RouteEvent::Relaxed {
+                from: 0,
+                to: 11,
+                cost: 3
+            })
+        );
+        for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
+            let scale = ((width / 400).min(height / 240)).clamp(1, 3) as i32;
+            let points = panel.network_points(width, height);
+            let mut road_mask = Raster::with_accent(width, height, [240, 180, 110]);
+            for road in &panel.workbench.town().roads {
+                let (a, b) = (points[road.road.from], points[road.road.to]);
+                road_mask.line(a.0, a.1, b.0, b.1, '.');
+            }
+            let blank = Raster::with_accent(width, height, [240, 180, 110]).to_rgba();
+            let mask = road_mask.to_rgba();
+            let actual = panel.draw(width, height, None);
+            let rgba = actual.to_rgba();
+            let tone = quiet_road_pixel();
+            let mut road_pixels = 0;
+            let mut quiet_pixels = 0;
+            for ((actual, expected), blank) in rgba
+                .chunks_exact(4)
+                .zip(mask.chunks_exact(4))
+                .zip(blank.chunks_exact(4))
+            {
+                if expected[..3] != blank[..3] {
+                    road_pixels += 1;
+                    assert!(
+                        actual[..3].iter().zip(tone).all(|(a, tone)| *a >= tone),
+                        "every actual road remains visible, including dense crossings"
+                    );
+                    quiet_pixels += usize::from(actual[..3] == tone);
+                }
+            }
+            assert!(
+                quiet_pixels * 2 > road_pixels,
+                "background crossings must not dominate the revealed prefix"
+            );
+            let active_origin =
+                search_label_origin(points[11], 4 * 6 * scale, 1, scale, width, height);
+            assert_text_pixels(&actual, "11:3", active_origin.0, active_origin.1, scale);
+            assert_text_pixels(
+                &actual,
+                &panel.search_inspector(Some(&panel.workbench.trace().unwrap().view())),
+                6,
+                (height as f64 * 0.675) as i32,
+                scale,
+            );
+            assert!(
+                pixel(
+                    &actual,
+                    (points[31].0 - 3 * scale) as usize,
+                    points[31].1 as usize
+                )
+                .iter()
+                .zip(marked_pixel('#'))
+                .all(|(a, ink)| *a >= ink)
+            );
+            assert_eq!(panel.workbench.snapshot(), before);
+        }
+        panel.pointer_at(panel.network_locations()[12], true);
+        for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
+            let scale = ((width / 400).min(height / 240)).clamp(1, 3) as i32;
+            let points = panel.network_points(width, height);
+            let selected = search_label_origin(points[12], 3 * 6 * scale, 1, scale, width, height);
+            let active = search_label_origin(points[11], 4 * 6 * scale, 1, scale, width, height);
+            let overlapping = active.0 < selected.0 + 3 * 6 * scale + 2
+                && active.0 + 4 * 6 * scale + 2 > selected.0
+                && active.1 < selected.1 + 7 * scale + 2
+                && active.1 + 7 * scale + 2 > selected.1;
+            let actual = panel.draw(width, height, None);
+            assert_text_pixels(&actual, ">12", selected.0, selected.1, scale);
+            assert_text_pixels(
+                &actual,
+                "11:3",
+                active.0,
+                if overlapping {
+                    selected.1 + 7 * scale + 3
+                } else {
+                    active.1
+                },
+                scale,
+            );
+            assert_eq!(panel.workbench.snapshot(), before);
+        }
+        panel.act(Action::Page(Page::Roads));
+        panel.act(Action::ToggleRoad);
+        panel.act(Action::Page(Page::Search));
+        let points = panel.network_points(900, 700);
+        let closed = panel.draw(900, 700, None);
+        assert_text_pixels(
+            &closed,
+            "X",
+            (points[0].0 + points[1].0) / 2,
+            (points[0].1 + points[1].1) / 2,
+            2,
+        );
     }
 }

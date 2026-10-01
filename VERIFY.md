@@ -308,7 +308,7 @@ content identifier detects a change only until someone deliberately recomputes
 it. It is not a signature or evidence of external custody; release decisions
 that need that property must register or sign the receipt outside this runner.
 
-The release scripts also regenerate `renders/qa-app/`, currently 2989 screens.
+The release scripts also regenerate `renders/qa-app/`, currently 3009 screens.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture
 responses that follow its declared interaction verb. The generator checks pure
@@ -321,12 +321,15 @@ For iteration, `cargo run -p numinous-app --example screens -- --room route-lab`
 uses the same composed rendering and domain checks for one catalog room. It
 writes a separate manifest under `renders/qa-room/route-lab/` and leaves the
 complete release matrix in place.
-`cargo run -p numinous-app --example screens -- --route-editor` writes 72
-native authoring receipts under `renders/qa-route-editor/`: nine states,
+`cargo run -p numinous-app --example screens -- --route-editor` writes 112
+native authoring receipts under `renders/qa-route-editor/`: fourteen states,
 keyboard and controller hints, and four window sizes. These cover custom and
 dense networks, road drafts, disconnected deliveries, search playback, question
 editing, and a paused remix. The complete release matrix includes the default
 and compact versions of those same states.
+Search receipts include cursor zero, a cheaper tentative predecessor replacing
+an earlier road, its backward step, disconnected completion, and a dense
+network. Fixture checks bind those pictures to the canonical revealed prefix.
 The matrix also covers every app game state, default and compact overlays,
 production Studio rendering, both ends of The Show, Times Tables K=2, K=3,
 K=pi, K=4, K=5, and earned-goal flows at both sizes, the Mandelbrot reset flow,

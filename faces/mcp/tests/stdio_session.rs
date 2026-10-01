@@ -46,6 +46,103 @@ fn stdio_route_workbench_retains_an_arbitrary_town_and_records_a_trace() {
     );
 }
 
+#[test]
+fn stdio_route_search_view_follows_next_restores_prefixes_and_refuses_imported_claims() {
+    let call = |tool: &str, arguments: Value| {
+        let replies = run_session(&[
+            json!({"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"route-search-view-test","version":"1"}}}),
+            json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            json!({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":tool,"arguments":arguments}}),
+        ]);
+        replies.into_iter().find(|reply| reply["id"] == 1).unwrap()
+    };
+    let content = |reply: Value| {
+        assert_ne!(reply["result"]["isError"], true, "{reply}");
+        reply["result"]["structuredContent"].clone()
+    };
+    let snapshot = json!({"revision":0,"undo":[],"trace":null,"current":{"junctions":5,"roads":[{"from":0,"to":1,"cost":5,"open":true},{"from":0,"to":2,"cost":1,"open":true},{"from":2,"to":1,"cost":1,"open":true},{"from":1,"to":3,"cost":1,"open":true}],"stops":[0,1,3],"order":[0,3,1]}});
+    let start = content(call(
+        "route_lab",
+        json!({"snapshot":snapshot,"action":{"type":"trace","from":0,"to":3}}),
+    ));
+    assert_eq!(
+        start["trace"]["view"]["junctions"][0],
+        json!({"junction":0,"state":"tentative","cost":0,"predecessor":null})
+    );
+    assert_eq!(start["trace"]["view"]["junctions"][4]["state"], "unseen");
+    assert!(start["trace"]["view"]["activeEvent"].is_null());
+    let first = content(call(
+        start["next"]["tool"].as_str().unwrap(),
+        start["next"]["arguments"].clone(),
+    ));
+    assert_eq!(
+        first["trace"]["view"]["activeEvent"],
+        first["trace"]["events"][0]
+    );
+    let early = content(call(
+        "route_lab",
+        json!({"snapshot":first["snapshot"],"action":{"type":"step","cursor":2}}),
+    ));
+    assert_eq!(
+        early["trace"]["view"]["junctions"][1],
+        json!({"junction":1,"state":"tentative","cost":5,"predecessor":0})
+    );
+    assert!(early["trace"]["result"].is_null());
+    let restored = content(call("route_lab", json!({"snapshot":early["snapshot"]})));
+    assert_eq!(restored["trace"], early["trace"]);
+    let mut complete = restored;
+    let event_count = complete["trace"]["eventCount"].as_u64().unwrap();
+    let first_cursor = complete["trace"]["cursor"].as_u64().unwrap() + 1;
+    for expected_cursor in first_cursor..=event_count {
+        complete = content(call(
+            complete["next"]["tool"].as_str().unwrap(),
+            complete["next"]["arguments"].clone(),
+        ));
+        assert_eq!(complete["trace"]["cursor"], expected_cursor);
+        assert_eq!(complete["trace"]["eventCount"], event_count);
+        assert_eq!(
+            complete["trace"]["completed"],
+            expected_cursor == event_count
+        );
+        assert_eq!(
+            complete["trace"]["result"].is_null(),
+            expected_cursor < event_count
+        );
+    }
+    assert_eq!(complete["trace"]["completed"], true);
+    assert_eq!(
+        complete["trace"]["view"]["junctions"][1],
+        json!({"junction":1,"state":"settled","cost":2,"predecessor":2})
+    );
+    assert_eq!(
+        complete["trace"]["view"]["junctions"][4],
+        json!({"junction":4,"state":"unreachable","cost":null,"predecessor":null})
+    );
+    assert_eq!(
+        complete["trace"]["result"],
+        json!({"status":"reachable","junctions":[0,2,1,3],"cost":3})
+    );
+    let backwards = content(call(
+        "route_lab",
+        json!({"snapshot":complete["snapshot"],"action":{"type":"step","cursor":2}}),
+    ));
+    assert_eq!(backwards["trace"], early["trace"]);
+    let changed = content(call(
+        "route_lab",
+        json!({"snapshot":complete["snapshot"],"action":{"type":"road_open","from":0,"to":1,"open":false}}),
+    ));
+    assert!(changed["trace"].is_null());
+    let mut forged = complete["snapshot"].clone();
+    forged["trace"]["view"] = complete["trace"]["view"].clone();
+    let mut stale = complete["snapshot"].clone();
+    stale["current"]["roads"][0]["cost"] = json!(9);
+    for snapshot in [forged, stale] {
+        let rejected = call("route_lab", json!({"snapshot":snapshot}));
+        assert_eq!(rejected["result"]["isError"], true);
+        assert!(rejected["result"].get("structuredContent").is_none());
+    }
+}
+
 /// Run a full session: send each line, return the parsed response lines.
 fn run_session(requests: &[Value]) -> Vec<Value> {
     run_session_with_barrier(requests, || true, &[])

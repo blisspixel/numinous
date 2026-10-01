@@ -719,6 +719,91 @@ fn public_route_workbench_accepts_bounded_stdin_and_refuses_oversized_input() {
     assert!(!run(&[0xff]).status.success());
 }
 
+#[test]
+fn public_route_search_view_restores_visible_knowledge_and_rejects_forged_snapshots() {
+    use serde_json::{Value, json};
+    let fixture = ProjectCliFixture::new("route-search-view");
+    let route =
+        |request: Value| fixture.json(&["route-lab", "--json", "--request", &request.to_string()]);
+    let snapshot = json!({"revision":0,"undo":[],"trace":null,"current":{"junctions":5,"roads":[{"from":0,"to":1,"cost":5,"open":true},{"from":0,"to":2,"cost":1,"open":true},{"from":2,"to":1,"cost":1,"open":true},{"from":1,"to":3,"cost":1,"open":true}],"stops":[0,1,3],"order":[0,3,1]}});
+    let start = route(json!({"snapshot":snapshot,"action":{"type":"trace","from":0,"to":3}}));
+    assert_eq!(start["trace"]["view"]["junctions"][0]["state"], "tentative");
+    assert_eq!(start["trace"]["view"]["junctions"][4]["state"], "unseen");
+    assert!(start["trace"]["view"]["activeEvent"].is_null());
+    let first = route(start["next"]["arguments"].clone());
+    assert_eq!(first["trace"]["view"]["junctions"][0]["state"], "settled");
+    let early = route(json!({"snapshot":first["snapshot"],"action":{"type":"step","cursor":2}}));
+    assert_eq!(
+        early["trace"]["view"]["junctions"][1],
+        json!({"junction":1,"state":"tentative","cost":5,"predecessor":0})
+    );
+    assert!(early["trace"]["result"].is_null());
+    let request = json!({"snapshot":early["snapshot"]}).to_string();
+    let plain = fixture.run(&["route-lab", "--request", &request]);
+    assert!(plain.status.success());
+    let plain = String::from_utf8(plain.stdout).unwrap();
+    assert!(plain.contains("Junction 1: tentative cost 5 from 0; predecessor 0."));
+    assert!(plain.contains("Junction 4: unseen; no cost revealed."));
+    assert!(plain.contains("Active event: Tentative cost from 0 to 1 via 0: 5."));
+    assert!(!plain.contains("Shortest path:"));
+    let restored = route(json!({"snapshot":early["snapshot"]}));
+    assert_eq!(restored["trace"], early["trace"]);
+    let mut complete = restored;
+    let event_count = complete["trace"]["eventCount"].as_u64().unwrap();
+    let first_cursor = complete["trace"]["cursor"].as_u64().unwrap() + 1;
+    for expected_cursor in first_cursor..=event_count {
+        assert_eq!(complete["next"]["tool"], "route_lab");
+        complete = route(complete["next"]["arguments"].clone());
+        assert_eq!(complete["trace"]["cursor"], expected_cursor);
+        assert_eq!(complete["trace"]["eventCount"], event_count);
+        assert_eq!(
+            complete["trace"]["completed"],
+            expected_cursor == event_count
+        );
+        assert_eq!(
+            complete["trace"]["result"].is_null(),
+            expected_cursor < event_count
+        );
+    }
+    assert_eq!(complete["trace"]["completed"], true);
+    assert_eq!(
+        complete["trace"]["view"]["junctions"][1],
+        json!({"junction":1,"state":"settled","cost":2,"predecessor":2})
+    );
+    assert_eq!(
+        complete["trace"]["view"]["junctions"][4]["state"],
+        "unreachable"
+    );
+    assert_eq!(
+        complete["trace"]["result"]["junctions"],
+        json!([0, 2, 1, 3])
+    );
+    let backwards =
+        route(json!({"snapshot":complete["snapshot"],"action":{"type":"step","cursor":2}}));
+    assert_eq!(backwards["trace"], early["trace"]);
+    assert!(backwards["trace"]["result"].is_null());
+    let changed = route(
+        json!({"snapshot":complete["snapshot"],"action":{"type":"road_cost","from":0,"to":1,"cost":4}}),
+    );
+    assert!(changed["trace"].is_null());
+    let mut forged = complete["snapshot"].clone();
+    forged["trace"]["view"] = complete["trace"]["view"].clone();
+    let mut stale = complete["snapshot"].clone();
+    stale["current"]["roads"][0]["cost"] = json!(9);
+    for snapshot in [forged, stale] {
+        let rejected = fixture.run(&[
+            "route-lab",
+            "--json",
+            "--request",
+            &json!({"snapshot":snapshot}).to_string(),
+        ]);
+        assert!(!rejected.status.success());
+        assert!(rejected.stdout.is_empty());
+    }
+    assert!(!fixture.root.join("chain.txt").exists());
+    assert!(!fixture.root.join("journal.txt").exists());
+}
+
 fn isolated_command(root: &std::path::Path, args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_numinous"))
         .args(args)

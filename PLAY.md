@@ -142,6 +142,16 @@ store it with the network. The controller can compose the question with the
 character controls. **THE QUESTION** in the Cabinet previews the kept route;
 Enter opens it for editing. Remix is a separate deliberate action.
 
+Search keeps the network visible while you step. A diamond means tentative,
+a square means the junction's cost is final, and a cross means unreachable
+after completion. Costs are cumulative from the search source. Dashed links
+show tentative predecessors, and the latest improved connection is emphasized.
+The completed path has a separate heavier stroke. Click a junction or use
+JUNCTION < and JUNCTION > to inspect its cost, state, and predecessor, including
+on dense or compact maps. Inspection does not advance or restart search.
+BACK removes later knowledge as well as moving the cursor; an edit clears the
+old calculation.
+
 From the CLI, `numinous route-lab` gives a readable comparison.
 `numinous render route-lab` draws the room; `--poke 0.75,0.92` accepts the
 opening saving. MCP uses `pokes: [[0.75, 0.92]]` for the same action.
@@ -175,6 +185,14 @@ cannot reach one another, comparison is unavailable but the network remains
 editable; an unused isolated junction does not prevent a round trip. Search
 event costs are cumulative from the starting junction. Working state is carried
 between calls without a profile write.
+`trace.view` reports every junction's revealed `cost`, `predecessor`, and
+`state`: `unseen`, `tentative`, `settled`, or `unreachable`. At cursor zero only
+the source has tentative cost zero. An unseen junction becomes unreachable
+only when the source search completes. `activeEvent` is the latest revealed
+decision, or `null` before the first step. Unrevealed costs and predecessors
+are `null`; the source has no predecessor. `trace.result` is `null` before
+completion. Plain CLI output shows the same junction states; rewinding removes
+later costs and predecessors.
 
 To make a portable route creation, send your snapshot with `action: "save"`.
 The response's `creation.capsule` is bounded `NUMINOUS_ROUTE 1` text. Pass that

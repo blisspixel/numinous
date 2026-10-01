@@ -5,8 +5,8 @@ use numinous_core::route::{
 };
 use numinous_core::route_creation::RouteCreation;
 use numinous_core::route_workbench::{
-    EditableRoad, MAX_ROUTE_UNDO, RouteEdit, RouteTownSnapshot, RouteTraceSnapshot, RouteWorkbench,
-    RouteWorkbenchSnapshot,
+    EditableRoad, MAX_ROUTE_UNDO, RouteEdit, RouteSearchState, RouteSearchView, RouteTownSnapshot,
+    RouteTraceSnapshot, RouteWorkbench, RouteWorkbenchSnapshot,
 };
 use serde_json::{Map, Value, json};
 
@@ -157,6 +157,28 @@ fn event_json(event: &RouteEvent) -> Value {
             json!({"type":"relaxed","from":from,"to":to,"cost":cost})
         }
     }
+}
+
+fn search_view_json(view: &RouteSearchView) -> Value {
+    json!({
+        "from": view.from,
+        "to": view.to,
+        "cursor": view.cursor,
+        "eventCount": view.event_count,
+        "completed": view.completed,
+        "junctions": view.junctions.iter().map(|junction| json!({
+            "junction": junction.junction,
+            "cost": junction.cost,
+            "predecessor": junction.predecessor,
+            "state": match junction.state {
+                RouteSearchState::Unseen => "unseen",
+                RouteSearchState::Tentative => "tentative",
+                RouteSearchState::Settled => "settled",
+                RouteSearchState::Unreachable => "unreachable",
+            },
+        })).collect::<Vec<_>>(),
+        "activeEvent": view.active_event.as_ref().map(event_json),
+    })
 }
 
 fn diagnostic_json(error: &RouteError) -> Value {
@@ -337,7 +359,7 @@ pub fn response(request: &Value) -> Result<Value, String> {
         }
     };
     let snapshot = snapshot_json(&workbench.snapshot());
-    let trace = workbench.trace().map(|trace| json!({"from":trace.snapshot().from,"to":trace.snapshot().to,"cursor":trace.cursor(),"eventCount":trace.events().len(),"completed":trace.completed(),"events":trace.visible_events().iter().map(event_json).collect::<Vec<_>>(),"result":trace.result().map(|result|match result { Ok(path)=>json!({"status":"reachable","junctions":path.junctions,"cost":path.cost}), Err(error)=>json!({"status":"unreachable","diagnostic":diagnostic_json(error),"diagnosis":error.to_string()}) })}));
+    let trace = workbench.trace().map(|trace| json!({"from":trace.snapshot().from,"to":trace.snapshot().to,"cursor":trace.cursor(),"eventCount":trace.events().len(),"completed":trace.completed(),"events":trace.visible_events().iter().map(event_json).collect::<Vec<_>>(),"view":search_view_json(&trace.view()),"result":trace.result().map(|result|match result { Ok(path)=>json!({"status":"reachable","junctions":path.junctions,"cost":path.cost}), Err(error)=>json!({"status":"unreachable","diagnostic":diagnostic_json(error),"diagnosis":error.to_string()}) })}));
     let next_action = if workbench.trace().is_some_and(|trace| !trace.completed()) {
         json!({"type":"step","steps":1})
     } else if offered {
@@ -366,6 +388,121 @@ pub fn response(request: &Value) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn search_snapshot() -> Value {
+        json!({"revision":0,"undo":[],"trace":null,"current":{"junctions":5,"roads":[{"from":0,"to":1,"cost":5,"open":true},{"from":0,"to":2,"cost":1,"open":true},{"from":2,"to":1,"cost":1,"open":true},{"from":1,"to":3,"cost":1,"open":true}],"stops":[0,1,3],"order":[0,3,1]}})
+    }
+
+    #[test]
+    fn search_view_projects_only_prefix_costs_and_replays_after_restore_and_backwards_seek() {
+        let start = response(
+            &json!({"snapshot":search_snapshot(),"action":{"type":"trace","from":0,"to":3}}),
+        )
+        .unwrap();
+        let view = &start["trace"]["view"];
+        assert_eq!(
+            view["junctions"][0],
+            json!({"junction":0,"state":"tentative","cost":0,"predecessor":null})
+        );
+        assert_eq!(
+            view["junctions"][1],
+            json!({"junction":1,"state":"unseen","cost":null,"predecessor":null})
+        );
+        assert!(view["activeEvent"].is_null());
+        assert!(start["trace"]["result"].is_null());
+        let first = response(&start["next"]["arguments"]).unwrap();
+        assert_eq!(first["trace"]["view"]["junctions"][0]["state"], "settled");
+        assert_eq!(
+            first["trace"]["view"]["activeEvent"],
+            first["trace"]["events"][0]
+        );
+        let early =
+            response(&json!({"snapshot":first["snapshot"],"action":{"type":"step","cursor":2}}))
+                .unwrap();
+        assert_eq!(
+            early["trace"]["view"]["junctions"][1],
+            json!({"junction":1,"state":"tentative","cost":5,"predecessor":0})
+        );
+        assert_eq!(early["trace"]["view"]["junctions"][2]["state"], "unseen");
+        let better =
+            response(&json!({"snapshot":early["snapshot"],"action":{"type":"step","cursor":5}}))
+                .unwrap();
+        assert_eq!(
+            better["trace"]["view"]["junctions"][1],
+            json!({"junction":1,"state":"tentative","cost":2,"predecessor":2})
+        );
+        assert_eq!(better["trace"]["view"]["junctions"][3]["state"], "unseen");
+        assert!(better["trace"]["result"].is_null());
+        let restored = response(&json!({"snapshot":better["snapshot"]})).unwrap();
+        assert_eq!(restored["trace"], better["trace"]);
+        let backwards =
+            response(&json!({"snapshot":restored["snapshot"],"action":{"type":"step","cursor":2}}))
+                .unwrap();
+        assert_eq!(backwards["trace"], early["trace"]);
+        let mut cursor = backwards;
+        let event_count = cursor["trace"]["eventCount"].as_u64().unwrap();
+        let first_cursor = cursor["trace"]["cursor"].as_u64().unwrap() + 1;
+        for expected_cursor in first_cursor..=event_count {
+            assert_eq!(cursor["next"]["tool"], "route_lab");
+            cursor = response(&cursor["next"]["arguments"]).unwrap();
+            assert_eq!(cursor["trace"]["cursor"], expected_cursor);
+            assert_eq!(cursor["trace"]["eventCount"], event_count);
+            assert_eq!(cursor["trace"]["completed"], expected_cursor == event_count);
+            assert_eq!(
+                cursor["trace"]["result"].is_null(),
+                expected_cursor < event_count
+            );
+        }
+        assert_eq!(cursor["trace"]["completed"], true);
+        assert_eq!(
+            cursor["trace"]["view"]["junctions"][1],
+            json!({"junction":1,"state":"settled","cost":2,"predecessor":2})
+        );
+        assert_eq!(
+            cursor["trace"]["view"]["junctions"][3],
+            json!({"junction":3,"state":"settled","cost":3,"predecessor":1})
+        );
+        assert_eq!(
+            cursor["trace"]["view"]["junctions"][4],
+            json!({"junction":4,"state":"unreachable","cost":null,"predecessor":null})
+        );
+        assert_eq!(
+            cursor["trace"]["result"],
+            json!({"status":"reachable","junctions":[0,2,1,3],"cost":3})
+        );
+        let rewind =
+            response(&json!({"snapshot":cursor["snapshot"],"action":{"type":"step","cursor":0}}))
+                .unwrap();
+        assert_eq!(rewind["trace"], start["trace"]);
+        assert_eq!(rewind["schemaVersion"], 1);
+        let edited = response(&json!({"snapshot":cursor["snapshot"],"action":{"type":"road_cost","from":0,"to":1,"cost":4}})).unwrap();
+        assert!(edited["trace"].is_null());
+        assert!(edited["snapshot"]["trace"].is_null());
+        let saved = response(&json!({"snapshot":cursor["snapshot"],"action":"save"})).unwrap();
+        let saved_without_playback =
+            response(&json!({"snapshot":search_snapshot(),"action":"save"})).unwrap();
+        assert_eq!(saved["creation"], saved_without_playback["creation"]);
+    }
+
+    #[test]
+    fn search_view_cannot_be_imported_as_an_authoritative_snapshot_claim() {
+        let start = response(
+            &json!({"snapshot":search_snapshot(),"action":{"type":"trace","from":0,"to":3}}),
+        )
+        .unwrap();
+        let mut forged = start["snapshot"].clone();
+        forged["trace"]["view"] = json!({"junctions":[{"junction":3,"state":"settled","cost":0}]});
+        assert!(
+            response(&json!({"snapshot":forged}))
+                .unwrap_err()
+                .contains("Unknown route request field")
+        );
+        for (field, value) in [("townIdentity", json!(vec![0; 32])), ("cursor", json!(999))] {
+            let mut forged = start["snapshot"].clone();
+            forged["trace"][field] = value;
+            assert!(response(&json!({"snapshot":forged})).is_err());
+        }
+    }
 
     #[test]
     fn authored_save_reopens_fresh_and_remix_retains_exact_parent_identity() {

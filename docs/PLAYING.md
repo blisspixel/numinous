@@ -24,6 +24,11 @@ tentative costs can improve, and finalized costs are the cheapest to their
 junctions. Pointer and controller users have the same labeled controls. Edits
 clear the old search, while unreachable deliveries remain visible with reopen
 and undo guidance. Journey is available through the Cabinet.
+Search now draws the revealed predecessor connections and cumulative costs on
+the network. Tentative and settled junctions have different shapes and labels;
+unreachable junctions are marked only at completion. The final path uses a
+separate heavier stroke. Native authoring keeps a junction inspector for compact
+and dense maps. Backward steps remove knowledge from later decisions.
 
 CLI `numinous route-lab` gives a readable comparison; `numinous render route-lab`
 draws the room. `--poke 0.75,0.92` accepts the opening saving, while

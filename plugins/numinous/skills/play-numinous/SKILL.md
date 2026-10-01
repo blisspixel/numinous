@@ -107,6 +107,14 @@ revealed when the sequence completes. Event costs are cumulative from the start:
 `relaxed` improves a tentative cost; `settled` finalizes the cheapest cost to a
 junction. Edits invalidate the trace, and an inconsistent revision or network
 identity is refused.
+`trace.view` gives the source, target, revealed cursor, `activeEvent`, and a row
+for each junction: `junction`, `cost`, `predecessor`, and `state`. States are
+`unseen`, `tentative`, `settled`, and `unreachable`. The source starts tentative
+at zero; other costs and predecessors are `null` until revealed. The source's
+predecessor stays `null`, and `activeEvent` is `null` before the first step.
+Unreachable is established only after completion, and `trace.result` remains
+`null` until then. Rewinding removes later knowledge. CLI text presents the
+same projection.
 
 For a portable route creation, send `action: "save"` and the current snapshot.
 `creation.capsule` is canonical `NUMINOUS_ROUTE 1` text. `action: "open"` with

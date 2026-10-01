@@ -5,6 +5,26 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.29] - 2026-10-01
+
+### Added
+- Route Lab search draws the revealed calculation on the street network in
+  ordinary play and native authoring. Tentative predecessors, settled costs,
+  the latest relaxed road, and the completed path have distinct marks. Dense
+  and compact authoring maps retain a junction inspector. Clicking a node
+  selects that inspector without advancing or restarting the search.
+- Core projects only the caller-revealed prefix into per-junction costs,
+  predecessors, and unseen, tentative, settled, or unreachable states. CLI
+  text and additive MCP `trace.view` share that projection. Backward seeks
+  remove later knowledge, and final results remain withheld until completion.
+- The App screenshot matrix covers search initialization, cheaper predecessor
+  replacement, backward stepping, disconnected completion, and dense networks.
+
+### Changed
+- Packaged player instructions explain search states, connection marks,
+  cumulative costs, and inspection across the three faces.
+- The bitmap font renders the tentative cost marker used by Route Lab.
+
 ## [0.4.0-alpha.28] - 2026-09-30
 
 ### Added

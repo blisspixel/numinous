@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 pub(super) fn catalog_entry() -> Value {
     json!({
         "name":"route_lab", "title":"Explore delivery routes",
-        "description":"Choose a delivery order and compare its round-trip cost with nearest-next and the exact minimum for a street network. Start with no arguments, or carry the returned working state (snapshot) into another call. Roads are two-way; declare each connection once. Actions replace network with current, or edit road_cost, road_open, stops (depot first), depot, or order; greedy chooses the nearest next stop, improve accepts one cheaper reorder, and undo restores a prior edit. Evaluation preserves your order. Each leg follows the cheapest open road path and may pass or revisit other stops. If required stops cannot reach one another, the network stays editable with an infeasible comparison; disconnected unused junctions do not prevent a round trip. trace records a shortest-path search at cursor zero, and step reveals events with steps (default one) or an absolute cursor. Event costs are cumulative from the starting junction: settled is final, relaxed is tentative. The path result appears on completion. next is a followable call carrying snapshot. Editing state stays private and caller-carried. Scalar action save returns a NUMINOUS_ROUTE 1 creation from the current snapshot; an optional existing capsule preserves its parent identity while saving edits. Explicit remix creates the child. Scalar open or remix accepts capsule text and starts a fresh session. Portable creations carry the authored network, delivery order, and parent identity, with no undo or search playback. creation.next offers an explicit remix; save next reopens the saved creation. The project tool can keep that capsule using existing project persistence.",
+        "description":"Choose a delivery order and compare its round-trip cost with nearest-next and the exact minimum for a street network. Start with no arguments, or carry the returned working state (snapshot) into another call. Roads are two-way; declare each connection once. Actions replace network with current, or edit road_cost, road_open, stops (depot first), depot, or order; greedy chooses the nearest next stop, improve accepts one cheaper reorder, and undo restores a prior edit. Evaluation preserves your order. Each leg follows the cheapest open road path and may pass or revisit other stops. If required stops cannot reach one another, the network stays editable with an infeasible comparison; disconnected unused junctions do not prevent a round trip. trace records a shortest-path search at cursor zero, and step reveals events with steps (default one) or an absolute cursor. Event costs are cumulative from the starting junction: settled is final, relaxed is tentative. trace.view reports each junction as unseen, tentative, settled, or unreachable, with its currently revealed cost and predecessor plus the latest visible event. Unseen becomes unreachable only when playback completes; seeking backwards removes later knowledge. The path result appears on completion. next is a followable call carrying snapshot. Editing state stays private and caller-carried. Scalar action save returns a NUMINOUS_ROUTE 1 creation from the current snapshot; an optional existing capsule preserves its parent identity while saving edits. Explicit remix creates the child. Scalar open or remix accepts capsule text and starts a fresh session. Portable creations carry the authored network, delivery order, and parent identity, with no undo or search playback. creation.next offers an explicit remix; save next reopens the saved creation. The project tool can keep that capsule using existing project persistence.",
         "annotations":{"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
         "inputSchema":request_schema(),
         "outputSchema":output_schema()
@@ -48,8 +48,24 @@ fn output_schema() -> Value {
         object_schema(json!({"status":{"type":"string","enum":["reachable"]},"junctions":{"type":"array","items":bounded_index()},"cost":integer}),&["status","junctions","cost"]),
         object_schema(json!({"status":{"type":"string","enum":["unreachable"]},"diagnosis":{"type":"string"},"diagnostic":diagnostic_schema()}),&["status","diagnosis","diagnostic"])
     ]});
+    let junction = object_schema(
+        json!({"junction":bounded_index(),"cost":{"oneOf":[{"type":"null"},distance]},"predecessor":{"oneOf":[{"type":"null"},bounded_index()]},"state":{"type":"string","enum":["unseen","tentative","settled","unreachable"]}}),
+        &["junction", "cost", "predecessor", "state"],
+    );
+    let view = object_schema(
+        json!({"from":bounded_index(),"to":bounded_index(),"cursor":integer,"eventCount":integer,"completed":{"type":"boolean"},"junctions":{"type":"array","maxItems":MAX_ROUTE_JUNCTIONS,"items":junction},"activeEvent":{"oneOf":[{"type":"null"},event]}}),
+        &[
+            "from",
+            "to",
+            "cursor",
+            "eventCount",
+            "completed",
+            "junctions",
+            "activeEvent",
+        ],
+    );
     let trace = object_schema(
-        json!({"from":bounded_index(),"to":bounded_index(),"cursor":integer,"eventCount":integer,"completed":{"type":"boolean"},"events":{"type":"array","items":event},"result":result}),
+        json!({"from":bounded_index(),"to":bounded_index(),"cursor":integer,"eventCount":integer,"completed":{"type":"boolean"},"events":{"type":"array","items":event},"view":view,"result":result}),
         &[
             "from",
             "to",
@@ -57,6 +73,7 @@ fn output_schema() -> Value {
             "eventCount",
             "completed",
             "events",
+            "view",
             "result",
         ],
     );
@@ -167,4 +184,47 @@ fn request_schema() -> Value {
         json!({"snapshot":snapshot,"capsule":{"type":"string","minLength":1,"maxLength":MAX_ROUTE_CAPSULE_BYTES},"action":{"oneOf":actions}}),
         &[],
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_view_schema_accepts_real_prefixes_and_refuses_forged_view_fields() {
+        let schema = output_schema();
+        let mut response =
+            route_json::response(&json!({"action":{"type":"trace","from":0,"to":3}})).unwrap();
+        let event_count = response["trace"]["eventCount"].as_u64().unwrap();
+        crate::validate_schema_value(&response, &schema, "", 0).unwrap();
+        for expected_cursor in 1..=event_count {
+            assert_eq!(response["next"]["tool"], "route_lab");
+            response = route_json::response(&response["next"]["arguments"]).unwrap();
+            crate::validate_schema_value(&response, &schema, "", 0).unwrap();
+            assert_eq!(response["trace"]["cursor"], expected_cursor);
+            assert_eq!(response["trace"]["eventCount"], event_count);
+            assert_eq!(
+                response["trace"]["completed"],
+                expected_cursor == event_count
+            );
+            assert_eq!(
+                response["trace"]["result"].is_null(),
+                expected_cursor < event_count
+            );
+        }
+        assert_eq!(response["trace"]["completed"], true);
+        for (field, value) in [
+            ("state", json!("certified")),
+            ("cost", json!(-1)),
+            ("predecessor", json!(999)),
+            ("secret", json!(true)),
+        ] {
+            let mut forged = response.clone();
+            forged["trace"]["view"]["junctions"][0][field] = value;
+            assert!(crate::validate_schema_value(&forged, &schema, "", 0).is_err());
+        }
+        let mut forged = response;
+        forged["trace"]["view"]["path"] = json!([0, 1, 3]);
+        assert!(crate::validate_schema_value(&forged, &schema, "", 0).is_err());
+    }
 }

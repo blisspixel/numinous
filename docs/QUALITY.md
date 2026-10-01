@@ -76,6 +76,25 @@ representative opening, custom-network, dense-network, compact draft, question,
 search, and remix views were inspected. Study plates, gallery, contact sheet,
 and audio artifacts were regenerated. Participant comprehension, real-host
 discovery, and physical cross-platform evidence remain open.
+The alpha 29 search pass on 2026-10-01 completed the full Windows verification
+gate on its final source and passed 4,570 all-target Rust test cases with the
+same three expensive diagnostics excluded from the ordinary run. Coverage
+measured 94.60% regions and 94.64% lines under the existing exclusions,
+improving alpha 28's 94.53% regions and 94.57% lines. The canonical route
+workbench measured 99.35% lines and native route authoring 98.96% lines.
+Independent prefix, tie, disconnected, import, invalidation, and real transport
+tests cover revealed costs and predecessors, completion-only paths, backward
+stepping, and followable next calls with bounded progress assertions. Thirty-four
+focused native authoring tests passed. Fresh room Raster regressions cover node
+shapes, predecessor and completed-path strokes, exact rewind parity, and the
+visible tentative marker; every supported bitmap glyph must render individually.
+The complete 3,009-frame App matrix, 112 focused authoring frames, and 22 focused
+ordinary Route Lab frames passed. Representative compact and default prefix,
+completion, unreachable, cheaper replacement, rewind, and dense views were
+inspected, along with a wide-short initialization view. README and study plates,
+gallery, contact sheet, and audio artifacts were regenerated. These are machine
+and rendering checks; participant comprehension and physical cross-platform
+evidence remain open.
 The broader dated baseline below retains its original counts.
 
 ## Evidence snapshot, 2026-09-01
