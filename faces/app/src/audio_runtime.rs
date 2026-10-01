@@ -17,9 +17,13 @@ pub(super) fn selected_parameter_sound(
     inputs: &[numinous_core::RoomInput],
     the_show: bool,
 ) -> Option<numinous_core::ParametricSound> {
+    let has_route_key = room.meta().id == "route-lab"
+        && inputs
+            .iter()
+            .any(|input| matches!(input, numinous_core::RoomInput::Key { .. }));
     if program != AudioProgram::RoomScore
         || modal_active
-        || !the_show && !has_finite_parameter_input(inputs)
+        || !the_show && !has_finite_parameter_input(inputs) && !has_route_key
     {
         return None;
     }

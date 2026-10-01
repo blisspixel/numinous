@@ -8,12 +8,18 @@
 //! The public README gallery is a separate, small set of those same frames:
 //! `cargo run -p numinous-app --example screens -- --readme` writes
 //! `assets/screens/`.
+//!
+//! `--room <id>` inspects one room in `renders/qa-room/<id>/` without replacing
+//! the full matrix. Its frames use the same composed drawing and domain checks.
 
 use std::collections::{BTreeSet, VecDeque};
 use std::fs::{File, OpenOptions};
 use std::io::{self, BufWriter};
 use std::path::{Path, PathBuf};
 
+use numinous_app::route_authoring::{
+    Action as RouteAction, Page as RoutePage, Panel as RoutePanel,
+};
 use numinous_core::{Journey, Raster, Room, RoomInput, Scoreboard, Surface, all_rooms};
 
 fn draw_cabinet_menu(raster: &mut Raster, mode: numinous_app::input_legend::InputMode) {
@@ -112,7 +118,18 @@ const MIN_SUPPORT_DENSITY_PERMILLE: usize = 1;
 const SPATIAL_TILE_SIZE: usize = 32;
 const MIN_COHERENT_TILES: usize = 2;
 const MIN_MEAN_CHANNEL_DELTA: usize = 4;
-const SHARED_SCREEN_COUNT: usize = 105;
+const ROUTE_AUTHORING_STATES: [&str; 9] = [
+    "opening",
+    "custom-network",
+    "dense-network",
+    "new-road-draft",
+    "disconnected",
+    "search-prefix",
+    "search-complete",
+    "keep-question",
+    "remix-preview",
+];
+const SHARED_SCREEN_COUNT: usize = 105 + ROUTE_AUTHORING_STATES.len() * 4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum InteractionKind {
@@ -249,7 +266,11 @@ fn expected_dimensions(relative: &str) -> (usize, usize) {
 }
 
 fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
-    assert_eq!(rooms.len(), 355, "current catalog size");
+    assert_eq!(
+        rooms.len(),
+        numinous_core::ROOM_CATALOG.len(),
+        "the QA matrix must cover the complete canonical catalog"
+    );
     let mut expected = BTreeSet::new();
     for room in rooms {
         let id = room.meta().id;
@@ -390,6 +411,16 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
         .into_iter()
         .map(str::to_string),
     );
+    for state in ROUTE_AUTHORING_STATES {
+        for mode in ["keyboard", "controller"] {
+            for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
+                expected.insert(format!(
+                    "overlays/route-editor-{state}-{mode}-{label}-{}x{}.png",
+                    size.0, size.1
+                ));
+            }
+        }
+    }
     assert_eq!(
         expected.len(),
         rooms.len() * 8 + SHARED_SCREEN_COUNT,
@@ -1565,9 +1596,280 @@ fn gauntlet(seed: u64) -> play::GauntletPlay {
     }
 }
 
+fn authored_route_workbench() -> numinous_core::route_workbench::RouteWorkbench {
+    use numinous_core::route::Road;
+    use numinous_core::route_workbench::{
+        EditableRoad, RouteTownSnapshot, RouteWorkbench, RouteWorkbenchSnapshot,
+    };
+    RouteWorkbench::from_snapshot(RouteWorkbenchSnapshot {
+        revision: 0,
+        current: RouteTownSnapshot {
+            junctions: 6,
+            roads: [
+                (0, 1, 2),
+                (1, 2, 3),
+                (2, 3, 4),
+                (3, 4, 5),
+                (4, 5, 6),
+                (0, 5, 25),
+            ]
+            .into_iter()
+            .map(|(from, to, cost)| EditableRoad {
+                road: Road { from, to, cost },
+                open: true,
+            })
+            .collect(),
+            stops: vec![0, 2, 3, 5],
+            order: vec![0, 5, 2, 3],
+        },
+        undo: Vec::new(),
+        trace: None,
+    })
+    .expect("bounded authored route fixture")
+}
+
+fn route_authoring_panels() -> Vec<(&'static str, RoutePanel)> {
+    use numinous_core::route::{MAX_ROUTE_JUNCTIONS, MAX_ROUTE_ROADS, Road};
+    use numinous_core::route_workbench::{EditableRoad, RouteEdit, RouteWorkbench};
+    let custom = authored_route_workbench();
+    let comparison = custom.compare().expect("connected authored route fixture");
+    assert_eq!(comparison.current.cost, 48);
+    // The endpoints are distance 20 apart, so any closed delivery route costs
+    // at least 40. A monotone visit followed by a return along the line attains it.
+    assert_eq!(comparison.exact.tour.cost, 40);
+    let mut dense_network = custom.snapshot();
+    dense_network.current.junctions = MAX_ROUTE_JUNCTIONS;
+    dense_network.current.roads = (0..MAX_ROUTE_JUNCTIONS)
+        .flat_map(|from| ((from + 1)..MAX_ROUTE_JUNCTIONS).map(move |to| (from, to)))
+        .take(MAX_ROUTE_ROADS)
+        .map(|(from, to)| EditableRoad {
+            road: Road {
+                from,
+                to,
+                cost: ((from + to) % 9 + 1) as u32,
+            },
+            open: true,
+        })
+        .collect();
+    dense_network.current.stops = vec![0, 4, 9, 15, 22, 31];
+    dense_network.current.order = vec![0, 31, 9, 22, 4, 15];
+    let dense = RouteWorkbench::from_snapshot(dense_network).expect("bounded dense route fixture");
+    let mut draft = RoutePanel::new(RouteWorkbench::first_town());
+    let before_draft = draft.workbench().snapshot();
+    draft.act(RouteAction::Page(RoutePage::Roads));
+    draft.act(RouteAction::NewRoad);
+    draft.act(RouteAction::To(2));
+    draft.act(RouteAction::Cost(3));
+    assert_eq!(draft.workbench().snapshot(), before_draft);
+    let mut disconnected = custom.clone();
+    for (from, to) in [(0, 1), (0, 5)] {
+        disconnected
+            .apply(RouteEdit::RoadOpen {
+                from,
+                to,
+                open: false,
+            })
+            .unwrap();
+    }
+    assert!(disconnected.compare().is_err());
+    let mut disconnected = RoutePanel::new(disconnected);
+    disconnected.act(RouteAction::Page(RoutePage::Roads));
+    let search_panel = |complete: bool| {
+        let mut panel = RoutePanel::new(RouteWorkbench::first_town());
+        panel.act(RouteAction::Page(RoutePage::Search));
+        for _ in 0..3 {
+            panel.act(RouteAction::Next);
+        }
+        panel.act(RouteAction::Search);
+        let count = if complete {
+            panel.workbench().trace().unwrap().events().len()
+        } else {
+            3
+        };
+        for _ in 0..count {
+            panel.act(RouteAction::Step);
+        }
+        assert_eq!(panel.workbench().trace().unwrap().completed(), complete);
+        panel
+    };
+    let source = numinous_core::RouteCreation::new(custom.town().clone()).unwrap();
+    let mut question = RoutePanel::opened(source.clone());
+    question.act(RouteAction::Confirm);
+    question.act(RouteAction::Page(RoutePage::Keep));
+    question.push_text("Can a new delivery make the nearest-next order cheaper?");
+    let child = source.remix(source.town().clone()).unwrap();
+    assert_eq!(child.parent_identity(), Some(source.identity()));
+    let panels = vec![
+        ("opening", RoutePanel::new(RouteWorkbench::first_town())),
+        ("custom-network", RoutePanel::new(custom)),
+        ("dense-network", RoutePanel::new(dense)),
+        ("new-road-draft", draft),
+        ("disconnected", disconnected),
+        ("search-prefix", search_panel(false)),
+        ("search-complete", search_panel(true)),
+        ("keep-question", question),
+        ("remix-preview", RoutePanel::opened(child)),
+    ];
+    assert!(
+        panels
+            .iter()
+            .map(|(name, _)| *name)
+            .eq(ROUTE_AUTHORING_STATES)
+    );
+    panels
+}
+
+fn route_authoring_frames(sizes: &[(&str, (usize, usize))]) -> Vec<(String, Raster)> {
+    let mut frames = Vec::new();
+    for (state, panel) in route_authoring_panels() {
+        for (mode, hint) in [
+            ("keyboard", None),
+            ("controller", Some("DPAD SELECT. SOUTH ACTS. BACK LEAVES.")),
+        ] {
+            for (label, (width, height)) in sizes {
+                let raster = panel.draw(*width, *height, hint);
+                assert_eq!((raster.width(), raster.height()), (*width, *height));
+                assert!(raster.lit_count() > 20, "route editor {state} is not blank");
+                frames.push((
+                    format!("route-editor-{state}-{mode}-{label}-{width}x{height}.png"),
+                    raster,
+                ));
+            }
+        }
+    }
+    frames
+}
+
+fn write_route_authoring_previews(output: &Path) {
+    let mut manifest = Vec::new();
+    for (name, mut raster) in route_authoring_frames(&[
+        ("default", DEFAULT_SIZE),
+        ("small", SMALL_SIZE),
+        ("wide", (1600, 700)),
+        ("wide-short", (1280, 400)),
+    ]) {
+        let audio = audio_state::describe(
+            audio_state::Program::RoomScore,
+            None,
+            0.45,
+            false,
+            true,
+            true,
+        );
+        let width = raster.width();
+        hud::draw_audio_state(&mut raster, &audio, width);
+        write_png(&raster, &output.join(&name));
+        manifest.push(name);
+    }
+    manifest.sort();
+    std::fs::write(
+        output.join("MANIFEST.txt"),
+        format!("{}\n", manifest.join("\n")),
+    )
+    .expect("write focused route editor manifest");
+    println!(
+        "wrote {} for native route authoring",
+        numinous_core::counted(manifest.len(), "preview")
+    );
+}
+
+fn write_room_previews(output: &Path, room: &dyn Room) {
+    let scenario = room_scenario(room);
+    let id = room.meta().id;
+    assert_scenario_shape(id, &scenario);
+    assert_scenario_matches_verb(room, &scenario);
+    assert_semantics(room, &scenario);
+    assert_hold_release_contract(room, &scenario);
+    let mut manifest = Vec::new();
+    let mut captures = vec![
+        ("base", 0.0, Vec::new(), 0),
+        ("arrival", 0.0, Vec::new(), 1),
+        ("interacted", 0.0, scenario.immediate.clone(), 0),
+        (
+            "delayed",
+            scenario.delayed_phase,
+            scenario.delayed.clone(),
+            0,
+        ),
+    ];
+    if id == "route-lab" {
+        for (name, keys) in [
+            ("closed-street", "c".to_string()),
+            ("disconnected", "c.c".to_string()),
+            ("undo", "c.cz".to_string()),
+            ("trace-start", "t".to_string()),
+            ("trace-prefix", "t...".to_string()),
+            ("trace-complete", format!("t{}", ".".repeat(32))),
+            ("trace-unreachable", "c.ct.".to_string()),
+        ] {
+            captures.push((
+                name,
+                0.0,
+                keys.chars().map(|ch| RoomInput::Key { ch }).collect(),
+                0,
+            ));
+        }
+    }
+    for (size_label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
+        assert_domain_response(
+            id,
+            size_label,
+            &room_content(room, 0.0, &[], size),
+            &room_content(room, 0.0, &scenario.immediate, size),
+            &room_content(room, scenario.delayed_phase, &[], size),
+            &room_content(room, scenario.delayed_phase, &scenario.delayed, size),
+        );
+        for (label, phase, inputs, card) in &captures {
+            let mut raster = room_screen(room, *phase, inputs, size, *card, false, 7);
+            let audio = audio_state::describe(
+                audio_state::Program::RoomScore,
+                None,
+                0.45,
+                false,
+                true,
+                true,
+            );
+            hud::draw_audio_state(&mut raster, &audio, size.0);
+            assert!(raster.lit_count() > 20, "{id}/{label} is not blank");
+            let relative = format!("{label}-{size_label}-{}x{}.png", size.0, size.1);
+            write_png(&raster, &output.join(&relative));
+            manifest.push(relative);
+        }
+    }
+    manifest.sort();
+    std::fs::write(
+        output.join("MANIFEST.txt"),
+        format!("room={id}\n{}\n", manifest.join("\n")),
+    )
+    .expect("write focused room manifest");
+    println!(
+        "wrote {} for {id}",
+        numinous_core::counted(manifest.len(), "preview")
+    );
+}
+
 fn main() {
     let _generation_lock = GenerationLock::acquire(Path::new("renders/.qa-app.lock"))
         .expect("another App screenshot generator is already writing renders");
+    let arguments: Vec<_> = std::env::args().skip(1).collect();
+    if arguments == ["--route-editor"] {
+        write_route_authoring_previews(Path::new("renders/qa-route-editor"));
+        return;
+    }
+    if let Some(index) = arguments.iter().position(|argument| argument == "--room") {
+        if arguments.len() != 2 || index != 0 {
+            eprintln!("Usage: screens --room <catalog-room-id>");
+            std::process::exit(2);
+        }
+        let rooms = all_rooms();
+        let Some(room) = rooms.iter().find(|room| room.meta().id == arguments[1]) else {
+            eprintln!("Unknown catalog room: {}", arguments[1]);
+            std::process::exit(2);
+        };
+        let output = Path::new("renders/qa-room").join(room.meta().id);
+        write_room_previews(&output, room.as_ref());
+        return;
+    }
     if std::env::args().any(|argument| argument == "--readme") {
         write_readme_screens(Path::new(README_SCREENS));
         println!("wrote {} README plates", README_PLATES.len());
@@ -2571,6 +2873,11 @@ fn main() {
         &mut manifest,
     );
 
+    for (relative, raster) in
+        route_authoring_frames(&[("default", DEFAULT_SIZE), ("small", SMALL_SIZE)])
+    {
+        save(&raster, &format!("overlays/{relative}"), &mut manifest);
+    }
     manifest.sort();
     let actual: BTreeSet<_> = manifest.iter().cloned().collect();
     assert_eq!(
@@ -2624,6 +2931,16 @@ mod tests {
             rooms.len() * 8 + SHARED_SCREEN_COUNT,
             "eight room states plus the exact shared evidence inventory"
         );
+        let count = numinous_core::counted(expected_paths(&rooms).len(), "screen");
+        for (name, prose) in [
+            ("docs/ROADMAP.md", include_str!("../../../docs/ROADMAP.md")),
+            ("VERIFY.md", include_str!("../../../VERIFY.md")),
+        ] {
+            assert!(
+                prose.contains(&count),
+                "{name} must describe the live QA inventory as {count}"
+            );
+        }
     }
 
     #[test]

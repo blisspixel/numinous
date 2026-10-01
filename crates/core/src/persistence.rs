@@ -3551,6 +3551,56 @@ mod tests {
     }
 
     #[test]
+    fn route_project_file_roundtrip_and_failed_changes_preserve_committed_bytes() {
+        let store = IsolatedStore::new("route_project_store");
+        let path = store.path("project.txt");
+        let creation = crate::RouteCreation::new(
+            crate::route_workbench::RouteWorkbench::first_town()
+                .town()
+                .clone(),
+        )
+        .unwrap();
+        let mut draft = crate::ProjectDraft {
+            recorded_at_utc: 30,
+            question: "Which street changes the best round trip?".into(),
+            next: crate::ProjectNext::OpenRoute {
+                capsule: creation.to_capsule(),
+            },
+            rooms: vec!["route-lab".into()],
+            evidence: Vec::new(),
+            creation: Some(creation.to_capsule()),
+        };
+        keep_project_file(&path, &draft).unwrap();
+        let before = std::fs::read(&path).unwrap();
+        let chain = try_load_project_file(&path).unwrap();
+        assert_eq!(
+            chain.revision(1).unwrap().creation_capsule(),
+            Some(creation.to_capsule().as_str())
+        );
+        let document = chain.revision(1).unwrap().to_document();
+        let other = store.path("other.txt");
+        import_project_file(&other, &document, 31, None, true).unwrap();
+        assert_eq!(
+            try_load_project_file(&other)
+                .unwrap()
+                .revision(1)
+                .unwrap()
+                .identity_hex(),
+            chain.revision(1).unwrap().identity_hex()
+        );
+        draft.creation = Some(
+            creation
+                .to_capsule()
+                .replace("road 1 3 3 open", "road 1 3 6 open"),
+        );
+        assert!(keep_project_file(&path, &draft).is_err());
+        assert!(super::correct_project_file(&path, 1, &draft).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        assert!(!super::lock_path_for(&path).exists());
+        assert_eq!(super::inspect_managed_file(&path).unwrap().sidecar_files, 0);
+    }
+
+    #[test]
     fn journal_erase_propagates_non_missing_removal_errors() {
         let path = temp_file("journal_erase_directory");
         std::fs::create_dir(&path).expect("directory fixture");

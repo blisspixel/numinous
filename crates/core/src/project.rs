@@ -1,14 +1,14 @@
 //! One chosen project the player can keep, import, and preview.
 //!
 //! The document holds a question, one next tool call, catalog room ids,
-//! typed evidence links, and an optional Studio creation. Keeping, importing,
+//! typed evidence links, and an optional Studio or route creation. Keeping, importing,
 //! and resuming are separate acts. Resume reports what is present, missing,
 //! corrected, collided, or incompatible. It does not call the next tool, and
 //! it does not write the journal or the workspace.
 //!
 //! There is no default path. A face that stores the chain passes an explicit
-//! file. This is not the `portable-1` evidence capsule, and a `NUMINOUS_STUDIO`
-//! file is not a project.
+//! file. This is not the `portable-1` evidence capsule. A creation capsule
+//! alone is not a project.
 
 use std::fmt;
 
@@ -18,6 +18,7 @@ use crate::journal::{
     Journal, JournalEntry,
 };
 use crate::path_closure::PathClosure;
+use crate::route_creation::{MAX_ROUTE_CAPSULE_BYTES, RouteCreation};
 use crate::sha256::{digest as sha256, hex as sha256_hex};
 use crate::studio::{MAX_SHARE_INPUT_BYTES, StudioCreation};
 use crate::{MAX_WORKSPACE_TEXT_CHARS, canonical_room_id, room_meta_by_id};
@@ -26,6 +27,10 @@ use crate::{MAX_WORKSPACE_TEXT_CHARS, canonical_room_id, room_meta_by_id};
 pub const PROJECT_DOCUMENT_HEADER: &str = "NUMINOUS_PROJECT 1";
 /// Local append-only chain header. This file is not an import document.
 pub const PROJECT_CHAIN_HEADER: &str = "numinous-project-v1";
+/// Portable document version supporting authored route creations.
+pub const PROJECT_DOCUMENT_HEADER_V2: &str = "NUMINOUS_PROJECT 2";
+/// Append-only chain version supporting route creations and next calls.
+pub const PROJECT_CHAIN_HEADER_V2: &str = "numinous-project-v2";
 /// Resume preview schema name. Core does not emit JSON.
 pub const PROJECT_RESUME_PREVIEW_SCHEMA: &str = "numinous.project-resume-preview";
 /// Resume preview schema version.
@@ -63,7 +68,7 @@ pub enum ProjectError {
     InvalidRoom(String),
     /// An evidence link is not a journal or receipt digest.
     InvalidEvidence(String),
-    /// The creation is not portable Studio data.
+    /// The creation is not supported portable creation data.
     InvalidCreation(String),
     /// The source is outside the two project acts.
     InvalidSource,
@@ -122,6 +127,13 @@ pub enum ProjectNext {
     },
     /// Fork this revision's creation. The parent link is derived at preview.
     ForkCreation,
+    /// Open one portable route creation through the shared workbench.
+    OpenRoute {
+        /// Canonical route capsule data, never a filesystem path.
+        capsule: String,
+    },
+    /// Remix this revision's embedded route creation.
+    RemixRoute,
     /// Play one room that this revision also names.
     PlayRoom {
         /// Canonical catalog id.
@@ -172,7 +184,7 @@ pub struct ProjectDraft {
     pub rooms: Vec<String>,
     /// Zero to four typed links.
     pub evidence: Vec<ProjectEvidence>,
-    /// Optional Studio capsule: `.num` text, a native link, or a bundled id.
+    /// Optional Studio capsule or bounded portable route capsule text.
     pub creation: Option<String>,
 }
 
@@ -278,10 +290,19 @@ pub struct EvidenceFact {
 pub enum CreationStatus {
     /// No creation was stored.
     Missing,
-    /// The stored `.num` reopened and matches its canonical text.
+    /// The stored creation reopened and matches its canonical text.
     Present,
-    /// The stored text is not a Studio creation, or it does not replay.
+    /// The stored text is not a supported creation, or it does not replay.
     Incompatible,
+}
+
+/// The closed kinds of portable creation a project may embed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CreationKind {
+    /// A Studio expression or construction.
+    Studio,
+    /// An authored street network and delivery order.
+    Route,
 }
 
 /// The creation a resume would hand back.
@@ -289,7 +310,11 @@ pub enum CreationStatus {
 pub struct CreationFact {
     /// Reopen status.
     pub status: CreationStatus,
-    /// Lineage link stored in the `.num` file, when the reopen succeeded.
+    /// Supported creation kind, when the reopen succeeded.
+    pub kind: Option<CreationKind>,
+    /// Canonical creation text for explicit reopening, when present.
+    pub capsule: Option<String>,
+    /// Studio lineage link or route parent digest, when the reopen succeeded.
     pub descends: Option<String>,
     /// The caller handed in a native link. A link does not carry lineage.
     pub lineage_was_not_in_the_link: bool,
@@ -445,10 +470,16 @@ impl ProjectRevision {
         &self.payload.evidence
     }
 
-    /// Canonical `.num` text, when a creation was stored.
+    /// Canonical creation text, when a creation was stored.
     #[must_use]
     pub fn creation_num(&self) -> Option<&str> {
         self.payload.creation_num.as_deref()
+    }
+
+    /// Canonical Studio or route capsule text, when a creation was stored.
+    #[must_use]
+    pub fn creation_capsule(&self) -> Option<&str> {
+        self.creation_num()
     }
 
     /// Whether the creation input was a native link.
@@ -489,10 +520,12 @@ impl ProjectRevision {
     /// is not part of this text.
     #[must_use]
     pub fn to_document(&self) -> String {
-        format!(
-            "{PROJECT_DOCUMENT_HEADER}\n{}\n",
-            self.payload.portable_line()
-        )
+        let header = if self.payload.needs_route_version() {
+            PROJECT_DOCUMENT_HEADER_V2
+        } else {
+            PROJECT_DOCUMENT_HEADER
+        };
+        format!("{header}\n{}\n", self.payload.portable_line())
     }
 }
 
@@ -646,7 +679,16 @@ impl ProjectChain {
     /// Serialize the local chain.
     #[must_use]
     pub fn to_text(&self) -> String {
-        let mut out = String::from(PROJECT_CHAIN_HEADER);
+        let header = if self
+            .revisions
+            .iter()
+            .any(|revision| revision.payload.needs_route_version())
+        {
+            PROJECT_CHAIN_HEADER_V2
+        } else {
+            PROJECT_CHAIN_HEADER
+        };
+        let mut out = String::from(header);
         out.push('\n');
         for revision in &self.revisions {
             out.push_str(&revision.chain_line());
@@ -661,11 +703,15 @@ impl ProjectChain {
             return Err(ProjectError::TooLarge);
         }
         let mut lines = text.lines();
-        if lines.next() != Some(PROJECT_CHAIN_HEADER) {
-            return Err(ProjectError::InvalidFormat(
-                "chain header must be numinous-project-v1".to_string(),
-            ));
-        }
+        let route_version = match lines.next() {
+            Some(PROJECT_CHAIN_HEADER) => false,
+            Some(PROJECT_CHAIN_HEADER_V2) => true,
+            _ => {
+                return Err(ProjectError::InvalidFormat(
+                    "unsupported project chain header".to_string(),
+                ));
+            }
+        };
         let mut revisions = Vec::new();
         let mut previous_id = 0_u64;
         for (index, line) in lines.enumerate() {
@@ -678,6 +724,11 @@ impl ProjectChain {
                 return Err(ProjectError::Capacity);
             }
             let revision = ProjectRevision::parse_chain_line(line, index + 2)?;
+            if !route_version && revision.payload.needs_route_version() {
+                return Err(ProjectError::InvalidFormat(
+                    "route content requires project chain version 2".into(),
+                ));
+            }
             if revision.id <= previous_id {
                 return Err(ProjectError::InvalidFormat(format!(
                     "line {} revision id is not increasing",
@@ -772,6 +823,12 @@ impl ProjectChain {
 }
 
 impl Payload {
+    fn needs_route_version(&self) -> bool {
+        matches!(
+            self.next,
+            ProjectNext::OpenRoute { .. } | ProjectNext::RemixRoute
+        ) || self.creation_num.as_deref().is_some_and(is_route_capsule)
+    }
     fn identity_hex(&self) -> String {
         sha256_hex(&sha256(self.portable_line().as_bytes()))
     }
@@ -869,11 +926,15 @@ fn parse_document(text: &str) -> Result<(Payload, bool), ProjectError> {
         return Err(ProjectError::TooLarge);
     }
     let mut lines = text.lines();
-    if lines.next() != Some(PROJECT_DOCUMENT_HEADER) {
-        return Err(ProjectError::InvalidFormat(
-            "document header must be NUMINOUS_PROJECT 1".to_string(),
-        ));
-    }
+    let route_version = match lines.next() {
+        Some(PROJECT_DOCUMENT_HEADER) => false,
+        Some(PROJECT_DOCUMENT_HEADER_V2) => true,
+        _ => {
+            return Err(ProjectError::InvalidFormat(
+                "unsupported project document header".to_string(),
+            ));
+        }
+    };
     let Some(line) = lines.next() else {
         return Err(ProjectError::InvalidFormat(
             "document has no payload line".to_string(),
@@ -905,6 +966,11 @@ fn parse_document(text: &str) -> Result<(Payload, bool), ProjectError> {
         creation_num,
         parent_hex: parse_parent(&fields[5])?,
     };
+    if !route_version && payload.needs_route_version() {
+        return Err(ProjectError::InvalidFormat(
+            "route content requires project document version 2".into(),
+        ));
+    }
     Ok((payload, from_link))
 }
 
@@ -1001,12 +1067,24 @@ fn canonical_next(
             capsule: canonical_open_capsule(capsule)?,
         }),
         ProjectNext::ForkCreation => {
-            if creation_num.is_none() {
+            if creation_num.is_none() || creation_num.is_some_and(is_route_capsule) {
                 return Err(ProjectError::InvalidNext(
-                    "fork_creation needs the project's creation".to_string(),
+                    "fork_creation needs the project's Studio creation".to_string(),
                 ));
             }
             Ok(ProjectNext::ForkCreation)
+        }
+        ProjectNext::OpenRoute { capsule } => Ok(ProjectNext::OpenRoute {
+            capsule: canonical_route(capsule)?,
+        }),
+        ProjectNext::RemixRoute => {
+            let Some(capsule) = creation_num.filter(|capsule| is_route_capsule(capsule)) else {
+                return Err(ProjectError::InvalidNext(
+                    "remix_route needs the project's route creation".into(),
+                ));
+            };
+            canonical_route(capsule)?;
+            Ok(ProjectNext::RemixRoute)
         }
         ProjectNext::PlayRoom { room, phase } => {
             let room = require_listed_room(room, rooms)?;
@@ -1046,6 +1124,9 @@ fn canonical_open_capsule(input: &str) -> Result<String, ProjectError> {
 }
 
 fn canonical_creation(input: &str) -> Result<(String, bool), ProjectError> {
+    if is_route_capsule(input) {
+        return canonical_route(input).map(|capsule| (capsule, false));
+    }
     if input.len() > MAX_SHARE_INPUT_BYTES {
         return Err(ProjectError::InvalidCreation(
             "creation exceeds the Studio byte cap".to_string(),
@@ -1060,6 +1141,16 @@ fn canonical_creation(input: &str) -> Result<(String, bool), ProjectError> {
         ));
     }
     Ok((num, from_link))
+}
+
+fn is_route_capsule(input: &str) -> bool {
+    input.starts_with("NUMINOUS_ROUTE")
+}
+
+fn canonical_route(input: &str) -> Result<String, ProjectError> {
+    RouteCreation::from_capsule(input)
+        .map(|creation| creation.to_capsule())
+        .map_err(|error| ProjectError::InvalidCreation(error.to_string()))
 }
 
 fn require_listed_room(room: &str, rooms: &[String]) -> Result<String, ProjectError> {
@@ -1315,14 +1406,38 @@ fn preview_creation(revision: &ProjectRevision) -> CreationFact {
     let Some(num) = revision.creation_num() else {
         return CreationFact {
             status: CreationStatus::Missing,
+            kind: None,
+            capsule: None,
             descends: None,
             lineage_was_not_in_the_link: false,
             period_text: None,
         };
     };
+    if is_route_capsule(num) {
+        return match RouteCreation::from_capsule(num) {
+            Ok(route) if route.to_capsule() == num => CreationFact {
+                status: CreationStatus::Present,
+                kind: Some(CreationKind::Route),
+                capsule: Some(num.to_string()),
+                descends: route.parent_identity().map(|parent| sha256_hex(&parent)),
+                lineage_was_not_in_the_link: false,
+                period_text: None,
+            },
+            _ => CreationFact {
+                status: CreationStatus::Incompatible,
+                kind: None,
+                capsule: None,
+                descends: None,
+                lineage_was_not_in_the_link: false,
+                period_text: None,
+            },
+        };
+    }
     let Ok(creation) = StudioCreation::from_capsule(num) else {
         return CreationFact {
             status: CreationStatus::Incompatible,
+            kind: None,
+            capsule: None,
             descends: None,
             lineage_was_not_in_the_link: revision.creation_from_link(),
             period_text: None,
@@ -1331,6 +1446,8 @@ fn preview_creation(revision: &ProjectRevision) -> CreationFact {
     if creation.to_num_file() != num {
         return CreationFact {
             status: CreationStatus::Incompatible,
+            kind: None,
+            capsule: None,
             descends: None,
             lineage_was_not_in_the_link: revision.creation_from_link(),
             period_text: None,
@@ -1342,6 +1459,8 @@ fn preview_creation(revision: &ProjectRevision) -> CreationFact {
     };
     CreationFact {
         status: CreationStatus::Present,
+        kind: Some(CreationKind::Studio),
+        capsule: Some(num.to_string()),
         descends: creation.descends().map(str::to_string),
         lineage_was_not_in_the_link: revision.creation_from_link(),
         period_text,
@@ -1350,6 +1469,11 @@ fn preview_creation(revision: &ProjectRevision) -> CreationFact {
 
 fn preview_next(revision: &ProjectRevision, creation: &CreationFact) -> NextPreview {
     match revision.next() {
+        ProjectNext::OpenRoute { capsule } => route_next(capsule, "open"),
+        ProjectNext::RemixRoute => match (creation.kind, creation.capsule.as_deref()) {
+            (Some(CreationKind::Route), Some(capsule)) => route_next(capsule, "remix"),
+            _ => incompatible("route_lab", "the project has no route creation to remix"),
+        },
         ProjectNext::OpenCreation { capsule } => {
             if StudioCreation::from_capsule(capsule).is_ok() {
                 NextPreview::Ready(ProjectCall {
@@ -1424,6 +1548,25 @@ fn preview_next(revision: &ProjectRevision, creation: &CreationFact) -> NextPrev
     }
 }
 
+fn route_next(capsule: &str, action: &str) -> NextPreview {
+    if RouteCreation::from_capsule(capsule).is_err() {
+        return incompatible("route_lab", "route capsule does not reopen");
+    }
+    NextPreview::Ready(ProjectCall {
+        tool: "route_lab",
+        arguments: vec![
+            ProjectArgument {
+                name: "capsule",
+                value: ProjectArgumentValue::Text(capsule.into()),
+            },
+            ProjectArgument {
+                name: "action",
+                value: ProjectArgumentValue::Text(action.into()),
+            },
+        ],
+    })
+}
+
 fn incompatible(tool: &str, reason: &str) -> NextPreview {
     NextPreview::Incompatible(IncompatibleNext {
         tool: tool.to_string(),
@@ -1435,6 +1578,8 @@ fn encode_next(next: &ProjectNext) -> String {
     match next {
         ProjectNext::OpenCreation { capsule } => format!("open_creation\n{capsule}"),
         ProjectNext::ForkCreation => "fork_creation".to_string(),
+        ProjectNext::OpenRoute { capsule } => format!("open_route\n{capsule}"),
+        ProjectNext::RemixRoute => "remix_route".to_string(),
         ProjectNext::PlayRoom { room, phase: None } => format!("play_room\n{room}"),
         ProjectNext::PlayRoom {
             room,
@@ -1449,6 +1594,31 @@ fn decode_next(field: &str) -> Result<ProjectNext, ProjectError> {
         .split_once('\n')
         .map_or((field, None), |(tool, rest)| (tool, Some(rest)));
     match tool {
+        "open_route" => {
+            let capsule = rest
+                .ok_or_else(|| ProjectError::InvalidFormat("open_route needs a capsule".into()))?;
+            if capsule.is_empty() || capsule.len() > MAX_ROUTE_CAPSULE_BYTES {
+                return Err(ProjectError::InvalidFormat(
+                    "route capsule is empty or too large".into(),
+                ));
+            }
+            if canonical_route(capsule)? != capsule {
+                return Err(ProjectError::InvalidFormat(
+                    "stored route next is not canonical".into(),
+                ));
+            }
+            Ok(ProjectNext::OpenRoute {
+                capsule: capsule.into(),
+            })
+        }
+        "remix_route" => {
+            if rest.is_some() {
+                return Err(ProjectError::InvalidFormat(
+                    "remix_route takes no stored argument".into(),
+                ));
+            }
+            Ok(ProjectNext::RemixRoute)
+        }
         "open_creation" => {
             let capsule = rest.ok_or_else(|| {
                 ProjectError::InvalidFormat("open_creation needs a capsule".to_string())
@@ -1627,6 +1797,11 @@ fn parse_stored_creation(field: &str) -> Result<(Option<String>, bool), ProjectE
             "stored creation is empty or too large".to_string(),
         ));
     }
+    if is_route_capsule(num) && (kind != "file" || canonical_route(num)? != num) {
+        return Err(ProjectError::InvalidFormat(
+            "stored route creation is not canonical file data".into(),
+        ));
+    }
     match kind {
         "link" => Ok((Some(num.to_string()), true)),
         "file" => Ok((Some(num.to_string()), false)),
@@ -1719,6 +1894,603 @@ fn encode_field(value: &str) -> String {
         }
     }
     encoded
+}
+
+#[cfg(test)]
+mod route_project_tests {
+    use super::*;
+    use crate::route_workbench::RouteWorkbench;
+
+    fn route_draft(creation: &RouteCreation) -> ProjectDraft {
+        ProjectDraft {
+            recorded_at_utc: 7,
+            question: "Can closing this road change the best delivery order?".into(),
+            next: ProjectNext::OpenRoute {
+                capsule: creation.to_capsule(),
+            },
+            rooms: vec!["route-lab".into()],
+            evidence: Vec::new(),
+            creation: Some(creation.to_capsule()),
+        }
+    }
+
+    fn studio_draft() -> ProjectDraft {
+        ProjectDraft {
+            recorded_at_utc: 7,
+            question: "Q".into(),
+            next: ProjectNext::StudyRoom {
+                room: "lissajous".into(),
+            },
+            rooms: vec!["lissajous".into()],
+            evidence: Vec::new(),
+            creation: Some("NUMINOUS_STUDIO 1\nexpr=t\nxmin=0\nxmax=1\na=1\n".into()),
+        }
+    }
+
+    #[test]
+    fn legacy_studio_document_bytes_and_identity_are_unchanged() {
+        let expected_line = "Q\tstudy_room\\nlissajous\tlissajous\t\tNUMINOUS_STUDIO 1\\nexpr=t\\nxmin=0\\nxmax=1\\na=1\\n\t";
+        let expected_document = format!("NUMINOUS_PROJECT 1\n{expected_line}\n");
+        let expected_chain = "numinous-project-v1\n1\t7\tself-authored\tQ\tstudy_room\\nlissajous\tlissajous\t\tfile\\nNUMINOUS_STUDIO 1\\nexpr=t\\nxmin=0\\nxmax=1\\na=1\\n\t\t\t\n";
+        let mut chain = ProjectChain::new();
+        chain.keep(&studio_draft()).unwrap();
+        let row = chain.revision(1).unwrap();
+        assert_eq!(row.to_document(), expected_document);
+        assert_eq!(
+            row.identity_hex(),
+            "f58dedb381dc8bcdae0fa510993c415086a21a5a3e94f15a9059bd7beb46e6a2"
+        );
+        assert_eq!(chain.to_text(), expected_chain);
+        assert_eq!(
+            ProjectChain::parse(expected_chain).unwrap().to_text(),
+            expected_chain
+        );
+        let mut imported = ProjectChain::new();
+        imported.import(&expected_document, 9, None, true).unwrap();
+        assert_eq!(
+            imported.revision(1).unwrap().identity_hex(),
+            row.identity_hex()
+        );
+    }
+
+    #[test]
+    fn mixed_chain_preserves_old_rows_and_reopens_corrected_route() {
+        let parent = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let mut chain = ProjectChain::new();
+        chain.keep(&studio_draft()).unwrap();
+        let old_row = chain.revision(1).unwrap().chain_line();
+        let old_identity = chain.revision(1).unwrap().identity_hex();
+        chain.keep(&route_draft(&parent)).unwrap();
+        assert!(chain.to_text().starts_with(PROJECT_CHAIN_HEADER_V2));
+        assert_eq!(chain.revision(1).unwrap().chain_line(), old_row);
+        assert_eq!(chain.revision(1).unwrap().identity_hex(), old_identity);
+        assert!(
+            chain
+                .revision(1)
+                .unwrap()
+                .to_document()
+                .starts_with(PROJECT_DOCUMENT_HEADER)
+        );
+        assert!(
+            chain
+                .revision(2)
+                .unwrap()
+                .to_document()
+                .starts_with(PROJECT_DOCUMENT_HEADER_V2)
+        );
+        let mut changed = parent.town().clone();
+        changed.roads[3].road.cost = 5;
+        let child = parent.remix(changed).unwrap();
+        chain.correct(2, &route_draft(&child)).unwrap();
+        let text = chain.to_text();
+        let restored = ProjectChain::parse(&text).unwrap();
+        assert_eq!(restored.to_text(), text);
+        let preview = restored
+            .preview(None, &Journal::new(), ReceiptCheck::NotSupplied)
+            .unwrap();
+        assert!(preview.will_return);
+        assert_eq!(preview.creation.kind, Some(CreationKind::Route));
+        assert_eq!(preview.creation.capsule, Some(child.to_capsule()));
+        assert_eq!(preview.creation.descends, Some(parent.identity_hex()));
+        assert!(preview.creation.period_text.is_none());
+        assert_eq!(preview.parent_resolved, Some(true));
+        assert_eq!(
+            restored.revision(2).unwrap().creation_capsule(),
+            Some(parent.to_capsule().as_str())
+        );
+        let NextPreview::Ready(call) = preview.next else {
+            panic!("ready route door");
+        };
+        assert_eq!(call.tool, "route_lab");
+        assert_eq!(call.arguments[0].name, "capsule");
+        assert_eq!(
+            call.arguments[0].value,
+            ProjectArgumentValue::Text(child.to_capsule())
+        );
+        assert_eq!(call.arguments[1].name, "action");
+        assert_eq!(
+            call.arguments[1].value,
+            ProjectArgumentValue::Text("open".into())
+        );
+        let reopened = RouteCreation::from_capsule(preview.creation.capsule.as_deref().unwrap())
+            .unwrap()
+            .open();
+        assert_eq!(reopened.compare().unwrap().exact.tour.cost, 9);
+    }
+
+    #[test]
+    fn route_import_keeps_infeasibility_and_explicit_remix_door() {
+        let mut town = RouteWorkbench::first_town().town().clone();
+        for road in &mut town.roads {
+            road.open = false;
+        }
+        let creation = RouteCreation::new(town).unwrap();
+        let mut draft = route_draft(&creation);
+        draft.next = ProjectNext::RemixRoute;
+        let mut chain = ProjectChain::new();
+        chain.keep(&draft).unwrap();
+        let document = chain.revision(1).unwrap().to_document();
+        let mut imported = ProjectChain::new();
+        assert_eq!(
+            imported.import(&document, 9, None, false).unwrap(),
+            ProjectStore::NeedsConfirm
+        );
+        assert!(imported.is_empty());
+        imported.import(&document, 9, None, true).unwrap();
+        let preview = imported
+            .preview(None, &Journal::new(), ReceiptCheck::NotSupplied)
+            .unwrap();
+        assert!(preview.will_return);
+        let NextPreview::Ready(call) = preview.next else {
+            panic!("ready remix door");
+        };
+        assert_eq!(
+            call.arguments[1].value,
+            ProjectArgumentValue::Text("remix".into())
+        );
+        let capsule = preview.creation.capsule.unwrap();
+        let reopened = RouteCreation::from_capsule(&capsule).unwrap().open();
+        assert_eq!(reopened.town(), creation.town());
+        assert!(reopened.compare().is_err());
+    }
+
+    #[test]
+    fn route_tampering_wrong_kind_and_v1_masquerades_are_refused_atomically() {
+        let creation = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let mut chain = ProjectChain::new();
+        chain.keep(&route_draft(&creation)).unwrap();
+        let before = chain.to_text();
+        let document = chain.revision(1).unwrap().to_document();
+        let tampered = document.replace("road 1 3 3 open", "road 1 3 5 open");
+        assert!(chain.import(&tampered, 9, None, true).is_err());
+        assert_eq!(chain.to_text(), before);
+        assert!(
+            ProjectChain::parse(&before.replace("road 1 3 3 open", "road 1 3 5 open")).is_err()
+        );
+        assert!(
+            ProjectChain::parse(&before.replacen(PROJECT_CHAIN_HEADER_V2, PROJECT_CHAIN_HEADER, 1))
+                .is_err()
+        );
+        assert!(
+            chain
+                .import(
+                    &document.replacen(PROJECT_DOCUMENT_HEADER_V2, PROJECT_DOCUMENT_HEADER, 1),
+                    9,
+                    None,
+                    true
+                )
+                .is_err()
+        );
+        let mut wrong = route_draft(&creation);
+        wrong.next = ProjectNext::ForkCreation;
+        assert!(chain.keep(&wrong).is_err());
+        wrong.creation = None;
+        wrong.next = ProjectNext::RemixRoute;
+        assert!(chain.keep(&wrong).is_err());
+        wrong.creation = Some("x".repeat(MAX_ROUTE_CAPSULE_BYTES + 1));
+        assert!(chain.keep(&wrong).is_err());
+        assert_eq!(chain.to_text(), before);
+    }
+
+    #[test]
+    fn version_two_reads_legacy_studio_without_changing_identity_or_provenance() {
+        let mut authored = ProjectChain::new();
+        authored.keep(&studio_draft()).unwrap();
+        let original = authored.revision(1).unwrap();
+        let identity = original.identity_hex();
+        let document = original.to_document();
+        let future_document =
+            document.replacen(PROJECT_DOCUMENT_HEADER, PROJECT_DOCUMENT_HEADER_V2, 1);
+        let future_chain =
+            authored
+                .to_text()
+                .replacen(PROJECT_CHAIN_HEADER, PROJECT_CHAIN_HEADER_V2, 1);
+        assert_eq!(
+            ProjectChain::parse(&future_chain).unwrap().to_text(),
+            authored.to_text()
+        );
+        let mut imported = ProjectChain::new();
+        imported
+            .import(&future_document, 23, Some(91), true)
+            .unwrap();
+        let row = imported.revision(1).unwrap();
+        assert_eq!(row.identity_hex(), identity);
+        assert_eq!(row.to_document(), document);
+        assert_eq!(row.recorded_at_utc(), 23);
+        assert_eq!(row.source(), JOURNAL_SOURCE_PLAYER_PROVIDED);
+        assert_eq!(row.origin_revision(), Some(91));
+        assert_eq!(original.source(), JOURNAL_SOURCE_SELF_AUTHORED);
+        assert_eq!(original.recorded_at_utc(), 7);
+    }
+
+    #[test]
+    fn route_next_and_embedded_creation_independently_require_version_two() {
+        let creation = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        for (next, stored) in [
+            (
+                ProjectNext::OpenRoute {
+                    capsule: creation.to_capsule(),
+                },
+                None,
+            ),
+            (
+                ProjectNext::StudyRoom {
+                    room: "route-lab".into(),
+                },
+                Some(creation.to_capsule()),
+            ),
+        ] {
+            let mut draft = route_draft(&creation);
+            draft.next = next;
+            draft.creation = stored;
+            let mut chain = ProjectChain::new();
+            chain.keep(&draft).unwrap();
+            let document = chain.revision(1).unwrap().to_document();
+            assert!(document.starts_with(PROJECT_DOCUMENT_HEADER_V2));
+            assert!(chain.to_text().starts_with(PROJECT_CHAIN_HEADER_V2));
+            let mut imported = ProjectChain::new();
+            imported.import(&document, 11, None, true).unwrap();
+            let preview = imported
+                .preview(None, &Journal::new(), ReceiptCheck::NotSupplied)
+                .unwrap();
+            assert!(preview.will_return);
+            assert_eq!(
+                preview.creation.status,
+                if draft.creation.is_some() {
+                    CreationStatus::Present
+                } else {
+                    CreationStatus::Missing
+                }
+            );
+            assert_eq!(
+                preview.creation.kind,
+                draft.creation.as_ref().map(|_| CreationKind::Route)
+            );
+            let NextPreview::Ready(call) = preview.next else {
+                panic!("followable route or study door");
+            };
+            assert_eq!(
+                call.tool,
+                if draft.creation.is_some() {
+                    "study_room"
+                } else {
+                    "route_lab"
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn authored_route_inputs_canonicalize_but_stored_noncanonical_capsules_are_refused() {
+        let creation = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let canonical = creation.to_capsule();
+        let noncanonical = canonical.replace("road 0 1 1 open", "road 1 0 1 open");
+        let mut draft = route_draft(&creation);
+        draft.creation = Some(noncanonical.clone());
+        draft.next = ProjectNext::OpenRoute {
+            capsule: noncanonical.clone(),
+        };
+        let mut chain = ProjectChain::new();
+        chain.keep(&draft).unwrap();
+        let text = chain.to_text();
+        assert_eq!(
+            chain.revision(1).unwrap().creation_capsule(),
+            Some(canonical.as_str())
+        );
+        let line = chain.revision(1).unwrap().chain_line();
+        for field in [4, 7] {
+            let mut fields = split_fields(&line, CHAIN_FIELDS, 2).unwrap();
+            fields[field] = fields[field].replace("road 0 1 1 open", "road 1 0 1 open");
+            let altered = fields
+                .iter()
+                .map(|field| encode_field(field))
+                .collect::<Vec<_>>()
+                .join("\t");
+            assert!(
+                ProjectChain::parse(&format!("{PROJECT_CHAIN_HEADER_V2}\n{altered}\n")).is_err()
+            );
+        }
+        assert!(
+            ProjectChain::parse(&text.replacen(
+                "file\\nNUMINOUS_ROUTE",
+                "link\\nNUMINOUS_ROUTE",
+                1
+            ))
+            .is_err()
+        );
+        assert_eq!(
+            chain.keep(&route_draft(&creation)).unwrap(),
+            ProjectStore::AlreadyPresent {
+                revision_id: 1,
+                identity_hex: chain.revision(1).unwrap().identity_hex()
+            }
+        );
+        assert_eq!(chain.to_text(), text);
+    }
+
+    #[test]
+    fn imported_route_corrections_resolve_only_current_matching_project_parents() {
+        let creation = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let mut original = ProjectChain::new();
+        original.keep(&route_draft(&creation)).unwrap();
+        let base_document = original.revision(1).unwrap().to_document();
+        let mut changed = route_draft(&creation);
+        changed.question = "Does the same network answer this new question?".into();
+        original.correct(1, &changed).unwrap();
+        let correction_document = original.revision(2).unwrap().to_document();
+        let mut orphan = ProjectChain::new();
+        orphan.import(&correction_document, 31, None, true).unwrap();
+        let preview = orphan
+            .preview(None, &Journal::new(), ReceiptCheck::NotSupplied)
+            .unwrap();
+        assert_eq!(preview.parent_resolved, Some(false));
+        assert!(preview.will_return);
+        let mut target = ProjectChain::new();
+        target.import(&base_document, 32, None, true).unwrap();
+        target.import(&correction_document, 33, None, true).unwrap();
+        assert!(!target.is_current(1));
+        assert_eq!(target.revision(2).unwrap().supersedes(), Some(1));
+        let mut alternative = route_draft(&creation);
+        alternative.question = "A different correction of the same original question?".into();
+        let mut sibling = ProjectChain::new();
+        sibling.import(&base_document, 34, None, true).unwrap();
+        sibling.correct(1, &alternative).unwrap();
+        let before = target.to_text();
+        assert_eq!(
+            target.import(&sibling.revision(2).unwrap().to_document(), 35, None, true),
+            Err(ProjectError::AlreadySuperseded(1))
+        );
+        assert_eq!(target.to_text(), before);
+    }
+
+    #[test]
+    fn route_projects_refuse_exhausted_storage_and_malformed_chain_links() {
+        let creation = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let mut chain = ProjectChain::new();
+        chain.keep(&route_draft(&creation)).unwrap();
+        let row = chain.revision(1).unwrap().chain_line();
+        let format_row = |id: u64, source: &str, supersedes: &str| {
+            let mut fields = split_fields(&row, CHAIN_FIELDS, 2).unwrap();
+            fields[0] = id.to_string();
+            fields[2] = source.into();
+            fields[9] = supersedes.into();
+            fields
+                .iter()
+                .map(|field| encode_field(field))
+                .collect::<Vec<_>>()
+                .join("\t")
+        };
+        for invalid in [
+            format!("{PROJECT_CHAIN_HEADER_V2}\n\n"),
+            format!("{PROJECT_CHAIN_HEADER_V2}\n{row}\n{row}\n"),
+            format!(
+                "{PROJECT_CHAIN_HEADER_V2}\n{}\n",
+                format_row(1, "third-party", "")
+            ),
+            format!(
+                "{PROJECT_CHAIN_HEADER_V2}\n{}\n",
+                format_row(1, JOURNAL_SOURCE_SELF_AUTHORED, "99")
+            ),
+            format!(
+                "{PROJECT_CHAIN_HEADER_V2}\n{row}\n{}\n{}\n",
+                format_row(2, JOURNAL_SOURCE_SELF_AUTHORED, "1"),
+                format_row(3, JOURNAL_SOURCE_SELF_AUTHORED, "1")
+            ),
+        ] {
+            assert!(ProjectChain::parse(&invalid).is_err());
+        }
+        let max_id = format!(
+            "{PROJECT_CHAIN_HEADER_V2}\n{}\n",
+            format_row(u64::MAX, JOURNAL_SOURCE_SELF_AUTHORED, "")
+        );
+        let mut exhausted = ProjectChain::parse(&max_id).unwrap();
+        let before = exhausted.to_text();
+        let mut new = route_draft(&creation);
+        new.question = "Another project?".into();
+        assert_eq!(exhausted.keep(&new), Err(ProjectError::IdentifierExhausted));
+        assert_eq!(exhausted.to_text(), before);
+        let over_capacity = format!(
+            "{PROJECT_CHAIN_HEADER_V2}\n{}",
+            (1..=MAX_PROJECT_REVISIONS + 1)
+                .map(|id| format!(
+                    "{}\n",
+                    format_row(id as u64, JOURNAL_SOURCE_SELF_AUTHORED, "")
+                ))
+                .collect::<String>()
+        );
+        assert_eq!(
+            ProjectChain::parse(&over_capacity),
+            Err(ProjectError::Capacity)
+        );
+        for index in 1..MAX_PROJECT_REVISIONS {
+            new.question = format!("Question {index}?");
+            chain.keep(&new).unwrap();
+        }
+        let before = chain.to_text();
+        new.question = "Question beyond the limit?".into();
+        assert_eq!(chain.keep(&new), Err(ProjectError::Capacity));
+        assert_eq!(chain.to_text(), before);
+        assert_eq!(
+            chain.correct(99, &new),
+            Err(ProjectError::MissingRevision(99))
+        );
+        assert_eq!(
+            chain.preview(Some(99), &Journal::new(), ReceiptCheck::NotSupplied),
+            Err(ProjectError::MissingRevision(99))
+        );
+        assert_eq!(
+            ProjectChain::parse(&"x".repeat(MAX_PROJECT_FILE_BYTES as usize + 1)),
+            Err(ProjectError::TooLarge)
+        );
+    }
+
+    #[test]
+    fn route_project_admission_refuses_ambiguous_questions_rooms_and_phases_atomically() {
+        let creation = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let mut chain = ProjectChain::new();
+        chain.keep(&route_draft(&creation)).unwrap();
+        let before = chain.to_text();
+        for question in [
+            " ".into(),
+            "q".repeat(MAX_WORKSPACE_TEXT_CHARS + 1),
+            "bad\0question".into(),
+        ] {
+            let mut draft = route_draft(&creation);
+            draft.question = question;
+            let error = chain.keep(&draft).unwrap_err();
+            assert!(matches!(error, ProjectError::InvalidQuestion(_)));
+            assert!(error.to_string().starts_with("invalid project question:"));
+        }
+        for rooms in [
+            vec![],
+            vec!["route-lab".into(); MAX_PROJECT_ROOMS + 1],
+            vec!["route-lab".into(), "route-lab".into()],
+            vec!["x".repeat(MAX_ROOM_ID_CHARS + 1)],
+            vec!["route\0lab".into()],
+            vec!["absent-room".into()],
+        ] {
+            let mut draft = route_draft(&creation);
+            draft.rooms = rooms;
+            let error = chain.keep(&draft).unwrap_err();
+            assert!(matches!(error, ProjectError::InvalidRoom(_)));
+            assert!(error.to_string().starts_with("invalid project room:"));
+        }
+        for room in [
+            "lissajous".into(),
+            "x".repeat(MAX_ROOM_ID_CHARS + 1),
+            "route\0lab".into(),
+        ] {
+            let mut draft = route_draft(&creation);
+            draft.next = ProjectNext::StudyRoom { room };
+            let error = chain.keep(&draft).unwrap_err();
+            assert!(matches!(error, ProjectError::InvalidNext(_)));
+            assert!(error.to_string().starts_with("invalid project next:"));
+        }
+        for phase in ["", "nan", "1.0", "-0.1", "1e309", "1e", "0.2.3"] {
+            let mut draft = route_draft(&creation);
+            draft.next = ProjectNext::PlayRoom {
+                room: "route-lab".into(),
+                phase: Some(phase.into()),
+            };
+            assert!(matches!(
+                chain.keep(&draft),
+                Err(ProjectError::InvalidNext(_))
+            ));
+        }
+        let mut valid = route_draft(&creation);
+        valid.next = ProjectNext::PlayRoom {
+            room: "route-lab".into(),
+            phase: Some("5e-1".into()),
+        };
+        assert_eq!(chain.to_text(), before);
+        chain.keep(&valid).unwrap();
+        let reopened = ProjectChain::parse(&chain.to_text()).unwrap();
+        let preview = reopened
+            .preview(None, &Journal::new(), ReceiptCheck::NotSupplied)
+            .unwrap();
+        let NextPreview::Ready(call) = preview.next else {
+            panic!("ready room playback");
+        };
+        assert_eq!(
+            call.arguments[1].value,
+            ProjectArgumentValue::Number("0.5".into())
+        );
+    }
+
+    #[test]
+    fn portable_route_projects_refuse_incomplete_or_conflicting_documents_without_writing() {
+        let creation = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let mut chain = ProjectChain::new();
+        chain.keep(&route_draft(&creation)).unwrap();
+        let before = chain.to_text();
+        let document = chain.revision(1).unwrap().to_document();
+        for invalid in [
+            format!("{PROJECT_DOCUMENT_HEADER_V2}\n"),
+            format!("{PROJECT_DOCUMENT_HEADER_V2}\n\n"),
+            document.clone() + "additional payload\n",
+            format!("{PROJECT_DOCUMENT_HEADER_V2}\nopen_route\n"),
+            "x".repeat(MAX_PROJECT_FILE_BYTES as usize + 1),
+        ] {
+            let error = chain.import(&invalid, 42, None, true).unwrap_err();
+            assert!(matches!(
+                error,
+                ProjectError::InvalidFormat(_) | ProjectError::TooLarge
+            ));
+            assert_eq!(chain.to_text(), before);
+        }
+        let payload_line = document.lines().nth(1).unwrap();
+        let fields = split_fields(payload_line, PORTABLE_FIELDS, 2).unwrap();
+        let document_with = |index: usize, replacement: &str| {
+            let mut altered = fields.clone();
+            altered[index] = replacement.into();
+            format!(
+                "{PROJECT_DOCUMENT_HEADER_V2}\n{}\n",
+                altered
+                    .iter()
+                    .map(|field| encode_field(field))
+                    .collect::<Vec<_>>()
+                    .join("\t")
+            )
+        };
+        for invalid in [
+            document_with(1, "open_route"),
+            document_with(1, "open_route\n"),
+            document_with(1, "open_route\nnot-a-capsule"),
+            document_with(1, "remix_route\nignored"),
+            document_with(
+                1,
+                &format!("open_route\n{}", "x".repeat(MAX_ROUTE_CAPSULE_BYTES + 1)),
+            ),
+            document_with(2, "absent-room"),
+            document_with(5, "invalid-parent"),
+        ] {
+            assert!(chain.import(&invalid, 42, None, true).is_err());
+            assert_eq!(chain.to_text(), before);
+        }
+        let mut missing = fields.clone();
+        missing[1] = "remix_route".into();
+        missing[4].clear();
+        let invalid = format!(
+            "{PROJECT_DOCUMENT_HEADER_V2}\n{}\n",
+            missing
+                .iter()
+                .map(|field| encode_field(field))
+                .collect::<Vec<_>>()
+                .join("\t")
+        );
+        assert!(matches!(
+            chain.import(&invalid, 42, None, true),
+            Err(ProjectError::InvalidNext(_))
+        ));
+        let mut unsupported = route_draft(&creation);
+        unsupported.next = ProjectNext::RemixRoute;
+        unsupported.creation = studio_draft().creation;
+        assert!(matches!(
+            chain.keep(&unsupported),
+            Err(ProjectError::InvalidNext(_))
+        ));
+        assert_eq!(chain.to_text(), before);
+    }
 }
 
 fn decode_field(value: &str) -> Result<String, ProjectError> {

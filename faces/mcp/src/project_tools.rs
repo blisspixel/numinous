@@ -6,14 +6,14 @@
 
 use std::path::Path;
 
+use super::project_json::{evidence_status_name, preview_json};
 use numinous_core::{
-    CreationFact, CreationStatus, EncounterTool, EvidenceFact, EvidenceStatus,
-    MAX_PROJECT_EVIDENCE, MAX_PROJECT_FILE_BYTES, MAX_PROJECT_ROOMS, MAX_SHARE_INPUT_BYTES,
-    MAX_WORKSPACE_TEXT_CHARS, NextPreview, PROJECT_RESUME_PREVIEW_SCHEMA,
-    PROJECT_RESUME_PREVIEW_VERSION, ProjectArgument, ProjectArgumentValue, ProjectDraft,
-    ProjectEvidence, ProjectNext, ProjectStore, ReceiptCheck, ResumePreview, RoomStatus,
+    EncounterTool, MAX_PROJECT_EVIDENCE, MAX_PROJECT_FILE_BYTES, MAX_PROJECT_ROOMS,
+    MAX_SHARE_INPUT_BYTES, MAX_WORKSPACE_TEXT_CHARS, NextPreview, PROJECT_RESUME_PREVIEW_SCHEMA,
+    PROJECT_RESUME_PREVIEW_VERSION, ProjectDraft, ProjectEvidence, ProjectNext, ProjectStore,
+    ReceiptCheck, ResumePreview,
 };
-use serde_json::{Map, Value, json};
+use serde_json::{Value, json};
 
 use super::{journal, tool_error, tool_structured};
 
@@ -37,7 +37,7 @@ pub(super) fn project_tool(
 pub(super) fn catalog_entry() -> Value {
     json!({
         "name": "project",
-        "description": "Keep, import, correct, or preview one explicit project. op keep stores a question as data, one closed next call, one to four catalog rooms, up to four journal or receipt digests, and an optional Studio creation. op import reads one NUMINOUS_PROJECT 1 document and appends only when confirm is true. op correct appends a new revision and leaves the named revision in place. op resume previews what is present, missing, corrected, collided, or incompatible. structuredContent.preview.next is a tool call you may follow; resume does not apply it, does not change the workspace, and does not copy journal text into the chain. The chain file is NUMINOUS_PROJECT, or .numinous-project when that variable is unset. This is not portable-1, and portable-1 does not import a project.",
+        "description": "Keep, import, correct, or preview one explicit project. op keep stores a question as data, one closed next call, one to four catalog rooms, up to four journal or receipt digests, and an optional Studio or authored route creation. op import reads one NUMINOUS_PROJECT 1 or NUMINOUS_PROJECT 2 document and appends only when confirm is true. op correct appends a new revision and leaves the named revision in place. op resume previews what is present, missing, corrected, collided, or incompatible. structuredContent.preview.next is a tool call you may follow; resume does not apply it, does not change the workspace, and does not copy journal text into the chain. The chain file is NUMINOUS_PROJECT, or .numinous-project when that variable is unset. Route projects use document version 2; Studio-only projects retain version 1. A route next names route_lab with scalar action open or remix; remix uses the embedded route creation and executes only when that next call is followed. This is not portable-1, and portable-1 does not import a project.",
         "inputSchema": input_schema(),
         "outputSchema": output_schema()
     })
@@ -264,114 +264,6 @@ fn preview_text(preview: &ResumePreview) -> String {
     )
 }
 
-fn preview_json(preview: &ResumePreview) -> Result<Value, String> {
-    let (status, tool, arguments, reason) = match &preview.next {
-        NextPreview::Ready(call) => ("ready", call.tool, arguments_json(&call.arguments)?, None),
-        NextPreview::Incompatible(incompatible) => (
-            "incompatible",
-            incompatible.tool.as_str(),
-            json!({}),
-            Some(incompatible.reason.as_str()),
-        ),
-    };
-    Ok(json!({
-        "schema": preview.schema,
-        "schemaVersion": preview.version,
-        "revisionId": preview.revision_id,
-        "question": preview.question,
-        "interpreted": preview.interpreted,
-        "next": {
-            "status": status,
-            "tool": tool,
-            "arguments": arguments,
-            "reason": reason,
-        },
-        "rooms": preview.rooms.iter().map(|room| json!({
-            "id": room.id,
-            "status": room_status_name(room.status),
-        })).collect::<Vec<_>>(),
-        "evidence": preview.evidence.iter().map(evidence_json).collect::<Vec<_>>(),
-        "creation": creation_json(&preview.creation),
-        "willReturn": preview.will_return,
-        "notApplied": preview.not_applied,
-        "workspaceChanged": preview.workspace_changed,
-        "journalChanged": preview.journal_changed,
-        "supersededBy": preview.superseded_by,
-        "parentResolved": preview.parent_resolved,
-    }))
-}
-
-fn arguments_json(arguments: &[ProjectArgument]) -> Result<Value, String> {
-    let mut object = Map::new();
-    for argument in arguments {
-        object.insert(argument.name.to_string(), argument_value(&argument.value)?);
-    }
-    Ok(Value::Object(object))
-}
-
-fn argument_value(value: &ProjectArgumentValue) -> Result<Value, String> {
-    match value {
-        ProjectArgumentValue::Text(text) => Ok(Value::String(text.clone())),
-        ProjectArgumentValue::Number(token) => {
-            let number: f64 = token
-                .parse()
-                .map_err(|_| "The previewed phase is not a JSON number.".to_string())?;
-            let number = serde_json::Number::from_f64(number)
-                .ok_or_else(|| "The previewed phase is not a JSON number.".to_string())?;
-            Ok(Value::Number(number))
-        }
-    }
-}
-
-fn evidence_json(fact: &EvidenceFact) -> Value {
-    json!({
-        "kind": fact.kind,
-        "digestHex": fact.digest_hex,
-        "status": evidence_status_name(fact.status),
-        "entryId": fact.entry_id,
-        "supersededBy": fact.superseded_by,
-        "subject": fact.subject,
-        "text": fact.text,
-        "tool": fact.tool,
-        "sameBytesElsewhere": fact.same_bytes_elsewhere,
-    })
-}
-
-fn creation_json(creation: &CreationFact) -> Value {
-    json!({
-        "status": creation_status_name(creation.status),
-        "descends": creation.descends,
-        "lineageWasNotInTheLink": creation.lineage_was_not_in_the_link,
-        "periodText": creation.period_text,
-    })
-}
-
-fn room_status_name(status: RoomStatus) -> &'static str {
-    match status {
-        RoomStatus::Present => "present",
-        RoomStatus::Missing => "missing",
-        RoomStatus::Incompatible => "incompatible",
-    }
-}
-
-fn evidence_status_name(status: EvidenceStatus) -> &'static str {
-    match status {
-        EvidenceStatus::Present => "present",
-        EvidenceStatus::Missing => "missing",
-        EvidenceStatus::Corrected => "corrected",
-        EvidenceStatus::Collided => "collided",
-        EvidenceStatus::Incompatible => "incompatible",
-    }
-}
-
-fn creation_status_name(status: CreationStatus) -> &'static str {
-    match status {
-        CreationStatus::Missing => "missing",
-        CreationStatus::Present => "present",
-        CreationStatus::Incompatible => "incompatible",
-    }
-}
-
 fn draft_from_args(args: &Value) -> Result<ProjectDraft, String> {
     let Some(question) = args.get("question").and_then(Value::as_str) else {
         return Err("Missing required string argument 'question'.".to_string());
@@ -382,13 +274,32 @@ fn draft_from_args(args: &Value) -> Result<ProjectDraft, String> {
     let Some(rooms) = args.get("rooms") else {
         return Err("Missing required array argument 'rooms'.".to_string());
     };
+    let creation = parse_creation(args)?;
+    if next["tool"] == "route_lab"
+        && next["arguments"]["action"] == "remix"
+        && let Some(capsule) = next["arguments"].get("capsule")
+    {
+        let capsule = capsule
+            .as_str()
+            .ok_or("Remix next capsule must be a string.")?;
+        let embedded = creation
+            .as_deref()
+            .ok_or("Remix next requires an embedded route creation.")?;
+        let supplied = numinous_core::route_creation::RouteCreation::from_capsule(capsule)
+            .map_err(|error| error.to_string())?;
+        let embedded = numinous_core::route_creation::RouteCreation::from_capsule(embedded)
+            .map_err(|error| error.to_string())?;
+        if supplied.identity() != embedded.identity() {
+            return Err("Remix next capsule must match the embedded route creation.".into());
+        }
+    }
     Ok(ProjectDraft {
         recorded_at_utc: now(),
         question: question.to_string(),
         next: parse_next(next)?,
         rooms: parse_rooms(rooms)?,
         evidence: parse_evidence(args.get("evidence"))?,
-        creation: parse_creation(args)?,
+        creation,
     })
 }
 
@@ -412,8 +323,31 @@ fn parse_next(value: &Value) -> Result<ProjectNext, String> {
         "study_room" => Ok(ProjectNext::StudyRoom {
             room: required_string(arguments, "room")?,
         }),
+        "route_lab" => {
+            let action = required_string(arguments, "action")?;
+            let allowed: &[&str] = match action.as_str() {
+                "open" => &["action", "capsule"],
+                "remix" => &["action", "capsule"],
+                _ => return Err("A kept route next action must be open or remix.".into()),
+            };
+            if arguments.as_object().is_some_and(|arguments| {
+                arguments.keys().any(|key| !allowed.contains(&key.as_str()))
+            }) {
+                return Err(
+                    "A kept route next carries an argument outside its chosen action.".into(),
+                );
+            }
+            if action == "open" {
+                Ok(ProjectNext::OpenRoute {
+                    capsule: required_string(arguments, "capsule")?,
+                })
+            } else {
+                Ok(ProjectNext::RemixRoute)
+            }
+        }
         _ => Err(
-            "next.tool must be open_creation, fork_creation, play_room, or study_room.".to_string(),
+            "next.tool must be open_creation, fork_creation, play_room, study_room, or route_lab."
+                .to_string(),
         ),
     }
 }
@@ -595,16 +529,17 @@ fn input_schema() -> Value {
                 "properties": {
                     "tool": {
                         "type": "string",
-                        "enum": ["open_creation", "fork_creation", "play_room", "study_room"]
+                        "enum": ["open_creation", "fork_creation", "play_room", "study_room", "route_lab"]
                     },
                     "arguments": {
                         "type": "object",
                         "properties": {
+                            "action":{"type":"string","enum":["open","remix"]},
                             "capsule": {
                                 "type": "string",
                                 "minLength": 1,
                                 "maxLength": MAX_SHARE_INPUT_BYTES,
-                                "description": "open_creation capsule: .num text, a native link, or a bundled experiment id."
+                                "description": "Studio capsule for open_creation, or NUMINOUS_ROUTE 1 text for route_lab open. Remix uses the embedded creation."
                             },
                             "id": {
                                 "type": "string",
@@ -675,13 +610,13 @@ fn input_schema() -> Value {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": MAX_SHARE_INPUT_BYTES,
-                "description": "Optional Studio .num text, native link, or bundled experiment id. A filesystem path is refused."
+                "description": "Optional Studio capsule or NUMINOUS_ROUTE 1 authored route creation. A filesystem path is refused."
             },
             "document": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": MAX_PROJECT_FILE_BYTES,
-                "description": "import only: one NUMINOUS_PROJECT 1 document."
+                "description": "import only: one NUMINOUS_PROJECT 1 or NUMINOUS_PROJECT 2 document."
             },
             "confirm": {
                 "type": "boolean",
@@ -746,6 +681,7 @@ fn preview_schema() -> Value {
                         "type": "object",
                         "properties": {
                             "capsule": { "type": "string" },
+                            "action": {"type":"string","enum":["open","remix"]},
                             "parent": { "type": "string" },
                             "id": { "type": "string" },
                             "room": { "type": "string" },
@@ -796,8 +732,10 @@ fn preview_schema() -> Value {
                     "descends": nullable(json!({ "type": "string" })),
                     "lineageWasNotInTheLink": { "type": "boolean" },
                     "periodText": nullable(json!({ "type": "string" }))
+                    ,"kind":nullable(json!({"type":"string","enum":["studio","route"]})),
+                    "capsule":nullable(json!({"type":"string"}))
                 },
-                "required": ["status", "descends", "lineageWasNotInTheLink", "periodText"],
+                "required": ["status", "descends", "lineageWasNotInTheLink", "periodText", "kind", "capsule"],
                 "additionalProperties": false
             },
             "willReturn": { "type": "boolean" },
@@ -873,6 +811,70 @@ mod tests {
                 "rooms": ["lissajous"]
             }),
         )
+    }
+
+    #[test]
+    fn route_project_open_and_remix_previews_are_followable_without_applying() {
+        let root = Isolated::new("route-follow");
+        let authored = numinous_core::route_creation::RouteCreation::new(
+            numinous_core::route_workbench::RouteWorkbench::first_town()
+                .town()
+                .clone(),
+        )
+        .unwrap();
+        let capsule = authored.to_capsule();
+        let kept = call(
+            &root,
+            json!({"op":"keep","question":"Which delivery order is cheaper?","next":{"tool":"route_lab","arguments":{"capsule":capsule,"action":"open"}},"rooms":["route-lab"],"creation":capsule}),
+        );
+        assert_eq!(kept["isError"], false, "{kept}");
+        assert!(
+            kept["structuredContent"]["document"]
+                .as_str()
+                .unwrap()
+                .starts_with("NUMINOUS_PROJECT 2\n")
+        );
+        let before = std::fs::read(root.project()).unwrap();
+        let preview = call(&root, json!({"op":"resume"}));
+        crate::validate_declared_tool_output("project", &preview).unwrap();
+        let content = &preview["structuredContent"]["preview"];
+        assert_eq!(content["creation"]["kind"], "route");
+        assert_eq!(content["creation"]["capsule"], capsule);
+        assert_eq!(content["willReturn"], true);
+        let next = &content["next"];
+        let followed=crate::handle_request(&json!({"jsonrpc":"2.0","id":103,"method":"tools/call","params":{"name":next["tool"],"arguments":next["arguments"]}})).unwrap();
+        assert_eq!(followed["result"]["isError"], false, "{followed}");
+        assert_eq!(
+            followed["result"]["structuredContent"]["snapshot"]["undo"],
+            json!([])
+        );
+        assert_eq!(std::fs::read(root.project()).unwrap(), before);
+        let remixed = call(
+            &root,
+            json!({"op":"correct","revision":1,"question":"Try a child delivery network.","next":{"tool":"route_lab","arguments":{"action":"remix","capsule":capsule}},"rooms":["route-lab"],"creation":capsule}),
+        );
+        assert_eq!(remixed["isError"], false, "{remixed}");
+        let preview = call(&root, json!({"op":"resume"}));
+        let next = &preview["structuredContent"]["preview"]["next"];
+        assert_eq!(next["arguments"]["action"], "remix");
+        let followed=crate::handle_request(&json!({"jsonrpc":"2.0","id":104,"method":"tools/call","params":{"name":next["tool"],"arguments":next["arguments"]}})).unwrap();
+        assert_eq!(followed["result"]["isError"], false, "{followed}");
+        assert_eq!(
+            followed["result"]["structuredContent"]["creation"]["parentIdentityHex"],
+            authored.identity_hex()
+        );
+        assert!(!root.journal().exists());
+        let before = std::fs::read(root.project()).unwrap();
+        let child = authored
+            .remix(authored.town().clone())
+            .unwrap()
+            .to_capsule();
+        let mismatch = call(
+            &root,
+            json!({"op":"keep","question":"Mismatched parent","next":{"tool":"route_lab","arguments":{"action":"remix","capsule":child}},"rooms":["route-lab"],"creation":capsule}),
+        );
+        assert_eq!(mismatch["isError"], true);
+        assert_eq!(std::fs::read(root.project()).unwrap(), before);
     }
 
     #[test]

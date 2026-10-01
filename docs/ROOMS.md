@@ -2,7 +2,7 @@
 
 The content catalog: the phenomena Numinous is built from. Each **room** is one playable mathematical object. Rooms are grouped into **Wings** by feeling, not by curriculum.
 
-**Current status (as of 2026-08):** 354 catalog rooms across the wings plus
+**Current status (as of 2026-09-30):** 356 catalog rooms across the wings plus
 hidden content. Per-visit variation seed is threaded through registry/app/CLI/
 MCP; every catalog room uses it for replay novelty, while hidden content stays
 outside the catalog replay contract. Every catalog room has `verb()` +
@@ -350,7 +350,7 @@ you are not told it), and **the kid principle** (the play carries itself even
 if the concept never consciously lands). If an idea cannot pass both, it does
 not ship, however important the syllabus thinks it is.
 
-**Current interaction inventory (2026-07):** 354 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, STEER THE SEARCH in the Conjecture Mill, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
+**Current interaction inventory (2026-09-30):** 356 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, STEER THE SEARCH in the Conjecture Mill, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
 
 **Interaction update, 2026-07-13:** the verb inventory above records the first
 complete poke substrate. The current contract also includes `render_input` and
@@ -446,7 +446,7 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [ ] **Graph theory** - the Bridges of Konigsberg as a walking puzzle; fail, then learn you were always going to fail, and why (degree parity, never named).
 - [ ] **Pigeonhole** - a party trick generator: guaranteed handshake-twins in any crowd of a certain size.
 - [ ] **Ramsey** - the party of six: find strangers or friends; order is unavoidable, chaos is impossible.
-- [ ] **Traveling salesman** - route the pizza drone; compare greedy choices with exact small tours; [Route Lab](ROUTE_LAB.md) designs a visible map search and delivery-order instrument.
+- [x] **Traveling salesman** (built: `route-lab`) - choose a delivery order on a costed street network, compare nearest-next with the minimum round-trip cost, and accept an offered cheaper reorder. [Route Lab](ROUTE_LAB.md) supports search playback, native network authoring, and portable route projects with a chosen question.
 
 ## Computation and logic
 - [x] **Universality** - Rule 110 and Life (the reveals and deep cuts carry it).
@@ -709,8 +709,8 @@ so predict can ask a mind to call the value before the burn finishes.
 **Build honestly:** Wow 5 / Build 2. Minimax with memoization over 5,478
 positions is a few pages of tested core code; the visual is the existing
 surface substrate drawing a tree; the war-shaped second game is a payoff
-matrix, not a simulation. The sibling [Route Lab](ROUTE_LAB.md) design develops
-the Traveling Salesman checklist stub and stays its own room. Ten cities have
+matrix, not a simulation. The sibling [Route Lab](ROUTE_LAB.md) builds the first
+Traveling Salesman example and keeps its general native editor designed. Ten cities have
 9!/2 = 181,440 symmetric tours with a fixed start and reversal identified,
 small enough for an exhaustive comparison. Larger instances expose the rapid
 growth of naive enumeration, while difficulty also depends on the instance
@@ -1432,7 +1432,7 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (354 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+**Built now (catalog plus hidden):** Times Tables (flagship dial), Mandelbrot and
 Julia, Cult of Pi, Life and Cellular Automata and Langton and Rule 30, The
 Sandpile, The First Rain, The Magnet, Phantom Jam, Chaos Game, Golden Angle,
 Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank, The Coffee Cup,

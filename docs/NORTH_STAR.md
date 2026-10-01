@@ -45,12 +45,14 @@ capability quest connecting an audited room to a portable Studio construction,
 with contrasting cases and a new application. See `PROGRESSION.md`.
 
 **Continuity that serves the player's inquiry.** Journal, exact room recall,
-receipts, process-local workspace, and portable creations exist. Resuming a
-chosen question across restarts still requires manual assembly. The next memory
-increment should explicitly connect the selected evidence, interpretation,
-creation, and next experiment, with correction, absence, and erasure respected.
-That is functional continuity; subjective experience remains a separate
-question. `DIGITAL_DEVELOPMENT.md` owns the contract.
+receipts, process-local workspace, and portable creations exist. Project chains
+connect a chosen question, evidence, a Studio or route creation, and a next experiment;
+the Cabinet can resume a saved creation paused, and CLI and MCP expose its next
+call. Route Lab adds native network authoring and the same keep, reopen, and
+remix boundary for authored roads and delivery orders. The remaining gap is
+extending that bounded loop to broader player-owned inquiry while respecting
+correction, absence, and erasure. That is functional continuity; subjective
+experience remains a separate question. `DIGITAL_DEVELOPMENT.md` owns the contract.
 
 ## What supports the direction
 

@@ -7,6 +7,8 @@
 //! implementations.
 
 pub mod nim_render;
+#[allow(missing_docs)]
+pub mod route_authoring;
 pub mod session_viewer;
 pub mod studio_render;
 pub mod study_reader;

@@ -1,16 +1,159 @@
-//! Resume one explicit project chain from the terminal.
+//! Keep, import, export, and preview one explicit project chain from the terminal.
 //!
 //! The preview comes from the core. Applying it writes this process's
 //! workspace intention and, when the next call names a present room, its
-//! place. Nothing is saved, and the next tool is not called.
+//! place. Resume saves no workspace and does not call the next tool. Keeping
+//! and importing use the existing core project persistence as explicit acts.
 
+use std::io::Read;
 use std::path::Path;
 
+use numinous_core::route_creation::MAX_ROUTE_CAPSULE_BYTES;
 use numinous_core::{
-    CreationStatus, EvidenceStatus, NextPreview, ProjectArgumentValue, ProjectCall, ReceiptCheck,
-    ResumePreview, RoomStatus, SessionWorkspace, WorkspacePlace, WorkspacePlaceDraft,
-    WorkspaceUpdate, display_safe, try_load_journal_file, try_load_project_file,
+    CreationStatus, EvidenceStatus, MAX_PROJECT_FILE_BYTES, NextPreview, ProjectArgumentValue,
+    ProjectCall, ProjectDraft, ProjectNext, ProjectStore, ReceiptCheck, ResumePreview, RoomStatus,
+    SessionWorkspace, WorkspacePlace, WorkspacePlaceDraft, WorkspaceUpdate, display_safe,
+    try_load_journal_file, try_load_project_file,
 };
+
+fn bounded_text(path: &Path, maximum: u64) -> Result<String, String> {
+    let mut input: Box<dyn Read> = if path == Path::new("-") {
+        Box::new(std::io::stdin().lock())
+    } else {
+        Box::new(std::fs::File::open(path).map_err(|error| {
+            format!(
+                "Could not read {}: {error}",
+                display_safe(&path.to_string_lossy())
+            )
+        })?)
+    };
+    let mut bytes = Vec::new();
+    input
+        .by_ref()
+        .take(maximum + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("Could not read project input: {error}"))?;
+    if bytes.len() as u64 > maximum {
+        return Err(format!("Project input exceeds {maximum} bytes."));
+    }
+    String::from_utf8(bytes).map_err(|_| "Project input must be UTF-8.".into())
+}
+
+fn now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
+fn store_report(path: &Path, store: ProjectStore, json_output: bool) -> Result<String, String> {
+    let (outcome, revision) = match store {
+        ProjectStore::Appended { revision_id, .. } => ("appended", Some(revision_id)),
+        ProjectStore::AlreadyPresent { revision_id, .. } => ("already_present", Some(revision_id)),
+        ProjectStore::Collided { origin_revision } => ("collided", Some(origin_revision)),
+        ProjectStore::NeedsConfirm => ("needs_confirm", None),
+    };
+    let chain = try_load_project_file(path)
+        .map_err(|error| format!("Could not read stored project: {error}"))?;
+    if json_output {
+        return serde_json::to_string_pretty(&serde_json::json!({"outcome":outcome,"revisionId":revision,"document":revision.and_then(|revision|chain.revision(revision)).map(|revision|revision.to_document())})).map_err(|error|error.to_string());
+    }
+    Ok(match outcome {
+        "appended" => format!(
+            "Project revision {} kept. Use numinous project resume to preview it.\n",
+            revision.unwrap_or_default()
+        ),
+        "already_present" => format!(
+            "Project revision {} already contains these bytes.\n",
+            revision.unwrap_or_default()
+        ),
+        "collided" => {
+            "Origin revision holds different bytes. Use --confirm to append a new revision.\n"
+                .into()
+        }
+        _ => "Import needs --confirm before a new revision is kept.\n".into(),
+    })
+}
+
+pub(super) fn keep_route_report(
+    path: &Path,
+    question: &str,
+    route: &Path,
+    remix: bool,
+    json_output: bool,
+) -> Result<String, String> {
+    let capsule = bounded_text(route, MAX_ROUTE_CAPSULE_BYTES as u64)?;
+    let draft = ProjectDraft {
+        recorded_at_utc: now(),
+        question: question.into(),
+        next: if remix {
+            ProjectNext::RemixRoute
+        } else {
+            ProjectNext::OpenRoute {
+                capsule: capsule.clone(),
+            }
+        },
+        rooms: vec!["route-lab".into()],
+        evidence: Vec::new(),
+        creation: Some(capsule),
+    };
+    let outcome = numinous_core::keep_project_file(path, &draft)
+        .map_err(|error| format!("Could not keep route project: {error}"))?;
+    store_report(path, outcome, json_output)
+}
+
+pub(super) fn import_report(
+    path: &Path,
+    input: &Path,
+    confirm: bool,
+    origin: Option<u64>,
+    json_output: bool,
+) -> Result<String, String> {
+    let document = bounded_text(input, MAX_PROJECT_FILE_BYTES)?;
+    let outcome = numinous_core::import_project_file(path, &document, now(), origin, confirm)
+        .map_err(|error| format!("Could not import project: {error}"))?;
+    store_report(path, outcome, json_output)
+}
+
+pub(super) fn export_report(
+    path: &Path,
+    revision: Option<u64>,
+    out: Option<&Path>,
+) -> Result<String, String> {
+    let chain =
+        try_load_project_file(path).map_err(|error| format!("Could not read project: {error}"))?;
+    let revision = match revision {
+        Some(revision) => chain.revision(revision),
+        None => chain.revisions().last(),
+    }
+    .ok_or("Project revision is not present.")?;
+    let document = revision.to_document();
+    if let Some(out) = out {
+        super::studio::write_create_new(out, document.as_bytes())?;
+        Ok(format!(
+            "Project document exported to {}.\n",
+            display_safe(&out.to_string_lossy())
+        ))
+    } else {
+        Ok(document)
+    }
+}
+
+pub(super) fn resume_json_report(
+    project_path: &Path,
+    journal_path: &Path,
+    revision: Option<u64>,
+) -> Result<String, String> {
+    let chain = try_load_project_file(project_path)
+        .map_err(|error| format!("Could not read project: {error}"))?;
+    let journal = try_load_journal_file(journal_path)
+        .map_err(|error| format!("Could not read journal: {error}"))?;
+    let preview = chain
+        .preview(revision, &journal, ReceiptCheck::NotSupplied)
+        .map_err(|error| error.to_string())?;
+    serde_json::to_string_pretty(&super::project_json::preview_json(&preview)?)
+        .map_err(|error| error.to_string())
+}
 
 /// Text for one resume, plus a refusal when `--apply` could not write.
 #[derive(Debug)]
@@ -90,7 +233,7 @@ fn apply_workspace(preview: &ResumePreview) -> Result<SessionWorkspace, String> 
     let place = match call.tool {
         "play_room" => Some(place_from_call(preview, call, "id", true)?),
         "study_room" => Some(place_from_call(preview, call, "room", false)?),
-        "open_creation" | "fork_creation" => None,
+        "open_creation" | "fork_creation" | "route_lab" => None,
         other => {
             return Err(format!(
                 "Apply refused: {other} is outside the process workspace rules."

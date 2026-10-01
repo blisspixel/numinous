@@ -52,6 +52,7 @@ EXPECTED_TOOL_NAMES = frozenset(
         "read_journal",
         "record_journal",
         "reveal_room",
+        "route_lab",
         "run_sim",
         "save_creation",
         "scores",

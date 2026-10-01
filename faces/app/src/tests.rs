@@ -5402,3 +5402,210 @@ fn cabinet_question_refuses_to_invent_a_missing_creation() {
     assert_eq!(app.journey, journey);
     assert!(!app.journey_file.exists());
 }
+
+fn route_authoring_app(name: &str) -> App {
+    let mut app = headless(name);
+    app.current = app
+        .rooms
+        .iter()
+        .position(|room| room.meta().id == "route-lab")
+        .unwrap();
+    app.close_menu();
+    app.open_room_construction();
+    assert!(app.route_active);
+    app
+}
+
+fn route_authoring_button(app: &App, action: numinous_app::route_authoring::Action) -> (f64, f64) {
+    let button = app
+        .route_authoring
+        .as_ref()
+        .unwrap()
+        .buttons()
+        .into_iter()
+        .find(|button| button.action == action)
+        .unwrap();
+    let (x, y, w, h) = button.bounds;
+    (x + w / 2.0, y + h / 2.0)
+}
+
+#[test]
+fn route_authoring_native_inputs_preserve_room_visit_and_session_on_reentry() {
+    use numinous_app::route_authoring::{Action, Page};
+    let mut app = route_authoring_app("route-editor-input");
+    let inputs = app.inputs.clone();
+    let current = app.current;
+    app.route_authoring
+        .as_mut()
+        .unwrap()
+        .act(Action::Page(Page::Roads));
+    let point = route_authoring_button(&app, Action::Cost(1));
+    app.begin_pointer_at(point);
+    let edited = app.route_authoring.as_ref().unwrap().workbench().snapshot();
+    app.move_pointer_to(route_authoring_button(&app, Action::ToggleRoad), true);
+    app.end_pointer_at(point);
+    assert_eq!(
+        app.route_authoring.as_ref().unwrap().workbench().snapshot(),
+        edited
+    );
+    assert_eq!(app.inputs, inputs);
+    assert_eq!(app.current, current);
+    assert!(app.desired_room_parameter_sound().is_none());
+    assert!(app.handle_route_authoring_key(&Key::Named(NamedKey::Escape), false));
+    assert!(!app.route_active);
+    app.open_room_construction();
+    assert_eq!(
+        app.route_authoring.as_ref().unwrap().workbench().snapshot(),
+        edited
+    );
+    assert_eq!(app.inputs, inputs);
+    assert_eq!(
+        app.activity_kind(),
+        Some(numinous_app::menu::ActivityKind::Route)
+    );
+}
+
+#[test]
+fn route_authoring_question_keys_own_audio_letters_repeat_and_menu_isolation() {
+    use numinous_app::route_authoring::{Action, Page};
+    let mut app = route_authoring_app("route-editor-text");
+    app.route_authoring
+        .as_mut()
+        .unwrap()
+        .act(Action::Page(Page::Keep));
+    for text in ["M", "+", "-", "q"] {
+        assert!(app.handle_route_authoring_key(&Key::Character(text.into()), false));
+    }
+    assert!(app.handle_route_authoring_key(&Key::Named(NamedKey::Space), false));
+    assert!(app.handle_route_authoring_key(&Key::Character("held".into()), true));
+    assert_eq!(app.route_authoring.as_ref().unwrap().question, "M+-q ");
+    assert!(!app.muted);
+    app.open_activity_menu(numinous_app::menu::ActivityKind::Route);
+    assert!(!app.handle_route_authoring_key(&Key::Character("x".into()), false));
+    assert_eq!(app.route_authoring.as_ref().unwrap().question, "M+-q ");
+    app.close_menu();
+    app.handle_route_authoring_key(&Key::Named(NamedKey::Backspace), false);
+    assert_eq!(app.route_authoring.as_ref().unwrap().question, "M+-q");
+}
+
+#[test]
+fn route_authoring_controller_activates_shared_buttons_once_and_never_navigates_rooms() {
+    use crate::gamepad::Command;
+    use numinous_app::route_authoring::{Action, Page};
+    let mut app = route_authoring_app("route-editor-controller");
+    let current = app.current;
+    app.route_authoring
+        .as_mut()
+        .unwrap()
+        .act(Action::Page(Page::Roads));
+    let index = app
+        .route_authoring
+        .as_ref()
+        .unwrap()
+        .buttons()
+        .iter()
+        .position(|button| button.action == Action::Cost(1))
+        .unwrap();
+    app.route_authoring.as_mut().unwrap().navigate(index as i32);
+    app.handle_gamepad_command(Command::PrimaryDown);
+    let edited = app.route_authoring.as_ref().unwrap().workbench().snapshot();
+    app.handle_gamepad_command(Command::PrimaryDown);
+    assert_eq!(
+        app.route_authoring.as_ref().unwrap().workbench().snapshot(),
+        edited
+    );
+    app.handle_gamepad_command(Command::PrimaryUp);
+    app.handle_gamepad_command(Command::NextRoom);
+    assert_eq!(app.current, current);
+    app.handle_gamepad_command(Command::PrimaryDown);
+    assert_eq!(
+        app.route_authoring.as_ref().unwrap().workbench().revision(),
+        edited.revision + 1
+    );
+    app.handle_gamepad_command(Command::CancelPointer);
+    assert!(!app.route_primary_held);
+    assert!(app.inputs.is_empty());
+}
+
+#[test]
+fn route_authoring_keeps_arbitrary_network_and_question_then_previews_without_writing() {
+    use numinous_app::route_authoring::{Action, Page};
+    let fixture = KeptQuestionFixture::new("route-authoring");
+    let mut app = route_authoring_app("route-editor-keep");
+    app.keep_route_at(&fixture.project());
+    assert!(!fixture.project().exists());
+    let panel = app.route_authoring.as_mut().unwrap();
+    panel.act(Action::Junctions(1));
+    panel.act(Action::Page(Page::Keep));
+    panel.push_text("Does an unused junction change this round trip?");
+    let expected = panel.workbench().town().clone();
+    app.keep_route_at(&fixture.project());
+    let bytes = std::fs::read(fixture.project()).unwrap();
+    app.open_kept_project_at(&fixture.project(), &fixture.journal());
+    assert!(app.route_active);
+    assert!(!app.studio);
+    assert!(app.route_authoring.as_ref().unwrap().paused);
+    assert_eq!(
+        app.route_authoring.as_ref().unwrap().workbench().town(),
+        &expected
+    );
+    assert_eq!(
+        app.route_authoring.as_ref().unwrap().question,
+        "Does an unused junction change this round trip?"
+    );
+    let preview = app.route_authoring.as_ref().unwrap().workbench().snapshot();
+    app.route_authoring.as_mut().unwrap().act(Action::Cost(1));
+    assert_eq!(
+        app.route_authoring.as_ref().unwrap().workbench().snapshot(),
+        preview
+    );
+    app.dismiss_kept_project();
+    assert!(!app.route_active);
+    assert_eq!(
+        app.route_authoring.as_ref().unwrap().workbench().town(),
+        &expected
+    );
+    app.open_kept_project_at(&fixture.project(), &fixture.journal());
+    app.confirm_kept_project();
+    assert!(!app.route_authoring.as_ref().unwrap().paused);
+    assert!(app.project_resume.is_none());
+    assert_eq!(std::fs::read(fixture.project()).unwrap(), bytes);
+    assert!(!fixture.journal().exists());
+}
+
+#[test]
+fn route_authoring_controller_release_through_menu_and_focus_loss_never_sticks() {
+    use crate::gamepad::Command;
+    use numinous_app::route_authoring::{Action, Page};
+    let mut app = route_authoring_app("route-editor-release");
+    app.route_authoring
+        .as_mut()
+        .unwrap()
+        .act(Action::Page(Page::Roads));
+    let index = app
+        .route_authoring
+        .as_ref()
+        .unwrap()
+        .buttons()
+        .iter()
+        .position(|button| button.action == Action::Cost(1))
+        .unwrap();
+    app.route_authoring.as_mut().unwrap().navigate(index as i32);
+    app.handle_gamepad_command(Command::PrimaryDown);
+    let revision = app.route_authoring.as_ref().unwrap().workbench().revision();
+    app.handle_gamepad_command(Command::Menu);
+    app.handle_gamepad_command(Command::PrimaryUp);
+    app.handle_gamepad_command(Command::Back);
+    assert!(!app.show_help);
+    app.handle_gamepad_command(Command::PrimaryDown);
+    assert_eq!(
+        app.route_authoring.as_ref().unwrap().workbench().revision(),
+        revision + 1
+    );
+    app.clear_pointer_state();
+    app.handle_gamepad_command(Command::PrimaryDown);
+    assert_eq!(
+        app.route_authoring.as_ref().unwrap().workbench().revision(),
+        revision + 2
+    );
+}

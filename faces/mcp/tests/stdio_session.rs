@@ -20,6 +20,32 @@ const SESSION_EXIT_BASE_TIMEOUT: Duration = Duration::from_secs(30);
 const SESSION_EXIT_PER_REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 static NEXT_SESSION: AtomicU64 = AtomicU64::new(0);
 
+#[test]
+fn stdio_route_workbench_retains_an_arbitrary_town_and_records_a_trace() {
+    let snapshot = json!({"revision":0,"undo":[],"trace":null,"current":{"junctions":5,"roads":[{"from":0,"to":1,"cost":1,"open":true},{"from":1,"to":2,"cost":1,"open":true},{"from":2,"to":3,"cost":1,"open":true},{"from":3,"to":4,"cost":1,"open":true},{"from":0,"to":4,"cost":2,"open":true}],"stops":[0,2,4],"order":[0,4,2]}});
+    let responses = run_session(&[
+        json!({"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"route-workbench-test","version":"1"}}}),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        json!({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"route_lab","arguments":{"snapshot":snapshot,"action":{"type":"trace","from":0,"to":3}}}}),
+    ]);
+    let response = responses
+        .iter()
+        .find(|response| response["id"] == 1)
+        .expect("route tool response");
+    assert_ne!(response["result"]["isError"], true, "{response}");
+    let content = &response["result"]["structuredContent"];
+    assert_eq!(content["snapshot"]["current"]["order"], json!([0, 4, 2]));
+    assert_eq!(content["comparison"]["current"]["cost"], 6);
+    assert_eq!(content["trace"]["cursor"], 0);
+    assert_eq!(content["trace"]["events"], json!([]));
+    assert!(content["trace"]["result"].is_null());
+    assert_eq!(content["next"]["tool"], "route_lab");
+    assert_eq!(
+        content["next"]["arguments"]["action"],
+        json!({"type":"step","steps":1})
+    );
+}
+
 /// Run a full session: send each line, return the parsed response lines.
 fn run_session(requests: &[Value]) -> Vec<Value> {
     run_session_with_barrier(requests, || true, &[])
@@ -1151,7 +1177,7 @@ fn modern_stateless_discovery_tools_and_prediction_work_over_real_stdio() {
     assert_eq!(by_id(2)["result"]["resultType"], "complete");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(42)
+        Some(43)
     );
     assert_eq!(by_id(3)["result"]["resultType"], "input_required");
     assert_eq!(
@@ -2337,7 +2363,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(42)
+        Some(43)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));
@@ -2678,7 +2704,7 @@ fn creation_capsules_cross_real_stdio_with_lineage_and_v2_journal_migration() {
         reply_by_id(&replies, 2)["result"]["tools"]
             .as_array()
             .map(Vec::len),
-        Some(42)
+        Some(43)
     );
     let saved = &reply_by_id(&replies, 3)["result"]["structuredContent"];
     assert_eq!(saved["numFile"], parent.to_num_file());

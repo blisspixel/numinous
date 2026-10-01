@@ -4,6 +4,52 @@ use super::{
 };
 
 impl App {
+    /// Route Lab owns only its construction keys during ordinary room play.
+    pub(super) fn handle_route_lab_key(&mut self, key: &Key, repeat: bool) -> bool {
+        if self.rooms[self.current].meta().id != "route-lab"
+            || self.modal_mode_active()
+            || self.menu.is_open()
+            || self.show_help
+            || self.show_journey
+            || self.console.is_open()
+            || self.the_show
+            || self.paused
+            || self.chosen_experiment
+            || self.room_wager.is_some()
+            || self.project_resume.is_some()
+            || self.share_naming.is_some()
+            || self.gallery.is_some()
+        {
+            return false;
+        }
+        let Key::Character(text) = key else {
+            return false;
+        };
+        let mut characters = text.chars();
+        let Some(ch) = characters.next().map(|ch| ch.to_ascii_lowercase()) else {
+            return false;
+        };
+        if characters.next().is_some()
+            || !matches!(
+                ch,
+                '1'..='6' | 'g' | 'i' | 'j' | 'l' | 'c' | 'z' | 't' | ',' | '.'
+            )
+        {
+            return false;
+        }
+        if !repeat {
+            self.clear_pointer_state();
+            self.input_mode = input_legend::InputMode::KeyboardMouse;
+            self.compact_room_inputs();
+            room_input::record_key(&mut self.inputs, ch);
+            self.room_card = 0;
+            self.maybe_announce_room_goal();
+            self.sync_room_parameter_voice();
+            self.play_room_interaction_audio(true);
+        }
+        true
+    }
+
     pub(super) fn handle_global_audio_key(&mut self, key: &Key, repeat: bool) -> bool {
         let Key::Character(text) = key else {
             return false;
@@ -191,6 +237,9 @@ impl App {
         if self.handle_study_pointer_down(point) {
             return;
         }
+        if self.handle_route_pointer(point, true) {
+            return;
+        }
         if self.paused {
             return;
         }
@@ -357,6 +406,9 @@ impl App {
         if self.handle_study_pointer_move(point) {
             return;
         }
+        if self.handle_route_pointer(point, false) {
+            return;
+        }
         if self.paused {
             return;
         }
@@ -474,6 +526,7 @@ impl App {
             }
         }
         if held && self.poking && room_input::extend_poke_trail(&mut self.pokes, point) {
+            self.compact_room_inputs();
             let accepted = room_input::record_pointer_move(&mut self.inputs, point, self.t);
             self.maybe_announce_room_goal();
             self.sync_times_tables_aha();
@@ -492,6 +545,9 @@ impl App {
         if self.handle_study_pointer_up(point) {
             return;
         }
+        if self.route_active && !self.show_help {
+            return;
+        }
         self.set_mouse_from_normalized(point);
         let room = &self.rooms[self.current];
         let room_id = room.meta().id;
@@ -499,6 +555,9 @@ impl App {
         let mode = room_input::release_mode(room_id, verb);
         let was_dial_drag =
             self.poking && self.pokes.len() > 1 && mode == room_input::ReleaseMode::Dial;
+        if self.poking {
+            self.compact_room_inputs();
+        }
         let accepted =
             self.poking && room_input::record_pointer_up(&mut self.inputs, point, self.t, mode);
         if was_dial_drag {
@@ -520,6 +579,9 @@ impl App {
 
     pub(super) fn apply_wheel_delta(&mut self, lines: f64) -> bool {
         if self.handle_study_wheel(lines) {
+            return true;
+        }
+        if self.route_active {
             return true;
         }
         if self.studio
@@ -760,6 +822,12 @@ impl App {
     }
 
     pub(super) fn handle_gamepad_command(&mut self, command: gamepad::Command) {
+        if matches!(
+            command,
+            gamepad::Command::PrimaryUp | gamepad::Command::CancelPointer
+        ) {
+            self.route_primary_held = false;
+        }
         match command {
             gamepad::Command::ToggleMute => {
                 self.input_mode = input_legend::InputMode::Controller;
@@ -810,6 +878,9 @@ impl App {
                 gamepad::Command::Menu => self.gamepad_menu(),
                 _ => {}
             }
+            return;
+        }
+        if self.handle_route_gamepad(command) {
             return;
         }
         if self.session_viewer.is_open() {
@@ -919,6 +990,296 @@ impl App {
             gamepad::Command::PreviousRoom
             | gamepad::Command::NextRoom
             | gamepad::Command::PhaseDelta(_) => {}
+        }
+    }
+}
+
+#[cfg(test)]
+mod route_lab_keyboard_tests {
+    use super::{App, Key, NamedKey};
+    use crate::input_legend::InputMode;
+    use numinous_core::RoomInput;
+
+    fn route_app(name: &str) -> App {
+        let mut app = crate::tests::headless(name);
+        app.close_menu();
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "route-lab")
+            .expect("Route Lab in the real catalog");
+        app.reset_current_room();
+        app
+    }
+
+    fn status(app: &App) -> String {
+        app.rooms[app.current]
+            .status_input(app.t, &app.inputs)
+            .expect("Route Lab status")
+    }
+
+    fn press(app: &mut App, text: &str) {
+        assert!(app.handle_route_lab_key(&Key::Character(text.into()), false));
+    }
+
+    #[test]
+    fn native_route_keys_select_improve_restore_greedy_and_edit_the_same_road() {
+        let mut app = route_app("route-native-keys");
+        let current = app.current;
+        let bed = app.tune.clone();
+        app.input_mode = InputMode::Controller;
+        for ch in '1'..='6' {
+            press(&mut app, &ch.to_string());
+            assert_eq!(app.inputs.last(), Some(&RoomInput::Key { ch }));
+            assert_eq!(app.current, current);
+        }
+        assert_eq!(app.input_mode, InputMode::KeyboardMouse);
+        assert_eq!(app.room_card, 0);
+        press(&mut app, "G");
+        assert!(status(&app).contains("ORDER=ABCD"));
+        assert_eq!(
+            app.desired_room_parameter_sound()
+                .expect("key voice")
+                .ratio(),
+            9.0 / 8.0
+        );
+        press(&mut app, "I");
+        assert!(status(&app).contains("ORDER=ABDC"));
+        assert!(app.rooms[current].goal_met(app.t, &app.inputs));
+        assert_eq!(
+            app.desired_room_parameter_sound()
+                .expect("optimal voice")
+                .ratio(),
+            1.0
+        );
+        assert!(app.goal_announced);
+        press(&mut app, "l");
+        assert!(status(&app).contains("BD=4"));
+        press(&mut app, "J");
+        assert!(status(&app).contains("BD=3"));
+        for _ in 0..12 {
+            press(&mut app, "j");
+        }
+        assert!(status(&app).contains("BD=1"));
+        for _ in 0..12 {
+            press(&mut app, "L");
+        }
+        assert!(status(&app).contains("BD=9"));
+        assert!(
+            std::sync::Arc::ptr_eq(&bed, &app.tune),
+            "keys preserve the room bed"
+        );
+        assert!(!app.show_journey, "J edits the road only in this room");
+        assert!(app.inputs.len() <= numinous_core::MAX_ROOM_INPUTS);
+
+        app.reset_current_room();
+        assert!(app.inputs.is_empty());
+        assert!(!app.goal_announced);
+        assert!(status(&app).contains("BD=3"));
+        assert!(app.desired_room_parameter_sound().is_none());
+    }
+
+    #[test]
+    fn native_route_key_repeats_cannot_change_or_duplicate_the_experiment() {
+        let mut app = route_app("route-native-repeat");
+        press(&mut app, "l");
+        let inputs = app.inputs.clone();
+        let before = status(&app);
+        for text in ["1", "6", "g", "i", "j", "l", "c", "z", "t", ",", "."] {
+            assert!(app.handle_route_lab_key(&Key::Character(text.into()), true));
+            assert_eq!(app.inputs, inputs);
+            assert_eq!(status(&app), before);
+        }
+    }
+
+    #[test]
+    fn native_route_closure_undo_and_trace_survive_controller_moves_and_compaction() {
+        let mut app = route_app("route-native-workbench");
+        press(&mut app, "2");
+        press(&mut app, "l");
+        press(&mut app, "c");
+        assert!(status(&app).contains("AB=closed"));
+        app.begin_pointer_at((0.7, 0.67));
+        assert!(status(&app).contains("SEARCH 0/"));
+        let initial = status(&app);
+        for step in 0..180 {
+            let point = ((step % 5) as f64 * 0.2 + 0.1, 0.67);
+            app.handle_gamepad_command(crate::gamepad::Command::PointerMoved { point, held: true });
+            assert_eq!(
+                status(&app),
+                initial,
+                "control-row move must not edit or step"
+            );
+            assert!(app.inputs.len() <= numinous_core::MAX_ROOM_INPUTS);
+        }
+        app.end_pointer_at((0.9, 0.67));
+        assert_eq!(status(&app), initial);
+        press(&mut app, ".");
+        assert!(status(&app).contains("SEARCH 1/"));
+        press(&mut app, ",");
+        assert!(status(&app).contains("SEARCH 0/"));
+        press(&mut app, "z");
+        assert!(status(&app).contains("STEP TO START"));
+        press(&mut app, "t");
+        assert!(!status(&app).contains("closed"));
+        assert!(status(&app).contains("BD=4"));
+        press(&mut app, "z");
+        assert!(status(&app).contains("ORDER=ABDC"));
+        assert!(status(&app).contains("BD=3"));
+        press(&mut app, "z");
+        assert!(status(&app).contains("ORDER=ABCD"));
+        assert_eq!(
+            app.desired_room_parameter_sound().unwrap().ratio(),
+            9.0 / 8.0
+        );
+        press(&mut app, "c");
+        press(&mut app, ".");
+        press(&mut app, "c");
+        assert!(status(&app).contains("disconnected"));
+        assert!(app.desired_room_parameter_sound().is_none());
+        app.reset_current_room();
+        assert!(app.inputs.is_empty());
+        assert!(app.desired_room_parameter_sound().is_none());
+        assert!(status(&app).starts_with("DRAG:  ORDER=ABCD cost=9"));
+    }
+
+    #[test]
+    fn long_native_route_sessions_preserve_road_order_voice_and_goal_under_the_history_cap() {
+        use numinous_core::Room;
+
+        let mut app = route_app("route-native-long-session");
+        let reference = numinous_core::rooms::route_lab::RouteLab::new();
+        let check = |app: &App, road_x: f64, order: char| {
+            let expected = [
+                RoomInput::PointerDown {
+                    x: road_x,
+                    y: 0.75,
+                    t: 0.0,
+                },
+                RoomInput::Key { ch: order },
+            ];
+            assert_eq!(
+                app.rooms[app.current].status_input(app.t, &app.inputs),
+                reference.status_input(0.0, &expected),
+                "older road/order state must survive: {:?}",
+                app.inputs
+            );
+            assert_eq!(
+                app.rooms[app.current].goal_met(app.t, &app.inputs),
+                reference.goal_met(0.0, &expected)
+            );
+            assert_eq!(
+                app.desired_room_parameter_sound(),
+                reference.parameter_sound(0.0, &expected)
+            );
+            assert!(app.inputs.len() <= numinous_core::MAX_ROOM_INPUTS);
+        };
+        app.begin_pointer_at((0.15, 0.75));
+        app.end_pointer_at((0.15, 0.75));
+        check(&app, 0.15, '1');
+        for cycle in 0..8 {
+            press(&mut app, "l");
+            check(&app, 0.25, if cycle == 0 { '1' } else { '2' });
+            press(&mut app, "j");
+            check(&app, 0.15, if cycle == 0 { '1' } else { '2' });
+            app.begin_pointer_at((0.05, 0.4));
+            assert!(app.poking);
+            check(&app, 0.15, '1');
+            for step in 0..36 {
+                let point = (if step % 2 == 0 { 0.2 } else { 0.3 }, 0.4);
+                if step % 3 == 0 {
+                    app.handle_gamepad_command(crate::gamepad::Command::PointerMoved {
+                        point,
+                        held: true,
+                    });
+                } else {
+                    app.move_pointer_to(point, true);
+                }
+                check(&app, 0.15, '2');
+            }
+            if cycle % 2 == 0 {
+                app.end_pointer_at((0.3, 0.4));
+            } else {
+                // A keyboard command cancels the held pointer through the
+                // ordinary App path, which appends two cancellation events.
+                press(&mut app, "2");
+                assert!(!app.poking);
+            }
+            check(&app, 0.15, '2');
+            press(&mut app, "j");
+            check(&app, 0.0, '2');
+            press(&mut app, "l");
+            check(&app, 0.15, '2');
+            press(&mut app, "g");
+            check(&app, 0.15, '1');
+            press(&mut app, "i");
+            check(&app, 0.15, '2');
+        }
+        assert!(app.goal_announced);
+        app.reset_current_room();
+        assert!(app.inputs.is_empty());
+        assert!(!app.goal_announced);
+        assert!(app.desired_room_parameter_sound().is_none());
+    }
+
+    #[test]
+    fn native_route_keys_yield_to_every_existing_modal_owner() {
+        let owners: [fn(&mut App); 14] = [
+            |app| app.open_home_menu(),
+            |app| app.show_help = true,
+            |app| app.show_journey = true,
+            |app| app.console.open(),
+            |app| app.the_show = true,
+            |app| app.paused = true,
+            |app| app.chosen_experiment = true,
+            |app| app.enter_studio(),
+            |app| app.quiz_next(),
+            |app| app.munch_start(),
+            |app| app.nim_start(),
+            |app| app.gauntlet_start(),
+            |app| app.arcade_start(),
+            |app| {
+                assert!(app.open_room_study());
+            },
+        ];
+        for (index, owner) in owners.into_iter().enumerate() {
+            let mut app = route_app(&format!("route-native-modal-{index}"));
+            owner(&mut app);
+            let inputs = app.inputs.clone();
+            for text in ["1", "g", "i", "j", "l", "c", "z", "t", ",", "."] {
+                assert!(!app.handle_route_lab_key(&Key::Character(text.into()), false));
+                assert_eq!(app.inputs, inputs, "modal owner {index}");
+            }
+        }
+    }
+
+    #[test]
+    fn native_route_keys_leave_navigation_and_global_commands_to_their_owners() {
+        let mut app = route_app("route-native-global");
+        for key in [
+            Key::Named(NamedKey::ArrowLeft),
+            Key::Named(NamedKey::ArrowRight),
+            Key::Named(NamedKey::ArrowUp),
+            Key::Named(NamedKey::ArrowDown),
+            Key::Named(NamedKey::Escape),
+            Key::Character("q".into()),
+            Key::Character("m".into()),
+            Key::Character("]".into()),
+            Key::Character("e".into()),
+            Key::Character("r".into()),
+            Key::Character("n".into()),
+            Key::Character("p".into()),
+            Key::Character("k".into()),
+        ] {
+            assert!(!app.handle_route_lab_key(&key, false));
+        }
+        let current = app.current;
+        app.switch(-1);
+        assert_ne!(app.current, current);
+        let inputs = app.inputs.clone();
+        for text in ["1", "g", "i", "j", "l", "c", "z", "t", ",", "."] {
+            assert!(!app.handle_route_lab_key(&Key::Character(text.into()), false));
+            assert_eq!(app.inputs, inputs);
         }
     }
 }

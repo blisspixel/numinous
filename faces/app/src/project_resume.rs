@@ -33,7 +33,14 @@ pub(crate) struct Plate {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct LoadedProject {
     pub(crate) plate: Plate,
-    pub(crate) creation: Option<StudioCreation>,
+    pub(crate) question: String,
+    pub(crate) creation: Option<LoadedCreation>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum LoadedCreation {
+    Studio(StudioCreation),
+    Route(numinous_core::RouteCreation),
 }
 
 /// Whether the Cabinet should offer the kept question.
@@ -60,19 +67,28 @@ pub(crate) fn load(project_path: &Path, journal_path: &Path) -> Result<LoadedPro
         return Err("project chain is empty".to_string());
     }
     let journal = try_load_journal_file(journal_path).map_err(|_| "Could not read the journal")?;
-    let revision = chain
-        .revisions()
-        .last()
-        .ok_or_else(|| "project chain is empty".to_string())?;
     let preview = chain
         .preview(None, &journal, ReceiptCheck::NotSupplied)
         .map_err(|_| "Could not read the project chain")?;
-    let creation = match preview.creation.status {
-        CreationStatus::Present => revision
-            .creation_num()
-            .and_then(|num| StudioCreation::from_capsule(num).ok()),
-        CreationStatus::Missing | CreationStatus::Incompatible => None,
-    };
+    let creation =
+        match preview.creation.status {
+            CreationStatus::Present => preview.creation.capsule.as_deref().and_then(|capsule| {
+                match preview.creation.kind {
+                    Some(numinous_core::CreationKind::Studio) => {
+                        StudioCreation::from_capsule(capsule)
+                            .ok()
+                            .map(LoadedCreation::Studio)
+                    }
+                    Some(numinous_core::CreationKind::Route) => {
+                        numinous_core::RouteCreation::from_capsule(capsule)
+                            .ok()
+                            .map(LoadedCreation::Route)
+                    }
+                    None => None,
+                }
+            }),
+            CreationStatus::Missing | CreationStatus::Incompatible => None,
+        };
     let creation_state = if creation.is_some() {
         CreationState::Present
     } else if preview.creation.status == CreationStatus::Missing {
@@ -117,6 +133,7 @@ pub(crate) fn load(project_path: &Path, journal_path: &Path) -> Result<LoadedPro
         }
     });
     Ok(LoadedProject {
+        question: preview.question.clone(),
         plate: Plate {
             lines,
             creation_state,

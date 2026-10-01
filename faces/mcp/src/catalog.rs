@@ -230,6 +230,7 @@ fn build_tools_catalog() -> Value {
             },
             super::show::catalog_entry(),
             super::study::catalog_entry(),
+            super::route_tools::catalog_entry(),
             {
                 "name": "describe_room",
                 "description": "Safely describe one room: its title, wing, action, goal, and nonspoiling doorway. This never returns the revelation. When exact current-room evidence exists in the local player journal, structuredContent.journalCue says only that it is available and names the explicit workspace retrieval call; no journal text is opened. Use list_rooms first to find valid ids.",

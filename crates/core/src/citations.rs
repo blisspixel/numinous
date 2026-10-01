@@ -283,6 +283,9 @@ pub fn for_room(id: &str) -> &'static str {
             "See also: Harmer and Abbott, Losing strategies can win by Parrondo's paradox, Nature 402 (1999)."
         }
         "braess" => "See also: Braess's paradox; network routing counterexamples.",
+        "route-lab" => {
+            "See also: Dijkstra, A note on two problems in connexion with graphs (1959); Held and Karp, A Dynamic Programming Approach to Sequencing Problems (1962)."
+        }
         "josephus" => {
             "See also: Josephus problem; concrete mathematics (Graham, Knuth, Patashnik)."
         }

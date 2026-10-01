@@ -13,8 +13,8 @@ interface. You may explore, create, rest, dislike a room, or leave.
 Begin with `list_rooms` using `response_mode: "compact"`. Its threshold offers
 three doors: touch the flagship, follow the six-step Strange Loop chain, or
 wander by wing. Choose the route that actually interests you. The complete
-catalog remains in `structuredContent.rooms`, but you do not need to read 355
-ids to begin. `describe_room` is a safe doorway if you want its title,
+catalog remains in `structuredContent.rooms`, but you do not need to read every
+id to begin. `describe_room` is a safe doorway if you want its title,
 action, and goal before playing; it never prints the explanation. Then call
 `play_room`. If its structured result carries `journalCue`, this local player
 profile kept exact room evidence, but no journal text was opened. Follow the
@@ -68,6 +68,73 @@ experiment without a call, such as landing Times Tables on four lobes or
 throwing enough needles in Buffon's Needle. Naming a wager still counts there,
 and consolidation grades the name you gave rather than the way you arrived.
 The same principle holds for challenges and games: failure has no penalty.
+
+Route Lab is another optional experiment: call `play_room` with
+`id: "route-lab"`. Deliver to B, C, and D, then return to A: choose a delivery
+order and compare its round-trip cost with the minimum. Each leg follows the
+cheapest open road path; it may pass a stop before its scheduled delivery and
+revisit junctions. Delivery order is distinct from the actual street walk.
+`pokes: [[0.75, 0.92]]` accepts the opening cheaper reorder.
+`pokes: [[0.5, 0.78]]` changes road BD to 5, where nearest-next is optimal.
+Include earlier pokes before later actions to continue one experiment.
+The minimum is exact for the declared integer road costs. A local reorder can
+prove a saving; absence of an offer alone does not prove the minimum.
+
+Call `route_lab` with no arguments for the typed workbench. Each response returns
+a bounded working state (`snapshot`) and a followable `next` call. Carry it with
+an explicit `action` into a later request; there is no hidden session or profile
+write. Action types are `evaluate`, `road_cost` (`from`, `to`, `cost`),
+`road_open` (`from`, `to`, `open`), `stops` (`stops`, depot first), `depot`
+(`depot`), `order` (`order`), `greedy`, `improve`, and `undo`. `network` replaces
+the complete network atomically through `current`, with the same fields as
+`snapshot.current`. `greedy` chooses
+the nearest next stop; `improve` accepts the offered cheaper order. A custom
+street network is supplied in `snapshot.current` with `junctions`, `roads` (each
+`from`, `to`, `cost`, `open`), `stops`, and `order`; start with `revision: 0`, `undo: []`, and
+`trace: null`. `junctions` is the count; junction IDs run from zero through
+`junctions - 1`. Each road can be traveled in either direction; declare each
+connection once. `stops` includes the depot as its first entry; `order` schedules
+those same stops, starting at the depot. Malformed state is refused. If required
+stops cannot reach one another, comparison is unavailable while the network
+remains editable. Unused isolated junctions do not prevent a round trip.
+Evaluation keeps the player's order.
+
+`action: {"type":"trace","from":0,"to":3}` records an actual shortest-path
+calculation at cursor zero. With its returned snapshot, `action:
+{"type":"step"}` reveals one event; `steps` selects an advance and `cursor`
+selects an absolute position. Supply only one of those fields. The result is
+revealed when the sequence completes. Event costs are cumulative from the start:
+`relaxed` improves a tentative cost; `settled` finalizes the cheapest cost to a
+junction. Edits invalidate the trace, and an inconsistent revision or network
+identity is refused.
+
+For a portable route creation, send `action: "save"` and the current snapshot.
+`creation.capsule` is canonical `NUMINOUS_ROUTE 1` text. `action: "open"` with
+that `capsule` reopens the authored roads, closures, stops, and order with fresh
+undo and search. `action: "remix"` makes a child whose parent is the supplied
+creation's identity. Save an edited child with both its capsule and the current
+snapshot; ordinary saves preserve its parent. These calls write no file and
+return followable next calls. A capsule-only save preserves that creation's
+network rather than substituting the opening example.
+
+Keep a chosen route question through `project`: `op: "keep"`, `question`,
+`rooms: ["route-lab"]`, `creation: <capsule>`, and
+`next: {"tool":"route_lab","arguments":{"capsule":<capsule>,"action":"open"}}`.
+Use the actual returned capsule text. Resume previews the exact saved network's
+next call without executing it. Route-containing project documents use
+`NUMINOUS_PROJECT 2`; Studio-only version 1 bytes remain supported.
+CLI `route-lab --out delivery.route` exports a creation to a new file;
+`project keep --question "Your question" --route delivery.route` keeps it,
+`project export --out delivery.project` exports the project, and
+`project import delivery.project --confirm` imports deliberately.
+`project resume --json` returns the structured preview.
+
+The App opens native route authoring through O or Cabinet CONSTRUCT in Route
+Lab. Its road, junction, delivery, depot, order, search, and Keep controls use
+the same core workbench. A kept route opens paused from THE QUESTION; Enter
+activates it. Leaving preserves the in-process editor, while KEEP QUESTION
+stores the chosen question and authored network in the existing project chain.
+
 Kepler Areas is a compact first wager: tune an ellipse with `pokes`, call
 `speed_wager` as `faster`, `slower`, or `same`, then choose whether to pass
 `aha_summon: true` and meet the equal-time evidence.
@@ -184,7 +251,7 @@ Entry text and opaque receipt digests are not searched. Play does not write the
 workspace. It dies when the process does. It is not a memory. Call `project`
 when one question should outlive the visit. `op: "keep"` stores that question
 as data, one closed next call, catalog rooms, typed evidence links, and an
-optional Studio creation at `NUMINOUS_PROJECT` (or `.numinous-project`).
+optional Studio or route creation at `NUMINOUS_PROJECT` (or `.numinous-project`).
 `op: "resume"` previews `structuredContent.preview.next` and does not apply it.
 It does not copy journal text. `numinous project resume` prints the same
 preview. `numinous project resume --apply` writes the question and a present

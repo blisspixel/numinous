@@ -43,7 +43,7 @@ should link here rather than restating the board.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.4.0-alpha.27, Understanding Alpha active with its exit
+**Current release state: 0.4.0-alpha.28, Understanding Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are complete. Human stranger sessions sit with 0.8
 Closed Beta and 1.0 First Light.
@@ -115,10 +115,48 @@ mastery, exploration, and company also remain complete reasons to play.
   when that call names a present room, its place. The Cabinet offers that
   question when a chain is present, opens a present creation paused, and
   Enter starts it.
-- **Designed:** [Route Lab](ROUTE_LAB.md) makes shortest-path search and
-  traveling-salesman improvement visible on one small street map. Its first
-  slice includes a complete four-stop comparison, an exact small-case solver,
-  and honest heuristic limits. Implementation and player evidence remain open.
+- **Built, Route Lab:** [Route Lab](ROUTE_LAB.md) compares delivery
+  orders on an explicitly costed street map. Core owns bounded Dijkstra,
+  reconstructed street walks, nearest-neighbor, checked two-edge exchanges,
+  and exact subset dynamic programming. The App, CLI, and MCP share road edits,
+  exact closed costs, optimum, and an offered saving. Independent shortest-path
+  and exhaustive tour oracles, including a local optimum that is not global,
+  support the solver. Room replay, native input retention, public CLI, MCP
+  followable-door/receipt, and composed compact-control regressions cover the
+  first playable boundary. The native room retains closed roads, bounded undo,
+  and caller-paced actual solver events across history rollover. The shared
+  workbench admits custom bounded street networks and depot, delivery, and order
+  edits through CLI `route-lab` and private MCP `route_lab`; validated snapshots carry
+  their state, with trace cursors bound to revision and canonical network digest.
+  Shared wire-contract, real process, followable-next, compaction, and composed
+  control regressions own those claims. The room and readable CLI distinguish
+  delivery order from the street walk, round-trip cost from shortest-path cost,
+  and tentative search costs from final ones. Shared regressions also prove
+  that isolated unused junctions do not prevent comparison. Native CONSTRUCT
+  owns an arbitrary bounded workbench with shared pointer, keyboard, and
+  controller controls, atomic structural edits, and retained in-process state.
+  Portable route creations keep authored roads, closures, stops, order, and
+  explicit parent lineage. The existing project chain keeps the chosen question
+  and reopens the exact network through Cabinet previews or followed CLI/MCP
+  next calls. Ordinary saves preserve parent identity; deliberate remixes leave
+  their sources intact. New version 2 route projects retain legacy Studio
+  version 1 bytes and identities. Capsule, mixed-chain, persistence, real process,
+  native lifecycle/input, and composed-frame regressions support these claims.
+  Diagram positioning, richer solver presentation, authored challenge exchange,
+  and participant experience evidence remain open.
+- **Built, Studio and room readability:** App and core text graphs and
+  overlays preserve sampled undefined gaps and isolated finite points. Studio
+  prioritizes slope and partial readings, and keeps a long formula's insertion
+  point visible. Content-aware footer scaling fixes the ordinary window's
+  status inversion. Core and composed App regressions own these bounded claims;
+  configurable text scale and independent audio-bus controls remain open.
+- **Built, offline format conformance:** pinned canonical plugin schemas and
+  immutable provenance supplement local semantic checks. The reference skill
+  validator and a real duplicate-refusing YAML parser check the portable skill.
+  A production MCP gate checks OKF escaping, corrections, pagination, Unicode,
+  and the portable capsule's closed hash manifest. Fixtures, validator contracts,
+  and the production gate run locally and in CI. Genuine external host discovery
+  remains separate work.
 - **Built:** a plotted or sung Studio experiment names `next` as
   `save_creation` with the expression and window already bound, and a kept
   creation names `next` as `fork_creation` with the capsule already bound as
@@ -264,343 +302,21 @@ mastery, exploration, and company also remain complete reasons to play.
   source. A path that does not close, a graph, a field, and an overlay
   stay without that reading. There is no topology command.
   Implementation and player evidence remain open.
-- **Built, first term of a two-oscillator sum:** a parametric path whose
-  `x` and `y` are each a sum of two oscillators, in the form closure
-  already accepts, grows the first term beside the path. Both curves
-  share one frame, so the first circle stays inside the path instead of
-  filling the box. Samples of the two signed terms add to the path Studio
-  already draws. The App sounds one tone per recognized frequency, using
-  the same 110 Hz map as closure. CLI `open-studio` and MCP
-  `structuredContent.partial` report `partial basis=sum`. A subtraction
-  is that sum with the second term negated. `sqrt(2)` is not replaced by
-  a nearby ratio. A speed closure cannot name, a graph, a field, and
-  an overlay have no partial reading from this rule. A sum on one
-  coordinate, and a third term, are the next paragraphs. Closure remains
-  the only period claim. The capsule, the postcard, the text preview, CLI
-  `sing`, and `melody.mid` stay the player's source. The live App voice
-  is the tones. Player evidence remains open.
-- **Built, a sum on one coordinate:** a parametric path with a
-  two-oscillator sum on one coordinate, and one oscillator closure
-  already accepts on the other, grows the first term of each coordinate
-  on the same frame. `cos(2*pi*t)+0.5*cos(6*pi*t)` beside `sin(2*pi*t)`
-  grows the circle of frequency `1` and sounds frequencies `1` and `3`.
-  The stored terms add back to the coordinate the player wrote. A
-  subtraction stores the second term negated. Source order is the order
-  of the reading, so the first term is the first term written, and a
-  repeated frequency is one tone. Both coordinates as single oscillators
-  stay with closure. A product of two oscillators, a graph, a field,
-  and an overlay have no partial reading from this rule. A third term
-  is the next paragraph. CLI `open-studio` and MCP
-  `structuredContent.partial` report `partial basis=sum`. The capsule,
-  the postcard, the text preview, CLI `sing`, and `melody.mid` stay the
-  player's source. Player evidence remains open.
-- **Built, a third term:** a coordinate may be a sum of three oscillators
-  in the form closure already accepts. The other coordinate is one, two,
-  or three of those oscillators, and at least one coordinate is a sum.
-  `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)` beside `sin(2*pi*t)`
-  grows the circle of frequency `1` and sounds frequencies `1`, `3`, and
-  `5`. Parentheses keep that reading. A subtraction distributes,
-  and the stored terms add back to the coordinate the player wrote. Source
-  order is the order of the reading. A leading minus on a whole sum, a
-  product of two oscillators, a field, and an overlay have no partial
-  reading from this rule. A graph that sums exactly two oscillators is
-  the next paragraph. CLI `open-studio` and MCP
-  `structuredContent.partial` report `partial basis=sum`. The capsule,
-  the postcard, the text preview, CLI `sing`, and `melody.mid` stay the
-  player's source. Player evidence remains open.
-- **Built, first term of a two-oscillator graph:** an open graph that
-  sums exactly two oscillators, in the form closure already accepts,
-  grows the first term on the same vertical axis.
-  `sin(2*pi*x)+0.5*sin(6*pi*x)` grows `sin(2*pi*x)` and sounds
-  frequencies `1` and `3`. The stored terms add back to the graph the
-  player wrote. A subtraction stores the second term negated. Source
-  order is the order of the reading. The App sounds one tone per
-  recognized frequency, using the same 110 Hz map. CLI `open-studio`
-  and MCP `structuredContent.partial` report `partial basis=sum`. One
-  term, a path, a field, and an overlay have no partial reading from
-  this rule. A third term on the graph is the next paragraph. A slope
-  this slice can name stays that slope.
-  The capsule, the postcard, the text preview, CLI `sing`, and
-  `melody.mid` stay the player's source. The live App voice is the
-  tones. Player evidence remains open.
-- **Built, a third term on a graph:** an open graph may sum three
-  oscillators in the form closure already accepts.
-  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)` grows `sin(2*pi*x)`
-  and sounds frequencies `1`, `3`, and `5`. Parentheses keep that
-  reading. A subtraction distributes, and the stored terms add back to
-  the graph the player wrote. Source order is the order of the reading.
+- **Built, finite oscillator-sum reading:** a supported graph or parametric
+  path can show its first signed oscillator term on the same frame as the
+  complete sum, and sound each recognized frequency through the same 110 Hz
+  map as closure. The stored terms add back to the player's expression.
+  Parentheses preserve the reading, subtraction stores signed terms, source
+  order chooses the first term, and a repeated frequency sounds once.
   CLI `open-studio` and MCP `structuredContent.partial` report
-  `partial basis=sum`. One term, a path, a field, and an overlay have
-  no partial reading from this rule. A slope this slice can name stays
-  that slope. The capsule, the postcard, the text
-  preview, CLI `sing`, and `melody.mid` stay the player's source.
-  Player evidence remains open.
-- **Built, a fourth term:** a coordinate may be a sum of four oscillators
-  in the form closure already accepts. The other coordinate is one, two,
-  three, or four of those oscillators, and at least one coordinate is a
-  sum. `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)`
-  beside `sin(2*pi*t)` grows the circle of frequency `1` and sounds
-  frequencies `1`, `3`, `5`, and `7`. Parentheses keep that reading. A
-  subtraction distributes, and the stored terms add back to the
-  coordinate the player wrote. Source order is the order of the reading.
-  A leading minus on a whole sum, a product of two oscillators, a field,
-  and an overlay have no partial reading from this rule. A fourth term
-  on a graph is the next paragraph. CLI `open-studio`
-  and MCP
-  `structuredContent.partial` report `partial basis=sum`. The capsule,
-  the postcard, the text preview, CLI `sing`, and `melody.mid` stay the
-  player's source. Player evidence remains open.
-- **Built, a fourth term on a graph:** an open graph may sum four
-  oscillators in the form closure already accepts.
-  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)`
-  grows `sin(2*pi*x)` and sounds frequencies `1`, `3`, `5`, and `7`.
-  Parentheses keep that reading. A subtraction distributes, and the
-  stored terms add back to the graph the player wrote. Source order is
-  the order of the reading. CLI `open-studio` and MCP
-  `structuredContent.partial` report `partial basis=sum`. One term, a
-  path, a field, and an overlay have no partial reading from this
-  rule. A fifth term on a path is the next
-  paragraph. A slope this slice can name stays that slope. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
-- **Built, a fifth term:** a coordinate may be a sum of five oscillators
-  in the form closure already accepts. The other coordinate is one, two,
-  three, four, or five of those oscillators, and at least one coordinate
-  is a sum.
-  `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)`
-  beside `sin(2*pi*t)` grows the circle of frequency `1` and sounds
-  frequencies `1`, `3`, `5`, `7`, and `9`. Parentheses keep that reading.
-  A subtraction distributes, and the stored terms add back to the
-  coordinate the player wrote. Source order is the order of the reading.
-  A leading minus on a whole sum, a product of two
-  oscillators, a field, and an overlay have no partial reading from
-  this rule. A fifth term on a graph is the next paragraph. A sixth
-  term follows that paragraph. CLI
-  `open-studio` and MCP
-  `structuredContent.partial` report `partial basis=sum`. The capsule,
-  the postcard, the text preview, CLI `sing`, and `melody.mid` stay the
-  player's source. Player evidence remains open.
-- **Built, a fifth term on a graph:** an open graph may sum five
-  oscillators in the form closure already accepts.
-  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)`
-  grows `sin(2*pi*x)` and sounds frequencies `1`, `3`, `5`, `7`, and
-  `9`. Parentheses keep that reading. A subtraction distributes, and
-  the stored terms add back to the graph the player wrote. Source order
-  is the order of the reading. CLI `open-studio` and MCP
-  `structuredContent.partial` report `partial basis=sum`. One term, a
-  sixth term, a path, a field, and an overlay have no partial reading
-  from this rule. A sixth term on a path is the next paragraph. A slope
-  this slice can name stays that slope. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
-- **Built, a sixth term:** a coordinate may be a sum of six oscillators
-  in the form closure already accepts. The other coordinate is one, two,
-  three, four, five, or six of those oscillators, and at least one
-  coordinate is a sum.
-  `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)`
-  beside `sin(2*pi*t)` grows the circle of frequency `1` and sounds
-  frequencies `1`, `3`, `5`, `7`, `9`, and `11`. Parentheses keep that
-  reading. A subtraction distributes, and the stored terms add back to
-  the coordinate the player wrote. Source order is the order of the
-  reading. A seventh term, a leading minus on a whole sum, a product of
-  two oscillators, a field, and an overlay have no partial reading from
-  this rule. A sixth term on a graph is the next paragraph. CLI `open-studio`
-  and MCP `structuredContent.partial` report `partial basis=sum`. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
-- **Built, a sixth term on a graph:** an open graph may sum six
-  oscillators in the form closure already accepts.
-  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)`
-  grows `sin(2*pi*x)` and sounds frequencies `1`, `3`, `5`, `7`, `9`,
-  and `11`. Parentheses keep that reading. A subtraction distributes,
-  and the stored terms add back to the graph the player wrote. Source
-  order is the order of the reading. CLI `open-studio` and MCP
-  `structuredContent.partial` report `partial basis=sum`. One term, a
-  seventh term, a leading minus on a whole sum, a product of two
-  oscillators, a path, a field, and an overlay have no partial reading
-  from this rule. A seventh term on a path is the next paragraph. A slope
-  this slice can name stays that slope. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
-- **Built, a seventh term:** a coordinate may be a sum of seven oscillators
-  in the form closure already accepts. The other coordinate is one, two,
-  three, four, five, six, or seven of those oscillators, and at least one
-  coordinate is a sum.
-  `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)`
-  beside `sin(2*pi*t)` grows the circle of frequency `1` and sounds
-  frequencies `1`, `3`, `5`, `7`, `9`, `11`, and `13`. Parentheses keep
-  that reading. A subtraction distributes, and the stored terms add back
-  to the coordinate the player wrote. Source order is the order of the
-  reading. An eighth term, a leading minus on a whole sum, a product of
-  two oscillators, a field, and an overlay have no partial reading from
-  this rule. A seventh term on a graph is the next paragraph. CLI `open-studio`
-  and MCP `structuredContent.partial` report `partial basis=sum`. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
-- **Built, a seventh term on a graph:** an open graph may sum seven
-  oscillators in the form closure already accepts.
-  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)`
-  grows `sin(2*pi*x)` and sounds frequencies `1`, `3`, `5`, `7`, `9`,
-  `11`, and `13`. Parentheses keep that reading. A subtraction distributes,
-  and the stored terms add back to the graph the player wrote. Source
-  order is the order of the reading. CLI `open-studio` and MCP
-  `structuredContent.partial` report `partial basis=sum`. One term, an
-  eighth term, a leading minus on a whole sum, a product of two
-  oscillators, a path, a field, and an overlay have no partial reading
-  from this rule. An eighth term on a path is the next paragraph. A slope
-  this slice can name stays that slope. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
-- **Built, an eighth term:** a coordinate may be a sum of eight oscillators
-  in the form closure already accepts. The other coordinate is one, two,
-  three, four, five, six, seven, or eight of those oscillators, and at
-  least one coordinate is a sum.
-  `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)`
-  beside `sin(2*pi*t)` grows the circle of frequency `1` and sounds
-  frequencies `1`, `3`, `5`, `7`, `9`, `11`, `13`, and `15`. Parentheses
-  keep that reading. A subtraction distributes, and the stored terms add
-  back to the coordinate the player wrote. Source order is the order of
-  the reading. A ninth term, a leading minus on a whole sum, a product of
-  two oscillators, a field, and an overlay have no partial reading from
-  this rule. An eighth term on a graph is the next paragraph. CLI `open-studio`
-  and MCP `structuredContent.partial` report `partial basis=sum`. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
-- **Built, an eighth term on a graph:** an open graph may sum eight
-  oscillators in the form closure already accepts.
-  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)`
-  grows `sin(2*pi*x)` and sounds frequencies `1`, `3`, `5`, `7`, `9`,
-  `11`, `13`, and `15`. Parentheses keep that reading. A subtraction
-  distributes, and the stored terms add back to the graph the player wrote.
-  Source order is the order of the reading. CLI `open-studio` and MCP
-  `structuredContent.partial` report `partial basis=sum`. One term, a
-  ninth term, a leading minus on a whole sum, a product of two
-  oscillators, a path, a field, and an overlay have no partial reading
-  from this rule. A ninth term on a path is the next paragraph. A slope
-  this slice can name stays that slope. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
-- **Built, a ninth term:** a coordinate may be a sum of nine oscillators
-  in the form closure already accepts. The other coordinate is one, two,
-  three, four, five, six, seven, eight, or nine of those oscillators, and
-  at least one coordinate is a sum.
-  `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)+0.25*cos(34*pi*t)`
-  beside `sin(2*pi*t)` grows the circle of frequency `1` and sounds
-  frequencies `1`, `3`, `5`, `7`, `9`, `11`, `13`, `15`, and `17`.
-  Parentheses keep that reading. A subtraction distributes, and the stored
-  terms add back to the coordinate the player wrote. Source order is the
-  order of the reading. A tenth term, a leading minus on a whole sum, a
-  product of two oscillators, a field, and an overlay have no partial
-  reading from this rule. A ninth term on a graph is the next paragraph. CLI
-  `open-studio` and MCP `structuredContent.partial` report
-  `partial basis=sum`. The capsule, the postcard, the text preview, CLI
-  `sing`, and `melody.mid` stay the player's source. Player evidence
-  remains open.
-- **Built, a ninth term on a graph:** an open graph may sum nine
-  oscillators in the form closure already accepts.
-  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)+0.25*sin(34*pi*x)`
-  grows `sin(2*pi*x)` and sounds frequencies `1`, `3`, `5`, `7`, `9`,
-  `11`, `13`, `15`, and `17`. Parentheses keep that reading. A subtraction
-  distributes, and the stored terms add back to the graph the player wrote.
-  Source order is the order of the reading. CLI `open-studio` and MCP
-  `structuredContent.partial` report `partial basis=sum`. One term, a
-  tenth term, a leading minus on a whole sum, a product of two
-  oscillators, a path, a field, and an overlay have no partial reading
-  from this rule. A tenth term on a path is the next paragraph. A slope
-  this slice can name stays that slope. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
-- **Built, a tenth term:** a coordinate may be a sum of ten oscillators
-  in the form closure already accepts. The other coordinate is one, two,
-  three, four, five, six, seven, eight, nine, or ten of those oscillators,
-  and at least one coordinate is a sum.
-  `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)+0.25*cos(34*pi*t)+0.25*cos(38*pi*t)`
-  beside `sin(2*pi*t)` grows the circle of frequency `1` and sounds
-  frequencies `1`, `3`, `5`, `7`, `9`, `11`, `13`, `15`, `17`, and `19`.
-  Parentheses keep that reading. A subtraction distributes, and the stored
-  terms add back to the coordinate the player wrote. Source order is the
-  order of the reading. An eleventh term, a leading minus on a whole sum, a
-  product of two oscillators, a field, and an overlay have no partial
-  reading from this rule. A tenth term on a graph is the next paragraph. CLI
-  `open-studio` and MCP `structuredContent.partial` report
-  `partial basis=sum`. The capsule, the postcard, the text preview, CLI
-  `sing`, and `melody.mid` stay the player's source. Player evidence
-  remains open.
-- **Built, a tenth term on a graph:** an open graph may sum ten
-  oscillators in the form closure already accepts.
-  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)+0.25*sin(34*pi*x)+0.25*sin(38*pi*x)`
-  grows `sin(2*pi*x)` and sounds frequencies `1`, `3`, `5`, `7`, `9`,
-  `11`, `13`, `15`, `17`, and `19`. Parentheses keep that reading. A
-  subtraction distributes, and the stored terms add back to the graph the
-  player wrote. Source order is the order of the reading. CLI `open-studio`
-  and MCP `structuredContent.partial` report `partial basis=sum`. One term,
-  an eleventh term, a leading minus on a whole sum, a product of two
-  oscillators, a path, a field, and an overlay have no partial reading
-  from this rule. An eleventh term on a path is the next paragraph. A slope
-  this slice can name stays that slope. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
-- **Built, an eleventh term:** a coordinate may be a sum of eleven oscillators
-  in the form closure already accepts. The other coordinate is one, two,
-  three, four, five, six, seven, eight, nine, ten, or eleven of those oscillators,
-  and at least one coordinate is a sum.
-  `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)+0.25*cos(34*pi*t)+0.25*cos(38*pi*t)+0.25*cos(42*pi*t)`
-  beside `sin(2*pi*t)` grows the circle of frequency `1` and sounds
-  frequencies `1`, `3`, `5`, `7`, `9`, `11`, `13`, `15`, `17`, `19`, and `21`.
-  Parentheses keep that reading. A subtraction distributes, and the stored
-  terms add back to the coordinate the player wrote. Source order is the
-  order of the reading. A twelfth term, a leading minus on a whole sum, a
-  product of two oscillators, a field, and an overlay have no partial
-  reading from this rule. An eleventh term on a graph is the next paragraph. CLI
-  `open-studio` and MCP `structuredContent.partial` report
-  `partial basis=sum`. The capsule, the postcard, the text preview, CLI
-  `sing`, and `melody.mid` stay the player's source. Player evidence
-  remains open.
-- **Built, an eleventh term on a graph:** an open graph may sum eleven
-  oscillators in the form closure already accepts.
-  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)+0.25*sin(34*pi*x)+0.25*sin(38*pi*x)+0.25*sin(42*pi*x)`
-  grows `sin(2*pi*x)` and sounds frequencies `1`, `3`, `5`, `7`, `9`,
-  `11`, `13`, `15`, `17`, `19`, and `21`. Parentheses keep that reading. A
-  subtraction distributes, and the stored terms add back to the graph the
-  player wrote. Source order is the order of the reading. CLI `open-studio`
-  and MCP `structuredContent.partial` report `partial basis=sum`. One term,
-  a twelfth term, a leading minus on a whole sum, a product of two
-  oscillators, a path, a field, and an overlay have no partial reading
-  from this rule. A twelfth term on a path is the next paragraph. A slope
-  this slice can name stays that slope. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
-- **Built, a twelfth term:** a coordinate may be a sum of twelve oscillators
-  in the form closure already accepts. The other coordinate is one, two,
-  three, four, five, six, seven, eight, nine, ten, eleven, or twelve of those oscillators,
-  and at least one coordinate is a sum.
-  `cos(2*pi*t)+0.5*cos(6*pi*t)+0.25*cos(10*pi*t)+0.25*cos(14*pi*t)+0.25*cos(18*pi*t)+0.25*cos(22*pi*t)+0.25*cos(26*pi*t)+0.25*cos(30*pi*t)+0.25*cos(34*pi*t)+0.25*cos(38*pi*t)+0.25*cos(42*pi*t)+0.25*cos(46*pi*t)`
-  beside `sin(2*pi*t)` grows the circle of frequency `1` and sounds
-  frequencies `1`, `3`, `5`, `7`, `9`, `11`, `13`, `15`, `17`, `19`, `21`, and `23`.
-  Parentheses keep that reading. A subtraction distributes, and the stored
-  terms add back to the coordinate the player wrote. Source order is the
-  order of the reading. A thirteenth term, a leading minus on a whole sum, a
-  product of two oscillators, a field, and an overlay have no partial
-  reading from this rule. A twelfth term on a graph is the next paragraph. CLI
-  `open-studio` and MCP `structuredContent.partial` report
-  `partial basis=sum`. The capsule, the postcard, the text preview, CLI
-  `sing`, and `melody.mid` stay the player's source. Player evidence
-  remains open.
-- **Built, a twelfth term on a graph:** an open graph may sum twelve
-  oscillators in the form closure already accepts.
-  `sin(2*pi*x)+0.5*sin(6*pi*x)+0.25*sin(10*pi*x)+0.25*sin(14*pi*x)+0.25*sin(18*pi*x)+0.25*sin(22*pi*x)+0.25*sin(26*pi*x)+0.25*sin(30*pi*x)+0.25*sin(34*pi*x)+0.25*sin(38*pi*x)+0.25*sin(42*pi*x)+0.25*sin(46*pi*x)`
-  grows the circle of frequency `1` on the same vertical axis beside
-  `sin(2*pi*x)` and sounds frequencies `1`, `3`, `5`, `7`, `9`, `11`,
-  `13`, `15`, `17`, `19`, `21`, and `23`. Parentheses keep that reading. A
-  subtraction distributes, and the stored terms add back to the graph the
-  player wrote. Source order is the order of the reading. CLI `open-studio`
-  and MCP `structuredContent.partial` report `partial basis=sum`. One term,
-  a thirteenth term, a leading minus on a whole sum, a product of two
-  oscillators, a path, a field, and an overlay have no partial reading
-  from this rule. A thirteenth term on a path stays absent. A slope
-  this slice can name stays that slope. The
-  capsule, the postcard, the text preview, CLI `sing`, and `melody.mid`
-  stay the player's source. Player evidence remains open.
+  `partial basis=sum`. Closure remains the only period claim, and exact
+  irrational frequencies are never replaced by nearby rational values.
+  Products, fields, overlays, unsupported speeds, and sums beyond the bounded
+  term budget receive no partial reading. A supported slope keeps precedence.
+  The capsule, postcard, text preview, CLI `sing`, and `melody.mid` preserve
+  the source; the live App voice is the recognized tones. `STUDIO.md` owns
+  the full vocabulary and limits; `CHANGELOG.md` records the incremental
+  term extensions. Player evidence remains open.
 - **Hypothesis, the rest of the partial:** later slices may add a
   thirteenth term on a path, or a thirteenth term on a graph. A drawn path turned into
   coefficients stays out. There is no series command and no infinite
@@ -659,11 +375,11 @@ unclaimed until run.
 | **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | The feature-gated linear HDR, half-resolution bloom, and tone-map spike passes its reference integrated-GPU budgets at 1080p and 1440p; an equivalent reusable single-threaded CPU reference fails both. Direct FIFO presentation now passes both full host boundaries too, without an offscreen output copy or readback. The disabled App path feeds real room rasters into the same surface renderer with explicit recovery and visible software fallback. A typed probe now runs that exact production boundary in the Windows, macOS, and Linux CI matrix while classifying all such timings as informational. An independent set builder now recomputes and binds the exact six physical candidates. The Windows pair now passes on the Framework 13 AMD Radeon 780M reference: release-profile, AC power, exact client area, FIFO sRGB, 30 warmups and 120 samples, zero skipped or suboptimal frames, combined p95 17.842 ms at 1080p against 33 ms and 17.830 ms at 1440p against 50 ms. Receipts: `docs/evidence/sensory-app-windows-1080p-2026-09-02.json` and `docs/evidence/sensory-app-windows-1440p-2026-09-02.json`. WSL2 Ubuntu on this laptop is not a Linux cell: the 780M appears only as Mesa Dozen (Vulkan-on-D3D12), wgpu 30 hides that non-conformant adapter, and the presenter falls back to software. Next: native macOS and Linux pairs at one frozen revision before the closed set can be built. The full lift still owns splats, one shared audio bus with reverb and shaped envelopes, global dissolve, and damped-spring input | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
 | **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists, all still after the lift so the opening is authored in the new light. **The cheap half is done:** the App had no way to see the catalog at all, and now carries the same three doors the protocol face has offered since the threshold landed, in the same order. Touch one astonishing thing, walk the authored route carrying a question into each room, or wander by wing with the arrows staying inside the one chosen. The wing list, the walk, and which room the flagship is are core's, so the faces cannot drift; each still writes its own invitation. **What remains here is the authored opening itself**, which is the part the lift changes | Awe today is a rare event in a long random walk; the arc makes it the designed path. The humans, including the children this is also for, no longer meet the catalog through an arrow key |
 | **6. Creator depth on the built loop** | **The first multi-expression ring is built in alpha.16:** one atomic `x(t), y(t)` pair draws a planar path and sings its y coordinate through continuous, chromatic, major, minor, or pentatonic pitch mapping. Version 3 capsules carry the pair and scale through the App, CLI, MCP, Gallery, exact reopen, and lineage-preserving fork while old version 1 and 2 documents stay unchanged. **MIDI export of that sung melody is built on all three faces:** core writes a Standard MIDI File type 0 from the same SoundSpec (nearest 12-TET key, leftover cents as pitch bend over plus or minus two semitones, range declared as Registered Parameter Number 0). CLI `numinous sing 'sin(t)' --out song.mid`, MCP `sing_expression` `midi: true`, and the App F4 share as `melody.mid` share it. WAV was already the audio export. **Editable prose credit is built:** a fork offers `After {title} by {author}` from the parent, the forker can rewrite or clear it, and version 4 capsules carry that sentence through every face. **The MCP keep chain is named in the packaged player docs:** a plot or song returns `next` at `save_creation` with the expression and window already bound; save, open, and fork return `next` at `fork_creation` with the capsule already bound as parent. `PLAY.md` and the play-numinous skill say so. Those doors answer a successful glance or keep; they are not a lobby or a loadout gate. **The second independent variable is built:** a field over the plane with phase, height, and proved-zero readings, version 5 capsules, and family `three-readings`. Height and phase now sing that reading along the real axis; the zero reading stays silent because it is a proof. **Named sliders are built:** extra identifiers besides `a` bind a value and a declared range, version 6 capsules, CLI `--slider`, MCP `sliders`, App Tab selection, and family `named-sliders`. **Overlay programs are built:** two to four graphs share one window, version 7 capsules, editor form `sin(x) & cos(x)`, family `overlay`. Every overlay graph sings in WAV; MIDI stays the first curve. **Euclidean rhythms are built:** `euclid(hits, steps)` places onsets as evenly as possible, family `euclidean`. **Pattern text is built:** integer 0/1 graphs report tracker marks (`x..x..x.` for tresillo). **Field melody is built:** height and phase sing along the real axis; zero stays silent. **Step grid is built:** numbered header plus App cells of the same 0/1 rows. **Tracker marks as a formula are built:** `pat(x..x..x.)` or the editor form `x..x..x.`. **Piano roll is built:** the sung MIDI voice as pitch over time. **Named pitches are built:** `note("c e g")` writes MIDI pitches as a step graph with `.` a rest, family `notes`. The in-app capability quest remains later | The creator ladder keeps rising without waiting on later community publishing, and each rung ships with its own machine gates; freestyle play is bounded by vocabulary long before it is bounded by rendering |
-| **7. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps into one committed per-room evidence file, after the Sensory Lift. **The wing accidents are fixed; the wing shape still needs a ruling.** The App's wing browser made the taxonomy visible to players for the first time, and two of the fifteen wings turned out to be accidents rather than choices: `Fractals & the Infinite`, holding the Mandelbrot set, the Julia set and the Barnsley fern beside a thirty-five room `Fractals` that held their derivatives, and `Chance & Noise` beside `Chance & Order`. Neither appeared in any document. Both are now merged into the documented wing they sat beside, so thirteen wings hold 355 rooms and the three most famous fractals in the product are filed under `Fractals`. The wing string was free text that minted a wing on a typo; `CATALOG_WINGS` closes the set and a test refuses a room filed outside it, so the next accidental wing is a build failure rather than a playtest finding. What remains is taste and is still open: whether `Shape & Space` at 94 should be split, whether the six wings `DESIGN.md`, `VISUALS.md` and `ROOMS.md` all describe should be restored (none of them names `Fractals`; all three say `Infinity & Fractals`), and whether `Signals & Codes` should stay at one room while three information-theory rooms sit in `Chance & Order`. `Chaos & Order` and `Open Problems` remain deliberate, named as such in this file and in `PANEL.md` | Rooms should be judged at their best, not at the old ceiling; the five commissioned rooms lead the next cohort after the review |
+| **7. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps into one committed per-room evidence file, after the Sensory Lift. **The wing accidents are fixed; the wing shape still needs a ruling.** The App's wing browser made the taxonomy visible to players for the first time, and two of the fifteen wings turned out to be accidents rather than choices: `Fractals & the Infinite`, holding the Mandelbrot set, the Julia set and the Barnsley fern beside a thirty-five room `Fractals` that held their derivatives, and `Chance & Noise` beside `Chance & Order`. Neither appeared in any document. Both are now merged into the documented wing they sat beside, so thirteen wings hold the catalog and the three most famous fractals in the product are filed under `Fractals`. The wing string was free text that minted a wing on a typo; `CATALOG_WINGS` closes the set and a test refuses a room filed outside it, so the next accidental wing is a build failure rather than a playtest finding. What remains is taste and is still open: whether `Shape & Space` at 94 should be split, whether the six wings `DESIGN.md`, `VISUALS.md` and `ROOMS.md` all describe should be restored (none of them names `Fractals`; all three say `Infinity & Fractals`), and whether `Signals & Codes` should stay at one room while three information-theory rooms sit in `Chance & Order`. `Chaos & Order` and `Open Problems` remain deliberate, named as such in this file and in `PANEL.md` | Rooms should be judged at their best, not at the old ceiling; the five commissioned rooms lead the next cohort after the review |
 | **Continuous filler between rocks** | The fifteen verified connection edges land as reveal lines and deep cuts, a few per PR. **The enumerated set of ten is closed**: the qubit and the Hopf fibration, the hanging chain and the soap film, the cycloid that is its own evolute, the three enumerations of the rationals that share one mediant, the parabola and the corner and the digit shift that are one system, the angle and the curve that a sunflower needs both of, the bell and the gasket that are one triangle read by size and by parity, the first collision against the last empty bin, Gauss's diary of 1799, and the two faces of one function at an easy point and along a hard line. Further edges need finding before they can be placed | The highest wonder-per-line work that exists; the fabric grows without blocking anything |
 | **Owner-blocked (stated, not scheduled)** | 0.4-am Understanding cohort: register, calibrate, and run the matched cohort through the sealed collector | Decisions entry 1 records it as optional paid validation awaiting an owner budget and registration ruling; carrying it as a contributor priority was a contradiction |
 | **Standing gate** | Keep 0.2 and 0.3 proof, the seven-room Universal Wager, coverage, dependency review, RustSec, CodeQL, install/play/uninstall roundtrips, four-platform packaging, and the one protected `main CI` result green | One stable protected result makes the repository state legible while its required aggregate still fails on any underlying gate, analysis, or package failure; regressions reopen completed milestones and invalidate new evidence |
-| **Standing interoperability gate** | Pin Agent Plugins 1.0.0 and OKF v0.2 fixtures; add canonical JSON Schema and Agent Skills validation beside Numinous semantic checks; add real YAML conformance checks for generated OKF; prove one zero-cost open host can discover the skill, resolve the installed MCP binary, and complete one play call | Standards are useful only when another conforming implementation can cross the boundary; a new upstream draft starts a focused compatibility review and never freezes ordinary gameplay work |
+| **Standing interoperability gate** | Agent Plugins 1.0.0 schemas and OKF v0.2 fixtures, canonical JSON Schema and reference skill validation, and production OKF YAML/capsule conformance are built and checked offline. Remaining: prove one zero-cost open host discovers the skill, resolves the installed MCP binary, and completes one play call | Standards are useful only when another conforming implementation can cross the boundary; format and protocol conformance do not substitute for real host discovery |
 | **Optional parallel (not am-blockers)** | Human stranger hallway, a11y player panels, musician long-listening, soft-thin densify, bulk rooms | Human taste and disability usability remain valuable later claims |
 
 The Mind's Seat advances through independently testable increments:
@@ -1092,7 +808,7 @@ first Pattern Studio views, and named pitches are built, each with its machine
 gates; MusicXML continues behind these.
 MIDI export of the sung melody and editable prose credit are already built on
 the CLI, MCP, and the App. Overlay programs and Euclidean rhythms are built.
-The keep-or-cut scorecard moves after the Sensory Lift so all 355 rooms are
+The keep-or-cut scorecard moves after the Sensory Lift so all catalog rooms are
 judged at their best, not at the old ceiling. 0.4-am stays owner-blocked and
 the critical-path table now says so plainly instead of carrying it as a
 priority nobody can schedule.
@@ -1180,16 +896,16 @@ journal
 sovereignty is complete on the clean-process machine acceptance bar.
 Detail below and in the version sections.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **355 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local verification and dated coverage measurements live in `QUALITY.md`; the full Windows release gate and three-platform CI remain required.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **356 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local verification and dated coverage measurements live in `QUALITY.md`; the full Windows release gate and three-platform CI remain required.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
 - **Done (sound):** every room describes its own sound (`SoundSpec` + `Room::sound`); `numinous sonify <room> --out file.wav` and `numinous play <room>` (live animated terminal).
 - **Done (the 0.2 technical vertical slice):** the windowed app implements live per-room sound, mouse and controller input, an on-screen HUD with reveals, The Show (lean-back auto-play of the whole collection), the Studio in the window (type math, watch and hear it live), and GPU real-time fractals (a persistent `wgpu` pipeline drives the Mandelbrot deep zoom and the morphing Julia at window resolution, with CPU fallback; verified on the dev laptop's Radeon 780M). The human hallway, accessibility, sensory, controller-hardware, and cross-platform evidence gates remain open.
-- **Done (content and play):** 354 catalog rooms across the wings plus unlisted hidden content, including Cult of Pi, the Conjecture Mill, the Change wing (The Pour, Slope Rider), Fourier Epicycles, the double pendulum, the random walk, Voronoi, Quine, Strange Loop, L-System Garden, Mandelbrot/Julia dives, Galton, Buffon, The Scariest Chart (Smith chart), Riemann Sphere, Bloch Sphere, etc.; 6 lever-driven sims; 11+ games (SETI, Talk to the Aliens, Guess the Shape, Crack the Code, Munch, Nim with the xor secret, Hackenbush, the Party Problem, Fifteen's Bet, the Gauntlet run, and full Munch Arcade) with daily seeds and dense feedback; the Studio expression engine (`plot`, `plot --save`, `open-studio`, `--animate`, `sing`, and live in the window); Visual Eras (phosphor, 8-bit, vector, modern) across app, terminal, and PNGs; truecolor terminal rendering with live sound (`watch`).
+- **Done (content and play):** the complete catalog across the wings plus unlisted hidden content, including Cult of Pi, the Conjecture Mill, the Change wing (The Pour, Slope Rider), Fourier Epicycles, the double pendulum, the random walk, Voronoi, Quine, Strange Loop, L-System Garden, Mandelbrot/Julia dives, Galton, Buffon, The Scariest Chart (Smith chart), Riemann Sphere, Bloch Sphere, etc.; 6 lever-driven sims; 11+ games (SETI, Talk to the Aliens, Guess the Shape, Crack the Code, Munch, Nim with the xor secret, Hackenbush, the Party Problem, Fifteen's Bet, the Gauntlet run, and full Munch Arcade) with daily seeds and dense feedback; the Studio expression engine (`plot`, `plot --save`, `open-studio`, `--animate`, `sing`, and live in the window); Visual Eras (phosphor, 8-bit, vector, modern) across app, terminal, and PNGs; truecolor terminal rendering with live sound (`watch`).
 - **Done (the RPG spine, complete):** the Journey (XP from play, levels 1 to 42 on triangular thresholds, a lore line for every level, LEVEL UP banners), locks that open (never gating basics), ranks and whispers (the Order), deep cuts unlocking at LV 5/12/24, the trophy case (18, evidence-computed, silhouettes), the shared high-score table across every game and both faces, the Layer-4 answer at the cap, and every genre organ from the priority list: the Gauntlet (session arc with a combo and one posted number), trophy pings (the case announces itself), boons (choice on level-up, where the loot is knowledge arriving early), daily streaks (the chain, never scolding), and resonances (synergies: links light when two deeds rhyme and hand over the connecting line).
-- **Done (agents as peers, v2):** 41 MCP tools total: 24 public play tools,
-  sixteen private progression, creation, study, or local-state tools, and one
+- **Done (agents as peers, v2):** 43 MCP tools total: 24 public play tools,
+  18 private tools for progression, creation, study, or local state, and one
   local broadcast consent control. The surface has structured output and full CLI
   parity (every game, the gauntlet, boons, trophies, `munch_arcade`, and
   portable Studio save, open, and fork), including stateless nim and `forget`
@@ -1231,8 +947,8 @@ Detail below and in the version sections.
 - **Done (soundtrack, Engine B v1):** Nick Seal made 42 tracks specifically for Numinous across NUMINA FM, THE ATTRACTOR, and EIGHT BIT SUNRISE. High-quality V0 MP3 assets ship in `assets/radio`, the app discovers them from a clean clone, and a bounded pure Rust decoder validates, decodes, and resamples them. The archival WAV masters remain outside the repository.
 - **Done (the app is the game, v1):** the chiptune scores the window (per-room seeded tunes with the room's voice riding on top); the quiz plays in-window (G: name the math, letters answer, the reveal follows); the Journey lives in the app (the CLI's own file: visits on entry, plays and wins from the quiz, explicit `JOURNEY LV` progress, `JOURNEY LEVEL UP` banners with lore, and J opens level, rank, trophies, and resonances); `NUMINOUS_MUTE=1` launches silent; the state machine is headlessly tested.
 - **Done (the window arcade):** Munch, Nim, and the full Gauntlet run play inside the app alongside the quiz, cursor-driven and keyboard-native, on the daily seeds, posting to the shared table and leveling the shared journey; Mobius and Zeno's Square join the catalog. Full Munch Arcade with Vexations.
-- **Done (poke + variation substrate):** Expanded pokes (all 354 catalog rooms with verbs + `render_poked`) and per-visit variation threading (registry `all_rooms_with`, app/CLI/MCP variation on each visit, default 0 exact). R now resets the current visit without silently changing its deal. Double Pendulum re-drops from both hand coordinates; Goldbach's Comet selects a real prime-pair witness; Galton Board draws bounded deterministic falling paths; Logistic Map seeds finite population orbits; and Cult of Pi repairs bounded faults in an exact-digit field. CLI `render --poke x,y` and MCP `play_room` `pokes: [[x,y]]` expose the same stateless hand-point path outside the App. All 355 catalog rooms are seed-aware today; hidden content is intentionally outside the catalog replay contract.
-- **Done (Engine A2 motifs, catalog-wide):** all 354 catalog rooms now expose a structured `Motif` through `Room::motif`, so `listen_room` gets real notation and the app gets room-specific phrases instead of the generic fallback. A registry test enforces that every catalog room has a playable motif. The default `Room::sound` derives from the motif through `SoundSpec::from_motif`; rooms with a specialized mathematical sonification may intentionally override it. `listen_room` gives the ambient motif and mathematical sonification distinct text headings and maps those roles to its compatible `motif` and `notes` fields so it never presents one score as the other.
+- **Done (poke + variation substrate):** Expanded pokes (every catalog room with a verb + `render_poked`) and per-visit variation threading (registry `all_rooms_with`, app/CLI/MCP variation on each visit, default 0 exact). R now resets the current visit without silently changing its deal. Double Pendulum re-drops from both hand coordinates; Goldbach's Comet selects a real prime-pair witness; Galton Board draws bounded deterministic falling paths; Logistic Map seeds finite population orbits; and Cult of Pi repairs bounded faults in an exact-digit field. CLI `render --poke x,y` and MCP `play_room` `pokes: [[x,y]]` expose the same stateless hand-point path outside the App. All 356 catalog rooms are seed-aware today; hidden content is intentionally outside the catalog replay contract.
+- **Done (Engine A2 motifs, catalog-wide):** all catalog rooms now expose a structured `Motif` through `Room::motif`, so `listen_room` gets real notation and the app gets room-specific phrases instead of the generic fallback. A registry test enforces that every catalog room has a playable motif. The default `Room::sound` derives from the motif through `SoundSpec::from_motif`; rooms with a specialized mathematical sonification may intentionally override it. `listen_room` gives the ambient motif and mathematical sonification distinct text headings and maps those roles to its compatible `motif` and `notes` fields so it never presents one score as the other.
 - **Done (Engine A2 listening refinement):** the App no longer doubles motifs
   at mismatched loop lengths or restarts sources from render cadence. Every
   catalog motif expands into a deterministic 128-step stereo macro-arrangement.
@@ -1667,7 +1383,7 @@ Detail below and in the version sections.
   focused MCP room-door module owns threshold, chain, wing, full-text, and
   compact projections. Core, projection, compatibility, non-disclosure, and
   real stdio regressions prove every route resolves and the wing counts cover
-  all 355 catalog rooms.
+  all 356 catalog rooms.
 - **Done (Mind's Seat MCP creation parity, August 22, 2026):** three private
   creation tools save, open, and fork the shared core Studio capsule without
   host filesystem access. The response carries canonical `.num` text, native
@@ -2181,11 +1897,11 @@ text or a native link, and `fork_creation` continues it with exact lineage.
 The caller decides whether to read a file and pass its contents. The pinned
 inventory is now 41 tools.
 
-**8. Should the App footer stop showing less of the status as the window
-grows?** Measured: 720 pixels shows the whole status, 900 truncates it, and 900
-is the size the window opens at. Each character costs six pixels times the
-footer scale while the budget grows only with width. Fixing it changes how the
-footer chooses its scale or divides its row, which changes every screen.
+**8. App footer visibility (resolved).** The footer chooses its scale from the
+complete status and controls, reducing scale before truncation. Widening no
+longer hides a status that fit at a smaller size. A width sweep and composed
+native raster regression require the default window to preserve both fields.
+Explicit user-selected text scaling remains the separate decision below.
 
 **9. Should player-set text scaling and separate music, effect and room volume
 be built?** Both are named 0.5 deliverables and neither exists. The 0.5 row has
@@ -2949,7 +2665,7 @@ meets the predeclared 1.0 thresholds.
 The near-term stack, adopted from the July 2026 external review
 (`docs/REVIEW.md`): (1) Times Tables as the gold-standard interactive room;
 (2) the input/verb/variation substrate (RoomInput, not one-shot pokes);
-(3) six first pokes, now generalized into all 354 catalog rooms with verbs;
+(3) six first pokes, now generalized into every catalog room with verbs;
 (4) Engine A2 motifs for every catalog room; (5) MCP structured deltas
 and challenge metrics for the same rooms; (6) one human hallway test; (7)
 cross-platform run; (8) docs reconciliation.
@@ -2970,17 +2686,17 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-09-13)
+## Where we stand (reviewed 2026-09-30)
 
-The package is **0.4.0-alpha.27**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.28**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
 Alpha is exit-met** on the same bar, and agent tactile is also a required CI
 gate. Human stranger hallway, musician panels, and accessibility player
 sessions are an **optional parallel track**, not am-track blockers for 1.0
-Agent-and-Machine First Light. Current breadth is 355 catalog rooms, 11+ games,
-six sims, three faces, 41 MCP tools, deterministic creation and persistence.
+Agent-and-Machine First Light. Current breadth is 356 catalog rooms, 11+ games,
+six sims, three faces, 43 MCP tools, deterministic creation and persistence.
 Required public CI passes locked tests, builds, installer self-tests,
 supply-chain checks, and live agent cohorts across three operating systems.
 **Breadth is still not a substitute for depth.** Active work moves to **0.4-am
@@ -2994,7 +2710,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 
 | 1.0 gate | Evidence today | Missing evidence or work |
 |---|---|---|
-| Complete coherent collection | 355 catalog rooms are built and listed | A coherent cold start, pacing, keep-or-cut review, and several planned signature rooms |
+| Complete coherent collection | 356 catalog rooms are built and listed | A coherent cold start, pacing, keep-or-cut review, and several planned signature rooms |
 | Every room earns its place | Every catalog room has a verb, variation, image, and motif; no doorway states a value its own reveal states, and no unplayed status recites one | Stranger discovery, room-specific depth, held input where useful, and per-room human scorecards; two rooms carry a standing dull or mute verdict from packaged play, `attention` and `strange-loop`, and 245 doorways are still under seventy characters of caption, now counted by the catalog rather than quoted from an older round |
 | Full sensory identity | Four Eras, deterministic synthesis, chiptune, and two GPU fractal paths are built | HDR post-stack, congruency review, accessibility controls, audio separation, and human sensory review |
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally, and the MCP face can send a player a room's sound as a real audio file beside the notation, with the last hop the client's to make | Independent usability sessions for each face and real execution off Windows |
@@ -3002,22 +2718,22 @@ subjective human taste gates, so this scorecard records evidence instead.
 | Real creative surface | Studio graphs, paired parametric paths, fields over the plane with three stored readings, named sliders with declared ranges, overlay programs of two to four graphs, and Euclidean rhythms as `euclid(hits, steps)`, tracker marks as `pat(x..x..x.)` or the editor form `x..x..x.`, piano roll of the sung MIDI voice, continuous and named-scale voices, versioned `.num` serialization with title, author, era, lineage, and editable prose credit, links, plotting, animation, singing, WAV and Standard MIDI File export of the sung melody on CLI, MCP, and the App F4 share, exact paused App reopen, the one-key share bundle, the local Gallery wall, and fork with recorded descent exist | MusicXML, safe share preview for incoming links, and clean-install round trip |
 | Rigor and care are provable | Dated full-gate and coverage evidence in `QUALITY.md`, Rust 1.89 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a native SPDX Rust plus packaged-native SBOM attested from the exact audited release set | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
-| Beautiful and honest throughout | An exact 2,945-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
+| Beautiful and honest throughout | An exact matrix of 2989 screens and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
-### Agent-and-machine track scorecard (September 13, 2026)
+### Agent-and-machine track scorecard (September 30, 2026)
 
 | Am milestone | Status | Automated evidence now |
 |---|---|---|
 | 0.2 Flagship | Met + CI-locked | agent-hallway, ahas, goldens |
 | 0.3 Tactile | Met + CI-locked | agent-tactile, first-contact |
 | 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort open |
-| 0.5 Sensory | Partial | flagship visual/audio goldens; the App footer measured to truncate the status at the default 900 pixel window while a narrower 720 shows it whole, tracked with a test that pins the inversion and requires a marked cut that keeps the start of the status; scalable text and separate music, effect and room volume still unbuilt; reduced motion locked in CI across the terminal and the App, including The Show, which no longer auto-advances in the terminal when it is set and is proved so end to end by counting the rooms a held gallery shows; the reduced-motion gate has a test twin covering its judgment; NO_COLOR locked for the terminal face, chrome and games as well as picture, and swept across every advertised subcommand by a gate that reads the subcommand list from the binary so a new one cannot ship unchecked; WCAG 2.3.1 general-flash budget measured across all 354 rooms, with three known violations tracked; the 2.3.1 red-flash budget implemented and measured across the same sweep, no violations and no room reaching the saturated-red ratio; the 2.3.1 flashing-area rule declared unimplemented rather than assumed; mono audio selectable with a non-clipping downmix; all three switches documented in docs/PLAYING.md and reported by `numinous access`, with a test that fails if a switch is added and left undocumented; the Muncher's position marked by bracket shape rather than hue after an audit found it color-only in the terminal; the semantic warning ink held to being legible through the color-free renderer in every room that draws with it, with the room list read from the sources so a new user of the ink is picked up; 17 rooms measured to lose one of their two drawn brightness levels without color (Kepler left the list in the September review), tracked shrink-only because fixing it changes what every room looks like; cult-of-pi measured to show no fault marks at all on a character terminal, pinned by a test and tracked as an owner decision about what the room says; color-independence of touch response audited across all 354 rooms, 17 of 21 failures fixed by shading the color-free renderer and measuring its thresholds, 4 tracked; what a color-blind player sees measured for the first time, since NO_COLOR and the color-free renderer answer a different question, with protanopia, deuteranopia and tritanopia simulated per Vienot, Brettel and Mollon 1999, compared in CIELAB, and the simulation held to four properties it must satisfy rather than to its own output; the rule requires both halves, clear for ordinary vision and folded for a dichromat, so contrast defects are not mixed in; two rooms measured to hide their fault marks from a color-blind player and tracked shrink-only, one neighbouring case excluded as contrast rather than color blindness, and anomalous trichromacy declared unmodelled rather than assumed; the spectral palette swept the same way across every pairing an ink can form, 16 pairs in 10 rooms measured to fold for a dichromat while ordinary vision separates them, including the catalog's largest collapse at 95 down to under 1, tracked shrink-only with the three marks that paint the plain accent recorded once rather than three times; which of those ten rooms speak with the ink now read room by room from the draw code rather than left unread, four speaking and six decorating, with the readings locked to the collapse list both ways and each room required to be filed under its own verdict in the decisions section; the App's own surfaces swept the same way and measured clean, with its ten accents and its drawn marks both read from the sources so a new one cannot ship unchecked, one pair recorded as measured and benign because it is heading against body text where the words carry the meaning, and the sweep itself checked with two mutations that add a non-ink literal and require it to stay quiet; the whole room-by-room audit committed as evidence at docs/evidence/color-independence.json rather than only asserted, 354 rooms with the marks each draws, its closest pair and how far apart that pair is for ordinary vision and for the dichromat who sees it worst, generated and compared line by line so a failure names the room that moved; 19 rooms carry a pair a colour-blind player cannot separate, reconciling exactly with the three tracked groups, and a lock now requires every room the audit flags to be held by some list, which found seven that were measured, real and held by nothing; the MCP face held to emitting no colour at all, sweeping every tool with the list read from the binary and requiring three real calls to have succeeded so a mistyped argument cannot leave the render path unswept, which completes the sweep across all three faces; the colour work added to the nightly am-QA suite, and both nightly steps that pin a test by name moved behind a helper that requires exactly one test to have run, since cargo runs nothing and exits 0 for a name that matches nothing and such a step reports success while checking nothing; no full HDR/a11y stack yet |
+| 0.5 Sensory | Partial | Flagship visual/audio goldens, reduced motion, NO_COLOR across all terminal surfaces, mono downmix, and source-bound color-independence sweeps are built. Studio graph/overlay sampled gaps, mathematical-reading visibility, long-formula cursor visibility, and content-aware native footer scaling are regression-locked. `docs/evidence/color-independence.json` records the palette audit; the decisions section owns the remaining photosensitivity and color/shape failures. Physical cross-platform Sensory Lift promotion, perceptual regression, configurable text scale, and independent music/effect/room buses remain open. Automated evidence does not establish human sensory or disability usability claims |
 | 0.6 Portable | Partial | release packaging, engagement smoke judged on signal and PNG geometry rather than file size and run against a freshly built binary rather than whichever one was on disk, with one shared resolver and a test that fails if a gate grows its own, provenance/SBOM, install/play/uninstall roundtrip with all three player-owned files preserved, not just the journey, run nightly against a freshly packaged archive as well as on the tagged artifact, and now on THREE operating systems rather than Linux alone, as a matrix job with fail-fast off so a green Linux leg cannot stand in for Windows, each platform packaging its own archive format and keeping its own summary; the Windows leg verified locally first at 4 of 4 with all three player-owned files byte-identical after uninstall, which nothing had previously checked; workflow actions gated for being pinned to a commit and pinned consistently across every workflow, after a pin written from memory rather than copied; all 42 bundled tracks now decoded and required to carry real audio rather than the first of each station being decoded and the other 39 checked against a header duration a truncated body also satisfies, run nightly on each of the three platforms; and every ignored test gated for being named by a workflow or a script, which found a catalog visual contract sweep that had never run anywhere |
 | 0.7 Creator | Partial | The CLI creator gate passes 12 save, reopen, drawing, voice, deterministic serialization, fork, and prose-credit checks, including a version 3 parametric pair with stored pitch map and atomic replacement. CLI and MCP parity passes 20 plot and 14 sing cases through face-neutral core types; the audio cases measure actual WAV pitch against MCP notation and cover all four quantized maps. App graph and parametric framing share the same bounded core program, including undefined-sample gap handling and two-axis parametric scaling. MCP can save, open, and fork portable `.num` text or native links with exact previews and lineage while rejecting host file paths; the App reopens a saved `.num` or link exactly through the launch argument and file drop, paused until confirmed; F4 shares the bundle from any parsed Studio state, including `melody.mid` as the same Standard MIDI File type 0 the CLI and MCP already write and prose credit in a version 4 capsule; F5 opens the local Gallery wall with exact graph or path thumbnails; Gallery F records descent; and the wall resolves its remix tree. Named sliders with declared ranges ship as version 6. Overlay programs ship as version 7. Euclidean rhythms ship as `euclid(hits, steps)`. Height and phase fields sing along the real axis; the zero reading stays silent. Pattern text and the numbered step-grid reading of 0/1 rows now ship. Tracker marks are a formula: `pat(x..x..x.)` or the editor form `x..x..x.`. The sung MIDI voice reads as a piano roll. Named pitches are `note("c e g")`. MusicXML remains |
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.4.0-alpha.27** because Understanding Alpha is the active
+Package label is **0.4.0-alpha.28** because Understanding Alpha is the active
 milestone. The alpha suffix says its exit remains open. External registration,
 calibration, fresh independent review, allocation freeze, and the qualifying
 cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
@@ -3350,7 +3066,7 @@ on equal terms. This is a values commitment, not a feature, and it holds from
 - **The quality loops (`QUALITY.md`):** the commit loop is partially enforced.
   Nightly, content-evaluation, agent-playtest, human-playtest, and refinement
   loops remain explicitly designed work.
-- **Beauty QA:** a deterministic 2,945-screen matrix covers eight states per room
+- **Beauty QA:** a deterministic matrix of 2989 screens covers eight states per room
   plus every persistent game display branch, overlays, The Show, Studio, and
   reset and phase flows, plus a five-frame persistent Life sequence, with 14
   compact controller and pause receipts, plus 18 explicit audio-state receipts. It
