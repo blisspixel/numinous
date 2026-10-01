@@ -60,6 +60,8 @@ Invoke-Step "understanding study runner" { python scripts/test-understanding-stu
 Invoke-Step "understanding study collector" { python scripts/test-understanding-collect.py }
 Invoke-Step "release packaging" { python scripts/test-package-release.py }
 Invoke-Step "portable agent plugin" { python scripts/test-agent-plugin.py }
+Invoke-Step "interoperability validator contracts" { python scripts/test-agent-interoperability.py }
+Invoke-Step "production knowledge export conformance" { python scripts/agent-interoperability.py }
 Invoke-Step "Sensory Lift platform proof contract" { python scripts/test-sensory-platform-proof.py }
 Invoke-Step "Sensory Lift physical set contract" { python scripts/test-sensory-platform-set.py }
 Invoke-Step "release engagement contract" { python scripts/test-release-engagement-smoke.py }

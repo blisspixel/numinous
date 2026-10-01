@@ -80,6 +80,8 @@ Step "understanding study runner" { python scripts/test-understanding-study.py }
 Step "understanding study collector" { python scripts/test-understanding-collect.py }
 Step "release packaging" { python scripts/test-package-release.py }
 Step "portable agent plugin" { python scripts/test-agent-plugin.py }
+Step "interoperability validator contracts" { python scripts/test-agent-interoperability.py }
+Step "production knowledge export conformance" { python scripts/agent-interoperability.py }
 Step "Sensory Lift platform proof contract" { python scripts/test-sensory-platform-proof.py }
 Step "Sensory Lift physical set contract" { python scripts/test-sensory-platform-set.py }
 Step "release engagement contract" { python scripts/test-release-engagement-smoke.py }
@@ -127,7 +129,7 @@ Step "house-style" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts
 Step "Windows installer safety" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTest }
 
 Step "regenerate study reader plates" { cargo run -q -p numinous-app --example study_screens --locked }
-Step "regenerate 2,945-screen app QA matrix" { cargo run -q -p numinous-app --example screens }
+Step "regenerate complete app QA matrix" { cargo run -q -p numinous-app --example screens }
 Step "regenerate gallery into renders\" { cargo run -q --bin numinous -- gallery --dir renders --width 600 --height 600 }
 Step "regenerate contact sheet" { cargo run -q --bin numinous -- contact-sheet --out renders\contact.png --cols 3 --tile 360 }
 Step "regenerate lissajous audio" { cargo run -q --bin numinous -- sonify lissajous --out renders\lissajous.wav }

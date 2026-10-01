@@ -5,6 +5,16 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Portable plugin validation uses pinned official JSON Schema fixtures and
+  the reference skill validator. Real YAML parsing rejects duplicate keys and
+  unsafe tags. A production MCP conformance gate checks knowledge-export
+  escaping, correction lineage, pagination, and portable UTF-8 file hashes.
+  These checks run locally and in CI; real-host discovery remains open.
+
+### Fixed
+- The portable plugin identifies Nick Seal as its author.
+
 ## [0.4.0-alpha.27] - 2026-09-30
 
 ### Added

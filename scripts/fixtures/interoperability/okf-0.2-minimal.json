@@ -1,0 +1,25 @@
+{
+  "standard": "Open Knowledge Format",
+  "version": "0.2",
+  "sourceSections": [
+    "4.1",
+    "6.1",
+    "8",
+    "11",
+    "12"
+  ],
+  "files": [
+    {
+      "path": "index.md",
+      "content": "---\nokf_version: \"0.2\"\n---\n\n# Concepts\n\n* [Example](concept.md) - A minimal unknown type.\n"
+    },
+    {
+      "path": "concept.md",
+      "content": "---\ntype: \"Unregistered Type\"\nextension:\n  local: \"preserved\"\n---\n\nSee [future knowledge](/missing.md).\n"
+    },
+    {
+      "path": "log.md",
+      "content": "# Updates\n\n## 2026-09-30\n\n* Created the portable example.\n"
+    }
+  ]
+}

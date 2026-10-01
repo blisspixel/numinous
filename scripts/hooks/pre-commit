@@ -112,4 +112,20 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
   "$release_python" scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
 fi
 
+if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
+    | grep -zqE '^plugins/numinous/|^requirements-interoperability\.txt$|^scripts/fixtures/interoperability/|^scripts/(validate-agent-plugin|test-agent-plugin|agent-interoperability|test-agent-interoperability)\.py$'; then
+  if command -v python3 >/dev/null 2>&1; then
+    interoperability_python=python3
+  elif command -v python >/dev/null 2>&1; then
+    interoperability_python=python
+  else
+    echo "pre-commit: Python 3.11 or newer is required for interoperability checks" >&2
+    exit 1
+  fi
+  echo "== portable plugin and interoperability =="
+  "$interoperability_python" scripts/test-agent-plugin.py
+  "$interoperability_python" scripts/test-agent-interoperability.py
+  "$interoperability_python" scripts/agent-interoperability.py
+fi
+
 echo "pre-commit: all checks passed."
