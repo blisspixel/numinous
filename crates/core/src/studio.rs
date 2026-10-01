@@ -3842,19 +3842,19 @@ fn plot_overlay_text(
     if width < 2 || height < 2 || xmax <= xmin {
         return Err(PlotTextError::InvalidGeometry);
     }
-    let curves: Vec<Vec<(f64, f64)>> = expressions
+    let curves: Vec<Vec<(usize, f64)>> = expressions
         .iter()
         .map(|expression| {
             (0..width)
                 .map(|i| {
                     let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
-                    (x, eval_named(expression, x, a, sliders))
+                    (i, eval_named(expression, x, a, sliders))
                 })
                 .filter(|(_, y)| y.is_finite())
                 .collect()
         })
         .collect();
-    let finite: Vec<(f64, f64)> = curves.iter().flatten().copied().collect();
+    let finite: Vec<(usize, f64)> = curves.iter().flatten().copied().collect();
     if finite.is_empty() {
         return Err(PlotTextError::Undefined);
     }
@@ -3866,20 +3866,10 @@ fn plot_overlay_text(
         .iter()
         .map(|point| point.1)
         .fold(f64::NEG_INFINITY, f64::max);
-    let yspan = (ymax - ymin).max(1e-9);
     let mut canvas = crate::canvas::Canvas::new(width, height);
     for (index, samples) in curves.iter().enumerate() {
         let mark = PROGRAM_MARKS[index.min(PROGRAM_MARKS.len() - 1)];
-        let mut previous: Option<(i32, i32)> = None;
-        for &(x, y) in samples {
-            let sx = ((x - xmin) / (xmax - xmin) * (width as f64 - 1.0)) as i32;
-            let sy = ((height as f64 - 1.0) - (y - ymin) / yspan * (height as f64 - 1.0)) as i32;
-            if let Some((px, py)) = previous {
-                use crate::surface::Surface;
-                canvas.line(px, py, sx, sy, mark);
-            }
-            previous = Some((sx, sy));
-        }
+        paint_graph_samples(&mut canvas, samples, ymin, ymax, mark);
     }
     Ok(StudioPlot {
         text: canvas.to_text(),
@@ -3922,10 +3912,10 @@ pub(crate) fn plot_parsed_text_named(
     if width < 2 || height < 2 || xmax <= xmin {
         return Err(PlotTextError::InvalidGeometry);
     }
-    let samples: Vec<(f64, f64)> = (0..width)
+    let samples: Vec<(usize, f64)> = (0..width)
         .map(|i| {
             let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
-            (x, eval_named(expr, x, a, sliders))
+            (i, eval_named(expr, x, a, sliders))
         })
         .filter(|(_, y)| y.is_finite())
         .collect();
@@ -3937,20 +3927,35 @@ pub(crate) fn plot_parsed_text_named(
         .iter()
         .map(|p| p.1)
         .fold(f64::NEG_INFINITY, f64::max);
-    let yspan = (ymax - ymin).max(1e-9);
-
     let mut canvas = crate::canvas::Canvas::new(width, height);
+    paint_graph_samples(&mut canvas, &samples, ymin, ymax, '#');
+    Ok((canvas.to_text(), ymin, ymax))
+}
+
+/// Adjacent finite columns form a segment; a skipped sample breaks the path.
+fn paint_graph_samples(
+    canvas: &mut crate::canvas::Canvas,
+    samples: &[(usize, f64)],
+    ymin: f64,
+    ymax: f64,
+    mark: char,
+) {
+    use crate::surface::Surface;
+    let yspan = (ymax - ymin).max(1e-9);
+    let bottom = canvas.height() as f64 - 1.0;
     let mut previous: Option<(i32, i32)> = None;
-    for &(x, y) in &samples {
-        let sx = ((x - xmin) / (xmax - xmin) * (width as f64 - 1.0)) as i32;
-        let sy = ((height as f64 - 1.0) - (y - ymin) / yspan * (height as f64 - 1.0)) as i32;
-        if let Some((px, py)) = previous {
-            use crate::surface::Surface;
-            canvas.line(px, py, sx, sy, '#');
+    for &(column, y) in samples {
+        let sx = column as i32;
+        let sy = (bottom - (y - ymin) / yspan * bottom) as i32;
+        if let Some((px, py)) = previous
+            && px + 1 == sx
+        {
+            canvas.line(px, py, sx, sy, mark);
+        } else {
+            canvas.plot(sx, sy, mark);
         }
         previous = Some((sx, sy));
     }
-    Ok((canvas.to_text(), ymin, ymax))
 }
 
 /// The most tokens an expression may hold. A real formula is tiny; this only
@@ -5375,6 +5380,40 @@ mod tests {
         assert!((ymin - -1.0).abs() < 0.1 && (ymax - 1.0).abs() < 0.1);
         assert!(super::plot_text("sin(", -1.0, 1.0, 0.0, 24, 8).is_err());
         assert!(super::plot_text("x", 1.0, -1.0, 0.0, 24, 8).is_err());
+    }
+
+    #[test]
+    fn graph_text_preserves_domain_gaps_and_isolated_finite_points() {
+        let marked_columns = |text: &str| {
+            let mut columns = std::collections::BTreeSet::new();
+            for line in text.lines() {
+                for (column, mark) in line.chars().enumerate() {
+                    if super::PROGRAM_MARKS.contains(&mark) {
+                        columns.insert(column);
+                    }
+                }
+            }
+            columns
+        };
+        let (text, ymin, ymax) =
+            super::plot_text("sqrt(x*x-0.25)", -1.0, 1.0, 1.0, 9, 8).expect("finite islands");
+        assert_eq!(ymin, 0.0);
+        assert_eq!(ymax, 0.75_f64.sqrt());
+        assert_eq!(marked_columns(&text), [0, 1, 2, 6, 7, 8].into());
+
+        let (text, _, _) = super::plot_text("1/x", -1.0, 1.0, 1.0, 9, 8).expect("sampled pole");
+        assert!(!marked_columns(&text).contains(&4));
+
+        let (text, ymin, ymax) =
+            super::plot_text("sqrt(-x*x)", -1.0, 1.0, 1.0, 9, 8).expect("single point");
+        assert_eq!((ymin, ymax), (0.0, 0.0));
+        assert_eq!(marked_columns(&text), [4].into());
+
+        let overlay =
+            StudioCreation::new_program(["sqrt(x*x-0.25)", "-sqrt(x*x-0.25)"], -1.0, 1.0, 1.0)
+                .expect("overlay islands");
+        let plate = overlay.plot_text(9, 8).expect("overlay picture");
+        assert_eq!(marked_columns(&plate.text), [0, 1, 2, 6, 7, 8].into());
     }
 
     #[test]
