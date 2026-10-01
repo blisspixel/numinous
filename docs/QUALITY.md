@@ -64,7 +64,8 @@ interoperability, and release workflow contracts. These are local functional
 and rendering checks, not participant
 comprehension or usability measurements.
 The alpha 28 authoring pass on 2026-09-30 completed the Windows verification
-gate across resumed runs. Final-source coverage measured 94.53% regions and
+gate across resumed runs and passed 4,547 all-target Rust test cases with the
+same three expensive diagnostics excluded. Final-source coverage measured 94.53% regions and
 94.57% lines with the same command and exclusions, improving the preceding
 polish baseline. Twenty-five focused native authoring tests cover pointer,
 keyboard, controller, pause, saved questions, explicit remix, and refusal
