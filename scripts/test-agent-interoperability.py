@@ -6,7 +6,9 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -30,6 +32,97 @@ class InteroperabilityTests(unittest.TestCase):
             if "path" in artifact:
                 data = (root / artifact["path"]).read_bytes()
                 self.assertEqual(hashlib.sha256(data).hexdigest(), artifact["sha256"])
+
+    def test_hashed_fixture_git_blobs_survive_checkout_with_every_autocrlf_mode(
+        self,
+    ) -> None:
+        root = INTEROP.PLUGIN.FIXTURE_ROOT
+        provenance = json.loads((root / "provenance.json").read_text(encoding="utf-8"))
+        fixtures: list[tuple[str, bytes, str]] = []
+        for artifact in provenance["artifacts"]:
+            if "path" not in artifact:
+                continue
+            path = root / artifact["path"]
+            relative = path.relative_to(ROOT).as_posix()
+            blob = subprocess.check_output(["git", "show", f":{relative}"], cwd=ROOT)
+            with self.subTest(path=relative):
+                self.assertEqual(hashlib.sha256(blob).hexdigest(), artifact["sha256"])
+                self.assertEqual(path.read_bytes(), blob)
+            fixtures.append((relative, blob, artifact["sha256"]))
+
+        for mode in ("false", "true", "input"):
+            with (
+                self.subTest(autocrlf=mode),
+                tempfile.TemporaryDirectory() as temporary,
+                patch.dict(
+                    "os.environ",
+                    {
+                        "GIT_DIR": "inherited-hook-git-dir",
+                        "GIT_INDEX_FILE": "inherited-hook-index",
+                        "GIT_WORK_TREE": "inherited-hook-worktree",
+                    },
+                ),
+            ):
+                checkout = Path(temporary)
+                # Hooks may select the parent repository or a temporary index.
+                # Only the isolated checkout drops those inherited selectors.
+                environment = {
+                    key: value
+                    for key, value in os.environ.items()
+                    if not key.upper().startswith("GIT_")
+                }
+                subprocess.run(
+                    ["git", "init", "--quiet"],
+                    cwd=checkout,
+                    check=True,
+                    capture_output=True,
+                    env=environment,
+                )
+                (checkout / ".gitattributes").write_bytes(
+                    (ROOT / ".gitattributes").read_bytes()
+                )
+                for relative, blob, _ in fixtures:
+                    target = checkout / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(blob)
+                git = [
+                    "git",
+                    "-c",
+                    f"core.autocrlf={mode}",
+                    "-c",
+                    "core.safecrlf=false",
+                ]
+                subprocess.run(
+                    [
+                        *git,
+                        "add",
+                        "--",
+                        ".gitattributes",
+                        *(path for path, _, _ in fixtures),
+                    ],
+                    cwd=checkout,
+                    check=True,
+                    capture_output=True,
+                    env=environment,
+                )
+                for relative, blob, _ in fixtures:
+                    indexed = subprocess.check_output(
+                        [*git, "show", f":{relative}"], cwd=checkout, env=environment
+                    )
+                    self.assertEqual(indexed, blob)
+                    (checkout / relative).unlink()
+                subprocess.run(
+                    [*git, "checkout-index", "--all", "--force"],
+                    cwd=checkout,
+                    check=True,
+                    capture_output=True,
+                    env=environment,
+                )
+                for relative, blob, digest in fixtures:
+                    with self.subTest(autocrlf=mode, path=relative):
+                        data = (checkout / relative).read_bytes()
+                        self.assertEqual(data, blob)
+                        self.assertEqual(hashlib.sha256(data).hexdigest(), digest)
 
     def test_pinned_minimal_okf_allows_unknown_types_extensions_and_broken_links(
         self,
@@ -103,8 +196,6 @@ class InteroperabilityTests(unittest.TestCase):
             INTEROP.validate_capsule(broken)
 
     def test_stdio_failures_and_ambiguous_envelopes_cannot_pass(self) -> None:
-        import subprocess
-
         request = INTEROP.call(1, "export_journal", {"format": "okf-0.2"})
         for output in (
             b"",
@@ -129,8 +220,6 @@ class InteroperabilityTests(unittest.TestCase):
                     INTEROP.session(Path(sys.executable), [request])
 
     def test_stdio_profile_isolated_and_cleaned_on_failure(self) -> None:
-        import subprocess
-
         roots: list[Path] = []
 
         def fake_run(

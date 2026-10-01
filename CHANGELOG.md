@@ -76,6 +76,8 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 - The portable plugin identifies Nick Seal as its author.
 - Windows commit hooks select the same Python interpreter as the documented
   local gate, so installing its pinned validators also satisfies the hook.
+- Interoperability fixture digests agree with committed bytes and remain valid
+  after checkout on Windows and POSIX systems.
 
 ### Changed
 - The roadmap summarizes the current finite oscillator-sum capability in one
