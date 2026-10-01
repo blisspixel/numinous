@@ -144,9 +144,11 @@ Enter opens it for editing. Remix is a separate deliberate action.
 
 Search keeps the network visible while you step. A diamond means tentative,
 a square means the junction's cost is final, and a cross means unreachable
-after completion. Costs are cumulative from the search source. Dashed links
-show tentative predecessors, and the latest improved connection is emphasized.
-The completed path has a separate heavier stroke. Click a junction or use
+after completion. Costs are cumulative from the search source. Native authoring
+draws predecessor links with dashes; ordinary play uses dashes while their
+junction cost is tentative and doubles them once final. The latest improved
+connection is emphasized. The completed path has a separate heavier stroke.
+Click a junction or use
 JUNCTION < and JUNCTION > to inspect its cost, state, and predecessor, including
 on dense or compact maps. Inspection does not advance or restart search.
 BACK removes later knowledge as well as moving the cursor; an edit clears the

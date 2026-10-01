@@ -120,13 +120,15 @@ CLI text and additive MCP `trace.view` use that projection. The existing snapsho
 format and portable creation identity stay unchanged.
 
 Both the ordinary room and native authoring draw the search on the network.
-Tentative predecessor links differ from settled connections and the final path;
-the latest relaxation is emphasized. Junction shapes and labels distinguish
+Ordinary play dashes tentative predecessor links and doubles finalized
+connections. Native authoring dashes predecessor links and marks finalized
+junctions with squares. Both emphasize the latest relaxation and give the
+completed path a separate heavier stroke. Junction shapes and labels distinguish
 state without depending on color. Native authoring retains a selected-junction
 inspector on dense and compact maps. Click a node or use the junction controls
 to inspect it without advancing or restarting the recorded search. The path
-appears only when playback
-completes. These are bounded functional and presentation capabilities;
+appears only when playback completes. These are bounded functional and
+presentation capabilities;
 participant comprehension has not been measured.
 
 The snapshot is caller-carried continuation across requests or processes.
