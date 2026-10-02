@@ -10,6 +10,15 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   a landed Times Tables goal no longer print a staged room's reveal before its
   wager and summon. CLI `reveal`, MCP `reveal_room`, and these surfaces share
   one core gate, `Journey::explanation_open`.
+- The App Show no longer prints each room's reveal in capitals over the art.
+  It names the room on arrival, and its legend offers the explanation on
+  request (E, or the controller's Select).
+- Under reduced motion the App Show rests on each room's postcard still and
+  waits for the player, as the accessibility list promises, with a legend that
+  names the next-room key. A music-driven visualizer no longer moves a held
+  phase.
+- Under reduced motion a screen shake becomes a still edge around the frame
+  for the same frames, marking the moment without moving the picture.
 
 ## [0.4.0-alpha.31] - 2026-10-01
 

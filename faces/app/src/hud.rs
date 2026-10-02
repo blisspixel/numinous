@@ -111,6 +111,9 @@ pub(crate) struct RoomChrome {
     pub(crate) level: u32,
     pub(crate) input_mode: InputMode,
     pub(crate) controller_face: ControllerCopy,
+    /// The player's motion setting. Under reduced motion The Show is held on
+    /// each room until the player moves on, so its chrome says how.
+    pub(crate) motion: numinous_core::Motion,
 }
 
 pub(crate) fn room_action(room: &dyn Room) -> &'static str {
@@ -264,6 +267,9 @@ fn show_control_band_height(scale: i32) -> i32 {
     18 * scale
 }
 
+/// The phase until which a moving Show shows a room's title card.
+const SHOW_TITLE_CARD_UNTIL: f64 = 0.12;
+
 pub(crate) fn draw_room_chrome(
     raster: &mut Raster,
     room: &dyn Room,
@@ -334,7 +340,12 @@ pub(crate) fn draw_room_chrome(
     if state.the_show {
         let control_band_height = show_control_band_height(scale).min(height as i32);
         let content_bottom = height as i32 - control_band_height;
-        if state.t < 0.12 {
+        // The Show names the phenomenon on arrival and says nothing more over
+        // the art: it is the mode built for strangers, and an explanation
+        // there is offered (E), never printed. A held Show has no later moment
+        // for its title card to give way to, so the card stays.
+        let held = !state.motion.animates();
+        if state.t < SHOW_TITLE_CARD_UNTIL || held {
             raster.dim_rows((content_bottom - 34 * scale).max(0), content_bottom, 45);
             numinous_core::draw_text(
                 raster,
@@ -344,23 +355,6 @@ pub(crate) fn draw_room_chrome(
                 scale + 1,
                 '#',
             );
-        } else if state.t > 0.9 {
-            let columns = ((width as i32 / (6 * scale)) - 8).max(12) as usize;
-            let lines = numinous_core::wrap_text(&room.reveal().to_uppercase(), columns);
-            let band_height = (lines.len() as i32 * 9 * scale + 16).min(content_bottom);
-            let band_top = content_bottom - band_height;
-            raster.clear_rows(band_top, content_bottom);
-            raster.line(0, band_top, width.saturating_sub(1) as i32, band_top, '-');
-            for (i, line) in lines.iter().enumerate() {
-                numinous_core::draw_text(
-                    raster,
-                    line,
-                    width as i32 / 10,
-                    band_top + 8 + i as i32 * 9 * scale,
-                    scale,
-                    '#',
-                );
-            }
         }
         raster.clear_rows(content_bottom, height as i32);
         raster.line(
@@ -370,11 +364,15 @@ pub(crate) fn draw_room_chrome(
             content_bottom,
             '-',
         );
-        let controls = fit_footer_text(
-            &input_legend::show_controls_with_controller(state.input_mode, state.controller_face),
-            width as i32 - 20,
-            scale,
-        );
+        let legend = if held {
+            input_legend::held_show_controls_with_controller(
+                state.input_mode,
+                state.controller_face,
+            )
+        } else {
+            input_legend::show_controls_with_controller(state.input_mode, state.controller_face)
+        };
+        let controls = fit_footer_text(&legend, width as i32 - 20, scale);
         numinous_core::draw_text(
             raster,
             &controls,
@@ -532,6 +530,7 @@ mod tests {
                         level: 1,
                         input_mode: mode,
                         controller_face: copy,
+                        motion: numinous_core::Motion::Full,
                     },
                     &[],
                     Some(status),
@@ -642,6 +641,7 @@ mod tests {
                         level: 1,
                         input_mode: mode,
                         controller_face: ControllerFace::Generic.into(),
+                        motion: numinous_core::Motion::Full,
                     },
                     &[],
                     None,
@@ -1244,6 +1244,7 @@ mod tests {
                 level: 3,
                 input_mode: InputMode::KeyboardMouse,
                 controller_face: ControllerFace::Generic.into(),
+                motion: numinous_core::Motion::Full,
             },
             &[],
             None,
@@ -1276,6 +1277,7 @@ mod tests {
                 level: 3,
                 input_mode: InputMode::KeyboardMouse,
                 controller_face: ControllerFace::Generic.into(),
+                motion: numinous_core::Motion::Full,
             },
             &[],
             None,
@@ -1285,39 +1287,95 @@ mod tests {
         assert_eq!(raster.to_rgba(), before);
     }
 
+    /// A Show frame over a room's own art, beside the bare art it covers.
+    fn show_frame(
+        room: &dyn Room,
+        t: f64,
+        motion: numinous_core::Motion,
+        (width, height): (usize, usize),
+    ) -> (Raster, Raster) {
+        let mut bare = Raster::with_accent(width, height, room.meta().accent);
+        room.render(&mut bare, t);
+        let mut shown = Raster::with_accent(width, height, room.meta().accent);
+        room.render(&mut shown, t);
+        draw_room_chrome(
+            &mut shown,
+            room,
+            &RoomChrome {
+                t,
+                room_card: 0,
+                show_info: false,
+                show_help: false,
+                show_journey: false,
+                banner_active: false,
+                the_show: true,
+                studio: false,
+                muted: false,
+                level: 1,
+                input_mode: InputMode::KeyboardMouse,
+                controller_face: ControllerFace::Generic.into(),
+                motion,
+            },
+            &[],
+            None,
+            width,
+            height,
+        );
+        (bare, shown)
+    }
+
+    /// The pixels above the Show's control band, where the art lives.
+    fn above_the_band(raster: &Raster) -> Vec<u8> {
+        let band_top = raster.height() - show_control_band_height(1) as usize;
+        raster.to_rgba()[..band_top * raster.width() * 4].to_vec()
+    }
+
     #[test]
-    fn the_show_draws_arrival_and_departure_copy() {
-        let room = room("lorenz");
-        let mut arrival = Raster::with_accent(420, 300, room.meta().accent);
-        let mut departure = Raster::with_accent(420, 300, room.meta().accent);
-        for (raster, t) in [(&mut arrival, 0.05), (&mut departure, 0.95)] {
-            room.render(raster, t);
-            draw_room_chrome(
-                raster,
-                room.as_ref(),
-                &RoomChrome {
-                    t,
-                    room_card: 0,
-                    show_info: false,
-                    show_help: false,
-                    show_journey: false,
-                    banner_active: false,
-                    the_show: true,
-                    studio: false,
-                    muted: false,
-                    level: 1,
-                    input_mode: InputMode::KeyboardMouse,
-                    controller_face: ControllerFace::Generic.into(),
-                },
-                &[],
-                None,
-                420,
-                300,
+    fn the_show_names_the_room_on_arrival_and_never_prints_its_explanation() {
+        // The Show is the mode built for strangers. It used to print every
+        // room's reveal in capitals over the art for the last tenth of each
+        // sweep, unasked, including the answers the seven staged rooms keep
+        // for their wagers. Now the art is untouched after the title card,
+        // and the explanation is one press of E away.
+        let size = (420, 300);
+        let ids = numinous_core::ENGINEERED_AHA_ROOM_IDS
+            .into_iter()
+            .chain(["lorenz", "golden-angle"]);
+        for id in ids {
+            let room = room(id);
+            for t in [0.3, 0.6, 0.91, 0.95, 0.99] {
+                let (bare, shown) = show_frame(room.as_ref(), t, numinous_core::Motion::Full, size);
+                assert_eq!(
+                    above_the_band(&shown),
+                    above_the_band(&bare),
+                    "{id} drew over its art at t={t}"
+                );
+            }
+            let (bare, arrival) =
+                show_frame(room.as_ref(), 0.05, numinous_core::Motion::Full, size);
+            assert_ne!(
+                above_the_band(&arrival),
+                above_the_band(&bare),
+                "{id} lost its arrival title card"
             );
         }
-        assert_ne!(arrival.to_rgba(), departure.to_rgba());
-        assert!(arrival.lit_count() > 100);
-        assert!(departure.lit_count() > 100);
+    }
+
+    #[test]
+    fn a_held_show_keeps_its_title_card_and_says_how_to_move_on() {
+        let room = room("double-pendulum");
+        let size = (420, 300);
+        let t = room.postcard_t();
+        assert!(t > SHOW_TITLE_CARD_UNTIL, "the still must lie past arrival");
+        let (bare, held) = show_frame(room.as_ref(), t, numinous_core::Motion::Reduced, size);
+        let (_, moving) = show_frame(room.as_ref(), t, numinous_core::Motion::Full, size);
+        // Held, there is no later moment for the card to give way to.
+        assert_ne!(above_the_band(&held), above_the_band(&bare));
+        assert_eq!(above_the_band(&moving), above_the_band(&bare));
+        // The band names the press that moves on, so it is not the moving
+        // Show's band.
+        let split = above_the_band(&held).len();
+        assert_ne!(held.to_rgba()[split..], moving.to_rgba()[split..]);
     }
 
     #[test]
@@ -1349,6 +1407,7 @@ mod tests {
                     level: 1,
                     input_mode,
                     controller_face: ControllerFace::Generic.into(),
+                    motion: numinous_core::Motion::Full,
                 },
                 &[],
                 None,
@@ -1367,11 +1426,14 @@ mod tests {
             "input copy must not move the Show content"
         );
         assert_ne!(&keyboard_pixels[split..], &controller_pixels[split..]);
+        let generic = ControllerFace::Generic.into();
         for copy in [
             input_legend::show_controls(InputMode::KeyboardMouse),
             input_legend::show_controls(InputMode::Controller),
+            input_legend::held_show_controls_with_controller(InputMode::KeyboardMouse, generic),
+            input_legend::held_show_controls_with_controller(InputMode::Controller, generic),
         ] {
-            assert!(copy.chars().count() * 6 <= width - 20);
+            assert!(copy.chars().count() * 6 <= width - 20, "{copy}");
         }
     }
 
@@ -1397,6 +1459,7 @@ mod tests {
                 level: 1,
                 input_mode: InputMode::KeyboardMouse,
                 controller_face: ControllerFace::Generic.into(),
+                motion: numinous_core::Motion::Full,
             },
             &[],
             None,

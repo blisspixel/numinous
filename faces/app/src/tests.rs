@@ -170,6 +170,63 @@ fn screen_shake_shifts_rgba_and_decays_on_present() {
 }
 
 #[test]
+fn reduced_motion_marks_a_jolt_with_a_still_edge_and_moves_no_pixel() {
+    use numinous_core::Surface;
+    const SIZE: (usize, usize) = (48, 32);
+    let background = [10_u8, 11, 15, 255];
+    let frame = |motion: numinous_core::Motion, jolt: u8| {
+        let mut app = headless("numinous_app_test_still_jolt.txt");
+        app.close_menu();
+        app.banner = None;
+        app.motion = motion;
+        app.screen_shake = jolt;
+        let mut raster = numinous_core::Raster::with_accent(SIZE.0, SIZE.1, [140, 230, 120]);
+        // A stripe to watch: a shake carries it sideways, a still edge cannot.
+        raster.line(24, 0, 24, SIZE.1 as i32 - 1, '*');
+        let (rgba, _, _) = app.compose_frame(raster, SIZE.0, SIZE.1);
+        let _ = std::fs::remove_file(&app.journey_file);
+        (rgba, app.screen_shake)
+    };
+    let pixel = |rgba: &[u8], x: usize, y: usize| {
+        let at = (y * SIZE.0 + x) * 4;
+        [rgba[at], rgba[at + 1], rgba[at + 2], rgba[at + 3]]
+    };
+    let travel = super::SHAKE_TRAVEL as usize;
+    let interior = |rgba: &[u8]| {
+        (travel..SIZE.1 - travel)
+            .flat_map(|y| (travel..SIZE.0 - travel).map(move |x| (x, y)))
+            .map(|(x, y)| pixel(rgba, x, y))
+            .collect::<Vec<_>>()
+    };
+
+    let (calm, _) = frame(numinous_core::Motion::Reduced, 0);
+    let (held, held_left) = frame(numinous_core::Motion::Reduced, 6);
+    let (shaken, shaken_left) = frame(numinous_core::Motion::Full, 6);
+
+    // The same moment, for the same frames, under either setting.
+    assert_eq!(held_left, 5);
+    assert_eq!(shaken_left, 5);
+    // Reduced motion displaces nothing: inside the edge, the frame is the
+    // frame it would have been with no jolt at all.
+    assert_eq!(interior(&held), interior(&calm), "a held jolt moved pixels");
+    // And it still marks the moment, with an edge as deep as the shake's
+    // travel lit all the way round.
+    for (x, y) in (0..SIZE.0)
+        .flat_map(|x| [(x, 0), (x, SIZE.1 - 1)])
+        .chain((0..SIZE.1).flat_map(|y| [(0, y), (SIZE.0 - 1, y)]))
+    {
+        assert_ne!(pixel(&held, x, y), background, "unlit edge at ({x}, {y})");
+    }
+    // Full motion still shakes, so the assertions above measure the setting
+    // and not a jolt that stopped working everywhere.
+    assert_ne!(
+        interior(&shaken),
+        interior(&calm),
+        "full motion lost its shake"
+    );
+}
+
+#[test]
 fn watch_agent_owns_audio_across_radio_resync_and_close_restores_prior_source() {
     let mut app = headless("numinous_app_test_watch_agent_audio_owner.txt");
     app.audio_program = AudioProgram::RoomScore;
@@ -2205,6 +2262,90 @@ fn reduced_motion_leaves_the_life_universe_untouched() {
         numinous_core::Motion::Full,
     ));
     assert!(moved > 0, "full motion must still step Life");
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
+fn a_held_show_rests_on_each_postcard_and_moves_only_when_asked() {
+    // `numinous access` and the player manual promise that under reduced
+    // motion The Show waits for you. The App waited, but on whatever phase a
+    // reset left and under a legend that named no way on. It now rests on
+    // each room's postcard, the still the terminal and MCP Shows hold too.
+    let mut app = headless("numinous_app_test_held_show.txt");
+    app.motion = numinous_core::Motion::Reduced;
+    app.banner = None;
+    app.room_card = 0;
+    // Two neighbours whose stills are not where a reset leaves the phase,
+    // so resting on the postcard cannot pass by coincidence.
+    let count = app.rooms.len();
+    let first = (0..count)
+        .find(|&i| {
+            app.rooms[i].postcard_t() != 0.0 && app.rooms[(i + 1) % count].postcard_t() != 0.0
+        })
+        .expect("two neighbouring rooms with a postcard past the start");
+    app.current = first;
+    app.t = 0.0;
+    app.toggle_show();
+    assert!(app.the_show);
+    let still = app.rooms[first].postcard_t();
+    assert_eq!(app.t, still, "the held Show must rest on the postcard");
+    for _ in 0..400 {
+        app.advance_room_tick(0.05, 0.05, false);
+    }
+    assert_eq!(app.current, first, "the held Show changed rooms by itself");
+    assert_eq!(app.t, still, "the held still drifted");
+
+    // Asked, it moves on and rests on the next room's own still.
+    app.switch(1);
+    assert_eq!(app.current, (first + 1) % count);
+    let next_still = app.rooms[app.current].postcard_t();
+    assert_ne!(next_still, 0.0);
+    assert_eq!(app.t, next_still);
+    // Starting a held room over returns to that same still.
+    app.t = 0.0;
+    app.reset_current_room();
+    assert_eq!(app.t, next_still);
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
+fn a_moving_show_keeps_its_phase_on_entry_and_advances_by_itself() {
+    // The counterpart, so the held test above is about the setting.
+    let mut app = headless("numinous_app_test_moving_show.txt");
+    app.motion = numinous_core::Motion::Full;
+    app.banner = None;
+    app.room_card = 0;
+    app.t = 0.3;
+    app.toggle_show();
+    assert_eq!(app.t, 0.3, "a moving Show starts from where the room was");
+    let first = app.current;
+    for _ in 0..400 {
+        app.advance_room_tick(0.05, 0.05, false);
+        if app.current != first {
+            break;
+        }
+    }
+    assert_ne!(app.current, first, "a moving Show must advance on its own");
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
+fn the_show_offers_its_explanation_on_request() {
+    // The Show no longer prints a reveal over the art, so the explanation
+    // must still be one press away, for the room on stage.
+    let mut app = headless("numinous_app_test_show_explains.txt");
+    app.toggle_show();
+    let on_stage = app.rooms[app.current].meta().id;
+    assert!(app.handle_study_key(&Key::Character("e".into()), false));
+    let study = app
+        .study
+        .as_ref()
+        .expect("E opens the explanation in the Show");
+    assert_eq!(study.reader.document().room_id, on_stage);
+    assert!(
+        app.the_show,
+        "reading holds the Show rather than leaving it"
+    );
     let _ = std::fs::remove_file(&app.journey_file);
 }
 
