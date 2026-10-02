@@ -1,4 +1,4 @@
-# Quality, Testing & Fun-Evals
+# Quality, testing, and fun evals
 
 How Numinous works toward a high quality bar. Most software tests whether a
 program works; Numinous also needs evidence about comprehension, awe, beauty,
@@ -270,8 +270,9 @@ The broader dated baseline below retains its original counts.
   reports finite-sample integrity, clipping, RMS, crest, channel balance, DC,
   correlation, side-to-mid ratio, adjacent steps, and exact-zero fraction.
   CLI tests parse RIFF independently and compare every exported PCM16 sample to
-  the shared quantizer's projection of the App source; MCP tests compare every event for all 355 rooms, enforce a
-  96-event and 64 KiB result budget, and reject binary or local-path transport.
+  the shared quantizer's projection of the App source; MCP tests compare every
+  event for every catalog room, enforce a 96-event and 64 KiB result budget,
+  and reject binary or local-path transport.
   The App's fixed 16 kHz room-score source is
   capped below two million interleaved samples and shared with the mixer, so
   device rate and repeated hand input cannot multiply that source allocation.
@@ -500,7 +501,7 @@ review, never as a claim that fictional participants had an experience.
    cards and compact states. Record clipping, low contrast, unclear controls,
    hidden consequences, unstable layout, and screens that fail to invite a
    first action.
-2. **Interaction and game-flow group:** traverse all 355 rooms through immediate
+2. **Interaction and game-flow group:** traverse every catalog room through immediate
    click, delayed gesture, release, and reset. Traverse every game from initial
    state through each stage and result. Compare the rendered consequence with
    its status copy and with the underlying mathematical rule. A changed image
@@ -602,6 +603,26 @@ tests establish what is verified today.
 - **Telemetry**: a local-first, opt-in, privacy-preserving aggregation layer.
 - **Playtest**: GEQ / FSS-2 / GUESS instruments plus a Fun Scorecard dashboard.
 - **CI/CD**: the commit loop on every PR (blocking); nightly runners on *real* hardware across all three OSes and all four GPU vendors for soak, perf, and cross-GPU differential tests.
+
+## The Polish Wave (August 2026)
+
+The refinement loop has run once by hand, as a critique wave. Seven independent
+agent critics read the whole product (a first-contact stranger, a digital mind
+over MCP, a maker, an accessibility skeptic, the engineer who inherits the
+code, a careful docs reader, and a day-seven returning player), each required
+to verify every claim against the repository or the built binaries before
+reporting it. Their 51 ranked critiques are committed at
+`docs/evidence/polish-critique-2026-08.json`, and each is re-verified at fix
+time before anything changes.
+
+The exit: every high critique closed; every medium closed or converted into a
+tracked owner decision carrying its evidence; every low fixed or recorded; then
+the same seven panels re-run and find no high critique. Workstreams 1 to 6
+(truth defects, reveals as payload, face-true verbs, the creator thread,
+access disclosures, and docs that match the binary) have landed. Workstream 7,
+the structural debts, is the sixth move in the roadmap's **Next, in order**.
+The dated landing notes are in the
+[frozen roadmap ledger](history/ROADMAP_LEDGER.md).
 
 ## Cadence (tied to the roadmap)
 

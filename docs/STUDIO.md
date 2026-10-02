@@ -5,7 +5,7 @@ instrument and a shader toy. You type a little math, and it instantly *draws*
 and *sings*. This is the "Create" posture (see `DESIGN.md`), and it is a core
 part of the experience rather than a bonus feature.
 
-**Implementation boundary, 2026-09-05:** the current source includes a bounded
+**Status (reviewed 2026-10-02).** Built: the current source includes a bounded
 expression parser and evaluator, graph and paired parametric plots,
 deterministic continuous or scale-quantized melody mapping, an editable app
 panel, CLI and MCP operations, `.num` plus link round trips on all three faces,
@@ -41,9 +41,11 @@ curve. Euclidean rhythms ship as
 layers them. An integer 0/1 graph also has a pattern-text view, `x` on a
 hit and `.` on a rest, and a numbered step-grid reading the App draws as
 cells. Tracker marks are a formula: type `x..x..x.` or `pat(x..x..x.)`.
-The sung MIDI voice also reads as a piano roll, pitch over time.
-MIDI-in, MusicXML, raw shader authoring, and community rooms
-are design targets. `ROADMAP.md` is the status authority.
+The sung MIDI voice also reads as a piano roll, pitch over time. Saved,
+opened, and forked creations carry the
+[readings](#readings-closure-tones-slope-and-partial) below. Designed, not
+built: MIDI-in, MusicXML, raw shader authoring, and community rooms.
+`ROADMAP.md` is the status authority.
 
 CLI and MCP plot and melody calls resolve through core `PlotRequest` and
 `SingRequest` types. Those types own curated discovery, expression parsing,
@@ -55,9 +57,10 @@ reinterpret the formula.
 Graph and overlay drawings preserve sampled undefined gaps in the App and text
 preview. A finite sample on its own is still drawn; two samples separated by an
 undefined column are not joined. This is a sampling guarantee, not analytic
-detection of every discontinuity between finite samples. The App puts slope and
-partial readings before navigation context, and a long formula's editing row
-keeps its tail and insertion cursor visible without changing its source.
+detection of every discontinuity between finite samples. The App puts the slope
+and partial [readings](#readings-closure-tones-slope-and-partial) before
+navigation context, and a long formula's editing row keeps its tail and
+insertion cursor visible without changing its source.
 
 **Alpha 18 correction:** fresh App formulas use the same default `a = 1` as
 their melody. Up/Down change `a` by 0.25 per press; Home restores 1. Controller
@@ -146,6 +149,88 @@ answer when the cell cannot be decided). Height and phase sing that reading
 along the real axis; the zero reading is a proof and stays silent. The named
 pitch maps are
 `continuous`, `chromatic`, `major`, `minor`, and `pentatonic`.
+
+## Readings: closure, tones, slope, and partial
+
+Built. A creation can carry a reading of its own formula, computed by core
+from the source and identical on every face. A reading never replaces the
+source: the capsule, the postcard, the text preview, CLI `sing`, and
+`melody.mid` stay the player's source. No reading grades the player or gates
+play, and a picture is never the proof.
+
+Where the readings appear:
+
+- **MCP:** `save_creation`, `open_creation`, and `fork_creation` return them in
+  `structuredContent` as `closure`, `tones`, `slope`, and `partial`.
+  `plot_expression` and `sing_expression` do not.
+- **CLI:** `numinous open-studio <.num or link>` prints them.
+- **App:** the Studio status line names closure and the slope. The App draws a
+  slope or first-term curve beside the whole, and Enter plays the tones; a
+  paused reopen stays silent.
+
+**Closure.** A parametric path whose coordinates are two harmonic oscillators
+reports an independently checked period, or an explicit aperiodic, including
+the half-period trap where position returns and velocity reverses. In
+Returning home, `full-return` has period `12`, `almost-home` has none,
+`same-place` is the half-period position-only trap, and `another-ratio` has
+period `1`; an unseen `8/5` construction reports period `5`. An overlay of two
+harmonic oscillators reports kind `voices`: each graph's ideal cycles in the
+window, and a common period when the model has one. `closing-voices` counts 12
+and 17 cycles on a period of 12. `shorter-window` keeps those formulas on
+`[0, 1]`, so the counts are `1` and `17/12` while the period stays 12.
+`wandering-voices` reports `12*sqrt(2)` and no positive common period. The
+least period is exact: frequencies 2 and 4 have period `1/2`, and
+commensurate square roots keep a period. Closure is the only period claim any
+reading makes.
+
+**Tones.** When closure names two frequencies, they sound as sustained sines.
+Frequency `1` is 110 Hz, and each other named frequency is 110 Hz times its
+cycles per unit time: Full return sounds `1` and `17/12` beside period `12`,
+and Almost home sounds `1` and `sqrt(2)` beside no period. On a path the texts
+are `x_frequency_text` and `y_frequency_text`; on an overlay each voice has
+`frequency_text`. `sqrt(2)` is never replaced by a nearby ratio, and the
+half-period caption stays a caption. A graph, a field, a sum, or any other
+unsupported creation invents no tones.
+
+**Slope.** An open graph `sin(a*x)` grows a second curve `a*cos(a*x)`, and
+`cos(a*x)` grows `-a*sin(a*x)`, including the `x*a` and spaced forms. A sum or
+difference of those with a line and non-negative integer powers of `x` grows
+the sum of the derivatives: the opening formula `sin(a*x) + x/3` grows
+`a*cos(a*x)+1/3`, `x^2` grows `2*x`, `x^2/12 - 1` grows `x/6`, and a constant
+term drops out. The App plots both curves on one vertical axis, so a larger
+slope stays taller, and sings both through the graph pitch map. CLI and MCP
+report `slope basis=symbolic source=...`. Samples of the rewritten source are
+checked against an independent slope wherever both are defined.
+
+These have no slope reading from this rule: `sin(x)`, `cos(x)`,
+`cos(2*a*x)`, `x*x`, `0.5*x`, `x/a`, a power of anything other than `x`, a
+negative or non-integer power, a product of two curves, a parenthesized sum
+inside a product, named sliders such as `sin(b*x)`, `tan`, `ln`, `sqrt`,
+`abs`, fields, paths, and overlays. `floor`, `mod`, `min`, `max`, `euclid`,
+`pat`, and `note` are refused anywhere in an expression: `slope=refused` on
+the CLI and MCP, and silence in the App.
+
+**Partial.** A graph that sums two to twelve oscillators, or a parametric path
+whose coordinates are sums of one to twelve oscillators with at least one a
+sum, shows its first signed term on the same frame as the whole (on a graph,
+the same vertical axis) and sounds one tone per recognized frequency through
+the same 110 Hz map. The stored terms add back to the player's expression:
+parentheses preserve the reading, subtraction stores signed terms, source
+order chooses the first term, and a repeated frequency sounds once. CLI and
+MCP report `partial basis=sum`. A thirteenth term, a product, a field, an
+overlay, an unsupported speed, and a drawn path have no partial reading. On a
+graph, a supported slope takes precedence. Exact irrational frequencies are
+never replaced by nearby rational values.
+
+**Hypothesis, not built.** Later slices may extend the slope to `sin` of a
+more general argument, `exp`, products and quotients of non-constant factors,
+and named sliders, only where the rewrite is exact; a general power stays
+out, and the secant label is the later reading. A closed path may later report
+how many times it winds the origin, one integer on all three faces, with no
+topology command. A thirteenth oscillator term may follow. A drawn path turned
+into coefficients, a series command, and an infinite sum stay out, and the
+Fourier sketch below stays a sketch. Player evidence remains open for the
+built readings as well as the hypotheses.
 
 ## The one-liner
 

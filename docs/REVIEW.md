@@ -9,7 +9,7 @@ own summary of the product stands as the best short description yet written:
 > rules, watch them explode into beauty, hear them as music, and optionally
 > uncover the revelation underneath.
 
-The mantra it set, now the roadmap's first line: **every screen answers
+The mantra it set, now standing law in the roadmap: **every screen answers
 your hand; every answer reveals the math.**
 
 ## Findings and responses

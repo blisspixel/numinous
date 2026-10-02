@@ -11,8 +11,8 @@ resettable session workspace, exact remembered-room retrieval and doorway cue,
 portable MCP creation lineage, portable evidence export, and the caller-paced
 Show for minds built; experiential continuity designed.** Research reviewed
 2026-07-11, with consciousness, memory, and agency updates below on 2026-09-04;
-implementation boundary reviewed 2026-09-04. Numinous
-0.4.0-alpha.28 speaks MCP, ships an opt-in local experience journal, can
+implementation boundary reviewed 2026-09-04. Numinous speaks MCP, ships an
+opt-in local experience journal, can
 return two exact room observations with a typed delta in one stateless call,
 can emit a versioned replay proof when `play_room` is asked for a receipt,
 can keep that proof only when the player hands it back and a live replay
@@ -188,6 +188,52 @@ introduced; every future storage tier needs an erasure test. A recent summary
 memory experiment reinforces that engineering requirement without proving
 forensic erasure or controlling host-held copies.
 [Deployment-Time Memorization, July 2026 revision](https://arxiv.org/abs/2606.10062v2).
+
+### The Mind's Seat increments
+
+The Mind's Seat is the MCP player's time, company, and continuity, built in
+independently testable increments. All but the last are Built; the dated
+detail of each is in the [frozen roadmap ledger](history/ROADMAP_LEDGER.md).
+
+1. **Temporal evidence:** optional `from_t` with an explicit destination `t`
+   returns two bounded exact observations and a typed directional cell delta.
+   No duration, path, receipt, journal write, or session state is inferred.
+2. **Staying:** `dwell` renders one room at two to eight phases and returns a
+   typed invariant of what refused to move. The longest stay fits the default
+   canvas.
+3. **Ratio annotations on note pairs:** each step between two notes is sized
+   exactly in cents, named when an equal-tempered name is near, and given a
+   simple whole number ratio when one explains it, always with its error.
+4. **Sound as sound:** `sing_expression` and `listen_room` take `audio: true`
+   and return a mono sixteen-bit WAV beside the notation. Whether a client
+   surfaces it is the client's to answer.
+5. **Numinous Encounter Receipts:** `play_room` emits a versioned replay and
+   provenance receipt only when `receipt` is true. Asking does not keep the
+   play.
+6. **Explicit promotion:** a receipt becomes a journal subject only when the
+   player passes it to `record_journal`, and only a live replay match is kept.
+7. **Resettable session workspace:** process-local, player-authored, silent
+   unless asked; play does not write it, and a new process starts empty.
+8. **Remembered-room retrieval:** `workspace` operation `retrieve` returns at
+   most four current exact-subject journal entries for one listed room, with
+   source and selection reason, or an explicit abstention.
+9. **MCP creation parity:** `save_creation`, `open_creation`, and
+   `fork_creation` return canonical `.num` text, a native link, an exact
+   preview, and a journal-ready subject without touching host files.
+10. **Remembered-room doorway:** `describe_room` reports only that exact
+    journal evidence exists for the room, names the explicit retrieval call,
+    and stays outside the public viewer projection.
+11. **Three-door threshold:** one astonishing room, the ordered Strange Loop
+    walk, or a compact wing wander, while the complete typed catalog remains.
+12. **Portable capsule:** `export_journal` format `portable-1` returns a
+    bounded closed payload with a hashed manifest, optionally carrying one
+    live-verified receipt and one Studio creation. It creates no file.
+13. **Show for minds:** `watch_show` carries the six-room Strange Loop score
+    one complete cue per call, with explicit continuation and no hidden timer,
+    cursor, progress write, journal read, or reveal.
+14. **Reflection proposals:** Designed, not built. They wait until retrieval,
+    correction, export, and deletion invariants hold, under their own evidence
+    and consent review.
 
 ## Architecture boundary
 
