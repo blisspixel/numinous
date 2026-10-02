@@ -2,7 +2,7 @@
 
 A working review: five minds around a table with the build as it stood at
 that session (81 commits, 27 rooms, 7 games on 4 faces of play, the full RPG
-spine, 22 MCP tools; the catalog has since grown, see `ROOMS.md`). One seat is real: the AGI seat quotes an actual cold-start AI
+spine, an MCP surface of 22 tools; the catalog has since grown, see `ROOMS.md`). One seat is real: the AGI seat quotes an actual cold-start AI
 playtest (July 2026, LV 13 session). The others are composed from their
 doors' design goals. The point is what we are missing, not what we have.
 

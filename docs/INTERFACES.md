@@ -11,7 +11,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
 **Implementation boundary, 2026-10-01:** all three faces are shipped from the
-same headless core in 0.4.0-alpha.31. Descriptions below mix current behavior
+same headless core in the current alpha. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -349,8 +349,8 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   explanation and level-gated deep cuts only after one real play, or after
   persisted consolidation for one of the seven engineered wager rooms.
   `listen_room` returns ambient motif, stable
-  ambient-bed summary, and bounded mathematical-sonification note data for all
-  355 rooms. `listen_room` names
+  ambient-bed summary, and bounded mathematical-sonification note data for
+  every catalog room. `listen_room` names
   all three sound roles
   separately because a specialized room sound can intentionally differ from
   the ambient score. The `motif` field is the authored theme; `ambient_bed` is
@@ -873,7 +873,7 @@ scripts exercise the same surface in local validation.
 
 ## Roadmap position
 
-- **Built by 0.3.0-alpha.4:** the headless core, full-color CLI, native app, and
+- **Built by `v0.3.0-alpha.4`:** the headless core, full-color CLI, native app, and
   bounded MCP server expose the shared catalog, play, creation, prediction,
   challenge, learning, progression, and export foundations.
 - **0.3 through 0.6:** deepen tactile behavior, understanding, sensory polish,

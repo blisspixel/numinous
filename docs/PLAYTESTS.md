@@ -1,8 +1,15 @@
-# The Persona Review Archive: voices from simulated troupes
+# Playtests: packaged agentic sessions and the persona archive
 
-This is an ideation record from fictional persona simulations run against the
-July 2026 build. No quoted visitor below was a real participant, and the
-roleplay is not evidence of fun, learning, accessibility, universality,
+This file holds two kinds of record. The dated sections from the July 27
+external MCP session through the August 31 tenth packaged round record real
+agent sessions, most of them source-blind playtests of published builds:
+formative agent evidence on the named builds, never human evidence. Everything
+from the July 2026 six-round technical cohort onward is the persona review
+archive, described next.
+
+The persona archive is an ideation record from fictional persona simulations
+run against the July 2026 build. No quoted visitor in it was a real
+participant, and the roleplay is not evidence of fun, learning, accessibility, universality,
 conscious experience, or a passed playtest gate. The method can generate
 adversarial questions and candidate defects; every defect still needs direct
 reproduction, and product claims still need the real sessions and qualified
