@@ -2,14 +2,15 @@
 
 How Numinous feels, moment to moment, and the rules that keep it feeling that way.
 
-**Implementation boundary, 2026-09-05:** this is the experience specification,
-not a claim that every element below ships in the current alpha. The native app,
-CLI, MCP face, catalog, Show, deterministic room voices, four Visual Eras,
-Studio expression surface, PNG postcards, short APNG loops, exact file/link
-reopening through App arguments and drops, and the local Gallery are built.
-The full theme system, longer video export, operating-system URL registration,
-community creator platform, and complete audio architecture remain roadmap
-work. `ROADMAP.md` is the status authority.
+**Status (reviewed 2026-10-02).** This is the experience specification, not a
+claim that every element below ships in the current alpha. Built: the native
+app, CLI, MCP face, catalog, Show, deterministic room voices, four Visual Eras,
+Studio expression surface, PNG postcards, short APNG loops, exact file and link
+reopening through App arguments and drops, the local Gallery, and the doorway
+rules in **Voice** below. Designed: the full theme system, room transitions
+through the stage, damped parameter springs, longer video export,
+operating-system URL registration, the community creator platform, and the
+complete audio architecture. `ROADMAP.md` is the status authority.
 
 ## The design pillars (and how to obey them)
 
@@ -51,7 +52,7 @@ Leaving that path retains its calls and earned progress for the current visit.
 **E** or the controller's Inspect action opens study independently.
 
 ### 4. Emergence is the star
-Prefer rooms where a **stupidly simple rule** produces **stunning complexity**, and make the simplicity *legible*, the visitor must be able to see/feel how little input created how much output. That gap is the product. Show the rule plainly (a single slider, a single equation-free statement) so the output feels impossible.
+Prefer rooms where a **stupidly simple rule** produces **stunning complexity**, and make the simplicity *legible*, the visitor must be able to see/feel how little input created how much output. That gap is the product. Show the rule plainly (a single slider, a single equation-free statement) so the output feels impossible. **Voice**, below, holds the doorway to that statement.
 
 ### 5. Beautiful by default
 - Every frame is screenshot-worthy. If you pause at a random moment and it isn't gorgeous, fix it.
@@ -59,42 +60,51 @@ Prefer rooms where a **stupidly simple rule** produces **stunning complexity**, 
 - Restraint over spectacle. Negative space. One idea per screen.
 
 ### 6. Made to be shared
-Every session can leave the app. One-tap **Share** captures a loop (MP4/GIF) or a `numinous://` link / `.num` seed file that reopens *your exact configuration* in the installed app (native, no browser). Watermark is a single tasteful glyph. The dream: a Numinous clip goes viral on its own aesthetic merits, math smuggled inside.
+Every session can leave the app. One-tap **Share** captures a still or a short loop (PNG and APNG are built; longer video is designed) or a `numinous://` link / `.num` file that reopens *your exact configuration* in the installed app (native, no browser). Watermark is a single tasteful glyph. The dream: a Numinous clip goes viral on its own aesthetic merits, math smuggled inside.
 
 ## The aesthetic direction
 
 **One sentence:** Ryoji Ikeda's restraint × Teenage Engineering's playfulness × 3Blue1Brown's clarity, on a near-black stage.
 
+**The law under every frame: meaning lives in shape and lightness; hue is a
+second voice.** A room says what is true with where marks are and how bright
+they are. Color may repeat that meaning, sharpen it, or make it beautiful, but
+it never carries meaning alone. The reason is built, not hypothetical: the
+Phosphor Era maps every pixel to green luminance, so anything a room says only
+in hue is erased for every player who chooses that Era, not only for players
+with fewer color distinctions. `VISUALS.md` owns the mark vocabulary that
+carries this law into pixels.
+
 - **Canvas:** deep near-black (`#0a0b0f`-ish), never pure black. The math glows *on* the dark.
-- **Color:** each room owns **one** signature accent that glows; supporting values stay monochrome. Color carries meaning (e.g., pitch, phase, iteration count), never decoration. A shared palette across rooms keeps the whole product coherent. (Palette to be validated for contrast + colorblind-safety per the `dataviz` guidance when we build the design system.)
+- **Color:** each room owns **one** signature accent that glows; supporting values stay monochrome. Color encodes real state (pitch, phase, iteration count), never decoration, and always as the second voice beside shape or lightness. A shared palette across rooms keeps the whole product coherent. The palette is validated for contrast and color-vision deficiency as part of the 0.5 gate; the measured limits are in the roadmap's decisions section.
 - **Type:** preserve the Cabinet's cartridge lettering and compact room HUD,
   with a separate case-preserving reading surface for longer prose and
   mathematical notation. Numbers and variables must retain their exact
   spelling. [Visuals](VISUALS.md) owns the App reader's bundled fonts,
   wrapping, scrolling, and linear-equation limits.
-- **Line & glow:** additive blending, subtle bloom, anti-aliased everything. Think "lit from within," not "flat UI."
+- **Line & glow:** additive blending, subtle bloom, anti-aliased everything. Think "lit from within," not "flat UI." Phosphor persistence (motion writes light) and a live instrument readout are part of the target look; the luminous sample lattice in `SYNESTHESIA.md` stays an Era-level candidate until a blind beauty review.
 - **UI:** near-invisible until needed. Controls fade in on hover/approach and recede while you watch. The math is the interface.
-- **Motion:** eased, physical, continuous. Nothing snaps. Dials have momentum. Transitions between rooms are dissolves through black, never hard cuts.
+- **Motion:** eased, physical, continuous. Nothing snaps. Dials glide on critically damped springs, so they settle without overshooting to a value the player never chose. Room changes dip through the stage, a short fade to the near-black stage and back with the sound washing under it, never a hard cut. Reduced motion holds each room at its best still phase, keeps touch answering, and never shakes the screen.
 
 ## Visual Eras: the look *progresses* (retro → modern)
 
-The minimalist glow above is Numinous's **native** look, but it is not the *only* look. Numinous carries a set of **Visual Eras**, skins that re-render every room (and re-voice its audio) in a different graphics epoch. This does three jobs at once: it gives the app **variety** so it never feels same-y across 20 rooms; it delivers pure **retro joy** (8-bit, CRT, chiptune, catnip for exactly our audience); and it quietly tells a story, *the history of computer graphics is the history of humans trying to make math visible*, from teletype to GPU. That lineage is the Wolfram/computational-universe thesis, felt.
+The minimalist glow above is Numinous's **native** look, but it is not the *only* look. Numinous carries a set of **Visual Eras**, skins that re-render every room (and, as designed, re-voice its audio) in a different graphics epoch. This does three jobs at once: it gives the app **variety** so it never feels same-y across a large catalog; it delivers pure **retro joy** (8-bit, CRT, chiptune, catnip for exactly our audience); and it quietly tells a story, *the history of computer graphics is the history of humans trying to make math visible*, from the phosphor terminal to the GPU. That lineage is the Wolfram/computational-universe thesis, felt.
 
-**The eras (roughly chronological):**
+**The eras (roughly chronological; vector scopes, from 1958, predate the 8-bit home raster):**
 
-| Era | Look | Audio voice |
-| --- | --- | --- |
-| **Teletype** | Green-phosphor terminal, ASCII/character-cell rendering, cursor blink | Bleeps / modem tones |
-| **8-bit** | Chunky pixels, a strict ~4-color palette, CRT scanlines + curvature + glow | Chiptune (square/triangle/noise) |
-| **16-bit** | Richer pixel palette, dithering, sprite-era polish | FM synth (Genesis/SNES flavor) |
-| **Vector / Oscilloscope** | Glowing wireframe lines on black, phosphor persistence, no fills | Pure analog sine/saw tones |
-| **Blueprint** | Graph-paper grid, drafting lines, annotations, ink-on-cyan | Soft mechanical pencil/pen |
-| **Modern (native)** | The minimalist additive-glow system above | The tuned house synth |
+| Era | Look | Audio voice | Status |
+| --- | --- | --- | --- |
+| **Phosphor** | Green-phosphor terminal, character-cell rendering, cursor blink | Bleeps / modem tones | Look built; voice designed |
+| **Vector / Oscilloscope** | Glowing wireframe lines on black, phosphor persistence, no fills | Pure analog sine/saw tones | Look built; voice designed |
+| **8-bit** | Chunky pixels, a strict ~4-color palette, CRT scanlines + curvature + glow | Chiptune (square/triangle/noise) | Look built; voice designed |
+| **16-bit** | Richer pixel palette, dithering, sprite-era polish | FM synth (Genesis/SNES flavor) | Designed |
+| **Blueprint** | Graph-paper grid, drafting lines, annotations, ink-on-cyan | Soft mechanical pencil/pen | Designed |
+| **Modern (native)** | The minimalist additive-glow system above | The tuned house synth | Look built; voice designed |
 
 **Three ways they're used:**
 
-1. **Skins (player choice).** Flip the whole app into any unlocked era anytime, including the audio. "Numinous in 8-bit with chiptune" is its own delightful mode, and a *distinct set of shareable clips* from the same rooms.
-2. **Progression (the meta-thread).** Collecting **Constants** (see the Cabinet section) unlocks eras **in historical order**, so the app literally *ages up* from teletype to modern glow as you go deeper. Reaching the modern era feels earned, and the journey re-tells the history of visualizing math.
+1. **Skins (player choice).** Flip the whole app into any era at any time, including, as designed, the audio. "Numinous in 8-bit with chiptune" is its own delightful mode, and a *distinct set of shareable clips* from the same rooms.
+2. **A history told as ceremony (the meta-thread).** Every era is free from the start; progression never gates one. The historical order is a story the eras tell, and **Constants** (see the Cabinet section), where they appear, celebrate that history rather than unlock it.
 3. **Native era per room/wing (variety by default).** Some phenomena have an obvious home era, so the collection has built-in visual variety even before you touch a skin: *Game of Life* and *Cellular Automata* are gorgeous in **8-bit**; *Lissajous* and *Fourier* belong on the **oscilloscope**; *Straightedge & Compass* wants **Blueprint**; *Mandelbrot* sings in **modern glow**. Each room ships with a "native" era and inherits the rest for free.
 
 **The target rule that keeps this coherent:** rooms describe face-neutral math,
@@ -117,7 +127,7 @@ Sound is a first-class citizen with its own art direction, not an afterthought.
 
 ## UX & interaction principles
 
-- **Zero-friction entry.** No account, no tutorial wall, no settings gauntlet. Open → Cabinet → tap a tile → you're playing in under 3 seconds.
+- **Zero-friction entry.** No account, no tutorial wall, no settings gauntlet. Open, choose from the Cabinet's text menu, and you are playing in under 3 seconds.
 - **Discovery over instruction.** Like *The Witness*: you learn what a control does by using it, not by reading a tooltip. Affordances are visual (a dial *looks* draggable).
 - **Direct manipulation.** You touch the math itself (drag the point, bend the curve), not an abstract slider elsewhere, wherever possible.
 - **No dead ends, no fail.** In toy mode you can't lose or break anything. A **reset** is always one tap and always graceful.
@@ -183,15 +193,77 @@ opaque, cartridge-era text screen, not a modern dashboard or a wall of cards.
   generous negative space preserve the directness of an NES or SNES command
   menu. Desktop type grows in whole pixel steps with the viewport, including
   descriptions and the command legend.
-- Rooms remain grouped into **Wings** by theme (see `ROOMS.md`): *Emergence,
-  Waves & Sound, Infinity & Fractals, Number & Pattern, Shape & Space, Chance &
-  Order.* Discovery of those places belongs inside play, not in a crowded front
-  page.
+- Rooms remain grouped into **Wings** by theme (see `ROOMS.md`). The design
+  named six: *Emergence, Waves & Sound, Infinity & Fractals, Number & Pattern,
+  Shape & Space, Chance & Order.* The catalog files its rooms under 13 wings
+  today, and the shape of that taxonomy awaits a ruling (the roadmap's next
+  moves). Discovery of those places belongs inside play, not in a crowded
+  front page.
 - Gentle **meta-progression** keeps Constants as a light, optional thread,
   purely for the joy of the set and never as a gate.
 - The **Watch** mode lets Numinous wander as generative art. A future live room
   gallery can be an in-world destination, but it must not replace the readable
   text front door.
+
+## Voice
+
+How Numinous speaks: the doorway (the one-line description a player can read
+before any play, through `describe_room`, the arrival card, and the Cabinet),
+the reveal, and the copy around them. The tone is the one `VISION.md` sets:
+reverent about the mathematics, irreverent about ourselves, short, warm, and
+confident. The doorway is a door, not a summary: it names the question and
+what is strange about it, and leaves the answer for the room.
+
+**Built: rules tests already enforce on every doorway**
+
+- **Name the question and the strangeness, never the call.** A staged room's
+  doorway may not print the answer it grades, and no doorway asserts another
+  room's reveal (`no_doorway_sells_a_staged_rooms_answer`).
+- **Never print a number the reveal repeats.** The door promises the
+  explanation comes later and only if asked
+  (`no_doorway_prints_a_number_its_own_reveal_repeats`).
+- **Describe the mathematics; leave the verb to the face.** Colon-caps lever
+  fragments such as `DRAG:` are banned, and each face writes its own Action line
+  for the input it can actually receive (`no_blurb_carries_a_lever_note_fragment`).
+- **A doorway that sends you to the dial has a dial that moves**
+  (`a_doorway_that_names_a_phase_dial_has_one`).
+- **Short doorways are counted, not quoted.** The catalog measures how many
+  doorways fall under seventy characters
+  (`the_short_doorway_count_is_measured_rather_than_quoted`).
+- **A count agrees with its number.** Prose counts route through
+  `numinous_core::counted`, and counts and versions in the docs are locked to
+  live data (`ENGINEERING.md`).
+
+**Designed: what the voice pass holds the catalog to next**
+
+- **Equation-free at the door.** Pillar 4 asks for a single equation-free
+  statement. A formula belongs to study and the Studio, where its variables
+  keep their spelling; the uppercase arrival card cannot keep them.
+- **No protocol words for a human.** A lever note such as "t turns the clock"
+  names a variable the App never shows. Say what changes in the player's
+  terms, or leave the verb to the face.
+- **Strangeness before classification.** "A curve that looks the same at every
+  scale" before "equiangular"; the name can come in study.
+- **Exact and humble reveals.** Say "nobody can prove this" as readily as
+  "look". A reveal may be cheeky; its mathematics is never rounded into a
+  lie-to-children.
+- **Fit the door.** The arrival card holds about three lines. A doorway that
+  needs more is carrying two ideas.
+
+Worked examples. Each "before" is the catalog text in alpha 31; each "after" is
+a Designed rewrite, not yet in the catalog.
+
+| Room | Before | After | The rule |
+|---|---|---|---|
+| Logarithmic Spiral | "Equiangular growth r = a e^{b theta}." | "A curve that grows without changing shape: zoom toward its center and it looks the same at every scale." | Equation-free; strangeness before classification |
+| Golden Angle | "...at the golden angle they pack into a flawless sunflower, and a nudge shatters it. t detunes the angle." | "...at the golden angle they pack into a flawless sunflower, and a nudge shatters it." | No protocol word; the verb belongs to the face |
+| Rule 110 | "Wolfram's Turing-complete elementary CA." | "One row of cells, one rule about each cell's two neighbors. Watch structures form, travel, and collide." | The question and the strangeness, not the answer |
+
+A reveal held to the same bar. The Golden Angle reveal says "Sunflowers,
+pinecones, and pineapples all use this exact angle, about 137.5 degrees." A
+plant does not grow an exact irrational angle; phyllotaxis approximates it. The
+honest line keeps the wonder: "Sunflowers, pinecones, and pineapples grow
+close to this angle, about 137.5 degrees."
 
 ## The anti-patterns list (paste this above your monitor)
 
