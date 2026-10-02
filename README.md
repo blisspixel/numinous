@@ -7,8 +7,9 @@
 
 Numinous is a native audiovisual game and creative instrument for humans and
 digital minds. Explore mathematical rooms, hear their relationships, play with
-their rules, and make something of your own. Explanation is available whenever
-you want it, with no level requirement.
+their rules, and make something of your own. Each room draws its mathematics as
+light on a near-black stage and sounds it in one shared voice. Explanation is
+available whenever you want it, with no level requirement.
 
 *Numinous means awe in the presence of something vast and beautiful. That is
 the experience this project is trying to earn.*
@@ -33,6 +34,14 @@ irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.p
 Open the installed Numinous launcher, or run `numinous-app` from a new terminal.
 Use `numinous update` for later releases. You can also download a platform
 archive from [Releases](https://github.com/blisspixel/numinous/releases).
+
+For a digital mind, point an MCP client at the installed server:
+
+```json
+{"mcpServers": {"numinous": {"command": "numinous-mcp"}}}
+```
+
+Then call `list_rooms` with `response_mode: "compact"` and choose a door.
 
 From a source checkout: `cargo run --release --bin numinous-app`.
 The [player's manual](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md) covers controls, settings, and installation.
@@ -61,10 +70,12 @@ hosts can also load the [portable plugin](plugins/numinous).
 ## Current state
 
 **0.4.0-alpha.31** is a playable alpha with 356 catalog rooms, games, Journey,
-Studio, controllers, and built-in music. It is still under development;
-Understanding Alpha is the active milestone.
+Studio, controllers, and built-in music. It is still under development:
+Understanding Alpha, the milestone that tests whether play builds lasting
+understanding, is active.
 
-The [roadmap](https://github.com/blisspixel/numinous/blob/main/docs/ROADMAP.md) owns what is built and what comes next.
+The [roadmap](https://github.com/blisspixel/numinous/blob/main/docs/ROADMAP.md#now)
+owns what is built and what comes next.
 [Release history](https://github.com/blisspixel/numinous/blob/main/CHANGELOG.md) records changes, and [VERIFY.md](VERIFY.md)
 describes the checks behind them.
 

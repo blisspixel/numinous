@@ -196,6 +196,14 @@ chain and its duplicate rules. Cancel restores the interrupted session,
 including its undo history and caller-paced search. Sharing uses a fresh export
 filename and does not replace an existing file.
 
+GALLERY on the Keep page browses shared route questions beside Studio
+creations; confirming a route-question tile stages the same paused preview, and
+`numinous-app delivery.project` receives one from the command line. Received
+and kept question bands use the bundled text fonts. A question that overflows
+its band pages with QUESTION < / QUESTION > or PageUp / PageDown, and sharing
+receipts preserve path case and Unicode, with PATH < / PATH > for long paths.
+In ordinary room play, JUNCTION < and JUNCTION > move the junction inspector.
+
 Core `RouteCreation` accepts bounded `NUMINOUS_ROUTE 1` data, preserving the
 authored roads, closures, required stops, depot, and selected order. Its 8 KiB
 limit applies before parsing. Opening starts revision zero with fresh undo and
