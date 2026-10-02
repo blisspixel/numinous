@@ -1743,7 +1743,17 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 return ExitCode::FAILURE;
             };
             let variation = if vary { fresh_variation_seed() } else { 0 };
-            watch(&id, fps, width, height, mute, allow_hidden, era, variation)
+            watch(
+                &id,
+                fps,
+                width,
+                height,
+                mute,
+                allow_hidden,
+                era,
+                variation,
+                journey,
+            )
         }
         Command::Sonify {
             id,
@@ -1834,7 +1844,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                         persist_progress_or_warn(&before, journey);
                     }
                     let variation = if vary { fresh_variation_seed() } else { 0 };
-                    play(&id, fps, width, height, allow_hidden, variation)
+                    play(&id, fps, width, height, allow_hidden, variation, journey)
                 }
             }
         }
@@ -3092,17 +3102,13 @@ fn reveal_report(
         return Err(not_found_message(id));
     };
     let m = room.meta();
-    if numinous_core::is_engineered_aha_room(m.id) && !journey.has_consolidated(m.id) {
-        return Err(
+    if !journey.explanation_open(m.id) {
+        return Err(if numinous_core::is_engineered_aha_room(m.id) {
             "This explanation is still closed. Complete the room's wager and summon in the App or through play_room first."
-                .to_string(),
-        );
-    }
-    if !numinous_core::is_engineered_aha_room(m.id) && !journey.visited.contains(m.id) {
-        return Err(
+        } else {
             "This explanation is still closed. Render or play the room once, then ask again."
-                .to_string(),
-        );
+        }
+        .to_string());
     }
 
     let level = journey.level();
@@ -3308,15 +3314,22 @@ fn first_sentence(text: &str) -> String {
     text.trim().to_string()
 }
 
-/// The two-line exit that completes the staircase when Ctrl+C ends a live
-/// view: the first sentence of the reveal as a tease, then the route to the
-/// whole story. Leaving is the player's verb here, not an error.
-fn viewing_epilogue(room: &dyn Room) -> String {
-    let tease = first_sentence(room.reveal());
-    format!(
-        "\n{tease}\nThe story: numinous describe {}\n",
-        room.meta().id
-    )
+/// The exit that completes the staircase when a live view ends: the first
+/// sentence of the reveal as a tease, then the route to the whole story.
+/// Leaving is the player's verb here, not an error.
+///
+/// The tease is part of the explanation, so it waits behind the same gate as
+/// `reveal`. A staged room's first sentence is its answer often enough (pi,
+/// ABB, nontransitive) that teasing it on the way out would hand over what the
+/// wager exists to let the player find.
+fn viewing_epilogue(room: &dyn Room, journey: &Journey) -> String {
+    let id = room.meta().id;
+    let route = format!("The story: numinous describe {id}");
+    if journey.explanation_open(id) {
+        format!("\n{}\n{route}\n", first_sentence(room.reveal()))
+    } else {
+        format!("\n{route}\n")
+    }
 }
 
 /// One truecolor frame of a room with a status line, for the watch loop.
@@ -3354,6 +3367,7 @@ fn watch(
     allow_hidden: bool,
     era: numinous_core::Era,
     variation: u64,
+    journey: &Journey,
 ) -> ExitCode {
     let Some(room) = find_room_with_variation(id, allow_hidden, variation) else {
         report_diagnostic(&not_found_message(id));
@@ -3385,7 +3399,7 @@ fn watch(
     let mut frame = 0u64;
     loop {
         if interrupted(&latch) {
-            println!("{}", viewing_epilogue(room.as_ref()));
+            println!("{}", viewing_epilogue(room.as_ref(), journey));
             return ExitCode::SUCCESS;
         }
         let _ = write!(
@@ -3475,13 +3489,17 @@ fn show_step(line: Option<&str>) -> ShowStep {
 /// The chrome is gated on the same `color` decision as the picture. It used to
 /// be written with a hardcoded bold and reset, so a `NO_COLOR` player got a
 /// color-free picture underneath two escape sequences.
-fn tour_screen(
-    room: &dyn Room,
-    t: f64,
-    width: usize,
-    height: usize,
-    style: TerminalStyle,
-) -> String {
+///
+/// The curtain line is the reveal, so it asks the journey first, exactly as
+/// `reveal` does. It used to print every room's reveal, which handed a staged
+/// room's answer to anyone who sat through the gallery while `numinous reveal`
+/// was still refusing it.
+fn tour_screen(room: &dyn Room, t: f64, frame: TourFrame, journey: &Journey) -> String {
+    let TourFrame {
+        width,
+        height,
+        style,
+    } = frame;
     let mut screen = watch_frame(room, t, width, height, style);
     let meta = room.meta();
     if t < 0.18 {
@@ -3493,7 +3511,7 @@ fn tour_screen(
         } else {
             screen.push_str(&format!("{}  ({})\x1b[K\n", meta.title, meta.wing));
         }
-    } else if t > 0.86 {
+    } else if t > 0.86 && journey.explanation_open(meta.id) {
         screen.push_str(&format!("{}\x1b[K\n", room.reveal()));
     } else {
         screen.push_str("\x1b[K\n");
@@ -3522,11 +3540,6 @@ fn tour_held(
     input: &mut impl BufRead,
     out: &mut impl Write,
 ) -> Vec<&'static str> {
-    let TourFrame {
-        width,
-        height,
-        style,
-    } = frame;
     let mut shown = Vec::new();
     if rooms.is_empty() {
         return shown;
@@ -3543,7 +3556,7 @@ fn tour_held(
         // face. A held room rests on a chosen picture rather than on whichever
         // frame the clock happened to stop at.
         let t = room.postcard_t();
-        let screen = tour_screen(room.as_ref(), t, width, height, style);
+        let screen = tour_screen(room.as_ref(), t, frame, journey);
         let _ = write!(out, "{screen}\x1b[J");
         let _ = writeln!(out, "Enter for the next room, q to leave.\x1b[K");
         let _ = out.flush();
@@ -3570,14 +3583,15 @@ fn tour_held(
     if let Some(last) = shown.last()
         && let Some(room) = rooms.iter().find(|room| room.meta().id == *last)
     {
-        let _ = writeln!(out, "{}", viewing_epilogue(room.as_ref()));
+        let _ = writeln!(out, "{}", viewing_epilogue(room.as_ref(), journey));
     }
     shown
 }
 
 /// The Show, in the terminal: every room takes the stage in turn, full color
-/// and sound, with a title card and its reveal as the curtain line. Ctrl+C
-/// whenever you have had enough; it comes back around forever.
+/// and sound, with a title card and, where the journey has opened it, its
+/// reveal as the curtain line. Ctrl+C whenever you have had enough; it comes
+/// back around forever.
 ///
 /// Under reduced motion it does not come around by itself: each room is held at
 /// its postcard phase and the player says when to move on.
@@ -3609,9 +3623,13 @@ fn tour(
     };
     let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
     let motion = numinous_core::Motion::from_env();
-    let style = TerminalStyle {
-        era,
-        color: color_allowed(),
+    let view = TourFrame {
+        width,
+        height,
+        style: TerminalStyle {
+            era,
+            color: color_allowed(),
+        },
     };
     let mut stdout = std::io::stdout();
     let _ = write!(stdout, "\x1b[2J");
@@ -3624,11 +3642,7 @@ fn tour(
             tour_held(
                 &rooms,
                 journey,
-                TourFrame {
-                    width,
-                    height,
-                    style,
-                },
+                view,
                 player.as_ref(),
                 &mut input,
                 &mut stdout,
@@ -3650,11 +3664,11 @@ fn tour(
             persist_progress_or_warn(&before, journey);
             for frame in 0..frames_per_room {
                 if interrupted(&latch) {
-                    println!("{}", viewing_epilogue(room.as_ref()));
+                    println!("{}", viewing_epilogue(room.as_ref(), journey));
                     return ExitCode::SUCCESS;
                 }
                 let t = frame as f64 / frames_per_room as f64;
-                let screen = tour_screen(room.as_ref(), t, width, height, style);
+                let screen = tour_screen(room.as_ref(), t, view, journey);
                 let _ = write!(stdout, "{screen}\x1b[J");
                 let _ = stdout.flush();
                 if let Some(player) = &player {
@@ -3715,7 +3729,14 @@ fn render_guidance(room: &dyn Room, t: f64, input: RoomRenderInput<'_>) -> Strin
     if let Some(goal) = room.goal() {
         guidance.push_str(&format!("Goal: {goal}\n"));
         if input.has_interaction() && room.goal_met(t, &inputs) {
-            guidance.push_str(&format!("Aha earned: {goal}\nReveal: {}\n", room.reveal()));
+            guidance.push_str(&format!("Aha earned: {goal}\n"));
+            // A staged room's explanation answers its wager, and landing the
+            // goal is not the wager, so only an ordinary room's landed goal
+            // speaks here. The staged reveal waits for consolidation, the
+            // same gate `reveal` keeps.
+            if !numinous_core::is_engineered_aha_room(room.meta().id) {
+                guidance.push_str(&format!("Reveal: {}\n", room.reveal()));
+            }
         }
     }
     guidance
@@ -4382,6 +4403,7 @@ fn play(
     height: usize,
     allow_hidden: bool,
     variation: u64,
+    journey: &Journey,
 ) -> ExitCode {
     let room = find_room_with_variation(id, allow_hidden, variation);
     let Some(room) = room else {
@@ -4395,7 +4417,7 @@ fn play(
     let mut t = 0.0f64;
     loop {
         if interrupted(&latch) {
-            println!("{}", viewing_epilogue(room.as_ref()));
+            println!("{}", viewing_epilogue(room.as_ref(), journey));
             return ExitCode::SUCCESS;
         }
         let _ = write!(stdout, "{}", play_frame(room.as_ref(), t, width, height));

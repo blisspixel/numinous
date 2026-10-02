@@ -202,6 +202,23 @@ impl Journey {
         self.consolidated.contains(canonical_room_id(room_id))
     }
 
+    /// Whether this record has opened a room's explanation.
+    ///
+    /// A staged room opens only through its wager and summon; every other room
+    /// opens once it has been entered. This is the one gate. Every surface that
+    /// can print a room's reveal without being asked in that moment, such as a
+    /// command's reply, a gallery's curtain line, or an exit tease, asks it, so
+    /// no face can show an answer another face would refuse.
+    #[must_use]
+    pub fn explanation_open(&self, room_id: &str) -> bool {
+        let room_id = canonical_room_id(room_id);
+        if is_engineered_aha_room(room_id) {
+            self.has_consolidated(room_id)
+        } else {
+            self.visited.contains(room_id)
+        }
+    }
+
     /// Record a game won.
     pub fn win(&mut self) {
         self.wins = self.wins.saturating_add(1);
@@ -844,6 +861,30 @@ mod tests {
                 .into_iter()
                 .collect()
         );
+    }
+
+    #[test]
+    fn a_staged_explanation_opens_on_consolidation_and_never_on_a_visit() {
+        let mut journey = Journey::default();
+        for room_id in super::ENGINEERED_AHA_ROOM_IDS {
+            journey.visit(room_id);
+            assert!(
+                !journey.explanation_open(room_id),
+                "{room_id} opened on a visit alone"
+            );
+            assert!(journey.consolidate(room_id));
+            assert!(journey.explanation_open(room_id), "{room_id} stayed shut");
+        }
+        // Aliases resolve to the same canonical gate in both directions.
+        assert!(journey.explanation_open("kepler-areas"));
+
+        let mut ordinary = Journey::default();
+        assert!(!ordinary.explanation_open("mandelbrot"));
+        // Consolidation is not how an ordinary room opens, so it cannot open one.
+        assert!(!ordinary.consolidate("mandelbrot"));
+        assert!(!ordinary.explanation_open("mandelbrot"));
+        ordinary.visit("mandelbrot");
+        assert!(ordinary.explanation_open("mandelbrot"));
     }
 
     #[test]

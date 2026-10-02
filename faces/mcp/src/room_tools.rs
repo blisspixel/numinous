@@ -466,17 +466,12 @@ pub(super) fn reveal_room_tool_for_journey(
     match find_room_for(id, journey) {
         Some(room) => {
             let room_id = room.meta().id;
-            if numinous_core::is_engineered_aha_room(room_id) && !journey.has_consolidated(room_id)
-            {
-                return tool_error(
-                    "This explanation is still closed. Play the room, commit its wager, then call play_room with aha_summon true.",
-                );
-            }
-            if !numinous_core::is_engineered_aha_room(room_id) && !journey.visited.contains(room_id)
-            {
-                return tool_error(
-                    "This explanation is still closed. Play the room once, then ask reveal_room again.",
-                );
+            if !journey.explanation_open(room_id) {
+                return tool_error(if numinous_core::is_engineered_aha_room(room_id) {
+                    "This explanation is still closed. Play the room, commit its wager, then call play_room with aha_summon true."
+                } else {
+                    "This explanation is still closed. Play the room once, then ask reveal_room again."
+                });
             }
             let cut0_by_boon = journey.chosen.contains(&format!("cut:{room_id}:0"));
             let citation =
