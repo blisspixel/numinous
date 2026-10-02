@@ -38,11 +38,15 @@ CLI `route-lab --json` and MCP `route_lab` carry working state for custom street
 networks, with explicit actions and followable next calls. [PLAY.md](../PLAY.md)
 documents the request shape and portable route/project commands; [Route
 Lab](ROUTE_LAB.md) explains the mathematics and native editor. O or Cabinet
-CONSTRUCT opens network authoring. Its View, Roads, Stops, Order, Search, and
-Keep pages share pointer, keyboard, and controller controls. KEEP QUESTION
-stores a chosen question and network in the existing project chain. THE QUESTION
-previews that exact network paused; Enter activates editing. Unsaved session
-history stays in process, while portable creations reopen with fresh undo/search.
+CONSTRUCT opens network authoring. Its Maps, View, Roads, Stops, Order, Search,
+and Keep pages share pointer, keyboard, and controller controls. Maps generates
+seeded RANDOM networks; Search picks independent START and END junctions. KEEP
+QUESTION stores a chosen question and network in the existing project chain.
+THE QUESTION previews that exact network paused; Enter activates editing.
+SHARE exports a question and network as a portable `.project` file, a dropped
+or launched route file opens in a paused preview, and GALLERY shows shared
+route questions beside Studio creations. Unsaved session history stays in
+process, while portable creations reopen with fresh undo/search.
 
 **Install once.** One command downloads and verifies the latest published
 release, then puts `numinous`, `numinous-app`, and `numinous-mcp` on your PATH.
@@ -82,7 +86,7 @@ your hands already know it:
 | A / D or arrows | previous / next room |
 | 1 - 9, 0 | jump straight to a room (0 is the tenth slot); Route Lab uses 1 through 6 for delivery order; while a chosen Times Tables, Buffon, Double Pendulum, Kepler, Parrondo, or Nontransitive Dice experiment asks for a call, the relevant digits place it instead |
 | K | keep the pack: still + loop + README in one share folder |
-| O | cycle the visualizer source |
+| O | open the room's construction where it has one (Lissajous: the Returning home Studio walk; Route Lab: the network editor); in other rooms, cycle the visualizer source |
 | W / S | run time faster / slower |
 | mouse drag or wheel | scrub time yourself |
 | Space | pause or resume while wandering |
@@ -124,7 +128,6 @@ your hands already know it:
 | hold controller North + D-pad up / down | global volume up / down |
 | hold controller North + South | global sound on / off |
 | Tab | the Studio: type math, watch and hear it live |
-| O | in Lissajous, open the optional Returning home Studio walk |
 
 The art keeps the frame, including behind the Cabinet. Room titles,
 arrival hints, and readouts use separate quiet bands. Arrival hints fade on
@@ -171,66 +174,40 @@ A saved creation reopens exactly. Launch the App with a `.num` path or a
 opens with the saved formula, window, and knob pinned, paused: the exact curve
 is drawn, and Enter starts it singing. A two-oscillator path also names its
 closure on the status line: a period, or no period, including the half-period
-trap where position returns and velocity reverses. When that closure names
-two frequencies, Enter plays them as sustained tones. Frequency 1 is 110 Hz,
-and each other named frequency is 110 Hz times its cycles per unit time.
-The sung melody and melody.mid stay the sampled curve. An open graph
-`sin(a*x)` grows a second curve `a*cos(a*x)` on the same vertical axis.
-The opening formula `sin(a*x) + x/3` grows `a*cos(a*x)+1/3`, and an
-integer power of `x` grows by the power rule the same way. An open graph
-`cos(a*x)` grows `-a*sin(a*x)` on that same axis. The App sings
-that shape beside the graph. The capsule, the text preview, and
-`melody.mid` stay the player's source. `sin(x)`, `cos(x)`, a product of
-two curves, and a named slider have no slope reading. `floor`, `mod`,
-`min`, `max`, `euclid`, `pat`, and `note` have no slope reading. A parametric path
-whose x and y are each a sum of two oscillators grows the first term
-beside the path, on the same frame. A sum on only one coordinate grows
-that same first term. A third term grows that same first term. A fourth
-term grows that same first term. A fifth term grows that same first
-term. A sixth term grows that same first term. A seventh
-term grows that same first term. An eighth
-term grows that same first term. A ninth
-term grows that same first term. A tenth
-term grows that same first term. An eleventh
-term grows that same first term. A twelfth
-term grows that same first term. An open
-graph that sums exactly two oscillators grows the first term on the
-same vertical axis. A third term on that graph grows that same first
-term. A fourth term on that graph grows that same first term. A fifth
-term on that graph grows that same first term. A sixth
-term on that graph grows that same first term. A seventh
-term on that graph grows that same first term. An eighth
-term on that graph grows that same first term. A ninth
-term on that graph grows that same first term. A tenth
-term on that graph grows that same first term. An eleventh
-term on that graph grows that same first term. A twelfth
-term on that graph grows that same first term. The App
-sounds one tone per recognized frequency.
-Frequency 1 is 110 Hz. The
-capsule, the text preview, and `melody.mid` stay the player's source.
-A thirteenth term on a path, a thirteenth term on a graph, and a drawn path have no partial reading. PageDown and PageUp walk
-a bundled family when the current creation still matches one. After same-place,
-PageDown opens the bundled `another-ratio` capsule, a period-1 starter
-you can retune. After that, PageDown opens `closing-voices`, the two
-oscillators of A full return as graphs. The next step, `shorter-window`,
-keeps those oscillators and shortens the window, so the cycle counts are
-not the period. One more step is `wandering-voices`, which has no positive
-common period. Opening either overlay names `closure` with kind `voices`.
-PageUp walks back. Esc or Tab leaves. Lissajous offers CONSTRUCT in the Cabinet,
-or `O` in the room, to open the first Returning home capsule. The first edit begins a remix while
-keeping the saved window and knob. In alpha 18, Up/Down tune `a` by 0.25 per
+trap where position returns and velocity reverses. When that closure names two
+frequencies, Enter plays them as sustained tones. Frequency 1 is 110 Hz, and
+each other named frequency is 110 Hz times its cycles per unit time. The sung
+melody and melody.mid stay the sampled curve. An open graph `sin(a*x)` grows a
+second curve `a*cos(a*x)` on the same vertical axis, and `cos(a*x)` grows
+`-a*sin(a*x)`; a sum with a line or an integer power of `x` grows by the power
+rule, so the opening formula `sin(a*x) + x/3` grows `a*cos(a*x)+1/3`. The App
+sings that shape beside the graph. A sum of two to twelve oscillators, on a
+graph or on one or both coordinates of a parametric path, grows its first term
+beside the whole on the same frame, and the App sounds one tone per recognized
+frequency. The capsule, the text preview, and `melody.mid` stay the player's
+source. [Studio](STUDIO.md#readings-closure-tones-slope-and-partial) owns the
+complete rules, including what has no slope or partial reading. PageDown and
+PageUp walk a bundled family when the current creation still matches one. After
+same-place, PageDown opens the bundled `another-ratio` capsule, a period-1
+starter you can retune. After that, PageDown opens `closing-voices`, the two
+oscillators of A full return as graphs. The next step, `shorter-window`, keeps
+those oscillators and shortens the window, so the cycle counts are not the
+period. One more step is `wandering-voices`, which has no positive common
+period. Opening either overlay names `closure` with kind `voices`. PageUp walks
+back. Esc or Tab leaves. Lissajous offers CONSTRUCT in the Cabinet, or `O` in
+the room, to open the first Returning home capsule. The first edit begins a
+remix while keeping the saved window and knob. Up/Down tune `a` by 0.25 per
 press and Home restores 1; controller Up/Down and Reset use the same actions.
 When a formula names extra sliders, Tab selects among `a` and those names.
 Fresh formulas start at `a = 1`, and drawing, melody, and exports use the value
-shown. A deliberate parameter change keeps the formula and its window.
-F6 changes only the pitch map. Leaving and
-returning keeps an untouched preview and its identity; choosing an F2 or F3
-recipe starts a new experiment. Your next edited share records the creation
-you opened as its parent. Save one from the terminal
-with `numinous plot "sin(a*x)" --save mine.num`, and remix any capsule or
-link with `numinous fork parent.num --out mine.num`. A drop never abandons a
-game in progress, and files that are not valid creations are refused with a
-reason, never half-opened.
+shown. A deliberate parameter change keeps the formula and its window. F6
+changes only the pitch map. Leaving and returning keeps an untouched preview
+and its identity; choosing an F2 or F3 recipe starts a new experiment. Your
+next edited share records the creation you opened as its parent. Save one from
+the terminal with `numinous plot "sin(a*x)" --save mine.num`, and remix any
+capsule or link with `numinous fork parent.num --out mine.num`. A drop never
+abandons a game in progress, and files that are not valid creations are refused
+with a reason, never half-opened.
 
 For a small creation you can investigate and extend, try the optional
 [Returning home](experiments/returning-home.md) experiments,
@@ -445,18 +422,21 @@ configure your client to run:
 cargo run --quiet --release --bin numinous-mcp
 ```
 
-or in any MCP client's config (build once with
-`cargo build --release --bin numinous-mcp`, then point at the binary):
+or in any MCP client's config, use the installed command:
 
 ```json
 {
   "mcpServers": {
     "numinous": {
-      "command": "C:/GitHub/Numinous/target/release/numinous-mcp"
+      "command": "numinous-mcp"
     }
   }
 }
 ```
+
+From a clone without installing, build once with
+`cargo build --release --bin numinous-mcp` and use the absolute path of
+`target/release/numinous-mcp` (`numinous-mcp.exe` on Windows) as the command.
 
 Transport is JSON-RPC 2.0 over newline-delimited stdio. Modern hosts use the
 stateless MCP 2026-07-28 path: call `server/discover`, then include the protocol
@@ -618,8 +598,8 @@ Conventions worth relying on:
   proof.
 - **Structured output, and the substance is in it.** Catalog, Show, description, study,
   reveal, listening, score, memory, game, and Journey results return bounded
-  `structuredContent` alongside prose; parse that, not the sentences. All 354
-  catalog rooms are covered by the discovery contract. The load-bearing content rides
+  `structuredContent` alongside prose; parse that, not the sentences. Every
+  catalog room is covered by the discovery contract. The load-bearing content rides
   there too: `play_room` carries the ASCII `render`, `nim` carries its `secret`
   on a win, `quiz` carries the `why`, `crack` carries per-guess `feedback`, and
   `seti` carries the channel traces. A client that surfaces only
@@ -658,12 +638,13 @@ signatures of mind). It costs nothing, is never shown uninvited, and is never
 required: the play carries itself, and this door is for the moment curiosity
 arrives on its own.
 
-### The Bench (comparing minds)
+### The Bench (a fixed run to compare with a friend)
 
 The Bench v1 is five gauntlets on fixed seeds, 101 through 105, composited
 into one number. Humans run `numinous bench`; agents call the `gauntlet` tool
 on the same five seeds and sum their five totals. The seeds never change, so
-any two minds, today or years apart, can compare runs honestly.
+any two players, today or years apart, can compare a run honestly. It is a
+shared game, not a benchmark of minds or a task to pass.
 
 ### For playtesters (human or otherwise)
 

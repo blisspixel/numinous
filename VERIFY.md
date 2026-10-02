@@ -141,7 +141,7 @@ Three expensive diagnostics are excluded from the ordinary run. The nightly
 workflow runs them, and the full local gate also runs the photosensitivity
 sweep. Coverage must meet the 80% line floor without
 regression; the latest dated counts and measured percentages live in
-[`docs/QUALITY.md`](docs/QUALITY.md).
+[QUALITY.md](https://github.com/blisspixel/numinous/blob/main/docs/QUALITY.md).
 The `gpu` and `audio` crates plus the App event loop are excluded from the
 coverage gate and have separate integration evidence there. Controller routing
 is pure-tested. Physical
@@ -158,7 +158,7 @@ cargo run --locked -p numinous-app --features gpu-post --example sensory_platfor
 
 Its timing is diagnostic only. The physical release-profile contract and its
 required machine, revision, power, sample, and p95 arguments live in
-`docs/PERFORMANCE.md`. A passing CI receipt is not a substitute for that
+[PERFORMANCE.md](https://github.com/blisspixel/numinous/blob/main/docs/PERFORMANCE.md). A passing CI receipt is not a substitute for that
 physical evidence. Once all six physical receipts exist, build their exact
 closed manifest with `scripts/sensory-platform-set.py build`, then reproduce it
 with the script's `verify` mode and the same receipt paths.
@@ -389,7 +389,7 @@ room or Studio domain handler and stops when that raster is complete. It does
 not include native event translation and history storage, window presentation,
 display scan-out, audio submission and callback latency, or human perception,
 so it is not end-to-end input-latency evidence. See
-`docs/QUALITY.md` for the dated reference-machine result.
+[QUALITY.md](https://github.com/blisspixel/numinous/blob/main/docs/QUALITY.md) for the dated reference-machine result.
 
 Galton's focused core regressions additionally pin newest-wave random-stream
 identity, 64-ball conservation at all 17 levels, highlighted-ball inclusion,
@@ -400,7 +400,7 @@ safety, not listening quality or physical-device timing.
 ## 2d. Verify the dependency migration performance receipt
 
 The retained July 2026 adjacent-revision receipt is verified without rerunning
-hardware measurements. On Windows:
+hardware measurements. From a source checkout on Windows:
 
 ```
 python scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
@@ -416,7 +416,7 @@ The verifier requires the exact reference contract, pinned machine, toolchain,
 workload-output and device identities, well-formed retained binary digests, and
 the exact recorder source. It then recomputes every statistic, threshold result,
 and verdict. The raw Windows reference-machine evidence and its integrity limits
-live in `docs/PERFORMANCE.md`.
+live in [PERFORMANCE.md](https://github.com/blisspixel/numinous/blob/main/docs/PERFORMANCE.md).
 Recording a replacement requires the Windows desktop and hardware named there;
 all scratch state must remain in `.agent/`.
 
@@ -444,7 +444,7 @@ cargo run --bin numinous-app
 ```
 The window opens the Cabinet with a room waiting to play. Use Modes for
 Watch, Play, and Create, and Games for the available game modes. The current
-controls live in [Playing](docs/PLAYING.md); [Study](docs/STUDY.md) covers E,
+controls live in [Playing](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md); [Study](https://github.com/blisspixel/numinous/blob/main/docs/STUDY.md) covers E,
 ?, and the optional mathematical reader. Q requests an orderly quit. Visual
 Era is selected through Settings. Check the live window and input devices
 alongside the generated headless plates.
@@ -592,38 +592,19 @@ before JSON decoding.
   and the drawing surfaces.
 - `crates/gpu` adaptive wgpu rendering; `crates/audio` adaptive cpal output.
 - `faces/cli` the `numinous` binary; `faces/mcp` the `numinous-mcp` server.
-- `docs/` the full design and plan (start at `docs/README.md`); `CHANGELOG.md` the
-  running record of what shipped; `docs/ROADMAP.md` the evidence-labeled plan.
+- `docs/` (source checkout only) the full design and plan, starting at the
+  [documentation map](https://github.com/blisspixel/numinous/blob/main/docs/README.md);
+  `CHANGELOG.md` the running record of what shipped; the
+  [roadmap](https://github.com/blisspixel/numinous/blob/main/docs/ROADMAP.md#now)
+  the evidence-labeled plan.
 - `.agent/` (gitignored) the working log; `renders/` (gitignored) generated output.
 
 ## 6. What is done vs pending
 
 Done and verifiable now: 356 catalog rooms plus hidden content, 6 sims, 11+
-games with a shared high-score table and daily seeds, the complete RPG spine
-(levels to 42 with lore, locks, 18 trophies with pings, the Gauntlet run,
-boons, daily streaks, resonances), the Studio (plot, animate, sing, in the
-terminal and the window), Visual Eras (including PNG output), Music Engine A
-(the seeded chiptune, `numinous tune`), GPU real-time fractals, live sound in
-the app and CLI plus structured notation over MCP, the `forget` right for
-players who are minds, and 43 MCP tools: 24 public play tools, 18 private tools
-for progression, creation, study, or local state, and one local broadcast
-consent control.
-Products 0.2 Flagship Proof and 0.3 Tactile Alpha are exit-met on the
-agent-and-machine bar. Their evidence includes the engineered flagship ahas,
-MCP wager path, hallway and five-flagship tactile cohorts, scoped reference
-measurements with every ambient and input-to-room-raster p95 under 33 ms, F9
-capture, and green public CI. Human stranger hallway is deferred to 0.8 / 1.0.
-
-Pending next is 0.4 Understanding Alpha: externally register the protocol,
-source, and independent attempt-receipt boundary before calibration ordinal 1;
-calibrate the concealed probe bank; obtain two fresh independent reviews of the
-replacement boundary from `docs/UNDERSTANDING_STUDY.md`; register the final
-frozen commitments; track the exact generated allocation; then run and publish
-the qualifying cohort. Provenance-preserving journal correction,
-export, erasure, and two-process machine evidence are complete. Representative
-physical-controller sessions, musician-led long-listening, accessibility
-review, physical clean-machine cross-platform proof, full Studio save/share
-depth beyond the current App, CLI, and portable MCP capsule loop,
-native end-to-end input latency, the music visualizer, and more GPU room paths
-remain later work. Soft-thin densify and Phase B glow are not the default next
-move.
+games, the Journey and its trophies, Studio, Visual Eras, GPU real-time
+fractals, live sound, and 43 MCP tools: 24 public play tools,
+18 private tools for progression, creation, study, or local state, and one
+local broadcast consent control. The 0.2 Flagship Proof and 0.3 Tactile Alpha
+exits are met on the agent-and-machine bar. What is next, and what is
+owner-blocked, is on the [roadmap's Now screen](https://github.com/blisspixel/numinous/blob/main/docs/ROADMAP.md#now).
