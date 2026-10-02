@@ -131,7 +131,7 @@ deliveries stay visible so you can reopen roads or undo. Journey remains
 available through the Cabinet.
 
 To make your own network in the App, press O in Route Lab or choose **CONSTRUCT**
-in the Cabinet. The editor has View, Roads, Stops, Order, Search, and Keep pages.
+in the Cabinet. The editor has Maps, View, Roads, Stops, Order, Search, and Keep pages.
 Add or remove roads and junctions, set road costs and closures, choose deliveries
 and a depot, and move deliveries earlier or later. Tab and arrow keys select
 controls; Enter acts. Pointer and controller input use the same controls.
@@ -141,6 +141,22 @@ until the App exits. On Keep, enter a question and choose **KEEP QUESTION** to
 store it with the network. The controller can compose the question with the
 character controls. **THE QUESTION** in the Cabinet previews the kept route;
 Enter opens it for editing. Remix is a separate deliberate action.
+
+On **Maps**, choose **RANDOM** to generate a connected road network from the
+displayed seed and options. **NEW RANDOM** changes the seed. NODES changes its
+size, EXTRA changes the number of roads beyond those needed to connect it, and
+MAX COST changes the maximum road cost. Adjust those options, then choose RANDOM
+to apply them. **DELIVERY** restores the opening delivery map. Replacing a map
+is one undoable edit; it clears the old search. An opened creation requires
+**REMIX SOURCE** on Keep before replacing its map.
+
+On **Search**, choose START and END with their arrow controls, or choose
+**PICK START** / **PICK END** and click a junction on the map. **RUN SEARCH** records the
+shortest-path search between those points. **STEP** reveals its decisions;
+**BACK** revisits an earlier one. Changing the next endpoints leaves the current
+recording intact until you choose RUN SEARCH. Finding a path between two points and
+choosing a delivery round trip are different questions; the Order page keeps
+the delivery comparison available on the same roads.
 
 On the same Keep page, **SHARE** exports the question and exact network as a
 portable `.project` file in your home folder. Sharing leaves the local
@@ -163,9 +179,10 @@ after completion. Costs are cumulative from the search source. Native authoring
 draws predecessor links with dashes; ordinary play uses dashes while their
 junction cost is tentative and doubles them once final. The latest improved
 connection is emphasized. The completed path has a separate heavier stroke.
-Click a junction or use
-JUNCTION < and JUNCTION > to inspect its cost, state, and predecessor, including
-on dense or compact maps. Inspection does not advance or restart search.
+Click a junction to inspect its cost, state, and predecessor, including on dense
+or compact maps. Outside endpoint-picking mode, inspection does not change the
+next endpoints, advance playback, or restart the search. In ordinary room play,
+JUNCTION < and JUNCTION > also move the inspector.
 BACK removes later knowledge as well as moving the cursor; an edit clears the
 old calculation.
 

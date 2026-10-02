@@ -664,7 +664,7 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
             };
             ((ax + bx) / 2 - half_width, (ay + by) / 2 - cost_gap - rise)
         };
-        label(surface, &cost_label, lx, ly, scale, '@');
+        label(surface, &cost_label, lx, ly, scale, '#');
     }
     for id in 0..4 {
         let (x, y) = node(id);
@@ -694,7 +694,7 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
             x + if text_cells { 2 } else { 3 * scale },
             y - if text_cells { 1 } else { 3 * scale },
             scale,
-            '@',
+            '#',
         );
         if !text_cells {
             let radius = 3 * scale;
@@ -718,7 +718,7 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
                 _ => {}
             }
         }
-        surface.plot(x, y, if session.trace_visible { '.' } else { '@' });
+        surface.plot(x, y, if session.trace_visible { '.' } else { '*' });
     }
     // A path may traverse a delivery before its scheduled service. The visible
     // stop order, not an invented straight-line AD street, identifies the tour.
@@ -1119,6 +1119,22 @@ mod tests {
 
     fn keys(text: &str) -> Vec<RoomInput> {
         text.chars().map(|ch| RoomInput::Key { ch }).collect()
+    }
+
+    #[test]
+    fn route_lab_labels_and_nodes_share_the_room_accent_in_play_and_search() {
+        let room = room_by_id("route-lab").unwrap();
+        for commands in ["", "c", "t.", "t...", "tc........"] {
+            let mut frame = Raster::with_accent(900, 700, room.meta().accent);
+            room.render_input(&mut frame, 0.0, &keys(commands));
+            assert!(frame.lit_count() > 200);
+            for color in frame.to_rgba().chunks_exact(4) {
+                assert!(
+                    color[0] <= color[1] && color[0] <= color[2],
+                    "{commands:?} uses accent brightness without an unrelated label hue: {color:?}"
+                );
+            }
+        }
     }
 
     fn assert_session_eq(actual: &Session, expected: &Session) {
@@ -1607,8 +1623,14 @@ mod tests {
         // D's left corners distinguish a final square from a tentative diamond;
         // its left midpoint distinguishes a final square from an unreachable X.
         let initial = frame(&session, Some(&experiment));
-        assert!(lit(&initial, 152, 184), "tentative legend marker must render");
-        assert!(lit(&initial, 150, 186), "tentative legend marker must render");
+        assert!(
+            lit(&initial, 152, 184),
+            "tentative legend marker must render"
+        );
+        assert!(
+            lit(&initial, 150, 186),
+            "tentative legend marker must render"
+        );
         assert!(!lit(&initial, 174, 394));
         for (x, y) in [(814, 394), (814, 400), (814, 406)] {
             assert!(!lit(&initial, x, y));

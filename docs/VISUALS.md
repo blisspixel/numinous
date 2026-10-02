@@ -5,7 +5,7 @@ screenshot-worthy.** If you pause at a random instant and it is not beautiful,
 that is a bug. This document owns both the current rendering boundary and the
 target visual system.
 
-**Implementation boundary:** 0.4.0-alpha.30 renders every room
+**Implementation boundary:** 0.4.0-alpha.31 renders every room
 deterministically through CPU `Surface` implementations and presents app frames
 with `softbuffer`. Mandelbrot and Julia alone have targeted `wgpu` paths. Four
 CPU-styled Eras ship: phosphor, 8-bit, vector, and modern. PNG room renders,
@@ -13,6 +13,29 @@ gallery sheets, app postcards, and short-loop APNG bundles ship. HDR, bloom,
 feedback persistence, a universal GPU pipeline, 16-bit and blueprint Eras,
 audio voice swaps, longer video export, and operating-system URL registration
 are targets, not current evidence.
+
+## App gallery
+
+These deterministic frames use the same room, HUD, and Cabinet composition as
+the live App. They show the current CPU-rendered presentation; they are not
+evidence of GPU performance or the target bloom pipeline.
+
+![Cabinet: choose a way in](../assets/screens/menu.png)
+
+| | |
+|---|---|
+| ![Times Tables](../assets/screens/times-tables.png) | ![Mandelbrot](../assets/screens/mandelbrot.png) |
+| Turn the dial. | Dive the set. |
+| ![Golden Angle](../assets/screens/golden-angle.png) | ![Double Pendulum](../assets/screens/double-pendulum.png) |
+| Pack a sunflower. | Fling the arms. |
+| ![Kepler Areas](../assets/screens/kepler-laws.png) | ![Lissajous](../assets/screens/lissajous.png) |
+| Equal times, equal areas. | Tune a relationship. |
+
+![Studio / Formula Jam](../assets/screens/studio.png)
+
+Studio lets you make and share a relationship of your own. Its
+[bundled experiments](STUDIO.md#bundled-experiments) provide starting points.
+The [Route Lab guide](ROUTE_LAB.md) shows its delivery map and search playback.
 
 ## Philosophy
 
@@ -71,10 +94,11 @@ naturally. A resolution-aware sample count preserves negative space in ASCII
 without changing the 240-point mathematical circle used by full-size raster
 frames. Its in-scene dial draws explicit ticks and a bright current marker.
 
-The README's deterministic Mandelbrot plate uses the CPU glyph-density image,
-whose filled interior differs from the dark-interior GPU treatment described
-above. That plate establishes the CPU appearance; it is not evidence of GPU
-presentation or display pacing.
+The gallery's deterministic Mandelbrot plate uses the CPU escape-time image:
+samples that do not escape within the iteration budget retain the near-black
+stage, and two accent brightness bands distinguish the visible exterior.
+That plate establishes the CPU appearance; it is not evidence of the GPU
+cosine palette or display pacing.
 
 The App study reader is a separate, opaque reading surface on the same
 near-black stage. Bundled Noto Sans, Noto Sans JP, and Noto Sans Math supply
@@ -185,7 +209,7 @@ HDR modern pass, and per-Era audio voices are planned. Era progression must not
 be described as complete until those visual and sonic variants are both built
 and tested.
 
-## Per-wing visual identity (so 355 rooms feel varied but unified)
+## Per-wing visual identity
 
 The shared pipeline guarantees coherence; these keep the wings distinct:
 - **Emergence:** dense fields and grids, particle clouds, feedback trails. Cellular, alive.

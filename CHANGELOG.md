@@ -1,9 +1,30 @@
 # Changelog
 
 All notable changes to Numinous. The format follows Keep a Changelog, and the
-project uses evidence-labeled milestones (see ROADMAP.md), not dates.
+project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
 ## [Unreleased]
+
+## [0.4.0-alpha.31] - 2026-10-01
+
+### Added
+- Route Lab offers reproducible random maps with bounded node, extra-road, and
+  maximum-cost options. Replacing a map is undoable and clears stale search.
+- Native shortest-path search has independent start and end controls, including
+  explicit map picking, while the current recording retains its own endpoints.
+
+### Changed
+- Simplify the README around first play, the three modes, and current status.
+  Keep two representative screenshots, with the fuller gallery, bundled Studio
+  experiment table, and Route Lab details in their linked guides.
+- Use repository links for README guides and images that are not included in
+  release archives, so the packaged entry page can reach them too.
+- Route Lab's native editor and thumbnails reuse the room's teal accent.
+  Map labels and nodes use the same accent instead of an unrelated magenta.
+  Search states retain their shape, line-style, and brightness distinctions.
+  Refresh the committed color audit for the resulting mark set.
+- Mandelbrot's CPU image keeps non-escaping samples on the near-black stage and
+  uses accent brightness for the exterior, replacing its gray fill.
 
 ## [0.4.0-alpha.30] - 2026-10-01
 

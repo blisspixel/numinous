@@ -15,6 +15,31 @@ use crate::route::{
 /// Maximum retained previous towns, oldest first.
 pub const MAX_ROUTE_UNDO: usize = 16;
 
+/// Maximum junctions in generated practice maps. Their complete graph fits
+/// comfortably inside the ordinary workbench's road bound.
+pub const MAX_RANDOM_ROUTE_JUNCTIONS: usize = 12;
+
+/// Bounded options for a reproducible connected practice map.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RouteRandomMapOptions {
+    /// Junction count, in 3..=12.
+    pub junctions: usize,
+    /// Extra connections after the random spanning tree, sampled without replacement.
+    pub extra_roads: usize,
+    /// Inclusive upper cost bound, in 1..=999; every road costs at least one.
+    pub max_cost: u32,
+}
+
+impl Default for RouteRandomMapOptions {
+    fn default() -> Self {
+        Self {
+            junctions: 12,
+            extra_roads: 8,
+            max_cost: 99,
+        }
+    }
+}
+
 /// One existing road with its explicit open or closed state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EditableRoad {
@@ -130,6 +155,8 @@ pub enum RouteWorkbenchError {
     TraceIdentity,
     /// A cursor exceeds the actual regenerated event count.
     TraceCursor,
+    /// Random-map options exceed the declared junction, connection, or cost bounds.
+    RandomOptions,
 }
 
 impl fmt::Display for RouteWorkbenchError {
@@ -148,6 +175,10 @@ impl fmt::Display for RouteWorkbenchError {
                 write!(f, "search playback belongs to a different street network")
             }
             Self::TraceCursor => write!(f, "route cursor exceeds the recorded calculation"),
+            Self::RandomOptions => write!(
+                f,
+                "random map needs 3..12 junctions, 1..999 maximum cost, and no more extra roads than unused connections"
+            ),
         }
     }
 }
@@ -353,6 +384,75 @@ fn validate_town(mut town: RouteTownSnapshot) -> Result<RouteTownSnapshot, Route
 }
 
 impl RouteWorkbench {
+    /// Generate a connected practice map reproducibly from its seed and options.
+    /// A random-parent spanning tree guarantees connectivity. Extra roads are
+    /// sampled without replacement in bounded work; positive integer costs are
+    /// independent of presentation. Up to six initial deliveries keep comparison
+    /// inexpensive; the remaining junctions are transit nodes available to search.
+    ///
+    /// # Errors
+    ///
+    /// Returns `RandomOptions` before allocation for out-of-range options, or an
+    /// ordinary admission error if generated data violates network bounds.
+    pub fn random_map(
+        seed: u64,
+        options: RouteRandomMapOptions,
+    ) -> Result<Self, RouteWorkbenchError> {
+        let n = options.junctions;
+        if !(3..=MAX_RANDOM_ROUTE_JUNCTIONS).contains(&n)
+            || !(1..=crate::route::MAX_ROUTE_ROAD_COST).contains(&options.max_cost)
+        {
+            return Err(RouteWorkbenchError::RandomOptions);
+        }
+        let remaining = n * (n - 1) / 2 - (n - 1);
+        if options.extra_roads > remaining {
+            return Err(RouteWorkbenchError::RandomOptions);
+        }
+        let mut rng = crate::rng::SplitMix64::new(seed);
+        let mut roads = Vec::with_capacity(n - 1 + options.extra_roads);
+        for to in 1..n {
+            let from = rng.below(to as u64) as usize;
+            let cost = 1 + rng.below(u64::from(options.max_cost)) as u32;
+            roads.push(EditableRoad {
+                road: Road { from, to, cost },
+                open: true,
+            });
+        }
+        let mut candidates = Vec::with_capacity(remaining);
+        for from in 0..n {
+            for to in from + 1..n {
+                if !roads
+                    .iter()
+                    .any(|editable| (editable.road.from, editable.road.to) == (from, to))
+                {
+                    candidates.push((from, to));
+                }
+            }
+        }
+        for index in 0..options.extra_roads {
+            let selected = index + rng.below((candidates.len() - index) as u64) as usize;
+            candidates.swap(index, selected);
+            let (from, to) = candidates[index];
+            let cost = 1 + rng.below(u64::from(options.max_cost)) as u32;
+            roads.push(EditableRoad {
+                road: Road { from, to, cost },
+                open: true,
+            });
+        }
+        let stops: Vec<_> = (0..n.min(6)).collect();
+        Self::from_snapshot(RouteWorkbenchSnapshot {
+            revision: 0,
+            current: RouteTownSnapshot {
+                junctions: n,
+                roads,
+                order: stops.clone(),
+                stops,
+            },
+            undo: Vec::new(),
+            trace: None,
+        })
+    }
+
     /// Open the documented four-stop town with every road available.
     #[must_use]
     pub fn first_town() -> Self {
@@ -663,6 +763,199 @@ fn find_road_mut(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn random_maps_are_repeatable_connected_and_match_independent_path_costs() {
+        for seed in [0, 1, 17, u64::MAX] {
+            for junctions in 3..=MAX_RANDOM_ROUTE_JUNCTIONS {
+                let remaining = junctions * (junctions - 1) / 2 - (junctions - 1);
+                for extra_roads in [0, remaining / 2, remaining] {
+                    let options = RouteRandomMapOptions {
+                        junctions,
+                        extra_roads,
+                        max_cost: 999,
+                    };
+                    let mut workbench = RouteWorkbench::random_map(seed, options).unwrap();
+                    assert_eq!(
+                        workbench.snapshot(),
+                        RouteWorkbench::random_map(seed, options)
+                            .unwrap()
+                            .snapshot()
+                    );
+                    let town = workbench.town();
+                    assert_eq!(town.roads.len(), junctions - 1 + extra_roads);
+                    assert_eq!(town.stops, (0..junctions.min(6)).collect::<Vec<_>>());
+                    let pairs: std::collections::BTreeSet<_> = town
+                        .roads
+                        .iter()
+                        .map(|road| (road.road.from, road.road.to))
+                        .collect();
+                    assert_eq!(pairs.len(), town.roads.len());
+                    let mut reachable = vec![false; junctions];
+                    let mut frontier = vec![0];
+                    reachable[0] = true;
+                    while let Some(from) = frontier.pop() {
+                        for road in &town.roads {
+                            assert!(road.open);
+                            assert!((1..=options.max_cost).contains(&road.road.cost));
+                            let to = if road.road.from == from {
+                                Some(road.road.to)
+                            } else if road.road.to == from {
+                                Some(road.road.from)
+                            } else {
+                                None
+                            };
+                            if let Some(to) = to
+                                && !reachable[to]
+                            {
+                                reachable[to] = true;
+                                frontier.push(to);
+                            }
+                        }
+                    }
+                    assert!(reachable.into_iter().all(|reached| reached));
+                    // Independent all-pairs dynamic programming, without the
+                    // production predecessor or Dijkstra recurrence.
+                    let mut costs = vec![vec![u64::MAX / 4; junctions]; junctions];
+                    for (node, row) in costs.iter_mut().enumerate() {
+                        row[node] = 0;
+                    }
+                    for road in &town.roads {
+                        costs[road.road.from][road.road.to] = u64::from(road.road.cost);
+                        costs[road.road.to][road.road.from] = u64::from(road.road.cost);
+                    }
+                    for via in 0..junctions {
+                        for from in 0..junctions {
+                            for to in 0..junctions {
+                                costs[from][to] =
+                                    costs[from][to].min(costs[from][via] + costs[via][to]);
+                            }
+                        }
+                    }
+                    let source = seed as usize % junctions;
+                    for (target, expected) in costs[source].iter().enumerate() {
+                        workbench.start_trace(source, target).unwrap();
+                        assert_eq!(workbench.trace().unwrap().view().from, source);
+                        assert!(workbench.trace().unwrap().result().is_none());
+                        let end = workbench.trace().unwrap().events().len();
+                        workbench.seek_trace(end).unwrap();
+                        let path = workbench
+                            .trace()
+                            .unwrap()
+                            .result()
+                            .unwrap()
+                            .as_ref()
+                            .unwrap();
+                        assert_eq!(u64::from(path.cost), *expected);
+                        assert_eq!(path.junctions.first(), Some(&source));
+                        assert_eq!(path.junctions.last(), Some(&target));
+                    }
+                }
+            }
+        }
+        assert_ne!(
+            RouteWorkbench::random_map(0, RouteRandomMapOptions::default())
+                .unwrap()
+                .town(),
+            RouteWorkbench::random_map(1, RouteRandomMapOptions::default())
+                .unwrap()
+                .town()
+        );
+    }
+
+    #[test]
+    fn random_map_options_refuse_extremes_before_work_and_unit_costs_are_real() {
+        let defaults = RouteRandomMapOptions::default();
+        for options in [
+            RouteRandomMapOptions {
+                junctions: 0,
+                ..defaults
+            },
+            RouteRandomMapOptions {
+                junctions: 2,
+                ..defaults
+            },
+            RouteRandomMapOptions {
+                junctions: MAX_RANDOM_ROUTE_JUNCTIONS + 1,
+                ..defaults
+            },
+            RouteRandomMapOptions {
+                junctions: usize::MAX,
+                ..defaults
+            },
+            RouteRandomMapOptions {
+                extra_roads: usize::MAX,
+                ..defaults
+            },
+            RouteRandomMapOptions {
+                max_cost: 0,
+                ..defaults
+            },
+            RouteRandomMapOptions {
+                max_cost: 1000,
+                ..defaults
+            },
+            RouteRandomMapOptions {
+                max_cost: u32::MAX,
+                ..defaults
+            },
+            RouteRandomMapOptions {
+                junctions: 3,
+                extra_roads: 2,
+                max_cost: 1,
+            },
+        ] {
+            assert_eq!(
+                RouteWorkbench::random_map(1, options),
+                Err(RouteWorkbenchError::RandomOptions)
+            );
+        }
+        let triangle = RouteWorkbench::random_map(
+            u64::MAX,
+            RouteRandomMapOptions {
+                junctions: 3,
+                extra_roads: 1,
+                max_cost: 1,
+            },
+        )
+        .unwrap();
+        let comparison = triangle.compare().unwrap();
+        assert_eq!(comparison.current.cost, 3);
+        assert_eq!(comparison.exact.tour.cost, 3);
+        assert!(comparison.proposal.is_none());
+        assert_eq!(
+            comparison.current.walk.first(),
+            comparison.current.walk.last()
+        );
+    }
+
+    #[test]
+    fn random_map_replacement_undo_and_capsules_use_existing_network_contract() {
+        let generated = RouteWorkbench::random_map(42, RouteRandomMapOptions::default()).unwrap();
+        assert_eq!(generated.revision(), 0);
+        assert!(generated.snapshot().undo.is_empty());
+        assert!(generated.trace().is_none());
+        let mut edited = RouteWorkbench::first_town();
+        edited.start_trace(0, 3).unwrap();
+        let original = edited.town().clone();
+        assert!(
+            edited
+                .apply(RouteEdit::Network(generated.town().clone()))
+                .unwrap()
+        );
+        assert!(edited.trace().is_none());
+        let capsule = crate::RouteCreation::new(edited.town().clone()).unwrap();
+        assert_eq!(
+            crate::RouteCreation::from_capsule(&capsule.to_capsule())
+                .unwrap()
+                .open()
+                .town(),
+            generated.town()
+        );
+        assert!(edited.undo().unwrap());
+        assert_eq!(edited.town(), &original);
+        assert!(edited.trace().is_none());
+    }
 
     #[test]
     fn a_structural_edit_replaces_the_network_atomically_and_undo_restores_it() {

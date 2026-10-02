@@ -10,6 +10,11 @@ release gates still applying. The current room and bounded solvers are described
 below. Deliberate diagram positioning, richer comparison presentation, authored
 challenges, and participant experience evidence remain open.
 
+![Route Lab search: a cheaper connection replaces an earlier tentative path](../assets/screens/route-lab.png)
+
+The map shows roads, integer costs, and the current search decision. Route and
+search states are described below, alongside the controls that change them.
+
 ## Choose a delivery order
 
 Open `route-lab` in the App, CLI, or MCP. The same roads, stop order, integer
@@ -125,8 +130,9 @@ connections. Native authoring dashes predecessor links and marks finalized
 junctions with squares. Both emphasize the latest relaxation and give the
 completed path a separate heavier stroke. Junction shapes and labels distinguish
 state without depending on color. Native authoring retains a selected-junction
-inspector on dense and compact maps. Click a node or use the junction controls
-to inspect it without advancing or restarting the recorded search. The path
+inspector on dense and compact maps. Click a node to inspect it without advancing
+or restarting the recorded search. Ordinary room play also has junction controls.
+The path
 appears only when playback completes. These are bounded functional and
 presentation capabilities;
 participant comprehension has not been measured.
@@ -138,7 +144,7 @@ caller-paced calculation](decisions/0002-route-workbench.md) owns that boundary.
 ## Native network authoring and kept routes, built
 
 Press O in Route Lab or choose Cabinet CONSTRUCT to enter the native editor.
-View, Roads, Stops, Order, Search, and Keep use one core workbench. Add and remove
+Maps, View, Roads, Stops, Order, Search, and Keep use one core workbench. Add and remove
 roads, adjust the junction count, change explicit costs and closures, choose
 deliveries and their depot, and move deliveries earlier or later. Pointer,
 keyboard, and controller input share the visible controls and hit layout.
@@ -146,6 +152,31 @@ The diagram is schematic. Road inspection reports the selected connection's
 actual cost and availability; the delivery route follows core-reconstructed
 streets. Invalid structural drafts are refused without replacing the network.
 Each successful structural change has one undo step and clears stale search.
+
+### Random maps and point-to-point routes
+
+Maps offers the opening DELIVERY network and deterministic RANDOM networks.
+Set NODES, EXTRA connections, and MAX COST, then choose RANDOM to apply the
+displayed seed and options. NEW RANDOM changes the seed before generating.
+Core builds a connected spanning tree, adds distinct extra roads, and assigns
+positive integer costs. The options are bounded and admitted through the same
+network validation as authored roads. The diagram is schematic; its line lengths
+do not determine travel costs. The seed is a generation control; portable
+creations retain the actual roads and costs, with no new file format.
+
+Search has independent START and END choices. Use their arrow buttons or arm
+PICK START / PICK END and click a junction. RUN SEARCH records a Dijkstra search; STEP and
+BACK reveal and revisit decisions. The active recording continues to name its
+original endpoints when you change the next choices. Outside picking mode, a
+map click only inspects a junction. A new map clears the old recording and is
+undoable; replacing an opened creation requires a deliberate REMIX SOURCE.
+
+A point-to-point shortest path minimizes travel between the chosen endpoints.
+A delivery round trip chooses an order through all required deliveries and
+returns to its depot, the Traveling Salesman Problem on the same street costs.
+Generated maps begin with a bounded delivery set and can contain other transit
+junctions. Use Stops and Order to change that delivery question. The existing
+exact comparison and local improvement controls still apply.
 
 Leaving and returning retain the in-process workbench, including bounded undo
 and playback. Baseline restores the network originally opened. Those behaviors

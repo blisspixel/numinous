@@ -283,7 +283,7 @@
     {"id": "rose", "marks": "#*", "closestPair": "#*", "normal": 28.2, "folded": 13.8, "dichromacy": "tritanopia", "colorAlone": []},
     {"id": "rossler", "marks": "#*", "closestPair": "#*", "normal": 29.2, "folded": 25.5, "dichromacy": "deuteranopia", "colorAlone": []},
     {"id": "roulette", "marks": "#*", "closestPair": "#*", "normal": 29.0, "folded": 23.1, "dichromacy": "deuteranopia", "colorAlone": []},
-    {"id": "route-lab", "marks": "#*@", "closestPair": "#*", "normal": 28.7, "folded": 28.5, "dichromacy": "deuteranopia", "colorAlone": []},
+    {"id": "route-lab", "marks": "#*", "closestPair": "#*", "normal": 28.7, "folded": 28.5, "dichromacy": "deuteranopia", "colorAlone": []},
     {"id": "rule-110", "marks": "#", "closestPair": null, "colorAlone": []},
     {"id": "rule-30", "marks": "#*", "closestPair": "#*", "normal": 12.7, "folded": 12.7, "dichromacy": "protanopia", "colorAlone": []},
     {"id": "ruler-function", "marks": "#*", "closestPair": "#*", "normal": 26.1, "folded": 22.8, "dichromacy": "deuteranopia", "colorAlone": []},

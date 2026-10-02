@@ -2,10 +2,16 @@
 
 use numinous_core::route::{Road, RouteEvent};
 use numinous_core::route_workbench::{
-    EditableRoad, RouteEdit, RouteSearchState, RouteSearchView, RouteWorkbench,
-    RouteWorkbenchSnapshot,
+    EditableRoad, RouteEdit, RouteRandomMapOptions, RouteSearchState, RouteSearchView,
+    RouteWorkbench, RouteWorkbenchSnapshot,
 };
-use numinous_core::{ProjectDraft, ProjectNext, Raster, RouteCreation, Surface};
+use numinous_core::{ProjectDraft, ProjectNext, Raster, RoomMetadata, RouteCreation, Surface};
+
+fn route_accent() -> [u8; 3] {
+    numinous_core::rooms::route_lab::RouteLab::new()
+        .meta()
+        .accent
+}
 
 fn wrapped(text: &str, columns: usize) -> Vec<String> {
     numinous_core::wrap_text(text, columns)
@@ -23,14 +29,16 @@ fn wrapped(text: &str, columns: usize) -> Vec<String> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Page {
     View,
+    Maps,
     Roads,
     Stops,
     Order,
     Search,
     Keep,
 }
-const PAGES: [Page; 6] = [
+const PAGES: [Page; 7] = [
     Page::View,
+    Page::Maps,
     Page::Roads,
     Page::Stops,
     Page::Order,
@@ -61,6 +69,16 @@ pub enum Action {
     Shorter,
     Undo,
     Search,
+    SearchStart(i32),
+    SearchEnd(i32),
+    PickStart,
+    PickEnd,
+    DeliveryMap,
+    RandomMap,
+    NewRandomMap,
+    RandomJunctions(i32),
+    RandomRoads(i32),
+    RandomCost(i32),
     Back,
     Step,
     Reset,
@@ -85,6 +103,12 @@ pub enum Effect {
     Browse,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SearchPick {
+    Start,
+    End,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Button {
     pub bounds: (f64, f64, f64, f64),
@@ -105,6 +129,11 @@ pub struct Panel {
     pub paused: bool,
     road: usize,
     junction: usize,
+    search_from: usize,
+    search_to: usize,
+    search_pick: Option<SearchPick>,
+    random_seed: u64,
+    random_options: RouteRandomMapOptions,
     order: usize,
     draft: Option<Road>,
     character: usize,
@@ -130,6 +159,9 @@ struct QuestionText {
 impl Panel {
     pub fn new(workbench: RouteWorkbench) -> Self {
         let baseline = workbench.snapshot();
+        let endpoints = workbench.trace().map(|trace| trace.snapshot());
+        let search_from = endpoints.map_or(workbench.town().stops[0], |trace| trace.from);
+        let search_to = endpoints.map_or(workbench.town().junctions - 1, |trace| trace.to);
         Self {
             workbench,
             baseline,
@@ -141,6 +173,11 @@ impl Panel {
             paused: false,
             road: 0,
             junction: 0,
+            search_from,
+            search_to,
+            search_pick: None,
+            random_seed: 0,
+            random_options: RouteRandomMapOptions::default(),
             order: 1,
             draft: None,
             character: 0,
@@ -294,6 +331,17 @@ impl Panel {
             vec![]
         } else {
             match self.page {
+                Page::Maps => vec![
+                    ("NODES -", Action::RandomJunctions(-1)),
+                    ("NODES +", Action::RandomJunctions(1)),
+                    ("DELIVERY", Action::DeliveryMap),
+                    ("EXTRA -", Action::RandomRoads(-1)),
+                    ("EXTRA +", Action::RandomRoads(1)),
+                    ("RANDOM", Action::RandomMap),
+                    ("MAX COST -", Action::RandomCost(-1)),
+                    ("MAX COST +", Action::RandomCost(1)),
+                    ("NEW RANDOM", Action::NewRandomMap),
+                ],
                 Page::View => vec![
                     ("UNDO", Action::Undo),
                     ("BASELINE", Action::Reset),
@@ -336,11 +384,15 @@ impl Panel {
                     ("UNDO", Action::Undo),
                 ],
                 Page::Search => vec![
-                    ("JUNCTION <", Action::Previous),
-                    ("JUNCTION >", Action::Next),
-                    ("START SEARCH", Action::Search),
+                    ("START <", Action::SearchStart(-1)),
+                    ("START >", Action::SearchStart(1)),
+                    ("PICK START", Action::PickStart),
+                    ("END <", Action::SearchEnd(-1)),
+                    ("END >", Action::SearchEnd(1)),
+                    ("PICK END", Action::PickEnd),
                     ("BACK", Action::Back),
                     ("STEP", Action::Step),
+                    ("RUN SEARCH", Action::Search),
                 ],
                 Page::Keep => vec![
                     ("CHAR <", Action::Character(-1)),
@@ -471,6 +523,12 @@ impl Panel {
                 .min_by(|a, b| a.1.total_cmp(&b.1));
             if let Some((junction, _)) = nearest {
                 self.junction = junction;
+                match self.search_pick.take() {
+                    Some(SearchPick::Start) => self.search_from = junction,
+                    Some(SearchPick::End) => self.search_to = junction,
+                    None => {}
+                }
+                self.message.clear();
             }
         }
         Effect::None
@@ -552,14 +610,23 @@ impl Panel {
             return Effect::None;
         }
         let mut edit = None;
+        let mut map_seed = None;
         match action {
             Action::Page(page) => {
                 self.page = page;
                 self.focus = 0;
+                self.search_pick = None;
             }
             Action::Previous | Action::Next => {
                 let delta = if action == Action::Next { 1 } else { -1 };
                 match self.page {
+                    Page::Search => {
+                        self.junction = (self.junction as i64 + delta as i64)
+                            .rem_euclid(town.junctions as i64)
+                            as usize;
+                        self.search_to = self.junction;
+                        self.search_pick = None;
+                    }
                     Page::Roads => {
                         self.draft = None;
                         if !town.roads.is_empty() {
@@ -686,8 +753,68 @@ impl Panel {
                 };
             }
             Action::Search => {
-                if let Err(error) = self.workbench.start_trace(town.stops[0], self.junction) {
+                self.search_pick = None;
+                if let Err(error) = self.workbench.start_trace(self.search_from, self.search_to) {
                     self.message = error.to_string();
+                }
+            }
+            Action::SearchStart(delta) => {
+                self.search_from = (self.search_from as i64 + delta as i64)
+                    .rem_euclid(town.junctions as i64) as usize;
+                self.junction = self.search_from;
+                self.search_pick = None;
+            }
+            Action::SearchEnd(delta) => {
+                self.search_to = (self.search_to as i64 + delta as i64)
+                    .rem_euclid(town.junctions as i64) as usize;
+                self.junction = self.search_to;
+                self.search_pick = None;
+            }
+            Action::PickStart | Action::PickEnd => {
+                self.search_pick = Some(if action == Action::PickStart {
+                    SearchPick::Start
+                } else {
+                    SearchPick::End
+                });
+                self.message = "Click a junction to choose this search endpoint.".into();
+            }
+            Action::DeliveryMap | Action::RandomMap | Action::NewRandomMap => {
+                if self.source.is_some() && !self.remix {
+                    self.message = "Choose REMIX SOURCE on Keep before replacing this map.".into();
+                    return Effect::None;
+                }
+                let seed = self
+                    .random_seed
+                    .wrapping_add(u64::from(action == Action::NewRandomMap));
+                let candidate = if action == Action::DeliveryMap {
+                    Ok(RouteWorkbench::first_town())
+                } else {
+                    RouteWorkbench::random_map(seed, self.random_options)
+                };
+                match candidate {
+                    Ok(candidate) => {
+                        edit = Some(RouteEdit::Network(candidate.town().clone()));
+                        map_seed = Some(seed);
+                    }
+                    Err(error) => self.message = error.to_string(),
+                }
+            }
+            Action::RandomJunctions(delta)
+            | Action::RandomRoads(delta)
+            | Action::RandomCost(delta) => {
+                let mut candidate = self.random_options;
+                if matches!(action, Action::RandomJunctions(_)) {
+                    candidate.junctions =
+                        (candidate.junctions as i64 + delta as i64).max(0) as usize;
+                } else if matches!(action, Action::RandomRoads(_)) {
+                    candidate.extra_roads =
+                        (candidate.extra_roads as i64 + delta as i64).max(0) as usize;
+                } else {
+                    candidate.max_cost = (candidate.max_cost as i64 + delta as i64).max(0) as u32;
+                }
+                match RouteWorkbench::random_map(self.random_seed, candidate) {
+                    Ok(_) => self.random_options = candidate,
+                    Err(error) => self.message = error.to_string(),
                 }
             }
             Action::Back | Action::Step => {
@@ -701,7 +828,7 @@ impl Panel {
                         self.message = error.to_string();
                     }
                 } else {
-                    self.message = "START SEARCH before stepping".into();
+                    self.message = "RUN SEARCH before stepping".into();
                 }
             }
             Action::Reset => {
@@ -740,7 +867,16 @@ impl Panel {
         if let Some(edit) = edit {
             match self.workbench.apply(edit) {
                 Ok(changed) => {
+                    if let Some(seed) = map_seed {
+                        self.random_seed = seed;
+                        self.search_from = self.workbench.town().stops[0];
+                        self.search_to = self.workbench.town().junctions - 1;
+                        self.search_pick = None;
+                        self.junction = self.search_to;
+                        self.draft = None;
+                    }
                     if changed {
+                        self.search_pick = None;
                         self.message = "Changed. UNDO restores the previous network.".into();
                         if action == Action::CommitRoad {
                             if let Some(added) = self.draft {
@@ -773,6 +909,11 @@ impl Panel {
             .road
             .min(self.workbench.town().roads.len().saturating_sub(1));
         self.junction = self.junction.min(self.workbench.town().junctions - 1);
+        self.search_from = self.search_from.min(self.workbench.town().junctions - 1);
+        self.search_to = self.search_to.min(self.workbench.town().junctions - 1);
+        if matches!(action, Action::Undo | Action::Reset) {
+            self.search_pick = None;
+        }
         self.order = self
             .order
             .min(self.workbench.town().order.len().saturating_sub(1))
@@ -788,7 +929,7 @@ impl Panel {
                 || {
                     format!(
                         "SEARCH {}>{}: START, THEN STEP",
-                        town.stops[0], self.junction
+                        self.search_from, self.search_to
                     )
                 },
                 |trace| {
@@ -819,6 +960,13 @@ impl Panel {
             .collect::<Vec<_>>()
             .join(">");
         let detail = match self.page {
+            Page::Maps => format!(
+                "RANDOM SEED {}: {} NODES, {} EXTRA, COST 1..{}. RANDOM LOADS; NEW RANDOM CHANGES SEED.",
+                self.random_seed,
+                self.random_options.junctions,
+                self.random_options.extra_roads,
+                self.random_options.max_cost
+            ),
             Page::View => format!(
                 "{order}>{}  {} / {}",
                 town.stops[0],
@@ -864,7 +1012,13 @@ impl Panel {
                     .get(self.order)
                     .map_or_else(|| "NONE".into(), |id| id.to_string())
             ),
-            Page::Search => format!("TARGET {}. {}", self.junction, self.search_line()),
+            Page::Search => format!(
+                "TARGET {}. NEXT {}>{}. {}",
+                self.search_to,
+                self.search_from,
+                self.search_to,
+                self.search_line()
+            ),
             Page::Keep => format!(
                 "QUESTION: {}",
                 if self.question.is_empty() {
@@ -891,9 +1045,8 @@ impl Panel {
     fn search_narration(&self) -> String {
         let Some(trace) = self.workbench.trace() else {
             return format!(
-                "START RECORDS DEPOT {} TO JUNCTION {}",
-                self.workbench.town().stops[0],
-                self.junction
+                "RUN RECORDS START {} TO END {}",
+                self.search_from, self.search_to
             );
         };
         if let Some(result) = trace.result() {
@@ -920,10 +1073,7 @@ impl Panel {
 
     fn search_inspector(&self, view: Option<&RouteSearchView>) -> String {
         let Some(reading) = view.and_then(|view| view.junctions.get(self.junction)) else {
-            return format!(
-                "JUNCTION {}: UNSEEN. START USES THIS TARGET.",
-                self.junction
-            );
+            return format!("JUNCTION {}: UNSEEN. CLICK INSPECTS.", self.junction);
         };
         let state = match reading.state {
             RouteSearchState::Unseen => "UNSEEN",
@@ -978,7 +1128,7 @@ impl Panel {
     }
 
     pub fn draw(&self, width: usize, height: usize, controller_hint: Option<&str>) -> Raster {
-        let mut raster = Raster::with_accent(width, height, [240, 180, 110]);
+        let mut raster = Raster::with_accent(width, height, route_accent());
         let (width, height) = (raster.width(), raster.height());
         let scale = ((width / 400).min(height / 240)).clamp(1, 3) as i32;
         let columns = width.saturating_sub(12) / (6 * scale as usize);
@@ -1006,6 +1156,22 @@ impl Panel {
                 &mut raster,
                 line,
                 0.075 + index as f64 * 8.0 * scale as f64 / height as f64,
+            );
+        }
+        if self.page == Page::Search && !self.paused {
+            text(
+                &mut raster,
+                &format!(
+                    "NEXT START {} END {}{}",
+                    self.search_from,
+                    self.search_to,
+                    match self.search_pick {
+                        Some(SearchPick::Start) => ". CLICK START NODE",
+                        Some(SearchPick::End) => ". CLICK END NODE",
+                        None => "",
+                    }
+                ),
+                0.108,
             );
         }
         if self.is_received_preview() {
@@ -1066,11 +1232,13 @@ impl Panel {
                 "[] FINAL <> TENTATIVE . UNSEEN X CUT OFF",
                 0.34,
             );
-            text(
-                &mut raster,
-                "DASH: VIA  DOUBLE: LATEST  TRIPLE: PATH. CLICK NODE",
-                0.38,
-            );
+            if self.message.is_empty() {
+                text(
+                    &mut raster,
+                    "DASH: VIA  DOUBLE: LATEST  TRIPLE: PATH. CLICK NODE",
+                    0.38,
+                );
+            }
             let view = self.workbench.trace().map(|trace| trace.view());
             self.draw_network(&mut raster, width, height, scale, view.as_ref());
             text(&mut raster, &self.search_inspector(view.as_ref()), 0.675);
@@ -1086,8 +1254,10 @@ impl Panel {
                 text(&mut raster, &lines[2], 0.37);
             }
         }
-        if self.page == Page::View {
-            if let Some(selected) = self.selected_road() {
+        if matches!(self.page, Page::View | Page::Maps) {
+            if self.page == Page::View
+                && let Some(selected) = self.selected_road()
+            {
                 text(
                     &mut raster,
                     &format!(
@@ -1137,7 +1307,11 @@ impl Panel {
                 text(
                     &mut raster,
                     line,
-                    0.87 + index as f64 * 8.0 * scale as f64 / height as f64,
+                    (if self.page == Page::Search {
+                        0.38
+                    } else {
+                        0.87
+                    }) + index as f64 * 8.0 * scale as f64 / height as f64,
                 );
             }
         }
@@ -1273,7 +1447,7 @@ impl Panel {
 
     /// Draw a portable thumbnail through the editor's authored network renderer.
     pub fn thumbnail(&self, width: usize, height: usize) -> Raster {
-        let mut raster = Raster::with_accent(width, height, [240, 180, 110]);
+        let mut raster = Raster::with_accent(width, height, route_accent());
         let (width, height) = (raster.width(), raster.height());
         let points = (0..self.workbench.town().junctions)
             .map(|id| {
@@ -1595,6 +1769,36 @@ fn draw_search_node(raster: &mut Raster, point: (i32, i32), radius: i32, state: 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn route_authoring_uses_the_room_palette_across_editor_search_and_thumbnails() {
+        let room = numinous_core::room_by_id("route-lab").unwrap();
+        assert_eq!(route_accent(), room.meta().accent);
+        let mut panel = Panel::new(RouteWorkbench::first_town());
+        panel.question = "Mixed case and 道路 remain neutral reading text".into();
+        for page in PAGES {
+            panel.act(Action::Page(page));
+            if page == Page::Search {
+                panel.act(Action::Next);
+                panel.act(Action::Search);
+                panel.act(Action::Step);
+            }
+            let frame = panel.draw(360, 240, None);
+            assert!(frame.lit_count() > 200);
+            for color in frame.to_rgba().chunks_exact(4) {
+                assert!(
+                    color[0] <= color[1] && color[0] <= color[2],
+                    "{page:?} uses the shared teal accent or neutral foreground: {color:?}"
+                );
+            }
+        }
+        let thumbnail = panel.thumbnail(180, 120);
+        assert!(thumbnail.lit_count() > 20);
+        for color in thumbnail.to_rgba().chunks_exact(4) {
+            assert!(color[0] <= color[1] && color[0] <= color[2]);
+        }
+    }
+
     #[test]
     fn route_authoring_edits_are_transactional_and_undoable() {
         let mut panel = Panel::new(RouteWorkbench::first_town());
@@ -1728,7 +1932,7 @@ mod tests {
         assert!(panel.lines()[1].contains("SEARCH 0>3"));
         assert!(!panel.lines()[1].contains("PATH"));
         panel.act(Action::Previous);
-        assert!(panel.lines()[1].contains("TARGET 2. SEARCH 0>3"));
+        assert!(panel.lines()[1].contains("TARGET 2. NEXT 0>2. SEARCH 0>3"));
         panel.act(Action::Step);
         let partial = panel.workbench.snapshot();
         panel.draw(360, 240, None);
@@ -1777,7 +1981,8 @@ mod tests {
                 let buttons = panel.buttons();
                 for button in &buttons {
                     let (x, y, w, h) = button.bounds;
-                    assert!(x >= 0.0 && y >= 0.0 && x + w <= 1.0 && y + h < 0.87);
+                    assert!(x >= 0.0 && y >= 0.0 && x + w <= 1.0);
+                    assert!(y + h < if page == Page::Search { 0.94 } else { 0.87 });
                     assert!(
                         button.label.len() < ((w * width as f64) as usize - 8) / (6 * scale),
                         "{} at {}x{}",
@@ -1987,10 +2192,10 @@ mod tests {
         let mut panel = Panel::new(RouteWorkbench::first_town());
         panel.act(Action::ToggleRoad);
         let actual = panel.draw(900, 700, None).to_rgba();
-        let mut expected = Raster::with_accent(900, 700, [240, 180, 110]);
+        let mut expected = Raster::with_accent(900, 700, route_accent());
         numinous_core::draw_text(&mut expected, "X", 607, 472, 2, '#');
         let expected = expected.to_rgba();
-        let blank = Raster::with_accent(900, 700, [240, 180, 110]).to_rgba();
+        let blank = Raster::with_accent(900, 700, route_accent()).to_rgba();
         let mut glyph_pixels = 0;
         for y in 472..486 {
             for x in 607..617 {
@@ -2012,7 +2217,7 @@ mod tests {
         panel.act(Action::Page(Page::View));
         let empty = panel.draw(900, 700, None).to_rgba();
         let center = (511 * 900 + 450) * 4;
-        let background = Raster::with_accent(900, 700, [240, 180, 110]).to_rgba();
+        let background = Raster::with_accent(900, 700, route_accent()).to_rgba();
         assert_eq!(
             &empty[center..center + 3],
             &background[center..center + 3],
@@ -2023,7 +2228,7 @@ mod tests {
         assert!(panel.lines()[1].contains("DELIVERY"));
         panel.act(Action::Page(Page::Search));
         panel.act(Action::Step);
-        assert!(panel.message.contains("START SEARCH"));
+        assert!(panel.message.contains("RUN SEARCH"));
         panel.act(Action::Search);
         assert!(!panel.lines()[1].contains("NO PATH"));
         panel.act(Action::Step);
@@ -2115,21 +2320,21 @@ mod tests {
         rgba[offset..offset + 3].try_into().unwrap()
     }
     fn marked_pixel(mark: char) -> [u8; 3] {
-        let mut raster = Raster::with_accent(1, 1, [240, 180, 110]);
+        let mut raster = Raster::with_accent(1, 1, route_accent());
         raster.plot(0, 0, mark);
         pixel(&raster, 0, 0)
     }
     fn quiet_road_pixel() -> [u8; 3] {
-        let mut raster = Raster::with_accent(1, 1, [240, 180, 110]);
+        let mut raster = Raster::with_accent(1, 1, route_accent());
         raster.shade_rect(0, 0, 1, 1, 0.0);
         pixel(&raster, 0, 0)
     }
     fn assert_text_pixels(actual: &Raster, text: &str, x: i32, y: i32, scale: i32) {
-        let mut expected = Raster::with_accent(actual.width(), actual.height(), [240, 180, 110]);
+        let mut expected = Raster::with_accent(actual.width(), actual.height(), route_accent());
         numinous_core::draw_text(&mut expected, text, x, y, scale, '#');
         let expected = expected.to_rgba();
         let actual = actual.to_rgba();
-        let blank = Raster::with_accent(1, 1, [240, 180, 110]).to_rgba();
+        let blank = Raster::with_accent(1, 1, route_accent()).to_rgba();
         let mut found = 0;
         for (a, e) in actual.chunks_exact(4).zip(expected.chunks_exact(4)) {
             if e[..3] != blank[..3] {
@@ -2180,7 +2385,7 @@ mod tests {
         assert!(panel.workbench.trace().is_none());
         let invalidated = panel.draw(360, 240, None);
         assert_eq!(pixel(&invalidated, 225, 132), quiet_road_pixel());
-        assert!(panel.search_narration().contains("START RECORDS"));
+        assert!(panel.search_narration().contains("RUN RECORDS"));
     }
     #[test]
     fn route_authoring_search_node_shapes_costs_and_inspector_follow_the_visible_prefix() {
@@ -2269,8 +2474,12 @@ mod tests {
                 scale,
             );
             for action in [
-                Action::Previous,
-                Action::Next,
+                Action::SearchStart(-1),
+                Action::SearchStart(1),
+                Action::PickStart,
+                Action::SearchEnd(-1),
+                Action::SearchEnd(1),
+                Action::PickEnd,
                 Action::Search,
                 Action::Back,
                 Action::Step,
@@ -2281,7 +2490,7 @@ mod tests {
                     .find(|button| button.action == action)
                     .unwrap();
                 let (x, y, w, h) = button.bounds;
-                assert!(y >= 0.72 && y + h < 0.87);
+                assert!(y >= 0.72 && y + h < 0.94);
                 assert!(x + w < 1.0);
                 panel.pointer_at((x + w / 2.0, y + h / 2.0), false);
             }
@@ -2370,7 +2579,7 @@ mod tests {
         assert!(panel.lines()[0].contains("SEARCH 2>2"));
         panel.act(Action::Search);
         let restarted = panel.workbench.trace().unwrap().view();
-        assert_eq!((restarted.from, restarted.to, restarted.cursor), (0, 1, 0));
+        assert_eq!((restarted.from, restarted.to, restarted.cursor), (2, 1, 0));
     }
     #[test]
     fn route_authoring_search_improved_predecessor_is_replaced_and_restored_by_back() {
@@ -2520,12 +2729,12 @@ mod tests {
         for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
             let scale = ((width / 400).min(height / 240)).clamp(1, 3) as i32;
             let points = panel.network_points(width, height);
-            let mut road_mask = Raster::with_accent(width, height, [240, 180, 110]);
+            let mut road_mask = Raster::with_accent(width, height, route_accent());
             for road in &panel.workbench.town().roads {
                 let (a, b) = (points[road.road.from], points[road.road.to]);
                 road_mask.line(a.0, a.1, b.0, b.1, '.');
             }
-            let blank = Raster::with_accent(width, height, [240, 180, 110]).to_rgba();
+            let blank = Raster::with_accent(width, height, route_accent()).to_rgba();
             let mask = road_mask.to_rgba();
             let actual = panel.draw(width, height, None);
             let rgba = actual.to_rgba();
@@ -2745,7 +2954,7 @@ mod tests {
             assert_eq!(text.layout.as_ref().unwrap().source(), text.source);
             assert!(text.layout.as_ref().unwrap().missing_glyphs().is_empty());
             drop(cache);
-            let mut expected = Raster::with_accent(width, height, [240, 180, 110]);
+            let mut expected = Raster::with_accent(width, height, route_accent());
             panel.draw_question(
                 &mut expected,
                 width,
@@ -2844,7 +3053,7 @@ mod tests {
             }
             let isolated = points[31];
             assert_eq!(pixel_at(isolated.0, isolated.1), &mark);
-            let blank = Raster::with_accent(1, 1, [240, 180, 110]).to_rgba();
+            let blank = Raster::with_accent(1, 1, route_accent()).to_rgba();
             for y in isolated.1..isolated.1 + 7 * scale {
                 for x in isolated.0 + 1..isolated.0 + 11 * scale {
                     assert_eq!(pixel_at(x, y), &blank[..3]);
@@ -3075,6 +3284,212 @@ mod tests {
             assert_eq!(panel.workbench.snapshot(), state);
             assert_eq!(panel.received_document(), Some(&document));
         }
+    }
+
+    #[test]
+    fn route_authoring_maps_use_core_generation_and_keep_undo_capsules_and_options_separate() {
+        let mut panel = Panel::new(RouteWorkbench::first_town());
+        panel.question = "What changes when another road connects?".into();
+        let original = panel.workbench.snapshot();
+        panel.act(Action::Page(Page::Search));
+        panel.act(Action::Search);
+        panel.act(Action::Step);
+        panel.act(Action::Page(Page::Maps));
+        let playback = panel.workbench.snapshot();
+        let options = panel.random_options;
+        panel.act(Action::RandomJunctions(i32::MAX));
+        panel.act(Action::RandomRoads(i32::MAX));
+        panel.act(Action::RandomCost(i32::MIN));
+        assert_eq!(panel.random_options, options);
+        assert_eq!(panel.workbench.snapshot(), playback);
+        panel.act(Action::RandomRoads(1));
+        assert_eq!(panel.random_options.extra_roads, options.extra_roads + 1);
+        assert_eq!(panel.workbench.snapshot(), playback);
+        panel.act(Action::RandomMap);
+        let expected = RouteWorkbench::random_map(0, panel.random_options).unwrap();
+        assert_eq!(panel.workbench.town(), expected.town());
+        assert!(panel.workbench.trace().is_none());
+        assert_eq!(
+            panel.workbench.snapshot().undo,
+            vec![original.current.clone()]
+        );
+        assert_eq!((panel.search_from, panel.search_to), (0, 11));
+        panel.act(Action::NewRandomMap);
+        assert_eq!(panel.random_seed, 1);
+        assert_eq!(
+            panel.workbench.town(),
+            RouteWorkbench::random_map(1, panel.random_options)
+                .unwrap()
+                .town()
+        );
+        let creation = RouteCreation::from_capsule(
+            panel.project_draft(1).unwrap().creation.as_deref().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(creation.open().town(), panel.workbench.town());
+        assert!(creation.open().trace().is_none());
+        assert!(creation.open().snapshot().undo.is_empty());
+        panel.act(Action::Undo);
+        assert_eq!(panel.workbench.town(), expected.town());
+        panel.act(Action::Undo);
+        assert_eq!(panel.workbench.town(), &original.current);
+        assert!(panel.search_from < 4 && panel.search_to < 4);
+        panel.act(Action::RandomMap);
+        panel.act(Action::Reset);
+        assert_eq!(panel.workbench.snapshot(), original);
+        assert!(panel.search_from < 4 && panel.search_to < 4);
+        panel.act(Action::RandomMap);
+        panel.act(Action::DeliveryMap);
+        assert_eq!(panel.workbench.town(), &original.current);
+        assert_eq!((panel.search_from, panel.search_to), (0, 3));
+    }
+
+    #[test]
+    fn route_authoring_map_replacement_requires_deliberate_remix_and_failed_apply_keeps_seed() {
+        let source = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let mut panel = Panel::opened(source.clone());
+        let opening = panel.workbench.snapshot();
+        for action in [
+            Action::RandomMap,
+            Action::NewRandomMap,
+            Action::PickStart,
+            Action::Search,
+        ] {
+            panel.act(action);
+        }
+        assert!(panel.paused);
+        assert_eq!(panel.workbench.snapshot(), opening);
+        assert_eq!(panel.random_seed, 0);
+        assert!(panel.search_pick.is_none());
+        panel.act(Action::Confirm);
+        panel.act(Action::Page(Page::Maps));
+        panel.act(Action::NewRandomMap);
+        assert!(panel.message.contains("REMIX SOURCE"));
+        assert_eq!(panel.workbench.snapshot(), opening);
+        assert_eq!(panel.random_seed, 0);
+        panel.act(Action::Remix);
+        panel.act(Action::NewRandomMap);
+        panel.question = "An explicitly remixed random network".into();
+        let child = RouteCreation::from_capsule(
+            panel.project_draft(1).unwrap().creation.as_deref().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(child.parent_identity(), Some(source.identity()));
+        assert_eq!(child.town(), panel.workbench.town());
+        assert_eq!(source.open().snapshot(), opening);
+        let mut exhausted = opening.clone();
+        exhausted.revision = u64::MAX;
+        let mut refused = Panel::new(RouteWorkbench::from_snapshot(exhausted.clone()).unwrap());
+        let endpoints = (refused.search_from, refused.search_to);
+        refused.act(Action::NewRandomMap);
+        assert_eq!(refused.workbench.snapshot(), exhausted);
+        assert_eq!(refused.random_seed, 0);
+        assert_eq!((refused.search_from, refused.search_to), endpoints);
+    }
+
+    #[test]
+    fn route_authoring_search_picks_independent_endpoints_without_changing_recorded_truth() {
+        let mut panel = Panel::new(RouteWorkbench::first_town());
+        panel.act(Action::Page(Page::Search));
+        assert_eq!((panel.search_from, panel.search_to), (0, 3));
+        panel.act(Action::Search);
+        panel.act(Action::Step);
+        let recorded = panel.workbench.snapshot();
+        let locations = panel.network_locations();
+        panel.pointer_at(locations[1], true);
+        assert_eq!(panel.junction, 1);
+        assert_eq!((panel.search_from, panel.search_to), (0, 3));
+        assert_eq!(panel.workbench.snapshot(), recorded);
+        panel.act(Action::SearchEnd(1));
+        assert_eq!((panel.search_to, panel.junction), (0, 0));
+        panel.act(Action::SearchStart(1));
+        assert_eq!((panel.search_from, panel.junction), (1, 1));
+        let start = panel
+            .buttons()
+            .into_iter()
+            .find(|button| button.action == Action::PickStart)
+            .unwrap();
+        let (x, y, w, h) = start.bounds;
+        panel.pointer_at((x + w / 2.0, y + h / 2.0), true);
+        assert_eq!(panel.search_pick, Some(SearchPick::Start));
+        panel.pointer_at(locations[2], true);
+        assert_eq!((panel.search_from, panel.junction), (2, 2));
+        assert_eq!(panel.search_pick, None);
+        let end = panel
+            .buttons()
+            .into_iter()
+            .find(|button| button.action == Action::PickEnd)
+            .unwrap();
+        let (x, y, w, h) = end.bounds;
+        panel.controller_activate(Some((x + w / 2.0, y + h / 2.0)));
+        assert_eq!(panel.search_pick, Some(SearchPick::End));
+        panel.controller_activate(Some(locations[0]));
+        assert_eq!((panel.search_to, panel.junction), (0, 0));
+        assert_eq!(panel.workbench.snapshot(), recorded);
+        assert!(panel.lines()[0].contains("SEARCH 0>3"));
+        let image = panel.draw(360, 240, None);
+        assert_text_pixels(&image, &panel.lines()[0], 6, 18, 1);
+        assert_text_pixels(&image, "NEXT START 2 END 0", 6, 25, 1);
+        panel.act(Action::Search);
+        let trace = panel.workbench.trace().unwrap().snapshot();
+        assert_eq!((trace.from, trace.to, trace.cursor), (2, 0, 0));
+        assert_eq!(panel.workbench.town(), &recorded.current);
+        assert_eq!(panel.workbench.snapshot().undo, recorded.undo);
+        finish_search(&mut panel);
+        panel.act(Action::SearchEnd(2));
+        panel.act(Action::Search);
+        finish_search(&mut panel);
+        let result = panel
+            .workbench
+            .trace()
+            .unwrap()
+            .result()
+            .unwrap()
+            .as_ref()
+            .unwrap();
+        assert_eq!(
+            (result.cost, result.junctions.as_slice()),
+            (0, [2].as_slice())
+        );
+    }
+
+    #[test]
+    fn route_authoring_maps_and_endpoint_controls_fit_and_hit_compact_geometry() {
+        let mut panel = Panel::new(RouteWorkbench::first_town());
+        for page in [Page::Maps, Page::Search] {
+            panel.act(Action::Page(page));
+            let body = panel
+                .buttons()
+                .into_iter()
+                .filter(|button| !matches!(button.action, Action::Page(_) | Action::Close))
+                .collect::<Vec<_>>();
+            assert_eq!(body.len(), 9);
+            for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
+                let scale = ((width / 400).min(height / 240)).clamp(1, 3) as i32;
+                for button in &body {
+                    let (x, y, w, h) = button.bounds;
+                    assert!(x >= 0.0 && x + w <= 1.0 && y + h < 0.95);
+                    panel.pointer_at((x + w / 2.0, y + h / 2.0), false);
+                    assert_eq!(panel.buttons()[panel.focus].action, button.action);
+                    let image = panel.draw(width, height, None);
+                    let left = (x * width as f64) as i32;
+                    let top = (y * height as f64) as i32;
+                    let bottom = ((y + h) * height as f64) as i32 - 1;
+                    assert_text_pixels(
+                        &image,
+                        &format!(">{}", button.label),
+                        left + 3,
+                        top + ((bottom - top - 7 * scale) / 2).max(1),
+                        scale,
+                    );
+                }
+            }
+        }
+        panel.act(Action::PickStart);
+        let image = panel.draw(360, 240, None);
+        assert_text_pixels(&image, "NEXT START 0 END 3. CLICK START NODE", 6, 25, 1);
+        panel.act(Action::Page(Page::Maps));
+        assert!(panel.search_pick.is_none());
     }
 
     #[test]

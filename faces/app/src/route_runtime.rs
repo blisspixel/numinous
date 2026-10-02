@@ -607,12 +607,13 @@ mod tests {
         let before = app.route_authoring.as_ref().unwrap().workbench().snapshot();
         assert!(app.handle_route_authoring_key(&Key::Named(NamedKey::Tab), false));
         app.handle_route_authoring_key(&Key::Named(NamedKey::Enter), false);
-        assert_eq!(app.route_authoring.as_ref().unwrap().page, Page::Roads);
+        assert_eq!(app.route_authoring.as_ref().unwrap().page, Page::Maps);
         for key in [
             NamedKey::ArrowRight,
             NamedKey::ArrowLeft,
             NamedKey::ArrowUp,
             NamedKey::ArrowDown,
+            NamedKey::ArrowRight,
         ] {
             assert!(app.handle_route_authoring_key(&Key::Named(key), false));
         }
@@ -665,6 +666,7 @@ mod tests {
             gamepad::Command::Left,
             gamepad::Command::Up,
             gamepad::Command::Down,
+            gamepad::Command::Right,
         ] {
             app.handle_gamepad_command(command);
         }
@@ -771,9 +773,8 @@ mod tests {
             app.end_pointer_at(point);
         };
         click(&mut app, Action::Page(Page::Search));
-        for _ in 0..3 {
-            click(&mut app, Action::Next);
-        }
+        click(&mut app, Action::SearchEnd(1));
+        click(&mut app, Action::SearchEnd(-1));
         click(&mut app, Action::Search);
         let initial = app
             .route_authoring
@@ -1386,7 +1387,7 @@ mod tests {
         app.open_route_project_document(document.clone()).unwrap();
         pointer_action(&mut app, Action::Confirm);
         pointer_action(&mut app, Action::Page(Page::Search));
-        pointer_action(&mut app, Action::Next);
+        pointer_action(&mut app, Action::SearchEnd(1));
         pointer_action(&mut app, Action::Search);
         pointer_action(&mut app, Action::Step);
         pointer_action(&mut app, Action::Page(Page::Keep));
