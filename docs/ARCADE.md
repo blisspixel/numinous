@@ -65,7 +65,7 @@ theirs; nothing is borrowed.
 ## Order of work (one session each, built to the bar)
 1. `munch_arcade` core + CLI twin + tests (the game exists end to end).
 2. App real-time Munch with juice (the fun lands).
-3. The poke trait + first six rooms + arrival verbs (expanded to all 354 rooms).
+3. The poke trait + first six rooms + arrival verbs (expanded to every catalog room).
 4. MCP `munch_arcade` + variation parity and docs. **DONE** (MCP tool + `play_room` variation + score posting).
 5. Run the documented human playtest, including a younger participant, before claiming the experience passes for either audience. **OPEN**.
 
