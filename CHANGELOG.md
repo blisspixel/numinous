@@ -5,6 +5,42 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Added
+- Prose locks that fail on a wrong count, not only on a missing right one. A
+  shared census of current documents holds every stated catalog, wing, MCP
+  tool, and screen-matrix count to live data, and history files are exempt.
+- A version lock: a bare version number in a current document must be the
+  workspace version, and README, the documentation map, and the roadmap must
+  state it. Past releases are named by tag.
+- A packaging regression that refuses a relative link in any shipped Markdown
+  file to a path the release archive does not carry.
+- `PLAY.md` warns about the rooms that flash past WCAG 2.3.1 or hide their touch
+  response without color, and names `numinous access`; a CLI test now holds the
+  packaged page to the same known-limit lists as the full manual.
+- `STUDIO.md` documents the closure, tones, slope, and partial readings, where
+  each face shows them, and what stays a hypothesis.
+
+### Changed
+- The roadmap opens on a **Now** screen with the next moves in order: the
+  Sensory Lift, mathematical honesty and photosensitivity, the arc, room depth,
+  the wing and voice pass, and structural debts. Its build ledger and dated
+  syntheses moved unedited to the frozen `docs/history/ROADMAP_LEDGER.md`, the
+  duplicated 1.0, 1.x, and 2.0 sections are merged, and each 0.5 to 0.9
+  milestone gains an agent-and-machine exit. The decisions section is unchanged.
+- `PLAY.md` puts a human's first session first and the MCP reference after it,
+  replaces the long term-by-term readings enumeration with one short block, and
+  documents `numinous open-studio`, which tools return readings, and the App
+  Studio keys. The play skill gets headed sections and the same short block.
+- `DESIGN.md` and `VISUALS.md` state the visual law, meaning lives in shape and
+  lightness and hue is a second voice, and `VISUALS.md` adds the mark
+  vocabulary with the designed ink table. `DESIGN.md` gains a Voice section
+  with the locked doorway rules and worked examples, and the docs agree on
+  explanation timing, free Eras, era order, transitions, springs, and reduced
+  motion.
+- The documentation map links every doc, lists decision 0003, the ledger,
+  release notes, and evidence, and gives ROADMAP sole ownership of priorities.
+  Stale catalog counts and versions in owner docs are corrected.
+
 ### Fixed
 - The terminal Show's curtain line, the exit tease of live terminal views, and
   a landed Times Tables goal no longer print a staged room's reveal before its

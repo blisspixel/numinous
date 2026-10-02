@@ -518,5 +518,10 @@ fn tool_error(text: &str) -> Value {
     json!({ "content": [ { "type": "text", "text": text } ], "isError": true })
 }
 
+// The core's census of current documents, for the tool-inventory lock only
+// this face can state.
+#[cfg(test)]
+#[path = "../../../crates/core/src/prose_census.rs"]
+mod prose_census;
 #[cfg(test)]
 mod tests;

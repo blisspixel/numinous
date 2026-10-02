@@ -1200,6 +1200,26 @@ fn every_declared_tool_has_one_exhaustive_viewer_policy() {
     let roadmap = include_str!("../../../docs/ROADMAP.md");
     assert!(roadmap.contains(&numinous_core::counted(tools.len(), "MCP tool")));
     assert!(roadmap.contains(&numinous_core::counted(private, "private tool")));
+    // The locks above pass while the right count is somewhere. These fail on
+    // a wrong one anywhere in current prose: the roadmap said "41 tools" for
+    // a month after the inventory reached 43.
+    let documents = super::prose_census::current_documents(
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."),
+    );
+    for (pattern, live) in [
+        ("# MCP tool", tools.len()),
+        ("The # tools include", tools.len()),
+        ("# public play tool", public),
+        ("# private tool", private),
+    ] {
+        let (wrong, matched) = super::prose_census::misstated(&documents, pattern, live);
+        assert!(matched > 0, "no current document states `{pattern}`");
+        assert!(
+            wrong.is_empty(),
+            "stale counts for `{pattern}`:\n{}",
+            wrong.join("\n")
+        );
+    }
     assert_eq!(public + private + control, tools.len());
     assert!(super::viewer_policy("future_unreviewed_tool").is_none());
 }

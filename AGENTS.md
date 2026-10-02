@@ -120,11 +120,15 @@ pass by weakening it.
 
 ## When you finish a change
 
-Update `CHANGELOG.md` (the `[Unreleased]` section) and, if you completed a
-roadmap item, mark it in `docs/ROADMAP.md` with evidence. If the change is
-player-facing, check the four packaged files, not only `docs/`. If it adds a
-count in prose, route it through `numinous_core::counted` and lock it against
-live data. If it adds an MCP `next`, follow it in a test. Keep commits small
+Update `CHANGELOG.md` (the `[Unreleased]` section). If you completed a
+roadmap item, update its row in **Next, in order** in `docs/ROADMAP.md` and its
+release line under **Recently built**, and put the standing description in the
+topic's owner doc; the roadmap does not regrow a build ledger. If the change is
+player-facing, check the four packaged files, not only `docs/`, and link
+anything outside them with a full repository URL. If it adds a count in prose,
+route it through `numinous_core::counted` and lock it against live data. A bare
+version number in a current doc means the current release; name a past one by
+its tag. If it adds an MCP `next`, follow it in a test. Keep commits small
 and focused, with a clear imperative subject and a body that explains the why,
 and with none of the attribution, dashes, or emojis named above. Temporary
 agent scratch stays in gitignored `.agent/`; durable knowledge belongs in
