@@ -1,9 +1,10 @@
 # Roadmap ledger (frozen)
 
-This file is history. It preserves, unedited, the build ledger and the dated
-status sections and syntheses that [the roadmap](../ROADMAP.md) carried
-through `v0.4.0-alpha.31`. They moved here on 2026-10-02, when the roadmap was
-restructured around what is true now and what comes next.
+This file is history. It preserves the build ledger and the dated status
+sections and syntheses that [the roadmap](../ROADMAP.md) carried through
+`v0.4.0-alpha.31`, unedited except that relative links are rebased to this
+folder. They moved here on 2026-10-02, when the roadmap was restructured
+around what is true now and what comes next.
 
 Nothing below is updated. Counts, versions, priorities, and statuses are as
 they were written on their dates, and some were already stale then. Current
@@ -83,7 +84,7 @@ mastery, exploration, and company also remain complete reasons to play.
   their proportions; actual-pixel and character checks cover composed exports,
   translated paths, constant coordinates, and undefined-sample gaps.
   `MATHEMATICS.md` records the correction and the limits of a fitted, sampled
-  view. The [Shape and scale experiment](experiments/shape-and-scale.md) turns
+  view. The [Shape and scale experiment](../experiments/shape-and-scale.md) turns
   this distinction into two portable creations to play with, keep, and remix.
 - **Built in alpha 19:** the Cabinet leads the refreshed README screenshots,
   Studio exposes Share beside its creation, and Kepler's ordinary raster text
@@ -91,7 +92,7 @@ mastery, exploration, and company also remain complete reasons to play.
   mark has one SVG source and reproducible native icon assets. `VISUALS.md`
   owns its construction; the updated color evidence remains a bounded palette
   check, not a complete accessibility assessment.
-- **Playable now:** [Returning home](experiments/returning-home.md) has four
+- **Playable now:** [Returning home](../experiments/returning-home.md) has four
   portable Studio contrasts with exact formulas and retained fork lineage.
   These are current-tool experiments. The overlay cycle reading is built.
   A kept project can be resumed: MCP `project` previews the next call, and
@@ -99,7 +100,7 @@ mastery, exploration, and company also remain complete reasons to play.
   when that call names a present room, its place. The Cabinet offers that
   question when a chain is present, opens a present creation paused, and
   Enter starts it.
-- **Built, Route Lab:** [Route Lab](ROUTE_LAB.md) compares delivery
+- **Built, Route Lab:** [Route Lab](../ROUTE_LAB.md) compares delivery
   orders on an explicitly costed street map. Core owns bounded Dijkstra,
   reconstructed street walks, nearest-neighbor, checked two-edge exchanges,
   and exact subset dynamic programming. The App, CLI, and MCP share road edits,
@@ -348,7 +349,7 @@ mastery, exploration, and company also remain complete reasons to play.
   Lissajous content work across the three study faces. Real CLI/MCP parity and
   native reader plates exercise this boundary. Japanese remains a translation
   draft; Hawaiian and Klingon requests currently fall back to English.
-  [Study](STUDY.md) owns controls and limitations. Full shell translation,
+  [Study](../STUDY.md) owns controls and limitations. Full shell translation,
   Unicode input/IME, the remaining numeric channels, and more reviewed
   mathematical treatments remain open in `ROSETTA.md` and `PEDAGOGY.md`.
 - **Standing evidence rule:** prediction closeness is not mastery or enjoyment.
