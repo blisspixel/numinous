@@ -411,6 +411,163 @@ mod tests {
         }
     }
 
+    fn repository_documents() -> Vec<crate::prose_census::Document> {
+        crate::prose_census::current_documents(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."),
+        )
+    }
+
+    #[test]
+    fn no_current_document_misstates_the_catalog_or_its_wings() {
+        // The lock above passes as long as the right phrase is somewhere.
+        // This one fails on a wrong one anywhere in current prose, which is
+        // the class that let five documents keep 354 and 355 rooms after the
+        // catalog grew. A shape that names the whole catalog without the
+        // locked noun ("all 355 rooms") is held to the same live count.
+        let documents = repository_documents();
+        let rooms = crate::rooms::ROOM_CATALOG.len();
+        let wings = crate::rooms::CATALOG_WINGS.len();
+        for (pattern, live, must_appear) in [
+            ("# catalog room", rooms, true),
+            ("all # rooms", rooms, false),
+            ("# wing", wings, false),
+        ] {
+            let (wrong, matched) = crate::prose_census::misstated(&documents, pattern, live);
+            assert!(
+                matched > 0 || !must_appear,
+                "no current document states `{pattern}`, so this lock would check nothing"
+            );
+            assert!(
+                wrong.is_empty(),
+                "stale counts for `{pattern}`:\n{}",
+                wrong.join("\n")
+            );
+        }
+    }
+
+    /// Every version shaped like the workspace's own (`0.4.0-alpha.31`) that
+    /// is not part of a longer token, such as the tag `v0.4.0-alpha.31`.
+    fn bare_versions(text: &str) -> Vec<&str> {
+        fn digits(bytes: &[u8], at: usize) -> usize {
+            bytes[at..]
+                .iter()
+                .take_while(|b| b.is_ascii_digit())
+                .count()
+        }
+        let bytes = text.as_bytes();
+        let mut found = Vec::new();
+        for start in 0..bytes.len() {
+            let joined = start > 0
+                && (bytes[start - 1].is_ascii_alphanumeric()
+                    || matches!(bytes[start - 1], b'.' | b'-' | b'_'));
+            if joined || !bytes[start].is_ascii_digit() {
+                continue;
+            }
+            let mut at = start;
+            let mut shape = true;
+            // Major, minor, and patch end in `.`, `.`, and `-` respectively.
+            for separator in *b"..-" {
+                let run = digits(bytes, at);
+                if run == 0 || bytes.get(at + run) != Some(&separator) {
+                    shape = false;
+                    break;
+                }
+                at += run + 1;
+            }
+            let label = bytes[at.min(bytes.len())..]
+                .iter()
+                .take_while(|b| b.is_ascii_alphabetic())
+                .count();
+            if !shape || label == 0 || bytes.get(at + label) != Some(&b'.') {
+                continue;
+            }
+            let number = digits(bytes, at + label + 1);
+            if number > 0 {
+                found.push(&text[start..at + label + 1 + number]);
+            }
+        }
+        found
+    }
+
+    #[test]
+    fn every_bare_version_in_a_current_document_is_the_workspace_version() {
+        // A bare version states the current release, and nothing held it to
+        // the workspace: owner docs went on saying alpha 28 three releases
+        // later. A past release keeps its tag (`v0.4.0-alpha.9`) or is called
+        // "alpha 9", and neither form is read as a claim about today.
+        let version = env!("CARGO_PKG_VERSION");
+        let documents = repository_documents();
+        let stale: Vec<String> = documents
+            .iter()
+            .flat_map(|document| {
+                bare_versions(&document.text)
+                    .into_iter()
+                    .filter(|found| *found != version)
+                    .map(|found| format!("{}: {found}", document.path))
+            })
+            .collect();
+        assert!(
+            stale.is_empty(),
+            "current documents name a release other than {version}:\n{}",
+            stale.join("\n")
+        );
+        for path in ["README.md", "docs/README.md", "docs/ROADMAP.md"] {
+            let document = documents
+                .iter()
+                .find(|document| document.path == path)
+                .unwrap_or_else(|| panic!("{path} is a current document"));
+            assert!(
+                document.text.contains(version),
+                "{path} must state the current release {version}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_version_scan_reads_bare_versions_and_skips_tags() {
+        let text = "Now 0.4.0-alpha.31; the tag v0.4.0-alpha.9, and **0.3.0-alpha.4**, \
+                    not 1.97.1, wgpu-0.1.0-rc.2, or 2025-06-18.";
+        assert_eq!(bare_versions(text), ["0.4.0-alpha.31", "0.3.0-alpha.4"]);
+    }
+
+    #[test]
+    fn the_census_finds_a_wrong_count_beside_the_right_one() {
+        use crate::prose_census::{Document, misstated, without_unread_section};
+        let one = |text: &str| {
+            vec![Document {
+                path: "docs/EXAMPLE.md".to_string(),
+                text: text.to_string(),
+            }]
+        };
+        // The failure this exists for: the true phrase is present, so the
+        // positive lock passes, and the stale one beside it is never read.
+        let (wrong, matched) = misstated(
+            &one("Now 356 catalog rooms. Earlier text said **355 catalog rooms**."),
+            "# catalog room",
+            356,
+        );
+        assert_eq!(matched, 2);
+        assert_eq!(wrong.len(), 1, "{wrong:?}");
+        assert!(wrong[0].contains("states 355"), "{wrong:?}");
+        // Line breaks and the singular match; dates, versions, and number
+        // words are not counts.
+        let prose =
+            one("lifts all\n354 rooms; 1 catalog room; MCP 2025-06-18 tools; thirteen wings");
+        assert_eq!(misstated(&prose, "all # rooms", 356).0.len(), 1);
+        assert_eq!(misstated(&prose, "# catalog room", 1).1, 1);
+        assert_eq!(misstated(&prose, "# tool", 43).1, 0);
+        assert_eq!(misstated(&prose, "# wing", 13).1, 0);
+        // Only the named roadmap section is left unread.
+        let roadmap = "## Now\n356 catalog rooms\n### Decisions the am-track is waiting on\n\
+                       all 354 rooms\n### Standing gates\nall 356 rooms\n";
+        let read = without_unread_section(roadmap);
+        assert!(!read.contains("354"), "{read}");
+        assert!(
+            read.contains("356 catalog rooms\n### Standing gates\nall 356 rooms"),
+            "{read}"
+        );
+    }
+
     #[test]
     fn registry_is_non_empty() {
         assert!(!all_rooms().is_empty());

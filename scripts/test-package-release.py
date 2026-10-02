@@ -8,7 +8,9 @@ import gzip
 import hashlib
 import io
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+import posixpath
+import re
 import struct
 import subprocess
 import sys
@@ -278,6 +280,83 @@ class FontNoticeInventoryTests(unittest.TestCase):
             "Copyright 2022 Google LLC. All Rights Reserved.",
         ):
             self.assertIn(original, copyright_text)
+
+
+FENCED_CODE = re.compile(r"^```.*?^```", re.MULTILINE | re.DOTALL)
+INLINE_CODE = re.compile(r"`[^`\n]*`")
+LINK_TARGETS = (
+    re.compile(r"\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)"),
+    re.compile(r"^\s*\[[^\]]+\]:\s*<?(\S+?)>?(?:\s|$)", re.MULTILINE),
+    re.compile(r"\b(?:href|src)=\"([^\"]+)\""),
+)
+
+
+def unpackaged_links(document: str, text: str, shipped: tuple[str, ...]) -> list[str]:
+    """Relative link targets in one shipped document that the archive lacks.
+
+    A target resolves against the document's own folder. It is satisfied by a
+    shipped file or by a folder that holds one. Web, mail, and in-page anchor
+    links are not files, and code is not a link.
+    """
+    files = {PurePosixPath(name) for name in shipped}
+    folders = {parent for name in files for parent in name.parents}
+    prose = INLINE_CODE.sub("", FENCED_CODE.sub("", text))
+    base = PurePosixPath(document).parent
+    missing = []
+    for pattern in LINK_TARGETS:
+        for match in pattern.finditer(prose):
+            target = match.group(1)
+            if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:|^#|^//", target):
+                continue
+            path = target.split("#", 1)[0].split("?", 1)[0]
+            resolved = PurePosixPath(posixpath.normpath(str(base / path)))
+            if path and resolved not in files and resolved not in folders:
+                missing.append(f"{document}: {target}")
+    return missing
+
+
+class PackagedDocumentLinkTests(unittest.TestCase):
+    """A packaged document may link only to what its archive carries."""
+
+    def test_shipped_documents_link_only_inside_the_release_archive(self) -> None:
+        # Alpha 31 moved README's guide links to repository URLs because a
+        # release archive carries no docs/ folder. PLAY.md and VERIFY.md kept
+        # eight relative docs/ links, and nothing noticed. This holds every
+        # shipped Markdown file to the archive's own inventory.
+        documents = [name for name in PACKAGE.RELEASE_FILES if name.endswith(".md")]
+        for required in (
+            "PLAY.md",
+            "README.md",
+            "VERIFY.md",
+            "plugins/numinous/skills/play-numinous/SKILL.md",
+        ):
+            self.assertIn(required, documents)
+        missing = []
+        for document in documents:
+            text = (ROOT / document).read_text(encoding="utf-8")
+            missing.extend(unpackaged_links(document, text, PACKAGE.RELEASE_FILES))
+        self.assertEqual(missing, [], "\n".join(missing))
+
+    def test_the_link_check_catches_what_it_exists_for(self) -> None:
+        shipped = ("PLAY.md", "LICENSE", "plugins/numinous/plugin.json")
+        text = (
+            "[a](docs/STUDY.md) [b](https://example.org/x) [c](#here) [d](LICENSE)\n"
+            "[e](plugins/numinous) [f](PLAY.md#if-you-are-a-human) `[g](docs/X.md)`\n"
+            '<img src="assets/missing.png">\n[h]: docs/ROADMAP.md\n'
+            "```\n[i](docs/IN_CODE.md)\n```\n"
+        )
+        self.assertEqual(
+            unpackaged_links("README.md", text, shipped),
+            [
+                "README.md: docs/STUDY.md",
+                "README.md: docs/ROADMAP.md",
+                "README.md: assets/missing.png",
+            ],
+        )
+        self.assertEqual(
+            unpackaged_links("plugins/numinous/skills/x/SKILL.md", "[up](../../plugin.json)", shipped),
+            [],
+        )
 
 
 class ReleasePackageTests(unittest.TestCase):

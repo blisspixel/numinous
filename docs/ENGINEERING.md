@@ -1,4 +1,4 @@
-# Engineering Standards & Code Quality
+# Engineering standards and code quality
 
 The aim is code that can be defended from first principles: correctness,
 clarity, and simplicity over cleverness. That is an aspiration, not a claim of
@@ -195,6 +195,32 @@ regression written against live data, walking the real catalog or the real
 rulebooks rather than a count copied down beside the code, because a copied
 count is what let this survive twice. When you add prose with a count, add the
 regression with it.
+
+### Counts, versions, and links in the docs are locked
+
+The same discipline applies to documentation, where the failure was quieter.
+Every count lock used to be positive: a test asserted that the true phrase
+appeared, and nothing failed on a wrong one beside it. So the roadmap kept
+saying "41 tools" and five owner docs kept 354 or 355 rooms long after the
+catalog grew. Three guards now hold the docs to live data:
+
+- **Stale counts.** The census in `crates/core/src/prose_census.rs` reads
+  every current Markdown document and returns every number stated in a locked
+  phrase. Core requires the catalog and wing counts, the MCP face the tool
+  inventory, and the App's screen matrix its size, each from live data. The
+  changelog, release notes, packaged playtest records, evidence, and the frozen
+  roadmap ledger are history and are not read.
+- **Versions.** A bare version number in a current document states the current
+  release and must equal the workspace version; a past release is named by its
+  tag (`v0.4.0-alpha.9`) or as "alpha 9". README, the documentation map, and the
+  roadmap must state the current version.
+- **Packaged links.** `scripts/test-package-release.py` refuses a relative link
+  in any shipped Markdown file to a path the release archive does not carry.
+  Link those with a full repository URL instead.
+
+The accessibility disclosure follows the same rule: the switches, `numinous
+access`, and every room on the flash and color-free lists must appear in
+`PLAY.md` as well as `docs/PLAYING.md`, because only one of them ships.
 
 ## Testing (the enforcement of `QUALITY.md`)
 

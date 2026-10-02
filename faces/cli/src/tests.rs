@@ -2921,6 +2921,20 @@ fn every_accessibility_switch_is_written_down_where_a_player_looks() {
         PLAYING.contains("numinous access"),
         "the docs never tell a player the access command exists"
     );
+    // PLAYING.md does not ship in a release archive, so the switches and the
+    // command must also be in PLAY.md, which a downloaded player can open.
+    const PLAY: &str = include_str!("../../../PLAY.md");
+    for setting in &settings {
+        assert!(
+            PLAY.contains(setting.variable),
+            "PLAY.md never mentions {}",
+            setting.variable
+        );
+    }
+    assert!(
+        PLAY.contains("numinous access"),
+        "PLAY.md never tells a packaged player the access command exists"
+    );
 }
 
 #[test]
@@ -2932,6 +2946,9 @@ fn the_access_report_names_every_room_on_the_known_limit_lists() {
     // every listed room appears in the report itself.
     let report = super::access_report(&super::access_settings(None, None, None));
     const PLAYING: &str = include_str!("../../../docs/PLAYING.md");
+    // The packaged page carries the same warning: a player who installed a
+    // release cannot open docs/PLAYING.md, and this is a safety disclosure.
+    const PLAY: &str = include_str!("../../../PLAY.md");
     for room in numinous_core::KNOWN_OVER_FLASH_BUDGET
         .iter()
         .map(|(room, _)| room)
@@ -2944,6 +2961,10 @@ fn the_access_report_names_every_room_on_the_known_limit_lists() {
         assert!(
             PLAYING.contains(room),
             "docs/PLAYING.md's disclosure no longer names {room}"
+        );
+        assert!(
+            PLAY.contains(room),
+            "PLAY.md's disclosure no longer names {room}"
         );
     }
     assert!(

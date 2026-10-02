@@ -92,6 +92,11 @@ mod overlays;
 #[allow(dead_code)]
 #[path = "../src/play.rs"]
 mod play;
+// The core's census of current documents, for the screen-matrix count only
+// this example can state.
+#[cfg(test)]
+#[path = "../../../crates/core/src/prose_census.rs"]
+mod prose_census;
 #[allow(dead_code)]
 #[path = "../src/studio_panel.rs"]
 mod studio_panel;
@@ -3280,6 +3285,18 @@ mod tests {
                 "{name} must describe the live QA inventory as {count}"
             );
         }
+        // And no current document states a different matrix size.
+        let documents = crate::prose_census::current_documents(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."),
+        );
+        let (wrong, matched) =
+            crate::prose_census::misstated(&documents, "# screen", expected_paths(&rooms).len());
+        assert!(matched > 0, "no current document states the screen count");
+        assert!(
+            wrong.is_empty(),
+            "stale screen counts:\n{}",
+            wrong.join("\n")
+        );
     }
 
     #[test]

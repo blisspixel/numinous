@@ -44,6 +44,12 @@ pub(crate) fn roadmap_decisions() -> &'static str {
         .expect("the roadmap has a decisions section for the am-track")
 }
 
+/// The current documents and the numbers they state, for the locks that hold
+/// prose counts and versions to live data. The faces include the same file by
+/// path for the counts only they own.
+#[cfg(test)]
+pub(crate) mod prose_census;
+
 pub mod aliens;
 pub mod ansi;
 pub mod cairn;
