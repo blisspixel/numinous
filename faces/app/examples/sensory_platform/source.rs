@@ -83,6 +83,7 @@ fn draw_source(width: u32, height: u32) -> Result<(Vec<u8>, usize), String> {
             level: 7,
             input_mode: input_legend::InputMode::KeyboardMouse,
             controller_face: input_legend::ControllerFace::Generic.into(),
+            motion: numinous_core::Motion::Full,
         },
         &inputs,
         None,

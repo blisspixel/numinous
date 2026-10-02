@@ -496,13 +496,33 @@ pub fn show_controls_with_face(mode: InputMode, face: ControllerFace) -> String 
     show_controls_with_controller(mode, face.into())
 }
 
+/// The Show's legend. Its explanation is one press away rather than printed
+/// over the art, so the legend names that press.
 pub fn show_controls_with_controller(mode: InputMode, copy: ControllerCopy) -> String {
     match mode {
-        InputMode::KeyboardMouse => "B EXIT SHOW   SPACE PAUSE".to_string(),
+        InputMode::KeyboardMouse => "E EXPLAIN   B EXIT SHOW   SPACE PAUSE".to_string(),
         InputMode::Controller => format!(
-            "{} EXIT SHOW   {} PAUSE",
+            "{} EXPLAIN   {} EXIT SHOW   {} PAUSE",
+            copy.token(Control::Inspect),
             copy.token(Control::Back),
             copy.token(Control::Pause)
+        ),
+    }
+}
+
+/// The legend for a Show held still under reduced motion.
+///
+/// A held Show changes rooms only when asked, so the legend leads with the
+/// press that moves on. It takes pause's place, because a picture that is
+/// already holding still gives pause nothing to stop.
+pub fn held_show_controls_with_controller(mode: InputMode, copy: ControllerCopy) -> String {
+    match mode {
+        InputMode::KeyboardMouse => "D NEXT ROOM   E EXPLAIN   B EXIT SHOW".to_string(),
+        InputMode::Controller => format!(
+            "{} NEXT ROOM   {} EXPLAIN   {} EXIT SHOW",
+            copy.action_token(ControllerAction::NextRoom),
+            copy.token(Control::Inspect),
+            copy.token(Control::Back)
         ),
     }
 }
@@ -873,8 +893,40 @@ mod tests {
         );
         assert_eq!(
             show_controls_with_controller(InputMode::Controller, copy),
-            "A EXIT SHOW   B PAUSE"
+            "UNBOUND EXPLAIN   A EXIT SHOW   B PAUSE"
         );
+        assert_eq!(
+            held_show_controls_with_controller(InputMode::Controller, copy),
+            "UNBOUND NEXT ROOM   UNBOUND EXPLAIN   A EXIT SHOW"
+        );
+    }
+
+    #[test]
+    fn a_held_show_names_how_to_move_on_and_both_name_the_explanation() {
+        let generic = ControllerCopy::from(ControllerFace::Generic);
+        let xbox = ControllerCopy::from(ControllerFace::Xbox);
+        assert_eq!(
+            show_controls_with_controller(InputMode::KeyboardMouse, generic),
+            "E EXPLAIN   B EXIT SHOW   SPACE PAUSE"
+        );
+        assert_eq!(
+            held_show_controls_with_controller(InputMode::KeyboardMouse, generic),
+            "D NEXT ROOM   E EXPLAIN   B EXIT SHOW"
+        );
+        assert_eq!(
+            show_controls_with_controller(InputMode::Controller, xbox),
+            "SELECT EXPLAIN   B EXIT SHOW   R3 PAUSE"
+        );
+        assert_eq!(
+            held_show_controls_with_controller(InputMode::Controller, xbox),
+            "RB NEXT ROOM   SELECT EXPLAIN   B EXIT SHOW"
+        );
+        // A held picture gives pause nothing to stop, so it gives up its
+        // place in the legend on every input.
+        for mode in [InputMode::KeyboardMouse, InputMode::Controller] {
+            let held = held_show_controls_with_controller(mode, generic);
+            assert!(!held.contains("PAUSE"), "{held}");
+        }
     }
 
     #[test]

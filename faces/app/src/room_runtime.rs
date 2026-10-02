@@ -41,6 +41,22 @@ impl App {
         // doorway would grade the wrong number.
         self.room_wager = None;
         self.goal_announced = false;
+        self.hold_show_still();
+    }
+
+    /// Rest a held Show on the current room's postcard phase.
+    ///
+    /// Under reduced motion The Show waits for the player instead of sweeping,
+    /// so each room is held on the frame it chose as its best face: the still
+    /// the terminal's held Show and MCP `watch_show` rest on too, rather than
+    /// whichever phase a reset happened to leave. A moving Show keeps its
+    /// phase, so this only ever chooses where a held one rests.
+    pub(super) fn hold_show_still(&mut self) {
+        if self.the_show {
+            self.t = self
+                .motion
+                .phase(self.t, self.rooms[self.current].postcard_t());
+        }
     }
 
     pub(super) fn reset_current_room(&mut self) {

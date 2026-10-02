@@ -85,15 +85,19 @@ fn blend_rgba(dest: &mut [u8], prev: &[u8], weight: f32) {
     }
 }
 
+/// How far a screen shake throws the frame, in pixels.
+const SHAKE_TRAVEL: i32 = 3;
+
 /// Shift an RGBA buffer a few pixels left or right for a short bad-grade shake.
 fn apply_screen_shake(rgba: &mut [u8], width: usize, height: usize, frames_left: u8) {
     if width < 4 || height == 0 || rgba.len() < width * height * 4 {
         return;
     }
+    let travel = SHAKE_TRAVEL as isize;
     let shift = if frames_left.is_multiple_of(2) {
-        3_isize
+        travel
     } else {
-        -3_isize
+        -travel
     };
     let row_bytes = width * 4;
     let mut shifted = vec![10_u8, 11, 15, 255]
@@ -115,6 +119,28 @@ fn apply_screen_shake(rgba: &mut [u8], width: usize, height: usize, frames_left:
     }
     rgba.copy_from_slice(&shifted);
 }
+
+/// The reduced-motion form of a screen shake: a still edge around the frame,
+/// as deep as the shake's travel, in the surface's own bright ink.
+///
+/// A shake marks a moment, a wrong bite or a bad set, and reduced motion keeps
+/// the moment while removing the movement. The edge appears and holds for the
+/// shake's frames without displacing a pixel, and it is told apart by shape and
+/// lightness rather than by a hue of its own.
+fn draw_still_jolt(raster: &mut Raster) {
+    let right = raster.width() as i32 - 1;
+    let bottom = raster.height() as i32 - 1;
+    if right < 0 || bottom < 0 {
+        return;
+    }
+    for inset in 0..SHAKE_TRAVEL {
+        raster.line(inset, inset, right - inset, inset, '#');
+        raster.line(inset, bottom - inset, right - inset, bottom - inset, '#');
+        raster.line(inset, inset, inset, bottom - inset, '#');
+        raster.line(right - inset, inset, right - inset, bottom - inset, '#');
+    }
+}
+
 #[cfg(test)]
 fn mandelbrot_gpu_view(
     t: f64,
@@ -981,6 +1007,7 @@ impl App {
             // hand able to aim it.
             self.room_wager = None;
             self.clear_transient_audio();
+            self.hold_show_still();
         }
         self.paused = false;
         if let Some(window) = &self.window {
@@ -2097,6 +2124,7 @@ impl App {
                 level: self.journey.level(),
                 input_mode: self.input_mode,
                 controller_face: self.gamepad.controller_copy(),
+                motion: self.motion,
             },
             inputs,
             status_override.as_deref(),
@@ -2157,7 +2185,20 @@ impl App {
         );
     }
 
-    fn present_raster(&mut self, mut raster: Raster, width: usize, height: usize) {
+    fn present_raster(&mut self, raster: Raster, width: usize, height: usize) {
+        let (rgba, rw, rh) = self.compose_frame(raster, width, height);
+        self.blit(&rgba, rw, rh, width, height);
+    }
+
+    /// Finish one frame for presentation: overlays, the era, the Show's blend,
+    /// and any jolt. Returned rather than presented, so the composed frame can
+    /// be checked without a window.
+    fn compose_frame(
+        &mut self,
+        mut raster: Raster,
+        width: usize,
+        height: usize,
+    ) -> (Vec<u8>, usize, usize) {
         if self.paused {
             overlays::draw_pause_overlay_with_controller(
                 &mut raster,
@@ -2185,10 +2226,10 @@ impl App {
             if drive && !self.modal_mode_active() && !self.paused {
                 // Bass pumps motion without rewriting the player's time_scale.
                 self.visualizer_scale = numinous_core::spectrum_time_scale(1.0, &levers);
+                // Reduced motion holds the phase, and the music is not the
+                // player's hand, so it may not move it either.
                 let nudge = numinous_core::spectrum_phase_nudge(&levers);
-                if nudge > 0.0 {
-                    self.t = (self.t + nudge).rem_euclid(1.0);
-                }
+                self.t = self.motion.next_phase(self.t, nudge);
                 if numinous_core::spectrum_should_poke(&levers)
                     && !self.studio
                     && !self.the_show
@@ -2205,6 +2246,10 @@ impl App {
             self.spectrum_prev = bands;
         }
         self.draw_menu_overlay(&mut raster);
+        // Drawn before the era, so the edge takes the era's look like any ink.
+        if self.screen_shake > 0 && !self.motion.animates() {
+            draw_still_jolt(&mut raster);
+        }
         let (rw, rh) = (raster.width(), raster.height());
         let mut rgba = raster.to_rgba();
         self.era.apply(&mut rgba, rw, rh);
@@ -2224,10 +2269,12 @@ impl App {
             self.show_crossfade_frames = 0;
         }
         if self.screen_shake > 0 {
-            apply_screen_shake(&mut rgba, rw, rh, self.screen_shake);
+            if self.motion.animates() {
+                apply_screen_shake(&mut rgba, rw, rh, self.screen_shake);
+            }
             self.screen_shake = self.screen_shake.saturating_sub(1);
         }
-        self.blit(&rgba, rw, rh, width, height);
+        (rgba, rw, rh)
     }
 
     fn audio_state(&self) -> hud::AudioState {
