@@ -218,7 +218,7 @@ pub use predict::{
     prediction_rate_window,
 };
 pub use preferences::{
-    AppPreferences, PREFERENCES_SCHEMA_VERSION, PreferencesError, WindowModePreference,
+    AppPreferences, PREFERENCES_SCHEMA_VERSION, PreferencesError, TextScale, WindowModePreference,
 };
 pub use project::{
     CreationFact, CreationKind, CreationStatus, EvidenceFact, EvidenceStatus, IncompatibleNext,

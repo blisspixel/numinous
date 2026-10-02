@@ -1,7 +1,7 @@
 use super::{
     App, AudioProgram, Route, TestStateRoot, advance_gallery_phase, app_icon, append_crash_log_at,
     bounded_tick_seconds, effective_room_phase, fullscreen_toggle_target, julia_gpu_c,
-    julia_gpu_vertical_span, live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
+    julia_gpu_vertical_span, live_mandelbrot_gpu_view, mandelbrot_gpu_view, menu, radio_cache,
 };
 use crate::audio_runtime::{
     life_step_audio_owned, room_transient_audio_owned, selected_life_step_audio,
@@ -3413,11 +3413,78 @@ fn app_options_persist_one_versioned_preference_snapshot() {
         numinous_core::read_app_preferences_file(&path).expect("saved preferences"),
         numinous_core::AppPreferences {
             volume_percent: 55,
+            music_volume_percent: 100,
+            room_volume_percent: 100,
+            effect_volume_percent: 100,
             muted: true,
             era: numinous_core::Era::Phosphor,
             window_mode: numinous_core::WindowModePreference::Windowed,
             study_locale: numinous_core::study::StudyLocale::default(),
+            text_scale: numinous_core::TextScale::BASE,
         }
+    );
+    let _ = std::fs::remove_file(path);
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
+fn a_launch_mute_silences_without_becoming_the_saved_choice() {
+    // NUMINOUS_MUTE used to set the one mute flag, so the next unrelated save
+    // wrote `muted true` and the following launch stayed silent with no
+    // switch set. The launch mute now changes only what plays.
+    let mut app = headless("numinous_app_test_launch_mute.txt");
+    let path = app.preferences_file.clone();
+    let _ = std::fs::remove_file(&path);
+    app.muted = true; // exactly what `resumed` does for NUMINOUS_MUTE
+
+    app.change_volume(0.1);
+
+    assert!(app.muted, "the launch stays silent");
+    let saved = numinous_core::read_app_preferences_file(&path).expect("saved preferences");
+    assert!(
+        !saved.muted,
+        "the saved choice is the player's, not the switch's"
+    );
+    assert_eq!(saved.volume_percent, 55);
+
+    // An explicit choice made during that launch is the player's, and persists.
+    app.toggle_mute();
+    assert!(!app.muted);
+    app.toggle_mute();
+    assert!(app.muted);
+    let saved = numinous_core::read_app_preferences_file(&path).expect("saved preferences");
+    assert!(saved.muted, "a mute the player chose is kept");
+    let _ = std::fs::remove_file(path);
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
+fn the_settings_volume_row_steps_through_the_shared_numeric_row_path() {
+    let mut app = headless("numinous_app_test_numeric_row.txt");
+    let path = app.preferences_file.clone();
+    let _ = std::fs::remove_file(&path);
+    app.show_help = true;
+    app.menu.open_home(menu::MenuOrigin::Room);
+    assert_eq!(
+        app.menu.activate_shortcut('s'),
+        Some(menu::MenuIntent::None)
+    );
+    assert_eq!(app.menu.focused(), menu::MenuItemId::MasterVolume);
+
+    let down = app
+        .menu
+        .adjust_focused(menu::Step::Down)
+        .expect("the volume row is numeric");
+    app.apply_menu_intent(down);
+    assert!((app.volume - 0.35).abs() < 1.0e-6);
+    let up = app.menu.activate_focused();
+    app.apply_menu_intent(up);
+    assert!((app.volume - 0.45).abs() < 1.0e-6);
+    assert_eq!(
+        numinous_core::read_app_preferences_file(&path)
+            .expect("saved preferences")
+            .volume_percent,
+        45
     );
     let _ = std::fs::remove_file(path);
     let _ = std::fs::remove_file(&app.journey_file);

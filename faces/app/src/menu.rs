@@ -76,7 +76,7 @@ pub enum MenuItemId {
     Nim,
     Gauntlet,
     Arcade,
-    Volume,
+    MasterVolume,
     Mute,
     VisualEra,
     WindowMode,
@@ -105,7 +105,8 @@ pub enum MenuIntent {
     ConstructRoom,
     Close,
     Choose(MenuChoice),
-    VolumeDelta(i8),
+    /// Step one numeric Settings row down or up.
+    Adjust(NumericSetting, Step),
     ToggleMute,
     CycleEra,
     CycleWindowMode,
@@ -127,9 +128,40 @@ pub enum MenuIntent {
     LeaveWing,
 }
 
+/// A Settings value the player sets by stepping left and right.
+///
+/// A row whose action names one of these is a numeric row: left and right step
+/// it, and activating it steps it up, so every input family reaches the same
+/// value the same way.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NumericSetting {
+    /// The master level every sound passes through.
+    MasterVolume,
+}
+
+/// Which way a numeric row moves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Step {
+    Down,
+    Up,
+}
+
+impl Step {
+    /// The step as a sign, for settings measured on a number line.
+    #[must_use]
+    pub const fn sign(self) -> f32 {
+        match self {
+            Self::Down => -1.0,
+            Self::Up => 1.0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum MenuAction {
     Intent(MenuIntent),
+    /// A numeric row. Activation steps it up; left and right step either way.
+    Adjust(NumericSetting),
     Open(MenuRoute),
     Back,
 }
@@ -287,11 +319,11 @@ const GAME_ITEMS: [MenuItem; 6] = [
 
 const SETTINGS_ITEMS: [MenuItem; 6] = [
     MenuItem {
-        id: MenuItemId::Volume,
+        id: MenuItemId::MasterVolume,
         title: "VOLUME",
         description: "PRESS LEFT OR RIGHT TO SET THE CABINET'S MASTER VOLUME.",
         shortcut: None,
-        action: MenuAction::Intent(MenuIntent::VolumeDelta(10)),
+        action: MenuAction::Adjust(NumericSetting::MasterVolume),
     },
     MenuItem {
         id: MenuItemId::Mute,
@@ -500,7 +532,7 @@ fn default_focus(route: MenuRoute, origin: MenuOrigin) -> MenuItemId {
         MenuRoute::Modes if origin == MenuOrigin::Launch => MenuItemId::Watch,
         MenuRoute::Modes => MenuItemId::Play,
         MenuRoute::Games => MenuItemId::Quiz,
-        MenuRoute::Settings => MenuItemId::Volume,
+        MenuRoute::Settings => MenuItemId::MasterVolume,
         MenuRoute::Controls => MenuItemId::Back,
         MenuRoute::Wings => MenuItemId::Touch,
         MenuRoute::Pause(_) => MenuItemId::Resume,
@@ -690,14 +722,23 @@ impl MenuState {
         Some(self.apply(item.action))
     }
 
-    pub fn adjust_focused(&self, delta: i8) -> Option<MenuIntent> {
-        (self.route() == MenuRoute::Settings && self.focused == MenuItemId::Volume)
-            .then_some(MenuIntent::VolumeDelta(delta))
+    /// Step the focused row when it is numeric; `None` leaves left and right
+    /// free to move between rows.
+    #[must_use]
+    pub fn adjust_focused(&self, step: Step) -> Option<MenuIntent> {
+        state_items(self)
+            .into_iter()
+            .find(|item| item.id == self.focused)
+            .and_then(|item| match item.action {
+                MenuAction::Adjust(setting) => Some(MenuIntent::Adjust(setting, step)),
+                _ => None,
+            })
     }
 
     fn apply(&mut self, action: MenuAction) -> MenuIntent {
         match action {
             MenuAction::Intent(intent) => intent,
+            MenuAction::Adjust(setting) => MenuIntent::Adjust(setting, Step::Up),
             MenuAction::Open(route) => {
                 self.push(route);
                 MenuIntent::None
@@ -963,7 +1004,7 @@ fn centered_x(text: &str, scale: i32, rect: Rect) -> i32 {
 
 fn item_value(id: MenuItemId, readout: MenuReadout<'_>) -> Option<String> {
     match id {
-        MenuItemId::Volume => Some(format!("{}%", readout.volume_percent)),
+        MenuItemId::MasterVolume => Some(format!("{}%", readout.volume_percent)),
         MenuItemId::Mute => Some(if readout.muted { "ON" } else { "OFF" }.to_string()),
         MenuItemId::VisualEra => Some(readout.era.to_uppercase()),
         MenuItemId::WindowMode => Some(readout.window_mode.to_uppercase()),
@@ -1497,14 +1538,58 @@ mod tests {
         let mut state = MenuState::launch();
         assert_eq!(state.activate_shortcut('s'), Some(MenuIntent::None));
         assert_eq!(state.route(), MenuRoute::Settings);
-        assert_eq!(state.focused(), MenuItemId::Volume);
+        assert_eq!(state.focused(), MenuItemId::MasterVolume);
+        let master = NumericSetting::MasterVolume;
         assert_eq!(
-            state.adjust_focused(-10),
-            Some(MenuIntent::VolumeDelta(-10))
+            state.adjust_focused(Step::Down),
+            Some(MenuIntent::Adjust(master, Step::Down))
         );
-        assert_eq!(state.adjust_focused(10), Some(MenuIntent::VolumeDelta(10)));
+        assert_eq!(
+            state.adjust_focused(Step::Up),
+            Some(MenuIntent::Adjust(master, Step::Up))
+        );
+        assert_eq!(
+            state.activate_focused(),
+            MenuIntent::Adjust(master, Step::Up),
+            "activating a numeric row steps it up"
+        );
         state.focus_next(1);
-        assert_eq!(state.adjust_focused(10), None);
+        assert_eq!(state.adjust_focused(Step::Up), None);
+    }
+
+    #[test]
+    fn every_numeric_row_and_only_a_numeric_row_answers_left_and_right() {
+        // The adjustment comes from the row's own action, not from a
+        // hard-wired row name, so a new numeric row works on every input
+        // path the moment it is listed, and no other row can steal the arrows.
+        let routes = [
+            MenuRoute::Home,
+            MenuRoute::Modes,
+            MenuRoute::Games,
+            MenuRoute::Settings,
+            MenuRoute::Controls,
+            MenuRoute::Wings,
+            MenuRoute::Pause(ActivityKind::Quiz),
+        ];
+        let mut numeric_rows = 0;
+        for route in routes {
+            for item in items(route, true, true, true) {
+                let mut state = MenuState::launch();
+                state.stack = vec![route];
+                state.focused = item.id;
+                let adjusted = state.adjust_focused(Step::Down);
+                match item.action {
+                    MenuAction::Adjust(setting) => {
+                        numeric_rows += 1;
+                        assert_eq!(adjusted, Some(MenuIntent::Adjust(setting, Step::Down)));
+                    }
+                    _ => assert_eq!(adjusted, None, "{route:?} {:?}", item.id),
+                }
+            }
+        }
+        assert_eq!(numeric_rows, 1, "the Settings route lists the numeric rows");
+        assert_eq!(Step::Down.sign(), -1.0);
+        assert_eq!(Step::Up.sign(), 1.0);
     }
 
     #[test]

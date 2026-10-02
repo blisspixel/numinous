@@ -2,6 +2,7 @@ use super::{
     App, Key, NamedKey, controls, game_draw, gamepad, input_legend, menu, mouse_input, room_input,
     wager,
 };
+use crate::audio_runtime::VOLUME_STEP;
 
 impl App {
     /// Route Lab owns only its construction keys during ordinary room play.
@@ -71,10 +72,10 @@ impl App {
             return true;
         }
         let step = match text.as_str() {
-            "[" => Some(-0.1),
-            "]" => Some(0.1),
-            "-" if !self.studio => Some(-0.1),
-            "=" if !self.studio => Some(0.1),
+            "[" => Some(-VOLUME_STEP),
+            "]" => Some(VOLUME_STEP),
+            "-" if !self.studio => Some(-VOLUME_STEP),
+            "=" if !self.studio => Some(VOLUME_STEP),
             _ => None,
         };
         if let Some(step) = step {
@@ -632,7 +633,7 @@ impl App {
                     }
                 }
                 gamepad::Command::Left => {
-                    if let Some(intent) = self.menu.adjust_focused(-10) {
+                    if let Some(intent) = self.menu.adjust_focused(menu::Step::Down) {
                         self.apply_menu_intent(intent);
                     } else if layout.is_compact() {
                         self.menu.focus_next(-1);
@@ -641,7 +642,7 @@ impl App {
                     }
                 }
                 gamepad::Command::Right => {
-                    if let Some(intent) = self.menu.adjust_focused(10) {
+                    if let Some(intent) = self.menu.adjust_focused(menu::Step::Up) {
                         self.apply_menu_intent(intent);
                     } else if layout.is_compact() {
                         self.menu.focus_next(1);
@@ -843,12 +844,12 @@ impl App {
             }
             gamepad::Command::VolumeDown => {
                 self.input_mode = input_legend::InputMode::Controller;
-                self.change_volume(-0.1);
+                self.change_volume(-VOLUME_STEP);
                 return;
             }
             gamepad::Command::VolumeUp => {
                 self.input_mode = input_legend::InputMode::Controller;
-                self.change_volume(0.1);
+                self.change_volume(VOLUME_STEP);
                 return;
             }
             _ => {}

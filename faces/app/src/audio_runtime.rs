@@ -7,7 +7,10 @@ use numinous_core::{ROOM_BED_SOURCE_RATE, Room};
 
 use crate::audio_state::Program as AudioProgram;
 use crate::room_phase::{effective_room_phase, has_finite_parameter_input};
-use crate::{App, effective_room_inputs, feedback, radio_cache, studio_panel};
+use crate::{App, effective_room_inputs, feedback, menu, radio_cache, studio_panel};
+
+/// One press of a volume control: keyboard, controller, or a Settings row.
+pub(super) const VOLUME_STEP: f32 = 0.1;
 
 pub(super) fn selected_parameter_sound(
     program: AudioProgram,
@@ -128,9 +131,22 @@ impl App {
     }
 
     pub(super) fn toggle_mute(&mut self) {
-        self.muted = !self.muted;
+        self.set_muted(!self.muted);
+    }
+
+    /// Record an explicit mute choice: it silences now and persists.
+    pub(super) fn set_muted(&mut self, muted: bool) {
+        self.muted = muted;
+        self.muted_preference = muted;
         self.apply_master_gain();
         self.persist_preferences();
+    }
+
+    /// Step one numeric Settings row.
+    pub(super) fn adjust_setting(&mut self, setting: menu::NumericSetting, step: menu::Step) {
+        match setting {
+            menu::NumericSetting::MasterVolume => self.change_volume(step.sign() * VOLUME_STEP),
+        }
     }
 
     /// Tune in to the current dial position: build the playlist, join the

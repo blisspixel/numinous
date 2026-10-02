@@ -1946,7 +1946,7 @@ mod tests {
         persist_journey_delta, read_app_preferences_file, record_journal_file, record_score_file,
         remove_persisted_file, resolve_local_state_paths_with, try_load_project_file,
     };
-    use crate::{AppPreferences, Era, WindowModePreference};
+    use crate::{AppPreferences, Era, TextScale, WindowModePreference};
     use std::collections::BTreeMap;
     use std::ffi::OsString;
     use std::fs::File;
@@ -2361,10 +2361,14 @@ mod tests {
         let path = temp_file("preferences");
         let preferences = AppPreferences {
             volume_percent: 65,
+            music_volume_percent: 40,
+            room_volume_percent: 90,
+            effect_volume_percent: 0,
             muted: true,
             era: Era::EightBit,
             window_mode: WindowModePreference::Borderless,
             study_locale: "haw".parse().unwrap(),
+            text_scale: TextScale::from_percent(150).expect("admitted text scale"),
         };
 
         assert_eq!(

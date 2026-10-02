@@ -5,6 +5,15 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Changed
+- App preferences move to schema 3, which adds music, room, and effect levels
+  (default 100 percent) and a text scale of 100 to 200 percent in steps of 25.
+  Schemas 1 and 2 still load, with the new fields at their defaults, so an
+  upgraded install sounds and reads as before. Parsing stays all-or-nothing.
+- The Settings menu adjusts any numeric row through one shared path instead of
+  a single hard-wired Volume row, so left, right, and activation behave the
+  same for every level a row holds.
+
 ### Fixed
 - The terminal Show's curtain line, the exit tease of live terminal views, and
   a landed Times Tables goal no longer print a staged room's reveal before its
@@ -19,6 +28,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   phase.
 - Under reduced motion a screen shake becomes a still edge around the frame
   for the same frames, marking the moment without moving the picture.
+- `NUMINOUS_MUTE` silences one launch without becoming the saved mute choice.
+  Previously the next settings save recorded it, and later launches stayed
+  muted with the switch unset.
 
 ## [0.4.0-alpha.31] - 2026-10-01
 
