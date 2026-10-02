@@ -365,7 +365,9 @@ struct App {
     route_authoring: Option<route_authoring::Panel>,
     route_active: bool,
     route_preview_previous: Option<route_authoring::Panel>,
+    route_received_return: Vec<route_runtime::RoutePreviewReturn>,
     route_primary_held: bool,
+    route_pointer_held: bool,
     /// The F4 naming step: a share waiting for its title and signature.
     share_naming: Option<ShareNaming>,
     /// The author name from the last named share, offered on the next one.
@@ -636,7 +638,9 @@ impl App {
             route_authoring: None,
             route_active: false,
             route_preview_previous: None,
+            route_received_return: Vec::new(),
             route_primary_held: false,
+            route_pointer_held: false,
             share_naming: None,
             remembered_author: String::new(),
             gallery: None,
@@ -1362,6 +1366,7 @@ impl App {
 
     fn clear_pointer_state(&mut self) {
         self.route_primary_held = false;
+        self.route_pointer_held = false;
         self.set_pointer_state(mouse_input::PointerState::default());
     }
 
@@ -1831,8 +1836,18 @@ impl App {
             } else {
                 None
             };
-            let mut raster = panel.draw(width, height, hint.as_deref());
-            if let Some(plate) = &self.project_resume {
+            let mut raster = if let Some(gallery) = &self.gallery {
+                let mut raster = Raster::new(width, height);
+                gallery.draw_with_hint(&mut raster, width, height, hint.as_deref());
+                raster
+            } else {
+                panel.draw(width, height, hint.as_deref())
+            };
+            if let Some(plate) = self
+                .project_resume
+                .as_ref()
+                .filter(|_| self.gallery.is_none())
+            {
                 project_resume::draw(&mut raster, &plate.lines, width, height);
             }
             if self.input_mode == input_legend::InputMode::Controller
@@ -2417,6 +2432,9 @@ impl ApplicationHandler for App {
                 if self.handle_study_key(&logical_key, repeat) {
                     return;
                 }
+                if self.handle_gallery_key(&logical_key, repeat) {
+                    return;
+                }
                 if self.handle_route_authoring_key(&logical_key, repeat) {
                     return;
                 }
@@ -2541,30 +2559,6 @@ impl ApplicationHandler for App {
                             let letter = c.chars().next().unwrap_or(' ').to_ascii_uppercase();
                             self.quiz_answer(letter);
                         }
-                        _ => {}
-                    }
-                } else if self.studio && self.gallery.is_some() {
-                    // The Gallery wall owns the keys while it is up: browse,
-                    // open, or step back to the Studio underneath.
-                    match logical_key {
-                        Key::Named(NamedKey::Escape)
-                        | Key::Named(NamedKey::Tab)
-                        | Key::Named(NamedKey::F5) => {
-                            self.gallery = None;
-                        }
-                        Key::Named(NamedKey::Enter) => self.gallery_open_selected(),
-                        // Case-insensitive: the footer advertises F, and a
-                        // held Shift or Caps Lock must not unplug it.
-                        Key::Character(c) if c.as_str().eq_ignore_ascii_case("f") => {
-                            self.gallery_fork_selected();
-                        }
-                        Key::Character(c) if c.as_str().eq_ignore_ascii_case("d") => {
-                            self.gallery_select_parent();
-                        }
-                        Key::Named(NamedKey::ArrowLeft) => self.gallery_move(-1, 0),
-                        Key::Named(NamedKey::ArrowRight) => self.gallery_move(1, 0),
-                        Key::Named(NamedKey::ArrowUp) => self.gallery_move(0, -1),
-                        Key::Named(NamedKey::ArrowDown) => self.gallery_move(0, 1),
                         _ => {}
                     }
                 } else if self.studio && self.project_resume.is_some() {

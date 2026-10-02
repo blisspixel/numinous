@@ -5,6 +5,29 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.30] - 2026-10-01
+
+### Added
+- Route Lab SHARE exports a chosen question and exact authored network as one
+  portable project document without appending to the local project chain.
+- The native App receives portable route project files by drop or launch path in a
+  paused preview. OPEN starts an in-memory experiment, KEEP explicitly imports
+  the question locally, and cancellation restores the interrupted session.
+- Core owns pure portable document construction and preview, bounded file
+  admission, and immutable export through the existing project format.
+- The local Gallery discovers portable route questions beside Studio creations
+  and opens them through the same paused receiving flow.
+
+### Changed
+- Packaged instructions explain native question sharing and deliberate receiving
+  alongside the existing CLI and MCP project round trips.
+- Sharing receipts preserve file-path case and Unicode, with bounded text and
+  paging for long paths. The bitmap font also includes the path separator glyph.
+- Received and kept questions and Gallery captions use the bundled shaped text
+  renderer, with paging for question overflow. Dense previews distinguish
+  deliveries and the depot without overlapping every junction label; compact
+  Gallery hints retain the back action.
+
 ## [0.4.0-alpha.29] - 2026-10-01
 
 ### Added

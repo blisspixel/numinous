@@ -3,13 +3,62 @@
 //!
 //! Local-first by design (see `docs/CREATOR.md`): the wall is a bounded scan
 //! of one folder, the same folder the share keys already write into, so it
-//! works before any server exists. Every thumbnail is the creation's own
-//! curve over its own saved window at its own saved knob; a wall of previews
-//! that drew some other window would be advertising files it cannot deliver.
+//! works before any server exists. Studio thumbnails show their saved window
+//! and knob. Route questions show their authored network and current street walk.
+//! Opening a tile delivers the admitted creation behind that preview.
 
 use std::path::{Path, PathBuf};
 
-use numinous_core::{Raster, StudioCreation, StudioKind, StudioProgram, Surface};
+use numinous_core::{
+    ProjectDocument, Raster, RouteCreation, StudioCreation, StudioKind, StudioProgram, Surface,
+};
+
+pub(crate) enum GalleryCreation {
+    Studio {
+        creation: StudioCreation,
+        program: StudioProgram,
+    },
+    RouteQuestion {
+        document: ProjectDocument,
+        creation: RouteCreation,
+        presentation: Box<numinous_app::route_authoring::Panel>,
+        question: String,
+        parent: Option<String>,
+    },
+}
+
+impl GalleryCreation {
+    fn source(&self) -> &str {
+        match self {
+            Self::Studio { creation, .. } => creation.source(),
+            Self::RouteQuestion { question, .. } => question,
+        }
+    }
+    fn title(&self) -> Option<&str> {
+        match self {
+            Self::Studio { creation, .. } => creation.title(),
+            Self::RouteQuestion { .. } => None,
+        }
+    }
+    fn editor_source(&self) -> String {
+        match self {
+            Self::Studio { creation, .. } => creation.editor_source(),
+            Self::RouteQuestion { .. } => format!("ROUTE: {}", self.source()),
+        }
+    }
+    fn descends(&self) -> Option<&str> {
+        match self {
+            Self::Studio { creation, .. } => creation.descends(),
+            Self::RouteQuestion { parent, .. } => parent.as_deref(),
+        }
+    }
+    fn to_link(&self) -> String {
+        match self {
+            Self::Studio { creation, .. } => creation.to_link(),
+            Self::RouteQuestion { creation, .. } => format!("route:{}", creation.identity_hex()),
+        }
+    }
+}
 
 /// The most creations one wall shows. Discovery is newest first, so the cap
 /// keeps the wall recent rather than complete; the folder stays the archive.
@@ -20,12 +69,10 @@ const COLUMNS: usize = 4;
 /// One discovered creation: where it lives, what it is, and where it sits in
 /// the wall's own remix tree.
 pub(crate) struct GalleryEntry {
-    /// The `.num` file this tile reopens.
+    /// The validated file this tile reopens.
     pub path: PathBuf,
     /// The validated creation, exactly as the file holds it.
-    pub creation: StudioCreation,
-    /// Parsed once at discovery so a wall of tiles does not reparse per frame.
-    program: StudioProgram,
+    pub creation: GalleryCreation,
     modified: std::time::SystemTime,
     /// The wall index of the creation this one descends from, when that
     /// exact creation is on the wall too. Matched by canonical link, so a
@@ -51,8 +98,36 @@ pub(crate) enum ParentStatus {
 fn entry_at(path: PathBuf) -> Option<GalleryEntry> {
     // The shared bounded loader: an oversized or invalid file is skipped, not
     // shown as a broken tile. Symlinks were already skipped by the caller.
-    let creation = StudioCreation::from_num_path(&path).ok()?;
-    let program = creation.program().ok()?;
+    let creation = if path
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("project"))
+    {
+        let document = numinous_core::read_project_document_file(&path).ok()?;
+        let preview = document.preview(
+            &numinous_core::Journal::default(),
+            numinous_core::ReceiptCheck::NotSupplied,
+        );
+        if preview.creation.kind != Some(numinous_core::CreationKind::Route) {
+            return None;
+        }
+        let creation = RouteCreation::from_capsule(preview.creation.capsule.as_deref()?).ok()?;
+        let parent = creation
+            .parent_identity_hex()
+            .map(|parent| format!("route:{parent}"));
+        let mut presentation = numinous_app::route_authoring::Panel::opened(creation.clone());
+        presentation.question = preview.question.clone();
+        GalleryCreation::RouteQuestion {
+            document,
+            creation,
+            presentation: Box::new(presentation),
+            question: preview.question,
+            parent,
+        }
+    } else {
+        let creation = StudioCreation::from_num_path(&path).ok()?;
+        let program = creation.program().ok()?;
+        GalleryCreation::Studio { creation, program }
+    };
     // A filesystem that cannot answer for the timestamp must not hide the
     // creation itself: the file opened and parsed, so it belongs on the
     // wall, merely sorted as oldest.
@@ -62,7 +137,6 @@ fn entry_at(path: PathBuf) -> Option<GalleryEntry> {
     Some(GalleryEntry {
         path,
         creation,
-        program,
         modified,
         parent: None,
         remixes: 0,
@@ -119,10 +193,9 @@ pub(crate) fn discover(parent: &Path) -> Option<Vec<GalleryEntry>> {
         let Ok(kind) = item.file_type() else { continue };
         let path = item.path();
         if kind.is_file() {
-            if path
-                .extension()
-                .is_some_and(|extension| extension.eq_ignore_ascii_case("num"))
-                && let Some(entry) = entry_at(path)
+            if path.extension().is_some_and(|extension| {
+                extension.eq_ignore_ascii_case("num") || extension.eq_ignore_ascii_case("project")
+            }) && let Some(entry) = entry_at(path)
             {
                 entries.push(entry);
             }
@@ -184,7 +257,17 @@ impl GalleryPanel {
 
     /// The creation under the cursor, if the wall is not empty.
     pub(crate) fn selected_creation(&self) -> Option<&StudioCreation> {
-        self.entries.get(self.selected).map(|entry| &entry.creation)
+        match &self.entries.get(self.selected)?.creation {
+            GalleryCreation::Studio { creation, .. } => Some(creation),
+            GalleryCreation::RouteQuestion { .. } => None,
+        }
+    }
+
+    pub(crate) fn selected_project(&self) -> Option<&ProjectDocument> {
+        match &self.entries.get(self.selected)?.creation {
+            GalleryCreation::RouteQuestion { document, .. } => Some(document),
+            GalleryCreation::Studio { .. } => None,
+        }
     }
 
     /// Where the selected creation's parent is.
@@ -227,18 +310,62 @@ impl GalleryPanel {
         let row = self.selected as i32 / columns;
         let column = self.selected as i32 % columns;
         let last_row = last / columns;
-        let target_row = (row + dy).clamp(0, last_row);
+        let target_row = (row as i64 + dy as i64).clamp(0, last_row as i64) as i32;
         let row_last_column = if target_row == last_row {
             last - last_row * columns
         } else {
             columns - 1
         };
-        let target_column = (column + dx).clamp(0, row_last_column);
+        let target_column = (column as i64 + dx as i64).clamp(0, row_last_column as i64) as i32;
         self.selected = (target_row * columns + target_column) as usize;
+    }
+
+    /// Choose only a visible tile, using the rendered grid's geometry.
+    pub(crate) fn pointer_at(&mut self, point: (f64, f64), width: usize, height: usize) -> bool {
+        if !point.0.is_finite()
+            || !point.1.is_finite()
+            || width < 40
+            || height < 40
+            || self.entries.is_empty()
+        {
+            return false;
+        }
+        let scale = (width as i32 / 450).clamp(1, 3);
+        let wall_top = 10 + 24 * scale;
+        let wall_height = (height as i32 - 28 * scale - 4 - wall_top).max(0) as usize;
+        let tile_width = width / COLUMNS;
+        let tile_height = (wall_height / self.entries.len().div_ceil(COLUMNS)).max(1);
+        if tile_height.saturating_sub(4) < 24 || tile_width.saturating_sub(8) < 12 {
+            return false;
+        }
+        let (x, y) = (point.0 * width as f64, point.1 * height as f64);
+        for index in 0..self.entries.len() {
+            let left = (index % COLUMNS * tile_width + 4) as f64;
+            let top = (wall_top + (index / COLUMNS * tile_height) as i32 + 2) as f64;
+            if x >= left
+                && x < left + tile_width.saturating_sub(8) as f64
+                && y >= top
+                && y < top + tile_height.saturating_sub(4) as f64
+            {
+                self.selected = index;
+                return true;
+            }
+        }
+        false
     }
 
     /// Draw the wall: a titled grid of exact thumbnails with one selection.
     pub(crate) fn draw(&self, raster: &mut Raster, width: usize, height: usize) {
+        self.draw_with_hint(raster, width, height, None);
+    }
+
+    pub(crate) fn draw_with_hint(
+        &self,
+        raster: &mut Raster,
+        width: usize,
+        height: usize,
+        hint: Option<&str>,
+    ) {
         let width = width.min(raster.width());
         let height = height.min(raster.height());
         if width < 40 || height < 40 {
@@ -251,7 +378,11 @@ impl GalleryPanel {
         raster.clear_rows(footer_top, height as i32);
         numinous_core::draw_text(
             raster,
-            "ARROWS: CHOOSE   ENTER: OPEN PAUSED   F: FORK   D: PARENT   ESC: BACK",
+            hint.unwrap_or(if self.selected_project().is_some() {
+                "ARROWS SELECT. ENTER/CLICK PREVIEW. D PARENT. ESC BACK."
+            } else {
+                "ARROWS SELECT. ENTER OPEN. F FORK. D PARENT. ESC BACK."
+            }),
             10,
             height as i32 - 11 * scale,
             scale,
@@ -290,7 +421,7 @@ impl GalleryPanel {
             );
             numinous_core::draw_text(
                 raster,
-                "F4 IN THE STUDIO SHARES A CREATION HERE",
+                "SHARE A STUDIO CREATION OR A ROUTE QUESTION HERE",
                 10,
                 10 + 44 * scale,
                 scale,
@@ -306,6 +437,9 @@ impl GalleryPanel {
             ParentStatus::NoLineage => None,
             ParentStatus::Absent => Some("DESCENDS FROM A CREATION NOT ON THIS WALL".to_string()),
             ParentStatus::Local(parent) => self.entries.get(parent).map(|entry| {
+                if matches!(entry.creation, GalleryCreation::RouteQuestion { .. }) {
+                    return "DESCENDS FROM A ROUTE QUESTION  D: GO THERE".into();
+                }
                 format!(
                     "DESCENDS FROM {}  D: GO THERE",
                     tile_label(entry, width.saturating_sub(180))
@@ -334,6 +468,20 @@ impl GalleryPanel {
                 '*',
             );
             if let Some(entry) = self.entries.get(self.selected) {
+                if let GalleryCreation::RouteQuestion { presentation, .. } = &entry.creation {
+                    let label = format!("CHOSEN {} OF {}", self.selected + 1, self.entries.len());
+                    numinous_core::draw_text(raster, &label, 10, wall_top + 14 * scale, scale, '#');
+                    presentation.draw_question_caption(
+                        raster,
+                        numinous_app::study_text::TextViewport {
+                            x: 10,
+                            y: wall_top + 24 * scale,
+                            width: width.saturating_sub(20) as u32,
+                            height: (lineage_top - wall_top - 24 * scale).max(0) as u32,
+                        },
+                    );
+                    return;
+                }
                 let label = format!(
                     "CHOSEN {} OF {}: {}",
                     self.selected + 1,
@@ -351,11 +499,8 @@ impl GalleryPanel {
             let y0 = wall_top + (row * tile_height) as i32 + 2;
             let inner_width = tile_width.saturating_sub(8);
             let inner_height = tile_height.saturating_sub(4);
-            // The curve band gives up 14 rows to the caption below it, so a
-            // tile shorter than that would underflow the subtraction rather
-            // than merely draw badly. The saturating subtraction below is the
-            // belt; this guard is the suspenders that keep a drawn tile tall
-            // enough to mean something.
+            // Reserve 14 rows for Studio captions and 20 for shaped route
+            // captions. Even short tiles retain the whole caption band.
             if inner_width < 12 || inner_height < 24 {
                 continue;
             }
@@ -367,23 +512,36 @@ impl GalleryPanel {
                 raster.line(x0, y0, x0, y1, '#');
                 raster.line(x1, y0, x1, y1, '#');
             }
+            let route_question = matches!(entry.creation, GalleryCreation::RouteQuestion { .. });
             draw_tile_curve(
                 raster,
                 x0 + 2,
                 y0 + 2,
                 inner_width.saturating_sub(4),
-                inner_height.saturating_sub(14),
+                inner_height.saturating_sub(if route_question { 20 } else { 14 }),
                 entry,
             );
-            let label = tile_label(entry, inner_width);
-            numinous_core::draw_text(
-                raster,
-                &label,
-                x0 + 2,
-                y0 + inner_height as i32 - 10,
-                1,
-                '*',
-            );
+            if let GalleryCreation::RouteQuestion { presentation, .. } = &entry.creation {
+                presentation.draw_question_caption(
+                    raster,
+                    numinous_app::study_text::TextViewport {
+                        x: x0 + 2,
+                        y: y0 + inner_height as i32 - 18,
+                        width: inner_width.saturating_sub(4) as u32,
+                        height: 18,
+                    },
+                );
+            } else {
+                let label = tile_label(entry, inner_width);
+                numinous_core::draw_text(
+                    raster,
+                    &label,
+                    x0 + 2,
+                    y0 + inner_height as i32 - 10,
+                    1,
+                    '*',
+                );
+            }
             if entry.remixes > 0 {
                 // The badge is the parent's point of pride: remixing is
                 // honoring, and the wall says so where the tree is visible.
@@ -431,19 +589,21 @@ fn draw_tile_curve(
     if tile_width < 2 || tile_height < 8 {
         return;
     }
-    let (xmin, xmax) = (entry.creation.xmin(), entry.creation.xmax());
-    let a = entry.creation.a();
+    let (creation, program) = match &entry.creation {
+        GalleryCreation::Studio { creation, program } => (creation, program),
+        GalleryCreation::RouteQuestion { presentation, .. } => {
+            let thumbnail = presentation.thumbnail(tile_width, tile_height);
+            raster.blit(&thumbnail, x0.max(0) as usize, y0.max(0) as usize);
+            return;
+        }
+    };
+    let (xmin, xmax) = (creation.xmin(), creation.xmax());
+    let a = creation.a();
     let span = xmax - xmin;
-    if entry.program.kind() == StudioKind::Field {
-        let ymin = entry
-            .creation
-            .ymin()
-            .unwrap_or(numinous_core::DEFAULT_FIELD_MIN);
-        let ymax = entry
-            .creation
-            .ymax()
-            .unwrap_or(numinous_core::DEFAULT_FIELD_MAX);
-        let reading = entry.creation.reading().unwrap_or_default();
+    if program.kind() == StudioKind::Field {
+        let ymin = creation.ymin().unwrap_or(numinous_core::DEFAULT_FIELD_MIN);
+        let ymax = creation.ymax().unwrap_or(numinous_core::DEFAULT_FIELD_MAX);
+        let reading = creation.reading().unwrap_or_default();
         let _ = numinous_app::studio_render::draw_field(
             raster,
             numinous_app::studio_render::CurveLayout {
@@ -453,18 +613,18 @@ fn draw_tile_curve(
                 bottom_margin: 0.0,
             },
             x0,
-            entry.program.voice_expression(),
+            program.voice_expression(),
             reading,
             xmin,
             xmax,
             ymin,
             ymax,
             a,
-            entry.creation.sliders(),
+            creation.sliders(),
         );
         return;
     }
-    if entry.program.kind() == StudioKind::Parametric {
+    if program.kind() == StudioKind::Parametric {
         let _ = numinous_app::studio_render::draw_parametric_rect(
             raster,
             numinous_app::studio_render::CurveRect {
@@ -475,18 +635,14 @@ fn draw_tile_curve(
             },
             xmin,
             xmax,
-            |input| {
-                entry
-                    .program
-                    .point_named(input, a, entry.creation.sliders())
-            },
+            |input| program.point_named(input, a, creation.sliders()),
         );
         return;
     }
     let points: Vec<(usize, f64)> = (0..tile_width)
         .filter_map(|column| {
             let x = xmin + span * column as f64 / (tile_width as f64 - 1.0);
-            let point = entry.program.point_named(x, a, entry.creation.sliders())?;
+            let point = program.point_named(x, a, creation.sliders())?;
             point.1.is_finite().then_some((column, point.1))
         })
         .collect();
@@ -985,5 +1141,258 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&dir);
         let _ = std::fs::remove_dir_all(&empty_dir);
+    }
+
+    fn route_document(
+        creation: numinous_core::RouteCreation,
+        question: &str,
+    ) -> numinous_core::ProjectDocument {
+        let mut panel = numinous_app::route_authoring::Panel::opened(creation);
+        panel.question = question.into();
+        numinous_core::ProjectDocument::from_draft(&panel.project_draft(0).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn route_question_gallery_discovers_typed_questions_with_true_route_lineage() {
+        let directory = scratch("route-typed");
+        save(&directory, "studio.num", "sin(x)");
+        let parent = numinous_core::RouteCreation::new(
+            numinous_core::route_workbench::RouteWorkbench::first_town()
+                .town()
+                .clone(),
+        )
+        .unwrap();
+        let mut network = parent.town().clone();
+        network.roads[3].road.cost = 7;
+        let child = parent.remix(network).unwrap();
+        for (name, document) in [
+            (
+                "parent.project",
+                route_document(parent, "Parent route question"),
+            ),
+            (
+                "child.PROJECT",
+                route_document(child, "Child route question"),
+            ),
+        ] {
+            numinous_core::export_project_document_file(&directory.join(name), &document).unwrap();
+        }
+        std::fs::write(directory.join("broken.project"), "not a project").unwrap();
+        let studio = StudioCreation::new("x", -1.0, 1.0, 0.0).unwrap();
+        let capsule = studio.to_num_file();
+        let studio_document =
+            numinous_core::ProjectDocument::from_draft(&numinous_core::ProjectDraft {
+                recorded_at_utc: 0,
+                question: "Not a route".into(),
+                rooms: vec!["mandelbrot".into()],
+                evidence: vec![],
+                creation: Some(capsule.clone()),
+                next: numinous_core::ProjectNext::OpenCreation { capsule },
+            })
+            .unwrap();
+        numinous_core::export_project_document_file(
+            &directory.join("studio.project"),
+            &studio_document,
+        )
+        .unwrap();
+        let mut panel = GalleryPanel::open(&directory);
+        assert_eq!(panel.len(), 3);
+        let child = panel
+            .entries
+            .iter()
+            .position(|entry| entry.creation.source() == "Child route question")
+            .unwrap();
+        panel.selected = child;
+        assert!(panel.selected_creation().is_none());
+        assert!(panel.selected_project().is_some());
+        assert!(super::tile_label(&panel.entries[child], 200).starts_with("ROUTE:"));
+        assert!(panel.select_parent());
+        assert_eq!(
+            panel.entries[panel.selected].creation.source(),
+            "Parent route question"
+        );
+        assert_eq!(panel.entries[panel.selected].remixes, 1);
+        assert_eq!(panel.parent_status(), super::ParentStatus::NoLineage);
+        panel.selected = panel
+            .entries
+            .iter()
+            .position(|entry| entry.creation.source() == "sin(x)")
+            .unwrap();
+        assert!(panel.selected_creation().is_some());
+        assert!(panel.selected_project().is_none());
+        assert_eq!(panel.parent_status(), super::ParentStatus::NoLineage);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn route_question_gallery_thumbnail_is_the_same_authored_network_and_hits_only_visible_tiles() {
+        let directory = scratch("route-thumbnail");
+        let creation = numinous_core::RouteCreation::new(
+            numinous_core::route_workbench::RouteWorkbench::first_town()
+                .town()
+                .clone(),
+        )
+        .unwrap();
+        let document = route_document(creation.clone(), "Which road?");
+        numinous_core::export_project_document_file(&directory.join("question.project"), &document)
+            .unwrap();
+        let mut panel = GalleryPanel::open(&directory);
+        let mut tile = Raster::new(200, 100);
+        super::draw_tile_curve(&mut tile, 0, 0, 200, 100, &panel.entries[0]);
+        assert!(
+            tile.to_rgba()
+                == numinous_app::route_authoring::Panel::opened(creation)
+                    .thumbnail(200, 100)
+                    .to_rgba(),
+            "route tile uses the authored graph renderer"
+        );
+        for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
+            let mut raster = Raster::new(width, height);
+            panel.draw(&mut raster, width, height);
+            assert!(raster.lit_count() > 100);
+            assert!(panel.pointer_at((0.1, 0.5), width, height));
+            assert!(!panel.pointer_at((0.99, 0.5), width, height));
+            assert!(!panel.pointer_at((f64::NAN, 0.5), width, height));
+            assert!(!panel.pointer_at((0.1, f64::INFINITY), width, height));
+            assert!(!panel.pointer_at((0.1, 0.001), width, height));
+        }
+        assert!(!panel.pointer_at((0.1, 0.5), 30, 30));
+        assert!(!panel.pointer_at((0.1, 0.5), 600, 40));
+        let mut short = Raster::new(600, 40);
+        panel.draw(&mut short, 600, 40);
+        let mut tiny = Raster::new(1, 1);
+        super::draw_tile_curve(&mut tiny, 0, 0, 1, 1, &panel.entries[0]);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn route_question_gallery_pointer_chooses_the_rendered_tile_without_wrapping_or_opening() {
+        let directory = scratch("route-pointer");
+        for i in 0..6 {
+            save(&directory, &format!("{i}.num"), "x");
+        }
+        let mut panel = GalleryPanel::open(&directory);
+        assert!(panel.pointer_at((0.6, 0.2), 900, 700));
+        assert_eq!(panel.selected, 2);
+        assert!(panel.pointer_at((0.1, 0.7), 900, 700));
+        assert_eq!(panel.selected, 4);
+        assert!(!panel.pointer_at((0.9, 0.7), 900, 700));
+        assert_eq!(panel.selected, 4);
+        panel.move_selection(i32::MAX, i32::MAX);
+        assert_eq!(panel.selected, 5);
+        panel.move_selection(i32::MIN, i32::MIN);
+        assert_eq!(panel.selected, 0);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn route_question_gallery_compact_footer_draws_the_complete_back_hint_for_both_tile_types() {
+        let directory = scratch("route-footer");
+        save(&directory, "studio.num", "x");
+        let creation = numinous_core::RouteCreation::new(
+            numinous_core::route_workbench::RouteWorkbench::first_town()
+                .town()
+                .clone(),
+        )
+        .unwrap();
+        numinous_core::export_project_document_file(
+            &directory.join("question.project"),
+            &route_document(creation, "Open paused"),
+        )
+        .unwrap();
+        let mut panel = GalleryPanel::open(&directory);
+        for index in 0..panel.entries.len() {
+            panel.selected = index;
+            let label = if panel.selected_project().is_some() {
+                "ARROWS SELECT. ENTER/CLICK PREVIEW. D PARENT. ESC BACK."
+            } else {
+                "ARROWS SELECT. ENTER OPEN. F FORK. D PARENT. ESC BACK."
+            };
+            assert!(10 + numinous_core::text_width(label, 1) < 360);
+            let mut actual = Raster::new(360, 240);
+            panel.draw(&mut actual, 360, 240);
+            let mut expected = Raster::new(360, 240);
+            numinous_core::draw_text(&mut expected, label, 10, 229, 1, '#');
+            let actual = actual.to_rgba();
+            let expected = expected.to_rgba();
+            for y in 229..236 {
+                for x in 0..360 {
+                    let offset = (y * 360 + x) * 4;
+                    assert_eq!(actual[offset..offset + 4], expected[offset..offset + 4]);
+                }
+            }
+        }
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+    #[test]
+    fn route_question_gallery_unicode_captions_distinguish_questions_on_the_same_network() {
+        let a = scratch("unicode-caption-a");
+        let b = scratch("unicode-caption-b");
+        let creation = numinous_core::RouteCreation::new(
+            numinous_core::route_workbench::RouteWorkbench::first_town()
+                .town()
+                .clone(),
+        )
+        .unwrap();
+        for (directory, question) in [(&a, "道はつながりますか"), (&b, "橋はつながりますか")]
+        {
+            numinous_core::export_project_document_file(
+                &directory.join("question.project"),
+                &route_document(creation.clone(), question),
+            )
+            .unwrap();
+        }
+        let first = GalleryPanel::open(&a);
+        let second = GalleryPanel::open(&b);
+        for (width, height) in [(360, 240), (900, 700)] {
+            let mut one = Raster::new(width, height);
+            first.draw(&mut one, width, height);
+            let mut two = Raster::new(width, height);
+            second.draw(&mut two, width, height);
+            let scale = (width as i32 / 450).clamp(1, 3);
+            let wall_top = 10 + 24 * scale;
+            let tile_height = (height as i32 - 28 * scale - 4 - wall_top) as usize;
+            let y0 = wall_top + 2;
+            let inner_height = tile_height - 4;
+            let caption_top = y0 + inner_height as i32 - 18;
+            let one = one.to_rgba();
+            let two = two.to_rgba();
+            let row = width * 4;
+            assert!(
+                one[y0 as usize * row..caption_top as usize * row]
+                    == two[y0 as usize * row..caption_top as usize * row],
+                "identical networks retain identical thumbnails"
+            );
+            assert!(
+                one[caption_top as usize * row..(caption_top as usize + 18) * row]
+                    != two[caption_top as usize * row..(caption_top as usize + 18) * row],
+                "the different Japanese first character has visible caption ink"
+            );
+        }
+        for index in 1..24 {
+            for (directory, question) in [(&a, "道はつながりますか"), (&b, "橋はつながりますか")]
+            {
+                numinous_core::export_project_document_file(
+                    &directory.join(format!("{index}.project")),
+                    &route_document(creation.clone(), question),
+                )
+                .unwrap();
+            }
+        }
+        let first = GalleryPanel::open(&a);
+        let second = GalleryPanel::open(&b);
+        let mut one = Raster::new(600, 150);
+        first.draw(&mut one, 600, 150);
+        let mut two = Raster::new(600, 150);
+        second.draw(&mut two, 600, 150);
+        let one = one.to_rgba();
+        let two = two.to_rgba();
+        let row = 600 * 4;
+        assert!(
+            one[58 * row..110 * row] != two[58 * row..110 * row],
+            "the chosen short-window fallback retains readable Japanese text"
+        );
+        std::fs::remove_dir_all(a).unwrap();
+        std::fs::remove_dir_all(b).unwrap();
     }
 }

@@ -199,11 +199,12 @@ pub use path_closure::{
 pub use persistence::{
     LocalCacheInventory, LocalCairnInventory, LocalFileInventory, LocalJourneyInventory,
     LocalScoresInventory, LocalStateEraseError, LocalStateEraseSelection, LocalStateInventory,
-    LocalStateLock, LocalStatePaths, correct_journal_file, correct_project_file,
-    erase_journal_file, erase_local_state, erase_project_file, import_project_file,
-    inspect_journal_file, inspect_local_state, keep_project_file, load_journal_file,
-    load_journey_file, load_scoreboard_file, lock_local_state, persist_app_preferences_file,
-    persist_journey_delta, read_app_preferences_file, read_journey_file, record_journal_file,
+    LocalStateLock, LocalStatePaths, ProjectDocumentExport, correct_journal_file,
+    correct_project_file, erase_journal_file, erase_local_state, erase_project_file,
+    export_project_document_file, import_project_file, inspect_journal_file, inspect_local_state,
+    keep_project_file, load_journal_file, load_journey_file, load_scoreboard_file,
+    lock_local_state, persist_app_preferences_file, persist_journey_delta,
+    read_app_preferences_file, read_journey_file, read_project_document_file, record_journal_file,
     record_score_file, remove_persisted_file, resolve_local_state_paths, try_load_journal_file,
     try_load_project_file,
 };
@@ -224,9 +225,9 @@ pub use project::{
     MAX_PROJECT_EVIDENCE, MAX_PROJECT_FILE_BYTES, MAX_PROJECT_REVISIONS, MAX_PROJECT_ROOMS,
     NextPreview, PROJECT_CHAIN_HEADER, PROJECT_CHAIN_HEADER_V2, PROJECT_DOCUMENT_HEADER,
     PROJECT_DOCUMENT_HEADER_V2, PROJECT_RESUME_PREVIEW_SCHEMA, PROJECT_RESUME_PREVIEW_VERSION,
-    ProjectArgument, ProjectArgumentValue, ProjectCall, ProjectChain, ProjectDraft, ProjectError,
-    ProjectEvidence, ProjectNext, ProjectRevision, ProjectStore, ReceiptCheck, ResumePreview,
-    RoomFact, RoomStatus,
+    ProjectArgument, ProjectArgumentValue, ProjectCall, ProjectChain, ProjectDocument,
+    ProjectDraft, ProjectError, ProjectEvidence, ProjectNext, ProjectRevision, ProjectStore,
+    ReceiptCheck, ResumePreview, RoomFact, RoomStatus,
 };
 pub use projection::PlanarProjection;
 pub use quiz::{ICONIC, QuizChoice, QuizRound, build_round, build_round_pool, build_round_sized};

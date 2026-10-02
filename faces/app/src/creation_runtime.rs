@@ -386,6 +386,101 @@ impl App {
         postcard::write_studio_share_bundle(&creation, &rgba, parent).map(Ok)
     }
 
+    pub(super) fn handle_gallery_key(&mut self, key: &Key, repeat: bool) -> bool {
+        if self.gallery.is_none()
+            || self.show_help
+            || self.study.is_some()
+            || self.console.is_open()
+        {
+            return false;
+        }
+        self.input_mode = super::input_legend::InputMode::KeyboardMouse;
+        if repeat {
+            return true;
+        }
+        match key {
+            Key::Named(NamedKey::Escape | NamedKey::Tab | NamedKey::F5) => self.gallery = None,
+            Key::Named(NamedKey::Enter) => self.gallery_open_selected(),
+            Key::Named(NamedKey::ArrowLeft) => self.gallery_move(-1, 0),
+            Key::Named(NamedKey::ArrowRight) => self.gallery_move(1, 0),
+            Key::Named(NamedKey::ArrowUp) => self.gallery_move(0, -1),
+            Key::Named(NamedKey::ArrowDown) => self.gallery_move(0, 1),
+            Key::Character(text) if text.eq_ignore_ascii_case("f") => self.gallery_fork_selected(),
+            Key::Character(text) if text.eq_ignore_ascii_case("d") => self.gallery_select_parent(),
+            _ => {}
+        }
+        true
+    }
+
+    pub(super) fn handle_gallery_pointer(&mut self, point: (f64, f64), activate: bool) -> bool {
+        if self.gallery.is_none()
+            || self.show_help
+            || self.study.is_some()
+            || self.console.is_open()
+        {
+            return false;
+        }
+        if activate {
+            if self.route_pointer_held {
+                return true;
+            }
+            self.route_pointer_held = true;
+        }
+        let (width, height) = self
+            .window
+            .as_ref()
+            .map(|window| {
+                let size = window.inner_size();
+                (size.width as usize, size.height as usize)
+            })
+            .unwrap_or((900, 700));
+        if self
+            .gallery
+            .as_mut()
+            .unwrap()
+            .pointer_at(point, width, height)
+            && activate
+        {
+            self.gallery_open_selected();
+        }
+        true
+    }
+
+    pub(super) fn handle_gallery_gamepad(&mut self, command: super::gamepad::Command) -> bool {
+        use super::gamepad::Command;
+        if self.gallery.is_none()
+            || self.show_help
+            || self.study.is_some()
+            || self.console.is_open()
+        {
+            return false;
+        }
+        self.input_mode = super::input_legend::InputMode::Controller;
+        match command {
+            Command::Left => self.gallery_move(-1, 0),
+            Command::Right => self.gallery_move(1, 0),
+            Command::Up => self.gallery_move(0, -1),
+            Command::Down => self.gallery_move(0, 1),
+            Command::Back => self.gallery = None,
+            Command::Menu => {
+                self.open_activity_menu(if self.route_active {
+                    super::menu::ActivityKind::Route
+                } else {
+                    super::menu::ActivityKind::Studio
+                });
+            }
+            Command::PointerMoved { point, .. } => {
+                self.handle_gallery_pointer(point, false);
+            }
+            Command::PrimaryDown if !self.route_primary_held => {
+                self.route_primary_held = true;
+                self.gallery_open_selected();
+            }
+            _ => {}
+        }
+        true
+    }
+
     /// Move the Gallery cursor by whole tiles.
     pub(super) fn gallery_move(&mut self, dx: i32, dy: i32) {
         if let Some(gallery) = &mut self.gallery {
@@ -461,6 +556,20 @@ impl App {
     /// Open the creation under the Gallery cursor: the wall closes and the
     /// Studio holds the exact reopened state, paused like any other open.
     pub(super) fn gallery_open_selected(&mut self) {
+        if let Some(document) = self
+            .gallery
+            .as_ref()
+            .and_then(|gallery| gallery.selected_project())
+            .cloned()
+        {
+            if let Err(error) = self.open_route_project_document(document) {
+                self.banner = Some(feedback::Banner::status(
+                    format!("PROJECT REFUSED: {}", numinous_core::display_safe(&error)),
+                    feedback::REFUSAL_FRAMES,
+                ));
+            }
+            return;
+        }
         let Some(creation) = self
             .gallery
             .as_ref()
@@ -530,6 +639,7 @@ impl App {
     /// whatever program was playing does not keep sounding under a preview
     /// that has deliberately not started singing yet.
     pub(super) fn open_studio_creation(&mut self, creation: &numinous_core::StudioCreation) {
+        self.discard_received_route_previews();
         // A new creation replaces any kept-question plate. The project opener
         // puts its own plate back after this returns. A route preview has not
         // replaced the prior editing session until explicitly opened.
@@ -622,7 +732,7 @@ impl App {
         }
     }
 
-    /// A file dropped on the window: only a `.num` creation opens here.
+    /// A file dropped on the window: Studio creations and portable route questions.
     pub(super) fn open_dropped_file(&mut self, path: &std::path::Path) {
         // A scored run in progress is not abandoned by a stray drop; the
         // player finishes or leaves it themselves, then drops again.
@@ -638,12 +748,26 @@ impl App {
             ));
             return;
         }
+        if path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("project"))
+        {
+            if self.study.is_some() || self.console.is_open() || self.show_help {
+                self.banner = Some(feedback::Banner::status(
+                    "CLOSE THE CURRENT PANEL BEFORE OPENING A ROUTE QUESTION",
+                    feedback::REFUSAL_FRAMES,
+                ));
+                return;
+            }
+            self.open_route_project_file(path);
+            return;
+        }
         let is_num = path
             .extension()
             .is_some_and(|extension| extension.eq_ignore_ascii_case("num"));
         if !is_num {
             self.banner = Some(feedback::Banner::status(
-                "ONLY .NUM CREATIONS OPEN HERE",
+                "OPEN A .NUM CREATION OR .PROJECT ROUTE QUESTION",
                 feedback::REFUSAL_FRAMES,
             ));
             return;
@@ -654,6 +778,14 @@ impl App {
     /// The launch-argument front door: a `.num` path, a `numinous://` link,
     /// or a bundled experiment id.
     pub(super) fn open_start_input(&mut self, input: &str) {
+        let path = std::path::Path::new(input);
+        if path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("project"))
+        {
+            self.open_route_project_file(path);
+            return;
+        }
         if let Some(creation) = numinous_core::studio_experiment(input) {
             self.open_studio_creation(&creation);
             self.banner = Some(feedback::Banner::status("REOPENED  ENTER: PLAY", 90));
@@ -675,6 +807,18 @@ impl App {
             return;
         }
         self.open_num_file(std::path::Path::new(input));
+    }
+
+    fn open_route_project_file(&mut self, path: &std::path::Path) {
+        let result = numinous_core::read_project_document_file(path)
+            .map_err(|error| error.to_string())
+            .and_then(|document| self.open_route_project_document(document));
+        if let Err(error) = result {
+            self.banner = Some(feedback::Banner::status(
+                format!("PROJECT REFUSED: {}", numinous_core::display_safe(&error)),
+                feedback::REFUSAL_FRAMES,
+            ));
+        }
     }
 
     /// Offer The Question only when a chain is present or unreadable.

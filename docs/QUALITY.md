@@ -95,6 +95,22 @@ inspected, along with a wide-short initialization view. README and study plates,
 gallery, contact sheet, and audio artifacts were regenerated. These are machine
 and rendering checks; participant comprehension and physical cross-platform
 evidence remain open.
+The alpha 30 native handoff pass on 2026-10-01 completed the full Windows
+verification gate on its final source. Coverage measured 94.65% regions and
+94.69% lines under the existing exclusions, improving alpha 29's 94.60%
+regions and 94.64% lines. Core regressions cover pure document previews,
+legacy bytes and identities, bounded admission, concurrent immutable exports,
+and explicit duplicate-safe import. Native input and composed-frame checks
+cover paused receiving, nested preview cancellation, retained undo and search,
+held controls, and Gallery admission. Real CLI and MCP process regressions
+preserve Unicode questions and lineage and follow the document's closed next
+call. The complete catalog-derived App matrix and focused native editor and
+Gallery frames passed. Representative dense, compact, Unicode first and final
+question pages, kept questions, case-preserving Unicode paths, and Gallery
+captions were inspected. README and study plates, gallery, contact sheet,
+and audio artifacts were regenerated. These are functional and rendering
+checks; participant comprehension, external-host discovery, and physical
+cross-platform evidence remain open.
 The broader dated baseline below retains its original counts.
 
 ## Evidence snapshot, 2026-09-01

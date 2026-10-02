@@ -374,7 +374,7 @@ pub struct ResumePreview {
     pub schema: &'static str,
     /// Schema version.
     pub version: u32,
-    /// Local revision that was previewed.
+    /// Local revision that was previewed, or zero for an unkept portable document.
     pub revision_id: u64,
     /// The question, as stored.
     pub question: String,
@@ -413,6 +413,89 @@ struct Payload {
     evidence: Vec<ProjectEvidence>,
     creation_num: Option<String>,
     parent_hex: String,
+}
+
+/// A validated portable question, creation, and closed next call.
+///
+/// This is one document, not a local revision chain. Constructing, parsing,
+/// serializing, and previewing it never import or keep a revision.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectDocument {
+    payload: Payload,
+    creation_from_link: bool,
+}
+
+impl ProjectDocument {
+    /// Validate a draft without appending it to a chain. Record time is local
+    /// metadata and is not included in the portable document.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same admission errors as keeping the draft, or `TooLarge`
+    /// when its canonical portable text exceeds the file bound.
+    pub fn from_draft(draft: &ProjectDraft) -> Result<Self, ProjectError> {
+        let (payload, creation_from_link) = payload_from_draft(draft, "")?;
+        let document = Self {
+            payload,
+            creation_from_link,
+        };
+        if document.to_document().len() as u64 > MAX_PROJECT_FILE_BYTES {
+            return Err(ProjectError::TooLarge);
+        }
+        Ok(document)
+    }
+
+    /// Admit one bounded v1 or v2 portable document using the canonical parser.
+    /// A local chain is not a portable document. Accepted legacy inputs are
+    /// serialized canonically; their portable payload identity is preserved.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for oversized, malformed, or incompatible documents.
+    pub fn parse(text: &str) -> Result<Self, ProjectError> {
+        let (payload, creation_from_link) = parse_document(text)?;
+        let document = Self {
+            payload,
+            creation_from_link,
+        };
+        if document.to_document().len() as u64 > MAX_PROJECT_FILE_BYTES {
+            return Err(ProjectError::TooLarge);
+        }
+        Ok(document)
+    }
+
+    /// Canonical portable text, with the existing Studio v1 or route v2 header.
+    #[must_use]
+    pub fn to_document(&self) -> String {
+        self.payload.to_document()
+    }
+
+    /// SHA-256 of the canonical portable payload line, lowercase hex.
+    #[must_use]
+    pub fn identity_hex(&self) -> String {
+        self.payload.identity_hex()
+    }
+
+    /// Preview the document without executing its next call or changing stores.
+    ///
+    /// `revision_id` is zero because this document has not been kept. Parent
+    /// resolution and supersession are absent: no local chain is inspected.
+    /// Evidence is checked against the supplied journal and receipt only.
+    #[must_use]
+    pub fn preview(&self, journal: &Journal, receipt: ReceiptCheck) -> ResumePreview {
+        let revision = ProjectRevision {
+            id: 0,
+            recorded_at_utc: 0,
+            source: String::new(),
+            payload: self.payload.clone(),
+            origin_revision: None,
+            supersedes: None,
+            creation_from_link: self.creation_from_link,
+        };
+        let mut preview = preview_revision(&ProjectChain::new(), &revision, journal, receipt);
+        preview.parent_resolved = None;
+        preview
+    }
 }
 
 /// One stored revision. Local id and source are not part of the payload identity.
@@ -520,12 +603,7 @@ impl ProjectRevision {
     /// is not part of this text.
     #[must_use]
     pub fn to_document(&self) -> String {
-        let header = if self.payload.needs_route_version() {
-            PROJECT_DOCUMENT_HEADER_V2
-        } else {
-            PROJECT_DOCUMENT_HEADER
-        };
-        format!("{header}\n{}\n", self.payload.portable_line())
+        self.payload.to_document()
     }
 }
 
@@ -823,6 +901,15 @@ impl ProjectChain {
 }
 
 impl Payload {
+    fn to_document(&self) -> String {
+        let header = if self.needs_route_version() {
+            PROJECT_DOCUMENT_HEADER_V2
+        } else {
+            PROJECT_DOCUMENT_HEADER
+        };
+        format!("{header}\n{}\n", self.portable_line())
+    }
+
     fn needs_route_version(&self) -> bool {
         matches!(
             self.next,
@@ -1925,6 +2012,189 @@ mod route_project_tests {
             evidence: Vec::new(),
             creation: Some("NUMINOUS_STUDIO 1\nexpr=t\nxmin=0\nxmax=1\na=1\n".into()),
         }
+    }
+
+    #[test]
+    fn portable_document_preview_preserves_route_question_lineage_without_keeping() {
+        let parent = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let mut network = parent.town().clone();
+        network.roads[3].road.cost = 5;
+        let child = parent.remix(network).unwrap();
+        let mut draft = route_draft(&child);
+        draft.question = "{\"tool\":\"route_lab\",\"action\":\"improve\"}".into();
+        let original = draft.clone();
+        let journal = Journal::new();
+        let journal_before = journal.to_text();
+        let document = ProjectDocument::from_draft(&draft).unwrap();
+        let restored = ProjectDocument::parse(&document.to_document()).unwrap();
+        let preview = restored.preview(&journal, ReceiptCheck::NotSupplied);
+        assert_eq!(draft, original);
+        assert_eq!(journal.to_text(), journal_before);
+        assert_eq!(preview.question, draft.question);
+        assert_eq!(preview.revision_id, 0);
+        assert_eq!(preview.parent_resolved, None);
+        assert_eq!(preview.superseded_by, None);
+        assert!(!preview.interpreted);
+        assert!(preview.not_applied && preview.will_return);
+        assert!(!preview.workspace_changed && !preview.journal_changed);
+        assert_eq!(preview.creation.kind, Some(CreationKind::Route));
+        assert_eq!(preview.creation.descends, Some(parent.identity_hex()));
+        let reopened =
+            RouteCreation::from_capsule(preview.creation.capsule.as_deref().unwrap()).unwrap();
+        assert_eq!(reopened.identity(), child.identity());
+        assert_eq!(reopened.open().town(), child.town());
+        let NextPreview::Ready(call) = preview.next else {
+            panic!("closed route next")
+        };
+        assert_eq!(call.tool, "route_lab");
+        assert!(
+            call.arguments.iter().any(|arg| arg.name == "action"
+                && arg.value == ProjectArgumentValue::Text("open".into()))
+        );
+        assert!(call.arguments.iter().any(|arg| arg.name == "capsule"
+            && arg.value == ProjectArgumentValue::Text(child.to_capsule())));
+        let mut chain = ProjectChain::new();
+        assert!(chain.revisions().is_empty());
+        let stored = chain
+            .import(&restored.to_document(), 10, None, true)
+            .unwrap();
+        assert!(matches!(
+            stored,
+            ProjectStore::Appended { revision_id: 1, .. }
+        ));
+        assert_eq!(
+            chain.revision(1).unwrap().identity_hex(),
+            document.identity_hex()
+        );
+        assert!(matches!(
+            chain
+                .import(&restored.to_document(), 11, None, true)
+                .unwrap(),
+            ProjectStore::AlreadyPresent { .. }
+        ));
+        assert_eq!(chain.revisions().len(), 1);
+    }
+
+    #[test]
+    fn portable_document_keeps_existing_studio_bytes_and_refuses_other_formats() {
+        let document = ProjectDocument::from_draft(&studio_draft()).unwrap();
+        let expected = "NUMINOUS_PROJECT 1\nQ\tstudy_room\\nlissajous\tlissajous\t\tNUMINOUS_STUDIO 1\\nexpr=t\\nxmin=0\\nxmax=1\\na=1\\n\t\n";
+        assert_eq!(document.to_document(), expected);
+        assert_eq!(
+            document.identity_hex(),
+            "f58dedb381dc8bcdae0fa510993c415086a21a5a3e94f15a9059bd7beb46e6a2"
+        );
+        assert_eq!(
+            ProjectDocument::parse(expected).unwrap().to_document(),
+            expected
+        );
+        let mut chain = ProjectChain::new();
+        chain.keep(&studio_draft()).unwrap();
+        assert!(ProjectDocument::parse(&chain.to_text()).is_err());
+        assert!(
+            ProjectDocument::parse(&expected.replace("NUMINOUS_PROJECT 1", "NUMINOUS_PROJECT 3"))
+                .is_err()
+        );
+        assert!(ProjectDocument::parse(&format!("{expected}unexpected\n")).is_err());
+        assert!(matches!(
+            ProjectDocument::parse(&"x".repeat(MAX_PROJECT_FILE_BYTES as usize + 1)),
+            Err(ProjectError::TooLarge)
+        ));
+        let mut invalid = studio_draft();
+        invalid.question.clear();
+        assert!(ProjectDocument::from_draft(&invalid).is_err());
+        invalid = studio_draft();
+        invalid.question = "x".repeat(MAX_WORKSPACE_TEXT_CHARS + 1);
+        assert!(ProjectDocument::from_draft(&invalid).is_err());
+        let route = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let route_document = ProjectDocument::from_draft(&route_draft(&route))
+            .unwrap()
+            .to_document();
+        assert!(
+            ProjectDocument::parse(&route_document.replacen(
+                PROJECT_DOCUMENT_HEADER_V2,
+                PROJECT_DOCUMENT_HEADER,
+                1
+            ))
+            .is_err()
+        );
+        assert!(
+            ProjectDocument::parse(&route_document.replace("NUMINOUS_ROUTE 1", "NUMINOUS_ROUTE 9"))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn portable_preview_preserves_correction_parent_without_inventing_chain_resolution() {
+        let mut chain = ProjectChain::new();
+        chain.keep(&studio_draft()).unwrap();
+        let original_identity = chain.revision(1).unwrap().identity_hex();
+        let mut corrected = studio_draft();
+        corrected.question = "A corrected question".into();
+        chain.correct(1, &corrected).unwrap();
+        let text_before = chain.to_text();
+        let revision = chain.revision(2).unwrap();
+        let document = ProjectDocument::parse(&revision.to_document()).unwrap();
+        assert_eq!(document.identity_hex(), revision.identity_hex());
+        assert!(document.to_document().contains(&original_identity));
+        let preview = document.preview(&Journal::new(), ReceiptCheck::NotSupplied);
+        assert!(preview.will_return);
+        assert_eq!(preview.parent_resolved, None);
+        assert_eq!(preview.superseded_by, None);
+        assert_eq!(chain.to_text(), text_before);
+        assert_eq!(
+            chain
+                .preview(Some(2), &Journal::new(), ReceiptCheck::NotSupplied)
+                .unwrap()
+                .parent_resolved,
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn portable_preview_checks_evidence_and_reports_legacy_link_admission() {
+        let creation = StudioCreation::from_capsule("full-return").unwrap();
+        let mut draft = studio_draft();
+        draft.question = "é".repeat(MAX_WORKSPACE_TEXT_CHARS);
+        draft.creation = Some(creation.to_link());
+        draft.evidence = vec![ProjectEvidence::Receipt {
+            digest: [7; 32],
+            tool: None,
+        }];
+        let document = ProjectDocument::from_draft(&draft).unwrap();
+        let journal = Journal::new();
+        let unchanged_journal = journal.to_text();
+        let preview = document.preview(&journal, ReceiptCheck::NotSupplied);
+        assert_eq!(preview.question, draft.question);
+        assert!(preview.creation.lineage_was_not_in_the_link);
+        assert_eq!(preview.creation.period_text.as_deref(), Some("12"));
+        assert_eq!(preview.evidence[0].status, EvidenceStatus::Missing);
+        assert!(preview.will_return);
+        let rejected = document.preview(&journal, ReceiptCheck::Disagreed);
+        assert_eq!(rejected.evidence[0].status, EvidenceStatus::Incompatible);
+        assert!(!rejected.will_return);
+        assert_eq!(journal.to_text(), unchanged_journal);
+        let canonical = document.to_document();
+        let legacy = canonical.replace(
+            &encode_field(&creation.to_num_file()),
+            &encode_field(&creation.to_link()),
+        );
+        let legacy_document = ProjectDocument::parse(&legacy).unwrap();
+        assert!(
+            legacy_document
+                .preview(&journal, ReceiptCheck::NotSupplied)
+                .creation
+                .lineage_was_not_in_the_link
+        );
+        assert_eq!(legacy_document.to_document(), canonical);
+        assert_eq!(legacy_document.identity_hex(), document.identity_hex());
+        let normalized = ProjectDocument::parse(&canonical).unwrap();
+        assert!(
+            !normalized
+                .preview(&journal, ReceiptCheck::NotSupplied)
+                .creation
+                .lineage_was_not_in_the_link
+        );
     }
 
     #[test]

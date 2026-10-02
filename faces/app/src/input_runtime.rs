@@ -237,6 +237,9 @@ impl App {
         if self.handle_study_pointer_down(point) {
             return;
         }
+        if self.handle_gallery_pointer(point, true) {
+            return;
+        }
         if self.handle_route_pointer(point, true) {
             return;
         }
@@ -406,6 +409,9 @@ impl App {
         if self.handle_study_pointer_move(point) {
             return;
         }
+        if self.handle_gallery_pointer(point, false) {
+            return;
+        }
         if self.handle_route_pointer(point, false) {
             return;
         }
@@ -542,6 +548,7 @@ impl App {
     }
 
     pub(super) fn end_pointer_at(&mut self, point: (f64, f64)) {
+        self.route_pointer_held = false;
         if self.handle_study_pointer_up(point) {
             return;
         }
@@ -878,6 +885,9 @@ impl App {
                 gamepad::Command::Menu => self.gamepad_menu(),
                 _ => {}
             }
+            return;
+        }
+        if self.handle_gallery_gamepad(command) {
             return;
         }
         if self.handle_route_gamepad(command) {

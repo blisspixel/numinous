@@ -142,6 +142,10 @@ Lab. Its road, junction, delivery, depot, order, search, and Keep controls use
 the same core workbench. A kept route opens paused from THE QUESTION; Enter
 activates it. Leaving preserves the in-process editor, while KEEP QUESTION
 stores the chosen question and authored network in the existing project chain.
+Native SHARE exports that question and network as one portable `.project`
+document without keeping it locally. The App receives dropped or launched
+route project files in a paused preview: OPEN starts an in-memory experiment, KEEP
+imports it deliberately, and Esc restores the preceding editing session.
 
 Kepler Areas is a compact first wager: tune an ellipse with `pokes`, call
 `speed_wager` as `faster`, `slower`, or `same`, then choose whether to pass

@@ -43,7 +43,7 @@ should link here rather than restating the board.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.4.0-alpha.29, Understanding Alpha active with its exit
+**Current release state: 0.4.0-alpha.30, Understanding Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are complete. Human stranger sessions sit with 0.8
 Closed Beta and 1.0 First Light.
@@ -149,6 +149,12 @@ mastery, exploration, and company also remain complete reasons to play.
   knowledge, and dense or compact maps retain a junction inspector. Independent
   prefix, tie, disconnected, import/invalidation, real transport, native input,
   and composed-frame regressions support this bounded solver presentation.
+  Native SHARE now exports a chosen question and exact network as one version 2
+  project document without adding a local saved revision. Dropped or launched
+  documents are validated and previewed paused; OPEN starts an in-memory
+  experiment, KEEP deliberately imports it, and cancellation restores the
+  interrupted workbench. Core admission, immutable export, native input,
+  real transport, and composed-frame regressions cover this handoff.
   Diagram positioning, authored challenge exchange,
   and participant experience evidence remain open.
 - **Built, Studio and room readability:** App and core text graphs and
@@ -2695,7 +2701,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-10-01)
 
-The package is **0.4.0-alpha.29**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.30**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -2725,7 +2731,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | Real creative surface | Studio graphs, paired parametric paths, fields over the plane with three stored readings, named sliders with declared ranges, overlay programs of two to four graphs, and Euclidean rhythms as `euclid(hits, steps)`, tracker marks as `pat(x..x..x.)` or the editor form `x..x..x.`, piano roll of the sung MIDI voice, continuous and named-scale voices, versioned `.num` serialization with title, author, era, lineage, and editable prose credit, links, plotting, animation, singing, WAV and Standard MIDI File export of the sung melody on CLI, MCP, and the App F4 share, exact paused App reopen, the one-key share bundle, the local Gallery wall, and fork with recorded descent exist | MusicXML, safe share preview for incoming links, and clean-install round trip |
 | Rigor and care are provable | Dated full-gate and coverage evidence in `QUALITY.md`, Rust 1.89 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a native SPDX Rust plus packaged-native SBOM attested from the exact audited release set | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
-| Beautiful and honest throughout | An exact matrix of 3009 screens and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
+| Beautiful and honest throughout | An exact matrix of 3045 screens and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
 ### Agent-and-machine track scorecard (September 30, 2026)
 
@@ -2740,7 +2746,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.4.0-alpha.29** because Understanding Alpha is the active
+Package label is **0.4.0-alpha.30** because Understanding Alpha is the active
 milestone. The alpha suffix says its exit remains open. External registration,
 calibration, fresh independent review, allocation freeze, and the qualifying
 cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
@@ -3073,7 +3079,7 @@ on equal terms. This is a values commitment, not a feature, and it holds from
 - **The quality loops (`QUALITY.md`):** the commit loop is partially enforced.
   Nightly, content-evaluation, agent-playtest, human-playtest, and refinement
   loops remain explicitly designed work.
-- **Beauty QA:** a deterministic matrix of 3009 screens covers eight states per room
+- **Beauty QA:** a deterministic matrix of 3045 screens covers eight states per room
   plus every persistent game display branch, overlays, The Show, Studio, and
   reset and phase flows, plus a five-frame persistent Life sequence, with 14
   compact controller and pause receipts, plus 18 explicit audio-state receipts. It
