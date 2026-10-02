@@ -5,6 +5,12 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Fixed
+- The terminal Show's curtain line, the exit tease of live terminal views, and
+  a landed Times Tables goal no longer print a staged room's reveal before its
+  wager and summon. CLI `reveal`, MCP `reveal_room`, and these surfaces share
+  one core gate, `Journey::explanation_open`.
+
 ## [0.4.0-alpha.31] - 2026-10-01
 
 ### Added

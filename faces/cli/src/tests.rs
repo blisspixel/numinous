@@ -752,7 +752,7 @@ fn render_known_room_has_ink() {
 }
 
 #[test]
-fn times_tables_goal_earns_the_aha_and_reveal_from_hand_input() {
+fn times_tables_goal_earns_the_aha_but_keeps_its_staged_reveal_closed() {
     let report = render_report(
         "times-tables",
         72,
@@ -766,7 +766,39 @@ fn times_tables_goal_earns_the_aha_and_reveal_from_hand_input() {
     assert!(report.contains("Status: K 5.00  CLOSED  4 LOBES  FOUND"));
     assert!(report.contains("Goal: LAND ON EXACTLY 4 LOBES"));
     assert!(report.contains("Aha earned: LAND ON EXACTLY 4 LOBES"));
-    assert!(report.contains("Reveal: Set the dial to 2"));
+    // Landing four lobes is not the wager the reveal answers. Printing it
+    // here named the Mandelbrot identity that `numinous reveal` keeps shut
+    // until the wager and summon are done.
+    let room = numinous_core::room_by_id("times-tables").expect("room");
+    assert!(!report.contains("Reveal:"), "{report}");
+    assert!(!report.contains(room.reveal()), "{report}");
+    assert!(!report.to_lowercase().contains("mandelbrot"), "{report}");
+}
+
+#[test]
+fn an_ordinary_landed_goal_still_speaks_its_reveal() {
+    // The other half of the staged gate above: a room that is not staged has
+    // no wager for its reveal to answer, so its landed goal keeps speaking.
+    let room = numinous_core::room_by_id("smith-chart").expect("room");
+    let t = 0.5;
+    let hand = (0..=40)
+        .flat_map(|i| (0..=40).map(move |j| (f64::from(i) / 40.0, f64::from(j) / 40.0)))
+        .find(|&hand| room.goal_met(t, &numinous_core::inputs_from_pokes(&[hand], t)))
+        .expect("some hand lands the bead on the ring");
+    let report = render_report(
+        "smith-chart",
+        48,
+        24,
+        t,
+        false,
+        RoomRenderInput::new(0, &[hand]),
+    )
+    .expect("goal render");
+    assert!(report.contains("Aha earned:"), "{report}");
+    assert!(
+        report.contains(&format!("Reveal: {}", room.reveal())),
+        "{report}"
+    );
 }
 
 #[test]
@@ -1950,7 +1982,12 @@ fn the_copy_a_player_reads_never_carries_a_wrapped_literal() {
         &super::call_report("lorenz", Some(1.0), 7).expect("graded"),
     );
     assert_reads_as_prose("the not-found message", &super::not_found_message("qqzz"));
-    assert_reads_as_prose("the exit tease", &super::viewing_epilogue(room.as_ref()));
+    let mut watched = numinous_core::Journey::default();
+    watched.visit("lorenz");
+    assert_reads_as_prose(
+        "the exit tease",
+        &super::viewing_epilogue(room.as_ref(), &watched),
+    );
     assert_reads_as_prose(
         "the action line",
         &super::terminal_action_line(room.as_ref()),
@@ -2228,7 +2265,10 @@ fn an_unknown_subcommand_error_carries_the_token_the_bridge_needs() {
 #[test]
 fn the_viewing_epilogue_teases_the_reveal_and_routes_to_the_story() {
     let room = numinous_core::room_by_id("times-tables").expect("room");
-    let epilogue = super::viewing_epilogue(room.as_ref());
+    let mut journey = numinous_core::Journey::default();
+    journey.visit("times-tables");
+    journey.consolidate("times-tables");
+    let epilogue = super::viewing_epilogue(room.as_ref(), &journey);
     let mut lines = epilogue.trim().lines();
     let tease = lines.next().expect("tease line");
     assert!(tease.ends_with('.'), "one sentence: {tease}");
@@ -2238,6 +2278,31 @@ fn the_viewing_epilogue_teases_the_reveal_and_routes_to_the_story() {
         Some("The story: numinous describe times-tables")
     );
     assert_eq!(lines.next(), None, "the epilogue is two lines");
+}
+
+#[test]
+fn leaving_a_staged_room_teases_nothing_its_wager_has_not_earned() {
+    // The first sentence of a staged reveal is often the answer itself:
+    // pi, ABB, nontransitive. Leaving a live view used to print it to
+    // anyone, while `numinous reveal` refused the same words.
+    for room_id in numinous_core::ENGINEERED_AHA_ROOM_IDS {
+        let room = numinous_core::room_by_id(room_id).expect("staged room");
+        let tease = super::first_sentence(room.reveal());
+        let mut journey = numinous_core::Journey::default();
+        journey.visit(room_id);
+        let closed = super::viewing_epilogue(room.as_ref(), &journey);
+        assert!(!closed.contains(&tease), "{room_id} teased: {closed}");
+        assert_eq!(
+            closed.trim(),
+            format!("The story: numinous describe {room_id}"),
+            "{room_id} still routes to the story"
+        );
+        assert!(super::reveal_report(room_id, false, false, &journey).is_err());
+
+        journey.consolidate(room_id);
+        let open = super::viewing_epilogue(room.as_ref(), &journey);
+        assert!(open.contains(&tease), "{room_id} withheld an earned tease");
+    }
 }
 
 #[test]
@@ -3318,15 +3383,89 @@ fn a_held_room_rests_on_its_postcard_and_says_how_to_move_on() {
         screen.contains(&super::tour_screen(
             room.as_ref(),
             room.postcard_t(),
-            24,
-            16,
-            TerminalStyle {
-                era: numinous_core::Era::Modern,
-                color: true,
+            super::TourFrame {
+                width: 24,
+                height: 16,
+                style: TerminalStyle {
+                    era: numinous_core::Era::Modern,
+                    color: true,
+                },
             },
+            &journey,
         )),
         "the held frame is not the postcard frame"
     );
+}
+
+#[test]
+fn the_show_never_curtains_a_staged_room_with_an_answer_it_has_not_earned() {
+    let view = super::TourFrame {
+        width: 24,
+        height: 16,
+        style: TerminalStyle {
+            era: numinous_core::Era::Modern,
+            color: false,
+        },
+    };
+    // The timer tour's curtain. The tour enters a room before drawing it, so
+    // the visit is already on the record; for a staged room that must not be
+    // enough, because `numinous reveal` refuses it on a visit too.
+    for room_id in numinous_core::ENGINEERED_AHA_ROOM_IDS {
+        let room = numinous_core::room_by_id(room_id).expect("staged room");
+        let mut journey = numinous_core::Journey::default();
+        journey.visit(room_id);
+        for t in [0.87, 0.93, 0.99] {
+            let screen = super::tour_screen(room.as_ref(), t, view, &journey);
+            assert!(
+                !screen.contains(room.reveal()),
+                "{room_id} curtained its answer at t={t}"
+            );
+        }
+        journey.consolidate(room_id);
+        assert!(
+            super::tour_screen(room.as_ref(), 0.93, view, &journey).contains(room.reveal()),
+            "{room_id} withheld a curtain its wager earned"
+        );
+    }
+    // An ordinary room's curtain stays, under the same gate `reveal` keeps.
+    let lorenz = numinous_core::room_by_id("lorenz").expect("room");
+    let mut entered = numinous_core::Journey::default();
+    entered.visit("lorenz");
+    assert!(super::tour_screen(lorenz.as_ref(), 0.93, view, &entered).contains(lorenz.reveal()));
+
+    // The held tour end to end over exactly the staged rooms: every screen it
+    // draws and the exit it prints on leaving.
+    let rooms = numinous_core::ENGINEERED_AHA_ROOM_IDS
+        .iter()
+        .map(|room_id| numinous_core::room_by_id(room_id).expect("staged room"))
+        .collect::<Vec<_>>();
+    let mut journey = numinous_core::Journey::default();
+    let mut out = Vec::new();
+    let answers = format!(
+        "{}q
+",
+        "
+"
+        .repeat(rooms.len() - 1)
+    );
+    let shown = super::tour_held(
+        &rooms,
+        &mut journey,
+        view,
+        None,
+        &mut std::io::Cursor::new(answers.into_bytes()),
+        &mut out,
+    );
+    assert_eq!(shown.len(), rooms.len(), "the held tour stopped early");
+    let printed = String::from_utf8_lossy(&out);
+    for room in &rooms {
+        let tease = super::first_sentence(room.reveal());
+        assert!(
+            !printed.contains(&tease),
+            "{} spoke its answer in the held Show",
+            room.meta().id
+        );
+    }
 }
 
 #[test]
@@ -3339,12 +3478,15 @@ fn the_shows_title_card_carries_no_color_when_color_is_off() {
     let plain = super::tour_screen(
         room.as_ref(),
         0.0,
-        24,
-        16,
-        TerminalStyle {
-            era: numinous_core::Era::Modern,
-            color: false,
+        super::TourFrame {
+            width: 24,
+            height: 16,
+            style: TerminalStyle {
+                era: numinous_core::Era::Modern,
+                color: false,
+            },
         },
+        &numinous_core::Journey::default(),
     );
     assert!(
         plain.contains("Chaos Game"),
@@ -3363,12 +3505,15 @@ fn the_shows_title_card_carries_no_color_when_color_is_off() {
     let colored = super::tour_screen(
         room.as_ref(),
         0.0,
-        24,
-        16,
-        TerminalStyle {
-            era: numinous_core::Era::Modern,
-            color: true,
+        super::TourFrame {
+            width: 24,
+            height: 16,
+            style: TerminalStyle {
+                era: numinous_core::Era::Modern,
+                color: true,
+            },
         },
+        &numinous_core::Journey::default(),
     );
     assert!(colored.contains("\x1b[1m"));
 }
