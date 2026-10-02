@@ -49,6 +49,14 @@ bounded undo, and trace invalidation as smaller workbench edits. Failed edits
 retain the current state. Leaving the native editor preserves its in-process
 session; keeping is a separate deliberate act.
 
+Portable document construction and preview also live in core and do not need
+a temporary local project chain. Native SHARE uses that document directly;
+drop and launch receive it through the shared bounded reader. An immutable
+export publishes complete bytes with exclusive destination creation. A paused
+incoming preview retains its admitted document until OPEN, KEEP, or cancel.
+OPEN changes process-local activity; KEEP uses the existing explicit import.
+Cancellation restores the interrupted session, including undo and search.
+
 ## Consequences
 
 A kept route can reopen in every face without substituting the opening four-stop

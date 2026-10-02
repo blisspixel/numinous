@@ -76,6 +76,7 @@ fn glyph(c: char) -> [u8; GLYPH_H] {
         '(' => [0b00010,0b00100,0b01000,0b01000,0b01000,0b00100,0b00010],
         ')' => [0b01000,0b00100,0b00010,0b00010,0b00010,0b00100,0b01000],
         '/' => [0b00001,0b00010,0b00100,0b01000,0b10000,0b00000,0b00000],
+        '\\' => [0b10000,0b01000,0b00100,0b00010,0b00001,0b00000,0b00000],
         _ => [0; GLYPH_H],
     }
 }
@@ -191,7 +192,7 @@ mod tests {
 
     #[test]
     fn every_supported_glyph_draws_something() {
-        let charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,'~-!?:()/+*=^<>[]%π·";
+        let charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,'~-!?:()/\\+*=^<>[]%π·";
         for character in charset.chars() {
             let mut c = Canvas::new(6, 8);
             draw_text(&mut c, &character.to_string(), 0, 0, 1, '*');

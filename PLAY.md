@@ -142,6 +142,21 @@ store it with the network. The controller can compose the question with the
 character controls. **THE QUESTION** in the Cabinet previews the kept route;
 Enter opens it for editing. Remix is a separate deliberate action.
 
+On the same Keep page, **SHARE** exports the question and exact network as a
+portable `.project` file in your home folder. Sharing leaves the local
+project chain untouched. Drop that route file into the App or pass its path when
+launching to receive a paused preview. **OPEN** starts an in-memory experiment;
+**KEEP** deliberately imports the question locally. Esc leaves the preview and
+restores the editing session it interrupted. Each share writes a new file.
+Native `.project` file receiving accepts route projects. OPEN opens the embedded
+network; KEEP retains the document's original next call without executing it.
+Choose **GALLERY** on Keep to browse shared route questions beside Studio
+creations. Select a route-question tile and confirm to receive the same paused
+preview. A launch from the command line is `numinous-app delivery.project`.
+Received and kept question bands use the bundled text fonts. If a question
+overflows its band, use QUESTION < / QUESTION > or PageUp / PageDown to read it.
+Sharing receipts preserve path case and Unicode; long paths use PATH < / PATH >.
+
 Search keeps the network visible while you step. A diamond means tentative,
 a square means the junction's cost is final, and a cross means unreachable
 after completion. Costs are cumulative from the search source. Native authoring

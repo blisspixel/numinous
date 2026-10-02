@@ -156,6 +156,15 @@ editing; leaving the preview does not execute its next call or write a project.
 Ordinary edits preserve a creation's existing parent, and explicit Remix creates
 a child without changing its source.
 
+SHARE on the Keep page exports the chosen question and canonical creation as
+one portable `.project` document, without appending a local project revision.
+The App receives route documents by drop or launch path, validates them through
+core's bounded reader, and stages a paused preview. OPEN starts the received
+experiment in memory. KEEP explicitly imports it through the existing project
+chain and its duplicate rules. Cancel restores the interrupted session,
+including its undo history and caller-paced search. Sharing uses a fresh export
+filename and does not replace an existing file.
+
 Core `RouteCreation` accepts bounded `NUMINOUS_ROUTE 1` data, preserving the
 authored roads, closures, required stops, depot, and selected order. Its 8 KiB
 limit applies before parsing. Opening starts revision zero with fresh undo and

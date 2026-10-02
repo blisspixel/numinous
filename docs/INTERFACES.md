@@ -11,7 +11,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
 **Implementation boundary, 2026-10-01:** all three faces are shipped from the
-same headless core in 0.4.0-alpha.29. Descriptions below mix current behavior
+same headless core in 0.4.0-alpha.30. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -273,7 +273,10 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   creation's network. Explicit remix creates a child. MCP requests remain
   stateless and accept no filesystem path. CLI `route-lab --out` writes an
   explicit new export file without replacing an existing file. Kept questions
-  and route creations use the existing project chain. Native authoring exposes
+  and route creations use the existing project chain. Native SHARE exports a
+  chosen route question and network without keeping it locally. Dropped or
+  launched route `.project` documents open in a paused preview with separate OPEN and
+  KEEP actions; cancel restores the interrupted session. Native authoring exposes
   the same edits and comparisons, with in-process undo and playback; Keep and
   Cabinet THE QUESTION save and preview the chosen network.
   [Route Lab](ROUTE_LAB.md) owns the contract, native controls, portable

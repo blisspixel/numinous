@@ -71,6 +71,9 @@ mod audio_state;
 #[path = "../src/feedback.rs"]
 mod feedback;
 #[allow(dead_code)]
+#[path = "../src/gallery.rs"]
+mod gallery;
+#[allow(dead_code)]
 #[path = "../src/game_draw.rs"]
 mod game_draw;
 #[path = "../src/hud.rs"]
@@ -119,7 +122,7 @@ const MIN_SUPPORT_DENSITY_PERMILLE: usize = 1;
 const SPATIAL_TILE_SIZE: usize = 32;
 const MIN_COHERENT_TILES: usize = 2;
 const MIN_MEAN_CHANNEL_DELTA: usize = 4;
-const ROUTE_AUTHORING_STATES: [&str; 14] = [
+const ROUTE_AUTHORING_STATES: [&str; 22] = [
     "opening",
     "custom-network",
     "dense-network",
@@ -133,9 +136,19 @@ const ROUTE_AUTHORING_STATES: [&str; 14] = [
     "search-disconnected",
     "search-dense",
     "keep-question",
+    "shared-question",
     "remix-preview",
+    "received-question",
+    "received-kept",
+    "received-dense",
+    "received-long-question",
+    "received-unicode-question",
+    "received-unicode-last-page",
+    "keep-unicode-question",
 ];
-const SHARED_SCREEN_COUNT: usize = 105 + ROUTE_AUTHORING_STATES.len() * 4;
+const ROUTE_GALLERY_STATES: [&str; 2] = ["question", "studio"];
+const SHARED_SCREEN_COUNT: usize =
+    105 + ROUTE_AUTHORING_STATES.len() * 4 + ROUTE_GALLERY_STATES.len() * 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum InteractionKind {
@@ -425,6 +438,14 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
                     size.0, size.1
                 ));
             }
+        }
+    }
+    for state in ROUTE_GALLERY_STATES {
+        for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
+            expected.insert(format!(
+                "overlays/route-gallery-{state}-{label}-{}x{}.png",
+                size.0, size.1
+            ));
         }
     }
     assert_eq!(
@@ -1644,6 +1665,16 @@ fn authored_route_workbench() -> numinous_core::route_workbench::RouteWorkbench 
     .expect("bounded authored route fixture")
 }
 
+fn route_qa_directory(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .expect("App QA runs inside its workspace")
+        .join(".agent")
+        .join(name)
+        .join(std::process::id().to_string())
+}
+
 fn route_authoring_panels() -> Vec<(&'static str, RoutePanel)> {
     use numinous_core::route::{MAX_ROUTE_JUNCTIONS, MAX_ROUTE_ROADS, Road, RouteEvent};
     use numinous_core::route_workbench::RouteSearchState;
@@ -1795,6 +1826,83 @@ fn route_authoring_panels() -> Vec<(&'static str, RoutePanel)> {
     question.push_text("Can a new delivery make the nearest-next order cheaper?");
     let child = source.remix(source.town().clone()).unwrap();
     assert_eq!(child.parent_identity(), Some(source.identity()));
+    let portable = numinous_core::ProjectDocument::from_draft(
+        &question
+            .project_draft(0)
+            .expect("portable authored question"),
+    )
+    .expect("canonical portable question without a local revision");
+    let received = RoutePanel::received(portable.clone()).expect("paused received route");
+    assert!(received.paused);
+    assert_eq!(received.question, question.question);
+    assert_eq!(received.workbench().town(), question.workbench().town());
+    assert!(received.workbench().snapshot().undo.is_empty());
+    assert!(received.workbench().trace().is_none());
+    let mut shared = RoutePanel::received(portable.clone()).expect("route sharing receipt");
+    shared.act(RouteAction::Confirm);
+    shared.act(RouteAction::Page(RoutePage::Keep));
+    let share_path = route_qa_directory("qa-route-sharing")
+        .join("Café-東京")
+        .join(format!(
+            "numinous-route-question-{}-000.project",
+            portable.identity_hex()
+        ));
+    numinous_core::export_project_document_file(&share_path, &portable)
+        .expect("immutable portable sharing receipt");
+    assert_eq!(
+        numinous_core::read_project_document_file(&share_path)
+            .unwrap()
+            .identity_hex(),
+        portable.identity_hex()
+    );
+    shared.shared_path = Some(share_path.display().to_string());
+    shared.message = "QUESTION SHARED. GALLERY OPENS IT PAUSED.".into();
+    let mut received_kept =
+        RoutePanel::received(portable).expect("paused received route after deliberate keep");
+    received_kept.mark_received_kept();
+    assert!(received_kept.paused);
+    let mut dense_question = RoutePanel::new(dense.clone());
+    dense_question.act(RouteAction::Page(RoutePage::Keep));
+    dense_question.push_text("Which road closure changes this delivery order most?");
+    let dense_document = numinous_core::ProjectDocument::from_draft(
+        &dense_question
+            .project_draft(0)
+            .expect("portable dense question"),
+    )
+    .expect("canonical dense question");
+    let received_dense = RoutePanel::received(dense_document).expect("paused dense route");
+    assert!(received_dense.paused);
+    assert_eq!(
+        received_dense.workbench().town().junctions,
+        MAX_ROUTE_JUNCTIONS
+    );
+    let mut long_draft = question.project_draft(0).expect("portable question draft");
+    let extended_question = "If a road closes after the first delivery, which alternate street walk keeps every required stop reachable, what changes in the total return cost, and can a different delivery order recover some of that cost without reopening the road? Compare the saved order against your choice.";
+    long_draft.question = extended_question.to_string();
+    let received_long = RoutePanel::received(
+        numinous_core::ProjectDocument::from_draft(&long_draft).expect("long portable question"),
+    )
+    .expect("paused long route question");
+    assert_eq!(
+        received_long.question.chars().count(),
+        numinous_core::MAX_WORKSPACE_TEXT_CHARS
+    );
+    let mut unicode_draft = long_draft;
+    unicode_draft.question = "道路が閉鎖された後でも、すべての配達先を訪問して出発点に戻れる経路を探してください。保存された訪問順と最も近い配達先を選ぶ順を比較し、通過する交差点、使う道路、往復の総費用を説明してください。高い道路の費用を下げた場合と、配達先を一つ追加した場合では、どの選択が変わるでしょうか。探索を一歩ずつ進め、仮の費用が更新される場所を確認してください。同じネットワークで順序だけを変えた実験と、道路そのものを変えた実験を区別してください。最初の経路を保存したまま別の案を試し、改善した理由と残った制約を説明してください。Caféから戻る道も含めてください。理由も確認。".to_string();
+    assert_eq!(
+        unicode_draft.question.chars().count(),
+        numinous_core::MAX_WORKSPACE_TEXT_CHARS
+    );
+    let unicode_document = numinous_core::ProjectDocument::from_draft(&unicode_draft)
+        .expect("bounded Japanese and accented portable question");
+    let received_unicode =
+        RoutePanel::received(unicode_document.clone()).expect("paused shaped question");
+    let received_unicode_last =
+        RoutePanel::received(unicode_document.clone()).expect("paged shaped question");
+    let mut keep_unicode =
+        RoutePanel::received(unicode_document).expect("shaped question retained after opening");
+    keep_unicode.act(RouteAction::Confirm);
+    keep_unicode.act(RouteAction::Page(RoutePage::Keep));
     let panels = vec![
         ("opening", RoutePanel::new(RouteWorkbench::first_town())),
         ("custom-network", RoutePanel::new(custom)),
@@ -1809,7 +1917,15 @@ fn route_authoring_panels() -> Vec<(&'static str, RoutePanel)> {
         ("search-disconnected", disconnected_search),
         ("search-dense", dense_search),
         ("keep-question", question),
+        ("shared-question", shared),
         ("remix-preview", RoutePanel::opened(child)),
+        ("received-question", received),
+        ("received-kept", received_kept),
+        ("received-dense", received_dense),
+        ("received-long-question", received_long),
+        ("received-unicode-question", received_unicode),
+        ("received-unicode-last-page", received_unicode_last),
+        ("keep-unicode-question", keep_unicode),
     ];
     assert!(
         panels
@@ -1822,12 +1938,19 @@ fn route_authoring_panels() -> Vec<(&'static str, RoutePanel)> {
 
 fn route_authoring_frames(sizes: &[(&str, (usize, usize))]) -> Vec<(String, Raster)> {
     let mut frames = Vec::new();
-    for (state, panel) in route_authoring_panels() {
-        for (mode, hint) in [
-            ("keyboard", None),
-            ("controller", Some("DPAD SELECT. SOUTH ACTS. BACK LEAVES.")),
-        ] {
-            for (label, (width, height)) in sizes {
+    for (mode, hint) in [
+        ("keyboard", None),
+        ("controller", Some("DPAD SELECT. SOUTH ACTS. BACK LEAVES.")),
+    ] {
+        for (label, (width, height)) in sizes {
+            for (state, mut panel) in route_authoring_panels() {
+                if state == "received-unicode-last-page" {
+                    // Paging uses the layout computed for this actual viewport.
+                    panel.draw(*width, *height, hint);
+                    for _ in 0..numinous_core::MAX_WORKSPACE_TEXT_CHARS {
+                        panel.act(RouteAction::QuestionPage(1));
+                    }
+                }
                 let raster = panel.draw(*width, *height, hint);
                 assert_eq!((raster.width(), raster.height()), (*width, *height));
                 assert!(raster.lit_count() > 20, "route editor {state} is not blank");
@@ -1839,6 +1962,75 @@ fn route_authoring_frames(sizes: &[(&str, (usize, usize))]) -> Vec<(String, Rast
         }
     }
     frames
+}
+
+fn route_gallery_frames(sizes: &[(&str, (usize, usize))]) -> Vec<(String, Raster)> {
+    let directory = route_qa_directory("qa-route-gallery");
+    std::fs::create_dir_all(&directory).expect("isolated Gallery fixture directory");
+    let mut question = RoutePanel::new(authored_route_workbench());
+    question.act(RouteAction::Page(RoutePage::Keep));
+    question.question = "道路を閉じると、Caféへの配達順と往復費用はどう変わりますか？".into();
+    let document = numinous_core::ProjectDocument::from_draft(
+        &question.project_draft(0).expect("Gallery question draft"),
+    )
+    .expect("Gallery route document");
+    numinous_core::export_project_document_file(&directory.join("route.project"), &document)
+        .expect("immutable Gallery route fixture");
+    let circle = numinous_core::StudioCreation::from_capsule("uniform-circle")
+        .expect("canonical Studio Gallery fixture");
+    std::fs::write(directory.join("circle.num"), circle.to_num_file())
+        .expect("Gallery Studio fixture");
+    let mut panel = gallery::GalleryPanel::open(&directory);
+    let mut frames = Vec::new();
+    let mut observed = BTreeSet::new();
+    for _ in 0..ROUTE_GALLERY_STATES.len() {
+        let state = if let Some(received) = panel.selected_project() {
+            assert_eq!(received.identity_hex(), document.identity_hex());
+            "question"
+        } else {
+            assert_eq!(panel.selected_creation(), Some(&circle));
+            "studio"
+        };
+        assert!(
+            observed.insert(state),
+            "Gallery fixtures remain distinct tiles"
+        );
+        for (label, (width, height)) in sizes {
+            let mut raster = Raster::new(*width, *height);
+            panel.draw(&mut raster, *width, *height);
+            assert!(raster.lit_count() > 20, "Gallery {state} is not blank");
+            frames.push((
+                format!("route-gallery-{state}-{label}-{width}x{height}.png"),
+                raster,
+            ));
+        }
+        panel.move_selection(1, 0);
+    }
+    assert_eq!(observed, ROUTE_GALLERY_STATES.into_iter().collect());
+    frames
+}
+
+fn write_route_gallery_previews(output: &Path) {
+    let mut manifest = Vec::new();
+    for (name, raster) in route_gallery_frames(&[
+        ("default", DEFAULT_SIZE),
+        ("small", SMALL_SIZE),
+        ("wide", (1600, 700)),
+        ("wide-short", (1280, 400)),
+    ]) {
+        write_png(&raster, &output.join(&name));
+        manifest.push(name);
+    }
+    manifest.sort();
+    std::fs::write(
+        output.join("MANIFEST.txt"),
+        format!("{}\n", manifest.join("\n")),
+    )
+    .expect("write focused Gallery manifest");
+    println!(
+        "wrote {}",
+        numinous_core::counted(manifest.len(), "Gallery preview")
+    );
 }
 
 fn write_route_authoring_previews(output: &Path) {
@@ -1953,6 +2145,10 @@ fn main() {
     let _generation_lock = GenerationLock::acquire(Path::new("renders/.qa-app.lock"))
         .expect("another App screenshot generator is already writing renders");
     let arguments: Vec<_> = std::env::args().skip(1).collect();
+    if arguments == ["--route-gallery"] {
+        write_route_gallery_previews(Path::new("renders/qa-route-gallery"));
+        return;
+    }
     if arguments == ["--route-editor"] {
         write_route_authoring_previews(Path::new("renders/qa-route-editor"));
         return;
@@ -2976,6 +3172,11 @@ fn main() {
 
     for (relative, raster) in
         route_authoring_frames(&[("default", DEFAULT_SIZE), ("small", SMALL_SIZE)])
+    {
+        save(&raster, &format!("overlays/{relative}"), &mut manifest);
+    }
+    for (relative, raster) in
+        route_gallery_frames(&[("default", DEFAULT_SIZE), ("small", SMALL_SIZE)])
     {
         save(&raster, &format!("overlays/{relative}"), &mut manifest);
     }

@@ -173,6 +173,12 @@ impl RouteCreation {
         self.parent
     }
 
+    /// The declared parent creation identity as lowercase hexadecimal.
+    #[must_use]
+    pub fn parent_identity_hex(&self) -> Option<String> {
+        self.parent.map(|identity| hex(&identity))
+    }
+
     /// Canonical authored network and delivery order.
     #[must_use]
     pub const fn town(&self) -> &RouteTownSnapshot {
@@ -356,6 +362,7 @@ mod tests {
         network.roads[3].road.cost = 5;
         let edited = child.with_network(network).unwrap();
         assert_eq!(edited.parent_identity(), Some(original.identity()));
+        assert_eq!(edited.parent_identity_hex(), Some(original.identity_hex()));
         assert_ne!(edited.identity(), child.identity());
         let reopened = RouteCreation::from_capsule(&edited.to_capsule()).unwrap();
         assert_eq!(reopened.parent_identity(), Some(original.identity()));
@@ -363,6 +370,7 @@ mod tests {
         assert_eq!(grandchild.parent_identity(), Some(edited.identity()));
         assert_eq!(child.parent_identity(), Some(original.identity()));
         assert!(original.parent_identity().is_none());
+        assert!(original.parent_identity_hex().is_none());
     }
 
     #[test]

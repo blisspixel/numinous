@@ -70,6 +70,9 @@ pub enum Action {
     Space,
     Backspace,
     Keep,
+    Share,
+    Browse,
+    QuestionPage(i32),
     Confirm,
 }
 
@@ -78,6 +81,8 @@ pub enum Effect {
     None,
     Close,
     Keep,
+    Share,
+    Browse,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -105,6 +110,21 @@ pub struct Panel {
     character: usize,
     focus: usize,
     pointer: bool,
+    received: Option<numinous_core::ProjectDocument>,
+    received_kept: bool,
+    pub shared_path: Option<String>,
+    question_text: std::cell::RefCell<Option<QuestionText>>,
+}
+
+#[derive(Debug)]
+struct QuestionText {
+    renderer: crate::study_text::StudyText,
+    layout: Option<std::sync::Arc<crate::study_text::TextLayout>>,
+    source: String,
+    dimensions: (u32, u32),
+    scale: i32,
+    scroll: f32,
+    maximum: f32,
 }
 
 impl Panel {
@@ -126,6 +146,10 @@ impl Panel {
             character: 0,
             focus: 0,
             pointer: false,
+            received: None,
+            received_kept: false,
+            shared_path: None,
+            question_text: std::cell::RefCell::new(None),
         }
     }
 
@@ -136,15 +160,61 @@ impl Panel {
         panel
     }
 
+    /// Preview a portable question without importing or executing its next call.
+    pub fn received(document: numinous_core::ProjectDocument) -> Result<Self, String> {
+        let preview = document.preview(
+            &numinous_core::Journal::default(),
+            numinous_core::ReceiptCheck::NotSupplied,
+        );
+        if preview.creation.kind != Some(numinous_core::CreationKind::Route) {
+            return Err("This project does not contain a route creation".into());
+        }
+        let capsule = preview
+            .creation
+            .capsule
+            .as_deref()
+            .ok_or("This route creation cannot be opened")?;
+        let creation = RouteCreation::from_capsule(capsule).map_err(|error| error.to_string())?;
+        let mut panel = Self::opened(creation);
+        panel.question = preview.question;
+        panel.received = Some(document);
+        Ok(panel)
+    }
+
+    /// Forward the admitted document while its question and creation remain unchanged.
+    pub fn received_document(&self) -> Option<&numinous_core::ProjectDocument> {
+        let document = self.received.as_ref()?;
+        let preview = document.preview(
+            &numinous_core::Journal::default(),
+            numinous_core::ReceiptCheck::NotSupplied,
+        );
+        let draft = self.project_draft(0).ok()?;
+        (draft.question == preview.question
+            && draft.creation.as_deref() == preview.creation.capsule.as_deref())
+        .then_some(document)
+    }
+
+    pub fn is_received_preview(&self) -> bool {
+        self.received.is_some() && self.paused
+    }
+
+    pub fn mark_received_kept(&mut self) {
+        self.received_kept = true;
+        self.message = "QUESTION KEPT. OPEN STARTS THIS NETWORK.".into();
+    }
+
     pub fn workbench(&self) -> &RouteWorkbench {
         &self.workbench
     }
 
     pub fn push_text(&mut self, text: &str) {
         if self.page == Page::Keep && !self.paused {
+            self.shared_path = None;
+            let mut count = self.question.chars().count();
             for ch in text.chars().filter(|ch| (' '..='~').contains(ch)) {
-                if self.question.len() < numinous_core::MAX_WORKSPACE_TEXT_CHARS {
+                if count < numinous_core::MAX_WORKSPACE_TEXT_CHARS {
                     self.question.push(ch);
+                    count += 1;
                 }
             }
         }
@@ -180,7 +250,21 @@ impl Panel {
     }
 
     pub fn buttons(&self) -> Vec<Button> {
-        let mut entries: Vec<(String, Action)> = if self.paused {
+        let mut entries: Vec<(String, Action)> = if self.is_received_preview() {
+            vec![
+                ("OPEN ROUTE".into(), Action::Confirm),
+                (
+                    if self.received_kept {
+                        "QUESTION KEPT"
+                    } else {
+                        "KEEP QUESTION"
+                    }
+                    .into(),
+                    Action::Keep,
+                ),
+                ("CANCEL".into(), Action::Close),
+            ]
+        } else if self.paused {
             vec![
                 ("OPEN ROUTE".into(), Action::Confirm),
                 ("LEAVE".into(), Action::Close),
@@ -193,8 +277,20 @@ impl Panel {
             entries.push(("LEAVE".into(), Action::Close));
             entries
         };
+        if self.is_received_preview()
+            && self
+                .question_text
+                .borrow()
+                .as_ref()
+                .is_some_and(|text| text.maximum > 0.0)
+        {
+            entries.extend([
+                ("QUESTION <".into(), Action::QuestionPage(-1)),
+                ("QUESTION >".into(), Action::QuestionPage(1)),
+            ]);
+        }
         let tab_count = entries.len();
-        let body: Vec<(&str, Action)> = if self.paused {
+        let mut body: Vec<(&str, Action)> = if self.paused {
             vec![]
         } else {
             match self.page {
@@ -253,11 +349,40 @@ impl Panel {
                     ("SPACE", Action::Space),
                     ("BACKSPACE", Action::Backspace),
                     ("KEEP QUESTION", Action::Keep),
+                    ("SHARE QUESTION", Action::Share),
+                    ("GALLERY", Action::Browse),
                     ("REMIX SOURCE", Action::Remix),
                     ("BASELINE", Action::Reset),
                 ],
             }
         };
+        if !self.paused
+            && self.page == Page::Keep
+            && self
+                .question_text
+                .borrow()
+                .as_ref()
+                .is_some_and(|text| text.maximum > 0.0)
+        {
+            body.extend([
+                (
+                    if self.shared_path.is_some() {
+                        "PATH <"
+                    } else {
+                        "QUESTION <"
+                    },
+                    Action::QuestionPage(-1),
+                ),
+                (
+                    if self.shared_path.is_some() {
+                        "PATH >"
+                    } else {
+                        "QUESTION >"
+                    },
+                    Action::QuestionPage(1),
+                ),
+            ]);
+        }
         entries.extend(
             body.into_iter()
                 .map(|(label, action)| (label.to_string(), action)),
@@ -266,7 +391,13 @@ impl Panel {
             .into_iter()
             .enumerate()
             .map(|(index, (label, action))| {
-                let bounds = if self.paused {
+                let bounds = if self.is_received_preview() {
+                    if index < 3 {
+                        (0.02 + index as f64 * 0.325, 0.76, 0.315, 0.085)
+                    } else {
+                        (0.02 + (index - 3) as f64 * 0.325, 0.43, 0.315, 0.045)
+                    }
+                } else if self.paused {
                     (0.02 + index as f64 * 0.49, 0.82, 0.47, 0.09)
                 } else if index < tab_count {
                     let columns = 4;
@@ -290,9 +421,14 @@ impl Panel {
                             0.72
                         } else {
                             0.40
-                        }) + row as f64 * 0.075,
+                        }) + row as f64
+                            * if self.page == Page::Keep {
+                                0.065
+                            } else {
+                                0.075
+                            },
                         0.315,
-                        0.065,
+                        if self.page == Page::Keep { 0.06 } else { 0.065 },
                     )
                 };
                 Button {
@@ -386,15 +522,29 @@ impl Panel {
     }
 
     pub fn act(&mut self, action: Action) -> Effect {
+        if let Action::QuestionPage(direction) = action {
+            if (self.is_received_preview() || self.page == Page::Keep)
+                && let Some(text) = self.question_text.get_mut().as_mut()
+            {
+                text.scroll = (text.scroll
+                    + text.dimensions.1 as f32 * direction.clamp(-1, 1) as f32)
+                    .clamp(0.0, text.maximum);
+            }
+            return Effect::None;
+        }
         if action == Action::Close {
             return Effect::Close;
         }
         if self.paused {
+            if action == Action::Keep && self.received.is_some() {
+                return Effect::Keep;
+            }
             if action == Action::Confirm {
                 self.paused = false;
             }
             return Effect::None;
         }
+        self.shared_path = None;
         self.message.clear();
         let town = self.workbench.town().clone();
         if self.draft.is_some() && matches!(action, Action::ToggleRoad | Action::DeleteRoad) {
@@ -482,7 +632,8 @@ impl Panel {
                 }
             }
             Action::ToggleRoad => {
-                if let Some(selected) = self.selected_road() {
+                if let Some(selected) = self.selected_road().filter(|_| !self.is_received_preview())
+                {
                     edit = Some(RouteEdit::RoadOpen {
                         from: selected.road.from,
                         to: selected.road.to,
@@ -582,7 +733,9 @@ impl Panel {
                 self.question.pop();
             }
             Action::Keep => return Effect::Keep,
-            Action::Close | Action::Confirm => {}
+            Action::Share => return Effect::Share,
+            Action::Browse => return Effect::Browse,
+            Action::Close | Action::Confirm | Action::QuestionPage(_) => {}
         }
         if let Some(edit) = edit {
             match self.workbench.apply(edit) {
@@ -838,7 +991,9 @@ impl Panel {
         };
         text(
             &mut raster,
-            if self.paused {
+            if self.is_received_preview() {
+                "ROUTE QUESTION: PREVIEW"
+            } else if self.paused {
                 "ROUTE LAB: PREVIEW. OPEN TO EDIT."
             } else {
                 "EDIT ROUTE"
@@ -853,19 +1008,48 @@ impl Panel {
                 0.075 + index as f64 * 8.0 * scale as f64 / height as f64,
             );
         }
-        if self.page == Page::Keep {
-            for (index, line) in lines[1]
-                .chars()
-                .collect::<Vec<_>>()
-                .chunks(columns.max(1))
-                .map(|chunk| chunk.iter().collect::<String>())
-                .enumerate()
-            {
+        if self.is_received_preview() {
+            self.draw_question(&mut raster, width, height, scale);
+            if self.workbench.town().junctions > 8 {
+                let town = self.workbench.town();
                 text(
                     &mut raster,
-                    &line,
-                    0.29 + index as f64 * 8.0 * scale as f64 / height as f64,
+                    &format!(
+                        "{} / {} / {}",
+                        numinous_core::counted(town.junctions, "junction"),
+                        numinous_core::counted(town.roads.len(), "road"),
+                        numinous_core::counted(town.stops.len(), "stop")
+                    )
+                    .to_uppercase(),
+                    0.635,
                 );
+            }
+            text(
+                &mut raster,
+                "OPEN EMBEDDED ROUTE. NEXT CALL NOT RUN.",
+                0.675,
+            );
+            text(
+                &mut raster,
+                "KEEP IMPORTS THE QUESTION. CANCEL RESTORES.",
+                0.71,
+            );
+        } else if self.page == Page::Keep {
+            if let Some(path) = &self.shared_path {
+                self.draw_question_in(
+                    &mut raster,
+                    (width, height),
+                    crate::study_text::TextViewport {
+                        x: 6,
+                        y: (height as f64 * 0.29) as i32,
+                        width: width.saturating_sub(12).clamp(1, 4096) as u32,
+                        height: (height as f64 * 0.24) as u32,
+                    },
+                    &format!("Shared to: {path}"),
+                    scale,
+                );
+            } else {
+                self.draw_question(&mut raster, width, height, scale);
             }
             text(
                 &mut raster,
@@ -965,8 +1149,149 @@ impl Panel {
         raster
     }
 
+    fn draw_question(&self, raster: &mut Raster, width: usize, height: usize, scale: i32) {
+        use crate::study_text::TextViewport;
+        let (top, band) = if self.is_received_preview() {
+            (0.15, 0.27)
+        } else {
+            (0.29, 0.24)
+        };
+        let viewport = TextViewport {
+            x: 6,
+            y: (height as f64 * top) as i32,
+            width: width.saturating_sub(12).clamp(1, 4096) as u32,
+            height: (height as f64 * band) as u32,
+        };
+        self.draw_question_in(
+            raster,
+            (width, height),
+            viewport,
+            &format!("Question: {}", self.question),
+            scale,
+        );
+    }
+
+    /// Draw a case-preserving route question caption with the bundled question renderer.
+    pub fn draw_question_caption(
+        &self,
+        raster: &mut Raster,
+        viewport: crate::study_text::TextViewport,
+    ) {
+        let dimensions = (raster.width(), raster.height());
+        self.draw_question_in(
+            raster,
+            dimensions,
+            viewport,
+            &format!("Route: {}", self.question),
+            1,
+        );
+    }
+
+    fn draw_question_in(
+        &self,
+        raster: &mut Raster,
+        frame_dimensions: (usize, usize),
+        viewport: crate::study_text::TextViewport,
+        source: &str,
+        scale: i32,
+    ) {
+        use crate::study_text::{StudyText, TextRole, TextSpan};
+        let result = (|| {
+            let mut cache = self.question_text.borrow_mut();
+            if cache.is_none() {
+                *cache = Some(QuestionText {
+                    renderer: StudyText::new("en")?,
+                    layout: None,
+                    source: String::new(),
+                    dimensions: (0, 0),
+                    scale: 0,
+                    scroll: 0.0,
+                    maximum: 0.0,
+                });
+            }
+            let text = cache.as_mut().unwrap();
+            let source = numinous_core::display_safe(source);
+            let dimensions = (viewport.width, viewport.height);
+            if text.source != source || text.dimensions != dimensions || text.scale != scale {
+                let anchor = text
+                    .layout
+                    .as_ref()
+                    .map_or(0, |layout| layout.source_offset_at_scroll(text.scroll));
+                let mut fit = |source: &str| {
+                    let spans = [TextSpan {
+                        text: source,
+                        role: TextRole::Prose,
+                    }];
+                    let mut font_size = (10 * scale).clamp(10, 28) as f32;
+                    loop {
+                        let layout = text.renderer.layout(&spans, viewport.width, font_size)?;
+                        if layout.height() <= viewport.height as f32 || font_size <= 8.0 {
+                            break Ok::<_, crate::study_text::TextError>(layout);
+                        }
+                        font_size -= 2.0;
+                    }
+                };
+                let mut layout = fit(&source)?;
+                if !layout.missing_glyphs().is_empty() {
+                    layout = fit(&format!("Some characters unavailable. {source}"))?;
+                }
+                text.maximum = layout.max_scroll(viewport.height);
+                text.scroll = if text.source == source {
+                    layout.scroll_for_source_offset(anchor).min(text.maximum)
+                } else {
+                    0.0
+                };
+                text.layout = Some(layout);
+                text.source = source;
+                text.dimensions = dimensions;
+                text.scale = scale;
+            }
+            let layout = text.layout.as_ref().unwrap();
+            let mut rgba = raster.to_rgba();
+            text.renderer.draw(
+                layout,
+                &mut rgba,
+                frame_dimensions,
+                viewport,
+                text.scroll,
+                [233, 237, 240, 255],
+            )?;
+            raster.set_rgba(&rgba);
+            Ok::<_, crate::study_text::TextError>(())
+        })();
+        if result.is_err() {
+            numinous_core::draw_text(
+                raster,
+                "QUESTION TEXT COULD NOT BE DRAWN",
+                6,
+                viewport.y,
+                scale,
+                '#',
+            );
+        }
+    }
+
+    /// Draw a portable thumbnail through the editor's authored network renderer.
+    pub fn thumbnail(&self, width: usize, height: usize) -> Raster {
+        let mut raster = Raster::with_accent(width, height, [240, 180, 110]);
+        let (width, height) = (raster.width(), raster.height());
+        let points = (0..self.workbench.town().junctions)
+            .map(|id| {
+                let angle = std::f64::consts::TAU * id as f64
+                    / self.workbench.town().junctions as f64
+                    - std::f64::consts::FRAC_PI_2;
+                (
+                    (width as f64 * (0.5 + 0.35 * angle.cos())) as i32,
+                    (height as f64 * (0.5 + 0.35 * angle.sin())) as i32,
+                )
+            })
+            .collect::<Vec<_>>();
+        self.draw_network_at(&mut raster, (width, height), 1, None, &points);
+        raster
+    }
+
     fn network_locations(&self) -> Vec<(f64, f64)> {
-        let search = self.page == Page::Search;
+        let search = self.page == Page::Search || self.is_received_preview();
         (0..self.workbench.town().junctions)
             .map(|id| {
                 let angle = std::f64::consts::TAU * id as f64
@@ -999,13 +1324,25 @@ impl Panel {
         scale: i32,
         view: Option<&RouteSearchView>,
     ) {
-        let town = self.workbench.town();
         let points = self.network_points(width, height);
+        self.draw_network_at(raster, (width, height), scale, view, &points);
+    }
+
+    fn draw_network_at(
+        &self,
+        raster: &mut Raster,
+        dimensions: (usize, usize),
+        scale: i32,
+        view: Option<&RouteSearchView>,
+        points: &[(i32, i32)],
+    ) {
+        let (width, height) = dimensions;
+        let town = self.workbench.town();
         for road in &town.roads {
             let (a, b) = (points[road.road.from], points[road.road.to]);
             let mut background = BackgroundRoads {
                 raster,
-                quiet: self.page == Page::Search,
+                quiet: self.page == Page::Search || self.is_received_preview(),
             };
             if road.open {
                 background.line(a.0, a.1, b.0, b.1, '.');
@@ -1092,6 +1429,32 @@ impl Panel {
                 }
             }
             for (id, point) in points.iter().enumerate() {
+                if self.is_received_preview() && town.junctions > 8 {
+                    let radius = 2 * scale;
+                    if id == town.stops[0] {
+                        draw_search_node(raster, *point, radius, RouteSearchState::Settled);
+                    } else if town.stops.contains(&id) {
+                        draw_search_node(raster, *point, radius, RouteSearchState::Tentative);
+                    } else {
+                        raster.plot(point.0, point.1, '#');
+                    }
+                    if id == town.stops[0] || id == self.junction {
+                        let label = if id == town.stops[0] {
+                            format!("{id}D")
+                        } else {
+                            format!(">{id}")
+                        };
+                        numinous_core::draw_text(
+                            raster,
+                            &label,
+                            point.0 + radius + 2,
+                            point.1,
+                            scale,
+                            '#',
+                        );
+                    }
+                    continue;
+                }
                 numinous_core::draw_text(
                     raster,
                     &format!(
@@ -1476,26 +1839,32 @@ mod tests {
         let mut panel = Panel::new(RouteWorkbench::first_town());
         panel.act(Action::Page(Page::Keep));
         panel.question = format!("{}QTAIL", "a".repeat(275));
+        panel.draw(360, 240, None);
+        panel.act(Action::QuestionPage(i32::MAX));
         let actual = panel.draw(360, 240, None).to_rgba();
-        let mut expected = Raster::with_accent(360, 240, [240, 180, 110]);
-        numinous_core::draw_text(&mut expected, "QTAIL", 324, 101, 1, '#');
-        let expected = expected.to_rgba();
-        let blank = Raster::with_accent(360, 240, [240, 180, 110]).to_rgba();
-        let mut checked = 0;
-        for y in 101..108 {
-            for x in 324..354 {
-                let index = (y * 360 + x) * 4;
-                if expected[index..index + 3] != blank[index..index + 3] {
-                    assert_eq!(
-                        &actual[index..index + 3],
-                        &expected[index..index + 3],
-                        "tail glyph at {x},{y}"
-                    );
-                    checked += 1;
-                }
-            }
-        }
-        assert!(checked > 30);
+        let original = panel.question.clone();
+        let layout = panel
+            .question_text
+            .borrow()
+            .as_ref()
+            .unwrap()
+            .layout
+            .clone()
+            .unwrap();
+        assert_eq!(layout.source(), format!("Question: {original}"));
+        assert_eq!(
+            panel.question_text.borrow().as_ref().unwrap().scroll,
+            layout.max_scroll((240.0 * 0.24) as u32)
+        );
+        panel.question = format!("{}BBBBB", "a".repeat(275));
+        panel.draw(360, 240, None);
+        panel.act(Action::QuestionPage(i32::MAX));
+        let altered = panel.draw(360, 240, None).to_rgba();
+        let row = 360 * 4;
+        assert!(
+            actual[69 * row..127 * row] != altered[69 * row..127 * row],
+            "the final five characters have visible ink"
+        );
     }
     #[test]
     fn route_authoring_maximum_network_stays_inspectable_and_refuses_overflow_transactionally() {
@@ -2240,5 +2609,496 @@ mod tests {
             (points[0].1 + points[1].1) / 2,
             2,
         );
+    }
+
+    fn route_question_document(
+        question: &str,
+        next: Option<ProjectNext>,
+    ) -> numinous_core::ProjectDocument {
+        let parent = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let mut town = parent.town().clone();
+        town.roads[3].road.cost = 7;
+        let child = parent.remix(town).unwrap();
+        let mut panel = Panel::opened(child);
+        panel.question = question.into();
+        let mut draft = panel.project_draft(42).unwrap();
+        if let Some(next) = next {
+            draft.next = next;
+        }
+        draft
+            .evidence
+            .push(numinous_core::ProjectEvidence::Journal {
+                digest: [9; 32],
+                entry_id: Some(7),
+            });
+        numinous_core::ProjectDocument::from_draft(&draft).unwrap()
+    }
+
+    #[test]
+    fn route_question_received_preview_opens_embedded_network_without_running_next() {
+        let other = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        for next in [
+            ProjectNext::RemixRoute,
+            ProjectNext::OpenRoute {
+                capsule: other.to_capsule(),
+            },
+        ] {
+            let document = route_question_document("Why is this road expensive?", Some(next));
+            let canonical = document.to_document();
+            let preview = document.preview(
+                &numinous_core::Journal::default(),
+                numinous_core::ReceiptCheck::NotSupplied,
+            );
+            let creation =
+                RouteCreation::from_capsule(preview.creation.capsule.as_deref().unwrap()).unwrap();
+            let mut panel = Panel::received(document).unwrap();
+            assert!(panel.is_received_preview());
+            assert_eq!(panel.question, preview.question);
+            assert_eq!(panel.workbench.town(), creation.town());
+            assert!(panel.workbench.trace().is_none());
+            assert!(panel.workbench.snapshot().undo.is_empty());
+            let initial = panel.workbench.snapshot();
+            panel.act(Action::Cost(1));
+            assert_eq!(panel.workbench.snapshot(), initial);
+            assert_eq!(panel.act(Action::Keep), Effect::Keep);
+            panel.mark_received_kept();
+            assert!(
+                panel
+                    .buttons()
+                    .iter()
+                    .any(|button| button.label == "QUESTION KEPT")
+            );
+            assert!(panel.paused);
+            panel.act(Action::Confirm);
+            assert!(!panel.paused);
+            assert_eq!(panel.received_document().unwrap().to_document(), canonical);
+            assert_eq!(panel.workbench.town(), creation.town());
+            panel.act(Action::Page(Page::Keep));
+            panel.push_text(" More");
+            assert!(panel.received_document().is_none());
+            panel.act(Action::Reset);
+            assert_eq!(panel.workbench.snapshot(), initial);
+        }
+    }
+
+    #[test]
+    fn route_question_received_document_tracks_network_and_question_without_hidden_lineage() {
+        let document = route_question_document("Which road matters?", None);
+        let mut panel = Panel::received(document.clone()).unwrap();
+        panel.act(Action::Confirm);
+        panel.act(Action::Cost(1));
+        assert!(panel.received_document().is_none());
+        panel.act(Action::Undo);
+        assert_eq!(panel.received_document(), Some(&document));
+        panel.act(Action::Page(Page::Search));
+        panel.act(Action::Search);
+        panel.act(Action::Step);
+        assert_eq!(panel.received_document(), Some(&document));
+        let imported = RouteCreation::from_capsule(
+            panel
+                .project_draft(10)
+                .unwrap()
+                .creation
+                .as_deref()
+                .unwrap(),
+        )
+        .unwrap();
+        panel.act(Action::Remix);
+        let remixed = RouteCreation::from_capsule(
+            panel
+                .project_draft(10)
+                .unwrap()
+                .creation
+                .as_deref()
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(remixed.parent_identity(), Some(imported.identity()));
+        assert_ne!(remixed.parent_identity(), imported.parent_identity());
+        assert!(panel.received_document().is_none());
+    }
+
+    #[test]
+    fn route_question_received_requires_a_route_and_draws_full_question_above_controls() {
+        let studio = numinous_core::StudioCreation::new("x", -1.0, 1.0, 0.0).unwrap();
+        let capsule = studio.to_num_file();
+        let draft = ProjectDraft {
+            recorded_at_utc: 0,
+            question: "A Studio question".into(),
+            next: ProjectNext::OpenCreation {
+                capsule: capsule.clone(),
+            },
+            rooms: vec!["mandelbrot".into()],
+            evidence: vec![],
+            creation: Some(capsule),
+        };
+        assert!(
+            Panel::received(numinous_core::ProjectDocument::from_draft(&draft).unwrap()).is_err()
+        );
+        let question = "q".repeat(numinous_core::MAX_WORKSPACE_TEXT_CHARS);
+        let panel = Panel::received(route_question_document(&question, None)).unwrap();
+        for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
+            let raster = panel.draw(width, height, None);
+            let cache = panel.question_text.borrow();
+            let text = cache.as_ref().unwrap();
+            assert_eq!(text.source, format!("Question: {question}"));
+            assert_eq!(text.layout.as_ref().unwrap().source(), text.source);
+            assert!(text.layout.as_ref().unwrap().missing_glyphs().is_empty());
+            drop(cache);
+            let mut expected = Raster::with_accent(width, height, [240, 180, 110]);
+            panel.draw_question(
+                &mut expected,
+                width,
+                height,
+                ((width / 400).min(height / 240)).clamp(1, 3) as i32,
+            );
+            let actual = raster.to_rgba();
+            let expected = expected.to_rgba();
+            for y in (height as f64 * 0.15) as usize..(height as f64 * 0.42) as usize {
+                let row = y * width * 4;
+                assert!(
+                    actual[row..row + width * 4] == expected[row..row + width * 4],
+                    "question band row {y} at {width}x{height}"
+                );
+            }
+            for button in panel.buttons() {
+                let (x, y, w, h) = button.bounds;
+                let mut opened = Panel::received(route_question_document(&question, None)).unwrap();
+                opened.draw(width, height, None);
+                let effect = opened.pointer_at((x + w / 2.0, y + h / 2.0), true);
+                assert_eq!(
+                    effect,
+                    match button.action {
+                        Action::Keep => Effect::Keep,
+                        Action::Close => Effect::Close,
+                        _ => Effect::None,
+                    }
+                );
+                assert_eq!(opened.paused, button.action != Action::Confirm);
+            }
+        }
+    }
+
+    #[test]
+    fn route_question_share_and_browse_controls_preserve_current_search_and_lineage() {
+        let mut panel =
+            Panel::received(route_question_document("Keep this question", None)).unwrap();
+        panel.act(Action::Confirm);
+        panel.act(Action::Page(Page::Search));
+        panel.act(Action::Search);
+        panel.act(Action::Step);
+        let state = panel.workbench.snapshot();
+        panel.act(Action::Page(Page::Keep));
+        assert_eq!(panel.act(Action::Share), Effect::Share);
+        panel.shared_path = Some("C:/example/question.project".into());
+        for (width, height) in [(360, 240), (900, 700)] {
+            panel.draw(width, height, None);
+        }
+        assert_eq!(panel.act(Action::Browse), Effect::Browse);
+        assert_eq!(panel.workbench.snapshot(), state);
+        assert_eq!(panel.thumbnail(200, 100).width(), 200);
+        panel.push_text("?");
+        assert!(panel.shared_path.is_none());
+    }
+
+    #[test]
+    fn route_question_dense_preview_preserves_network_roles_and_counts_without_unused_id_labels() {
+        let mut town = RouteWorkbench::first_town().town().clone();
+        town.junctions = 32;
+        let mut source = Panel::opened(RouteCreation::new(town).unwrap());
+        source.question = "Inspect this network".into();
+        let panel = Panel::received(
+            numinous_core::ProjectDocument::from_draft(&source.project_draft(0).unwrap()).unwrap(),
+        )
+        .unwrap();
+        for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
+            let raster = panel.draw(width, height, None);
+            let scale = ((width / 400).min(height / 240)).clamp(1, 3) as i32;
+            assert_text_pixels(
+                &raster,
+                "32 JUNCTIONS / 5 ROADS / 4 STOPS",
+                6,
+                (height as f64 * 0.635) as i32,
+                scale,
+            );
+            let points = panel.network_points(width, height);
+            let rgba = raster.to_rgba();
+            let pixel_at = |x: i32, y: i32| {
+                let offset = (y as usize * width + x as usize) * 4;
+                &rgba[offset..offset + 3]
+            };
+            let mark = marked_pixel('#');
+            let radius = 2 * scale;
+            for (x, y) in [
+                (points[0].0 - radius, points[0].1 - radius),
+                (points[0].0 + radius, points[0].1 + radius),
+                (points[1].0 - radius, points[1].1),
+                (points[1].0, points[1].1 + radius),
+            ] {
+                assert!(
+                    pixel_at(x, y)
+                        .iter()
+                        .zip(mark)
+                        .all(|(actual, expected)| *actual >= expected)
+                );
+            }
+            let isolated = points[31];
+            assert_eq!(pixel_at(isolated.0, isolated.1), &mark);
+            let blank = Raster::with_accent(1, 1, [240, 180, 110]).to_rgba();
+            for y in isolated.1..isolated.1 + 7 * scale {
+                for x in isolated.0 + 1..isolated.0 + 11 * scale {
+                    assert_eq!(pixel_at(x, y), &blank[..3]);
+                }
+            }
+            assert_text_pixels(&raster, "0D", points[0].0 + radius + 2, points[0].1, scale);
+        }
+    }
+
+    #[test]
+    fn route_question_unicode_paging_and_resize_preserve_literal_source_and_canonical_network() {
+        let question = "道路の配送順序".repeat(40);
+        assert_eq!(question.chars().count(), 280);
+        let document = route_question_document(&question, None);
+        let canonical = document.to_document();
+        let mut panel = Panel::received(document).unwrap();
+        let initial = panel.workbench.snapshot();
+        let first = panel.draw(360, 240, None).to_rgba();
+        let layout = panel
+            .question_text
+            .borrow()
+            .as_ref()
+            .unwrap()
+            .layout
+            .clone()
+            .unwrap();
+        assert_eq!(layout.source(), format!("Question: {question}"));
+        assert!(layout.missing_glyphs().is_empty());
+        assert!(panel.question_text.borrow().as_ref().unwrap().maximum > 0.0);
+        panel.draw(360, 240, None);
+        assert!(std::sync::Arc::ptr_eq(
+            &layout,
+            panel
+                .question_text
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .layout
+                .as_ref()
+                .unwrap()
+        ));
+        assert!(
+            panel
+                .buttons()
+                .iter()
+                .any(|button| button.action == Action::QuestionPage(1))
+        );
+        panel.act(Action::QuestionPage(i32::MAX));
+        let last = panel.draw(360, 240, None).to_rgba();
+        assert!(
+            first != last,
+            "the remaining question has a different rendered page"
+        );
+        {
+            let cache = panel.question_text.borrow();
+            let text = cache.as_ref().unwrap();
+            assert_eq!(text.scroll, text.maximum);
+            assert!(
+                text.layout
+                    .as_ref()
+                    .unwrap()
+                    .source_offset_at_scroll(text.scroll)
+                    > 0
+            );
+        }
+        for (width, height) in [(900, 700), (1600, 700), (1280, 400), (360, 240)] {
+            panel.draw(width, height, None);
+            let cache = panel.question_text.borrow();
+            let text = cache.as_ref().unwrap();
+            assert_eq!(
+                text.layout.as_ref().unwrap().source(),
+                format!("Question: {question}")
+            );
+            assert!((0.0..=text.maximum).contains(&text.scroll));
+            assert_eq!(
+                text.dimensions.0,
+                width.saturating_sub(12).clamp(1, 4096) as u32
+            );
+        }
+        panel.act(Action::QuestionPage(i32::MIN));
+        assert_eq!(panel.question_text.borrow().as_ref().unwrap().scroll, 0.0);
+        assert_eq!(panel.workbench.snapshot(), initial);
+        assert_eq!(panel.received_document().unwrap().to_document(), canonical);
+        panel.act(Action::Confirm);
+        panel.act(Action::Page(Page::Keep));
+        panel.draw(360, 240, None);
+        panel.act(Action::QuestionPage(1));
+        assert!(panel.question_text.borrow().as_ref().unwrap().scroll > 0.0);
+        assert_eq!(panel.question, question);
+        assert_eq!(panel.received_document().unwrap().to_document(), canonical);
+    }
+
+    #[test]
+    fn route_question_unicode_edit_counts_characters_and_preserves_combining_and_supplementary_data()
+     {
+        let question = format!("{}e\u{301}\u{10400}", "道".repeat(150));
+        assert!(question.len() > numinous_core::MAX_WORKSPACE_TEXT_CHARS);
+        let mut panel = Panel::received(route_question_document(&question, None)).unwrap();
+        panel.act(Action::Confirm);
+        panel.act(Action::Page(Page::Keep));
+        panel.push_text(" ASCII");
+        assert_eq!(panel.question, format!("{question} ASCII"));
+        panel.push_text(&"x".repeat(300));
+        assert_eq!(
+            panel.question.chars().count(),
+            numinous_core::MAX_WORKSPACE_TEXT_CHARS
+        );
+        assert!(panel.question.starts_with(&question));
+        assert_eq!(panel.project_draft(0).unwrap().question, panel.question);
+        panel.draw(360, 240, None);
+        assert!(
+            panel
+                .question_text
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .layout
+                .as_ref()
+                .unwrap()
+                .source()
+                .starts_with("Some characters unavailable.")
+        );
+        assert!(panel.question.starts_with(&question));
+        panel.act(Action::Backspace);
+        assert_eq!(panel.question.chars().count(), 279);
+    }
+
+    #[test]
+    fn route_question_text_adapter_refuses_oversized_public_draft_without_blank_success_or_domain_change()
+     {
+        let mut panel =
+            Panel::received(route_question_document("Bounded admission", None)).unwrap();
+        panel.question = "x".repeat(65_536);
+        let before = panel.workbench.snapshot();
+        let raster = panel.draw(360, 240, None);
+        assert_text_pixels(&raster, "QUESTION TEXT COULD NOT BE DRAWN", 6, 36, 1);
+        assert_eq!(panel.workbench.snapshot(), before);
+        assert!(panel.received_document().is_none());
+        panel.act(Action::QuestionPage(1));
+        panel.question = "Recovered".into();
+        panel.draw(360, 240, None);
+        assert_eq!(
+            panel
+                .question_text
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .layout
+                .as_ref()
+                .unwrap()
+                .source(),
+            "Question: Recovered"
+        );
+    }
+    #[test]
+    fn route_question_shared_receipt_preserves_case_unicode_and_pages_inside_its_band() {
+        let document = route_question_document("Preserve the route question", None);
+        let path = format!(
+            "/home/山田/MixedCase/{}TailCase.project",
+            "ReadableFolder/".repeat(1_100)
+        );
+        for (width, height) in [(360, 240), (900, 700), (1600, 700), (1280, 400)] {
+            let mut panel = Panel::received(document.clone()).unwrap();
+            panel.act(Action::Confirm);
+            panel.act(Action::Page(Page::Search));
+            panel.act(Action::Next);
+            panel.act(Action::Search);
+            panel.act(Action::Step);
+            panel.act(Action::Page(Page::Keep));
+            let state = panel.workbench.snapshot();
+            panel.shared_path = Some(path.clone());
+            let first = panel.draw(width, height, None).to_rgba();
+            let (maximum, page_height) = {
+                let cache = panel.question_text.borrow();
+                let text = cache.as_ref().unwrap();
+                let layout = text.layout.as_ref().unwrap();
+                assert_eq!(text.source, format!("Shared to: {path}"));
+                assert_eq!(layout.source(), text.source);
+                assert!(layout.missing_glyphs().is_empty());
+                assert!(text.maximum > 0.0);
+                (text.maximum, text.dimensions.1)
+            };
+            for button in panel
+                .buttons()
+                .iter()
+                .filter(|button| matches!(button.action, Action::QuestionPage(_)))
+            {
+                assert!(button.label.starts_with("PATH "));
+            }
+            let pages = (maximum / page_height as f32).ceil() as usize + 1;
+            for _ in 0..pages {
+                panel.act(Action::QuestionPage(1));
+            }
+            let last = panel.draw(width, height, None).to_rgba();
+            assert_eq!(
+                panel.question_text.borrow().as_ref().unwrap().scroll,
+                maximum
+            );
+            let band = (height as f64 * 0.29) as usize * width * 4
+                ..((height as f64 * 0.29) as usize + (height as f64 * 0.24) as usize) * width * 4;
+            assert!(
+                first[band.clone()] != last[band.clone()],
+                "path tail is reachable"
+            );
+            assert!(first[..band.start] == last[..band.start]);
+            assert!(
+                first[band.end..] == last[band.end..],
+                "paging cannot cover controls"
+            );
+            for _ in 0..pages {
+                panel.act(Action::QuestionPage(-1));
+            }
+            assert!(panel.draw(width, height, None).to_rgba() == first);
+            for (altered, witness) in [
+                (path.replace("山田", "道路"), "Unicode directory"),
+                (path.replace("MixedCase", "MIXEDCASE"), "filename case"),
+            ] {
+                panel.shared_path = Some(altered);
+                let changed = panel.draw(width, height, None).to_rgba();
+                assert!(
+                    first[band.clone()] != changed[band.clone()],
+                    "{witness} has distinct visible ink"
+                );
+            }
+            panel.shared_path = Some(path.clone());
+            panel.draw(width, height, None);
+            assert_eq!(panel.shared_path.as_deref(), Some(path.as_str()));
+            assert_eq!(panel.workbench.snapshot(), state);
+            assert_eq!(panel.received_document(), Some(&document));
+        }
+    }
+
+    #[test]
+    fn route_question_resize_cache_matches_fresh_render_at_scale_thresholds() {
+        let document = route_question_document("Which road changes the result?", None);
+        for (width, first_height, next_height) in [(900, 479, 480), (1200, 719, 720)] {
+            let reused = Panel::received(document.clone()).unwrap();
+            reused.draw(width, first_height, None);
+            let before_dimensions = reused.question_text.borrow().as_ref().unwrap().dimensions;
+            let resized = reused.draw(width, next_height, None).to_rgba();
+            let after_dimensions = reused.question_text.borrow().as_ref().unwrap().dimensions;
+            assert_eq!(
+                before_dimensions, after_dimensions,
+                "the fixture isolates a scale collision"
+            );
+            let fresh = Panel::received(document.clone())
+                .unwrap()
+                .draw(width, next_height, None)
+                .to_rgba();
+            assert!(
+                resized == fresh,
+                "resized question font matches a fresh {width}x{next_height} frame"
+            );
+            assert_eq!(reused.received_document(), Some(&document));
+        }
     }
 }

@@ -14,7 +14,7 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::project::{
-    MAX_PROJECT_FILE_BYTES, ProjectChain, ProjectDraft, ProjectError, ProjectStore,
+    MAX_PROJECT_FILE_BYTES, ProjectChain, ProjectDocument, ProjectDraft, ProjectError, ProjectStore,
 };
 use crate::{AppPreferences, Journal, JournalRecord, Journey, Scoreboard};
 
@@ -1064,6 +1064,87 @@ pub fn erase_journal_file(path: &Path) -> io::Result<LocalFileInventory> {
     Ok(inventory)
 }
 
+/// Result of publishing an immutable portable project document.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectDocumentExport {
+    /// A complete document was atomically published at a new path.
+    Created,
+    /// The destination already contained exactly the canonical document bytes.
+    AlreadyPresent,
+}
+
+/// Read one portable project document, bounded before parsing to 256 KiB.
+///
+/// This does not load a project chain, create a missing file, or import anything.
+///
+/// # Errors
+///
+/// Returns an error for missing, unreadable, invalid UTF-8, oversized, or
+/// malformed documents, including local revision chains.
+pub fn read_project_document_file(path: &Path) -> io::Result<ProjectDocument> {
+    let text = read_local_text_bounded(path, MAX_PROJECT_FILE_BYTES)?;
+    ProjectDocument::parse(&text).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+}
+
+/// Publish canonical portable document bytes without replacing any destination.
+///
+/// An exact existing match is idempotent and does not rewrite the file. New
+/// bytes are flushed in a same-directory temporary file before an atomic hard
+/// link publishes them. No local project chain, journal, or lock is touched.
+///
+/// # Errors
+///
+/// Returns an error when an existing destination differs or cannot be read,
+/// preparation fails, or the filesystem cannot publish a hard link. Temporary
+/// files are cleaned up on failure; there is no replacing fallback.
+pub fn export_project_document_file(
+    path: &Path,
+    document: &ProjectDocument,
+) -> io::Result<ProjectDocumentExport> {
+    let text = document.to_document();
+    match matching_project_document(path, &text) {
+        Ok(outcome) => return Ok(outcome),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error),
+    }
+    ensure_parent(path)?;
+    #[cfg(unix)]
+    let parent = open_parent_directory(path)?;
+    let (temp, mut file) = allocate_temp_file(path)?;
+    let pending = PendingTempFile::new(temp.clone());
+    let prepared = file
+        .write_all(text.as_bytes())
+        .and_then(|()| file.sync_all());
+    drop(file);
+    prepared?;
+    let outcome = match fs::hard_link(&temp, path) {
+        Ok(()) => ProjectDocumentExport::Created,
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+            matching_project_document(path, &text)?
+        }
+        Err(error) => return Err(error),
+    };
+    drop(pending);
+    #[cfg(unix)]
+    {
+        // Publication has committed. A failed directory barrier cannot turn
+        // that complete file into an uncommitted result.
+        let _sync_result = parent.sync_all();
+    }
+    Ok(outcome)
+}
+
+fn matching_project_document(path: &Path, text: &str) -> io::Result<ProjectDocumentExport> {
+    if read_local_text_bounded(path, MAX_PROJECT_FILE_BYTES)? == text {
+        Ok(ProjectDocumentExport::AlreadyPresent)
+    } else {
+        Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "destination contains different bytes; choose another project export path",
+        ))
+    }
+}
+
 /// Load a project chain from an explicit path.
 ///
 /// A missing file is an empty chain. A malformed file is an error, so a later
@@ -1073,7 +1154,7 @@ pub fn erase_journal_file(path: &Path) -> io::Result<LocalFileInventory> {
 /// # Errors
 ///
 /// Returns an error when the file is unreadable, oversized, or not a
-/// `numinous-project-v1` chain.
+/// supported project revision chain.
 pub fn try_load_project_file(path: &Path) -> io::Result<ProjectChain> {
     match read_local_text_bounded(path, MAX_PROJECT_FILE_BYTES) {
         Ok(text) => ProjectChain::parse(&text)
@@ -2029,6 +2110,181 @@ mod tests {
             radio_cache: root.join("radio"),
             protected_radio_source: None,
             crash_log: root.join("crash.log"),
+        }
+    }
+
+    fn portable_route_question(question: &str) -> crate::ProjectDocument {
+        let parent = crate::RouteCreation::new(
+            crate::route_workbench::RouteWorkbench::first_town()
+                .town()
+                .clone(),
+        )
+        .unwrap();
+        let mut network = parent.town().clone();
+        network.roads[3].road.cost = 5;
+        let child = parent.remix(network).unwrap();
+        crate::ProjectDocument::from_draft(&crate::ProjectDraft {
+            recorded_at_utc: 7,
+            question: question.into(),
+            next: crate::ProjectNext::OpenRoute {
+                capsule: child.to_capsule(),
+            },
+            rooms: vec!["route-lab".into()],
+            evidence: Vec::new(),
+            creation: Some(child.to_capsule()),
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn portable_document_export_is_immutable_and_open_does_not_keep() {
+        use super::{
+            ProjectDocumentExport, export_project_document_file, read_project_document_file,
+        };
+        let store = IsolatedStore::new("portable_document_export");
+        let path = store.path("question.nump");
+        let chain = store.path("projects.txt");
+        let journal = store.path("journal.txt");
+        std::fs::write(&journal, b"existing journal bytes").unwrap();
+        let document = portable_route_question("Can this delivery order be improved?");
+        assert_eq!(
+            export_project_document_file(&path, &document).unwrap(),
+            ProjectDocumentExport::Created
+        );
+        let bytes = std::fs::read(&path).unwrap();
+        let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+        let opened = read_project_document_file(&path).unwrap();
+        assert_eq!(opened.identity_hex(), document.identity_hex());
+        let preview = opened.preview(&crate::Journal::new(), crate::ReceiptCheck::NotSupplied);
+        assert!(preview.will_return && preview.not_applied);
+        assert_eq!(preview.revision_id, 0);
+        assert!(!chain.exists());
+        assert_eq!(std::fs::read(&journal).unwrap(), b"existing journal bytes");
+        assert_eq!(
+            export_project_document_file(&path, &opened).unwrap(),
+            ProjectDocumentExport::AlreadyPresent
+        );
+        assert_eq!(
+            std::fs::metadata(&path).unwrap().modified().unwrap(),
+            modified
+        );
+        let different = portable_route_question("Another question");
+        assert_eq!(
+            export_project_document_file(&path, &different)
+                .unwrap_err()
+                .kind(),
+            io::ErrorKind::AlreadyExists
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        assert_eq!(
+            import_project_file(&chain, &opened.to_document(), 10, None, false).unwrap(),
+            crate::ProjectStore::NeedsConfirm
+        );
+        assert!(!chain.exists());
+        assert!(matches!(
+            import_project_file(&chain, &opened.to_document(), 11, None, true).unwrap(),
+            crate::ProjectStore::Appended { revision_id: 1, .. }
+        ));
+        let kept_bytes = std::fs::read(&chain).unwrap();
+        assert!(matches!(
+            import_project_file(&chain, &opened.to_document(), 12, None, true).unwrap(),
+            crate::ProjectStore::AlreadyPresent { .. }
+        ));
+        assert_eq!(std::fs::read(&chain).unwrap(), kept_bytes);
+        assert_eq!(
+            try_load_project_file(&chain)
+                .unwrap()
+                .revision(1)
+                .unwrap()
+                .identity_hex(),
+            document.identity_hex()
+        );
+        assert_eq!(std::fs::read_dir(&store.root).unwrap().count(), 3);
+    }
+
+    #[test]
+    fn portable_document_reads_are_bounded_and_refuse_chains_without_mutation() {
+        use super::{export_project_document_file, read_project_document_file};
+        let store = IsolatedStore::new("portable_document_admission");
+        let path = store.path("input.nump");
+        assert_eq!(
+            read_project_document_file(&path).unwrap_err().kind(),
+            io::ErrorKind::NotFound
+        );
+        assert!(!path.exists());
+        let document = portable_route_question("A received question");
+        for bytes in [
+            b"numinous-project-v2\n".to_vec(),
+            b"NUMINOUS_PROJECT 99\n".to_vec(),
+            vec![0xff, 0xfe],
+            vec![b'x'; crate::MAX_PROJECT_FILE_BYTES as usize],
+            vec![b'x'; crate::MAX_PROJECT_FILE_BYTES as usize + 1],
+            document
+                .to_document()
+                .replace("NUMINOUS_ROUTE 1", "NUMINOUS_ROUTE 99")
+                .into_bytes(),
+        ] {
+            std::fs::write(&path, &bytes).unwrap();
+            assert!(read_project_document_file(&path).is_err());
+            assert!(export_project_document_file(&path, &document).is_err());
+            assert_eq!(std::fs::read(&path).unwrap(), bytes);
+            assert_eq!(std::fs::read_dir(&store.root).unwrap().count(), 1);
+        }
+        std::fs::remove_file(&path).unwrap();
+        std::fs::create_dir(&path).unwrap();
+        assert!(export_project_document_file(&path, &document).is_err());
+        assert_eq!(std::fs::read_dir(&store.root).unwrap().count(), 1);
+        std::fs::remove_dir(&path).unwrap();
+    }
+
+    #[test]
+    fn portable_document_concurrent_exports_publish_one_complete_immutable_file() {
+        use super::{
+            ProjectDocumentExport, export_project_document_file, read_project_document_file,
+        };
+        for same_question in [true, false] {
+            let store = IsolatedStore::new("portable_document_concurrent");
+            let path = store.path("question.nump");
+            let first = portable_route_question("Question one");
+            let second = if same_question {
+                first.clone()
+            } else {
+                portable_route_question("Question two")
+            };
+            let barrier = std::sync::Arc::new(std::sync::Barrier::new(2));
+            let handles = [first.clone(), second.clone()].map(|document| {
+                let path = path.clone();
+                let barrier = barrier.clone();
+                thread::spawn(move || {
+                    barrier.wait();
+                    export_project_document_file(&path, &document)
+                })
+            });
+            let outcomes = handles.map(|handle| handle.join().unwrap());
+            assert_eq!(
+                outcomes
+                    .iter()
+                    .filter(|result| matches!(result, Ok(ProjectDocumentExport::Created)))
+                    .count(),
+                1
+            );
+            if same_question {
+                assert_eq!(
+                    outcomes
+                        .iter()
+                        .filter(|result| matches!(
+                            result,
+                            Ok(ProjectDocumentExport::AlreadyPresent)
+                        ))
+                        .count(),
+                    1
+                );
+            } else {
+                assert_eq!(outcomes.iter().filter(|result| matches!(result, Err(error) if error.kind() == io::ErrorKind::AlreadyExists)).count(), 1);
+            }
+            let actual = read_project_document_file(&path).unwrap().to_document();
+            assert!(actual == first.to_document() || actual == second.to_document());
+            assert_eq!(std::fs::read_dir(&store.root).unwrap().count(), 1);
         }
     }
 

@@ -11,9 +11,10 @@ use std::path::Path;
 use numinous_core::route_creation::MAX_ROUTE_CAPSULE_BYTES;
 use numinous_core::{
     CreationStatus, EvidenceStatus, MAX_PROJECT_FILE_BYTES, NextPreview, ProjectArgumentValue,
-    ProjectCall, ProjectDraft, ProjectNext, ProjectStore, ReceiptCheck, ResumePreview, RoomStatus,
-    SessionWorkspace, WorkspacePlace, WorkspacePlaceDraft, WorkspaceUpdate, display_safe,
-    try_load_journal_file, try_load_project_file,
+    ProjectCall, ProjectDocument, ProjectDocumentExport, ProjectDraft, ProjectNext, ProjectStore,
+    ReceiptCheck, ResumePreview, RoomStatus, SessionWorkspace, WorkspacePlace, WorkspacePlaceDraft,
+    WorkspaceUpdate, display_safe, export_project_document_file, try_load_journal_file,
+    try_load_project_file,
 };
 
 fn bounded_text(path: &Path, maximum: u64) -> Result<String, String> {
@@ -127,15 +128,40 @@ pub(super) fn export_report(
         None => chain.revisions().last(),
     }
     .ok_or("Project revision is not present.")?;
-    let document = revision.to_document();
+    let document = ProjectDocument::parse(&revision.to_document()).map_err(|error| {
+        format!(
+            "Could not export project: {}",
+            display_safe(&error.to_string())
+        )
+    })?;
     if let Some(out) = out {
-        super::studio::write_create_new(out, document.as_bytes())?;
+        if out
+            .parent()
+            .is_some_and(|parent| !parent.as_os_str().is_empty() && !parent.is_dir())
+        {
+            return Err(format!(
+                "Could not export project: destination directory for {} must exist.",
+                display_safe(&out.to_string_lossy())
+            ));
+        }
+        let outcome = export_project_document_file(out, &document).map_err(|error| {
+            format!(
+                "Could not export project: {}",
+                display_safe(&error.to_string())
+            )
+        })?;
+        if outcome == ProjectDocumentExport::AlreadyPresent {
+            return Err(format!(
+                "Could not export project: {} already exists.",
+                display_safe(&out.to_string_lossy())
+            ));
+        }
         Ok(format!(
             "Project document exported to {}.\n",
             display_safe(&out.to_string_lossy())
         ))
     } else {
-        Ok(document)
+        Ok(document.to_document())
     }
 }
 

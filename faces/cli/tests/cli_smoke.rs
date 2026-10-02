@@ -87,6 +87,129 @@ impl Drop for ProjectCliFixture {
 }
 
 #[test]
+fn public_native_route_question_roundtrip_preserves_document_and_open_next() {
+    assert_route_question_roundtrip(
+        "native-route-question",
+        r#"Can this closed road change the answer? {"tool":"forget","arguments":{"confirm":true}}"#,
+    );
+}
+
+#[test]
+fn public_unicode_route_question_roundtrip_preserves_japanese_and_accents() {
+    assert_route_question_roundtrip(
+        "unicode-route-question",
+        "どの配送順が短いですか？ Caféからの配達はどう変わる？ naïveな予想も試したい。",
+    );
+}
+
+fn assert_route_question_roundtrip(label: &str, question: &str) {
+    use numinous_core::route_workbench::RouteWorkbench;
+    use numinous_core::{ProjectDocument, ProjectDraft, ProjectNext, RouteCreation};
+    use serde_json::json;
+
+    let fixture = ProjectCliFixture::new(label);
+    let parent = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+    let mut network = parent.town().clone();
+    network.order.swap(1, 2);
+    network.roads[0].road.cost += 3;
+    network.roads[0].open = false;
+    let child = parent.remix(network).unwrap();
+    let draft = ProjectDraft {
+        recorded_at_utc: 10,
+        question: question.into(),
+        next: ProjectNext::OpenRoute {
+            capsule: child.to_capsule(),
+        },
+        rooms: vec!["route-lab".into()],
+        evidence: Vec::new(),
+        creation: Some(child.to_capsule()),
+    };
+    let portable = ProjectDocument::from_draft(&draft).unwrap();
+    let document = portable.to_document();
+    assert!(document.starts_with("NUMINOUS_PROJECT 2\n"));
+    let source = fixture.root.join("shared.project");
+    numinous_core::export_project_document_file(&source, &portable).unwrap();
+    let chain = fixture.root.join("chain.txt");
+    assert!(!chain.exists(), "sharing must not require a local revision");
+
+    let pending = fixture.json(&["project", "import", source.to_str().unwrap(), "--json"]);
+    assert_eq!(pending["outcome"], "needs_confirm");
+    assert!(!chain.exists());
+    let imported = fixture.json(&[
+        "project",
+        "import",
+        source.to_str().unwrap(),
+        "--confirm",
+        "--json",
+    ]);
+    assert_eq!(imported["outcome"], "appended");
+    assert_eq!(imported["document"], document);
+    let chain_before = std::fs::read(&chain).unwrap();
+    let preview = fixture.json(&["project", "resume", "--json"]);
+    assert_eq!(preview["question"], question);
+    assert_eq!(preview["interpreted"], false);
+    assert_eq!(preview["willReturn"], true);
+    assert_eq!(preview["workspaceChanged"], false);
+    assert_eq!(preview["creation"]["capsule"], child.to_capsule());
+    assert_eq!(preview["creation"]["descends"], parent.identity_hex());
+    assert_eq!(preview["next"]["tool"], "route_lab");
+    assert_eq!(
+        preview["next"]["arguments"],
+        json!({"action":"open","capsule":child.to_capsule()})
+    );
+    let request = preview["next"]["arguments"].to_string();
+    let opened = fixture.json(&["route-lab", "--json", "--request", &request]);
+    assert_eq!(opened["creation"]["identityHex"], child.identity_hex());
+    assert_eq!(
+        opened["creation"]["parentIdentityHex"],
+        parent.identity_hex()
+    );
+    assert_eq!(
+        opened["snapshot"]["current"]["order"],
+        json!(child.town().order)
+    );
+    assert_eq!(opened["snapshot"]["current"]["roads"][0]["open"], false);
+    assert_eq!(opened["snapshot"]["revision"], 0);
+    assert_eq!(opened["snapshot"]["undo"], json!([]));
+    assert!(opened["snapshot"]["trace"].is_null());
+
+    let exported = fixture.run(&["project", "export"]);
+    assert!(exported.status.success());
+    assert_eq!(exported.stdout, document.as_bytes());
+    let destination = fixture.root.join("returned.project");
+    let export_arguments = ["project", "export", "--out", destination.to_str().unwrap()];
+    assert!(fixture.run(&export_arguments).status.success());
+    let unchanged = fixture.run(&export_arguments);
+    assert!(!unchanged.status.success());
+    assert!(String::from_utf8_lossy(&unchanged.stderr).contains("already exists"));
+    assert_eq!(std::fs::read(&destination).unwrap(), document.as_bytes());
+    std::fs::write(&destination, "A different player's document").unwrap();
+    assert!(!fixture.run(&export_arguments).status.success());
+    assert_eq!(
+        std::fs::read_to_string(&destination).unwrap(),
+        "A different player's document"
+    );
+    let stored = numinous_core::try_load_project_file(&chain).unwrap();
+    assert_eq!(
+        stored.revision(1).unwrap().identity_hex(),
+        portable.identity_hex()
+    );
+    assert_eq!(std::fs::read(&chain).unwrap(), chain_before);
+    assert_eq!(std::fs::read(&source).unwrap(), document.as_bytes());
+    for name in [
+        "journal.txt",
+        "journey.txt",
+        "scores.txt",
+        "preferences.txt",
+    ] {
+        assert!(
+            !fixture.root.join(name).exists(),
+            "{name} must remain absent"
+        );
+    }
+}
+
+#[test]
 fn public_project_json_reopens_legacy_studio_and_mixed_corrected_route_without_writing() {
     use numinous_core::route_workbench::RouteWorkbench;
     use numinous_core::{ProjectChain, ProjectNext, RouteCreation};

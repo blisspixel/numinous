@@ -308,7 +308,7 @@ content identifier detects a change only until someone deliberately recomputes
 it. It is not a signature or evidence of external custody; release decisions
 that need that property must register or sign the receipt outside this runner.
 
-The release scripts also regenerate `renders/qa-app/`, currently 3009 screens.
+The release scripts also regenerate `renders/qa-app/`, currently 3045 screens.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture
 responses that follow its declared interaction verb. The generator checks pure
@@ -321,12 +321,20 @@ For iteration, `cargo run -p numinous-app --example screens -- --room route-lab`
 uses the same composed rendering and domain checks for one catalog room. It
 writes a separate manifest under `renders/qa-room/route-lab/` and leaves the
 complete release matrix in place.
-`cargo run -p numinous-app --example screens -- --route-editor` writes 112
-native authoring receipts under `renders/qa-route-editor/`: fourteen states,
-keyboard and controller hints, and four window sizes. These cover custom and
-dense networks, road drafts, disconnected deliveries, search playback, question
-editing, and a paused remix. The complete release matrix includes the default
-and compact versions of those same states.
+`cargo run -p numinous-app --example screens -- --route-editor` writes
+native authoring receipts under `renders/qa-route-editor/`, with keyboard and
+controller hints at default, compact, wide, and wide-short sizes. These cover
+custom and dense networks, road drafts, disconnected deliveries, search
+playback, question editing, a shared-file receipt, a paused remix, and received
+question previews before and after keeping. Japanese and accented text,
+overflow paging, and dense received networks have dedicated states. The complete
+release matrix includes the default and compact versions of those same states.
+`cargo run -p numinous-app --example screens -- --route-gallery` writes mixed
+Gallery receipts under `renders/qa-route-gallery/`, with route-question and
+Studio selection at default, compact, wide, and wide-short sizes. The release
+matrix includes their default and compact views. Both use the production
+bounded discovery and tile renderer, with canonical fixture identity checked
+before drawing.
 Search receipts include cursor zero, a cheaper tentative predecessor replacing
 an earlier road, its backward step, disconnected completion, and a dense
 network. Fixture checks bind those pictures to the canonical revealed prefix.
