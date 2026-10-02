@@ -1,4 +1,4 @@
-# Music & Sound
+# Music and sound
 
 Sound is not decoration in Numinous. It is half the product. The visuals get you to stop; the music is why you stay, why you leave it running, and why a clip is worth sharing. The bar is simple: **the music has to be genuinely, unironically great**, the kind of thing you would put on even with the screen off.
 
@@ -8,7 +8,7 @@ There are two engines, and they are designed to coexist and even harmonize.
 
 ## Engine A: Programmatic music (the math makes the sound)
 
-> A2 engineering pass (July 14, 2026, catalog later expanded to 350): motifs
+> A2 engineering pass (July 14, 2026; the catalog has grown since): motifs
 > ship for every catalog room. A motif is
 > a room's musical identity (key, tempo, a line of semitone degrees, and
 > what it encodes): Times Tables circles and returns in D minor pentatonic;
@@ -67,8 +67,9 @@ There are two engines, and they are designed to coexist and even harmonize.
 > Status: v1 shipped. `crates/core/src/chiptune.rs` composes deterministic
 > pentatonic chiptunes (square lead, triangle bass, noise ticks, click-free
 > envelopes) from a seed; `numinous tune --seed N --out chip.wav` writes them.
-> The app already uses this engine as its per-room score. Next is the pattern
-> engine below.
+> The App's room beds are built from the same motifs with a soft sine or
+> triangle lead (`SOUND.md`); seeded chiptune exports keep the square lead.
+> Next is the pattern engine below.
 
 The shipped engine is native Rust: custom deterministic DSP in
 `numinous-core`, with `cpal` output through `numinous-audio`. It runs locally
@@ -118,11 +119,11 @@ The current chiptune engine supplies one square, triangle, and noise palette.
 The fuller target pairs a distinct voice with each Visual Era (see
 `DESIGN.md`):
 
-- **4-bit**: the crudest square/noise, one or two voices, brutal and charming.
+- **Phosphor**: the crudest square and noise, one or two voices, terminal bleeps and modem tones, brutal and charming.
+- **Vector**: pure analog sine/saw; the waveform you hear is the waveform you see.
 - **8-bit**: NES-flavored: pulse, triangle, noise channels. Chiptune melodies generated from the room's math.
-- **16-bit**: Genesis/SNES-flavored FM synthesis and sample-ish pads. Richer, still retro.
-- **Oscilloscope era**: pure analog sine/saw; the waveform you hear is the waveform you see.
-- **Modern era**: the full tuned house synth, reverb, the polished default.
+- **16-bit** (planned era): Genesis/SNES-flavored FM synthesis and sample-ish pads. Richer, still retro.
+- **Modern**: the full tuned house synth, reverb, the polished default.
 
 The target is for the same mathematical motif to survive every voice change.
 

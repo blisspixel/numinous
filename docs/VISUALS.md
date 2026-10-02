@@ -1,18 +1,19 @@
-# Visuals: The Rendering & Look Bible
+# Visuals: the rendering and look bible
 
 How Numinous is drawn. The rule above all others: **every single frame is
 screenshot-worthy.** If you pause at a random instant and it is not beautiful,
 that is a bug. This document owns both the current rendering boundary and the
 target visual system.
 
-**Implementation boundary:** 0.4.0-alpha.31 renders every room
+**Status (reviewed 2026-10-02).** Built: the current alpha renders every room
 deterministically through CPU `Surface` implementations and presents app frames
 with `softbuffer`. Mandelbrot and Julia alone have targeted `wgpu` paths. Four
 CPU-styled Eras ship: phosphor, 8-bit, vector, and modern. PNG room renders,
-gallery sheets, app postcards, and short-loop APNG bundles ship. HDR, bloom,
-feedback persistence, a universal GPU pipeline, 16-bit and blueprint Eras,
-audio voice swaps, longer video export, and operating-system URL registration
-are targets, not current evidence.
+gallery sheets, app postcards, and short-loop APNG bundles ship. Designed, not
+current evidence: HDR, bloom, feedback persistence, a universal GPU pipeline,
+the one ink table below, 16-bit and blueprint Eras, audio voice swaps, room
+transitions through the stage, longer video export, and operating-system URL
+registration.
 
 ## App gallery
 
@@ -44,6 +45,7 @@ The [Route Lab guide](ROUTE_LAB.md) shows its delivery map and search playback.
   fractal GPU paths evaluate escape-time fields in WGSL.
 - **Lit from within, not lit from above.** The aesthetic is additive light on a near-black stage (see `DESIGN.md`), not flat UI and not photorealism. Think glowing lines and points, HDR bloom, phosphor. The image looks *emissive*.
 - **Restraint is the style.** One idea per screen, one accent color per room, generous negative space. Beauty comes from precision and motion, not from clutter or spectacle.
+- **Meaning lives in shape and lightness; hue is a second voice.** Where a mark sits and how bright it is carry what is true. Hue may repeat, sharpen, or beautify that meaning, never carry it alone: the Phosphor Era maps every pixel to green luminance, so hue-only meaning is erased for anyone who picks it. `DESIGN.md` states the law; the mark vocabulary below carries it.
 - **Beauty in stillness and in motion.** Both the paused frame and the animation must be gorgeous. Much of the magic lives in smooth, eased, continuous motion at a locked 60fps (120 where the display allows).
 
 ## Design continuity gate
@@ -72,10 +74,58 @@ visual surface against these invariants:
   treatment must preserve the same information and visual hierarchy.
 - Check the default frame, compact frame, and at least one consequential
   interaction state. Pair color with shape, brightness, or text so meaning does
-  not depend on hue alone.
+  not depend on hue alone: meaning lives in shape and lightness, and hue is a
+  second voice.
 
 These are continuity requirements, not evidence that the planned 0.5
 accessibility and human visual-review gates have already passed.
+
+## The mark vocabulary and its inks
+
+Rooms speak only in marks. A room draws through `Surface::plot(mark)`, and each
+face turns the mark into its own medium: the terminal face into a character,
+and `Raster::ink` into an RGB value added to the pixel. The law in `DESIGN.md`
+decides what the marks must carry: **meaning lives in shape and lightness; hue
+is a second voice.** Two marks that mean different things must stay apart in
+shape or lightness even with the hue taken away, as the Phosphor Era takes it.
+
+**Built today (`Raster::ink`):**
+
+| Mark | Pixel ink |
+|---|---|
+| `'#'` | the room accent times 1.7 |
+| `'!'` | warning ink `[230, 72, 72]` |
+| `'-'` | structure ink `[16, 20, 34]` |
+| `'@'`, `'%'`, `'&'`, `'~'` | the four spectral inks `[216, 40, 190]`, `[56, 224, 132]`, `[242, 148, 36]`, `[116, 72, 232]` |
+| every other mark, including `' '` | the room accent |
+
+The terminal reads `' ' . : + * #` as an ordered weight ramp, but the pixel
+face paints all of those except `'#'` at the same full accent. That flattening
+is why some rooms read as one flat tone in the App, a PNG, a postcard, or the
+Gallery while their character face still shows structure. The related
+color-independence limits are measured in the roadmap's decisions section.
+
+**Designed, not built: one ink table for every face.** The pixel face should
+speak the terminal's weight ramp:
+
+| Mark | Role | Pixel ink |
+|---|---|---|
+| `' '` | empty | nothing (plotting it is a no-op) |
+| `'.'`, `':'` | faint: guides, the unlit field, older history | accent x 0.35 |
+| `'-'` | chrome structure | fixed `[16, 20, 34]` (unchanged) |
+| `'+'`, `'x'`, `'='` | secondary | accent x 0.6 |
+| `'*'`, `'o'`, and other marks | the idea | accent x 1.0 |
+| `'#'` | hot core, emphasis | accent x 1.7 now; tone-mapped toward white after the Sensory Lift |
+| `'!'` | wrong, always with a shape cue | `[230, 72, 72]` |
+| `'@'`, `'%'`, `'&'`, `'~'` | spectral state | unchanged until the spectral ruling (decisions entry 12) |
+
+With it comes one guard: for every room that draws two marks with different
+roles, the raster must render them distinguishably. The terminal shade steps
+in `ansi.rs`, measured quartiles of today's ink, are re-derived from the new
+table. Because it changes every golden image, the table lands as the first
+commit of the Sensory Lift, inside its one deliberate re-baseline, together
+with an accent lightness band that keeps every room's accent bright enough to
+glow on the stage.
 
 ## Current and target render pipelines
 
@@ -133,8 +183,11 @@ survives at small sizes; the circle connects it to the rooms while the existing
 cartridge wordmark remains the name. Keep the mark simple, without decorative
 glyphs, hidden letters, or extra orbiting elements.
 
-`assets/logo.svg` is the vector source. Its cyan `#4effff` matches the Cabinet's
-highlight, on the shared `#0a0b0f` stage. Windows, macOS, and Linux use the PNG,
+`assets/logo.svg` is the vector source. Its cyan `#4effff` is the identity hue,
+on the shared `#0a0b0f` stage. The Cabinet draws its highlight in the waiting
+room's accent today, so it matches the mark only when that room is Times
+Tables; one fixed chrome palette with the cyan as its only identity hue is
+Designed. Windows, macOS, and Linux use the PNG,
 ICO, and ICNS assets derived from that source. The transparent corners and
 dark backing preserve the silhouette on either light or dark desktops.
 
@@ -188,12 +241,15 @@ live render resolution to protect its 33 ms room budget. The rules below are the
 remaining product bar, not claims that every room already satisfies it.
 
 - **Everything eases.** Nothing snaps. Physical, continuous, momentum-based. Dials have inertia; values glide.
-- **Idle "breathing."** A room left alone never freezes; it drifts in a slow, generative, gorgeous idle loop (this is also what makes Watch mode and the Cabinet's live tile-previews work, see `DESIGN.md`).
-- **Transitions are dissolves through black.** Room-to-room is a soft cross-dissolve, never a hard cut, always in the near-black.
+- **Idle "breathing."** A room left alone never freezes; it drifts in a slow, generative, gorgeous idle loop (this is also what makes Watch mode work, see `DESIGN.md`).
+- **Transitions dip through the stage.** Room to room fades down to the near-black stage and back up, about a quarter second out and a third of a second in, with the sound washing under it. Never a hard cut, and never a direct cross-dissolve that sums two additive rooms into a swell of light.
+- **Dials glide.** Parameter input follows critically damped springs, so a value settles without overshooting to one the player never chose.
+- **Motion writes light.** Phosphor persistence leaves a decaying trail behind what moves, the visual rhyme of reverb.
+- **A live number on the frame.** The room's status readout is the instrument's display; keeping it present in every mode and Era is part of the look.
 - **Frame budget.** Work toward smooth display pacing on representative
   hardware. The current evidence is the adaptive 33 ms room-render budget on
   one Windows machine, not a universal 60 or 120 fps guarantee.
-- **Reduce-motion is real.** A genuine reduced-motion mode (calmer idles, no fast strobing, no aggressive zoom) that stays beautiful, not a degraded fallback.
+- **Reduce-motion is real.** Reduced motion holds each room at its best still phase, keeps touch answering, never shakes the screen, and never strobes or zooms aggressively. It stays beautiful, not a degraded fallback. Holding the phase still is built; the screen-shake gate is designed.
 
 ## Rendering the Visual Eras
 
@@ -211,7 +267,9 @@ and tested.
 
 ## Per-wing visual identity
 
-The shared pipeline guarantees coherence; these keep the wings distinct:
+The shared pipeline guarantees coherence; these keep the wings distinct. They are
+designed for the six original wings; the catalog files its rooms under 13 wings
+today, and these identities will follow the wing ruling (`ROOMS.md`):
 - **Emergence:** dense fields and grids, particle clouds, feedback trails. Cellular, alive.
 - **Waves & Sound:** flowing lines, oscilloscope-native, waveforms and phase. Fluid.
 - **Infinity & Fractals:** deep zoom, domain coloring, raymarched recursion. Vertiginous.

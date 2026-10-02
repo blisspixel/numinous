@@ -16,8 +16,8 @@ no true HDR bloom, no phosphor persistence, no tonemap, and the `wgpu` path is
 wired only to the Mandelbrot and Julia escape-time fractals. "Lit from within" is
 a promise on paper, not a look on screen. This is not a flaw in the design; the
 design is right. It is the most important fact for the aesthetics roadmap,
-because the fix is systemic: one pipeline lifts all 354 rooms and every Era at
-once.
+because the fix is systemic: one pipeline lifts every catalog room and every
+Era at once.
 
 ## The signature identity, in one sentence
 
@@ -25,14 +25,18 @@ Numinous is math drawn as light emitted from a lattice of discrete luminous
 samples on a near-black stage, where every moving thing writes a decaying
 phosphor trail, and a live number is always burned into the frame.
 
-Four locked ingredients. The first ships; the other three are the differentiators
-that make a still frame unmistakable:
+Four ingredients. The first ships; the other three are the differentiators that
+make a still frame unmistakable. Persistence and the readout are visual law,
+owned by `VISUALS.md`. The lattice stays an Era-level candidate rather than the
+native look until a blind beauty review chooses it, because `DESIGN.md` also
+asks for anti-aliased line and glow:
 
 1. **Near-black stage, one accent, additive HDR emission.** The canvas (shipped
    in spirit, faked in the raster). The upgrade is making it truly HDR: accent
    values push above 1.0 and a real bright-pass bloom makes them glow, rather
    than drawing bright pixels.
-2. **The luminous sample lattice (the DNA move).** Promote the character-cell
+2. **The luminous sample lattice (the DNA move, an Era-level candidate).**
+   Promote the character-cell
    heritage from "the Teletype Era" to permanent structural DNA in every Era,
    including Modern. Every render is a field of discrete glowing cells sampled on
    a grid; Modern uses a fine grid with soft bloom, Teletype a coarse grid of

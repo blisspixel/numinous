@@ -51,7 +51,7 @@ one. There is no correct altitude.
 
 And the whole thing is presented with **humility**. The math was here before us
 and will outlast us; we did not invent the beauty, we only built a room to
-notice it in. So the tone never lectures and never struts (`Tone`, above): it
+notice it in. So the tone never lectures and never struts (`Tone`, below): it
 shows you something astonishing and gets out of the way. The reveals say "nobody
 can prove this" as readily as they say "look what this does." Humility is not
 modesty about the work; it is accuracy about our place. We are one more mind,
@@ -117,12 +117,12 @@ means saying no to a clever feature.
 - **Not edtech / not a classroom tool.** No grade levels, no curriculum alignment, no "learning objectives," no worksheets. (If teachers love it anyway, and they will, great. But we never design *for* the classroom, because that's how you kill the cool.)
 - **Not a calculator or a CAS.** Wolfram Alpha already exists and it's incredible. We're the *emotional* counterpart, the part that makes you feel why anyone built Wolfram Alpha in the first place.
 - **Not gamified drills.** No "solve 10 problems to earn a star." The math *is* the play; we never bolt a game onto a chore.
-- **Not a lecture with a play button.** 3Blue1Brown is the gold standard of explanation and we bow to it, but we are the *other* half: you don't watch, you touch. Explanation is opt-in and always comes *after* the wonder.
+- **Not a lecture with a play button.** 3Blue1Brown is the gold standard of explanation and we bow to it, but we are the *other* half: you don't watch, you touch. The wonder is offered first; explanation is always a choice, there whenever you ask, even before a first touch.
 - **Not ugly, ever.** No default-Bootstrap, no clip-art, no Comic Sans irony. Restraint is the aesthetic.
 
 ## Tone
 
-**Reverent and irreverent at the same time.** The math is treated with total respect, accurate, real, never dumbed down. The *packaging* is playful, cheeky, a little stoned-at-2am ("this shape should NOT be allowed"). Copy is short, warm, and confident. The revelation cards can swear (tastefully). We take the math seriously and ourselves not at all.
+**Reverent and irreverent at the same time.** The math is treated with total respect, accurate, real, never dumbed down. The *packaging* is playful, cheeky, a little stoned-at-2am ("this shape should NOT be allowed"). Copy is short, warm, and confident. The revelation cards can swear (tastefully). `DESIGN.md` owns the house voice and its worked examples. We take the math seriously and ourselves not at all.
 
 ## The makers, and the working culture
 
