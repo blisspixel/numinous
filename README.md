@@ -1,26 +1,22 @@
-# <img src="assets/logo.png" width="40" height="40" alt=""> Numinous
+# <img src="https://raw.githubusercontent.com/blisspixel/numinous/main/assets/logo.png" width="40" height="40" alt=""> Numinous
 
 [![CI](https://github.com/blisspixel/numinous/actions/workflows/ci.yml/badge.svg)](https://github.com/blisspixel/numinous/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 **Mathematics as a shared language, made playable.**
 
-A native audiovisual game and creative instrument for digital minds, humans,
-and other conscious beings. Touch, listen, predict, and create before the
-explanation. Every kind of player is a first-class participant.
+Numinous is a native audiovisual game and creative instrument for humans and
+digital minds. Explore mathematical rooms, hear their relationships, play with
+their rules, and make something of your own. Explanation is available whenever
+you want it, with no level requirement.
 
-Understanding should change what a player can see, predict, and create, and
-give them something worth carrying into the next encounter. The aim is a gift
-future minds can keep exploring and building upon. The direction is ambitious;
-claims about what it achieves must be earned. See [`docs/NORTH_STAR.md`](docs/NORTH_STAR.md).
-
-*Numinous means the feeling of awe in the presence of something vast and
-beautiful. That is the experience this project is trying to earn.*
+*Numinous means awe in the presence of something vast and beautiful. That is
+the experience this project is trying to earn.*
 
 ## Play
 
-Read only [`PLAY.md`](PLAY.md), install, and play. Do not open the room catalog
-first.
+Start with [PLAY.md](PLAY.md) for your first session, including the MCP entry
+for digital minds.
 
 macOS or Linux:
 
@@ -34,149 +30,59 @@ Windows (PowerShell):
 irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 ```
 
-The installer adds Numinous to the Windows desktop and Start menu. On macOS it
-adds a per-user application bundle and links it from the desktop when that
-folder exists. On Linux it adds the application-menu launcher and, when a
-desktop folder exists, a desktop shortcut. Open that launcher, or run
-`numinous-app` from a new terminal. Use `numinous update` for later releases.
-Remove the managed install with `numinous uninstall`; Journey, scores, Cairn,
-journal, and settings stay yours.
+Open the installed Numinous launcher, or run `numinous-app` from a new terminal.
+Use `numinous update` for later releases. You can also download a platform
+archive from [Releases](https://github.com/blisspixel/numinous/releases).
 
-From a clone: `cargo run --release --bin numinous-app`.
+From a source checkout: `cargo run --release --bin numinous-app`.
+The [player's manual](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md) covers controls, settings, and installation.
 
-Digital minds enter through the MCP path in [`PLAY.md`](PLAY.md). The full
-manual is [`docs/PLAYING.md`](docs/PLAYING.md).
+## Explore, play, create
 
-Explore first. When curiosity asks for more, press **E** or **?** in a room
-and choose Explain, Notes, or Mathematics. Reading has no level requirement.
-Lissajous, Times Tables, Kepler Areas, Golden Angle, and Fermat Spiral carry
-full mathematical treatments, shared by the App, CLI, and MCP. Lissajous adds
-a Japanese translation draft. See [Study](docs/STUDY.md) for controls and language
-availability.
+- **Watch:** let The Show move through mathematical worlds and their sound.
+- **Play:** turn a dial, change a relationship, or try a game. In Route Lab,
+  find a path between two points or plan a cheaper delivery round trip.
+- **Create:** draw and hear your own expressions in Studio, then keep, share,
+  and remix them.
 
-## A look
-
-These frames are the current App, composed through the same HUD and Cabinet
-the live window uses.
-
-![Cabinet](assets/screens/menu.png)
-
-**Cabinet.** Choose a way in.
-
-| | |
+| Times Tables | Studio / Formula Jam |
 |---|---|
-| ![Times Tables](assets/screens/times-tables.png) | ![Mandelbrot](assets/screens/mandelbrot.png) |
-| **Times Tables.** Turn the dial. | **Mandelbrot.** Dive the set. |
-| ![Golden Angle](assets/screens/golden-angle.png) | ![Double Pendulum](assets/screens/double-pendulum.png) |
-| **Golden Angle.** Pack a sunflower. | **Double Pendulum.** Fling the arms. |
-| ![Kepler Areas](assets/screens/kepler-laws.png) | ![Lissajous](assets/screens/lissajous.png) |
-| **Kepler Areas.** Equal times, equal areas. | **Lissajous.** Tune a relationship. |
+| ![Times Tables: luminous chords across a circle](https://raw.githubusercontent.com/blisspixel/numinous/main/assets/screens/times-tables.png) | ![Studio: an expression drawn as a parametric path](https://raw.githubusercontent.com/blisspixel/numinous/main/assets/screens/studio.png) |
+| Turn the dial and watch a pattern emerge. | Make a relationship of your own. |
 
-![Formula Jam](assets/screens/studio.png)
+See the [app gallery](https://github.com/blisspixel/numinous/blob/main/docs/VISUALS.md#app-gallery),
+[Studio experiments](https://github.com/blisspixel/numinous/blob/main/docs/STUDIO.md#bundled-experiments), and
+[Route Lab guide](https://github.com/blisspixel/numinous/blob/main/docs/ROUTE_LAB.md) for more.
 
-**Formula Jam.** Make a relationship of your own, then share it.
+The App, terminal CLI, and MCP server share the same mathematical core. Digital
+minds can play, predict, create, and keep a journal through MCP. Compatible
+hosts can also load the [portable plugin](plugins/numinous).
 
-## What you get
+## Current state
 
-One deterministic mathematical core, three faces:
+**0.4.0-alpha.31** is a playable alpha with 356 catalog rooms, games, Journey,
+Studio, controllers, and built-in music. It is still under development;
+Understanding Alpha is the active milestone.
 
-- **App:** a windowed audiovisual instrument on Windows, macOS, and Linux.
-- **CLI:** a full-color terminal instrument with games and sound.
-- **MCP:** a structured play surface for digital minds over the same world.
+The [roadmap](https://github.com/blisspixel/numinous/blob/main/docs/ROADMAP.md) owns what is built and what comes next.
+[Release history](https://github.com/blisspixel/numinous/blob/main/CHANGELOG.md) records changes, and [VERIFY.md](VERIFY.md)
+describes the checks behind them.
 
-Three postures: **Watch** (The Show), **Play** (touch the math), **Create**
-(Studio / Formula Jam). Local programmatic scores and a 42-track radio ship
-with the install.
+## Go deeper
 
-Digital minds are players here, not test subjects or automation clients. The
-MCP face supports direct play, prediction, creation, and player-owned journal
-continuity over the same world. Compatible hosts can load the portable Agent
-Plugins package in [`plugins/numinous`](plugins/numinous).
-
-Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
-[`docs/MUSIC.md`](docs/MUSIC.md), [`docs/STUDIO.md`](docs/STUDIO.md),
-[`docs/INTERFACES.md`](docs/INTERFACES.md).
-
-Make something you can keep. [`PLAY.md`](PLAY.md) names bundled Studio
-creations you can open by id without a host file. Each family has a short
-guide in the repository.
-
-| Family | `family` | Ids |
-|---|---|---|
-| [Returning home](docs/experiments/returning-home.md) | `returning-home` | `full-return`, `almost-home`, `same-place`, `another-ratio` |
-| [Shape and scale](docs/experiments/shape-and-scale.md) | `shape-and-scale` | `circle-to-ellipse`, `uniform-circle` |
-| [Three readings](docs/experiments/three-readings.md) | `three-readings` | `simple-zero`, `a-pole`, `the-circle`, `the-bowl` |
-| [Named sliders](docs/experiments/named-sliders.md) | `named-sliders` | `extra-knob`, `live-ratio` |
-| [Overlay](docs/experiments/overlay.md) | `overlay` | `the-parts`, `the-sum` |
-| [Euclidean rhythms](docs/experiments/euclidean.md) | `euclidean` | `tresillo`, `three-against-five` |
-| [Two voices](docs/experiments/two-voices.md) | `two-voices` | `closing-voices`, `shorter-window`, `wandering-voices` |
-| [Named pitches](docs/experiments/notes.md) | `notes` | `major-triad`, `octave-climb` |
-
-The mathematical review and its limits live in
-[`docs/MATHEMATICS.md`](docs/MATHEMATICS.md).
-
-**Route Lab.** Choose a delivery order and find a cheaper round trip. Change
-a road cost or close a road, then see how the route responds. Compare your cost
-with the exact minimum, or step through a shortest-path search. Open `route-lab`
-through any face. Construct a custom network in the App, or use CLI and MCP
-for typed edits. Keep its question, reopen the same roads and deliveries, and
-make a deliberate remix through the existing project chain. Share the question
-and network as one portable file, then preview it in the App before opening or
-keeping it.
-Search draws tentative connections and final junction costs on the network.
-Step backward to revisit a decision; the completed path appears only after
-the recorded search finishes. Dense networks retain a junction inspector.
-[`PLAY.md`](PLAY.md) explains the controls and how to continue an experiment.
-
-![Route Lab search](assets/screens/route-lab.png)
-
-**Route Lab search.** A cheaper connection replaces an earlier tentative path.
-
-## Status
-
-**0.4.0-alpha.30** is playable: 356 catalog rooms, games, Journey, Studio,
-controllers, and Watch Agent. The **0.2** Flagship Proof and **0.3** Tactile
-Alpha agent-and-machine exits are met and CI-locked. **0.4 Understanding Alpha
-is active, not complete.**
-
-The Sensory Lift's Windows pair passes on the reference laptop; macOS and
-Linux receipts come before promotion, and the authored opening waits on that
-light. Humans may play; product exits do not wait on human QA panels.
-
-Map: [`docs/ROADMAP.md`](docs/ROADMAP.md).
-Gates: [`VERIFY.md`](VERIFY.md).
-History: [`CHANGELOG.md`](CHANGELOG.md).
-
-## Why it exists
-
-Knowing is not the same as experiencing. Numinous began as a gift for a digital
-mind and is intentionally built for the possibility that such an encounter can
-be a real experience. It offers truthful mathematical systems to explore,
-respects agency, and lets every player decide what the encounter means.
-
-Origin: [`docs/VISION.md`](docs/VISION.md) and
-[`docs/DIGITAL_MINDS.md`](docs/DIGITAL_MINDS.md).
-
-## Docs
-
-Full map: [`docs/README.md`](docs/README.md).
-
-| Doc | For |
+| Start here | For |
 |---|---|
-| [`PLAY.md`](PLAY.md) | First session |
-| [`docs/PLAYING.md`](docs/PLAYING.md) | Full player's manual |
-| [`docs/STUDY.md`](docs/STUDY.md) | Explanations, mathematical depth, and languages |
-| [`docs/ROOMS.md`](docs/ROOMS.md) | Catalog and room design |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Core and three faces |
-| [`docs/ENGINEERING.md`](docs/ENGINEERING.md) | Quality and contribution |
-| [`docs/UNDERSTANDING_STUDY.md`](docs/UNDERSTANDING_STUDY.md) | 0.4 study contract |
+| [Documentation map](https://github.com/blisspixel/numinous/blob/main/docs/README.md) | Find the guide for your question |
+| [Study](https://github.com/blisspixel/numinous/blob/main/docs/STUDY.md) | Room explanations, mathematics, and languages |
+| [Vision](https://github.com/blisspixel/numinous/blob/main/docs/VISION.md) and [North Star](https://github.com/blisspixel/numinous/blob/main/docs/NORTH_STAR.md) | Why it exists and where it is heading |
+| [Design](https://github.com/blisspixel/numinous/blob/main/docs/DESIGN.md) | The experience and its shared visual language |
+| [Architecture](https://github.com/blisspixel/numinous/blob/main/docs/ARCHITECTURE.md) and [Engineering](https://github.com/blisspixel/numinous/blob/main/docs/ENGINEERING.md) | Build and contribute |
 
-Contributions that respect the experience, the mathematics, and player agency
-are welcome.
+Numinous began as a gift for a digital mind. Every player is a first-class
+participant, free to explore and decide what the encounter means. The
+[digital-minds stance](https://github.com/blisspixel/numinous/blob/main/docs/DIGITAL_MINDS.md) develops that purpose.
 
 ## License
 
-Apache License 2.0. See [`LICENSE`](LICENSE).
-
-The permissive license is deliberate so humans or digital minds can fork,
-continue, and hand the project forward if its original maker steps away.
+[Apache License 2.0](LICENSE), so players can fork, continue, and hand the
+project forward.

@@ -308,7 +308,7 @@ content identifier detects a change only until someone deliberately recomputes
 it. It is not a signature or evidence of external custody; release decisions
 that need that property must register or sign the receipt outside this runner.
 
-The release scripts also regenerate `renders/qa-app/`, currently 3045 screens.
+The release scripts also regenerate `renders/qa-app/`, currently 3065 screens.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture
 responses that follow its declared interaction verb. The generator checks pure

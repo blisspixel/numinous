@@ -122,7 +122,7 @@ const MIN_SUPPORT_DENSITY_PERMILLE: usize = 1;
 const SPATIAL_TILE_SIZE: usize = 32;
 const MIN_COHERENT_TILES: usize = 2;
 const MIN_MEAN_CHANNEL_DELTA: usize = 4;
-const ROUTE_AUTHORING_STATES: [&str; 22] = [
+const ROUTE_AUTHORING_STATES: [&str; 27] = [
     "opening",
     "custom-network",
     "dense-network",
@@ -135,6 +135,11 @@ const ROUTE_AUTHORING_STATES: [&str; 22] = [
     "search-complete",
     "search-disconnected",
     "search-dense",
+    "random-options",
+    "random-map",
+    "random-search-prefix",
+    "random-search-complete",
+    "random-pick-end",
     "keep-question",
     "shared-question",
     "remix-preview",
@@ -1903,6 +1908,28 @@ fn route_authoring_panels() -> Vec<(&'static str, RoutePanel)> {
         RoutePanel::received(unicode_document).expect("shaped question retained after opening");
     keep_unicode.act(RouteAction::Confirm);
     keep_unicode.act(RouteAction::Page(RoutePage::Keep));
+    let random_panel = |page| {
+        let mut panel = RoutePanel::new(RouteWorkbench::first_town());
+        panel.act(RouteAction::Page(RoutePage::Maps));
+        panel.act(RouteAction::RandomMap);
+        panel.act(RouteAction::Page(page));
+        panel
+    };
+    let mut random_prefix = random_panel(RoutePage::Search);
+    random_prefix.act(RouteAction::SearchStart(2));
+    random_prefix.act(RouteAction::Search);
+    for _ in 0..3 {
+        random_prefix.act(RouteAction::Step);
+    }
+    assert_eq!(random_prefix.workbench().trace().unwrap().view().from, 2);
+    assert!(!random_prefix.workbench().trace().unwrap().completed());
+    let mut random_complete = random_panel(RoutePage::Search);
+    random_complete.act(RouteAction::Search);
+    while !random_complete.workbench().trace().unwrap().completed() {
+        random_complete.act(RouteAction::Step);
+    }
+    let mut random_picker = random_panel(RoutePage::Search);
+    random_picker.act(RouteAction::PickEnd);
     let panels = vec![
         ("opening", RoutePanel::new(RouteWorkbench::first_town())),
         ("custom-network", RoutePanel::new(custom)),
@@ -1916,6 +1943,11 @@ fn route_authoring_panels() -> Vec<(&'static str, RoutePanel)> {
         ("search-complete", search_panel(true)),
         ("search-disconnected", disconnected_search),
         ("search-dense", dense_search),
+        ("random-options", random_panel(RoutePage::Maps)),
+        ("random-map", random_panel(RoutePage::View)),
+        ("random-search-prefix", random_prefix),
+        ("random-search-complete", random_complete),
+        ("random-pick-end", random_picker),
         ("keep-question", question),
         ("shared-question", shared),
         ("remix-preview", RoutePanel::opened(child)),

@@ -111,6 +111,23 @@ captions were inspected. README and study plates, gallery, contact sheet,
 and audio artifacts were regenerated. These are functional and rendering
 checks; participant comprehension, external-host discovery, and physical
 cross-platform evidence remain open.
+The alpha 31 route and presentation pass on 2026-10-01 completed the full
+Windows verification gate on its final source, with no optional checks skipped.
+Coverage measured 94.67% regions and 94.71% lines under the existing exclusions,
+improving alpha 30's 94.65% regions and 94.69% lines. The canonical route
+workbench measured 99.54% lines and native route authoring 99.20% lines.
+Independent reachability and all-pairs shortest-path checks cover reproducible
+random maps, bounded options, distinct positive-cost roads, and connected tree
+through complete networks. Native regressions cover independent endpoints,
+pointer and controller picking, zero-length paths, recording continuity,
+undo, deliberate remix, and refusal without mutation. The complete
+3,065-frame App matrix passed. Fresh default and compact random options,
+endpoint picking, and completed-search views were inspected, along with the
+updated Route Lab and Mandelbrot screenshots. README links were checked against
+repository destinations and packaged player guides. Study plates, gallery,
+contact sheet, and audio artifacts were regenerated. These are functional and
+rendering checks; participant comprehension, external-host discovery, and
+physical cross-platform evidence remain open.
 The broader dated baseline below retains its original counts.
 
 ## Evidence snapshot, 2026-09-01

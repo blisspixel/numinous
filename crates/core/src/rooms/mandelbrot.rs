@@ -226,12 +226,14 @@ fn render_view(
             let cx = center_x + (px as f64 - half_w) * scale;
             let cy = center_y + (py as f64 - half_h) * scale;
             let iters = escape_iters(cx, cy, FRACTAL_MAX_ITER);
+            // Keep non-escaping samples on the shared dark stage. Exterior
+            // escape-time bands use the room accent, rather than gray fill.
             let mark = if iters == FRACTAL_MAX_ITER {
-                '#'
+                continue;
             } else if iters > 24 {
-                '*'
+                '#'
             } else if iters > 6 {
-                '-'
+                '*'
             } else {
                 continue;
             };
@@ -354,7 +356,6 @@ fn dive_events(inputs: &[RoomInput], width: usize, height: usize) -> Vec<DiveEve
 }
 
 impl Room for Mandelbrot {
-
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let Some((width, height)) = drawing_dims(canvas) else {
             return;
@@ -473,6 +474,36 @@ mod tests {
         room.render(&mut b, 0.0);
         assert_eq!(a.to_text(), b.to_text());
         assert!(a.ink_count() > 20);
+    }
+
+    #[test]
+    fn cpu_raster_keeps_the_set_dark_and_escape_bands_accented_without_gray_fill() {
+        let room = crate::room_by_id("mandelbrot").unwrap();
+        let mut image = crate::Raster::with_accent(300, 200, room.meta().accent);
+        room.render(&mut image, 0.0);
+        let pixels = image.to_rgba();
+        let pixel = |x: usize, y: usize| {
+            let offset = (y * 300 + x) * 4;
+            &pixels[offset..offset + 4]
+        };
+        let ink = |mark| {
+            let mut sample = crate::Raster::with_accent(1, 1, room.meta().accent);
+            sample.plot(0, 0, mark);
+            sample.to_rgba()
+        };
+        let background = crate::Raster::new(1, 1).to_rgba();
+        // The opening camera maps these pixels exactly to c=0 and c=-1,
+        // whose fixed point and two-cycle never escape.
+        assert_eq!(pixel(200, 100), background);
+        assert_eq!(pixel(100, 100), background);
+        // c=.4+.4i escapes after nine iterations; c=-.75+.1i after 33.
+        // Both remain visible, with the slower band brighter.
+        assert_eq!(escape_iters(0.4, 0.4, 160), 9);
+        assert_eq!(escape_iters(-0.75, 0.1, 160), 33);
+        assert_eq!(pixel(240, 140), ink('*'));
+        assert_eq!(pixel(125, 110), ink('#'));
+        let gray = ink('-');
+        assert!(pixels.chunks_exact(4).all(|pixel| pixel != gray));
     }
 
     #[test]

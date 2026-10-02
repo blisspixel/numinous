@@ -5,7 +5,7 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.4.0-alpha.30.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
+Status: **0.4.0-alpha.31.** The 0.1 Public Foundation, 0.2 Flagship Proof, and
 0.3 Tactile Alpha agent-and-machine exits are met. Understanding Alpha is the
 active line, and its 0.4 exit remains open. The
 headless core, CLI, MCP server, windowed App, GPU and audio adapters, 356 catalog
@@ -55,12 +55,13 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 **Content and sensory**
 - `ROOMS.md` the catalog: the built and planned phenomena, scored by wow and build cost, with the three layers and sound per room.
 - `INSIGHTS.md` the awe bank: the library of revelations, the six flavors of awe, the insight-chains (including The Strange Loop).
-- `VISUALS.md` the render and look bible: the pipeline, the shader toolbox, color, motion, and how each Visual Era is drawn.
+- [VISUALS.md](VISUALS.md) the app gallery and render bible: the shared palette,
+  pipeline, shader toolbox, motion, and how each Visual Era is drawn.
 - `SOUND.md` the sonification bible: how math becomes tuned sound, synthesis, tuning, per-room sound design.
 - `MUSIC.md` the music engines: programmatic chiptune and mathematical patterns, plus 42 built-in radio tracks and the comedy channel plan.
 - `RADIO_ASSETS.md` the built-in soundtrack layout, license, and cache override.
-- `STUDIO.md` the shipped expression canvas and the planned path toward a
-  bounded room-authoring layer.
+- [STUDIO.md](STUDIO.md) the shipped expression canvas, bundled experiment ids
+  and guides, and the planned path toward a bounded room-authoring layer.
 - [Returning home](experiments/returning-home.md) four playable Studio
   experiments about full motion, near returns, a deceptive repeated position,
   and a period-1 starter to retune.
@@ -77,7 +78,8 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
   and of a wandering one, drawn as graphs.
 - [Named pitches](experiments/notes.md) a major triad, then a climb to the
   octave, written as `note("c e g")`.
-- `ROUTE_LAB.md` the playable delivery experiment, shared shortest-path and
+- `ROUTE_LAB.md` the playable delivery experiment, random maps, start/end search,
+  shared shortest-path and
   exact-tour solvers, native network authoring, portable route creations, and
   kept questions, with larger-network extensions still planned.
 - `SYNESTHESIA.md` the sensory seam: the glow pipeline (the documented HDR look, not yet built) and the one-event-two-renderings model that binds sight and sound.

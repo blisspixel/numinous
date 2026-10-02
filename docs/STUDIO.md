@@ -78,6 +78,24 @@ and presentation-clock edge, with an audio crossfade. That clock does not
 establish a musical phrase boundary. Continuous parameter sweeping still needs
 a dedicated audio transport before it can be offered as one changing experiment.
 
+## Bundled experiments
+
+Start with a bundled creation when you want something to explore before writing
+an expression. [PLAY.md](../PLAY.md) explains how to open these by id in the App,
+CLI, or MCP without a host file. Each family has a short guide with questions
+and suggested changes.
+
+| Family | `family` | Ids |
+|---|---|---|
+| [Returning home](experiments/returning-home.md) | `returning-home` | `full-return`, `almost-home`, `same-place`, `another-ratio` |
+| [Shape and scale](experiments/shape-and-scale.md) | `shape-and-scale` | `circle-to-ellipse`, `uniform-circle` |
+| [Three readings](experiments/three-readings.md) | `three-readings` | `simple-zero`, `a-pole`, `the-circle`, `the-bowl` |
+| [Named sliders](experiments/named-sliders.md) | `named-sliders` | `extra-knob`, `live-ratio` |
+| [Overlay](experiments/overlay.md) | `overlay` | `the-parts`, `the-sum` |
+| [Euclidean rhythms](experiments/euclidean.md) | `euclidean` | `tresillo`, `three-against-five` |
+| [Two voices](experiments/two-voices.md) | `two-voices` | `closing-voices`, `shorter-window`, `wandering-voices` |
+| [Named pitches](experiments/notes.md) | `notes` | `major-triad`, `octave-climb` |
+
 ## Shipped formula vocabulary
 
 The current expression language is deliberately small and total:
