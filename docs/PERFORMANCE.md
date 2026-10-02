@@ -5,6 +5,61 @@ revision, and measurement boundary. A dependency update is not called neutral
 because it compiles. Comparable evidence must exercise the exact revisions on
 one machine and retain the raw samples.
 
+## October 2026 Mandelbrot interior test
+
+The Mandelbrot room's CPU frame is escape-time arithmetic and almost nothing
+else. Every pixel inside the set runs the full 160 iterations, and in the
+automatic dive views most pixels are inside. The room now asks first whether a
+point lies in the main cardioid or the period-2 bulb, the two largest interior
+components, which both have exact closed forms. A point that does is answered
+at once; every other point is iterated as before.
+
+No pixel changes, iteration counts included. Two tests in
+`crates/core/src/rooms/mandelbrot.rs` hold that: one classifies every pixel of
+the five automatic views, for two seeds, both ways and requires agreement; one
+walks both component boundaries on either side at distances down to 1e-9 and
+requires iteration to agree wherever the test answers. The test only answers
+when a point is inside by more than a margin a thousand times the polynomial's
+rounding, so the shell where rounding could matter is always iterated.
+
+**Measured**, two ways. The work is exact: an ignored test counts the
+escape-time iterations of every pixel of the five automatic views at 2560 by
+1440, with and without the interior test, and asserts every pixel agrees.
+Iterations are the frame's whole cost and are identical on every machine.
+
+| Phase t | Iterations before | Iterations after | Work saved |
+| --- | ---: | ---: | ---: |
+| 0.00 | 196.5 M | 36.4 M | 81.5% |
+| 0.25 | 409.2 M | 33.0 M | 91.9% |
+| 0.50 | 516.1 M | 26.6 M | 94.8% |
+| 0.75 | 545.6 M | 20.8 M | 96.2% |
+| 1.00 | 538.7 M | 25.4 M | 95.3% |
+
+```
+cargo test -p numinous-core --release --lib -- --ignored --nocapture the_interior_shortcut_changes_no_pixel_at_1440p
+```
+
+Wall time was measured end to end on the Framework 13 (Ryzen 7 7840U) as a
+CLI PNG export, `numinous render mandelbrot --width 2560 --height 1440`, five
+alternating runs of a release build with and without the test, while the
+machine was saturated by parallel builds. The minimum run is reported; every
+pair of exports was byte-identical. The figures include process start and
+PNG encoding, which the interior test does not touch and which now dominate
+the export.
+
+| Phase t | Export before ms | Export after ms | Speedup |
+| --- | ---: | ---: | ---: |
+| 0.00 | 984 | 447 | 2.2x |
+| 0.25 | 1843 | 473 | 3.9x |
+| 0.50 | 2253 | 462 | 4.9x |
+| 0.75 | 2124 | 368 | 5.8x |
+| 0.99 | 2399 | 411 | 5.8x |
+
+The opening view gains least because only about a third of it is interior.
+Julia and Voronoi, the next slowest CPU rooms, do not benefit: neither has an
+interior with a closed form. The App's adaptive live-render scale still
+applies to every room.
+
 ## August 2026 Sensory Lift post comparison
 
 The disabled-by-default `gpu-post` feature tests the proposed post stack before

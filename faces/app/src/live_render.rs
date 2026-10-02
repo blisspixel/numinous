@@ -17,6 +17,13 @@
 //! live window; exports, postcards, modal game frames, the Studio, and the
 //! GPU path never pass through it, and the HUD draws after the upscale so
 //! text stays window-crisp at any factor.
+//!
+//! The Mandelbrot frame has since been made cheaper at its source: a
+//! closed-form main-cardioid and period-2-bulb test answers the interior
+//! pixels without iterating, which is most of every dive view, and changes
+//! no pixel (`docs/PERFORMANCE.md`). The 939ms figure is kept below as the
+//! worst case this scale was designed against; the scale still guards every
+//! room whose cost lives in pixels it cannot skip.
 
 /// The room render may burn this much per frame before the factor climbs.
 /// Two consecutive frames over keeps a lone scheduler hiccup from degrading

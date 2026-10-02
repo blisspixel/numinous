@@ -192,8 +192,54 @@ impl Mandelbrot {
     }
 }
 
+/// How far inside a closed-form interior test a point must sit before the
+/// test is trusted, in the units of the test's own polynomial.
+///
+/// Both polynomials below evaluate to within a few units in the last place
+/// of 1.0, about 1e-15, so a margin a thousand times larger means a point is
+/// called interior only when rounding cannot have put it there. Points in
+/// that thin shell are simply iterated, which costs a sliver of pixels and
+/// removes the one place the shortcut could disagree with iteration.
+const INTERIOR_TEST_MARGIN: f64 = 1.0e-12;
+
+/// Whether `c` lies inside the main cardioid or the period-2 bulb.
+///
+/// These are the two largest interior components of the set, and both have
+/// exact closed forms: the cardioid is `q (q + (x - 1/4)) <= y^2 / 4` with
+/// `q = (x - 1/4)^2 + y^2`, the parameters whose fixed point attracts, and
+/// the bulb is the disc `(x + 1)^2 + y^2 <= 1/16`, the parameters whose
+/// two-cycle attracts. Every such orbit stays bounded forever, and for
+/// `|c| <= 3/4` it never leaves `|z| <= 3/2`, well inside the escape radius,
+/// so iterating them can only ever reach the iteration cap.
+///
+/// In the dive views most pixels are interior and each one costs the full
+/// cap, so this test removes most of the frame's arithmetic without changing
+/// what any pixel shows.
+fn in_main_cardioid_or_period_two_bulb(cx: f64, cy: f64) -> bool {
+    let y2 = cy * cy;
+    let shifted = cx - 0.25;
+    let q = shifted * shifted + y2;
+    if q * (q + shifted) - 0.25 * y2 < -INTERIOR_TEST_MARGIN {
+        return true;
+    }
+    let bulb = cx + 1.0;
+    bulb * bulb + y2 - 0.0625 < -INTERIOR_TEST_MARGIN
+}
+
 /// How many iterations `z -> z*z + c` survives before escaping `|z| > 2`.
+///
+/// Points the closed-form interior test recognises return the cap at once;
+/// everything else is iterated by [`iterate_escape`]. The two agree on every
+/// pixel, which the tests check against plain iteration.
 fn escape_iters(cx: f64, cy: f64, max: u32) -> u32 {
+    if in_main_cardioid_or_period_two_bulb(cx, cy) {
+        return max;
+    }
+    iterate_escape(cx, cy, max)
+}
+
+/// The plain escape-time iteration, with no shortcut.
+fn iterate_escape(cx: f64, cy: f64, max: u32) -> u32 {
     let (mut zx, mut zy) = (0.0, 0.0);
     let mut i = 0;
     while i < max && zx * zx + zy * zy <= 4.0 {
@@ -448,16 +494,156 @@ impl Room for Mandelbrot {
 mod tests {
     use super::{
         DivePoint, MIN_LIVE_HALF_SPAN, Mandelbrot, MandelbrotCamera, automatic_view,
-        bounded_dive_points, escape_iters, finite_phase, selected_view, selected_view_from_points,
-        selected_view_input,
+        bounded_dive_points, escape_iters, finite_phase, in_main_cardioid_or_period_two_bulb,
+        iterate_escape, selected_view, selected_view_from_points, selected_view_input,
     };
     use crate::canvas::Canvas;
     use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
+    use crate::rooms::FRACTAL_MAX_ITER;
     use crate::surface::{MAX_DIM, Surface};
 
     #[test]
     fn origin_is_in_the_set() {
         assert_eq!(escape_iters(0.0, 0.0, 160), 160);
+    }
+
+    /// Every pixel of one camera view, classified both ways, as
+    /// `(shortcut, plain iteration, pixels the shortcut answered)`.
+    ///
+    /// Uses the render's own pixel-to-plane mapping so the comparison is of
+    /// the exact points a frame asks about, not of a grid chosen beside it.
+    fn classify_view(
+        view: (f64, f64, f64),
+        width: usize,
+        height: usize,
+    ) -> (Vec<u32>, Vec<u32>, usize) {
+        let (center_x, center_y, zoom) = view;
+        let scale = 2.0 * zoom / width as f64;
+        let (half_w, half_h) = (width as f64 / 2.0, height as f64 / 2.0);
+        let mut fast = Vec::with_capacity(width * height);
+        let mut plain = Vec::with_capacity(width * height);
+        let mut answered = 0;
+        for py in 0..height {
+            for px in 0..width {
+                let cx = center_x + (px as f64 - half_w) * scale;
+                let cy = center_y + (py as f64 - half_h) * scale;
+                answered += usize::from(in_main_cardioid_or_period_two_bulb(cx, cy));
+                fast.push(escape_iters(cx, cy, FRACTAL_MAX_ITER));
+                plain.push(iterate_escape(cx, cy, FRACTAL_MAX_ITER));
+            }
+        }
+        (fast, plain, answered)
+    }
+
+    /// The five automatic dive views the research timings were taken at.
+    const AUTOMATIC_PHASES: [f64; 5] = [0.0, 0.25, 0.5, 0.75, 1.0];
+
+    #[test]
+    fn the_interior_shortcut_changes_no_pixel_of_any_automatic_view() {
+        // The shortcut is only worth having if no frame can tell it was
+        // taken. Every pixel of every automatic view, for the default seed
+        // and a far one, is classified both ways and must agree exactly,
+        // iteration count included, so the escape bands cannot move either.
+        let mut shortcut_taken = 0usize;
+        for seed in [0, 997] {
+            for t in AUTOMATIC_PHASES {
+                let (fast, plain, answered) = classify_view(automatic_view(t, seed), 192, 108);
+                let differing = fast.iter().zip(&plain).filter(|(a, b)| a != b).count();
+                assert_eq!(differing, 0, "t={t} seed={seed}: {differing} pixels moved");
+                shortcut_taken += answered;
+            }
+        }
+        // Proof the comparison exercised the shortcut rather than agreeing
+        // over pixels it never answered.
+        assert!(
+            shortcut_taken > 50_000,
+            "the shortcut answered only {shortcut_taken} pixels"
+        );
+    }
+
+    #[test]
+    fn the_interior_test_agrees_with_iteration_up_to_both_boundaries() {
+        // The places a closed form and an iteration could disagree are the
+        // boundaries. Walk both components' boundaries on either side, at
+        // shrinking distances, and require that whenever the test answers
+        // "interior" plain iteration agrees. Points just outside are walked
+        // too: the margin has to err toward iterating, never the reverse.
+        let mut answered = 0usize;
+        let mut walked = 0usize;
+        for step in 0..720 {
+            let angle = f64::from(step) * std::f64::consts::TAU / 720.0;
+            let (cos, sin) = (angle.cos(), angle.sin());
+            for depth in [1.0e-2, 1.0e-4, 1.0e-6, 1.0e-9, -1.0e-9, -1.0e-6, -1.0e-4] {
+                // Main cardioid: c = mu/2 - mu^2/4 for |mu| = 1 - depth.
+                let radius = 1.0 - depth;
+                let (mx, my) = (radius * cos, radius * sin);
+                let cardioid = (mx / 2.0 - (mx * mx - my * my) / 4.0, my / 2.0 - mx * my / 2.0);
+                // Period-2 bulb: the disc of radius 1/4 about -1.
+                let bulb_radius = 0.25 * (1.0 - depth);
+                let bulb = (-1.0 + bulb_radius * cos, bulb_radius * sin);
+                for (cx, cy) in [cardioid, bulb] {
+                    walked += 1;
+                    if in_main_cardioid_or_period_two_bulb(cx, cy) {
+                        answered += 1;
+                        assert_eq!(
+                            iterate_escape(cx, cy, FRACTAL_MAX_ITER),
+                            FRACTAL_MAX_ITER,
+                            "the shortcut called {cx}{cy:+}i interior and iteration disagrees"
+                        );
+                    }
+                }
+            }
+        }
+        // Both halves have to be exercised: the shortcut answering most of
+        // the inside walk, and declining a real share of the rest.
+        assert!(
+            answered > 2_000,
+            "the shortcut answered only {answered} points"
+        );
+        assert!(
+            walked - answered > 2_000,
+            "the shortcut declined only {} points",
+            walked - answered
+        );
+    }
+
+    #[test]
+    #[ignore = "full 2560x1440 comparison over five views; run by hand with --release"]
+    fn the_interior_shortcut_changes_no_pixel_at_1440p_and_reports_its_saving() {
+        // The size the 939 ms frame was measured at. Run with
+        // `cargo test -p numinous-core --release --lib -- --ignored --nocapture
+        // the_interior_shortcut_changes_no_pixel_at_1440p`.
+        //
+        // The saving is reported as iterations rather than time. Iterations
+        // are the frame's whole cost and they are exact on every machine; the
+        // core reads no clock, and wall time belongs to the faces that pay it
+        // (`docs/PERFORMANCE.md` records the end-to-end measurement).
+        let (width, height) = (2560, 1440);
+        for t in AUTOMATIC_PHASES {
+            let (center_x, center_y, zoom) = automatic_view(t, 0);
+            let scale = 2.0 * zoom / width as f64;
+            let (mut plain_work, mut shortcut_work) = (0u64, 0u64);
+            for index in 0..width * height {
+                let x = center_x + ((index % width) as f64 - width as f64 / 2.0) * scale;
+                let y = center_y + ((index / width) as f64 - height as f64 / 2.0) * scale;
+                let plain = iterate_escape(x, y, FRACTAL_MAX_ITER);
+                assert_eq!(
+                    escape_iters(x, y, FRACTAL_MAX_ITER),
+                    plain,
+                    "t={t}: the shortcut moved pixel {index}"
+                );
+                plain_work += u64::from(plain);
+                if !in_main_cardioid_or_period_two_bulb(x, y) {
+                    shortcut_work += u64::from(plain);
+                }
+            }
+            eprintln!(
+                "t={t:.2}  plain {:.1}M iterations  with the interior test {:.1}M  saved {:.1}%",
+                plain_work as f64 / 1e6,
+                shortcut_work as f64 / 1e6,
+                100.0 * (1.0 - shortcut_work as f64 / plain_work as f64)
+            );
+        }
     }
 
     #[test]
