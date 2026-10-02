@@ -8,7 +8,12 @@ their evidence. Current priorities and release exits live in `ROADMAP.md`.
 
 This direction was sharpened on 2026-09-04. The July synthesis established the
 prediction wager; that verb now ships. The next gap is turning encounters into
-capabilities, creations, and inquiries a player can carry forward.
+capabilities, creations, and inquiries a player can carry forward. The August
+syntheses behind it, the Three Ceilings (the sensory ceiling, time and company
+for digital minds, and the arc) and the Mathematical Soul, are preserved in the
+[frozen roadmap ledger](history/ROADMAP_LEDGER.md), with their condensed
+findings in `docs/evidence/exceptional-blockers-2026-08.json` and
+`docs/evidence/math-creativity-2026-08.json`.
 
 ## The power is real
 
