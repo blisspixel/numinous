@@ -90,8 +90,9 @@ This selects direct `wgpu` surface output as the production candidate for the
 full Sensory Lift. The disabled App `gpu-post` feature now feeds its real room
 rasters through that renderer, while explicit recovery retains the default
 software path on failure. The next gate is still a closed Windows, macOS, and Linux physical set before
-promotion. The Windows pair on the reference laptop now exists as a named
-candidate; macOS and Linux remain. The receipt stops when the queue
+promotion. The Windows pair on the reference laptop exists as a named
+candidate at an earlier revision; all three pairs at the frozen revision
+below remain. The receipt stops when the queue
 presentation request returns and does not include compositor work, display
 scanout, input latency, human perception, or room aesthetics. The 1440p client
 area was exact but extended beyond the reference machine's 2256 x 1504 desktop.
@@ -157,6 +158,27 @@ production presenter then falls back to software. Even if Dozen were forced
 on, it is a D3D12 translation of the Windows GPU, not native Linux `amdgpu`.
 A Linux cell in the closed set still needs a real Linux Vulkan/Metal-class
 surface stack.
+
+**Frozen revision and the 2026-10-02 native attempt.** The set builder
+requires one package version and one revision across all six receipts, so the
+alpha.16 Windows pair above cannot enter a set recorded at a later revision.
+The closed set is frozen at `0.4.0-alpha.31`, revision
+`eedf450d337e890221139aff54e59a61967b4d91`, and all six receipts, Windows
+included, must be recorded there. The first macOS attempt at that revision, on
+an Apple M1 Mac mini (macOS 27.0, Metal, `Bgra8UnormSrgb`, FIFO), refused at
+both sizes because the console session was locked: every acquire was skipped,
+the probe stopped after 121, and no sample was retained. winit reported the
+exact requested client area at window creation at both sizes, including 2560
+by 1440 on a 1920 by 1080 display, but no frame reached the screen, so whether
+that area holds while visible is unobserved. Receipts:
+`docs/evidence/sensory-app-macos-1080p-refused-2026-10-02.json` and
+`docs/evidence/sensory-app-macos-1440p-refused-2026-10-02.json`; the verifier
+rejects both. The Linux reference, an NVIDIA DGX Spark (GB10, Ubuntu 24.04
+aarch64), was not attempted: its only X server belongs to the login greeter,
+so no user session can own a window, and the build needs the ALSA, udev, and
+xkbcommon development packages CI installs. Recording needs an unlocked Mac
+console, a logged-in Spark desktop with those packages, and an idle Windows
+machine, each at the frozen revision.
 
 After recording both sizes on each operating system, build the closed set with
 the six explicit receipt paths:

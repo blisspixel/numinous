@@ -5,6 +5,24 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Added
+- The Sensory Lift closed physical pacing set is frozen at `0.4.0-alpha.31`,
+  revision `eedf450d337e890221139aff54e59a61967b4d91`. The set builder
+  requires one package version and one revision across all six receipts, so
+  the alpha.16 Windows pair from 2026-09-02 stays a historical candidate and
+  must be re-recorded at the frozen revision on an idle machine. A first
+  native macOS attempt on an Apple M1 Mac mini (macOS 27.0, Metal,
+  `Bgra8UnormSrgb` FIFO) refused at both sizes: the console session was
+  locked, so all 121 acquires were skipped and no sample was retained. winit
+  reported the exact requested client area at creation at both sizes,
+  including 2560 by 1440 on the 1920 by 1080 display. The verifier rejects
+  both receipts. Linux on an NVIDIA DGX Spark (GB10) was not attempted: its
+  only X server belongs to the login greeter, and the ALSA, udev, and
+  xkbcommon development packages CI installs are absent. No budget was
+  measured and no threshold changed. Evidence:
+  `docs/evidence/sensory-app-macos-1080p-refused-2026-10-02.json` and
+  `docs/evidence/sensory-app-macos-1440p-refused-2026-10-02.json`.
+
 ## [0.4.0-alpha.31] - 2026-10-01
 
 ### Added
