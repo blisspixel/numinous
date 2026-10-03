@@ -161,7 +161,7 @@ licensed source.
 data, not arbitrary paths. `open_creation` accepts canonical `.num`
 text or a native link, and `fork_creation` continues it with exact lineage.
 The caller decides whether to read a file and pass its contents. The pinned
-inventory is now 41 tools.
+inventory is now 43 MCP tools.
 
 **8. App footer visibility (resolved).** The footer chooses its scale from the
 complete status and controls, reducing scale before truncation. Widening no
