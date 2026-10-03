@@ -486,7 +486,7 @@ impl App {
             return;
         }
         let samples = numinous_core::munch_crunch(player.sample_rate(), seed);
-        player.play_oneshot(samples, 0.55 * self.volume);
+        player.play_oneshot(numinous_audio::Bus::Effect, samples, 0.55 * self.volume);
     }
 
     /// Bright or low square tick for quiz, nim, and graded munch feedback.
@@ -498,7 +498,7 @@ impl App {
             return;
         }
         let samples = numinous_core::game_tick(player.sample_rate(), good);
-        player.play_oneshot(samples, 0.5 * self.volume);
+        player.play_oneshot(numinous_audio::Bus::Effect, samples, 0.5 * self.volume);
     }
 
     /// Low buzz for a bad Munch grade (pairs with screen shake).
@@ -510,7 +510,7 @@ impl App {
             return;
         }
         let samples = numinous_core::game_buzz(player.sample_rate(), seed);
-        player.play_oneshot(samples, 0.45 * self.volume);
+        player.play_oneshot(numinous_audio::Bus::Effect, samples, 0.45 * self.volume);
     }
 
     /// One key into standalone Nim, including an explicit retry after either

@@ -5,7 +5,24 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Added
+- One shared master chain for App sound. Every source plays on a room, music,
+  or effect bus. The buses share a reverb with a 2.2 second decay, at a
+  modest send for room sound, a drier one for game cues, and none for the
+  radio, then pass the master level and a soft limiter that replaces the hard
+  clip. The mixer can also wash an outgoing source into the reverb as it
+  fades, ready for room-change dissolves.
+- Every room-bed and `SoundSpec` note now speaks through one house
+  articulation: a sine lead blooms, a triangle lead plucks, anchors swell, and
+  each decays and releases exponentially instead of being switched on and off.
+
 ### Changed
+- The room bed's loop seam is continuous rather than silent: releases that run
+  past the end wrap to the start, so the loop never cuts its own tails. Room-bed
+  peak and RMS move accordingly, and MCP `listen_room` names the renderer
+  `numinous.chiptune.stereo.v2` and reports each event's articulation.
+- A game cue and a room event no longer replace each other; each bus has its
+  own one-shot slot.
 - App preferences move to schema 3, which adds music, room, and effect levels
   (default 100 percent) and a text scale of 100 to 200 percent in steps of 25.
   Schemas 1 and 2 still load, with the new fields at their defaults, so an

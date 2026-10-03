@@ -33,7 +33,7 @@ There are two engines, and they are designed to coexist and even harmonize.
 > developments, then returns. Eight restrained rhythm and accompaniment
 > families provide catalog and within-bed variety. Soft sine or triangle leads
 > sit over short, low-level root and fifth anchors with real gaps, and each
-> motif retains its own final degree. The catalog has silent seams, bounded
+> motif retains its own final degree. The catalog has continuous seams, bounded
 > RMS and sample steps, low DC, and measured headroom. These structural checks
 > reject specific failures, but do not prove that the result is pleasant.
 > Source changes use a

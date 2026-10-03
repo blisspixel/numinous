@@ -264,7 +264,7 @@ The broader dated baseline below retains its original counts.
   density so the terminal picture retains negative space.
   Programmatic room-bed tests preserve every authored interval in one register,
   require catalog and within-bed phrase diversity, and bound oscillator level,
-  RMS, adjacent sample steps, headroom, DC, exact seams, determinism, and common
+  RMS, adjacent sample steps, headroom, DC, continuous seams, determinism, and common
   device rates. This is structural audio regression coverage, not a perceptual
   fingerprint or listening result. A shared fixed-order analyzer additionally
   reports finite-sample integrity, clipping, RMS, crest, channel balance, DC,

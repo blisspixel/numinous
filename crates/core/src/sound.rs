@@ -4,14 +4,12 @@
 //! pillar, see `docs/SOUND.md`). Rendering to samples is pure (std `sin`),
 //! deterministic, and needs no audio device, so it is testable and can be
 //! written straight to a WAV or to a Standard MIDI File. Real-time playback
-//! (the `audio` crate) renders the same `SoundSpec`.
+//! (the `audio` crate) renders the same `SoundSpec`. Every note speaks with
+//! the house voice's bloom articulation, fitted inside its own duration.
 
 use std::f32::consts::TAU;
 
-/// A short attack in seconds, so notes do not click on.
-const ATTACK: f32 = 0.01;
-/// A short release in seconds, so notes do not click off.
-const RELEASE: f32 = 0.05;
+use crate::articulation::{Articulation, Envelope};
 
 /// A single sine note.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -176,7 +174,9 @@ impl SoundSpec {
 
     /// Render to mono `f32` samples at `sample_rate`, clamped to `[-1, 1]`.
     ///
-    /// Deterministic and device-free.
+    /// Deterministic and device-free. Each note blooms from silence, settles,
+    /// and releases to silence before its own duration ends, so a note never
+    /// rings past the time it was given.
     #[must_use]
     pub fn render(&self, sample_rate: u32) -> Vec<f32> {
         let rate = sample_rate.max(1) as f32;
@@ -197,13 +197,14 @@ impl SoundSpec {
             }
             let start = (note.start.max(0.0) * rate) as usize;
             let len = (note.dur.max(0.0) * rate) as usize;
+            let mut envelope = Envelope::fitted(Articulation::Bloom, len, sample_rate);
             for i in 0..len {
                 let idx = start + i;
                 if idx >= total {
                     break;
                 }
                 let seconds = i as f32 / rate;
-                let env = envelope(seconds, note.dur);
+                let env = envelope.next_level();
                 buffer[idx] += (TAU * note.freq * seconds).sin() * note.amp * env;
             }
         }
@@ -278,20 +279,9 @@ pub fn wav_bytes(samples: &[f32], sample_rate: u32) -> Vec<u8> {
     bytes
 }
 
-/// A short attack/release envelope so notes do not click.
-fn envelope(t: f32, dur: f32) -> f32 {
-    if t < ATTACK {
-        (t / ATTACK).clamp(0.0, 1.0)
-    } else if t > dur - RELEASE {
-        ((dur - t) / RELEASE).clamp(0.0, 1.0)
-    } else {
-        1.0
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{Note, ParametricSound, SoundSpec, envelope, wav_bytes};
+    use super::{Note, ParametricSound, SoundSpec, wav_bytes};
     use crate::Motif;
 
     #[test]
@@ -432,10 +422,37 @@ mod tests {
     }
 
     #[test]
-    fn envelope_fades_in_and_out() {
-        assert!(envelope(0.0, 1.0) < 0.01);
-        assert!((envelope(0.5, 1.0) - 1.0).abs() < 1e-6);
-        assert!(envelope(1.0, 1.0) < 0.01);
+    fn a_note_blooms_settles_and_falls_silent_inside_its_duration() {
+        let rate = 16_000;
+        let amp = 0.5;
+        let samples = SoundSpec::tone(200.0, 1.0, amp).render(rate);
+        assert_eq!(samples.len(), rate as usize);
+        assert_eq!(samples[0], 0.0, "the note starts in silence");
+        let tail = &samples[samples.len() - 16..];
+        assert!(
+            tail.iter().all(|sample| sample.abs() < 1.0e-3),
+            "the note has released before its duration ends: {tail:?}"
+        );
+        let peak = samples[..rate as usize / 10]
+            .iter()
+            .fold(0.0f32, |peak, sample| peak.max(sample.abs()));
+        assert!(
+            (peak - amp).abs() < 0.03,
+            "the bloom peaks near {amp}: {peak}"
+        );
+        let held = &samples[rate as usize / 2..rate as usize * 6 / 10];
+        let held_peak = held
+            .iter()
+            .fold(0.0f32, |peak, sample| peak.max(sample.abs()));
+        assert!(
+            (held_peak / amp - 0.7).abs() < 0.03,
+            "the held tone settles to its sustain: {held_peak}"
+        );
+        let largest_step = samples
+            .windows(2)
+            .map(|pair| (pair[1] - pair[0]).abs())
+            .fold(0.0f32, f32::max);
+        assert!(largest_step < 0.05, "a note never clicks: {largest_step}");
     }
 
     #[test]

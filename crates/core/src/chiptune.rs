@@ -7,6 +7,7 @@
 
 use std::f32::consts::TAU;
 
+use crate::articulation::{Articulation, Envelope};
 use crate::rng::SplitMix64;
 
 /// Decorrelates tune seeds from other seeded systems.
@@ -67,6 +68,8 @@ pub struct ChipNote {
     pub level: f32,
     /// Stereo position from hard left at `-1.0` to hard right at `1.0`.
     pub pan: f32,
+    /// How the note speaks: its attack, its decay while held, and its release.
+    pub articulation: Articulation,
 }
 
 /// A bounded polyphonic chip arrangement on one shared musical grid.
@@ -373,6 +376,11 @@ pub fn game_buzz(sample_rate: u32, seed: u64) -> Vec<f32> {
 
 impl Arrangement {
     /// Render a stereo interleaved buffer with constant-power panning.
+    ///
+    /// Each note speaks through its [`Articulation`] and rings on after its
+    /// gate closes. The arrangement is a loop, so a release that runs past the
+    /// end wraps to the start: the seam is continuous, and every pass of the
+    /// loop carries the tails of the one before it.
     #[must_use]
     pub fn render_stereo(&self, sample_rate: u32) -> Vec<f32> {
         let rate = sample_rate.max(1);
@@ -392,7 +400,7 @@ impl Arrangement {
                 continue;
             }
             let requested = (note.step_count as f32 * self.step_seconds * rate as f32) as usize;
-            let length = requested.min(frames - start);
+            let gate = requested.min(frames - start);
             let pan = if note.pan.is_finite() {
                 note.pan.clamp(-1.0, 1.0)
             } else {
@@ -401,12 +409,13 @@ impl Arrangement {
             let angle = (pan + 1.0) * std::f32::consts::FRAC_PI_4;
             let (left_gain, right_gain) = (angle.cos(), angle.sin());
             let level = note.level.clamp(0.0, 1.0);
-            for index in 0..length {
+            let mut envelope = Envelope::new(note.articulation, gate, rate);
+            for index in 0..envelope.len() {
                 let seconds = index as f32 / rate as f32;
                 let sample = wave(note.voice, note.frequency * seconds, &mut noise)
                     * level
-                    * edge_envelope(index, length, rate);
-                let frame = (start + index) * 2;
+                    * envelope.next_level();
+                let frame = (start + index) % frames * 2;
                 output[frame] += sample * left_gain;
                 output[frame + 1] += sample * right_gain;
             }
@@ -503,10 +512,30 @@ pub fn compose(seed: u64, bars: usize) -> Pattern {
 #[cfg(test)]
 mod tests {
     use super::{
-        Arrangement, ChipNote, Pattern, Voice, compose, pitch, quantize_pcm16,
+        Arrangement, Articulation, ChipNote, Pattern, Voice, compose, pitch, quantize_pcm16,
         stereo_signal_metrics, wave,
     };
     use crate::rng::SplitMix64;
+
+    /// The largest step between adjacent frames inside an interleaved buffer,
+    /// and the step across its loop seam, from the last frame to the first.
+    fn interior_and_seam_steps(stereo: &[f32]) -> (f32, f32) {
+        let interior = stereo
+            .chunks_exact(2)
+            .collect::<Vec<_>>()
+            .windows(2)
+            .map(|pair| {
+                (pair[1][0] - pair[0][0])
+                    .abs()
+                    .max((pair[1][1] - pair[0][1]).abs())
+            })
+            .fold(0.0f32, f32::max);
+        let last = stereo.len() - 2;
+        let seam = (stereo[0] - stereo[last])
+            .abs()
+            .max((stereo[1] - stereo[last + 1]).abs());
+        (interior, seam)
+    }
 
     #[test]
     fn waveforms_have_their_shapes() {
@@ -616,6 +645,7 @@ mod tests {
                     voice: Voice::Sine,
                     level: 0.15,
                     pan: -0.5,
+                    articulation: Articulation::Swell,
                 },
                 ChipNote {
                     frequency: 330.0,
@@ -624,6 +654,7 @@ mod tests {
                     voice: Voice::Triangle,
                     level: 0.12,
                     pan: 0.5,
+                    articulation: Articulation::Pluck,
                 },
             ],
             steps: 8,
@@ -633,13 +664,59 @@ mod tests {
             let stereo = arrangement.render_stereo(rate);
             assert_eq!(stereo.len(), rate as usize * 2);
             assert!(stereo.iter().all(|sample| (-1.0..=1.0).contains(sample)));
-            assert_eq!(stereo[0], 0.0);
-            assert_eq!(stereo[stereo.len() - 1], 0.0);
+            let (interior, seam) = interior_and_seam_steps(&stereo);
+            assert!(
+                seam <= interior + 1.0e-6,
+                "the loop seam steps by {seam}, more than any interior step {interior}"
+            );
             assert!(
                 stereo.chunks_exact(2).any(|frame| frame[0] != frame[1]),
                 "panning must create a real stereo field"
             );
         }
+    }
+
+    #[test]
+    fn a_release_past_the_end_wraps_to_the_start_exactly() {
+        let note = ChipNote {
+            frequency: 330.0,
+            start_step: 3,
+            step_count: 1,
+            voice: Voice::Sine,
+            level: 0.2,
+            pan: 0.0,
+            articulation: Articulation::Bloom,
+        };
+        let rate = 16_000;
+        let looped = Arrangement {
+            notes: vec![note],
+            steps: 4,
+            step_seconds: 0.25,
+        }
+        .render_stereo(rate);
+        let open = Arrangement {
+            notes: vec![note],
+            steps: 8,
+            step_seconds: 0.25,
+        }
+        .render_stereo(rate);
+        let period = looped.len();
+        let onset = 3 * 4_000 * 2;
+        let tail = (Articulation::Bloom.release_seconds() * rate as f32).round() as usize * 2;
+        assert!(
+            open[period..period + tail]
+                .iter()
+                .any(|sample| sample.abs() > 0.01),
+            "the release rings on after the note's gate"
+        );
+        assert_eq!(
+            &looped[..tail],
+            &open[period..period + tail],
+            "the loop carries its own tail"
+        );
+        assert!(looped[tail..onset].iter().all(|sample| *sample == 0.0));
+        assert_eq!(&looped[onset..], &open[onset..period]);
+        assert!(open[period + tail..].iter().all(|sample| *sample == 0.0));
     }
 
     #[test]
@@ -653,6 +730,7 @@ mod tests {
                     voice: Voice::Sine,
                     level: 0.1,
                     pan: 0.0,
+                    articulation: Articulation::Bloom,
                 },
                 ChipNote {
                     frequency: -1.0,
@@ -661,6 +739,7 @@ mod tests {
                     voice: Voice::Square,
                     level: 0.1,
                     pan: 0.0,
+                    articulation: Articulation::Bloom,
                 },
                 ChipNote {
                     frequency: 220.0,
@@ -669,6 +748,7 @@ mod tests {
                     voice: Voice::Triangle,
                     level: f32::NAN,
                     pan: 0.0,
+                    articulation: Articulation::Bloom,
                 },
                 ChipNote {
                     frequency: 220.0,
@@ -677,6 +757,7 @@ mod tests {
                     voice: Voice::Noise,
                     level: 0.1,
                     pan: 0.0,
+                    articulation: Articulation::Bloom,
                 },
                 ChipNote {
                     frequency: 220.0,
@@ -685,6 +766,7 @@ mod tests {
                     voice: Voice::Sine,
                     level: 0.1,
                     pan: 0.0,
+                    articulation: Articulation::Bloom,
                 },
                 ChipNote {
                     frequency: 220.0,
@@ -693,6 +775,7 @@ mod tests {
                     voice: Voice::Sine,
                     level: 0.1,
                     pan: f32::NAN,
+                    articulation: Articulation::Bloom,
                 },
             ],
             steps: 1,

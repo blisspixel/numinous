@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use numinous_audio::{Bus, Transition};
 use numinous_core::{ROOM_BED_SOURCE_RATE, Room};
 
 use crate::audio_state::Program as AudioProgram;
@@ -11,6 +12,14 @@ use crate::{App, effective_room_inputs, feedback, menu, radio_cache, studio_pane
 
 /// One press of a volume control: keyboard, controller, or a Settings row.
 pub(super) const VOLUME_STEP: f32 = 0.1;
+
+/// The audio half of a curated Studio recipe change, paired with the curve's
+/// own morph and validated when the App is built.
+const RECIPE_TRANSITION: Transition =
+    match Transition::crossfade(studio_panel::RECIPE_MORPH_SECONDS as f32) {
+        Some(transition) => transition,
+        None => panic!("the Studio recipe morph must be a valid audio crossfade"),
+    };
 
 pub(super) fn selected_parameter_sound(
     program: AudioProgram,
@@ -105,7 +114,7 @@ impl App {
             return;
         };
         player.clear_parameter_voice();
-        player.clear_oneshot();
+        player.clear_oneshot(Bus::Room);
         player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         let stereo = match selection.and_then(|sel| sel.render(ROOM_BED_SOURCE_RATE)) {
             Some(mono) if !mono.is_empty() => mono
@@ -114,7 +123,12 @@ impl App {
                 .collect::<Vec<_>>(),
             _ => vec![0.0, 0.0],
         };
-        player.set_shared_stereo_at_rate(Arc::new(stereo), ROOM_BED_SOURCE_RATE);
+        let _ = player.set_shared_stereo_at_rate(
+            Bus::Room,
+            Arc::new(stereo),
+            ROOM_BED_SOURCE_RATE,
+            Transition::QUICK,
+        );
     }
 
     pub(super) fn change_volume(&mut self, step: f32) {
@@ -256,8 +270,13 @@ impl App {
         self.audio_program = AudioProgram::Radio;
         if let Some(player) = &self.player {
             player.clear_parameter_voice();
-            player.clear_oneshot();
-            player.set_shared_stereo_at_rate(self.radio_track.clone(), self.radio_track_rate);
+            player.clear_oneshot(Bus::Room);
+            let _ = player.set_shared_stereo_at_rate(
+                Bus::Music,
+                self.radio_track.clone(),
+                self.radio_track_rate,
+                Transition::QUICK,
+            );
             player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         }
         true
@@ -304,32 +323,27 @@ impl App {
     }
 
     pub(super) fn set_studio_sound(&mut self, spec: Option<numinous_core::SoundSpec>) {
-        self.set_studio_sound_with_crossfade(spec, None);
+        self.set_studio_sound_with_transition(spec, Transition::QUICK);
     }
 
     pub(super) fn set_studio_recipe_sound(&mut self, spec: Option<numinous_core::SoundSpec>) {
-        self.set_studio_sound_with_crossfade(spec, Some(studio_panel::RECIPE_MORPH_SECONDS as f32));
+        self.set_studio_sound_with_transition(spec, RECIPE_TRANSITION);
     }
 
-    fn set_studio_sound_with_crossfade(
+    fn set_studio_sound_with_transition(
         &mut self,
         spec: Option<numinous_core::SoundSpec>,
-        crossfade_seconds: Option<f32>,
+        transition: Transition,
     ) {
         self.audio_program = AudioProgram::Studio;
         let Some(player) = &self.player else {
             return;
         };
         player.clear_parameter_voice();
-        player.clear_oneshot();
+        player.clear_oneshot(Bus::Room);
         player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         if let Some(spec) = spec {
-            let samples = spec.render(player.sample_rate());
-            if let Some(seconds) = crossfade_seconds {
-                let _ = player.set_samples_with_crossfade(samples, seconds);
-            } else {
-                player.set_samples(samples);
-            }
+            let _ = player.set_samples(Bus::Room, spec.render(player.sample_rate()), transition);
         }
     }
 
@@ -343,7 +357,7 @@ impl App {
             self.audio_program = AudioProgram::Studio;
             if let Some(player) = &self.player {
                 player.clear_parameter_voice();
-                player.clear_oneshot();
+                player.clear_oneshot(Bus::Room);
             }
             self.apply_master_gain();
             return;
@@ -352,7 +366,7 @@ impl App {
             self.audio_program = AudioProgram::Radio;
             if let Some(player) = &self.player {
                 player.clear_parameter_voice();
-                player.clear_oneshot();
+                player.clear_oneshot(Bus::Room);
             }
             self.apply_master_gain();
             return;
@@ -378,7 +392,12 @@ impl App {
             });
         }
         if rendered_room_score || switching_to_room_score {
-            player.set_shared_stereo_at_rate(self.tune.clone(), ROOM_BED_SOURCE_RATE);
+            let _ = player.set_shared_stereo_at_rate(
+                Bus::Room,
+                self.tune.clone(),
+                ROOM_BED_SOURCE_RATE,
+                Transition::QUICK,
+            );
         }
         self.sync_room_parameter_voice();
     }
@@ -514,7 +533,7 @@ impl App {
         self.transient_audio_clears
             .set(self.transient_audio_clears.get().saturating_add(1));
         if let Some(player) = &self.player {
-            player.clear_oneshot();
+            player.clear_oneshot(Bus::Room);
         }
     }
 
@@ -548,7 +567,7 @@ impl App {
         ) else {
             return;
         };
-        player.play_stereo_oneshot(samples, 0.65);
+        player.play_stereo_oneshot(Bus::Room, samples, 0.65);
     }
 
     pub(super) fn play_life_step_audio(&self, completed_steps: usize) {
@@ -565,6 +584,6 @@ impl App {
         ) else {
             return;
         };
-        player.play_stereo_oneshot(samples, 0.65);
+        player.play_stereo_oneshot(Bus::Room, samples, 0.65);
     }
 }

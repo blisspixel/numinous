@@ -3917,6 +3917,10 @@ fn listen_room_returns_readable_notation() {
     assert_eq!(sound["ambient_bed"]["schema"], "numinous.room-bed.events");
     assert_eq!(sound["ambient_bed"]["schema_version"], 1);
     assert_eq!(
+        sound["ambient_bed"]["renderer"],
+        "numinous.chiptune.stereo.v2"
+    );
+    assert_eq!(
         sound["ambient_bed"]["source_sample_rate_hz"],
         numinous_core::ROOM_BED_SOURCE_RATE
     );
@@ -4076,6 +4080,12 @@ fn listen_room_projects_every_bed_event_without_binary_transport() {
                 room.meta().id
             );
             assert_eq!(event["voice"], note.voice.id(), "{}", room.meta().id);
+            assert_eq!(
+                event["articulation"],
+                note.articulation.id(),
+                "{}",
+                room.meta().id
+            );
             assert_eq!(event["level"], note.level, "{}", room.meta().id);
             assert_eq!(event["pan"], note.pan, "{}", room.meta().id);
         }

@@ -177,7 +177,7 @@ fn ambient_bed_value(motif: numinous_core::Motif, include_events: bool) -> Resul
     let mut value = json!({
         "schema": "numinous.room-bed.events",
         "schema_version": 1,
-        "renderer": "numinous.chiptune.stereo.v1",
+        "renderer": "numinous.chiptune.stereo.v2",
         "source_sample_rate_hz": numinous_core::ROOM_BED_SOURCE_RATE,
         "channels": 2,
         "steps": arrangement.steps,
@@ -213,6 +213,7 @@ fn ambient_bed_value(motif: numinous_core::Motif, include_events: bool) -> Resul
                     "start_seconds": note.start_step as f64 * f64::from(arrangement.step_seconds),
                     "duration_seconds": note.step_count as f64 * f64::from(arrangement.step_seconds),
                     "voice": note.voice.id(),
+                    "articulation": note.articulation.id(),
                     "level": note.level,
                     "pan": note.pan,
                 })
