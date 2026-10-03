@@ -3,6 +3,36 @@ use super::{
     controls, play,
 };
 
+/// One short game cue, played on the effect bus.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum GameCue {
+    /// Munch bite juice, seeded.
+    Crunch(u64),
+    /// A bright tick for a good action, a low one for a miss.
+    Tick(bool),
+    /// The harsher buzz of a bad Munch grade, seeded.
+    Buzz(u64),
+}
+
+impl GameCue {
+    /// The cue's own level beneath the Effects level and master.
+    pub(super) const fn level(self) -> f32 {
+        match self {
+            Self::Crunch(_) => 0.55,
+            Self::Tick(_) => 0.5,
+            Self::Buzz(_) => 0.45,
+        }
+    }
+
+    fn render(self, sample_rate: u32) -> Vec<f32> {
+        match self {
+            Self::Crunch(seed) => numinous_core::munch_crunch(sample_rate, seed),
+            Self::Tick(good) => numinous_core::game_tick(sample_rate, good),
+            Self::Buzz(seed) => numinous_core::game_buzz(sample_rate, seed),
+        }
+    }
+}
+
 impl App {
     pub(super) fn quiz_next(&mut self) {
         self.the_show = false;
@@ -479,38 +509,38 @@ impl App {
 
     /// Soft one-shot noise tick over the room score (Munch bite juice).
     pub(super) fn play_munch_crunch(&self, seed: u64) {
-        let Some(player) = &self.player else {
-            return;
-        };
-        if self.muted {
-            return;
-        }
-        let samples = numinous_core::munch_crunch(player.sample_rate(), seed);
-        player.play_oneshot(numinous_audio::Bus::Effect, samples, 0.55 * self.volume);
+        self.play_game_cue(GameCue::Crunch(seed));
     }
 
     /// Bright or low square tick for quiz, nim, and graded munch feedback.
     fn play_game_tick(&self, good: bool) {
-        let Some(player) = &self.player else {
-            return;
-        };
-        if self.muted {
-            return;
-        }
-        let samples = numinous_core::game_tick(player.sample_rate(), good);
-        player.play_oneshot(numinous_audio::Bus::Effect, samples, 0.5 * self.volume);
+        self.play_game_cue(GameCue::Tick(good));
     }
 
     /// Low buzz for a bad Munch grade (pairs with screen shake).
     fn play_game_buzz(&self, seed: u64) {
+        self.play_game_cue(GameCue::Buzz(seed));
+    }
+
+    /// What a cue submits: its samples and its own fixed level, or nothing
+    /// while muted. Master volume is deliberately absent. The mixer applies
+    /// it once to every bus, and multiplying it here as well played a
+    /// half-volume Cabinet's cues at a quarter.
+    pub(super) fn game_cue_submission(
+        &self,
+        cue: GameCue,
+        sample_rate: u32,
+    ) -> Option<(Vec<f32>, f32)> {
+        (!self.muted).then(|| (cue.render(sample_rate), cue.level()))
+    }
+
+    fn play_game_cue(&self, cue: GameCue) {
         let Some(player) = &self.player else {
             return;
         };
-        if self.muted {
-            return;
+        if let Some((samples, level)) = self.game_cue_submission(cue, player.sample_rate()) {
+            player.play_oneshot(numinous_audio::Bus::Effect, samples, level);
         }
-        let samples = numinous_core::game_buzz(player.sample_rate(), seed);
-        player.play_oneshot(numinous_audio::Bus::Effect, samples, 0.45 * self.volume);
     }
 
     /// One key into standalone Nim, including an explicit retry after either

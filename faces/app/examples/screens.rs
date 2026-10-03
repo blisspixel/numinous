@@ -45,6 +45,7 @@ fn draw_cabinet_menu_state_with_display(
         audio_state::Program::RoomScore,
         None,
         0.45,
+        audio_state::SourceLevels::default(),
         false,
         true,
         true,
@@ -57,6 +58,9 @@ fn draw_cabinet_menu_state_with_display(
         numinous_app::input_legend::ControllerFace::Generic.into(),
         numinous_app::menu::MenuReadout {
             volume_percent: 45,
+            music_percent: 100,
+            room_percent: 100,
+            effect_percent: 100,
             muted: false,
             era: "phosphor",
             window_mode: if fullscreen { "borderless" } else { "windowed" },
@@ -227,7 +231,15 @@ fn save(raster: &Raster, relative: &str, manifest: &mut Vec<String>) {
     } else {
         audio_state::Program::RoomScore
     };
-    let state = audio_state::describe(program, None, 0.45, false, true, true);
+    let state = audio_state::describe(
+        program,
+        None,
+        0.45,
+        audio_state::SourceLevels::default(),
+        false,
+        true,
+        true,
+    );
     save_with_audio(raster, relative, state, manifest);
 }
 
@@ -1505,7 +1517,15 @@ fn present_readme_plate(raster: &Raster, name: &str) -> Raster {
         } else {
             audio_state::Program::RoomScore
         };
-        let state = audio_state::describe(program, None, 0.45, false, true, true);
+        let state = audio_state::describe(
+            program,
+            None,
+            0.45,
+            audio_state::SourceLevels::default(),
+            false,
+            true,
+            true,
+        );
         hud::draw_audio_state(&mut presented, &state, raster.width());
     }
     presented
@@ -2082,6 +2102,7 @@ fn write_route_authoring_previews(output: &Path) {
             audio_state::Program::RoomScore,
             None,
             0.45,
+            audio_state::SourceLevels::default(),
             false,
             true,
             true,
@@ -2155,6 +2176,7 @@ fn write_room_previews(output: &Path, room: &dyn Room) {
                 audio_state::Program::RoomScore,
                 None,
                 0.45,
+                audio_state::SourceLevels::default(),
                 false,
                 true,
                 true,
@@ -2798,7 +2820,15 @@ fn main() {
         ),
     ];
     for (name, program, station, volume, muted, active, output, expected) in audio_states {
-        let state = audio_state::describe(program, station, volume, muted, active, output);
+        let state = audio_state::describe(
+            program,
+            station,
+            volume,
+            audio_state::SourceLevels::default(),
+            muted,
+            active,
+            output,
+        );
         assert_eq!(state.label(), expected, "{name} label is semantic");
         for (mode_name, size, input_mode) in [
             (
@@ -3552,6 +3582,7 @@ mod tests {
                     super::audio_state::Program::RoomScore,
                     None,
                     0.45,
+                    super::audio_state::SourceLevels::default(),
                     false,
                     true,
                     true,

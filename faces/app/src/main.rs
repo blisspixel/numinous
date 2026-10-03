@@ -1736,7 +1736,7 @@ impl App {
             }
             Command::Volume(v) => {
                 self.volume = v.clamp(0.0, 1.0);
-                self.apply_master_gain();
+                self.apply_levels();
                 self.banner = Some(feedback::volume(self.volume, self.muted));
                 self.persist_preferences();
                 vec![format!("volume {:.0}%", self.volume * 100.0)]
@@ -2192,6 +2192,9 @@ impl App {
             self.gamepad.controller_copy(),
             menu::MenuReadout {
                 volume_percent: (self.volume * 100.0).round().clamp(0.0, 100.0) as u8,
+                music_percent: self.music_volume_percent,
+                room_percent: self.room_volume_percent,
+                effect_percent: self.effect_volume_percent,
                 muted: self.muted,
                 era: self.era.name(),
                 window_mode,
@@ -2304,6 +2307,10 @@ impl App {
                 .and_then(|index| numinous_core::STATIONS.get(index))
                 .map(|station| station.name),
             self.volume,
+            audio_state::SourceLevels {
+                radio_percent: self.music_volume_percent,
+                room_percent: self.room_volume_percent,
+            },
             self.muted,
             self.window_active,
             self.player.is_some(),

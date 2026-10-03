@@ -3428,6 +3428,86 @@ fn app_options_persist_one_versioned_preference_snapshot() {
 }
 
 #[test]
+fn source_levels_step_persist_and_never_leave_their_range() {
+    let mut app = headless("numinous_app_test_source_levels.txt");
+    let path = app.preferences_file.clone();
+    let _ = std::fs::remove_file(&path);
+    let adjust = |app: &mut App, setting, step| {
+        app.apply_menu_intent(menu::MenuIntent::Adjust(setting, step));
+    };
+
+    adjust(&mut app, menu::NumericSetting::RoomVolume, menu::Step::Down);
+    assert_eq!(app.room_volume_percent, 90);
+    assert_eq!(
+        app.banner.as_ref().expect("level banner").lines()[0],
+        "ROOM SOUND 90%"
+    );
+    for _ in 0..12 {
+        adjust(
+            &mut app,
+            menu::NumericSetting::MusicVolume,
+            menu::Step::Down,
+        );
+    }
+    assert_eq!(app.music_volume_percent, 0, "a level stops at silence");
+    adjust(&mut app, menu::NumericSetting::EffectVolume, menu::Step::Up);
+    assert_eq!(app.effect_volume_percent, 100, "a level stops at full");
+    assert!(
+        (app.volume - 0.45).abs() < f32::EPSILON,
+        "master is untouched"
+    );
+
+    let saved = numinous_core::read_app_preferences_file(&path).expect("saved preferences");
+    assert_eq!(saved.music_volume_percent, 0);
+    assert_eq!(saved.room_volume_percent, 90);
+    assert_eq!(saved.effect_volume_percent, 100);
+    assert_eq!(saved.volume_percent, 45);
+
+    app.muted = true;
+    adjust(&mut app, menu::NumericSetting::MusicVolume, menu::Step::Up);
+    assert_eq!(
+        app.banner.as_ref().expect("level banner").lines(),
+        ["RADIO 10%", "OUTPUT REMAINS MUTED"]
+    );
+    let _ = std::fs::remove_file(path);
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
+fn game_cues_keep_their_own_level_whatever_the_master_volume() {
+    // Master volume already scales every bus in the mixer. Cues used to be
+    // scaled by it a second time, so a half-volume Cabinet played its cues at
+    // a quarter. What a cue submits must not depend on the master at all.
+    use crate::game_runtime::GameCue;
+
+    let mut app = headless("numinous_app_test_cue_levels.txt");
+    for cue in [
+        GameCue::Crunch(3),
+        GameCue::Tick(true),
+        GameCue::Tick(false),
+        GameCue::Buzz(5),
+    ] {
+        let submitted = [0.1, 0.45, 1.0].map(|volume| {
+            app.volume = volume;
+            app.game_cue_submission(cue, 48_000)
+                .expect("an audible cue")
+        });
+        assert!(
+            submitted.windows(2).all(|pair| pair[0] == pair[1]),
+            "{cue:?} changed with the master volume"
+        );
+        assert_eq!(submitted[0].1, cue.level());
+        assert!(submitted[0].0.iter().any(|sample| sample.abs() > 0.01));
+    }
+    app.muted = true;
+    assert!(
+        app.game_cue_submission(GameCue::Tick(true), 48_000)
+            .is_none()
+    );
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
 fn a_launch_mute_silences_without_becoming_the_saved_choice() {
     // NUMINOUS_MUTE used to set the one mute flag, so the next unrelated save
     // wrote `muted true` and the following launch stayed silent with no

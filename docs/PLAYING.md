@@ -141,10 +141,16 @@ state. On restore, radio rejoins the wall-clock broadcast position before audio
 fades back in. Studio keeps ownership of formula audio through focus changes
 and radio boundaries, then rejoins a selected station live when Studio closes.
 A persistent top-right audio badge names the active source, volume level, mute,
-zero-volume, background-silent, or no-device state. A separate `JOURNEY LV`
-label reports accumulated progress in the local profile, not room difficulty.
-Options persist master volume, mute, Visual Era, and window mode in the
-versioned local preference store. `numinous forget` inventories that store;
+zero-volume, background-silent, or no-device state, and it names the Radio or
+Room Sound level when the active source's own level is zero. A separate
+`JOURNEY LV` label reports accumulated progress in the local profile, not room
+difficulty. Settings holds four levels (built). Master scales everything;
+Radio, Room Sound, and Effects sit beneath it. Room Sound covers the room
+score, its mathematical voices and events, the Studio, and Shared Play replay;
+Effects covers game cues. Left and right step a level by ten points, and
+activating its row steps it up. The keyboard and controller volume controls
+stay master-only. Options persist those levels, mute, Visual Era, and window
+mode in the versioned local preference store. `numinous forget` inventories that store;
 `numinous forget --confirm --all-local` erases it with the other managed local
 state. A selective Journey or journal erasure leaves Options intact.
 Settings also carries a full-size Skip Track row. It advances the current

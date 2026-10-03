@@ -12,6 +12,8 @@ use crate::{App, effective_room_inputs, feedback, menu, radio_cache, studio_pane
 
 /// One press of a volume control: keyboard, controller, or a Settings row.
 pub(super) const VOLUME_STEP: f32 = 0.1;
+/// One press of a radio, room, or effect level: the master's ten points.
+const LEVEL_STEP_PERCENT: i16 = 10;
 
 /// The audio half of a curated Studio recipe change, paired with the curve's
 /// own morph and validated when the App is built.
@@ -99,7 +101,7 @@ impl App {
         let selection = self.session_viewer.audio_selection();
         let sequence = selection.as_ref().map(|sel| sel.public_sequence());
         if !self.session_audio.select(sequence) {
-            self.apply_master_gain();
+            self.apply_levels();
             return;
         }
         self.publish_viewer_audio(selection.as_ref());
@@ -115,7 +117,7 @@ impl App {
         };
         player.clear_parameter_voice();
         player.clear_oneshot(Bus::Room);
-        player.set_master_gain(if self.muted { 0.0 } else { self.volume });
+        self.apply_levels();
         let stereo = match selection.and_then(|sel| sel.render(ROOM_BED_SOURCE_RATE)) {
             Some(mono) if !mono.is_empty() => mono
                 .into_iter()
@@ -134,14 +136,41 @@ impl App {
     pub(super) fn change_volume(&mut self, step: f32) {
         self.volume = (self.volume + step).clamp(0.0, 1.0);
         self.banner = Some(feedback::volume(self.volume, self.muted));
-        self.apply_master_gain();
+        self.apply_levels();
         self.persist_preferences();
     }
 
-    pub(super) fn apply_master_gain(&self) {
+    /// Send the master level, mute, and every bus level to the player.
+    pub(super) fn apply_levels(&self) {
         if let Some(player) = &self.player {
             player.set_master_gain(if self.muted { 0.0 } else { self.volume });
+            for bus in Bus::ALL {
+                player.set_bus_gain(bus, f32::from(self.bus_level(bus)) / 100.0);
+            }
         }
+    }
+
+    /// The player's level for `bus`, in whole percent beneath master.
+    pub(super) fn bus_level(&self, bus: Bus) -> u8 {
+        match bus {
+            Bus::Music => self.music_volume_percent,
+            Bus::Room => self.room_volume_percent,
+            Bus::Effect => self.effect_volume_percent,
+        }
+    }
+
+    fn change_bus_level(&mut self, bus: Bus, setting: menu::NumericSetting, step: menu::Step) {
+        let slot = match bus {
+            Bus::Music => &mut self.music_volume_percent,
+            Bus::Room => &mut self.room_volume_percent,
+            Bus::Effect => &mut self.effect_volume_percent,
+        };
+        let stepped = i16::from(*slot) + step.sign() as i16 * LEVEL_STEP_PERCENT;
+        *slot = u8::try_from(stepped.clamp(0, 100)).unwrap_or(100);
+        let percent = *slot;
+        self.banner = Some(feedback::level(setting.title(), percent, self.muted));
+        self.apply_levels();
+        self.persist_preferences();
     }
 
     pub(super) fn toggle_mute(&mut self) {
@@ -152,7 +181,7 @@ impl App {
     pub(super) fn set_muted(&mut self, muted: bool) {
         self.muted = muted;
         self.muted_preference = muted;
-        self.apply_master_gain();
+        self.apply_levels();
         self.persist_preferences();
     }
 
@@ -160,6 +189,11 @@ impl App {
     pub(super) fn adjust_setting(&mut self, setting: menu::NumericSetting, step: menu::Step) {
         match setting {
             menu::NumericSetting::MasterVolume => self.change_volume(step.sign() * VOLUME_STEP),
+            menu::NumericSetting::MusicVolume => self.change_bus_level(Bus::Music, setting, step),
+            menu::NumericSetting::RoomVolume => self.change_bus_level(Bus::Room, setting, step),
+            menu::NumericSetting::EffectVolume => {
+                self.change_bus_level(Bus::Effect, setting, step);
+            }
         }
     }
 
@@ -277,7 +311,7 @@ impl App {
                 self.radio_track_rate,
                 Transition::QUICK,
             );
-            player.set_master_gain(if self.muted { 0.0 } else { self.volume });
+            self.apply_levels();
         }
         true
     }
@@ -341,7 +375,7 @@ impl App {
         };
         player.clear_parameter_voice();
         player.clear_oneshot(Bus::Room);
-        player.set_master_gain(if self.muted { 0.0 } else { self.volume });
+        self.apply_levels();
         if let Some(spec) = spec {
             let _ = player.set_samples(Bus::Room, spec.render(player.sample_rate()), transition);
         }
@@ -359,7 +393,7 @@ impl App {
                 player.clear_parameter_voice();
                 player.clear_oneshot(Bus::Room);
             }
-            self.apply_master_gain();
+            self.apply_levels();
             return;
         }
         if self.radio.is_some() && !self.radio_track.is_empty() {
@@ -368,7 +402,7 @@ impl App {
                 player.clear_parameter_voice();
                 player.clear_oneshot(Bus::Room);
             }
-            self.apply_master_gain();
+            self.apply_levels();
             return;
         }
         let switching_to_room_score = self.audio_program != AudioProgram::RoomScore;
@@ -379,7 +413,7 @@ impl App {
         let Some(player) = &self.player else {
             return;
         };
-        player.set_master_gain(if self.muted { 0.0 } else { self.volume });
+        self.apply_levels();
         let rendered_room_score = self.tune.is_empty();
         if rendered_room_score {
             self.tune = Arc::new(match self.rooms[self.current].motif() {

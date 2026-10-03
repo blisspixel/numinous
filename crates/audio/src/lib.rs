@@ -288,9 +288,9 @@ const MAX_REVERB_SEND: f32 = 4.0;
 
 /// Where a sound plays.
 ///
-/// Each bus has its own share of the shared reverb, so a room's mathematics,
-/// a recorded song, and a game cue can sit in one space without one dictating
-/// the others' character.
+/// Each bus has its own level and its own share of the shared reverb, so a
+/// room's mathematics, a recorded song, and a game cue can be balanced and
+/// placed in one space without one dictating the others' level or character.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Bus {
     /// Sonified mathematics: the room score, its parameter voice and events,
@@ -826,15 +826,19 @@ impl BusMix {
         slot.1 += frame.1 * extra;
     }
 
-    /// The dry sum and the reverb send. A non-finite bus is silenced as a
-    /// unit rather than allowed into the reverb, where it would poison the
-    /// tail until the stream closed.
-    fn sum(&self) -> ((f32, f32), (f32, f32)) {
+    /// The dry sum and the reverb send after each bus's level. Sends follow
+    /// the level, so a bus turned down is turned down in the space as well.
+    /// A non-finite bus is silenced as a unit rather than allowed into the
+    /// reverb, where it would poison the tail until the stream closed.
+    fn sum(&self, levels: [f32; 3]) -> ((f32, f32), (f32, f32)) {
         let mut dry = (0.0f32, 0.0f32);
         let mut send = (0.0f32, 0.0f32);
         for bus in Bus::ALL {
+            let level = levels[bus.index()];
             let frame = finite_frame(self.dry[bus.index()]);
+            let frame = (frame.0 * level, frame.1 * level);
             let wash = finite_frame(self.wash[bus.index()]);
+            let wash = (wash.0 * level, wash.1 * level);
             dry.0 += frame.0;
             dry.1 += frame.1;
             send.0 += frame.0.mul_add(bus.reverb_send(), wash.0);
@@ -891,6 +895,9 @@ struct MixerState {
     wash: bool,
     master_gain: f32,
     master: Ramp,
+    /// Each bus's requested level beneath master, in [`Bus::ALL`] order.
+    bus_levels: [f32; 3],
+    bus_ramps: [Ramp; 3],
     active: bool,
     parameter_voice: ParameterVoice,
     /// One one-shot slot per bus, so a game cue and a room event never
@@ -905,6 +912,11 @@ impl MixerState {
     fn new(sample_rate: u32) -> Self {
         let rate = sample_rate.max(1) as f32;
         let default_crossfade_frames = (SOURCE_CROSSFADE_SECONDS * rate).max(1.0) as usize;
+        let gain_step = 1.0 / (GAIN_RAMP_SECONDS * rate).max(1.0);
+        let full = || Ramp {
+            current: 1.0,
+            step: gain_step,
+        };
         Self {
             current: LoopBuffer::silent(),
             previous: None,
@@ -916,10 +928,9 @@ impl MixerState {
             coefficient_ramp_start: None,
             wash: false,
             master_gain: 1.0,
-            master: Ramp {
-                current: 1.0,
-                step: 1.0 / (GAIN_RAMP_SECONDS * rate).max(1.0),
-            },
+            master: full(),
+            bus_levels: [1.0; 3],
+            bus_ramps: [full(), full(), full()],
             active: true,
             parameter_voice: ParameterVoice::new(sample_rate),
             oneshots: [None, None, None],
@@ -1107,11 +1118,11 @@ impl MixerState {
     }
 
     fn set_master_gain(&mut self, gain: f32) {
-        self.master_gain = if gain.is_finite() {
-            gain.clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
+        self.master_gain = admitted_gain(gain);
+    }
+
+    fn set_bus_gain(&mut self, bus: Bus, gain: f32) {
+        self.bus_levels[bus.index()] = admitted_gain(gain);
     }
 
     fn set_parameter_voice(&mut self, root_hz: f32, ratio: f32, gain: f32) -> bool {
@@ -1152,7 +1163,9 @@ impl MixerState {
             mix.add(bus, frame, 1.0);
         }
 
-        let (dry, send) = mix.sum();
+        let levels =
+            Bus::ALL.map(|bus| self.bus_ramps[bus.index()].advance(self.bus_levels[bus.index()]));
+        let (dry, send) = mix.sum(levels);
         let wet = self.reverb.process(send);
         let target = if self.active { self.master_gain } else { 0.0 };
         let gain = self.master.advance(target);
@@ -1164,6 +1177,15 @@ impl MixerState {
             ring.push_frame(left, right);
         }
         (left, right)
+    }
+}
+
+/// A requested linear gain in `[0, 1]`; anything non-finite is silence.
+fn admitted_gain(gain: f32) -> f32 {
+    if gain.is_finite() {
+        gain.clamp(0.0, 1.0)
+    } else {
+        0.0
     }
 }
 
@@ -1392,6 +1414,15 @@ impl LoopPlayer {
     pub fn set_master_gain(&self, gain: f32) {
         if let Ok(mut state) = self.state.lock() {
             state.set_master_gain(gain);
+        }
+    }
+
+    /// Set one bus's linear gain beneath master, in `[0, 1]`, without
+    /// touching its sources. Changes ramp like the master level, and the
+    /// bus's reverb send follows it. Non-finite input is silence.
+    pub fn set_bus_gain(&self, bus: Bus, gain: f32) {
+        if let Ok(mut state) = self.state.lock() {
+            state.set_bus_gain(bus, gain);
         }
     }
 
@@ -2587,5 +2618,120 @@ mod tests {
         for _ in 0..rate {
             assert_eq!(mixer.next_frame(), (0.0, 0.0), "the tail ends in silence");
         }
+    }
+    #[test]
+    fn a_bus_level_moves_only_its_own_sound() {
+        // The radio keeps playing while room sound is turned off, and a room
+        // keeps playing while the cues are turned off.
+        let rate = 8_000;
+        let settled_with = |bus: Bus| {
+            let mut mixer = MixerState::new(rate);
+            mixer.set_bus_gain(bus, 0.0);
+            for _ in 0..rate / 10 {
+                let _ = mixer.next_frame();
+            }
+            mixer
+        };
+        let mut mixer = settled_with(Bus::Room);
+        mixer.current = LoopBuffer::new(vec![0.25; 64], 1, Bus::Room);
+        let cue = OneshotPlay::new(vec![0.125; rate as usize], 1.0, 1).expect("cue");
+        let _ = mixer.replace_oneshot(Bus::Music, cue);
+        for _ in 0..rate / 10 {
+            let _ = mixer.next_frame();
+        }
+        let frame = mixer.next_frame();
+        assert!(
+            (frame.0 - 0.125).abs() < 1.0e-6,
+            "only the music remains: {frame:?}"
+        );
+
+        let mut mixer = settled_with(Bus::Effect);
+        mixer.current = LoopBuffer::new(vec![0.25; 64], 1, Bus::Music);
+        let cue = OneshotPlay::new(vec![0.125; rate as usize], 1.0, 1).expect("cue");
+        let _ = mixer.replace_oneshot(Bus::Effect, cue);
+        for _ in 0..rate / 10 {
+            let _ = mixer.next_frame();
+        }
+        assert_eq!(
+            mixer.next_frame(),
+            (0.25, 0.25),
+            "only the cues fall silent"
+        );
+    }
+
+    #[test]
+    fn a_bus_level_ramps_without_a_step() {
+        let rate = 1_000;
+        let mut mixer = MixerState::new(rate);
+        mixer.current = LoopBuffer::new(vec![0.5; 64], 1, Bus::Music);
+        let _ = mixer.next_frame();
+        mixer.set_bus_gain(Bus::Music, 0.2);
+        let ramp_frames = (super::GAIN_RAMP_SECONDS * rate as f32) as usize;
+        let fade = (0..ramp_frames + 2)
+            .map(|_| mixer.next_frame().0)
+            .collect::<Vec<_>>();
+        assert!(fade.windows(2).all(|pair| pair[1] <= pair[0]));
+        let largest = fade
+            .windows(2)
+            .map(|pair| pair[0] - pair[1])
+            .fold(0.0f32, f32::max);
+        assert!(largest <= 0.5 / ramp_frames as f32 + 1.0e-6, "{largest}");
+        assert!((fade.last().copied().unwrap_or_default() - 0.1).abs() < 1.0e-6);
+
+        mixer.set_bus_gain(Bus::Music, f32::NAN);
+        assert_eq!(mixer.bus_levels[Bus::Music.index()], 0.0);
+        mixer.set_bus_gain(Bus::Music, 4.0);
+        assert_eq!(mixer.bus_levels[Bus::Music.index()], 1.0);
+    }
+
+    #[test]
+    fn a_crossfade_between_buses_follows_each_sides_own_level() {
+        // Radio at full level fading to a room score turned down to half:
+        // each side carries its own bus level through the equal-power law.
+        let rate = 1_000;
+        let mut mixer = MixerState::new(rate);
+        mixer.current = LoopBuffer::new(vec![0.4; 64], 1, Bus::Music);
+        mixer.set_bus_gain(Bus::Room, 0.5);
+        for _ in 0..100 {
+            let _ = mixer.next_frame();
+        }
+        let _ = mixer.replace_with_fade(LoopBuffer::new(vec![0.4; 63], 1, Bus::Room), 101, false);
+        for frame in 0..101 {
+            let progress = frame as f32 / 100.0;
+            let expected = 0.4 * (1.0 - progress).sqrt() + 0.2 * progress.sqrt();
+            let mixed = mixer.next_frame();
+            // The room side's tail enters the reverb after its pre-delay, so
+            // compare the dry law while the space is still empty.
+            if frame < 18 {
+                assert!((mixed.0 - expected).abs() < 1.0e-5, "{frame}: {mixed:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_bus_turned_down_is_turned_down_in_the_space_too() {
+        let rate = 8_000;
+        let energy_with_room_level = |level: f32| {
+            let mut mixer = MixerState::new(rate);
+            mixer.set_bus_gain(Bus::Room, level);
+            for _ in 0..rate / 10 {
+                let _ = mixer.next_frame();
+            }
+            mixer.current = burst(Bus::Room, rate);
+            for _ in 0..rate * 2 {
+                let _ = mixer.next_frame();
+            }
+            (0..rate)
+                .map(|_| {
+                    let frame = mixer.next_frame();
+                    frame.0.mul_add(frame.0, frame.1 * frame.1)
+                })
+                .sum::<f32>()
+        };
+        let full = energy_with_room_level(1.0);
+        let half = energy_with_room_level(0.5);
+        assert!(full > 0.0);
+        assert!((half / full - 0.25).abs() < 1.0e-3, "{}", half / full);
+        assert_eq!(energy_with_room_level(0.0), 0.0);
     }
 }

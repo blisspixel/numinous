@@ -389,6 +389,8 @@ the right stick scrubs time, Start opens or closes the menu, Select opens study,
 and clicking the left stick resets the room. West changes the visual era.
 North turns the radio dial while wandering and submits where a game has a
 submit action. `N`, or Skip Track under Settings, advances the current station.
+Settings also holds Master, Radio, Room Sound, and Effects levels. Left and
+right step each by ten points, and they are kept with your other settings.
 Start pauses a live game behind the menu without discarding it.
 
 To remap standard controller buttons, create `.numinous-bindings.json` in your

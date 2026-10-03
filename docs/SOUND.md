@@ -175,7 +175,11 @@ The reverb flushes its tail to exact zero far below hearing, so a long silence
 never crosses the slow subnormal range. Studio formula audio and Watch Agent
 replay play on the room bus; game cues on the effect bus. A room event and a
 game cue no longer replace each other, because each bus has its own one-shot
-slot. The mixer can also wash an outgoing source into the reverb as it fades,
+slot. Each bus also has its own level beneath master, set by the Radio, Room
+Sound, and Effects rows in Settings and persisted (built); its reverb send
+follows that level. Game cues play at their own fixed levels, so the master
+volume applies to them once. The mixer can also wash an outgoing source into
+the reverb as it fades,
 for room changes (built in the mixer). The App does not request it yet, because
 the visual dissolve it accompanies is designed and not built. Exports stay
 pre-master. Sample-accurate event scheduling, per-Era voices, global tuning,
@@ -290,7 +294,7 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 ## Accessibility & silence
 
 - **Beautiful in silence.** A prominent, graceful mute. The visuals must fully carry the experience with the sound off (the library, the office, the sleeping-roommate 2am). Muting is never a downgrade.
-- **Full control.** Independent volumes for room sonification, the radio (Engine B), and UI; a master; and a hard mute.
+- **Full control.** Independent volumes for room sonification, the radio (Engine B), and UI; a master; and a hard mute. Built: Settings holds Master, Radio, Room Sound, and Effects levels, each persisted, plus a hard mute. Interface navigation has no sound of its own yet, so Effects covers game cues.
 - **No painful surprises.** No sudden loud onsets, no harsh strobing-audio; loudness is managed on the master bus, which ends in a soft limiter (built). Reduce-motion never silences the room, and mute never freezes the visuals.
 
 ## Open questions

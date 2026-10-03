@@ -242,11 +242,13 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 
 ## How the two engines coexist
 
-- **One master bus, partially shipped.** Room score, Studio, and radio share one
-  global master level and mute, with a persistent effective-state badge. Source
+- **One master bus (built).** Room score, Studio, radio, and game cues share one
+  master chain: a shared reverb that the radio skips, the master level, mute,
+  and a soft limiter, with a persistent effective-state badge. Radio, room
+  sound, and effects each have their own level beneath master. Source
   ownership is exclusive today: Studio owns formula audio while open, radio
   rejoins live after Studio, and the room score is the fallback. Simultaneous
-  room-over-radio mixing and separate source levels remain upgrades.
+  room-over-radio mixing remains an upgrade.
 - **Global key and tempo target.** A future shared bus can quantize room
   sonification to the current station. The app has no global key or BPM today.
 - **Mode-aware mixing.**

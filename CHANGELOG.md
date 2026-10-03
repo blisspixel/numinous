@@ -12,6 +12,10 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   radio, then pass the master level and a soft limiter that replaces the hard
   clip. The mixer can also wash an outgoing source into the reverb as it
   fades, ready for room-change dissolves.
+- Settings holds separate Radio, Room Sound, and Effects levels beneath
+  Master, each persisted with the other options. The audio badge names the
+  level when the active source's own level is zero. A long Settings list steps
+  its rows down in whole pixels instead of running into the footer.
 - Every room-bed and `SoundSpec` note now speaks through one house
   articulation: a sine lead blooms, a triangle lead plucks, anchors swell, and
   each decays and releases exponentially instead of being switched on and off.
@@ -32,6 +36,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   same for every level a row holds.
 
 ### Fixed
+- Game cues no longer scale by the master volume twice. Each plays at its own
+  level beneath Effects and Master, so a half-volume Cabinet no longer plays
+  its cues at a quarter.
 - The terminal Show's curtain line, the exit tease of live terminal views, and
   a landed Times Tables goal no longer print a staged room's reveal before its
   wager and summon. CLI `reveal`, MCP `reveal_room`, and these surfaces share
