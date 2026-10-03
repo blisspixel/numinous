@@ -532,7 +532,7 @@ mod tests {
 
     #[test]
     fn the_census_finds_a_wrong_count_beside_the_right_one() {
-        use crate::prose_census::{Document, misstated, without_unread_section};
+        use crate::prose_census::{Document, misstated};
         let one = |text: &str| {
             vec![Document {
                 path: "docs/EXAMPLE.md".to_string(),
@@ -557,15 +557,6 @@ mod tests {
         assert_eq!(misstated(&prose, "# catalog room", 1).1, 1);
         assert_eq!(misstated(&prose, "# tool", 43).1, 0);
         assert_eq!(misstated(&prose, "# wing", 13).1, 0);
-        // Only the named roadmap section is left unread.
-        let roadmap = "## Now\n356 catalog rooms\n### Decisions the am-track is waiting on\n\
-                       all 354 rooms\n### Standing gates\nall 356 rooms\n";
-        let read = without_unread_section(roadmap);
-        assert!(!read.contains("354"), "{read}");
-        assert!(
-            read.contains("356 catalog rooms\n### Standing gates\nall 356 rooms"),
-            "{read}"
-        );
     }
 
     #[test]

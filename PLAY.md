@@ -57,8 +57,12 @@ is available from Installed Apps.
 ### Before you start: flashing, motion, color, and sound
 
 Two things are known to be wrong and are not fixed yet, so you can decide for
-yourself rather than find out the hard way. coupled-tent, gauss-map, and
-ricker flash faster than the WCAG 2.3.1 budget allows. hilbert,
+yourself rather than find out the hard way. cellular-automata, julia,
+lambda-map, and pickover flash faster than the WCAG 2.3.1 budget allows when
+the App runs them at its fastest speed, 8x. At normal speed and up to 4x they
+stay within it, and every other room stays within it all the way to 8x, at the
+App's 60 frames a second. The music visualizer, which can push a room faster
+still, is not measured. hilbert,
 magnet-fractal, percolation, and wireworld answer a touch in a way the
 color-free renderer cannot show, so under `NO_COLOR` they look like they
 ignored you. `numinous access` prints this same list straight from the code

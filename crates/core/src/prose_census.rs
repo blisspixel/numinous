@@ -28,14 +28,6 @@ const HISTORY: &[&str] = &[
     "docs/history/",
 ];
 
-/// The roadmap section that is not read yet, and why.
-///
-/// On this revision its entries are being revised one by one, and two still
-/// quote counts from the day they were written ("all 354 rooms" in entry 2,
-/// "41 tools" in entry 7). When those are restated, delete this exception so
-/// the section is held to the same lock as the rest of the roadmap.
-const UNREAD_ROADMAP_SECTION: &str = "### Decisions the am-track is waiting on";
-
 /// One current Markdown document: its path from the repository root and its
 /// text.
 pub struct Document {
@@ -86,27 +78,12 @@ fn collect(root: &Path, directory: &Path, recurse: bool, documents: &mut Vec<Doc
         if !relative.ends_with(".md") || HISTORY.contains(&relative.as_str()) {
             continue;
         }
-        let mut text = std::fs::read_to_string(&path)
+        let text = std::fs::read_to_string(&path)
             .unwrap_or_else(|error| panic!("cannot read {relative}: {error}"));
-        if relative == "docs/ROADMAP.md" {
-            text = without_unread_section(&text);
-        }
         documents.push(Document {
             path: relative,
             text,
         });
-    }
-}
-
-/// The roadmap with [`UNREAD_ROADMAP_SECTION`] removed, up to the next
-/// heading of the same level.
-pub fn without_unread_section(text: &str) -> String {
-    let Some((before, rest)) = text.split_once(UNREAD_ROADMAP_SECTION) else {
-        return text.to_string();
-    };
-    match rest.split_once("\n### ") {
-        Some((_, after)) => format!("{before}### {after}"),
-        None => before.to_string(),
     }
 }
 
