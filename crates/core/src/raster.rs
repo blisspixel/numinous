@@ -257,6 +257,12 @@ impl Surface for Raster {
         self.height
     }
 
+    fn paint(&mut self, x: i32, y: i32, _mark: char, color: [u8; 3]) {
+        if x >= 0 && y >= 0 && (x as usize) < self.width && (y as usize) < self.height {
+            self.pixels[y as usize * self.width + x as usize] = color;
+        }
+    }
+
     fn plot(&mut self, x: i32, y: i32, mark: char) {
         if x < 0 || y < 0 {
             return;
@@ -282,6 +288,18 @@ mod tests {
         let r = Raster::new(4, 4);
         assert_eq!(r.width(), 4);
         assert_eq!(r.lit_count(), 0);
+    }
+
+    #[test]
+    fn sampled_colors_replace_pixels_and_clip_without_accumulation() {
+        let mut raster = Raster::new(2, 2);
+        raster.paint(0, 0, '*', [33, 66, 99]);
+        raster.paint(0, 0, '*', [33, 66, 99]);
+        for (x, y) in [(-1, 0), (0, -1), (2, 0), (0, 2), (i32::MAX, i32::MAX)] {
+            raster.paint(x, y, '#', [255, 255, 255]);
+        }
+        assert_eq!(&raster.to_rgba()[..4], &[33, 66, 99, 255]);
+        assert_eq!(raster.lit_count(), 1);
     }
 
     #[test]

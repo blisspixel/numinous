@@ -20,6 +20,20 @@ struct Params {
 
 @group(0) @binding(0) var<uniform> params: Params;
 @group(0) @binding(1) var<storage, read_write> output: array<u32>;
+@group(0) @binding(2) var<uniform> palette: array<vec4<f32>, 8>;
+
+fn escape_color(escape: f32) -> vec3<f32> {
+    if (escape <= palette[0].w) { return palette[0].xyz / 255.0; }
+    for (var j = 1u; j < 8u; j = j + 1u) {
+        let lo = palette[j - 1u];
+        let hi = palette[j];
+        if (escape <= hi.w) {
+            let t = (escape - lo.w) / (hi.w - lo.w);
+            return mix(lo.xyz, hi.xyz, t * t * (3.0 - 2.0 * t)) / 255.0;
+        }
+    }
+    return palette[7].xyz / 255.0;
+}
 
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -44,6 +58,14 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     var i = 0u;
+    if (params.mode == 0u) {
+        let x = cx - 0.25;
+        let y2 = cy * cy;
+        let q = x * x + y2;
+        if (q * (q + x) <= 0.25 * y2 || (cx + 1.0) * (cx + 1.0) + y2 <= 0.0625) {
+            i = params.max_iter;
+        }
+    }
     loop {
         if (i >= params.max_iter) { break; }
         let nx = zx * zx - zy * zy + cx;
@@ -54,19 +76,18 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         if (zx * zx + zy * zy > 4.0) { break; }
     }
 
-    // Julia retains its established warm bands. Mandelbrot maps smooth escape
-    // time to a vivid cosine palette: hue identifies iteration depth while
-    // the dark interior keeps the set itself legible as negative space.
-    var color = vec3<f32>(10.0, 11.0, 15.0) / 255.0;
+    // The color table comes from core, shared with PNG and CPU App fallback.
+    // Julia retains its established warm bands.
+    var color = palette[0].xyz / 255.0;
     if (params.mode == 0u) {
         if (i < params.max_iter) {
-            let magnitude_squared = max(zx * zx + zy * zy, 4.000001);
-            let smooth_i = f32(i) + 1.0 - log2(0.5 * log2(magnitude_squared));
-            let band = smooth_i * 0.071;
-            let phase = vec3<f32>(0.00, 0.34, 0.68);
-            let acid = vec3<f32>(0.55) + 0.45 * cos(6.2831853 * (vec3<f32>(band) + phase));
-            let pulse = 0.62 + 0.38 * (0.5 + 0.5 * cos(6.2831853 * band * 0.37));
-            color = clamp(acid * pulse + vec3<f32>(0.02, 0.04, 0.08), vec3<f32>(0.0), vec3<f32>(1.0));
+            for (var extra = 0u; extra < 2u; extra = extra + 1u) {
+                let nx = zx * zx - zy * zy + cx;
+                zy = 2.0 * zx * zy + cy;
+                zx = nx;
+            }
+            let smooth_i = f32(i) + 3.0 - log2(0.5 * log(zx * zx + zy * zy));
+            color = escape_color(smooth_i);
         }
     } else {
         if (i == params.max_iter) {
@@ -78,8 +99,8 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         }
     }
 
-    let r = u32(clamp(color.x, 0.0, 1.0) * 255.0);
-    let g = u32(clamp(color.y, 0.0, 1.0) * 255.0);
-    let b = u32(clamp(color.z, 0.0, 1.0) * 255.0);
+    let r = u32(round(clamp(color.x, 0.0, 1.0) * 255.0));
+    let g = u32(round(clamp(color.y, 0.0, 1.0) * 255.0));
+    let b = u32(round(clamp(color.z, 0.0, 1.0) * 255.0));
     output[gid.y * params.width + gid.x] = r | (g << 8u) | (b << 16u) | (255u << 24u);
 }

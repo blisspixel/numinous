@@ -7,6 +7,7 @@
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::{MAX_DIM, Surface};
+use crate::fractal::{MANDELBROT_STAGE, mandelbrot_color};
 
 use super::FRACTAL_MAX_ITER;
 const DIVE_FACTOR: f64 = 0.5;
@@ -193,7 +194,20 @@ impl Mandelbrot {
 }
 
 /// How many iterations `z -> z*z + c` survives before escaping `|z| > 2`.
+#[cfg(test)]
 fn escape_iters(cx: f64, cy: f64, max: u32) -> u32 {
+    escape_sample(cx, cy, max).0
+}
+
+fn escape_sample(cx: f64, cy: f64, max: u32) -> (u32, [u8; 3]) {
+    // The main cardioid and period-two bulb are certified interior regions.
+    // Avoid spending the entire iteration budget on their flat dark pixels.
+    let y2 = cy * cy;
+    let x = cx - 0.25;
+    let q = x * x + y2;
+    if q * (q + x) <= 0.25 * y2 || (cx + 1.0).powi(2) + y2 <= 0.0625 {
+        return (max, MANDELBROT_STAGE);
+    }
     let (mut zx, mut zy) = (0.0, 0.0);
     let mut i = 0;
     while i < max && zx * zx + zy * zy <= 4.0 {
@@ -202,7 +216,18 @@ fn escape_iters(cx: f64, cy: f64, max: u32) -> u32 {
         zx = next_x;
         i += 1;
     }
-    i
+    if i == max {
+        return (i, MANDELBROT_STAGE);
+    }
+    // Two post-escape iterations make the continuous potential less dependent
+    // on which orbit step first crossed the bailout circle.
+    for _ in 0..2 {
+        let next_x = zx * zx - zy * zy + cx;
+        zy = 2.0 * zx * zy + cy;
+        zx = next_x;
+    }
+    let smooth = f64::from(i) + 3.0 - (0.5 * (zx * zx + zy * zy).ln()).log2();
+    (i, mandelbrot_color(smooth as f32))
 }
 
 /// Linear interpolation from `a` to `b` by `t`.
@@ -225,19 +250,18 @@ fn render_view(
         for px in 0..width {
             let cx = center_x + (px as f64 - half_w) * scale;
             let cy = center_y + (py as f64 - half_h) * scale;
-            let iters = escape_iters(cx, cy, FRACTAL_MAX_ITER);
-            // Keep non-escaping samples on the shared dark stage. Exterior
-            // escape-time bands use the room accent, rather than gray fill.
+            let (iters, color) = escape_sample(cx, cy, FRACTAL_MAX_ITER);
+            // Text retains a weight ramp; pixels retain the continuous field.
             let mark = if iters == FRACTAL_MAX_ITER {
-                continue;
+                ' '
             } else if iters > 24 {
                 '#'
             } else if iters > 6 {
                 '*'
             } else {
-                continue;
+                ' '
             };
-            canvas.plot(px as i32, py as i32, mark);
+            canvas.paint(px as i32, py as i32, mark, color);
         }
     }
 }
@@ -466,6 +490,23 @@ mod tests {
     }
 
     #[test]
+    fn interior_shortcuts_preserve_the_unshortened_orbit() {
+        use crate::complex::Complex;
+        for cx in [-2.0, -1.75, -1.25, -1.0, -0.75, -0.4, 0.0, 0.25, 0.4, 1.0] {
+            for cy in [-1.0, -0.5, -0.2, 0.0, 0.2, 0.5, 1.0] {
+                let c = Complex::new(cx, cy);
+                let mut z = Complex::ZERO;
+                let mut count = 0;
+                while count < 160 && z.norm_sqr() <= 4.0 {
+                    z = z * z + c;
+                    count += 1;
+                }
+                assert_eq!(escape_iters(cx, cy, 160), count, "c={cx}+{cy}i");
+            }
+        }
+    }
+
+    #[test]
     fn render_is_deterministic_and_has_ink() {
         let room = Mandelbrot::new();
         let mut a = Canvas::new(50, 30);
@@ -477,7 +518,7 @@ mod tests {
     }
 
     #[test]
-    fn cpu_raster_keeps_the_set_dark_and_escape_bands_accented_without_gray_fill() {
+    fn cpu_raster_has_a_smooth_multicolor_exterior_and_a_uniform_dark_interior() {
         let room = crate::room_by_id("mandelbrot").unwrap();
         let mut image = crate::Raster::with_accent(300, 200, room.meta().accent);
         room.render(&mut image, 0.0);
@@ -486,24 +527,24 @@ mod tests {
             let offset = (y * 300 + x) * 4;
             &pixels[offset..offset + 4]
         };
-        let ink = |mark| {
-            let mut sample = crate::Raster::with_accent(1, 1, room.meta().accent);
-            sample.plot(0, 0, mark);
-            sample.to_rgba()
-        };
         let background = crate::Raster::new(1, 1).to_rgba();
         // The opening camera maps these pixels exactly to c=0 and c=-1,
         // whose fixed point and two-cycle never escape.
         assert_eq!(pixel(200, 100), background);
         assert_eq!(pixel(100, 100), background);
+        for (x, y) in [(0, 0), (299, 0), (0, 199), (299, 199)] {
+            assert_eq!(pixel(x, y), background, "the outer field is the stage");
+        }
         // c=.4+.4i escapes after nine iterations; c=-.75+.1i after 33.
-        // Both remain visible, with the slower band brighter.
+        // Both remain visible, without the two-color threshold outline.
         assert_eq!(escape_iters(0.4, 0.4, 160), 9);
         assert_eq!(escape_iters(-0.75, 0.1, 160), 33);
-        assert_eq!(pixel(240, 140), ink('*'));
-        assert_eq!(pixel(125, 110), ink('#'));
-        let gray = ink('-');
-        assert!(pixels.chunks_exact(4).all(|pixel| pixel != gray));
+        assert_ne!(pixel(240, 140), background);
+        assert_ne!(pixel(125, 110), pixel(240, 140));
+        let colors: std::collections::HashSet<_> = pixels.chunks_exact(4).collect();
+        assert!(colors.len() > 300, "the exterior collapsed to an outline");
+        assert!(colors.iter().any(|p| p[0] > p[1] && p[2] > p[1]));
+        assert!(colors.iter().any(|p| p[1] > p[0] && p[2] > p[0]));
     }
 
     #[test]

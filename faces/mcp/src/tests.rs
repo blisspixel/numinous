@@ -3875,6 +3875,51 @@ fn a_function_with_no_finite_samples_is_refused_not_sung_as_silence() {
 }
 
 #[test]
+fn a_bare_unknown_name_returns_no_song_plot_or_save_door() {
+    for tool in ["plot_expression", "sing_expression", "save_creation"] {
+        for source in ["zzzzz", "  zzzzz  ", "(zzzzz)"] {
+            let response = handle_request(&json!({
+                "jsonrpc":"2.0", "id":43, "method":"tools/call",
+                "params":{"name":tool,"arguments":{"expr":source}}
+            }))
+            .expect("tool responds");
+            let result = &response["result"];
+            assert_eq!(result["isError"], true, "{tool}: {response}");
+            assert!(
+                result["content"][0]["text"]
+                    .as_str()
+                    .unwrap()
+                    .contains("unknown name 'zzzzz'")
+            );
+            assert!(result["structuredContent"].is_null());
+            assert!(
+                result["content"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .all(|block| block["type"] == "text")
+            );
+        }
+    }
+    for tool in ["plot_expression", "sing_expression"] {
+        let response = handle_request(&json!({
+            "jsonrpc":"2.0", "id":43, "method":"tools/call",
+            "params":{"name":tool,"arguments":{"expr":"sin(b*x)"}}
+        }))
+        .expect("tool responds");
+        assert_ne!(response["result"]["isError"], true);
+        assert_eq!(
+            response["result"]["structuredContent"]["sliders"][0]["name"],
+            "b"
+        );
+        assert_eq!(
+            response["result"]["structuredContent"]["next"]["tool"],
+            "save_creation"
+        );
+    }
+}
+
+#[test]
 fn the_jokes_can_be_dissected() {
     let list = handle_request(&json!({
         "jsonrpc":"2.0","id":43,"method":"tools/call",

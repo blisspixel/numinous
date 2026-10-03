@@ -62,7 +62,7 @@ plain room fade. Quick room changes may briefly wait on the dark stage.
 
 Two things are known to be wrong and are not fixed yet, so you can decide for
 yourself rather than find out the hard way. cellular-automata, julia,
-lambda-map, and pickover flash faster than the WCAG 2.3.1 budget allows when
+and lambda-map flash faster than the WCAG 2.3.1 budget allows when
 the App runs them at its fastest speed, 8x. At normal speed and up to 4x they
 stay within it, and every other room stays within it all the way to 8x, at the
 App's 60 frames a second. The music visualizer, which can push a room faster
@@ -116,7 +116,9 @@ speed, the right stick scrubs time, Start opens or closes the menu, Select
 opens study, and clicking the left stick resets the room. West changes the
 visual era. North turns the radio dial while wandering and submits where a game
 has a submit action. `N`, or Skip Track under Settings, advances the current
-station. Start pauses a live game behind the menu without discarding it.
+station. Settings also holds Master, Radio, Room Sound, and Effects levels.
+Left and right step each by ten points, and they are kept with your other
+settings. Start pauses a live game behind the menu without discarding it.
 
 ### Make something in the Studio
 
@@ -277,6 +279,11 @@ Now here is everything you need to start. Three tools:
    whose `next` lists the bundled capsules. `describe_room` gives a room's
    title, wing, action, goal, and doorway without the explanation.
 
+`listen_room` describes the stable room bed under `ambient_bed`. Request
+`ambient_detail: "events"` for its arranged notes, including each note's
+articulation. This is the pre-master source; App reverb and playback levels
+change local playback, leaving those source facts unchanged.
+
 Or let the house choose a bounded performance. Call **`watch_show`** with no
 arguments for the first cue of the six-room Strange Loop score. Each result
 contains exact ASCII looks, visual alternatives, deltas, sound notation, and an
@@ -310,6 +317,9 @@ want it, and the full manual for a clone is
 You do not need either to start, and starting is better.
 
 ### Make something
+
+A bare unknown name such as `zzzzz` is refused. Introduce a named slider in
+a formula such as `sin(b*x)`; `x`, `t`, `a`, `pi`, and `e` remain valid alone.
 
 `plot_expression` draws a function nobody has plotted before, or a parametric
 path from paired `x_expr` and `y_expr` fields. `sing_expression` sings one:

@@ -330,6 +330,22 @@ jobs:
     name: release artifacts
     uses: ./.github/workflows/release-packages.yml
 
+  gpu-field:
+    name: CPU and GPU color field
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - name: Install software Vulkan
+        run: bash scripts/ci-linux-libs.sh mesa-vulkan-drivers
+      - name: Compare independently rendered CPU and GPU fields
+        run: |
+          python3 scripts/run-exact-test.py --package numinous-gpu --lib --ignored \
+            tests::mandelbrot_gpu_and_cpu_share_the_smooth_color_field
+
   main-ci:
     name: main CI
     if: always()
@@ -344,6 +360,7 @@ jobs:
       - coverage
       - build
       - release-artifacts
+      - gpu-field
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -357,6 +374,7 @@ jobs:
       COVERAGE_RESULT: ${{ needs.coverage.result }}
       BUILD_RESULT: ${{ needs.build.result }}
       RELEASE_ARTIFACTS_RESULT: ${{ needs.release-artifacts.result }}
+      GPU_FIELD_RESULT: ${{ needs.gpu-field.result }}
     steps:
       - name: Require every CI job
         run: |
@@ -370,7 +388,8 @@ jobs:
             "$CODEQL_RESULT" \
             "$COVERAGE_RESULT" \
             "$BUILD_RESULT" \
-            "$RELEASE_ARTIFACTS_RESULT"
+            "$RELEASE_ARTIFACTS_RESULT" \
+            "$GPU_FIELD_RESULT"
           do
             test "$result" = success
           done

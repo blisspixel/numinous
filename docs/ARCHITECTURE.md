@@ -123,8 +123,9 @@ dependency.
   ownership, global keyboard and controller gain controls, and separate
   validated radio playback. The App renders the effective source, level, and
   silence reason through one persistent HUD state.
-  A shared mix bus and
-  sample-accurate scheduler remain roadmap work (see `MUSIC.md` and `SOUND.md`).
+  One shared master chain carries room, music, and effect buses through a
+  shared reverb, the master level, and a soft limiter. A sample-accurate
+  scheduler remains roadmap work (see `MUSIC.md` and `SOUND.md`).
 - **Headless room-bed evidence:** core owns the 16 kHz stereo arrangement and
   fixed-order signal analysis. The App consumes that source directly. CLI
   `sonify --layer room-bed` writes its exact PCM16 projection, while MCP
@@ -197,7 +198,10 @@ Built-in `RoomMetadata` implementations, module declarations, and replayable
 constructors are generated from one typed catalog declaration. The inherited
 `RoomMetadata::meta` method is the single object-safe discovery dispatch used
 by faces. `Surface`
-is the rendering seam for ASCII and RGBA output. `RoomInput` is bounded,
+is the rendering seam for ASCII and RGBA output. Its `paint` operation pairs a
+continuous field color with a text glyph; `Raster` replaces the sampled pixel,
+while text surfaces keep the glyph. Mandelbrot's palette lives in core and is
+uploaded as a uniform by the GPU adapter. `RoomInput` is bounded,
 normalized, replayable gesture data. `Motif` and `SoundSpec` keep notation and
 audio face-neutral. Seeded registry constructors provide variation without
 ambient randomness. `parameter_sound` describes a continuous input-controlled
@@ -253,7 +257,7 @@ numinous/
 ├── crates/
 │   ├── core/            # rooms, sims, games, Studio math, persistence, audio specs
 │   ├── gpu/             # optional wgpu fractal renderer with CPU fallback
-│   ├── audio/           # cpal output and looping sample player
+│   ├── audio/           # cpal output, bus mixer, reverb, and limiter
 │   └── broadcast/       # consent, pairing, framing, identity, bounded queue
 ├── faces/
 │   ├── app/             # winit window, softbuffer, mouse/controller input, radio

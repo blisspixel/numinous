@@ -127,6 +127,27 @@ fn every_way_of_changing_rooms_enters_through_the_dissolve() {
 }
 
 #[test]
+fn room_changes_preserve_the_radio_source_and_broadcast_position() {
+    let mut app = presented_app("numinous_app_test_motion_radio", Motion::Full);
+    let track = std::sync::Arc::new(vec![0.1, -0.1, 0.2, -0.2]);
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    app.radio = Some(0);
+    app.radio_track = track.clone();
+    app.radio_index = 3;
+    app.radio_until = Some(until);
+    app.audio_program = super::audio_state::Program::Radio;
+    for _ in 0..8 {
+        app.switch(1);
+        app.advance_presentation_time(0.04);
+        assert_eq!(app.audio_program, super::audio_state::Program::Radio);
+        assert!(std::sync::Arc::ptr_eq(&app.radio_track, &track));
+        assert_eq!(app.radio_index, 3);
+        assert_eq!(app.radio_until, Some(until));
+    }
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
 fn the_room_index_is_written_in_one_place() {
     // The behavioural test above walks every way that exists today. This
     // keeps a new one from writing the room index directly and cutting.

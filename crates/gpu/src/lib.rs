@@ -328,14 +328,33 @@ pub enum Fractal {
 impl GpuContext {
     /// Create a context, adapting to whatever adapter this machine offers.
     ///
-    /// Prefers a real GPU; falls back to a CPU adapter so it never fails to run.
+    /// Tries primary graphics backends before initializing secondary drivers.
+    /// Each search can fall back to a CPU adapter.
     ///
     /// # Errors
-    /// Returns an error string if no adapter at all can be acquired.
+    /// Returns an error if no compatible adapter or device can be acquired.
     pub fn new() -> Result<Self, String> {
-        let instance = wgpu::Instance::default();
-        let adapter = Self::request_adapter(&instance, None)?;
+        let instance = Self::primary_instance();
+        let adapter = Self::request_adapter(&instance, None).or_else(|primary_error| {
+            // Only initialize the secondary driver when no primary adapter is
+            // available. Initializing every backend exposed an OpenGL driver
+            // teardown crash in a Windows probe.
+            let secondary = wgpu::Instance::new(wgpu::InstanceDescriptor {
+                backends: wgpu::Backends::SECONDARY,
+                ..wgpu::InstanceDescriptor::new_without_display_handle()
+            });
+            Self::request_adapter(&secondary, None).map_err(|secondary_error| {
+                format!("primary adapters: {primary_error}; secondary adapters: {secondary_error}")
+            })
+        })?;
         Self::from_adapter(adapter)
+    }
+
+    fn primary_instance() -> wgpu::Instance {
+        wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::PRIMARY,
+            ..wgpu::InstanceDescriptor::new_without_display_handle()
+        })
     }
 
     fn request_adapter(
@@ -442,6 +461,7 @@ impl GpuContext {
 pub struct FractalRenderer {
     context: GpuContext,
     pipeline: wgpu::ComputePipeline,
+    palette: wgpu::Buffer,
     /// Cached output and readback buffers with their pixel size.
     buffers: Option<(u32, u32, wgpu::Buffer, wgpu::Buffer)>,
 }
@@ -474,9 +494,17 @@ impl FractalRenderer {
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
                 cache: None,
             });
+        let palette = context
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("mandelbrot-palette"),
+                contents: bytemuck::cast_slice(&numinous_core::fractal::MANDELBROT_PALETTE),
+                usage: wgpu::BufferUsages::UNIFORM,
+            });
         Self {
             context,
             pipeline,
+            palette,
             buffers: None,
         }
     }
@@ -566,6 +594,10 @@ impl FractalRenderer {
                     binding: 1,
                     resource: storage_buf.as_entire_binding(),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: self.palette.as_entire_binding(),
+                },
             ],
         });
 
@@ -611,6 +643,53 @@ mod tests {
     use super::{
         FrameLayout, RenderError, copy_mapped_bytes, frame_size_supported, validate_map_completion,
     };
+
+    #[test]
+    #[ignore = "requires a graphics adapter"]
+    fn mandelbrot_gpu_and_cpu_share_the_smooth_color_field() {
+        use numinous_core::{Raster, Room};
+        let mut renderer = super::FractalRenderer::new().expect("graphics adapter");
+        eprintln!(
+            "adapter: {} ({})",
+            renderer.adapter_name(),
+            renderer.context.backend()
+        );
+        let (width, height) = (160, 120);
+        let gpu = renderer
+            .render(
+                width,
+                height,
+                -0.5,
+                0.0,
+                2.25,
+                160,
+                super::Fractal::Mandelbrot,
+            )
+            .expect("GPU frame");
+        let mut cpu = Raster::new(width as usize, height as usize);
+        numinous_core::rooms::mandelbrot::Mandelbrot::new().render(&mut cpu, 0.0);
+        let cpu = cpu.to_rgba();
+        let mut differences: Vec<u8> = gpu
+            .chunks_exact(4)
+            .zip(cpu.chunks_exact(4))
+            .map(|(a, b)| {
+                a[..3]
+                    .iter()
+                    .zip(&b[..3])
+                    .map(|(&x, &y)| x.abs_diff(y))
+                    .max()
+                    .unwrap()
+            })
+            .collect();
+        differences.sort_unstable();
+        // f32 and f64 orbits diverge at the intricate boundary. Away from it,
+        // the independently computed field must retain the same presentation.
+        assert!(differences[differences.len() * 99 / 100] <= 3);
+        let colors: std::collections::HashSet<_> = gpu.chunks_exact(4).collect();
+        assert!(colors.len() > 300);
+        let center = (height as usize / 2 * width as usize + width as usize / 2) * 4;
+        assert_eq!(&gpu[center..center + 4], &[10, 11, 15, 255]);
+    }
 
     #[test]
     fn frame_layout_enforces_product_and_device_limits() {

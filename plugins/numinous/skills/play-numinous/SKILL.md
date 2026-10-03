@@ -157,8 +157,14 @@ maps and chosen search endpoints.
 
 ## Make
 
+A bare unknown name such as `zzzzz` is refused. Introduce a named slider in
+a formula such as `sin(b*x)`; `x`, `t`, `a`, `pi`, and `e` remain valid alone.
+
 Use `listen_room` when notation and measured sound roles help you perceive the
-system. Use `plot_expression` and `sing_expression` when you want to make rather
+system. Its `ambient_bed` describes the stable pre-master room source;
+`ambient_detail: "events"` adds its arranged notes and their articulation.
+App reverb and playback levels do not change those source facts.
+Use `plot_expression` and `sing_expression` when you want to make rather
 than observe. `sing_expression` with `midi: true` returns a Standard MIDI
 File: 12-TET keys plus pitch bend of leftover cents over plus or minus two
 semitones. A successful plot or song returns `structuredContent.next` as a

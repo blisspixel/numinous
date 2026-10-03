@@ -109,7 +109,7 @@ pub fn room_by_id_with(id: &str, variation: u64) -> Option<Box<dyn Room>> {
 /// rooms to the player from the same list the tests enforce: a count that
 /// lives in prose drifts, a count that lives here cannot.
 ///
-/// The four below were found when the sweep moved to the App's worst case on
+/// The three below were found when the sweep moved to the App's worst case on
 /// 2026-10-02. Each is within budget at 1x, 2x and 4x. At 8x the App runs 2.4
 /// cycles a second, and each picture's whole-frame brightness swings by more
 /// than a tenth more than once per cycle:
@@ -120,15 +120,12 @@ pub fn room_by_id_with(id: &str, variation: u64) -> Option<Box<dyn Room>> {
 ///   large connected set and back, with a dip on the way up and down.
 /// - `lambda-map` sweeps its parameter along a loop; the escape-time picture's
 ///   mean luminance runs between 0.36 and 0.70, down and up twice a cycle.
-/// - `pickover` sweeps two parameters straight across a cycle; the attractor
-///   collapses to a periodic freckle at some of them and jumps back at the wrap.
 ///
 /// Fixing them changes each room's tour or speed, which is ROADMAP decision 2.
-pub const KNOWN_OVER_FLASH_BUDGET: [(&str, f64); 4] = [
+pub const KNOWN_OVER_FLASH_BUDGET: [(&str, f64); 3] = [
     ("cellular-automata", 8.0),
     ("julia", 8.0),
     ("lambda-map", 8.0),
-    ("pickover", 8.0),
 ];
 
 /// Rooms whose answer to a touch the color-free renderer cannot show,
@@ -885,6 +882,45 @@ mod tests {
                 .iter()
                 .fold(0.0f64, |worst, state| worst.max(state.saturation)),
         }
+    }
+
+    #[test]
+    fn mandelbrot_color_field_stays_inside_the_measured_flash_budget() {
+        let room = crate::rooms::mandelbrot::Mandelbrot::new();
+        let speeds: Vec<_> = std::iter::successors(Some(1usize), |speed| Some(speed * 2))
+            .take_while(|&speed| speed as f64 <= crate::MAX_TIME_SCALE)
+            .collect();
+        let sweep = sweep_room(&room, &speeds);
+        assert!(sweep.over.is_none(), "general flashes: {:?}", sweep.over);
+        assert!(
+            sweep.red_over.is_none(),
+            "red flashes: {:?}",
+            sweep.red_over
+        );
+        assert!(
+            sweep.swing > 0.01,
+            "the field did not change during the sweep"
+        );
+    }
+
+    #[test]
+    fn pickover_fixed_viewport_stays_inside_the_measured_flash_budget() {
+        let speeds = [1, 2, 4, 8];
+        assert_eq!(
+            speeds.last().map(|&speed| speed as f64),
+            Some(crate::MAX_TIME_SCALE)
+        );
+        let sweep = sweep_room(&crate::rooms::pickover::Pickover::new(), &speeds);
+        assert!(sweep.over.is_none(), "general flashes: {:?}", sweep.over);
+        assert!(
+            sweep.red_over.is_none(),
+            "red flashes: {:?}",
+            sweep.red_over
+        );
+        assert!(
+            sweep.swing > 0.01,
+            "the orbit did not change during the sweep"
+        );
     }
 
     #[test]

@@ -10,6 +10,7 @@ function Invoke-Step($name, $script) {
 }
 
 Invoke-Step "fmt"         { cargo fmt --all --check }
+Invoke-Step "ignored test wiring" { python scripts/test-ignored-tests-run-somewhere.py }
 Invoke-Step "clippy"      { cargo clippy --workspace --all-targets -- -D warnings }
 Invoke-Step "GPU post and App presentation" {
     cargo clippy -p numinous-gpu --all-features --all-targets -- -D warnings

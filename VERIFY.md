@@ -1,7 +1,8 @@
 # How to verify Numinous
 
 Use these commands to check the source and regenerate its evidence. Most
-focused core tests need no device. The full gate also runs the feature-gated
+focused core tests need no device. The full gate needs a graphics adapter
+for its CPU/GPU color comparison and also runs the feature-gated
 presentation checks and fetches current dependency advisories when the audit
 tools are installed.
 
@@ -34,6 +35,9 @@ the from-source verification path for contributors and the curious.
   support for `--source-ref`, `--source-digest`, `--signer-digest`, and
   `--deny-self-hosted-runners`. These instructions are checked with GitHub CLI
   2.97.0.
+- A Vulkan, Metal, or Direct3D 12 adapter for the full gate's offscreen color
+  comparison. Software Vulkan suffices on Linux; this test needs no window
+  and does not qualify physical presentation.
 - The Linux build needs the ALSA, xkbcommon, and libudev headers. Running the
   direct-surface proof also needs the xkbcommon X11 runtime, Mesa Vulkan, and
   Xvfb. CI installs them with:
@@ -46,7 +50,8 @@ Run the full gate and regenerate every artifact:
 - Windows: `scripts\verify.ps1`
 - macOS / Linux: `bash scripts/verify.sh`
 
-It runs format, clippy and rustdoc with warnings denied, Rust, 0.4 study runner
+It runs format, clippy and rustdoc with warnings denied, Rust, a CPU/GPU color
+comparison with exact-test execution checked, ignored-test wiring, 0.4 study runner
 and collector, portable Agent Plugins, canonical schema and skill conformance,
 production knowledge-export YAML validation, both Sensory Lift platform contracts, and
 deterministic release-packaging tests, the 1.89 MSRV check (if that toolchain is
@@ -66,8 +71,9 @@ naming none of the three jobs about to fail.
 GitHub exposes one protected result named `main CI`. It is an aggregate, not a
 shortcut: it waits for format, Clippy, tests, docs, MSRV, house style,
 dependency review, supply-chain checks, RustSec audit, Rust and workflow CodeQL,
-coverage, Windows, macOS, and Linux builds, and the four-package release-set
-audit. The release packages are artifacts of the same CI run. A cancelled,
+coverage, Windows, macOS, and Linux builds, a CPU/GPU Mandelbrot color-field
+comparison on software Vulkan, and the four-package release-set audit. The
+release packages are artifacts of the same CI run. A cancelled,
 skipped, timed-out, or failed dependency makes `main CI` fail. CodeQL findings
 are published for review; alert presence does not itself fail the analysis
 action.

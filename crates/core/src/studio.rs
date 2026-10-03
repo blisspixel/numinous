@@ -3987,8 +3987,8 @@ pub fn parse(source: &str) -> Result<Expr, String> {
 /// plane needs: `z` for the point itself, `y` for its imaginary coordinate
 /// beside the `x` a curve already spells, `i` for the imaginary unit, and
 /// `re`, `im`, `arg`, and `conj` for reading a value back apart. The curve
-/// grammar is left exactly as it was, so every saved curve parses to the same
-/// expression it always did.
+/// grammars share expression and bare-name checks, so an accepted curve keeps
+/// its meaning when read as a field.
 ///
 /// # Errors
 /// Returns the same bounded parser diagnostics as [`parse`].
@@ -4007,8 +4007,8 @@ enum Grammar {
 
 /// Whole-source tracker marks: `x..x..x.`.
 ///
-/// A lone `x` stays the variable. A run of letters with no rest stays a
-/// slider name. The form must include a `.` so those two cannot be stolen.
+/// A lone `x` stays the variable. A run of letters with no rest is not a
+/// pattern. The form must include a `.` so variable names cannot be stolen.
 fn tracker_pattern_from_source(source: &str) -> Result<Option<Vec<bool>>, String> {
     let compact: String = source.chars().filter(|c| !c.is_whitespace()).collect();
     if compact.len() < 2 || !compact.contains('.') {
@@ -4120,6 +4120,19 @@ fn parse_in(source: &str, grammar: Grammar) -> Result<Expr, String> {
         return Err(format!(
             "unexpected trailing input at column {}",
             parser.current_column()
+        ));
+    }
+    if let Expr::Slider(name) = &expr {
+        let column = parser
+            .tokens
+            .iter()
+            .zip(&parser.columns)
+            .find_map(|(token, &column)| {
+                matches!(token, Tok::Ident(identifier) if identifier == name).then_some(column)
+            })
+            .unwrap_or(1);
+        return Err(format!(
+            "unknown name '{name}' at column {column}; use a formula such as sin({name}*x) to introduce a named slider"
         ));
     }
     Ok(expr)
@@ -4561,11 +4574,46 @@ mod tests {
     }
 
     #[test]
-    fn every_saved_curve_still_parses_to_the_expression_it_always_did() {
+    fn curated_curves_keep_their_meaning_in_the_field_grammar() {
         for source in STUDIO_RECIPES {
             let curve = parse(source).expect("recipe parses as a curve");
             let field = parse_field(source).expect("recipe parses as a field too");
             assert_eq!(curve, field, "{source} changed meaning between grammars");
+        }
+    }
+
+    #[test]
+    fn a_bare_unknown_name_is_not_a_finished_creation() {
+        for source in ["zzzzz", "  zzzzz  ", "((zzzzz))", "sin", "foo"] {
+            for parser in [parse, parse_field] {
+                let error = parser(source).expect_err("a bare name must be refused");
+                assert!(error.contains("unknown name"), "{source}: {error}");
+                if source.trim().contains("zzzzz") {
+                    assert!(error.contains("named slider"));
+                    let column = source.find("zzzzz").unwrap() + 1;
+                    assert!(error.contains(&format!("column {column};")));
+                }
+            }
+            assert!(StudioCreation::new(source, -1.0, 1.0, 1.0).is_err());
+        }
+        for source in [
+            "x",
+            "t",
+            "a",
+            "pi",
+            "e",
+            "1",
+            "sin(a*x)",
+            "sin(b*x)",
+            "b*x",
+            "euclid(3,8)",
+            "pat(x..x..x.)",
+            "note(\"c e g\")",
+        ] {
+            parse(source).unwrap_or_else(|error| panic!("{source}: {error}"));
+        }
+        for source in ["z", "y", "i", "abs(z)", "b*z"] {
+            parse_field(source).expect("field vocabulary and parameters still work");
         }
     }
 
@@ -5174,7 +5222,14 @@ mod tests {
         assert!(parse("pat").is_err());
         assert!(parse("pat(z..)").is_err());
         assert!(matches!(parse("x").expect("variable"), Expr::Var));
-        assert!(matches!(parse("xx").expect("slider"), Expr::Slider(_)));
+        assert!(
+            parse("xx").is_err(),
+            "a bare name is neither a pattern nor a formula"
+        );
+        assert!(
+            parse("xx*x").is_ok(),
+            "named parameters belong in a formula"
+        );
         assert_eq!(eval(&parse(".x").expect("rest then hit"), 0.0, 1.0), 0.0);
         assert_eq!(eval(&parse(".x").expect("rest then hit"), 1.0, 1.0), 1.0);
         assert!((at(".5 + x", 1.0) - 1.5).abs() < 1e-12);

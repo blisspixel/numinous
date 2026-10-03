@@ -626,7 +626,7 @@ impl<'window> SensorySurfaceRenderer<'window> {
         width: u32,
         height: u32,
     ) -> Result<Self, String> {
-        let instance = wgpu::Instance::default();
+        let instance = GpuContext::primary_instance();
         let surface = instance
             .create_surface(target)
             .map_err(|error| format!("failed to create GPU surface: {error}"))?;

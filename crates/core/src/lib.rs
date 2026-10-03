@@ -68,6 +68,7 @@ pub mod era;
 pub mod field;
 pub mod fifteen;
 pub mod font;
+pub mod fractal;
 pub mod gauntlet;
 pub mod graph_slope;
 pub mod hackenbush;

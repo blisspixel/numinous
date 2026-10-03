@@ -5,6 +5,8 @@ set -euo pipefail
 
 echo "== fmt =="
 cargo fmt --all --check
+echo "== ignored test wiring =="
+python3 scripts/test-ignored-tests-run-somewhere.py
 echo "== clippy =="
 cargo clippy --workspace --all-targets -- -D warnings
 echo "== GPU post and App presentation =="

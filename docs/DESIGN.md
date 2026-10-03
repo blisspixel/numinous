@@ -7,9 +7,10 @@ claim that every element below ships in the current alpha. Built: the native
 app, CLI, MCP face, catalog, Show, deterministic room voices, four Visual Eras,
 Studio expression surface, PNG postcards, short APNG loops, exact file and link
 reopening through App arguments and drops, the local Gallery, and the doorway
-rules in **Voice** below, room transitions through the stage, and critically
-damped springs for drag dials and Studio knobs. Designed: the full theme
-system, audio wash during room transitions, longer video export,
+rules in **Voice** below. Room changes fade through the stage; drag dials and
+Studio knobs use critically damped springs. Sound shares articulation, reverb,
+limiting, persisted source levels, and room-change washes. Designed: the full
+theme system, longer video export,
 operating-system URL registration, the community creator platform, and the
 complete audio architecture. `ROADMAP.md` is the status authority.
 

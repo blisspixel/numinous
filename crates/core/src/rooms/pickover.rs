@@ -8,6 +8,14 @@ use crate::surface::Surface;
 
 const ITERS: usize = 24_000;
 
+fn step([x, y, z]: [f64; 3], [a, b, c, d]: [f64; 4]) -> [f64; 3] {
+    [
+        (a * y).sin() - z * (b * x).cos(),
+        z * (c * x).sin() - (d * y).cos(),
+        x.sin(),
+    ]
+}
+
 fn phase_unit(t: f64) -> f64 {
     if t.is_finite() {
         t.clamp(0.0, 1.0)
@@ -56,56 +64,18 @@ fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
     let mut x = 0.1_f64;
     let mut y = 0.1_f64;
     let mut z = 0.1_f64;
-    let mut pts = Vec::with_capacity(ITERS);
-    for _ in 0..ITERS {
-        let nx = (a * y).sin() - z * (b * x).cos();
-        let ny = z * (c * x).sin() - (d * y).cos();
-        let nz = x.sin();
-        if !nx.is_finite() || !ny.is_finite() || !nz.is_finite() {
-            break;
-        }
-        if nx.abs() > 20.0 || ny.abs() > 20.0 {
-            // Soft reset keeps ink flowing instead of going blank.
-            x = 0.1;
-            y = 0.1;
-            z = 0.1;
-            continue;
-        }
-        x = nx;
-        y = ny;
-        z = nz;
-        pts.push((x, y));
-    }
-    if pts.len() < 50 {
-        for i in 0..480 {
-            let th = i as f64 / 479.0 * std::f64::consts::TAU * 3.0;
-            let r = 0.1 + 0.32 * (i as f64 / 479.0);
-            let px = (0.5 + r * th.cos()) * width.saturating_sub(1) as f64;
-            let py = (0.5 + r * th.sin() * 0.7) * height.saturating_sub(1) as f64;
-            canvas.plot(px.round() as i32, py.round() as i32, '*');
-            canvas.plot(px.round() as i32 + 1, py.round() as i32, '.');
-        }
-        return;
-    }
-    let mut min_x = f64::MAX;
-    let mut max_x = f64::MIN;
-    let mut min_y = f64::MAX;
-    let mut max_y = f64::MIN;
-    for &(px, py) in &pts {
-        min_x = min_x.min(px);
-        max_x = max_x.max(px);
-        min_y = min_y.min(py);
-        max_y = max_y.max(py);
-    }
-    let dx = (max_x - min_x).max(1e-6);
-    let dy = (max_y - min_y).max(1e-6);
+    // Since z' = sin(x), |z| <= 1. The two other coordinates are sums of
+    // terms bounded by one, so every iterate lies in [-2, 2] on both axes.
+    // Keep that viewport fixed: fitting each orbit to its own extrema makes
+    // a nearly periodic orbit swell into a bright plate as the parameters move.
     let mx = width as f64 * 0.05;
     let my = height as f64 * 0.05;
     let iw = (width as f64 - 2.0 * mx).max(1.0);
     let ih = (height as f64 - 2.0 * my).max(1.0);
-    for (i, &(px, py)) in pts.iter().enumerate() {
-        let u = ((px - min_x) / dx).clamp(0.0, 1.0);
-        let v = ((py - min_y) / dy).clamp(0.0, 1.0);
+    for i in 0..ITERS {
+        [x, y, z] = step([x, y, z], [a, b, c, d]);
+        let u = (x + 2.0) / 4.0;
+        let v = (y + 2.0) / 4.0;
         let ix = (mx + u * iw).round() as i32;
         let iy = (my + (1.0 - v) * ih).round() as i32;
         let ch = if i % 10 == 0 { '#' } else { '*' };
@@ -185,12 +155,7 @@ impl Room for Pickover {
         let mut y = 0.1_f64;
         let mut z = 0.1_f64;
         for _ in 0..40 {
-            let nx = (a * y).sin() - z * (b * x).cos();
-            let ny = z * (c * x).sin() - (d * y).cos();
-            let nz = x.sin();
-            x = nx;
-            y = ny;
-            z = nz;
+            [x, y, z] = step([x, y, z], [a, b, c, d]);
             if !x.is_finite() || !y.is_finite() || x.abs() > 50.0 || y.abs() > 50.0 {
                 return Some(format!("a={a:.2} b={b:.2}  span=0  div"));
             }
@@ -200,9 +165,7 @@ impl Room for Pickover {
         let mut min_y = y;
         let mut max_y = y;
         for _ in 0..500 {
-            let nx = (a * y).sin() - z * (b * x).cos();
-            let ny = z * (c * x).sin() - (d * y).cos();
-            let nz = x.sin();
+            let [nx, ny, nz] = step([x, y, z], [a, b, c, d]);
             if !nx.is_finite() || !ny.is_finite() || nx.abs() > 50.0 || ny.abs() > 50.0 {
                 break;
             }
@@ -257,22 +220,54 @@ mod tests {
 
     #[test]
     fn render_ink() {
-        let mut c = Canvas::new(40, 28);
-        Pickover::new().render(&mut c, 0.5);
-        assert!(c.ink_count() > 80, "swirl must fill the plate");
-        for t in [0.0, 0.35, 0.55, 0.9] {
+        let mut c = Canvas::new(80, 56);
+        Pickover::new().render(&mut c, 0.4);
+        assert!(c.ink_count() > 80, "the postcard must show a visible orbit");
+        for t in [0.0, 0.35, 0.4, 0.5, 0.55, 0.9] {
             let mut large = Canvas::new(120, 70);
             Pickover::new().render(&mut large, t);
-            assert!(
-                large.ink_count() > 150,
-                "t={t} must not collapse to freckles: {}",
-                large.ink_count()
-            );
+            assert!(large.ink_count() > 150, "t={t}: the orbit is missing");
         }
     }
 
     #[test]
     fn motif_ok() {
         assert!(Pickover::new().motif().unwrap().line.len() >= 6);
+    }
+
+    #[test]
+    fn the_projection_uses_the_maps_fixed_bounds() {
+        #[derive(Default)]
+        struct FirstMark(Option<(i32, i32)>);
+        impl crate::surface::Surface for FirstMark {
+            fn width(&self) -> usize { 120 }
+            fn height(&self) -> usize { 70 }
+            fn plot(&mut self, x: i32, y: i32, _: char) {
+                self.0.get_or_insert((x, y));
+            }
+        }
+        // Substitution into the published map at a=-0.76 and b=2.45 gives
+        // (-0.172940591, -0.976273839) for the first iterate of (0.1,0.1,0.1).
+        // It belongs at (55,50) in the fixed [-2,2] view, independently of
+        // the extrema that the remaining orbit happens to visit.
+        let mut first = FirstMark::default();
+        Pickover::new().render(&mut first, 0.5);
+        assert_eq!(first.0, Some((55, 50)));
+
+        // The bounds are invariant, including the corners and every seed
+        // variation's parameter tour, rather than fitted to one screenshot.
+        for seed in 0..5 {
+            for phase in 0..=20 {
+                let (a, b, c, d) = super::params(phase as f64 / 20.0, None, seed);
+                for x in [-2.0, -1.0, 0.0, 1.0, 2.0] {
+                    for y in [-2.0, -1.0, 0.0, 1.0, 2.0] {
+                        for z in [-1.0, 0.0, 1.0] {
+                            let [nx, ny, nz] = super::step([x, y, z], [a,b,c,d]);
+                            assert!(nx.abs() <= 2.0 && ny.abs() <= 2.0 && nz.abs() <= 1.0);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

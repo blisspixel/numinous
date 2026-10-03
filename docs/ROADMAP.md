@@ -15,7 +15,7 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 Reviewed 2026-10-03.
 
-**Current release state: 0.4.0-alpha.31, Understanding Alpha active with its
+**Current release state: 0.4.0-alpha.32, Understanding Alpha active with its
 exit open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile
 Alpha agent-and-machine exits are met and stay CI-locked. The alpha suffix
 says the 0.4 exit remains open: external registration, calibration,
@@ -52,8 +52,8 @@ with the labels from `RESEARCH.md`.
 
 | # | Next move | Evidence today | Done when | Owner doc |
 |---|---|---|---|---|
-| 1 | **The Sensory Lift** | Measured: the GPU post stack and direct surface pass their integrated-GPU budgets, and a Windows physical pair passed on the Framework 13 reference at an earlier revision. In progress: the closed set needs all six physical receipts at one frozen revision; the first native macOS attempt was refused because the console session was locked, and the Linux probe is built and awaits a desktop session. Built: room changes through the dark stage, critically damped drag dials and Studio knobs, and a transition flash guard. In progress on unmerged branches: one shared master chain with reverb, shaped envelopes, and independent music, effect, and room levels (`lift-sound`); the ink ramp and soft light inside `Raster`, with the Mandelbrot interior answered in closed form (`lift-light`). Designed: transition audio wash, player text scale and the accent lightness band | The six physical receipts close the set, the lift is promoted, and the visual and audio goldens re-baseline once, deliberately, with it | `PERFORMANCE.md`, `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md` |
-| 2 | **Mathematical honesty and photosensitivity** | Built: an exact or dithered iterator for the expanding maps, so no slope-2 map collapses to zero in binary floating point; Coupled Tents, Gauss Map, and Ricker redrawn honestly and inside the flash budget; the flash sweep measured at the App's 60 frames a second up to its fastest 8x speed. Open: four rooms flash only at 8x (decisions entry 2) | The 8x remainder carries an owner ruling, either a speed cap or tour pacing, and no room presents a floating-point artifact as dynamics | `MATHEMATICS.md`, decisions entry 2 |
+| 1 | **The Sensory Lift** | Measured: the GPU post stack and direct surface pass their integrated-GPU budgets, and a Windows physical pair passed on the Framework 13 reference at an earlier revision. In progress: the closed set needs all six physical receipts at one frozen revision; the first native macOS attempt was refused because the console session was locked, and the Linux probe is built and awaits a desktop session. Built: room changes through the dark stage, critically damped drag dials and Studio knobs, a transition flash guard, and one shared master chain with reverb, shaped envelopes, independent music, effect, and room levels, and room-change audio washes; audio goldens follow the new articulation. Built: one smooth Mandelbrot color field across CPU and GPU, with the main cardioid and period-two bulb answered in closed form. In progress on an unmerged branch: the ink ramp and soft light inside `Raster` (`lift-light`). Designed: player text scale and the accent lightness band | The six physical receipts close the set, the lift is promoted, and the visual goldens re-baseline once, deliberately, with it | `PERFORMANCE.md`, `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md` |
+| 2 | **Mathematical honesty and photosensitivity** | Built: an exact or dithered iterator for the expanding maps, so no slope-2 map collapses to zero in binary floating point; Coupled Tents, Gauss Map, Ricker, and Pickover redrawn honestly and inside the measured flash budget; the flash sweep measured at the App's 60 frames a second up to its fastest 8x speed. Open: three rooms flash only at 8x (decisions entry 2) | The 8x remainder carries an owner ruling, either a speed cap or tour pacing, and no room presents a floating-point artifact as dynamics | `MATHEMATICS.md`, decisions entry 2 |
 | 3 | **The arc** | Built: the three-door threshold in the App and over MCP; the caller-paced Show for minds; an App Show that names each room without printing its reveal unasked; core Show director profiles with seeded, contrast-aware ordering that keeps staged answers unperformed; the Front Hall collection; and The Overture as a core score that minds can play over MCP `watch_show`. Designed: App playback of the Overture, after the lift's audio bus | A first visit meets an authored opening rather than catalog order, and the App plays it in the lifted light | `DESIGN.md`, `INSIGHTS.md` |
 | 4 | **Vibe: radio and chill** | Built: the radio's three stations of original tracks on a live broadcast clock, a music visualizer that already quickens The Show with the mix's energy, and per-room tempo and key in the core Show director. Designed: one lean-back mode where a station plays through and the music chooses and paces the rooms, with screensaver manners (`DESIGN.md`, "Vibe: radio and chill") | Numinous can be left on for hours like a radio: the music leads, rooms change on its seams inside the certified flash envelope, no text or prompts appear, and any touch hands the current room back | `DESIGN.md`, `MUSIC.md` |
 | 5 | **Room depth** | Observed in packaged agent sessions (`PLAYTESTS.md`): `attention` and `strange-loop` carry a standing dull or mute verdict. Built: the catalog counts its 245 short doorways | Those two rooms are rebuilt, thin rooms are deepened or cut through the keep-or-cut scorecard, and the commissioned rooms (the Braid, the Calm Axes, the Seventeen Stamps, the Seven Bridges, and Noether's Mirror) lead the next cohort | `ROOMS.md`, `QUALITY.md` |
@@ -86,9 +86,9 @@ Fixtures cannot satisfy it and the contract rejects scripted conclusions. Every
 other item on this list could be answered and 1.0-am would still wait on this
 one. Recorded as OPTIONAL PAID VALIDATION and not run.
 
-**2. Flashing past WCAG 2.3.1: the three chaotic rooms are resolved; four
-rooms flash only at 8x speed: `cellular-automata`, `julia`, `lambda-map`,
-`pickover`.** Resolved 2026-10-02 by fixing the mathematics. `coupled-tent`,
+**2. Flashing past WCAG 2.3.1: four chaotic rooms are resolved; three
+rooms flash only at 8x speed: `cellular-automata`, `julia`, `lambda-map`.**
+The first three were resolved 2026-10-02 by fixing the mathematics. `coupled-tent`,
 `gauss-map` and `ricker` redrew a re-seeded chaotic orbit every frame, and two
 were drawing floating-point artifacts. Coupled Tents now draws a density cloud
 and reports the exact transverse exponent, which crosses zero at the true
@@ -98,7 +98,12 @@ steady because the long-run mean population is exactly 1. Equations, sources
 and budgets are in `docs/MATHEMATICS.md`. The sweep now measures the App's worst
 case, 60 frames a second at every speed from 1x to the 8x maximum, rather than
 30 frames at 1x. That found five more rooms over the budget, at 8x only.
-`logistic-orbit` was the same re-seeded-orbit defect and is fixed. The four
+`logistic-orbit` was the same re-seeded-orbit defect and is fixed. Pickover's
+orbit was fitted to its own extrema every frame, magnifying narrow orbits;
+its measured failure differed between builds. It now keeps the map's invariant
+`[-2,2]` projection and passes the same sweep without changing its parameters
+or speed. Its renderer never substitutes unrelated geometry for an orbit.
+The three
 named above stay within the budget at 1x, 2x and 4x; at 8x the App runs 2.4
 cycles a second, and their brightness swings more than once per cycle. The
 decision left is whether to cap those rooms' speed, slow their tours, or keep
@@ -323,9 +328,12 @@ and curated facts about the world stay out with the external call.
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
 
-- **Unreleased:** room transitions through the stage and damped drag dials and
-  Studio knobs, with reduced-motion behavior and a transition flash guard
-  (`VISUALS.md`).
+- **Alpha 32 (2026-10-03):** room transitions through the stage and damped drag dials and
+  Studio knobs, with reduced-motion behavior and a transition flash guard;
+  shared sound articulation, reverb, limiting, room-change washes, and separate
+  persisted source levels; a shared smooth Mandelbrot color field and refusal
+  of bare unknown Studio names, and Pickover's fixed mathematical projection
+  (`VISUALS.md`, `SOUND.md`, `STUDIO.md`, `MATHEMATICS.md`).
 - **Alpha 31 (2026-10-01):** Route Lab random maps and independent search
   endpoints, the editor in the room's accent, a shorter README entry, and a
   Mandelbrot CPU image without gray fill (`ROUTE_LAB.md`).
@@ -881,7 +889,7 @@ survival to one wallet or one person's attention.
 | 0.2 Flagship | Met + CI-locked | agent-hallway, ahas, goldens |
 | 0.3 Tactile | Met + CI-locked | agent-tactile, first-contact |
 | 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort owner-blocked |
-| 0.5 Sensory | Partial | Built: flagship visual and audio goldens, reduced motion, `NO_COLOR` across all terminal surfaces, mono downmix, source-bound color-independence sweeps (`docs/evidence/color-independence.json`), and regression-locked Studio gaps, reading visibility, cursor visibility, and native footer scaling. Open: physical Sensory Lift promotion, perceptual regression, text scale, and independent music, effect, and room volumes. Automated evidence does not establish human sensory or disability usability |
+| 0.5 Sensory | Partial | Built: flagship visual and audio goldens, reduced motion, `NO_COLOR` across all terminal surfaces, mono downmix, source-bound color-independence sweeps (`docs/evidence/color-independence.json`), and regression-locked Studio gaps, reading visibility, cursor visibility, native footer scaling, and independent music, effect, and room volumes. Open: physical Sensory Lift promotion, perceptual regression, and text scale. Automated evidence does not establish human sensory or disability usability |
 | 0.6 Portable | Partial | Built: release packaging; engagement smoke judged on signal and PNG geometry against a freshly built binary through one shared resolver; provenance and SBOM; a nightly install, play, and uninstall roundtrip on three operating systems that keeps every player-owned file byte-identical; commit-pinned workflow actions; all 42 bundled tracks decoded nightly on each platform; and every ignored test named by a workflow or script. Open: physical clean-machine sessions and signing |
 | 0.7 Creator | Partial | Built: the CLI creator gate (12 checks); CLI and MCP parity (20 plot and 14 sing cases through face-neutral core types, with measured WAV pitch); exact App reopen, F4 share with `melody.mid`, the F5 Gallery with its remix tree; capsule versions 3 to 7; Euclidean rhythms, pattern text, step grid, tracker formulas, piano roll, and named pitches. Open: MusicXML |
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |

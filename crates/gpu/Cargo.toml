@@ -12,6 +12,7 @@ default = []
 gpu-post = []
 
 [dependencies]
+numinous-core = { workspace = true }
 wgpu = "30.0.1"
 pollster = "1"
 bytemuck = { version = "1", features = ["derive"] }

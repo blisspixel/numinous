@@ -55,6 +55,10 @@ python3 scripts/test-no-color.py
 python3 scripts/no-color.py
 echo "== photosensitivity budget, general and red flashes (full catalog) =="
 cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget
+echo "== CPU and GPU color field =="
+python3 scripts/run-exact-test.py --package numinous-gpu --lib --ignored tests::mandelbrot_gpu_and_cpu_share_the_smooth_color_field
+echo "== ignored test wiring =="
+python3 scripts/test-ignored-tests-run-somewhere.py
 echo "== one gate resolver =="
 python3 scripts/test-gate-cli.py
 echo "== am soak contract =="
