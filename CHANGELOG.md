@@ -21,6 +21,10 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   each face shows them, and what stays a hypothesis.
 
 ### Changed
+- `DESIGN.md` designs Vibe, a radio-and-chill form of Watch in which a station
+  plays through and the music chooses and paces the rooms, and the roadmap
+  schedules it after the arc. Decision 10 records the first packaged Linux run
+  and the native aarch64 Linux test pass.
 - The roadmap opens on a **Now** screen with the next moves in order: the
   Sensory Lift, mathematical honesty and photosensitivity, the arc, room depth,
   the wing and voice pass, and structural debts. Its build ledger and dated

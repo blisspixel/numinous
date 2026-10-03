@@ -161,6 +161,32 @@ Watch mode has a headline form: a full-screen, self-directing, never-repeating a
 
 Design requirements it imposes on everything else: every room must have an **auto-director profile** (what "beautiful, evolving, hands-off" means for it, what to sweep and how slowly), and must degrade quality gracefully under the benchmark's load balancer. It is also the single best sharing and marketing engine in the product, a Benchmark session is an endless supply of clips, and the readout makes those clips legibly *about math*.
 
+### Vibe: radio and chill (Designed)
+
+Vibe is Watch with the music in front. Put it on while you work, read, or
+wind down, the way you would put on a radio. A station plays its tracks
+through, and the screen answers the music with a slowly changing gallery of
+rooms, a math screensaver that listens. Nothing asks anything of you.
+
+- **The music leads.** The radio's stations (`MUSIC.md`), and later a Flow
+  State session, are the source. The Show director chooses each next room for
+  how it sits beside the current track, from the tempo and key it already
+  derives for every room, and the live mix's energy paces the room's phase
+  and intensity the way the visualizer already quickens The Show.
+- **Changes land on the music's seams.** Rooms change on phrase or track
+  boundaries, through the same dissolve every room switch uses, never mid
+  phrase.
+- **Screensaver manners.** No reveals, doorway text, prompts, scores, or
+  Journey progress. A track's title may surface briefly when it changes and
+  then fade. The session can run for hours without accumulating anything.
+- **Safe by construction.** Music-driven motion stays inside the envelope the
+  photosensitivity sweep certifies, and the beat-driven speed-ups the sweep
+  does not yet measure are measured before Vibe ships. Rooms with a known
+  fast-speed flash limit are capped or left out. Reduced motion holds stills
+  that change only on track boundaries.
+- **The hand is always welcome.** Any touch takes the current room into Play
+  without stopping the music; Esc returns to the Cabinet.
+
 ## The Studio (the creative canvas)
 
 The creator tier, and the thing that makes Numinous a tool people *live in*, not just a gallery they visit. Think **an expressive graphing calculator**, crossed with an independently designed **mathematical live-coding environment**, crossed with a shader toy.
