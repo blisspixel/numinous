@@ -60,8 +60,10 @@ Cabinet **EXPERIMENT**. Their predictions, observation alternatives, earned
 connections, and rewards belong to that path. **Enter** advances an earned
 connection when offered; **U** or **Esc** returns to free play while retaining
 calls and earned progress. **E** opens study without completing the experiment.
-The Show remains a separately selected presentation that can display reveal
-text near the end of a room. None of these choices establishes understanding.
+The Show remains a separately selected presentation. It names each room on
+arrival and never prints a reveal unasked; its legend offers the explanation on
+request (E, or the controller's Select). None of these choices establishes
+understanding.
 
 Lissajous's English treatment has a Japanese `reviewed_draft`; its original
 catalog notes remain explicitly English. Mathematical and text review of that
