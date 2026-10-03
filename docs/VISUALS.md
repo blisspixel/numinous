@@ -249,7 +249,7 @@ remaining product bar, not claims that every room already satisfies it.
 - **Frame budget.** Work toward smooth display pacing on representative
   hardware. The current evidence is the adaptive 33 ms room-render budget on
   one Windows machine, not a universal 60 or 120 fps guarantee.
-- **Reduce-motion is real.** Reduced motion holds each room at its best still phase, keeps touch answering, never shakes the screen, and never strobes or zooms aggressively. It stays beautiful, not a degraded fallback. Holding the phase still is built; the screen-shake gate is designed.
+- **Reduce-motion is real.** Reduced motion holds each room at its best still phase, keeps touch answering, never shakes the screen, and never strobes or zooms aggressively. It stays beautiful, not a degraded fallback. Holding the phase still, a held Show that waits for the player, and a still frame edge in place of a screen shake are built.
 
 ## Rendering the Visual Eras
 
