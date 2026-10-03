@@ -68,6 +68,11 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   `segment.sound.octaveLock`, and a `play_room` hand-off in `next`.
 
 ### Fixed
+- `numinous-app` launched without a display (over SSH, or on a headless
+  Linux machine) now says it needs a desktop session, names `numinous` and
+  `numinous-mcp` as the faces that need no window, and exits with status 1.
+  It used to panic into an abort with nothing on the terminal, the reason
+  left only in the crash log; every App panic now also reaches stderr.
 - The terminal Show's curtain line, the exit tease of live terminal views, and
   a landed Times Tables goal no longer print a staged room's reveal before its
   wager and summon. CLI `reveal`, MCP `reveal_room`, and these surfaces share
