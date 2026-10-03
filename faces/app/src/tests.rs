@@ -2683,6 +2683,17 @@ fn elapsed_simulation_time_is_measured_and_bounded() {
 }
 
 #[test]
+fn the_frame_cadence_is_the_one_the_flash_sweep_certifies() {
+    // The core's photosensitivity sweep renders every room at the App's frame
+    // rate. Presenting faster here would show phase steps it never measured.
+    let rate = 1.0 / super::FRAME_INTERVAL.as_secs_f64();
+    assert!(
+        (rate - numinous_core::APP_FRAMES_PER_SECOND).abs() < 0.01,
+        "the App presents at {rate:.3} frames per second"
+    );
+}
+
+#[test]
 fn fullscreen_shortcut_returns_directly_to_windowed_mode() {
     assert!(fullscreen_toggle_target(true).is_none());
     assert!(matches!(

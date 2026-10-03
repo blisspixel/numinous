@@ -1862,13 +1862,29 @@ Fixtures cannot satisfy it and the contract rejects scripted conclusions. Every
 other item on this list could be answered and 1.0-am would still wait on this
 one. Recorded as OPTIONAL PAID VALIDATION and not run.
 
-**2. Three rooms flash faster than WCAG 2.3.1 allows: `coupled-tent`,
-`gauss-map`, `ricker`.** Measured across all 354 rooms at a declared reference
-size, on the worst one-second window rather than the average. Each renders a
-chaotic map whose point density changes sharply with phase, so fixing them means
-changing what the mathematics draws. Tracked shrink-only by
-`no_catalog_room_flashes_past_the_photosensitivity_budget`, which fails if the
-list grows or if an entry stops violating and is not removed.
+**2. Flashing past WCAG 2.3.1: the three chaotic rooms are resolved; four
+rooms flash only at 8x speed: `cellular-automata`, `julia`, `lambda-map`,
+`pickover`.** Resolved 2026-10-02 by fixing the mathematics. `coupled-tent`,
+`gauss-map` and `ricker` redrew a re-seeded chaotic orbit every frame, and two
+were drawing floating-point artifacts. Coupled Tents now draws a density cloud
+and reports the exact transverse exponent, which crosses zero at the true
+threshold 1/4; Gauss Map keeps one seed per visit and reveals its legs over
+time; Ricker draws 16 faded legs and a population strip whose light holds
+steady because the long-run mean population is exactly 1. Equations, sources
+and budgets are in `docs/MATHEMATICS.md`. The sweep now measures the App's worst
+case, 60 frames a second at every speed from 1x to the 8x maximum, rather than
+30 frames at 1x. That found five more rooms over the budget, at 8x only.
+`logistic-orbit` was the same re-seeded-orbit defect and is fixed. The four
+named above stay within the budget at 1x, 2x and 4x; at 8x the App runs 2.4
+cycles a second, and their brightness swings more than once per cycle. The
+decision left is whether to cap those rooms' speed, slow their tours, or keep
+the disclosure the access report prints. Speeds between the doublings (set by
+the console or Life's wheel) and the music visualizer's extra 1.5x and beat
+kicks are not measured.
+Tracked shrink-only by `no_catalog_room_flashes_past_the_photosensitivity_budget`,
+which records the slowest failing speed per room and fails if a room goes over
+that is not listed, goes over at a slower speed than recorded, or stops
+violating and is not removed.
 
 **3. Three rooms cannot show their touch response without color: `hilbert`,
 `percolation`, `wireworld`.** The cells they change are half-lit, one half below

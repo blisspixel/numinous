@@ -182,7 +182,10 @@ pub use midi::{
     MIDI_PITCH_BEND_RANGE_SEMITONES, MIDI_TEMPO_MICROSECONDS, MIDI_TICKS_PER_QUARTER, midi_file,
 };
 pub use motifs::{MAX_ROOM_BED_EVENTS, Motif, ROOM_BED_SOURCE_RATE};
-pub use motion::{Motion, REDUCED_MOTION_VAR, setting_is_on};
+pub use motion::{
+    APP_FRAMES_PER_SECOND, MAX_TIME_SCALE, MIN_TIME_SCALE, Motion, REDUCED_MOTION_VAR,
+    ROOM_CYCLES_PER_SECOND, setting_is_on,
+};
 pub use munchers::{
     Board, FULL_DECK_ROUND, Munched, board_text, build_board, clean_win as munch_clean_win,
     grade as grade_munch, score_key as munch_score_key,

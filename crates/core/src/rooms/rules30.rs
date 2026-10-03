@@ -118,8 +118,10 @@ impl Room for Rules30 {
         draw(canvas, &grid);
     }
 
+    /// The start of the cycle, the one phase where the gallery is on Rule 30
+    /// itself. Mid-cycle it is on Rule 54, which the postcard used to show.
     fn postcard_t(&self) -> f64 {
-        0.5
+        0.0
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -192,9 +194,27 @@ impl Room for Rules30 {
 
 #[cfg(test)]
 mod tests {
-    use super::{Rules30, evolve};
+    use super::{Rules30, evolve, rule_byte};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn the_postcard_is_rule_30() {
+        let room = Rules30::new();
+        let t = room.postcard_t();
+        assert_eq!(rule_byte(t, None, 0), 30);
+        assert!(room.status(t).unwrap().starts_with("rule=30 "));
+        // The center column from one cell, OEIS A051023, computed separately
+        // from this file. Rule 54, which the postcard used to show, repeats
+        // 1, 1, 0, 0 instead.
+        const CENTER: [u8; 36] = [
+            1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0,
+            1, 1, 1, 0, 0, 1, 1, 1,
+        ];
+        let grid = evolve(72, CENTER.len(), rule_byte(t, None, 0), 36);
+        let column: Vec<u8> = grid.iter().map(|row| row[36]).collect();
+        assert_eq!(column, CENTER);
+    }
 
     #[test]
     fn status_invites() {

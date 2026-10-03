@@ -168,9 +168,29 @@ impl Room for Horseshoe {
 
 #[cfg(test)]
 mod tests {
-    use super::Horseshoe;
+    use super::{Horseshoe, horseshoe, iters};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn the_deepest_fold_stays_on_the_exact_rational_orbit() {
+        // The vertical stretch is 2y or 2(1 - y), exact in binary, and the
+        // only direction that could run a seed out of digits. The room folds
+        // at most six times, far inside the 53 a double carries, so every
+        // drawn row is the true image of its grid row (2i + 1) / 112, and
+        // integer arithmetic on the numerators is an exact oracle.
+        let deepest = iters(0.0, Some((1.0, 0.5)));
+        assert!(deepest <= 6);
+        for i in 0..56u64 {
+            let mut q = 2 * i + 1;
+            let mut point = (0.5, q as f64 / 112.0);
+            for _ in 0..deepest {
+                q = if q < 56 { 2 * q } else { 224 - 2 * q };
+                point = horseshoe(point.0, point.1).expect("the toy keeps every point");
+            }
+            assert!((point.1 - q as f64 / 112.0).abs() < 1e-12, "row {i}");
+        }
+    }
 
     #[test]
     fn status_invites() {

@@ -232,7 +232,9 @@ pub(crate) fn parse_line(line: &str) -> Command {
                 Command::Unknown("usage: speed <0.25..8>".into())
             } else {
                 match rest[0].parse::<f64>() {
-                    Ok(v) if v.is_finite() => Command::Speed(v.clamp(0.25, 8.0)),
+                    Ok(v) if v.is_finite() => Command::Speed(
+                        v.clamp(numinous_core::MIN_TIME_SCALE, numinous_core::MAX_TIME_SCALE),
+                    ),
                     _ => Command::Unknown(format!("bad speed: {}", rest[0])),
                 }
             }

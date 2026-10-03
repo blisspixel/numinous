@@ -8,7 +8,16 @@
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
+/// Iterates the status reads when it guesses a period.
 const ORBIT: usize = 200;
+/// Cobweb legs drawn from the seed, newest brightest.
+///
+/// At `r = 4` the map doubles a small error each step, so a double's 53 bits
+/// keep the drawn orbit within about `1e-6` of the stated seed's true orbit
+/// for 32 steps. Drawing all 200 iterates used to paint a saturated tangle
+/// whose brightness jumped from frame to frame: at the App's fastest speed it
+/// flashed seven times a second.
+const LEGS: usize = 32;
 
 fn phase_unit(t: f64) -> f64 {
     if t.is_finite() {
@@ -90,16 +99,18 @@ fn draw(canvas: &mut dyn Surface, r: f64, x0: f64) {
         0,
         '.',
     );
-    // Cobweb.
+    // Cobweb, faded by age: the transient from the seed is dimmest and the
+    // legs nearest the cycle or the chaos are brightest.
     let mut x = x0.clamp(0.01, 0.99);
     let mut px = (x * width.saturating_sub(1) as f64).round() as i32;
     let mut py = height.saturating_sub(1) as i32;
-    for i in 0..ORBIT {
+    for i in 0..LEGS {
         let y = (r * x * (1.0 - x)).clamp(0.0, 1.0);
         let qx = (x * width.saturating_sub(1) as f64).round() as i32;
         let qy = ((1.0 - y) * height.saturating_sub(1) as f64).round() as i32;
-        canvas.line(px, py, qx, py, if i % 2 == 0 { '*' } else { '+' });
-        canvas.line(qx, py, qx, qy, if i % 2 == 0 { '*' } else { '+' });
+        let mark = ['.', '+', '*', '#'][i * 4 / LEGS];
+        canvas.line(px, py, qx, py, mark);
+        canvas.line(qx, py, qx, qy, mark);
         let dx = (y * width.saturating_sub(1) as f64).round() as i32;
         let dy = ((1.0 - y) * height.saturating_sub(1) as f64).round() as i32;
         canvas.line(qx, qy, dx, dy, '.');
@@ -194,9 +205,26 @@ impl Room for LogisticOrbit {
 
 #[cfg(test)]
 mod tests {
-    use super::LogisticOrbit;
+    use super::{LEGS, LogisticOrbit};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn every_drawn_leg_at_r_four_is_the_true_orbit_of_its_seed() {
+        // At r = 4 the map has the closed form x(n) = sin^2(2^n theta) with
+        // x(0) = sin^2(theta), an oracle that never iterates the map. Errors
+        // double each step on average, so 32 legs keep the drawn orbit within
+        // about 1e-6 of the true one, far below a pixel.
+        for x0 in [0.2_f64, 0.35, 0.1234, 0.77] {
+            let theta = x0.sqrt().asin();
+            let mut x: f64 = x0;
+            for n in 1..=LEGS {
+                x = 4.0 * x * (1.0 - x);
+                let exact = (theta * 2f64.powi(n as i32)).sin().powi(2);
+                assert!((x - exact).abs() < 1e-4, "seed {x0} leg {n}: {x} vs {exact}");
+            }
+        }
+    }
 
     #[test]
     fn status_invites() {

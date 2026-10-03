@@ -216,11 +216,9 @@ fn julia_gpu_vertical_span(width: u32, height: u32) -> f32 {
     }
 }
 
-/// Normal room phase cycles per elapsed second.
-///
-/// Slightly above a quarter-cycle per second so quiet rooms still feel alive
-/// without rushing the math past readability.
-const T_RATE: f64 = 0.30;
+/// Normal room phase cycles per elapsed second, owned by the core so the
+/// photosensitivity sweep certifies the speed this loop actually runs.
+const T_RATE: f64 = numinous_core::ROOM_CYCLES_PER_SECOND;
 /// The Show advances more slowly for a deliberate, hypnotic pace.
 const SHOW_T_RATE: f64 = 0.11;
 /// A restored or stalled window never consumes a giant simulation step.
@@ -1727,7 +1725,8 @@ impl App {
                 vec![format!("volume {:.0}%", self.volume * 100.0)]
             }
             Command::Speed(s) => {
-                self.time_scale = s.clamp(0.25, 8.0);
+                self.time_scale =
+                    s.clamp(numinous_core::MIN_TIME_SCALE, numinous_core::MAX_TIME_SCALE);
                 vec![format!("speed {:.2}", self.time_scale)]
             }
             Command::Phase(t) => {
@@ -2790,16 +2789,20 @@ impl ApplicationHandler for App {
                         Key::Character(c) if c.as_str() == "a" => self.switch(-1),
                         // W/S run time faster or slower.
                         Key::Named(NamedKey::ArrowUp) => {
-                            self.time_scale = (self.time_scale * 2.0).min(8.0);
+                            self.time_scale =
+                                (self.time_scale * 2.0).min(numinous_core::MAX_TIME_SCALE);
                         }
                         Key::Named(NamedKey::ArrowDown) => {
-                            self.time_scale = (self.time_scale / 2.0).max(0.25);
+                            self.time_scale =
+                                (self.time_scale / 2.0).max(numinous_core::MIN_TIME_SCALE);
                         }
                         Key::Character(c) if c.as_str() == "w" => {
-                            self.time_scale = (self.time_scale * 2.0).min(8.0);
+                            self.time_scale =
+                                (self.time_scale * 2.0).min(numinous_core::MAX_TIME_SCALE);
                         }
                         Key::Character(c) if c.as_str() == "s" => {
-                            self.time_scale = (self.time_scale / 2.0).max(0.25);
+                            self.time_scale =
+                                (self.time_scale / 2.0).max(numinous_core::MIN_TIME_SCALE);
                         }
                         Key::Named(NamedKey::Space) => self.toggle_pause(),
                         // Times Tables place wager: 1 Mandelbrot, 2 Nephroid, 3 Circle.

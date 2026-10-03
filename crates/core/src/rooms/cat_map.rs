@@ -31,6 +31,16 @@ fn iters(t: f64, hand: Option<(f64, f64)>) -> usize {
     }
 }
 
+/// One step of the inverse cat map: the inverse of `(x + y, x + 2y)` mod 1 is
+/// `(2x - y, y - x)` mod 1.
+///
+/// Iterated at most 14 times per pixel. Both this map and its inverse stretch
+/// by at most `(3 + sqrt 5) / 2`, about 2.618, so rounding of about `1e-16`
+/// grows to under `1e-10` by then, far below a pixel.
+fn inverse_step(u: f64, v: f64) -> (f64, f64) {
+    ((2.0 * u - v).rem_euclid(1.0), (v - u).rem_euclid(1.0))
+}
+
 fn draw(canvas: &mut dyn Surface, n: usize, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
@@ -48,11 +58,7 @@ fn draw(canvas: &mut dyn Surface, n: usize, seed: u64) {
             let mut v = (y as f64 + 0.5) / height as f64;
             // inverse map n times so we sample the preimage of the pattern
             for _ in 0..n {
-                // inverse of cat (x+y, x+2y) mod 1: (2x - y, -x + y) mod 1
-                let nx = (2.0 * u - v).rem_euclid(1.0);
-                let ny = (-u + v).rem_euclid(1.0);
-                u = nx;
-                v = ny;
+                (u, v) = inverse_step(u, v);
             }
             u = (u + shift).rem_euclid(1.0);
             let face = (u - 0.35).hypot(v - 0.55) < 0.12
@@ -146,9 +152,37 @@ impl Room for CatMap {
 
 #[cfg(test)]
 mod tests {
-    use super::CatMap;
+    use super::{CatMap, inverse_step, iters};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn the_deepest_preimage_stays_on_the_exact_rational_orbit() {
+        // Pixel centers are rationals, and the inverse map sends a/D to
+        // integers mod D exactly, so integer arithmetic is an oracle with no
+        // rounding at all. The deepest the room ever iterates is the hand's
+        // maximum.
+        let deepest = iters(0.0, Some((1.0, 0.5)));
+        assert!(deepest <= 14);
+        let (width, height) = (40i64, 28i64);
+        let d = 2 * width * height;
+        for y in 0..height {
+            for x in 0..width {
+                let (mut a, mut b) = ((2 * x + 1) * height, (2 * y + 1) * width);
+                let mut u = (x as f64 + 0.5) / width as f64;
+                let mut v = (y as f64 + 0.5) / height as f64;
+                for _ in 0..deepest {
+                    (a, b) = ((2 * a - b).rem_euclid(d), (b - a).rem_euclid(d));
+                    (u, v) = inverse_step(u, v);
+                }
+                let circle = |f: f64, n: i64| {
+                    let gap = (f - n as f64 / d as f64).abs();
+                    gap.min(1.0 - gap)
+                };
+                assert!(circle(u, a) < 1e-9 && circle(v, b) < 1e-9, "pixel ({x}, {y})");
+            }
+        }
+    }
 
     #[test]
     fn status_invites() {

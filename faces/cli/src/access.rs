@@ -85,18 +85,72 @@ pub(crate) fn access_report(settings: &[AccessSetting]) -> String {
     // so this report cannot drift from the code.
     out.push_str(&format!(
         "Known and not yet fixed, so you can decide for yourself:\n\
-         {} flash faster than the WCAG budget allows,\n\
-         and {} answer a touch\n\
-         in a way the color-free renderer cannot show.\n\n",
-        numinous_core::KNOWN_OVER_FLASH_BUDGET.join(", "),
+         {} answer a touch\n\
+         in a way the color-free renderer cannot show.\n",
         numinous_core::RESPONSE_INVISIBLE_WITHOUT_COLOR.join(", "),
     ));
+    out.push_str(&flash_disclosure(&numinous_core::KNOWN_OVER_FLASH_BUDGET));
+    out.push('\n');
     out.push_str(
         "One boundary, stated plainly: the keyboard reaches every menu, game,\n\
          quiz, and formula on every face, but the hand verbs inside App rooms\n\
          (drag, click, hold) need a mouse or a controller today. One exception\n\
          narrows it: U calls a room's readout, aimed with the arrow keys and\n\
          committed with Enter.\n",
+    );
+    out
+}
+
+/// What the photosensitivity sweep found, in the words a player reads.
+///
+/// `known` is the sweep's shrink-only list: each room with the slowest App
+/// speed at which it goes over the WCAG 2.3.1 budget. Rooms are grouped by
+/// that speed, so a player learns both which rooms and when. The music
+/// visualizer is named as unmeasured whatever the list holds, because the
+/// sweep does not model it.
+pub(crate) fn flash_disclosure(known: &[(&str, f64)]) -> String {
+    /// Room names wrap before this width, leaving room for the comma.
+    const NAME_COLUMNS: usize = 72;
+    let fastest = numinous_core::MAX_TIME_SCALE;
+    let mut out = String::new();
+    if known.is_empty() {
+        out.push_str(&format!(
+            "No room is known to flash faster than the WCAG budget allows\n\
+             at any App speed up to {fastest}x.\n"
+        ));
+    } else {
+        let mut speeds: Vec<f64> = known.iter().map(|&(_, speed)| speed).collect();
+        speeds.sort_by(f64::total_cmp);
+        speeds.dedup();
+        for speed in speeds {
+            let rooms = known
+                .iter()
+                .filter(|&&(_, from)| from == speed)
+                .map(|&(room, _)| room);
+            // The names get lines of their own, wrapped, so the report stays
+            // inside eighty columns however long the list grows.
+            let mut line = String::new();
+            for room in rooms {
+                if !line.is_empty() && line.len() + room.len() + 2 > NAME_COLUMNS {
+                    out.push_str(&line);
+                    out.push_str(",\n");
+                    line.clear();
+                }
+                if !line.is_empty() {
+                    line.push_str(", ");
+                }
+                line.push_str(room);
+            }
+            out.push_str(&format!(
+                "{line}\n\
+                 flash faster than the WCAG budget allows when the App runs them\n\
+                 at {speed}x speed or faster.\n"
+            ));
+        }
+    }
+    out.push_str(
+        "The music visualizer, which can push a room faster still,\n\
+         is not measured.\n",
     );
     out
 }

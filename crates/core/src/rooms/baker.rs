@@ -161,9 +161,37 @@ impl Room for Baker {
 
 #[cfg(test)]
 mod tests {
-    use super::{Baker, baker_step};
+    use super::{Baker, baker_step, steps};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn the_deepest_kneading_stays_on_the_exact_rational_orbit() {
+        // The stretch is a doubling, exact in binary, so a stored seed runs
+        // out of digits after about 53 steps and sits at 0. The deepest the
+        // room kneads is 16 steps, far inside that, so every drawn point is
+        // the true image of its grid point (2i + 1) / 96. Integer arithmetic
+        // on those rationals is the oracle. A few are dyadic, 3 / 96 = 1 / 32
+        // for one, and their true orbits do reach 0; the oracle says so too.
+        let deepest = steps(0.0, Some((1.0, 0.5)));
+        assert!(deepest <= 16);
+        for i in 0..48u64 {
+            for j in 0..48u64 {
+                let (mut p, mut q, mut scale) = (2 * i + 1, 2 * j + 1, 96u64);
+                let mut point = (p as f64 / 96.0, q as f64 / 96.0);
+                for _ in 0..deepest {
+                    // x = p / 96 and y = q / scale, exactly.
+                    let right = p >= 48;
+                    p = if right { 2 * p - 96 } else { 2 * p };
+                    q += if right { scale } else { 0 };
+                    scale *= 2;
+                    point = baker_step(point.0, point.1);
+                }
+                assert!((point.0 - p as f64 / 96.0).abs() < 1e-9, "x of ({i}, {j})");
+                assert!((point.1 - q as f64 / scale as f64).abs() < 1e-9, "y of ({i}, {j})");
+            }
+        }
+    }
 
     #[test]
     fn status_invites() {
