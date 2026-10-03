@@ -5761,3 +5761,18 @@ fn route_authoring_controller_release_through_menu_and_focus_loss_never_sticks()
         revision + 2
     );
 }
+
+#[test]
+fn a_missing_display_names_its_cause_and_the_faces_that_need_no_window() {
+    // Launched over SSH on Ubuntu 26.04 with no display, the App panicked
+    // into an abort and printed nothing; the reason sat only in the crash
+    // log. The message a player now reads instead carries the cause and the
+    // two faces that run without a window.
+    let message = super::no_display_message(
+        &"neither WAYLAND_DISPLAY nor WAYLAND_SOCKET nor DISPLAY is set.",
+    );
+    assert!(message.contains("desktop session"), "{message}");
+    assert!(message.contains("nor DISPLAY is set"), "{message}");
+    assert!(message.contains("`numinous`"), "{message}");
+    assert!(message.contains("`numinous-mcp`"), "{message}");
+}

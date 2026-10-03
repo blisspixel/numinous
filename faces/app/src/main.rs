@@ -3310,10 +3310,23 @@ fn scores_path() -> std::path::PathBuf {
     local_state_paths().scores
 }
 
+/// What a player reads when the App cannot reach a display: launched over SSH,
+/// on a headless machine, or from a shell outside the desktop session. It
+/// names the cause and the two faces that need no window.
+fn no_display_message(cause: &dyn std::fmt::Display) -> String {
+    format!(
+        "numinous-app needs a desktop session to open its window, and it could not reach one \
+         ({cause}).\nIn a terminal, the same world plays as `numinous`; a digital mind can \
+         connect to `numinous-mcp`."
+    )
+}
+
 fn main() {
     // The GUI subsystem has no console: a panic would vanish. Every panic
     // writes its message and location to a crash log next to the save files,
-    // so any crash report can be triaged from one file.
+    // so any crash report can be triaged from one file. Launched from a
+    // terminal, the same entry also goes to stderr, so the reason is not left
+    // behind a bare "Aborted".
     std::panic::set_hook(Box::new(|info| {
         let path = crash_log_path();
         let location = info
@@ -3325,8 +3338,15 @@ fn main() {
 "
         );
         let _ = append_crash_log_at(&path, &entry);
+        eprint!("{entry}");
     }));
-    let event_loop = EventLoop::new().expect("create event loop");
+    let event_loop = match EventLoop::new() {
+        Ok(event_loop) => event_loop,
+        Err(cause) => {
+            eprintln!("{}", no_display_message(&cause));
+            std::process::exit(1);
+        }
+    };
     event_loop.set_control_flow(ControlFlow::Wait);
     let mut app = App::new();
     // Support --fullscreen / -f / -F and NUMINOUS_FULLSCREEN=1 for launch full screen view.
