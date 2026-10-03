@@ -33,6 +33,11 @@ returns the same cue's postcard only. `audio: true` adds a WAV beside notation,
 but makes no claim that your client played it. The Show reads no journal or
 workspace, writes no progress, and never opens the explanation.
 
+On a first visit, consider `watch_show` with `show: "overture"` instead: four
+rooms played as one piece, each a single rule repeated. Its last cue's
+`segment.sound.octaveLock` shows the Times Tables voice converging on an exact
+2:1 octave, and its `next` is a `play_room` call that hands you the dial.
+
 ## Touch and stay
 
 Change `t`, poke it, or give it a phase-stamped gesture. Attend to what changes.

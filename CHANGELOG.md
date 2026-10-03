@@ -56,6 +56,16 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   Its last beat carries the octave lock as exact fractions: the dial settles
   from 43/20 through 41/20 to 2 while the voice settles from 43:23 through
   41:21 to an exact 2:1.
+- `watch_show` accepts `show: "overture"`. Each of its four cues returns three
+  authored looks, or the beat's finished still under reduced motion. The last
+  cue carries `segment.sound.octaveLock`, with exact fractions, cents from an
+  exact octave, and the frequencies the voice really plays, and its `next` is
+  a `play_room` call that hands over the Times Tables dial at K=2. The tool
+  count and the Strange Loop default are unchanged.
+
+### Changed
+- `numinous.show-segment` is schema version 2: the `passage` look role,
+  `segment.sound.octaveLock`, and a `play_room` hand-off in `next`.
 
 ### Fixed
 - The terminal Show's curtain line, the exit tease of live terminal views, and
