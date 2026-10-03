@@ -167,6 +167,17 @@ pub(crate) fn release_mode(room_id: &str, verb: &str) -> ReleaseMode {
     ReleaseMode::Dial
 }
 
+/// Whether a room's presented frames may ease its dial toward the hand.
+///
+/// Only a drag that turns a dial eases. A HOLD must end the moment the hand
+/// lifts (the HOLD verb contract), a CLICK plants a discrete choice, and a
+/// fling or persistent edit reads its raw samples as physics or as the edit
+/// itself, so each of those always presents exactly what the hand did.
+#[must_use]
+pub(crate) fn eases_hand(room_id: &str, verb: &str) -> bool {
+    verb.starts_with("DRAG") && release_mode(room_id, verb) == ReleaseMode::Dial
+}
+
 /// Record the lift that completes a gesture, stamped with the room phase.
 ///
 /// - [`ReleaseMode::Dial`]: a drag is dropped so the room resumes ambient
@@ -517,6 +528,27 @@ mod tests {
             release_mode("double-pendulum", "CLICK: RE-DROP"),
             ReleaseMode::Fling
         );
+    }
+
+    #[test]
+    fn only_dial_drags_ease_across_the_real_catalog() {
+        let mut eased = 0;
+        for room in numinous_core::all_rooms() {
+            let id = room.meta().id;
+            let verb = room.verb().unwrap_or("");
+            let eases = eases_hand(id, verb);
+            if verb.starts_with("HOLD") || verb.starts_with("CLICK") || verb.is_empty() {
+                assert!(!eases, "{id} ({verb}) must present the raw hand");
+            }
+            if room_keeps_drag_after_release(id) {
+                assert!(!eases, "{id} reads raw samples and must not ease");
+            }
+            if eases {
+                assert_eq!(release_mode(id, verb), ReleaseMode::Dial, "{id}");
+                eased += 1;
+            }
+        }
+        assert!(eased > 100, "the dial rooms are the bulk of the catalog");
     }
 
     #[test]

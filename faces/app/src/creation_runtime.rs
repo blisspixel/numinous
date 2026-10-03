@@ -700,9 +700,11 @@ impl App {
         }
         if !repeat {
             let spec = match key {
-                Key::Named(NamedKey::ArrowUp) => self.studio_panel.adjust_parameter(1),
-                Key::Named(NamedKey::ArrowDown) => self.studio_panel.adjust_parameter(-1),
-                Key::Named(NamedKey::Home) => self.studio_panel.reset_parameter(),
+                Key::Named(NamedKey::ArrowUp) => self.studio_panel.adjust_parameter(1, self.motion),
+                Key::Named(NamedKey::ArrowDown) => {
+                    self.studio_panel.adjust_parameter(-1, self.motion)
+                }
+                Key::Named(NamedKey::Home) => self.studio_panel.reset_parameter(self.motion),
                 _ => None,
             };
             // A bound or unchanged reset must not restart the voice or confirm

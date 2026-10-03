@@ -5,14 +5,16 @@ instrument and a shader toy. You type a little math, and it instantly *draws*
 and *sings*. This is the "Create" posture (see `DESIGN.md`), and it is a core
 part of the experience rather than a bonus feature.
 
-**Status (reviewed 2026-10-02).** Built: the current source includes a bounded
+**Status (reviewed 2026-10-03).** Built: the current source includes a bounded
 expression parser and evaluator, graph and paired parametric plots,
 deterministic continuous or scale-quantized melody mapping, an editable app
 panel, CLI and MCP operations, `.num` plus link round trips on all three faces,
 exact app reopen (launch argument, dropped file, or link), the F5
 Gallery wall with its remix tree, fork with recorded lineage on the App and
 the terminal, the F4 naming step with title, signature, and prose credit, F6
-pitch-map selection, and explicit App parameter controls. The same melody
+pitch-map selection, and explicit App parameter controls. App knobs glide on
+critically damped springs; reduced motion applies them immediately. The saved
+creation, postcard, and sound use the exact knob value throughout the glide. The same melody
 can leave as WAV or as a Standard MIDI File type 0: CLI `numinous sing 'sin(t)' --out song.mid`,
 MCP `sing_expression` with `midi: true`, and the App F4 share as `melody.mid`.
 MIDI is 12-TET keys plus pitch bend of leftover cents over plus or minus two

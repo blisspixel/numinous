@@ -169,6 +169,11 @@ Enter summons an earned connection, and U or Esc leaves that path without
 discarding its progress during the visit. Reading remains independent. The
 `numinous access` report states both boundaries.
 
+Room changes fade through the near-black stage. Drag dials and Studio knobs
+glide into place, while holds, clicks, flings, and persistent edits answer
+immediately. Reduced motion makes all input immediate and shortens the room
+fade. Rapid room changes can briefly wait on the dark stage.
+
 A saved creation reopens exactly. Launch the App with a `.num` path or a
 `numinous://studio` link, or drop a `.num` file on the window, and the Studio
 opens with the saved formula, window, and knob pinned, paused: the exact curve
