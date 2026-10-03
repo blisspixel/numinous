@@ -120,6 +120,7 @@ pub mod sims;
 pub mod slider;
 pub mod sound;
 pub mod spectrum;
+pub mod spring;
 pub mod studio;
 pub mod studio_request;
 pub mod study;
@@ -298,6 +299,7 @@ pub use spectrum::{
     normalize_bands, spectrum_hand_point, spectrum_phase_nudge, spectrum_should_poke,
     spectrum_time_scale,
 };
+pub use spring::Spring;
 pub use studio::{
     Expr, MAX_CREDIT_CHARS, MAX_EUCLID_STEPS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS,
     MAX_PROGRAM_EXPRS, MAX_SHARE_INPUT_BYTES, MAX_STUDIO_EDITOR_CHARS, MAX_STUDIO_SOURCE_CHARS,

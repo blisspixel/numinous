@@ -135,8 +135,7 @@ impl RetainedPlay {
                     app.room_card,
                     app.screen_shake,
                     app.life_accumulator,
-                    app.goal_announced,
-                    app.show_crossfade_frames
+                    app.goal_announced
                 ),
                 (
                     app.audio_program,

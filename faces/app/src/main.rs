@@ -26,10 +26,12 @@ mod audio_state;
 mod bindings;
 mod console;
 mod creation_runtime;
+mod dissolve;
 mod feedback;
 mod gallery;
 mod game_runtime;
 mod gamepad;
+mod hand_spring;
 mod hud;
 mod input_feedback;
 mod input_runtime;
@@ -60,8 +62,6 @@ use room_phase::{effective_room_phase, has_finite_parameter_input};
 #[cfg(test)]
 use crate::creation_runtime::ShareIdentity;
 
-/// Frames of The Show crossfade when the gallery advances rooms.
-const SHOW_CROSSFADE_FRAMES: u8 = 14;
 /// Wall time for the Times Tables cardioid-to-Mandelbrot morph beat.
 const TIMES_TABLES_MORPH_SECONDS: f64 = 1.6;
 /// Wall time for the Buffon circle-grows-from-sticks morph beat.
@@ -75,15 +75,6 @@ const KEPLER_MORPH_SECONDS: f64 = 1.6;
 /// Wall time for the Parrondo exact-expectation morph beat.
 const PARRONDO_MORPH_SECONDS: f64 = 1.6;
 const NONTRANSITIVE_MORPH_SECONDS: f64 = 1.6;
-
-/// Blend `prev` into `dest` with `weight` of the previous frame in [0, 1].
-fn blend_rgba(dest: &mut [u8], prev: &[u8], weight: f32) {
-    let w = weight.clamp(0.0, 1.0);
-    let inv = 1.0 - w;
-    for (d, p) in dest.iter_mut().zip(prev.iter()) {
-        *d = (f32::from(*d) * inv + f32::from(*p) * w) as u8;
-    }
-}
 
 /// How far a screen shake throws the frame, in pixels.
 const SHAKE_TRAVEL: i32 = 3;
@@ -376,10 +367,12 @@ struct App {
     show_info: bool,
     /// The Show: lean back and let the whole collection play itself.
     the_show: bool,
-    /// Last presented Show frame for room-to-room crossfade.
-    show_crossfade_prev: Option<Vec<u8>>,
-    /// Remaining frames of Show crossfade blend.
-    show_crossfade_frames: u8,
+    /// The one room transition: every change of room dims the leaving room to
+    /// the stage and raises the arriving one (see `enter_room`).
+    dissolve: dissolve::Dissolve,
+    /// The spring a room's dial rides between the points the hand reports.
+    /// Presentation only: `inputs` stays exactly what the hand did.
+    hand: hand_spring::HandSpring,
     /// The Studio: type an expression and watch it live.
     studio: bool,
     /// The typed Studio expression and its last-good parse state.
@@ -545,6 +538,15 @@ enum Route {
     },
 }
 
+/// Whether entering a room deals its variations afresh.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Deal {
+    /// A new deal, as walking from room to room has always given.
+    Fresh,
+    /// The current deal, as a jump to a named room keeps.
+    Keep,
+}
+
 impl Route {
     /// The room this route opens on.
     fn doorway(&self) -> usize {
@@ -654,8 +656,8 @@ impl App {
             dragging: false,
             show_info: false,
             the_show: false,
-            show_crossfade_prev: None,
-            show_crossfade_frames: 0,
+            dissolve: dissolve::Dissolve::default(),
+            hand: hand_spring::HandSpring::default(),
             studio: false,
             studio_panel: studio_panel::StudioPanel::default(),
             project_resume: None,
@@ -1520,10 +1522,41 @@ impl App {
         self.inactive_since.get_or_insert(now);
     }
 
+    /// Advance everything that eases on presentation time rather than on the
+    /// room's own clock: the room dissolve, the hand's dial, and the Studio's
+    /// morph and knobs. None of it changes what a room computes, only what is shown on
+    /// the way, so it keeps running while a reader holds the room.
     fn advance_presentation_time(&mut self, seconds: f64) {
+        self.dissolve.advance(seconds);
+        self.follow_hand();
+        self.hand.advance(seconds);
         if self.studio {
             self.studio_panel.advance_morph(seconds);
+            self.studio_panel.advance_knobs(seconds);
         }
+    }
+
+    /// Point the hand spring at the open gesture of a room whose dial eases.
+    fn follow_hand(&mut self) {
+        let room = &self.rooms[self.current];
+        let eases =
+            !self.the_show && room_input::eases_hand(room.meta().id, room.verb().unwrap_or(""));
+        let hand = if eases {
+            hand_spring::open_hand(&self.inputs).map(|(_, point)| point)
+        } else {
+            None
+        };
+        self.hand.follow(hand, self.motion);
+    }
+
+    /// The input history as the room should be drawn this frame: the input
+    /// the room answers to, with the hand where its spring presents it. Once
+    /// the spring rests that is the accepted history itself. Everything that
+    /// grades, replays, or records reads `inputs`.
+    fn presented_room_inputs(&mut self) -> Vec<numinous_core::RoomInput> {
+        self.follow_hand();
+        self.hand
+            .present(effective_room_inputs(&self.inputs, self.the_show))
     }
 
     fn resume_presentation_clock(&mut self, now: Instant) {
@@ -1580,15 +1613,32 @@ impl App {
         }
     }
 
+    /// Step to the next or previous room, inside the chosen route if there is
+    /// one, with a fresh deal of variations.
     fn switch(&mut self, delta: isize) {
-        if self.the_show && self.show_crossfade_prev.is_some() {
-            self.show_crossfade_frames = SHOW_CROSSFADE_FRAMES;
-        }
-        self.current = match &mut self.route {
+        let index = match &mut self.route {
             Some(route) => route.step(self.current, delta, self.rooms.len()),
             None => room_input::wrapped_room_index(self.current, delta, self.rooms.len()),
         };
-        self.rooms = room_input::redeal_rooms(&mut self.variation, &mut self.current);
+        self.enter_room(index, Deal::Fresh);
+    }
+
+    /// Enter the room at a catalog index. Every change of room comes through
+    /// here: arrows, bumpers, The Show, wing and walk steps, number slots,
+    /// Cabinet entries, the three doors, and the console.
+    ///
+    /// The room state changes at once, so everything that reads it (grading,
+    /// audio, the title, the Journey visit) answers immediately. Only the
+    /// picture is staged: the dissolve dims the frame the old room last showed
+    /// to the stage and raises the new room from it.
+    fn enter_room(&mut self, index: usize, deal: Deal) {
+        if index >= self.rooms.len() {
+            return;
+        }
+        self.current = index;
+        if deal == Deal::Fresh {
+            self.rooms = room_input::redeal_rooms(&mut self.variation, &mut self.current);
+        }
         self.reset_room_runtime();
         self.tune = Arc::new(Vec::new());
         if let Some(window) = &self.window {
@@ -1596,6 +1646,18 @@ impl App {
         }
         self.visit_current();
         self.update_audio();
+        self.dissolve.begin(self.motion);
+    }
+
+    /// The room a number key names, as a weapon slot names a weapon: 1 is the
+    /// first room and 0 the tenth.
+    fn enter_room_slot(&mut self, digit: char) {
+        let slot = match digit.to_digit(10) {
+            Some(0) => 9,
+            Some(digit) => digit as usize - 1,
+            None => return,
+        };
+        self.enter_room(slot, Deal::Fresh);
     }
 
     /// Enter a route, or leave the one we are in.
@@ -1614,20 +1676,7 @@ impl App {
 
     /// Jump to a catalog index without bumping variation (console / power users).
     fn goto_room_index(&mut self, index: usize) {
-        if index >= self.rooms.len() {
-            return;
-        }
-        if self.the_show && self.show_crossfade_prev.is_some() {
-            self.show_crossfade_frames = SHOW_CROSSFADE_FRAMES;
-        }
-        self.current = index;
-        self.reset_room_runtime();
-        self.tune = Arc::new(Vec::new());
-        if let Some(window) = &self.window {
-            window.set_title(&self.title());
-        }
-        self.visit_current();
-        self.update_audio();
+        self.enter_room(index, Deal::Keep);
     }
 
     /// Rebind rooms at a variation seed while keeping the same room id when possible.
@@ -1639,18 +1688,12 @@ impl App {
             .unwrap_or("");
         self.variation = variation;
         self.rooms = all_rooms_with(variation);
-        if let Some(i) = self.rooms.iter().position(|r| r.meta().id == id) {
-            self.current = i;
-        } else if !self.rooms.is_empty() {
-            self.current = self.current.min(self.rooms.len() - 1);
-        }
-        self.reset_room_runtime();
-        self.tune = Arc::new(Vec::new());
-        if let Some(window) = &self.window {
-            window.set_title(&self.title());
-        }
-        self.visit_current();
-        self.update_audio();
+        let index = self
+            .rooms
+            .iter()
+            .position(|r| r.meta().id == id)
+            .unwrap_or_else(|| self.current.min(self.rooms.len().saturating_sub(1)));
+        self.enter_room(index, Deal::Keep);
     }
 
     /// Apply one parsed console command; returns log lines to print.
@@ -1926,10 +1969,10 @@ impl App {
 
     /// Advance the live room after input, holding every reading-owned tick.
     fn advance_room_tick(&mut self, elapsed: f64, presentation_elapsed: f64, study_captured: bool) {
+        self.advance_presentation_time(presentation_elapsed);
         if study_captured || self.study.is_some() {
             return;
         }
-        self.advance_presentation_time(presentation_elapsed);
         self.refresh_pointer_state();
         let first_contact_obscured = self.banner.is_some() && self.room_card > 0;
         let ambient = ambient_tick_seconds(elapsed, self.motion);
@@ -2040,17 +2083,15 @@ impl App {
             self.present_raster(raster, width, height);
             return;
         }
+        let room_inputs = self.presented_room_inputs();
         if !self.studio
             && let Some(rgba) = self.gpu_frame(width, height)
             && let Some(mut raster) =
                 Raster::from_rgba(width, height, self.rooms[self.current].meta().accent, &rgba)
         {
             let room = &self.rooms[self.current];
-            input_feedback::draw(
-                &mut raster,
-                effective_room_inputs(&self.inputs, self.the_show),
-            );
-            self.draw_room_interface(&mut raster, room.as_ref(), width, height);
+            input_feedback::draw(&mut raster, &room_inputs);
+            self.draw_room_interface(&mut raster, room.as_ref(), &room_inputs, width, height);
             self.present_raster(raster, width, height);
             return;
         }
@@ -2067,7 +2108,6 @@ impl App {
             let (rw, rh) = self.live_scale.render_size(width, height);
             let started = std::time::Instant::now();
             let mut raster = Raster::with_accent(rw, rh, room.meta().accent);
-            let room_inputs = effective_room_inputs(&self.inputs, self.the_show);
             if room.meta().id == "mandelbrot" {
                 self.mandelbrot_camera.render(&mut raster);
             } else if room.meta().id == "game-of-life" {
@@ -2075,14 +2115,14 @@ impl App {
             } else if !self.draw_chosen_experiment(&mut raster) {
                 let phase =
                     effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
-                room.render_input(&mut raster, phase, room_inputs);
+                room.render_input(&mut raster, phase, &room_inputs);
                 if !self.the_show
                     && let Some(posed) = &self.room_wager
                 {
                     posed.draw(&mut raster);
                 }
             }
-            input_feedback::draw(&mut raster, room_inputs);
+            input_feedback::draw(&mut raster, &room_inputs);
             self.live_scale
                 .observe(started.elapsed().as_secs_f64() * 1000.0);
             if factor > 1 {
@@ -2092,20 +2132,22 @@ impl App {
             }
         };
 
-        self.draw_room_interface(&mut raster, room.as_ref(), width, height);
+        self.draw_room_interface(&mut raster, room.as_ref(), &room_inputs, width, height);
         self.present_raster(raster, width, height);
     }
 
+    /// Draw the chrome over a room frame. `inputs` is the history the frame
+    /// was drawn with, so the readout names what the picture shows.
     fn draw_room_interface(
         &self,
         raster: &mut Raster,
         room: &dyn Room,
+        inputs: &[numinous_core::RoomInput],
         width: usize,
         height: usize,
     ) {
         let status_override = self.current_status_override(width);
         let phase = effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
-        let inputs = effective_room_inputs(&self.inputs, self.the_show);
         let show_info = self.show_info;
         hud::draw_room_chrome(
             raster,
@@ -2186,12 +2228,16 @@ impl App {
 
     fn present_raster(&mut self, raster: Raster, width: usize, height: usize) {
         let (rgba, rw, rh) = self.compose_frame(raster, width, height);
-        self.blit(&rgba, rw, rh, width, height);
+        // Every change of room passes through the stage here, after the frame
+        // is composed and before either presentation path sees it.
+        let mut dissolve = std::mem::take(&mut self.dissolve);
+        self.blit(dissolve.frame(rgba, rw, rh), rw, rh, width, height);
+        self.dissolve = dissolve;
     }
 
-    /// Finish one frame for presentation: overlays, the era, the Show's blend,
-    /// and any jolt. Returned rather than presented, so the composed frame can
-    /// be checked without a window.
+    /// Finish one frame for presentation: overlays, the era, and any jolt.
+    /// Returned rather than presented, so the composed frame can be checked
+    /// without a window.
     fn compose_frame(
         &mut self,
         mut raster: Raster,
@@ -2252,21 +2298,6 @@ impl App {
         let (rw, rh) = (raster.width(), raster.height());
         let mut rgba = raster.to_rgba();
         self.era.apply(&mut rgba, rw, rh);
-        if self.the_show
-            && self.show_crossfade_frames > 0
-            && let Some(prev) = self.show_crossfade_prev.as_ref()
-            && prev.len() == rgba.len()
-        {
-            let weight = f32::from(self.show_crossfade_frames) / f32::from(SHOW_CROSSFADE_FRAMES);
-            blend_rgba(&mut rgba, prev, weight);
-            self.show_crossfade_frames = self.show_crossfade_frames.saturating_sub(1);
-        }
-        if self.the_show {
-            self.show_crossfade_prev = Some(rgba.clone());
-        } else {
-            self.show_crossfade_prev = None;
-            self.show_crossfade_frames = 0;
-        }
         if self.screen_shake > 0 {
             if self.motion.animates() {
                 apply_screen_shake(&mut rgba, rw, rh, self.screen_shake);
@@ -2988,25 +3019,8 @@ impl ApplicationHandler for App {
                         Key::Character(c)
                             if c.len() == 1 && c.chars().all(|ch| ch.is_ascii_digit()) =>
                         {
-                            let digit = c.chars().next().unwrap_or('1');
-                            let slot = if digit == '0' {
-                                9
-                            } else {
-                                (digit as usize - '1' as usize) % 10
-                            };
-                            if slot < self.rooms.len() {
-                                self.current = slot;
-                                self.rooms = room_input::redeal_rooms(
-                                    &mut self.variation,
-                                    &mut self.current,
-                                );
-                                self.reset_room_runtime();
-                                self.tune = Arc::new(Vec::new());
-                                if let Some(window) = &self.window {
-                                    window.set_title(&self.title());
-                                }
-                                self.visit_current();
-                                self.update_audio();
+                            if let Some(digit) = c.chars().next() {
+                                self.enter_room_slot(digit);
                             }
                         }
                         _ => {}
@@ -3374,6 +3388,9 @@ fn main() {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod motion_tests;
 
 #[cfg(test)]
 mod study_runtime_tests;

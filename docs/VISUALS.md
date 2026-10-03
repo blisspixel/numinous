@@ -5,14 +5,16 @@ screenshot-worthy.** If you pause at a random instant and it is not beautiful,
 that is a bug. This document owns both the current rendering boundary and the
 target visual system.
 
-**Status (reviewed 2026-10-02).** Built: the current alpha renders every room
+**Status (reviewed 2026-10-03).** Built: the current alpha renders every room
 deterministically through CPU `Surface` implementations and presents app frames
 with `softbuffer`. Mandelbrot and Julia alone have targeted `wgpu` paths. Four
 CPU-styled Eras ship: phosphor, 8-bit, vector, and modern. PNG room renders,
-gallery sheets, app postcards, and short-loop APNG bundles ship. Designed, not
-current evidence: HDR, bloom, feedback persistence, a universal GPU pipeline,
-the one ink table below, 16-bit and blueprint Eras, audio voice swaps, room
-transitions through the stage, longer video export, and operating-system URL
+gallery sheets, app postcards, and short-loop APNG bundles ship. Room changes
+fade through the stage, and drag dials and Studio knobs use critically damped
+springs. Designed, not current evidence: HDR, bloom, feedback persistence,
+a universal GPU pipeline, the one ink table below, 16-bit and blueprint Eras,
+audio voice swaps, room
+transition audio wash, longer video export, and operating-system URL
 registration.
 
 ## App gallery
@@ -242,8 +244,20 @@ remaining product bar, not claims that every room already satisfies it.
 
 - **Everything eases.** Nothing snaps. Physical, continuous, momentum-based. Dials have inertia; values glide.
 - **Idle "breathing."** A room left alone never freezes; it drifts in a slow, generative, gorgeous idle loop (this is also what makes Watch mode work, see `DESIGN.md`).
-- **Transitions dip through the stage.** Room to room fades down to the near-black stage and back up, about a quarter second out and a third of a second in, with the sound washing under it. Never a hard cut, and never a direct cross-dissolve that sums two additive rooms into a swell of light.
-- **Dials glide.** Parameter input follows critically damped springs, so a value settles without overshooting to one the player never chose.
+- **Transitions dip through the stage (Built).** Every App room change dims
+  the last presented room to the near-black stage over 0.2 seconds, then raises
+  the arriving room over 0.35 seconds. Reduced motion uses a plain 0.08-second
+  fade out and 0.12-second fade in. Presentation time sets the duration at any
+  refresh rate. Repeated changes keep dimming and wait at the stage when needed
+  to space arrivals at least 0.5 seconds apart. A deterministic full-white
+  sweep checks the transition against the photosensitivity budget; this does
+  not certify the moving content of the rooms themselves. Audio washing under
+  the change remains Designed in `SOUND.md`.
+- **Dials glide (Built).** Drag dials and Studio knobs follow critically damped
+  springs without overshooting. Accepted input, grading, saved creations,
+  postcards, and sound retain exact written values; the room readout follows
+  the presented dial. At rest the drawn value is exact. Holds, clicks, flings,
+  persistent edits, and reduced-motion input apply immediately.
 - **Motion writes light.** Phosphor persistence leaves a decaying trail behind what moves, the visual rhyme of reverb.
 - **A live number on the frame.** The room's status readout is the instrument's display; keeping it present in every mode and Era is part of the look.
 - **Frame budget.** Work toward smooth display pacing on representative

@@ -2,13 +2,14 @@
 
 How Numinous feels, moment to moment, and the rules that keep it feeling that way.
 
-**Status (reviewed 2026-10-02).** This is the experience specification, not a
+**Status (reviewed 2026-10-03).** This is the experience specification, not a
 claim that every element below ships in the current alpha. Built: the native
 app, CLI, MCP face, catalog, Show, deterministic room voices, four Visual Eras,
 Studio expression surface, PNG postcards, short APNG loops, exact file and link
 reopening through App arguments and drops, the local Gallery, and the doorway
-rules in **Voice** below. Designed: the full theme system, room transitions
-through the stage, damped parameter springs, longer video export,
+rules in **Voice** below, room transitions through the stage, and critically
+damped springs for drag dials and Studio knobs. Designed: the full theme
+system, audio wash during room transitions, longer video export,
 operating-system URL registration, the community creator platform, and the
 complete audio architecture. `ROADMAP.md` is the status authority.
 

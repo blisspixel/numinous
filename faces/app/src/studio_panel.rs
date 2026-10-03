@@ -1,8 +1,8 @@
 //! App-local Studio input, parsing, audio, and drawing helpers.
 
 use numinous_core::{
-    Expr, FieldReading, GraphPartial, GraphSlope, HarmonicPartial, MAX_STUDIO_EDITOR_CHARS,
-    PathClosure, Raster, SoundSpec, StudioCreation, StudioKind, StudioProgram, StudioScale,
+    Expr, FieldReading, GraphPartial, GraphSlope, HarmonicPartial, MAX_STUDIO_EDITOR_CHARS, Motion,
+    PathClosure, Raster, SoundSpec, Spring, StudioCreation, StudioKind, StudioProgram, StudioScale,
     StudioSlider, Surface,
 };
 
@@ -70,6 +70,13 @@ fn studio_footer_lines(
 }
 
 const DEFAULT_SOURCE: &str = "sin(a*x) + x/3";
+
+/// Stiffness of the springs the drawn curve rides between knob steps, the
+/// same feel as a room's dial under the hand (`hand_spring`).
+const KNOB_STIFFNESS: f64 = 30.0;
+/// Knobs step by a quarter, so a ten-thousandth is far below any visible
+/// change in a curve.
+const KNOB_TOLERANCE: f64 = 1e-4;
 
 /// Target seconds a recipe holds before Auto checks a presentation-clock edge.
 pub(crate) const AUTO_DWELL_SECONDS: f64 = 21.0;
@@ -166,6 +173,10 @@ pub struct StudioPanel {
     sliders: Vec<StudioSlider>,
     /// 0 is `a`; 1 and up select `sliders[n-1]`.
     selected_knob: usize,
+    /// The springs the drawn curve rides between knob steps, indexed like
+    /// `selected_knob`. Presentation only: the knobs, the voice, the share,
+    /// and the postcard all read the exact values.
+    knob_springs: Vec<Spring>,
     /// Recipe index for Random (advances each draw).
     recipe_cursor: u64,
     /// Auto set: calm recipe rotation while the player watches.
@@ -209,6 +220,7 @@ impl StudioPanel {
             parameter: numinous_core::DEFAULT_STUDIO_PARAMETER,
             sliders: Vec::new(),
             selected_knob: 0,
+            knob_springs: Vec::new(),
             // Start at 1 so the first Random draw is not the default recipe.
             recipe_cursor: 1,
             auto_active: false,
@@ -246,6 +258,7 @@ impl StudioPanel {
                 self.parameter = creation.a();
                 self.sliders = creation.sliders().to_vec();
                 self.selected_knob = 0;
+                self.knob_springs.clear();
                 self.expr = Some(program.voice_expression().clone());
                 self.program = Some(program);
                 self.error = None;
@@ -395,9 +408,10 @@ impl StudioPanel {
 
     /// Move the explicit parameter in quarter steps. An admitted change is
     /// one edit: it pauses Auto, ends a morph, and returns one replacement voice.
-    pub fn adjust_parameter(&mut self, steps: i32) -> Option<SoundSpec> {
+    /// The drawn curve glides to the new value unless `motion` is reduced.
+    pub fn adjust_parameter(&mut self, steps: i32, motion: Motion) -> Option<SoundSpec> {
         if self.selected_knob == 0 {
-            return self.set_parameter(self.parameter + f64::from(steps) * 0.25);
+            return self.set_parameter(self.parameter + f64::from(steps) * 0.25, motion);
         }
         let index = self.selected_knob.checked_sub(1)?;
         let slider = self.sliders.get(index)?.clone();
@@ -405,7 +419,7 @@ impl StudioPanel {
         if updated.value() == self.sliders[index].value() {
             return None;
         }
-        self.sliders[index] = updated;
+        self.move_slider(index, updated, motion);
         self.creation_for_parameter(self.parameter).ok()?;
         self.pause_auto();
         self.morph = None;
@@ -415,16 +429,16 @@ impl StudioPanel {
 
     /// Return the parameter to the shared Studio default without replacing the
     /// formula, its window, or its lineage.
-    pub fn reset_parameter(&mut self) -> Option<SoundSpec> {
+    pub fn reset_parameter(&mut self, motion: Motion) -> Option<SoundSpec> {
         if self.selected_knob == 0 {
-            return self.set_parameter(numinous_core::DEFAULT_STUDIO_PARAMETER);
+            return self.set_parameter(numinous_core::DEFAULT_STUDIO_PARAMETER, motion);
         }
         let index = self.selected_knob.checked_sub(1)?;
         let slider = self.sliders.get(index)?.clone();
         let updated = slider
             .with_value(numinous_core::DEFAULT_SLIDER_VALUE)
             .ok()?;
-        self.sliders[index] = updated;
+        self.move_slider(index, updated, motion);
         self.creation_for_parameter(self.parameter).ok()?;
         self.pause_auto();
         self.morph = None;
@@ -432,7 +446,7 @@ impl StudioPanel {
         self.current_sound()
     }
 
-    fn set_parameter(&mut self, parameter: f64) -> Option<SoundSpec> {
+    fn set_parameter(&mut self, parameter: f64, motion: Motion) -> Option<SoundSpec> {
         if parameter == self.parameter {
             return None;
         }
@@ -442,8 +456,55 @@ impl StudioPanel {
         self.pause_auto();
         self.morph = None;
         self.begin_remix();
-        self.parameter = parameter;
+        let from = std::mem::replace(&mut self.parameter, parameter);
+        self.knob_spring(0).retarget(from, parameter, motion);
         self.current_sound()
+    }
+
+    /// Write a named slider, leaving its drawn value to glide after it.
+    fn move_slider(&mut self, index: usize, updated: StudioSlider, motion: Motion) {
+        let from = self.sliders[index].value();
+        let to = updated.value();
+        self.sliders[index] = updated;
+        self.knob_spring(index + 1).retarget(from, to, motion);
+    }
+
+    /// The spring for one knob, indexed like `selected_knob`.
+    fn knob_spring(&mut self, knob: usize) -> &mut Spring {
+        if self.knob_springs.len() <= knob {
+            self.knob_springs
+                .resize(knob + 1, Spring::new(KNOB_STIFFNESS, KNOB_TOLERANCE));
+        }
+        &mut self.knob_springs[knob]
+    }
+
+    /// Let `seconds` of presentation time pass for the knob springs.
+    pub(crate) fn advance_knobs(&mut self, seconds: f64) {
+        for spring in &mut self.knob_springs {
+            spring.advance(seconds);
+        }
+    }
+
+    /// `a` as the curve should be drawn this frame: the knob itself at rest.
+    fn presented_parameter(&self) -> f64 {
+        self.knob_springs
+            .first()
+            .map_or(self.parameter, |spring| spring.present(self.parameter))
+    }
+
+    /// The named sliders as the curve should be drawn this frame.
+    fn presented_sliders(&self) -> Vec<StudioSlider> {
+        self.sliders
+            .iter()
+            .enumerate()
+            .map(|(index, slider)| match self.knob_springs.get(index + 1) {
+                Some(spring) if !spring.is_settled() => slider
+                    .clone()
+                    .with_value(spring.present(slider.value()))
+                    .unwrap_or_else(|_| slider.clone()),
+                _ => slider.clone(),
+            })
+            .collect()
     }
 
     /// Neighbor in the current bundled family, if this creation still matches one.
@@ -483,6 +544,7 @@ impl StudioPanel {
         self.parameter = numinous_core::DEFAULT_STUDIO_PARAMETER;
         self.sliders.clear();
         self.selected_knob = 0;
+        self.knob_springs.clear();
         self.source = STUDIO_RECIPES[index].to_string();
         self.auto_elapsed = 0.0;
         let spec = self.reparse();
@@ -808,6 +870,9 @@ impl StudioPanel {
 
     fn sync_sliders(&mut self) {
         if let Ok(creation) = self.creation_for_parameter(self.parameter) {
+            // A typed edit can add, drop, or reorder named knobs, so any
+            // glide in progress lands where it was going.
+            self.knob_springs.clear();
             self.sliders = creation.sliders().to_vec();
             if self.selected_knob > self.sliders.len() {
                 self.selected_knob = 0;
@@ -1010,16 +1075,15 @@ impl StudioPanel {
         &self,
         raster: &mut Raster,
         layout: numinous_app::studio_render::CurveLayout,
-        xmin: f64,
-        xmax: f64,
-        a: f64,
+        (xmin, xmax): (f64, f64),
+        (a, sliders): (f64, &[StudioSlider]),
         program: &StudioProgram,
     ) -> bool {
         let Some(partial) = self.harmonic_partial() else {
             return false;
         };
-        let path_sliders = self.sliders.clone();
-        let partial_sliders = self.sliders.clone();
+        let path_sliders = sliders.to_vec();
+        let partial_sliders = sliders.to_vec();
         let path = program.clone();
         numinous_app::studio_render::draw_parametric_pair(
             raster,
@@ -1036,9 +1100,8 @@ impl StudioPanel {
         &self,
         raster: &mut Raster,
         layout: numinous_app::studio_render::CurveLayout,
-        xmin: f64,
-        xmax: f64,
-        a: f64,
+        (xmin, xmax): (f64, f64),
+        (a, sliders): (f64, &[StudioSlider]),
         program: &StudioProgram,
     ) -> bool {
         if self.morph.is_some() {
@@ -1049,8 +1112,8 @@ impl StudioPanel {
         };
         let graph = program.voice_expression().clone();
         let slope = derivative.expression;
-        let graph_sliders = self.sliders.clone();
-        let slope_sliders = self.sliders.clone();
+        let graph_sliders = sliders.to_vec();
+        let slope_sliders = sliders.to_vec();
         numinous_app::studio_render::draw_two_curves(
             raster,
             layout,
@@ -1074,9 +1137,8 @@ impl StudioPanel {
         &self,
         raster: &mut Raster,
         layout: numinous_app::studio_render::CurveLayout,
-        xmin: f64,
-        xmax: f64,
-        a: f64,
+        (xmin, xmax): (f64, f64),
+        (a, sliders): (f64, &[StudioSlider]),
         program: &StudioProgram,
     ) -> bool {
         if self.morph.is_some() {
@@ -1089,8 +1151,8 @@ impl StudioPanel {
             return false;
         };
         let graph = program.voice_expression().clone();
-        let graph_sliders = self.sliders.clone();
-        let first_sliders = self.sliders.clone();
+        let graph_sliders = sliders.to_vec();
+        let first_sliders = sliders.to_vec();
         numinous_app::studio_render::draw_two_curves(
             raster,
             layout,
@@ -1102,16 +1164,16 @@ impl StudioPanel {
         .is_some()
     }
 
-    fn curve_value(&self, x: f64, a: f64) -> Option<f64> {
+    fn curve_value(&self, x: f64, a: f64, sliders: &[StudioSlider]) -> Option<f64> {
         let current = self
             .expr
             .as_ref()
-            .map(|expr| numinous_core::eval_named(expr, x, a, &self.sliders))
+            .map(|expr| numinous_core::eval_named(expr, x, a, sliders))
             .filter(|value| value.is_finite());
         let Some(morph) = &self.morph else {
             return current;
         };
-        let previous = Some(numinous_core::eval_named(&morph.from, x, a, &self.sliders))
+        let previous = Some(numinous_core::eval_named(&morph.from, x, a, sliders))
             .filter(|value| value.is_finite());
         match (previous, current) {
             (Some(from), Some(to)) => Some(from + (to - from) * morph.progress()),
@@ -1336,7 +1398,10 @@ impl StudioPanel {
         }
 
         if let Some(program) = &self.program {
-            let (xmin, xmax, a) = self.window_and_knob();
+            // The curve rides the knob springs; the window does not move.
+            let (xmin, xmax, _) = self.window_and_knob();
+            let a = self.presented_parameter();
+            let sliders = self.presented_sliders();
             let layout = numinous_app::studio_render::CurveLayout {
                 width,
                 height,
@@ -1344,28 +1409,30 @@ impl StudioPanel {
                 bottom_margin: f64::from(footer_height + 8 * scale),
             };
             if !self.paint_pattern_grid(raster, layout) {
+                let window = (xmin, xmax);
+                let knobs = (a, sliders.as_slice());
                 match program.kind() {
                     StudioKind::Graph => {
-                        if !self.draw_slope_curve(raster, layout, xmin, xmax, a, program)
-                            && !self.draw_graph_partial(raster, layout, xmin, xmax, a, program)
+                        if !self.draw_slope_curve(raster, layout, window, knobs, program)
+                            && !self.draw_graph_partial(raster, layout, window, knobs, program)
                         {
                             let _ = numinous_app::studio_render::draw_curve(
                                 raster,
                                 layout,
                                 xmin,
                                 xmax,
-                                |x| self.curve_value(x, a),
+                                |x| self.curve_value(x, a, &sliders),
                             );
                         }
                     }
                     StudioKind::Parametric => {
-                        if !self.draw_harmonic_partial(raster, layout, xmin, xmax, a, program) {
+                        if !self.draw_harmonic_partial(raster, layout, window, knobs, program) {
                             let _ = numinous_app::studio_render::draw_parametric(
                                 raster,
                                 layout,
                                 xmin,
                                 xmax,
-                                |input| program.point_named(input, a, &self.sliders),
+                                |input| program.point_named(input, a, &sliders),
                             );
                         }
                     }
@@ -1382,11 +1449,10 @@ impl StudioPanel {
                             ymin,
                             ymax,
                             a,
-                            &self.sliders,
+                            &sliders,
                         );
                     }
                     StudioKind::Program => {
-                        let sliders = self.sliders.clone();
                         let mut curves: Vec<_> = program
                             .overlay_expressions()
                             .iter()
@@ -1458,9 +1524,9 @@ fn finite_sample(expr: &Expr, x: f64, a: f64, sliders: &[StudioSlider]) -> Optio
 #[cfg(test)]
 mod tests {
     use super::{
-        AUTO_DWELL_SECONDS, MAX_STUDIO_EDITOR_CHARS, RECIPE_MORPH_SECONDS, STUDIO_HELP_LINES,
-        STUDIO_RECIPES, StudioPanel, compact_number, fit_editor_line, fit_studio_line,
-        studio_footer_lines, studio_scale,
+        AUTO_DWELL_SECONDS, MAX_STUDIO_EDITOR_CHARS, Motion, RECIPE_MORPH_SECONDS,
+        STUDIO_HELP_LINES, STUDIO_RECIPES, StudioPanel, compact_number, fit_editor_line,
+        fit_studio_line, studio_footer_lines, studio_scale,
     };
     use crate::input_legend::{
         self, ControllerAction, ControllerButton, ControllerCopy, ControllerFace, InputMode,
@@ -1643,15 +1709,26 @@ mod tests {
         assert!(panel.load_random_recipe().is_some());
         let new = numinous_core::eval(panel.expr.as_ref().expect("new expression"), x, a);
         assert!((old - new).abs() > 1.0e-3, "fixture must expose the morph");
-        assert!((panel.curve_value(x, a).expect("morph start") - old).abs() < 1.0e-12);
+        assert!(
+            (panel
+                .curve_value(x, a, &panel.sliders)
+                .expect("morph start")
+                - old)
+                .abs()
+                < 1.0e-12
+        );
 
         panel.advance_morph(RECIPE_MORPH_SECONDS / 2.0);
-        let halfway = panel.curve_value(x, a).expect("halfway morph");
+        let halfway = panel
+            .curve_value(x, a, &panel.sliders)
+            .expect("halfway morph");
         assert!((halfway - (old + new) / 2.0).abs() < 1.0e-12);
 
         panel.advance_morph(RECIPE_MORPH_SECONDS / 2.0);
         assert!(panel.morph.is_none());
-        assert!((panel.curve_value(x, a).expect("morph end") - new).abs() < 1.0e-12);
+        assert!(
+            (panel.curve_value(x, a, &panel.sliders).expect("morph end") - new).abs() < 1.0e-12
+        );
 
         let invalid = numinous_core::parse("1/0").expect("parseable non-finite expression");
         let valid = panel.expr.clone().expect("valid target expression");
@@ -1660,13 +1737,27 @@ mod tests {
             elapsed: RECIPE_MORPH_SECONDS / 2.0,
         });
         panel.expr = Some(invalid.clone());
-        assert!((panel.curve_value(x, a).expect("finite previous") - new).abs() < 1.0e-12);
+        assert!(
+            (panel
+                .curve_value(x, a, &panel.sliders)
+                .expect("finite previous")
+                - new)
+                .abs()
+                < 1.0e-12
+        );
         panel.morph = Some(super::CurveMorph {
             from: invalid,
             elapsed: RECIPE_MORPH_SECONDS / 2.0,
         });
         panel.expr = Some(valid);
-        assert!((panel.curve_value(x, a).expect("finite current") - new).abs() < 1.0e-12);
+        assert!(
+            (panel
+                .curve_value(x, a, &panel.sliders)
+                .expect("finite current")
+                - new)
+                .abs()
+                < 1.0e-12
+        );
     }
 
     #[test]
@@ -1958,19 +2049,62 @@ mod tests {
     }
 
     #[test]
+    fn a_knob_step_glides_the_drawn_curve_while_the_creation_stays_exact() {
+        fn curve(panel: &StudioPanel) -> Vec<u8> {
+            let mut raster = Raster::new(360, 240);
+            panel.draw(&mut raster, InputMode::KeyboardMouse, 360, 240);
+            // Below the editor and readout lines: only the curve itself.
+            raster.to_rgba()[360 * 4 * 90..].to_vec()
+        }
+        for (source, knob) in [("sin(a*x) + x/3", 0), ("sin(b*x)", 1)] {
+            let mut gliding = StudioPanel::new(source).expect("formula");
+            gliding.toggle_help();
+            while gliding.selected_knob != knob {
+                assert!(gliding.cycle_knob(1));
+            }
+            let mut landed = gliding.clone();
+            let before = curve(&gliding);
+            let voice = gliding.adjust_parameter(4, Motion::Full).expect("a step");
+            assert_eq!(
+                landed.adjust_parameter(4, Motion::Reduced),
+                Some(voice),
+                "{source}: the voice answers the exact knob at once"
+            );
+            // Everything that is kept or heard is exact immediately.
+            assert_eq!(gliding.current_creation(), landed.current_creation());
+            assert_eq!(gliding.knob_status(), landed.knob_status());
+            assert_eq!(
+                gliding.postcard_rgba(200, numinous_core::Era::Modern, None, None),
+                landed.postcard_rgba(200, numinous_core::Era::Modern, None, None),
+                "{source}: a postcard is never taken mid-glide"
+            );
+            // Only the drawn curve moves on the spring: reduced motion lands
+            // at once, full motion starts where it was and arrives exactly.
+            assert_eq!(curve(&gliding), before, "{source}: the curve jumped");
+            assert_ne!(curve(&landed), before);
+            gliding.advance_knobs(1.0 / 60.0);
+            let between = curve(&gliding);
+            assert_ne!(between, before, "{source}: the curve did not move");
+            assert_ne!(between, curve(&landed), "{source}: the curve did not glide");
+            gliding.advance_knobs(1.0);
+            assert_eq!(curve(&gliding), curve(&landed), "{source}: never landed");
+        }
+    }
+
+    #[test]
     fn named_sliders_tab_steps_and_home_and_reopen() {
         let mut panel = StudioPanel::new("sin(b*x)").expect("panel");
         assert_eq!(panel.sliders.len(), 1);
         assert_eq!(panel.selected_knob, 0);
         assert!(panel.cycle_knob(1));
         assert_eq!(panel.selected_knob, 1);
-        let voice = panel.adjust_parameter(4).expect("step b");
+        let voice = panel.adjust_parameter(4, Motion::Full).expect("step b");
         assert_eq!(panel.sliders[0].value(), 2.0);
         let creation = panel.current_creation().expect("creation");
         assert!(creation.to_num_file().starts_with("NUMINOUS_STUDIO 6\n"));
         assert_eq!(creation.sliders()[0].value(), 2.0);
         assert_eq!(voice, creation.to_melody(32));
-        assert!(panel.reset_parameter().is_some());
+        assert!(panel.reset_parameter(Motion::Full).is_some());
         assert_eq!(panel.sliders[0].value(), 1.0);
         assert!(panel.cycle_knob(1));
         assert_eq!(panel.selected_knob, 0);
@@ -1990,13 +2124,13 @@ mod tests {
             saved.to_melody(32)
         );
         reopened.cycle_knob(1);
-        assert!(reopened.reset_parameter().is_some());
+        assert!(reopened.reset_parameter(Motion::Full).is_some());
         assert_eq!(reopened.sliders[0].value(), 1.0);
         let ranged = numinous_core::StudioSlider::new("b", 3.0, 2.0, 8.0).expect("ranged");
         let mut blocked = StudioPanel::new("sin(b*x)").expect("blocked");
         blocked.sliders = vec![ranged];
         blocked.selected_knob = 1;
-        assert!(blocked.reset_parameter().is_none());
+        assert!(blocked.reset_parameter(Motion::Full).is_none());
         assert_eq!(blocked.sliders[0].value(), 3.0);
 
         let extra = numinous_core::studio_experiment("extra-knob").expect("extra");
@@ -2165,7 +2299,9 @@ mod tests {
             let original = panel.current_sound().expect("voice");
             let mut voices = Vec::new();
             for a in [0.0, 0.25, 1.25, -0.5] {
-                let voice = panel.set_parameter(a).expect("changed parameter");
+                let voice = panel
+                    .set_parameter(a, Motion::Full)
+                    .expect("changed parameter");
                 let creation = panel.current_creation().expect("creation");
                 assert_eq!(creation.a(), a);
                 assert_eq!(creation.xmin(), numinous_core::DEFAULT_STUDIO_XMIN);
@@ -2209,15 +2345,15 @@ mod tests {
                 1e12 + 0.25,
                 -1e12 - 0.25,
             ] {
-                assert!(panel.set_parameter(invalid).is_none());
+                assert!(panel.set_parameter(invalid, Motion::Full).is_none());
             }
-            assert!(panel.adjust_parameter(0).is_none());
+            assert!(panel.adjust_parameter(0, Motion::Full).is_none());
             if a == 1.0 {
-                assert!(panel.reset_parameter().is_none());
+                assert!(panel.reset_parameter(Motion::Full).is_none());
             } else if a.abs() == 1e12 {
                 assert!(
                     panel
-                        .adjust_parameter(if a > 0.0 { 1 } else { -1 })
+                        .adjust_parameter(if a > 0.0 { 1 } else { -1 }, Motion::Full)
                         .is_none()
                 );
             }
@@ -2226,7 +2362,9 @@ mod tests {
             assert_eq!(panel.current_creation().expect("unchanged"), saved);
 
             let steps = if a > 0.0 { -1 } else { 1 };
-            let voice = panel.adjust_parameter(steps).expect("one admitted step");
+            let voice = panel
+                .adjust_parameter(steps, Motion::Full)
+                .expect("one admitted step");
             let edited = panel.current_creation().expect("remix");
             assert_eq!(edited.a(), a + f64::from(steps) * 0.25);
             assert_eq!((edited.xmin(), edited.xmax()), (-2.0, 3.0));
@@ -2244,11 +2382,13 @@ mod tests {
         let mut panel = StudioPanel::default();
         assert!(panel.load_random_recipe().is_some());
         assert!(panel.morph.is_some());
-        assert!(panel.adjust_parameter(1).is_some());
+        assert!(panel.adjust_parameter(1, Motion::Full).is_some());
         assert!(panel.morph.is_none());
         let valid_source = panel.source.clone();
         assert!(panel.push_text("+").is_none());
-        let voice = panel.adjust_parameter(-2).expect("last-good voice");
+        let voice = panel
+            .adjust_parameter(-2, Motion::Full)
+            .expect("last-good voice");
         assert!(panel.error.is_some());
         assert_eq!(panel.parameter, 0.75);
         assert!(panel.current_creation().is_err());

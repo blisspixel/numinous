@@ -6,6 +6,13 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 ## [Unreleased]
 
 ### Added
+- Every App room change fades through the near-black stage, with a shorter
+  plain fade under reduced motion. Rapid changes wait at the stage to keep
+  arrivals at least half a second apart; deterministic full-white sweeps check
+  transition flashing without claiming to certify each room's moving content.
+- Drag dials and Studio knobs glide on critically damped springs. Accepted
+  input, grading, saved creations, postcards, and sound keep exact written
+  values. Reduced motion applies input immediately.
 - Prose locks that fail on a wrong count, not only on a missing right one. A
   shared census of current documents holds every stated catalog, wing, MCP
   tool, and screen-matrix count to live data, and history files are exempt.

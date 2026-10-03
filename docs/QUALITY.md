@@ -130,6 +130,14 @@ rendering checks; participant comprehension, external-host discovery, and
 physical cross-platform evidence remain open.
 The broader dated baseline below retains its original counts.
 
+The 2026-10-03 motion pass measured 94.72% regions and 94.75% lines with the
+existing workspace exclusions. The spring measured 99.03% lines, the room
+dissolve 99.42%, and the presented hand 100%. Deterministic transition tests
+cover rapid changes, the initial arrival, motion changes during departure,
+resizing, reduced motion, and a full-white photosensitivity sweep. Rendered
+strips of room changes and dial input were inspected. These checks measure
+transition behavior; the known room-content flash limits remain open.
+
 ## Evidence snapshot, 2026-09-01
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,

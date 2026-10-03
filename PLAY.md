@@ -54,6 +54,10 @@ is available from Installed Apps.
 
 (From a clone, `cargo run --release --bin numinous-app` works directly.)
 
+Room changes fade through the dark stage. Drag dials and Studio knobs glide
+into place; reduced motion makes their input immediate and uses a shorter,
+plain room fade. Quick room changes may briefly wait on the dark stage.
+
 ### Before you start: flashing, motion, color, and sound
 
 Two things are known to be wrong and are not fixed yet, so you can decide for

@@ -2586,7 +2586,7 @@ fn accelerated_mandelbrot_uses_the_core_camera_and_shared_chrome() {
             .expect("GPU frame import");
     let before = raster.to_rgba();
     let room = &app.rooms[app.current];
-    app.draw_room_interface(&mut raster, room.as_ref(), 320, 220);
+    app.draw_room_interface(&mut raster, room.as_ref(), &app.inputs, 320, 220);
     let after = raster.to_rgba();
     assert_ne!(
         after, before,
@@ -2640,7 +2640,7 @@ fn phase_portrait_curves_survive_composed_room_chrome_at_both_window_sizes() {
             );
             let mut composed = source.clone();
             crate::input_feedback::draw(&mut composed, &app.inputs);
-            app.draw_room_interface(&mut composed, room.as_ref(), width, height);
+            app.draw_room_interface(&mut composed, room.as_ref(), &app.inputs, width, height);
             crate::hud::draw_audio_state(&mut composed, &app.audio_state(), width);
             crate::hud::draw_spectrum_meter(
                 &mut composed,
@@ -4478,7 +4478,9 @@ fn fresh_studio_picture_live_voice_and_shared_midi_ignore_gallery_phase() {
         app.enter_studio();
         app.studio_panel.toggle_help();
         for steps in [0, 1, -3] {
-            app.studio_panel.adjust_parameter(steps);
+            app.studio_panel.adjust_parameter(steps, app.motion);
+            // The drawn curve glides to the knob; compare frames once it lands.
+            app.advance_presentation_time(1.0);
             let creation = app.studio_panel.current_creation().expect("creation");
             let voice = app.studio_panel.current_sound().expect("voice");
             let sung = creation.to_melody(32);

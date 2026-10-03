@@ -251,7 +251,7 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
   tracked-glider phase accent, and Galton ships one bounded all-ball wave
   texture with an exact newest-ball peg sequence. Tuned event layers and
   equivalent mathematical voices in other rooms remain planned.
-- **Transitions are washes.** Room-to-room dissolves carry a reverb wash through black, matching the visual cross-dissolve (see `VISUALS.md`).
+- **Transitions are washes (Designed).** Room changes carry a reverb wash through black, matching the built visual fade through the stage (see `VISUALS.md`). The shared audio bus remains a Sensory Lift candidate.
 - **Reveal has a resolution.** Summoning a Revelation card lands on a small, satisfying harmonic resolution, the sonic version of the floor tilting.
 
 ## Accessibility & silence
