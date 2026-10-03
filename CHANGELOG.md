@@ -40,6 +40,22 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 - The documentation map links every doc, lists decision 0003, the ledger,
   release notes, and evidence, and gives ROADMAP sole ownership of priorities.
   Stale catalog counts and versions in owner docs are corrected.
+- Core owns Show direction. Every catalog room has a director profile: a phase
+  window to perform and a reduced-motion still, derived from the postcard or,
+  in a short authored table, chosen to avoid a sweep's ugly end or a staged
+  room's graded answer. A test sweeps every staged window for that answer.
+- `ShowDirector` orders the hands-off Show by integer scores over derived
+  features (accent hue, motif tempo and key, and ink and motion measured on the
+  ASCII canvas), with a seeded draw among the best three. It never places two
+  rooms of one wing side by side or parks on a near-static room, weights
+  toward the new Front Hall collection of 25 rooms, and keeps staged rooms at
+  their canonical variation. Passing through a room records no visit.
+- The Overture is core data: four beats (Chaos Game, Mandelbrot, Golden Angle,
+  Times Tables) with exact phases, eased key moves, full-motion timing,
+  dissolve lengths, a continuous bed, and a hand-off into Times Tables at K=2.
+  Its last beat carries the octave lock as exact fractions: the dial settles
+  from 43/20 through 41/20 to 2 while the voice settles from 43:23 through
+  41:21 to an exact 2:1.
 
 ### Fixed
 - The terminal Show's curtain line, the exit tease of live terminal views, and

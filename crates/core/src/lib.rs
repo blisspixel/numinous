@@ -102,6 +102,7 @@ pub mod registry;
 pub mod resonance;
 pub mod rng;
 pub mod room;
+pub mod room_collection;
 pub mod room_walk;
 pub mod rooms;
 pub mod route;
@@ -256,6 +257,7 @@ pub use room::{
     RoomInput, RoomMeta, RoomMetadata, held_pokes_from_inputs, inputs_from_pokes, latest_gesture,
     pokes_from_inputs, renderable_poke_count, room_action, room_touch_action,
 };
+pub use room_collection::{FRONT_HALL, RoomCollection};
 pub use room_walk::{RoomWalk, RoomWalkStep, STRANGE_LOOP_WALK};
 pub use rooms::{ROOM_CATALOG, canonical_room_id, catalog_index, room_meta_by_id};
 pub use route_creation::{
@@ -277,7 +279,10 @@ pub use share::{
     write_share_bundle_readme, write_share_sidecar, write_studio_share_readme,
 };
 pub use show::{
-    DirectedShowCue, DirectedShowLook, MINDS_SHOW, ShowLookRole, ShowMotion, ShowScore,
+    DirectedShowCue, DirectedShowLook, DirectorCue, DirectorProfile, Ease, ExactRatio, LockStep,
+    MINDS_SHOW, OCTAVE_LOCK, OVERTURE, OVERTURE_SHOW, Overture, OvertureBeat, OvertureKey,
+    PhaseWindow, SHOW_SCORES, ShowDirector, ShowHandoff, ShowLookRole, ShowMotion, ShowScore,
+    director_profile,
 };
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};
