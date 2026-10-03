@@ -634,6 +634,269 @@ The full recurrence and primary references to Dijkstra and Held-Karp are in
 `crates/core/src/route.rs`, `crates/core/src/route_workbench.rs`, and
 `crates/core/src/rooms/route_lab.rs`.
 
+## October 2026 review: expanding maps and flashing
+
+Scope: Tent Map, Coupled Tents, Angle Doubling, Gauss Map, and Ricker Map, the
+Rule 30 postcard, a precision check of Baker's Map, Arnold's Cat Map, and the
+Smale Horseshoe, and the photosensitivity sweep that three of these rooms
+failed. The three failures and two of the defects below share one cause: a
+chaotic room redrew a re-seeded orbit every frame, and binary floating point
+quietly changed what that orbit was.
+
+### Expanding maps in binary floating point
+
+A map whose slopes are powers of two is computed exactly in binary. Doubling
+`x`, or forming `2(1 - x)`, shifts one significant binary digit out and none
+in, so the machine's orbit of a seed is the exact orbit of the dyadic rational
+`odd / 2^k` that the seed rounded to, and it reaches `0` after exactly `k`
+steps. For a double in `[1/2, 1)` that is at most 53 steps, and one more per
+halving below. At `mu = 2` the tent map's density strip put 1,986 of its 2,000
+samples at exactly 0, where the true invariant density is uniform.
+
+`crates/core/src/numerics.rs` now has one iterator for maps of the unit cube,
+`MapOrbit`, with two modes. The exact mode is plain arithmetic, for a room whose
+subject is the digits. The dithered mode adds a deterministic nudge of at most
+`d = 2^-44` (about `5.7e-14`) to each coordinate after every step, reflected
+back into the cube and keyed by the room's seed. That is a pseudo-orbit with
+error `d` per step. For a uniformly expanding circle map with expansion
+`lambda > 1`, such as angle doubling, a true orbit lies within
+`d / (lambda - 1)` of it at every step, and Coven, Kan and Yorke prove that the
+tent map at slope 2 has the same shadowing property, so there the picture is
+the orbit of a real seed next to the one asked for. Elsewhere the claim is
+statistical, and each room checks its picture against an exact invariant.
+
+Tests check the stored-digit oracle directly: for seven seeds, digit `k` of
+the exact doubling orbit equals bit `k` of the integer `odd` from the double's
+own bit pattern, and the orbit is 0 from step `k` on and never before. The
+dithered tent orbit stays within `d (2^k - 1)` of the exact one for 40 steps,
+the bound that follows from the map being 2-Lipschitz, and a plain slope-2 orbit
+from 0.3 is 0 from step 60 while the dithered one never touches 0.
+
+Sources: Coven, Kan and Yorke, Pseudo-orbit shadowing in the family of tent
+maps, Trans. Amer. Math. Soc. 308 (1988), for shadowing in the tent family, and
+IEEE 754-2019 for the 53-bit binary64 significand. Implementation and
+regressions: `crates/core/src/numerics.rs`.
+
+### Tent Map
+
+`T(x) = mu min(x, 1 - x)`. Ambient play sets `mu = 1.5 + 0.5 t + s` and a hand
+sets `mu = 1 + x + s`, with seed offset `s = 0.02 (seed mod 5)`, clamped to
+`[0.5, 2]`. Both the end of the ambient sweep and a full drag reach `mu = 2`
+exactly. At `mu = 2` every point has two preimages, each through a branch of
+slope 2, so Lebesgue measure is invariant and the density is uniform. For
+`1 < mu <= 2` the attractor is the core `[T(T(1/2)), T(1/2)]`, which is
+`[mu (1 - mu/2), mu/2]`.
+
+The cobweb and the density strip now use the dithered iterator. Regressions
+take the room's own 2,000 density samples at `mu = 2` for four keys: none is 0,
+the Kolmogorov-Smirnov distance to uniform is below the one percent critical
+value 0.036, and every tenth of the interval holds between 150 and 250 of an
+expected 200 samples. At `mu = 1.5, 1.7, 1.9, 2` the samples stay inside the core to `1e-12`
+and come within 0.01 of both ends. Source: Lasota and Mackey, Chaos, Fractals,
+and Noise (Springer, 1994), for the tent map's invariant density.
+Implementation: `tent_map.rs`.
+
+### Coupled Tents
+
+`x' = (1 - eps) T(x) + eps T(y)` and `y' = (1 - eps) T(y) + eps T(x)`, with
+`T(u) = 2 min(u, 1 - u)`. A gap `x - y` across the diagonal becomes
+`(1 - 2 eps)(T(x) - T(y))`. Because `|T'| = 2` everywhere, every synchronized
+orbit multiplies a small gap by the same `2 (1 - 2 eps)`, so the transverse
+Lyapunov exponent is exactly `ln 2 + ln |1 - 2 eps|`, zero at `eps = 1/4`.
+Because `|T(a) - T(b)| <= 2 |a - b|` for every pair, the gap also obeys
+`|gap'| <= 2 |1 - 2 eps| |gap|`, so for `1/4 < eps < 3/4` every start locks,
+not only nearby ones. The admitted couplings stay below 0.6.
+
+The old picture joined 300 iterates by chords, which are not trajectories. In
+plain floating point a locked pair is the pure tent map, so it ran out of digits
+and sat at the origin: at `eps = 0, 0.24, 0.30, 0.35` frames alternated between a
+square of chords and a dot. Its status called the pair synchronized whenever the
+mean gap was below 0.05, so at `eps = 0.24`, below the threshold, the collapse
+to the origin (mean gap about `1.9e-14`) read as `sync`.
+
+The room now burns in 200 steps, bins 4,000 dithered steps per frame, and plots
+each occupied cell once at a log-density level relative to the busiest cell, so
+locking reads as a loss of dimension rather than a surge of light. The nudges
+are independent per coordinate, so they cannot manufacture a lock: a gap they
+open shrinks only where the exponent is negative. Ambient coupling breathes
+`eps = 0.35 (1 - cos 2 pi t) / 2 + s`, crossing the threshold twice per cycle
+with no jump at the wrap. The status prints the exact exponent and `LOCK`,
+`FREE`, or `EDGE` from its sign. Near the threshold the picture is genuinely
+slow: just above it the gap shrinks two percent a step, and just below it the
+fold keeps knocking the gap down while it grows four percent a step, so the
+cloud hugs the diagonal without settling (on-off intermittency).
+
+Regressions measure the growth of a `1e-6` gap over 10 steps from four starts
+and match the formula within `1e-3` at `eps = 0, 0.1, 0.2, 0.3, 0.4`. For four
+seeds, the settled gap is below `1e-11` at `eps = 0.27, 0.3, 0.35, 0.5`, the
+mean gap exceeds `1/9` (a third of the uncoupled `1/3`) at
+`eps = 0, 0.1, 0.15`, and at `eps = 0.24` it exceeds 0.01. The locked cloud lies
+within one cell of the drawn diagonal, and locking moves whole-frame luminance
+by less than 0.05.
+
+Source: [Fujisaka and Yamada, Stability theory of synchronized motion in
+coupled-oscillator systems](https://doi.org/10.1143/PTP.69.32), Prog. Theor.
+Phys. 69 (1983). Implementation: `coupled_tent.rs`.
+
+### Angle Doubling
+
+`theta -> 2 theta mod 1` reads one binary digit of the seed per step, and the
+machine's orbit is exact: the stored seed `odd / 2^k` is 0 after `k` steps. The
+step dial stopped at 48 for a hand and 42 ambient, so this was never seen. Both
+now reach 64. When the stored digits run out within the steps drawn, the digit
+strip marks the place, a ring marks 0 on the circle where the orbit now stays,
+and the status says so, for example `digits ran out at 53` for the ambient seed
+0.4 at the end of each cycle. That is the room's own reveal made visible: the
+digits were always in the starting number, and the machine kept only 53 of them.
+
+Two geometry faults are corrected. The graph samples were plotted at 45 percent
+of the height while the graph was drawn full height, so they did not lie on it;
+the graph now occupies the top band the samples use. Under a hand the status
+read a different start angle from the picture; both now use the same one. A
+test reconstructs `k` from the double's bits independently for four hand seeds
+and the ambient end, and the digit strip of 0.8125 reads `1101` then zeros.
+Implementation: `doubling_map.rs`.
+
+### Gauss Map
+
+`G(x) = 1/x - floor(1/x)` sends `[0; a1, a2, ...]` to `[0; a2, a3, ...]`: the
+orbit is the shift of the continued-fraction digits. Rationals have finite
+expansions, so their orbits end at 0. Almost every orbit is distributed by
+the Gauss density `1 / ((1 + x) ln 2)`, and its Lyapunov exponent is
+`pi^2 / (6 ln 2)`, about 2.37 per step, so a plain floating-point orbit is
+faithful for only about 15 steps.
+
+Three defects are corrected. Phase moved the seed, so each frame redrew a
+different 180-leg cobweb. The step sent 0 to 0.5, inventing a `0 <-> 0.5` cycle,
+and the postcard seed 0.4, whose stored value begins `[0; 2, 2, ...]`, fell into
+it. The graph was one polyline joined across the jumps at `x = 1/k`.
+
+A visit now keeps one irrational seed, chosen by the variation seed from six
+defined by their digits: `pi - 3` (OEIS A001203, tabulated), `e - 2`
+(`[0; 1, 2, 1, 1, 4, 1, 1, 6, ...]`), the golden conjugate (all 1s, a fixed
+point), `sqrt 2 - 1` (all 2s, a fixed point), `sqrt 3 - 1` (alternating 1, 2, a
+two-cycle), and `tanh(1/2)` (`[0; 2, 6, 10, 14, ...]`). The phase adds one leg
+per fourteenth of the cycle, up to 15. Each drawn point is evaluated backwards
+from at least 40 following digits, the stable direction, so there is no error
+amplification and even the all-ones expansion is fixed below `1e-16`. A hand's
+seed is a double, and every double is rational: Euclid's algorithm on its
+stored `odd / 2^k` gives its digits exactly, and when they run out within the
+drawn legs an end mark sits at `x = 1/a_last` and the status says
+`ENDS: RATIONAL`. A hand at the middle gives 0.5 = `[0; 2]`, which ends after one
+leg. Near a simple fraction the stored digits include a huge one, printed in
+scientific form; that digit is real, and it measures how close the seed is to
+the fraction. The graph is drawn branch by branch, and the Gauss density is a
+faint guide along the bottom.
+
+Regressions check that each digit rule evaluates to its constant within
+`1e-15`; that for every drawn leg `floor(1/x_n)` is the digit and
+`frac(1/x_n)` is `x_(n+1)`; the fixed points and the two-cycle; hand-worked
+Euclid for 0.5 and 0.375 = `[0; 2, 1, 2]`; that the stored 0.37 begins like
+37/100 and ends; that the guide integrates to 1 within `1e-9`; and that the
+transfer operator `sum_k rho(1/(k + x)) / (k + x)^2` returns `rho(x)` within
+`1e-9` at five points, a direct check of invariance.
+
+Sources: Corless, Continued fractions and chaos, Amer. Math. Monthly 99
+(1992), for the map, its invariant density and exponent;
+[OEIS A001203](https://oeis.org/A001203) and
+[OEIS A003417](https://oeis.org/A003417) for the digits of `pi` and `e`.
+Implementation: `gauss_map.rs`.
+
+### Ricker Map
+
+`x' = x exp(r (1 - x))`. Taking logs, `ln x(n+1) - ln x(n) = r (1 - x(n))`, so
+over `N` generations the mean population is `1 + (ln x(0) - ln x(N)) / (r N)`:
+along any orbit that stays bounded and away from 0 the boom and bust average
+to the carrying capacity exactly. The hump's peak is `e^(r - 1) / r` at
+`x = 1/r`; no population exceeds it after one generation, and the attractor
+lies in `[f(peak), peak]`. The fixed point `x = 1` is stable for `0 < r < 2`.
+
+The old picture redrew 200 three-segment legs from a fixed seed every frame. Its
+axes were `[0, 2.5]` by `[0, 3]`, so the corner line it drew as the diagonal was
+`y = 1.2 x`, and for `r` above about 3.3 the peak (3.02 at 3.3, 4.02 at 3.7) was
+clamped onto the frame edge.
+
+The room now uses equal axes `[0, M]`, with `M` five percent above the highest
+peak in the current mode's whole range, fixed for the mode so nothing is clamped
+and the axes never breathe. It burns in 300 generations and draws the last 16
+legs faded by age, and a strip of the last 48 generations as bars on the same
+scale. The strip's lit area is proportional to the mean population, which the
+identity pins near 1, so its light holds steady while every bar booms and busts.
+Ambient `r = 1.5 + 2 (1 - cos 2 pi t) / 2 + s` breathes with no jump at the wrap.
+
+Regressions check the identity within `1e-9` over `10^5` generations at seven
+rates, the mean within `1e-3` of 1, and the strip's 48-generation mean within
+its bound `ln(peak / f(peak)) / (48 r)`. The peak is checked at `1/r`, and for
+five seeds and 101 rates in each mode every drawn population lies strictly
+inside the axes. The strip's light varies by less than 15 percent from
+`r = 1.6` to 3.5. The status labels' boundaries at 2 and 2.7 were not re-derived
+in this review; 2 is the exact loss of stability, 2.7 is an approximate onset of
+chaos.
+
+Source: [Ricker, Stock and recruitment](https://doi.org/10.1139/f54-039),
+J. Fish. Res. Board Can. 11 (1954). Implementation: `ricker.rs`.
+
+### Rule 30 postcard
+
+The ambient phase tours eight rules and the postcard phase 0.5 rounded to the
+fifth, Rule 54, so the room's gallery image showed the wrong automaton. The
+postcard is now phase 0, Rule 30, and a test compares its center column with
+[OEIS A051023](https://oeis.org/A051023) for 36 rows; Rule 54's column repeats
+`1, 1, 0, 0` instead. The room's near-black accent is a separate color question
+left to the room-color rulings.
+
+### Baker, Cat Map, and Horseshoe: checked, no collapse
+
+The same digit loss could hide in any room that doubles a coordinate. None of
+these three iterates deep enough for it. Baker's Map doubles `x` at most 16
+times from grid points `(2i + 1)/96`. The Cat Map applies its inverse at most
+13 times; both directions stretch by at most `(3 + sqrt 5)/2`, so rounding near
+`1e-16` stays below `1e-10`. The Horseshoe folds at most six times from rows
+`(2i + 1)/112`. Each room has a regression comparing its deepest floating-point
+iterate with exact integer arithmetic on the same rationals, within `1e-9`,
+`1e-9`, and `1e-12` respectively, over every grid point. A few grid points are
+themselves dyadic, `3/96 = 1/32` for one, and their true orbits do reach 0 in
+a few steps; the exact oracle agrees, so that is the mathematics and not the
+machine. Implementation: `baker.rs`, `cat_map.rs`, `horseshoe.rs`.
+
+### The photosensitivity sweep at the App's worst case
+
+WCAG 2.3.1 allows at most three general flashes in any one-second window. The
+sweep used to sample 30 frames a second at normal speed and called that the
+fastest a face advances a room. The App presents 60 frames a second and a
+player can double its speed up to eight times. The core now owns those numbers
+(`ROOM_CYCLES_PER_SECOND`, `MAX_TIME_SCALE`, `APP_FRAMES_PER_SECOND`), the App
+reads them, and the sweep renders one full cycle per room at the App's normal
+speed and frame rate, 200 frames, and measures every speed on the doubling
+ladder by taking every first, second, fourth, or eighth frame cyclically.
+
+Before this review, at 30 frames and 1x, `gauss-map`, `coupled-tent` and
+`ricker` peaked at 7, 5 and 4 flashes a second. At 60 frames and 1x they peaked
+at 22, 15 and 5, because each frame was a fresh chaotic picture. After the
+corrections all three measure 0 at every speed through 8x, and so do Tent Map,
+Angle Doubling and Logistic Orbit; their whole-frame luminance moves by at most
+0.12 across a cycle (Tent Map) and 0.04 or less for the rest. The worst-case
+sweep found five rooms over the budget at 8x that the old regime missed.
+`logistic-orbit` drew a 200-leg cobweb from phase-driven parameters, the same
+defect, and peaked at 7 a second; it now draws 32 legs, each within about
+`1e-6` of the stated seed's true orbit, checked at `r = 4` against the closed
+form `sin^2(2^n theta)`. `cellular-automata` (5), `julia` (5), `lambda-map` (4)
+and `pickover` (4) are within budget at 1x, 2x and 4x and over it only at 8x.
+None of them redraws a fresh chaotic picture each frame, but within one cycle
+each one's whole-frame brightness swings by more than a tenth more than once,
+and 8x runs 2.4 cycles a second.
+They stay on the shrink-only list with that slowest failing speed recorded, and
+ROADMAP decision 2 holds the choice between capping their speed and slowing
+their tours.
+
+The measurement remains whole-frame mean relative luminance at 240 by 140, so
+the flashing-area rule is not implemented, as before. Speeds between the
+doublings, which the App's typed console and the Life room's wheel can set, and
+the music visualizer, which multiplies speed by up to 1.5 and adds beat kicks, are not
+measured. Source: [WCAG 2.2, Understanding Three Flashes or Below
+Threshold](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold).
+Implementation: the sweep in `crates/core/src/registry.rs`.
+
 ## What remains open
 
 Independent mathematical review before 1.0 remains unstaffed. The rest of the
