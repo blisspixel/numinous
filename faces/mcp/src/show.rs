@@ -4,19 +4,41 @@
 //! experience is replayable without a session, timer, task, or stored cursor.
 
 use numinous_broadcast::PLAY_ROOM_MAX_DWELL_CELLS;
-use numinous_core::{Canvas, MINDS_SHOW, ShowMotion, room_action, room_by_id_with};
+use numinous_core::{
+    Canvas, ExactRatio, LockStep, MINDS_SHOW, Room, SHOW_SCORES, ShowHandoff, ShowMotion,
+    ShowScore, counted, room_action, room_by_id_with,
+};
 use serde_json::{Value, json};
 
 const SHOW_SCHEMA: &str = "numinous.show-segment";
-const SHOW_SCHEMA_VERSION: u32 = 1;
-const SHOW_ID: &str = "strange-loop";
+const SHOW_SCHEMA_VERSION: u32 = 2;
 const MAX_RETURNED_NOTES: usize = 64;
+
+fn score_ids() -> Vec<&'static str> {
+    SHOW_SCORES.iter().map(|score| score.id()).collect()
+}
+
+fn cue_counts() -> Vec<usize> {
+    SHOW_SCORES.iter().map(|score| score.cue_count()).collect()
+}
+
+fn longest_score() -> usize {
+    cue_counts().into_iter().max().unwrap_or(1)
+}
+
+fn score_summary() -> String {
+    SHOW_SCORES
+        .iter()
+        .map(|score| format!("{} ({})", score.id(), counted(score.cue_count(), "cue")))
+        .collect::<Vec<_>>()
+        .join(" or ")
+}
 
 pub(super) fn catalog_entry() -> Value {
     json!({
         "name": "watch_show",
         "title": "The Show",
-        "description": "Watch one bounded cue from a curated six-room Strange Loop show. Every call is deterministic and complete: exact ASCII looks, typed visual deltas, a visual alternative, sound notation, and optional WAV audio. The caller owns timing and must request the next position explicitly. The call reads no journal or workspace, writes no progress, and never reveals an explanation.",
+        "description": "Watch one bounded cue from a curated show. The default strange-loop score walks six rooms from a tiny local rule toward self-reference. The overture score plays four rooms as one piece, each a single rule repeated, and its last cue hands you the Times Tables dial as a play_room call while the parameter voice converges on an exact 2:1 octave. Every call is deterministic and complete: exact ASCII looks, typed visual deltas, a visual alternative, sound notation, and optional WAV audio. The caller owns timing and must request the next position explicitly. The call reads no journal or workspace, writes no progress, and never reveals an explanation.",
         "annotations": {
             "title": "The Show",
             "readOnlyHint": true,
@@ -29,16 +51,16 @@ pub(super) fn catalog_entry() -> Value {
             "properties": {
                 "show": {
                     "type": "string",
-                    "enum": [SHOW_ID],
-                    "default": SHOW_ID,
-                    "description": "Stable curated score identifier."
+                    "enum": score_ids(),
+                    "default": MINDS_SHOW.id(),
+                    "description": format!("Stable curated score identifier: {}.", score_summary())
                 },
                 "position": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 5,
+                    "maximum": longest_score() - 1,
                     "default": 0,
-                    "description": "Zero-based cue position. Use the exact next.arguments returned by the preceding cue."
+                    "description": "Zero-based cue position inside the chosen score. Use the exact next.arguments returned by the preceding cue."
                 },
                 "seed": {
                     "type": "integer",
@@ -64,12 +86,12 @@ pub(super) fn catalog_entry() -> Value {
                     "type": "string",
                     "enum": ["sampled", "reduced"],
                     "default": "sampled",
-                    "description": "sampled returns arrival, postcard, and curtain looks. reduced returns the same cue's postcard only."
+                    "description": "sampled returns the cue's three exact looks. reduced returns the cue's still only: the room's postcard on strange-loop, each beat's finished picture on overture."
                 },
                 "audio": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Attach one WAV of the postcard sound. Notation and exact note facts are always returned."
+                    "description": "Attach one WAV of the sound at the cue's still. Notation and exact note facts are always returned."
                 }
             },
             "additionalProperties": false
@@ -115,6 +137,78 @@ fn output_schema() -> Value {
         "required": ["tool", "arguments"],
         "additionalProperties": false
     });
+    let handoff = json!({
+        "type": "object",
+        "properties": {
+            "tool": {"type": "string", "enum": ["play_room"]},
+            "arguments": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "t": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+                    "width": {"type": "integer", "minimum": 1, "maximum": super::MAX_TOOL_WIDTH},
+                    "height": {"type": "integer", "minimum": 1, "maximum": super::MAX_TOOL_HEIGHT}
+                },
+                "required": ["id", "t", "width", "height"],
+                "additionalProperties": false
+            }
+        },
+        "required": ["tool", "arguments"],
+        "additionalProperties": false
+    });
+    let exact_ratio = json!({
+        "type": "object",
+        "properties": {
+            "numerator": {"type": "integer", "minimum": 1},
+            "denominator": {"type": "integer", "minimum": 1}
+        },
+        "required": ["numerator", "denominator"],
+        "additionalProperties": false
+    });
+    let octave_lock = json!({
+        "oneOf": [
+            {"type": "null"},
+            {
+                "type": "object",
+                "properties": {
+                    "description": {"type": "string"},
+                    "target": {
+                        "type": "object",
+                        "properties": {
+                            "numerator": {"type": "integer", "enum": [2]},
+                            "denominator": {"type": "integer", "enum": [1]}
+                        },
+                        "required": ["numerator", "denominator"],
+                        "additionalProperties": false
+                    },
+                    "steps": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "t": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+                                "multiplier": exact_ratio.clone(),
+                                "voiceRatio": exact_ratio,
+                                "centsFromOctave": {"type": "number", "maximum": 0},
+                                "isOctave": {"type": "boolean"},
+                                "voiceHz": {
+                                    "type": "array",
+                                    "items": {"type": "number", "exclusiveMinimum": 0},
+                                    "minItems": 2,
+                                    "maxItems": 2
+                                }
+                            },
+                            "required": ["t", "multiplier", "voiceRatio", "centsFromOctave", "isOctave", "voiceHz"],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": ["description", "target", "steps"],
+                "additionalProperties": false
+            }
+        ]
+    });
     json!({
         "type": "object",
         "properties": {
@@ -123,7 +217,7 @@ fn output_schema() -> Value {
             "show": {
                 "type": "object",
                 "properties": {
-                    "id": {"type": "string", "enum": [SHOW_ID]},
+                    "id": {"type": "string", "enum": score_ids()},
                     "routeVersion": {"type": "integer", "minimum": 1},
                     "title": {"type": "string"},
                     "invitation": {"type": "string"}
@@ -134,9 +228,9 @@ fn output_schema() -> Value {
             "timingAuthority": {"type": "string", "enum": ["caller"]},
             "automaticAdvance": {"type": "boolean", "enum": [false]},
             "seed": {"type": "integer", "minimum": 0},
-            "position": {"type": "integer", "minimum": 1, "maximum": 6},
-            "positionIndex": {"type": "integer", "minimum": 0, "maximum": 5},
-            "cueCount": {"type": "integer", "enum": [6]},
+            "position": {"type": "integer", "minimum": 1, "maximum": longest_score()},
+            "positionIndex": {"type": "integer", "minimum": 0, "maximum": longest_score() - 1},
+            "cueCount": {"type": "integer", "enum": cue_counts()},
             "motion": {"type": "string", "enum": ["sampled", "reduced"]},
             "width": {"type": "integer", "minimum": 1, "maximum": super::MAX_TOOL_WIDTH},
             "height": {"type": "integer", "minimum": 1, "maximum": super::MAX_TOOL_HEIGHT},
@@ -158,7 +252,7 @@ fn output_schema() -> Value {
                             "type": "object",
                             "properties": {
                                 "index": {"type": "integer", "minimum": 1, "maximum": 3},
-                                "role": {"type": "string", "enum": ["arrival", "postcard", "curtain"]},
+                                "role": {"type": "string", "enum": ["arrival", "postcard", "passage", "curtain"]},
                                 "beat": {"type": "string"},
                                 "t": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
                                 "status": nullable_string.clone(),
@@ -232,6 +326,7 @@ fn output_schema() -> Value {
                                 }
                             },
                             "description": {"type": "string"},
+                            "octaveLock": octave_lock,
                             "audio": {
                                 "oneOf": [
                                     {"type": "null"},
@@ -251,7 +346,7 @@ fn output_schema() -> Value {
                                 ]
                             }
                         },
-                        "required": ["phase", "durationSeconds", "noteCount", "returnedNoteCount", "truncated", "motif", "notes", "description", "audio"],
+                        "required": ["phase", "durationSeconds", "noteCount", "returnedNoteCount", "truncated", "motif", "notes", "description", "octaveLock", "audio"],
                         "additionalProperties": false
                     }
                 },
@@ -284,7 +379,7 @@ fn output_schema() -> Value {
                 "additionalProperties": false
             },
             "replay": call.clone(),
-            "next": {"oneOf": [{"type": "null"}, call.clone()]},
+            "next": {"oneOf": [{"type": "null"}, call.clone(), handoff]},
             "restart": call,
             "leave": {
                 "type": "object",
@@ -305,8 +400,8 @@ fn replay_arguments_schema() -> Value {
     json!({
         "type": "object",
         "properties": {
-            "show": {"type": "string", "enum": [SHOW_ID]},
-            "position": {"type": "integer", "minimum": 0, "maximum": 5},
+            "show": {"type": "string", "enum": score_ids()},
+            "position": {"type": "integer", "minimum": 0, "maximum": longest_score() - 1},
             "seed": {"type": "integer", "minimum": 0},
             "width": {"type": "integer", "minimum": 1, "maximum": super::MAX_TOOL_WIDTH},
             "height": {"type": "integer", "minimum": 1, "maximum": super::MAX_TOOL_HEIGHT},
@@ -319,20 +414,25 @@ fn replay_arguments_schema() -> Value {
 }
 
 pub(super) fn tool(arguments: &Value) -> Value {
-    let show_id = match arguments.get("show") {
-        None => SHOW_ID,
-        Some(Value::String(show)) => show,
+    let score = match arguments.get("show") {
+        None => MINDS_SHOW,
+        Some(Value::String(show)) => match ShowScore::by_id(show) {
+            Some(score) => score,
+            None => {
+                return super::tool_error(&format!(
+                    "Argument 'show' must be one of: {}.",
+                    score_ids().join(", ")
+                ));
+            }
+        },
         Some(_) => return super::tool_error("Argument 'show' must be a string."),
     };
-    if show_id != SHOW_ID {
-        return super::tool_error("Argument 'show' must be strange-loop.");
-    }
     let position_value = arguments
         .get("position")
         .and_then(Value::as_u64)
         .unwrap_or(0);
-    if position_value >= MINDS_SHOW.cue_count() as u64 {
-        return super::tool_error("Argument 'position' must be from 0 through 5.");
+    if position_value >= score.cue_count() as u64 {
+        return super::tool_error(&position_error(score));
     }
     let position = position_value as usize;
     let seed = arguments.get("seed").and_then(Value::as_u64).unwrap_or(0);
@@ -359,8 +459,8 @@ pub(super) fn tool(arguments: &Value) -> Value {
         Ok(requested) => requested,
         Err(message) => return super::tool_error(&message),
     };
-    let Some(cue) = MINDS_SHOW.direct(seed, position, motion) else {
-        return super::tool_error("Argument 'position' must be from 0 through 5.");
+    let Some(cue) = score.direct(seed, position, motion) else {
+        return super::tool_error(&position_error(score));
     };
     let Some(total_cells) = cue
         .looks()
@@ -381,9 +481,9 @@ pub(super) fn tool(arguments: &Value) -> Value {
     let mut looks = Vec::with_capacity(cue.looks().len());
     let mut text = format!(
         "{}\nCue {} of {}: {} ({})\nQuestion: {}\nCaller-paced: nothing advances until you request the next position.\n",
-        MINDS_SHOW.title(),
+        score.title(),
         position + 1,
-        MINDS_SHOW.cue_count(),
+        score.cue_count(),
         meta.title,
         meta.id,
         cue.question()
@@ -438,7 +538,7 @@ pub(super) fn tool(arguments: &Value) -> Value {
         })
     });
 
-    let sound_phase = room.postcard_t();
+    let sound_phase = cue.sound_phase();
     let sound_spec = room.sound(sound_phase);
     let notes = sound_spec
         .notes
@@ -473,9 +573,9 @@ pub(super) fn tool(arguments: &Value) -> Value {
         None
     };
     let sound_description = format!(
-        "The postcard sound lasts {:.2} seconds and contains {} mathematical notes. Up to {MAX_RETURNED_NOTES} exact note facts follow whether or not audio was requested; returnedNoteCount and truncated state the boundary.",
+        "The sound at the cue's still lasts {:.2} seconds and contains {}. Up to {MAX_RETURNED_NOTES} exact note facts follow whether or not audio was requested; returnedNoteCount and truncated state the boundary.",
         sound_spec.duration,
-        sound_spec.notes.len()
+        counted(sound_spec.notes.len(), "mathematical note")
     );
     text.push_str(&format!("\nSound: {sound_description}"));
     if let Some(motif) = room.motif() {
@@ -490,29 +590,56 @@ pub(super) fn tool(arguments: &Value) -> Value {
     if audible.is_some() {
         text.push_str(" A WAV follows. Whether a client surfaces it as sound is outside this result; the notation and note facts remain complete.");
     }
+    let octave_lock = cue
+        .octave_lock()
+        .map(|steps| octave_lock_json(room.as_ref(), steps));
+    if let Some(lock) = &octave_lock {
+        text.push_str(&format!(
+            "\nOctave lock: {}",
+            lock["description"].as_str().unwrap_or_default()
+        ));
+    }
 
-    let replay_arguments = call_arguments(position, seed, width, height, motion, audio_requested);
-    let next = (position + 1 < MINDS_SHOW.cue_count()).then(|| {
-        json!({
-            "tool": "watch_show",
-            "arguments": call_arguments(position + 1, seed, width, height, motion, audio_requested)
-        })
-    });
+    let call = Call {
+        score,
+        seed,
+        width,
+        height,
+        motion,
+        audio: audio_requested,
+    };
+    let replay_arguments = call.arguments(position);
+    let next = match cue.handoff() {
+        Some(handoff) => {
+            text.push_str(&format!(
+                "\nThe score ends by handing you {} at t={:.3}. next is a play_room call there; turn the dial yourself with t, pokes, or a gesture.",
+                handoff.room_id(),
+                handoff.phase()
+            ));
+            Some(handoff_call(handoff, width, height))
+        }
+        None => (position + 1 < score.cue_count()).then(|| {
+            json!({
+                "tool": "watch_show",
+                "arguments": call.arguments(position + 1)
+            })
+        }),
+    };
     let structured = json!({
         "schema": SHOW_SCHEMA,
         "schemaVersion": SHOW_SCHEMA_VERSION,
         "show": {
-            "id": MINDS_SHOW.id(),
-            "routeVersion": MINDS_SHOW.route_version(),
-            "title": MINDS_SHOW.title(),
-            "invitation": MINDS_SHOW.invitation(),
+            "id": score.id(),
+            "routeVersion": score.route_version(),
+            "title": score.title(),
+            "invitation": score.invitation(),
         },
         "timingAuthority": "caller",
         "automaticAdvance": false,
         "seed": seed,
         "position": position + 1,
         "positionIndex": position,
-        "cueCount": MINDS_SHOW.cue_count(),
+        "cueCount": score.cue_count(),
         "motion": motion.as_str(),
         "width": width,
         "height": height,
@@ -535,6 +662,7 @@ pub(super) fn tool(arguments: &Value) -> Value {
                 "motif": motif,
                 "notes": notes,
                 "description": sound_description,
+                "octaveLock": octave_lock,
                 "audio": audible.as_ref().map(|(_, descriptor)| descriptor.clone()),
             }
         },
@@ -557,7 +685,7 @@ pub(super) fn tool(arguments: &Value) -> Value {
         "next": next,
         "restart": {
             "tool": "watch_show",
-            "arguments": call_arguments(0, seed, width, height, motion, audio_requested)
+            "arguments": call.arguments(0)
         },
         "leave": {"tool": "list_rooms", "arguments": {}},
     });
@@ -568,22 +696,111 @@ pub(super) fn tool(arguments: &Value) -> Value {
     }
 }
 
-fn call_arguments(
-    position: usize,
+/// The replayable request shape every continuation of one call shares.
+struct Call {
+    score: ShowScore,
     seed: u64,
     width: usize,
     height: usize,
     motion: ShowMotion,
     audio: bool,
-) -> Value {
+}
+
+impl Call {
+    fn arguments(&self, position: usize) -> Value {
+        json!({
+            "show": self.score.id(),
+            "position": position,
+            "seed": self.seed,
+            "width": self.width,
+            "height": self.height,
+            "motion": self.motion.as_str(),
+            "audio": self.audio,
+        })
+    }
+}
+
+/// The followable call that hands the player the score's last room.
+fn handoff_call(handoff: ShowHandoff, width: usize, height: usize) -> Value {
     json!({
-        "show": SHOW_ID,
-        "position": position,
-        "seed": seed,
-        "width": width,
-        "height": height,
-        "motion": motion.as_str(),
-        "audio": audio,
+        "tool": "play_room",
+        "arguments": {
+            "id": handoff.room_id(),
+            "t": handoff.phase(),
+            "width": width,
+            "height": height,
+        }
+    })
+}
+
+fn position_error(score: ShowScore) -> String {
+    format!(
+        "Argument 'position' must be from 0 through {} for the {} score.",
+        score.cue_count() - 1,
+        score.id()
+    )
+}
+
+/// The exact octave lock, with the room's own voice at every step beside the
+/// arithmetic, so the claim and the sound can be checked against each other.
+fn octave_lock_json(room: &dyn Room, steps: &[LockStep]) -> Value {
+    let ratio = |ratio: ExactRatio| json!({"numerator": ratio.numerator(), "denominator": ratio.denominator()});
+    let fraction = |ratio: ExactRatio| {
+        if ratio.denominator() == 1 {
+            ratio.numerator().to_string()
+        } else {
+            format!("{}/{}", ratio.numerator(), ratio.denominator())
+        }
+    };
+    let rows = steps
+        .iter()
+        .map(|step| {
+            let voice_hz = room
+                .parameter_sound(step.phase(), &[])
+                .map(|voice| {
+                    let root = f64::from(voice.root_hz());
+                    vec![root, root * f64::from(voice.ratio())]
+                })
+                .unwrap_or_default();
+            json!({
+                "t": step.phase(),
+                "multiplier": ratio(step.multiplier()),
+                "voiceRatio": ratio(step.voice_ratio()),
+                "centsFromOctave": step.cents_from_octave(),
+                "isOctave": step.is_octave(),
+                "voiceHz": voice_hz,
+            })
+        })
+        .collect::<Vec<_>>();
+    let readings = steps
+        .iter()
+        .map(|step| {
+            let interval = step.voice_ratio();
+            if step.is_octave() {
+                format!(
+                    "K={} sounds {}:{}, exactly an octave",
+                    fraction(step.multiplier()),
+                    interval.numerator(),
+                    interval.denominator()
+                )
+            } else {
+                format!(
+                    "K={} sounds {}:{}, {:.1} cents flat",
+                    fraction(step.multiplier()),
+                    interval.numerator(),
+                    interval.denominator(),
+                    -step.cents_from_octave()
+                )
+            }
+        })
+        .collect::<Vec<_>>();
+    json!({
+        "description": format!(
+            "The Times Tables voice sounds K/(K-1) above its root. As the dial settles, the interval settles: {}.",
+            readings.join("; then ")
+        ),
+        "target": {"numerator": 2, "denominator": 1},
+        "steps": rows,
     })
 }
 
@@ -624,7 +841,15 @@ pub(super) fn compact_summary(structured: &Value) -> Option<String> {
         segment.get("room")?.as_str()?,
         segment.get("looks")?.as_array()?.len(),
     );
-    if let Some(arguments) = next.and_then(|value| value.get("arguments")) {
+    let next_tool = next
+        .and_then(|value| value.get("tool"))
+        .and_then(Value::as_str);
+    if next_tool == Some("play_room") {
+        summary.push_str(&format!(
+            " The score ends by handing you {}: call play_room with the returned next arguments and turn the dial yourself.",
+            next?.get("arguments")?.get("id")?.as_str()?
+        ));
+    } else if let Some(arguments) = next.and_then(|value| value.get("arguments")) {
         summary.push_str(&format!(
             " To continue, call watch_show with position {} and the returned replay arguments.",
             arguments.get("position")?.as_u64()?
@@ -822,8 +1047,12 @@ mod tests {
             json!({}),
             json!({"position": 5, "seed": 99}),
             json!({"motion": "reduced", "audio": true}),
+            json!({"show": "overture"}),
+            json!({"show": "overture", "position": 3}),
+            json!({"show": "overture", "position": 3, "motion": "reduced", "audio": true}),
         ] {
             let result = tool(&arguments);
+            assert_eq!(result["isError"], false, "{arguments}: {result}");
             super::super::validate_schema_value(
                 &result["structuredContent"],
                 &entry["outputSchema"],
@@ -832,6 +1061,180 @@ mod tests {
             )
             .unwrap_or_else(|error| panic!("{error}: {result}"));
         }
+    }
+
+    /// Call a tool through the real dispatcher, exactly as a client would.
+    fn dispatch(call: &serde_json::Value) -> serde_json::Value {
+        let response = super::super::handle_request(&json!({
+            "jsonrpc": "2.0", "id": 7, "method": "tools/call",
+            "params": {"name": call["tool"], "arguments": call["arguments"]}
+        }))
+        .expect("tools/call responds");
+        response["result"].clone()
+    }
+
+    #[test]
+    fn the_overture_followed_verbatim_hands_over_a_playable_dial() {
+        // Follow every returned pointer exactly as given. The score's last
+        // pointer is not a dead end or a null: it is a play_room call that a
+        // client can issue without editing, landing on the K=2 heart.
+        let mut call = json!({"tool": "watch_show", "arguments": {"show": "overture", "seed": 5}});
+        let mut rooms = Vec::new();
+        let final_next = loop {
+            let result = dispatch(&call);
+            assert_eq!(result["isError"], false, "{result}");
+            let structured = &result["structuredContent"];
+            assert_eq!(structured["show"]["id"], "overture");
+            assert_eq!(structured["cueCount"], 4);
+            assert_eq!(structured["effects"]["journeyWritten"], false);
+            assert_eq!(structured["segment"]["variation"], 0);
+            rooms.push(structured["segment"]["room"].as_str().unwrap().to_string());
+            let next = structured["next"].clone();
+            assert!(!next.is_null(), "the overture never ends on a null door");
+            if next["tool"] != "watch_show" {
+                break next;
+            }
+            assert_eq!(next["arguments"]["show"], "overture");
+            call = next;
+        };
+        assert_eq!(
+            rooms,
+            ["chaos-game", "mandelbrot", "golden-angle", "times-tables"]
+        );
+        assert_eq!(final_next["tool"], "play_room");
+        assert_eq!(final_next["arguments"]["id"], "times-tables");
+        let played = dispatch(&final_next);
+        assert_eq!(played["isError"], false, "{played}");
+        let text = played["content"][0]["text"].as_str().unwrap_or_default();
+        assert!(
+            text.contains("K 2.00") && text.contains("CLOSED  1 LOBE"),
+            "{text}"
+        );
+        assert!(
+            text.contains("TURN THE DIAL"),
+            "the hand-off names the verb: {text}"
+        );
+    }
+
+    #[test]
+    fn the_overture_lock_converges_on_an_exact_octave_the_voice_really_plays() {
+        let result = tool(&json!({"show": "overture", "position": 3}));
+        let segment = &result["structuredContent"]["segment"];
+        let lock = &segment["sound"]["octaveLock"];
+        assert_eq!(lock["target"], json!({"numerator": 2, "denominator": 1}));
+        let steps = lock["steps"].as_array().expect("lock steps");
+        let ratios = steps
+            .iter()
+            .map(|step| step["voiceRatio"].clone())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            ratios,
+            [
+                json!({"numerator": 43, "denominator": 23}),
+                json!({"numerator": 41, "denominator": 21}),
+                json!({"numerator": 2, "denominator": 1}),
+            ]
+        );
+        let cents = steps
+            .iter()
+            .map(|step| step["centsFromOctave"].as_f64().unwrap())
+            .collect::<Vec<_>>();
+        assert!(cents[0] < cents[1] && cents[1] < cents[2], "{cents:?}");
+        assert_eq!(cents[2], 0.0);
+        assert_eq!(steps[2]["isOctave"], true);
+        let lock_hz = steps[2]["voiceHz"].as_array().expect("voice");
+        assert_eq!(
+            lock_hz[1].as_f64().unwrap(),
+            2.0 * lock_hz[0].as_f64().unwrap()
+        );
+        // The looks are the lock steps, in order, and the sound facts are the
+        // locked octave the still holds.
+        let looks = segment["looks"].as_array().expect("looks");
+        for (look, step) in looks.iter().zip(steps) {
+            assert_eq!(look["t"], step["t"]);
+        }
+        assert_eq!(segment["sound"]["phase"], steps[2]["t"]);
+        let notes = segment["sound"]["notes"].as_array().expect("notes");
+        assert_eq!(notes.len(), 2);
+        let description = lock["description"].as_str().unwrap();
+        assert!(description.contains("exactly an octave"), "{description}");
+        assert!(!description.contains("Mandelbrot"), "{description}");
+        // Earlier beats carry no lock, and the strange-loop score is unchanged.
+        let first = tool(&json!({"show": "overture"}));
+        assert!(first["structuredContent"]["segment"]["sound"]["octaveLock"].is_null());
+        let walk = tool(&json!({}));
+        assert!(walk["structuredContent"]["segment"]["sound"]["octaveLock"].is_null());
+        assert_eq!(walk["structuredContent"]["show"]["id"], "strange-loop");
+    }
+
+    #[test]
+    fn counted_prose_agrees_with_the_live_scores_and_notes() {
+        let entry = catalog_entry();
+        let description = entry["inputSchema"]["properties"]["show"]["description"]
+            .as_str()
+            .expect("show description");
+        for score in numinous_core::SHOW_SCORES {
+            let named = format!(
+                "{} ({})",
+                score.id(),
+                numinous_core::counted(score.cue_count(), "cue")
+            );
+            assert!(description.contains(&named), "{description}");
+        }
+        let lock = tool(&json!({"show": "overture", "position": 3}));
+        let notes = lock["structuredContent"]["segment"]["sound"]["notes"]
+            .as_array()
+            .expect("notes")
+            .len();
+        let sentence = lock["structuredContent"]["segment"]["sound"]["description"]
+            .as_str()
+            .expect("sound description");
+        assert!(
+            sentence.contains(&numinous_core::counted(notes, "mathematical note")),
+            "{sentence}"
+        );
+    }
+
+    #[test]
+    fn overture_motion_and_bounds_are_exact_and_fail_closed() {
+        let reduced = tool(&json!({"show": "overture", "position": 0, "motion": "reduced"}));
+        let looks = reduced["structuredContent"]["segment"]["looks"]
+            .as_array()
+            .expect("looks");
+        assert_eq!(looks.len(), 1);
+        assert_eq!(
+            looks[0]["t"], 0.0,
+            "the chaos still is a jump of exactly one half"
+        );
+        let sampled = tool(&json!({"show": "overture", "position": 0}));
+        let roles = sampled["structuredContent"]["segment"]["looks"]
+            .as_array()
+            .expect("looks")
+            .iter()
+            .map(|look| look["role"].as_str().unwrap().to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(roles, ["arrival", "passage", "curtain"]);
+        let beyond = tool(&json!({"show": "overture", "position": 4}));
+        assert_eq!(beyond["isError"], true);
+        assert!(
+            beyond["content"][0]["text"]
+                .as_str()
+                .unwrap()
+                .contains("0 through 3 for the overture score")
+        );
+        let unknown = tool(&json!({"show": "finale"}));
+        assert_eq!(unknown["isError"], true);
+        assert!(
+            unknown["content"][0]["text"]
+                .as_str()
+                .unwrap()
+                .contains("strange-loop, overture")
+        );
+        let compact = super::compact_summary(
+            &tool(&json!({"show": "overture", "position": 3}))["structuredContent"],
+        )
+        .expect("summary");
+        assert!(compact.contains("call play_room"), "{compact}");
     }
 
     #[test]

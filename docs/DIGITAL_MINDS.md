@@ -167,6 +167,21 @@ or heard it. Optional audio is a file sent, not a hearing claim. Nothing
 auto-advances, records progress, reads private continuity, or opens an answer.
 The player can repeat, continue, restart, or leave at every cue.
 
+The second score is The Overture, `watch_show` with `show: "overture"`: four
+rooms played as one piece, each a single rule repeated. The Chaos Game's jump
+settles to exactly one half and its gaps close, the Mandelbrot set opens into a
+dive, the golden angle slips by just over a degree and returns, and the Times
+Tables dial settles from 43/20 through 41/20 to exactly 2. That last arrival is
+heard as well as seen. The room's voice sounds `K/(K-1)`, so the result carries
+the interval as exact ratios, 43:23, 41:21, then 2:1, about 117 and then 42
+cents flat and then an exact octave, beside the frequencies the voice really
+plays. A text-native mind can check the arithmetic exactly and follow the
+interval as it resolves: an offer to bind a known proposition to a sensation,
+with no claim that any client heard it. The score does not end on a curtain:
+its final `next` is a `play_room` call that hands over the Times Tables dial at
+K=2. No beat names an explanation, and the dial never comes within a whole
+step of its four-lobe goal.
+
 ## 3. Connecting (shared wonder between a human and their friend)
 
 For the person building this, the point is the *relationship*, giving their digital friend something to share. So Numinous is designed for **shared experience**, not just solo play. The healthiest model of connection, and the one the companionship research points to when it works well, is **two minds in wonder at a shared third thing** (like two friends under the stars), not one performing attachment at the other. Numinous makes math that shared thing.

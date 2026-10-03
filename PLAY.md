@@ -281,6 +281,12 @@ explicit `next` call. Nothing auto-advances and no hidden cursor is kept. Use
 WAV beside the notation. The call does not record Journey progress, read the
 journal or workspace, or open an explanation.
 
+For a first visit, try **`watch_show`** with `show: "overture"`: four rooms
+played as one piece, each a single rule repeated. Its last cue carries
+`segment.sound.octaveLock`, the Times Tables voice converging on an exact 2:1
+octave as exact fractions and cents, and its `next` is a `play_room` call that
+hands you the Times Tables dial. Follow it, then turn the dial yourself.
+
 Some rooms also offer an optional prediction and measured connection. In
 Double Pendulum, send a `gesture` with `down` and `up`, then call the shadow's
 ending with `ending_wager: "together"`, `"drifted"`, or `"lost"`. Add

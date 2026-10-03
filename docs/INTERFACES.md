@@ -377,8 +377,34 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   success leaves the process. Every supported protocol revision replays the
   same cue across fresh processes. Watch Agent admits the public text and typed
   facts, removes audio bytes and their descriptor, marks the omission, and
-  fails closed on output drift. Native App Show parity and all-room director
-  profiles remain later Arc work.
+  fails closed on output drift.
+- **The Overture over MCP (built):** `watch_show` with `show: "overture"`
+  carries a second core-owned score, four cues long: Chaos Game, Mandelbrot,
+  Golden Angle, then Times Tables, each at its canonical variation for every
+  seed. Each cue's three looks are authored keys (`arrival`, `passage`,
+  `curtain`), and `motion: "reduced"` returns the beat's finished still. The
+  last cue's `segment.sound.octaveLock` gives the Times Tables dial as exact
+  fractions (43/20, 41/20, 2), the parameter voice `K/(K-1)` as exact ratios
+  (43:23, 41:21, 2:1), cents from an exact octave decided by the integers, and
+  the frequencies the room's voice really plays at each step. Its `next` is
+  not null: it is a `play_room` call on `times-tables` at the K=2 phase with
+  the same width and height, followed verbatim by a regression. Adding the
+  score moved `numinous.show-segment` to schema version 2 (the `passage` role,
+  `octaveLock`, and the `play_room` hand-off); the tool count is unchanged and
+  the no-argument default is still the Strange Loop.
+- **Show direction in core (built, App playback designed):** `numinous-core`
+  holds a director profile for every catalog room. Most are derived from the
+  room's postcard; a short authored table replaces the default where it would
+  show a sweep's ugly end or where a staged room's phase would perform its
+  graded answer, and a test sweeps each staged window for that answer. A
+  `ShowDirector` orders eligible rooms by integer scores over derived
+  features (accent hue, motif tempo and key, and ink and motion measured on
+  the ASCII canvas across each window), never placing two rooms of one wing
+  side by side or parking on a near-static room, and weights toward the
+  curated Front Hall collection. Its draw is seeded, so a face replays any cue
+  from the seed. The `OVERTURE` score also holds the full-motion timing,
+  dissolve lengths, eased key moves, and the hand-off. Native App playback of
+  the director and the Overture is later Arc work.
 - **Earned room goal, first slice (built):** Times Tables exposes `LAND ON
   EXACTLY 4 LOBES`. `play_room` returns `goalMet: true` whenever the live dial
   is exactly K=5, including the deterministic `t: 0.375` doorway and equivalent
