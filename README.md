@@ -69,7 +69,7 @@ hosts can also load the [portable plugin](plugins/numinous).
 
 ## Current state
 
-**0.4.0-alpha.31** is a playable alpha with 356 catalog rooms, games, Journey,
+**0.4.0-alpha.32** is a playable alpha with 356 catalog rooms, games, Journey,
 Studio, controllers, and built-in music. It is still under development:
 Understanding Alpha, the milestone that tests whether play builds lasting
 understanding, is active.

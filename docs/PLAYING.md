@@ -144,10 +144,17 @@ state. On restore, radio rejoins the wall-clock broadcast position before audio
 fades back in. Studio keeps ownership of formula audio through focus changes
 and radio boundaries, then rejoins a selected station live when Studio closes.
 A persistent top-right audio badge names the active source, volume level, mute,
-zero-volume, background-silent, or no-device state. A separate `JOURNEY LV`
-label reports accumulated progress in the local profile, not room difficulty.
-Options persist master volume, mute, Visual Era, and window mode in the
-versioned local preference store. `numinous forget` inventories that store;
+zero-volume, background-silent, or no-device state, and it names the Radio or
+Room Sound level when the active source's own level is zero. A separate
+`JOURNEY LV` label reports accumulated progress in the local profile, not room
+difficulty. Settings holds Master, Radio, Room Sound, and Effects (built).
+Master scales everything;
+Radio, Room Sound, and Effects sit beneath it. Room Sound covers the room
+score, its mathematical voices and events, the Studio, and Shared Play replay;
+Effects covers game cues. Left and right step a level by ten points, and
+activating its row steps it up. The keyboard and controller volume controls
+stay master-only. Options persist those levels, mute, Visual Era, and window
+mode in the versioned local preference store. `numinous forget` inventories that store;
 `numinous forget --confirm --all-local` erases it with the other managed local
 state. A selective Journey or journal erasure leaves Options intact.
 Settings also carries a full-size Skip Track row. It advances the current
@@ -397,7 +404,7 @@ NUMINOUS_REDUCED_MOTION=1 NO_COLOR=1 numinous show
 
 Two things are known to be wrong and are not fixed yet, so you can decide for
 yourself rather than find out the hard way. cellular-automata, julia,
-lambda-map, and pickover flash faster than the WCAG 2.3.1 budget allows when
+and lambda-map flash faster than the WCAG 2.3.1 budget allows when
 the App runs them at its fastest speed, 8x. At normal speed and up to 4x they
 stay within it, and every other room stays within it all the way to 8x, at the
 App's 60 frames a second. The music visualizer, which can push a room faster

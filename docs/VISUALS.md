@@ -11,11 +11,10 @@ with `softbuffer`. Mandelbrot and Julia alone have targeted `wgpu` paths. Four
 CPU-styled Eras ship: phosphor, 8-bit, vector, and modern. PNG room renders,
 gallery sheets, app postcards, and short-loop APNG bundles ship. Room changes
 fade through the stage, and drag dials and Studio knobs use critically damped
-springs. Designed, not current evidence: HDR, bloom, feedback persistence,
-a universal GPU pipeline, the one ink table below, 16-bit and blueprint Eras,
-audio voice swaps, room
-transition audio wash, longer video export, and operating-system URL
-registration.
+springs. Room scores wash into the shared reverb during the fade. Designed,
+not current evidence: HDR, bloom, feedback persistence, a universal GPU
+pipeline, the one ink table below, 16-bit and blueprint Eras,
+audio voice swaps, longer video export, and operating-system URL registration.
 
 ## App gallery
 
@@ -46,7 +45,7 @@ The [Route Lab guide](ROUTE_LAB.md) shows its delivery map and search playback.
   prerecorded texture. Most rooms compute on the CPU today; the two shipped
   fractal GPU paths evaluate escape-time fields in WGSL.
 - **Lit from within, not lit from above.** The aesthetic is additive light on a near-black stage (see `DESIGN.md`), not flat UI and not photorealism. Think glowing lines and points, HDR bloom, phosphor. The image looks *emissive*.
-- **Restraint is the style.** One idea per screen, one accent color per room, generous negative space. Beauty comes from precision and motion, not from clutter or spectacle.
+- **Restraint is the style.** One idea per screen, one primary accent, generous negative space. A continuous field may use a color ramp tied to its measured scalar, with lightness carrying the same order. Beauty comes from precision and motion, not from clutter or spectacle.
 - **Meaning lives in shape and lightness; hue is a second voice.** Where a mark sits and how bright it is carry what is true. Hue may repeat, sharpen, or beautify that meaning, never carry it alone: the Phosphor Era maps every pixel to green luminance, so hue-only meaning is erased for anyone who picks it. `DESIGN.md` states the law; the mark vocabulary below carries it.
 - **Beauty in stillness and in motion.** Both the paused frame and the animation must be gorgeous. Much of the magic lives in smooth, eased, continuous motion at a locked 60fps (120 where the display allows).
 
@@ -84,9 +83,11 @@ accessibility and human visual-review gates have already passed.
 
 ## The mark vocabulary and its inks
 
-Rooms speak only in marks. A room draws through `Surface::plot(mark)`, and each
-face turns the mark into its own medium: the terminal face into a character,
-and `Raster::ink` into an RGB value added to the pixel. The law in `DESIGN.md`
+Rooms draw through `Surface`. Stroke geometry uses `Surface::plot(mark)`, and
+each face turns the mark into its own medium: the terminal face into a character,
+and `Raster::ink` into an RGB value added to the pixel. A continuous sampled
+field can use `Surface::paint` to pair an exact pixel color with a text mark.
+The law in `DESIGN.md`
 decides what the marks must carry: **meaning lives in shape and lightness; hue
 is a second voice.** Two marks that mean different things must stay apart in
 shape or lightness even with the hue taken away, as the Phosphor Era takes it.
@@ -124,8 +125,8 @@ speak the terminal's weight ramp:
 With it comes one guard: for every room that draws two marks with different
 roles, the raster must render them distinguishably. The terminal shade steps
 in `ansi.rs`, measured quartiles of today's ink, are re-derived from the new
-table. Because it changes every golden image, the table lands as the first
-commit of the Sensory Lift, inside its one deliberate re-baseline, together
+table. Because it changes every golden image, the table lands inside the
+Sensory Lift's one deliberate visual re-baseline, together
 with an accent lightness band that keeps every room's accent bright enough to
 glow on the stage.
 
@@ -135,10 +136,19 @@ The current shared seam is `Surface`: each room emits deterministic drawing
 operations that can become terminal cells or RGBA pixels. The app presents the
 RGBA raster, adaptively reducing live resolution when a room exceeds its 33 ms
 budget. The GPU adapter can replace the fractal raster for Mandelbrot and Julia
-while preserving CPU fallback and deterministic exports. Mandelbrot uses a
-smooth escape-time field with a dark interior and a high-energy cyan, lime,
-violet, and magenta cosine palette; its native camera keeps advancing after a
-click rather than snapping back at a normalized phase boundary. Julia retains
+using a primary graphics backend first; offscreen OpenGL is initialized only
+when no primary adapter is available. Native HDR surfaces use primary backends.
+This avoids initializing a secondary driver unnecessarily: a local Windows
+probe rendered on Vulkan but crashed in AMD's OpenGL teardown. Repeated primary
+backend probes rendered and exited cleanly. These are local observations, not
+the pending physical-platform receipts. CPU fallback and deterministic exports
+remain available. Mandelbrot uses one
+core-owned smooth escape-time palette on both CPU and GPU: violet, indigo,
+teal, amber, rose, and pale highlights, ordered by increasing lightness. The
+outer field eases into the uniform near-black stage, with no bright cutoff
+band. Samples still bounded at the iteration limit share the dark stage. Its
+native camera keeps advancing after a click rather than snapping back at a
+normalized phase boundary. Julia retains
 its separate palette and interaction identity.
 Times Tables uses five fixed spectral chord families on the shared additive
 raster. Their hue identifies source-circle regions, while crossings brighten
@@ -146,11 +156,12 @@ naturally. A resolution-aware sample count preserves negative space in ASCII
 without changing the 240-point mathematical circle used by full-size raster
 frames. Its in-scene dial draws explicit ticks and a bright current marker.
 
-The gallery's deterministic Mandelbrot plate uses the CPU escape-time image:
-samples that do not escape within the iteration budget retain the near-black
-stage, and two accent brightness bands distinguish the visible exterior.
-That plate establishes the CPU appearance; it is not evidence of the GPU
-cosine palette or display pacing.
+The gallery's deterministic Mandelbrot plate uses the same continuous color
+field as the App fallback and PNG exports. The text surface keeps its ordered
+escape-time marks. Pixel surfaces replace field samples through `Surface::paint`
+rather than reducing them to accent marks. CPU and GPU compute their orbits at
+different precision, so intricate boundary pixels can differ; sharing the
+palette does not establish identical deep-zoom geometry or display pacing.
 
 The App study reader is a separate, opaque reading surface on the same
 near-black stage. Bundled Noto Sans, Noto Sans JP, and Noto Sans Math supply
@@ -251,8 +262,10 @@ remaining product bar, not claims that every room already satisfies it.
   refresh rate. Repeated changes keep dimming and wait at the stage when needed
   to space arrivals at least 0.5 seconds apart. A deterministic full-white
   sweep checks the transition against the photosensitivity budget; this does
-  not certify the moving content of the rooms themselves. Audio washing under
-  the change remains Designed in `SOUND.md`.
+  not certify the moving content of the rooms themselves. Room-score washes
+  share the fade duration; rapid changes use a short, continuous audio
+  interruption. Radio keeps playing. Audio and presentation clocks remain
+  separate (`SOUND.md`).
 - **Dials glide (Built).** Drag dials and Studio knobs follow critically damped
   springs without overshooting. Accepted input, grading, saved creations,
   postcards, and sound retain exact written values; the room readout follows

@@ -25,6 +25,7 @@ PERFORMANCE_RECEIPT_COMMAND = (
 )
 REQUIRED_CI_JOBS = (
     "quality",
+    "gpu-field",
     "msrv",
     "house-style",
     "python-quality",
@@ -291,12 +292,32 @@ class ReleaseWorkflowTests(unittest.TestCase):
         )
         for job in REQUIRED_CI_JOBS:
             self.assertEqual(main_ci.count(f"${{{{ needs.{job}.result }}}}"), 1)
+        expected_results = {
+            f"{job.replace('-', '_').upper()}_RESULT" for job in REQUIRED_CI_JOBS
+        }
+        self.assertEqual(
+            set(re.findall(r'"\$([A-Z_]+_RESULT)"', main_ci)), expected_results
+        )
         self.assertEqual(main_ci.count('test "$result" = success'), 1)
+
+    def test_color_comparison_has_an_adapter_and_runs_in_release_gates(self) -> None:
+        name = "tests::mandelbrot_gpu_and_cpu_share_the_smooth_color_field"
+        block = job_block(self.ci_workflow, "gpu-field")
+        self.assertIn("scripts/ci-linux-libs.sh mesa-vulkan-drivers", block)
+        self.assertIn("scripts/run-exact-test.py --package numinous-gpu --lib --ignored", block)
+        self.assertIn(name, block)
+        self.assertNotIn("continue-on-error", block)
+        for filename in ("verify.ps1", "verify.sh"):
+            gate = (ROOT / "scripts" / filename).read_text(encoding="utf-8")
+            self.assertIn(name, gate)
+            self.assertIn("scripts/run-exact-test.py", gate)
+            self.assertIn("scripts/test-ignored-tests-run-somewhere.py", gate)
 
     def test_every_runner_job_has_a_deliberate_timeout(self) -> None:
         expected = {
             CI_WORKFLOW_PATH: {
                 "quality": 30,
+                "gpu-field": 15,
                 "msrv": 15,
                 "house-style": 10,
                 # Two checkers over fifty-odd small files; a minute in practice.

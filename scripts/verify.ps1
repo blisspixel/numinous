@@ -70,6 +70,8 @@ Step "python quality judgment" { python scripts/test-python-quality.py }
 Step "no color contract" { python scripts/test-no-color.py }
 Step "no color across every terminal surface" { python scripts/no-color.py }
 Step "photosensitivity budget, general and red flashes" { cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget }
+Step "CPU and GPU color field" { python scripts/run-exact-test.py --package numinous-gpu --lib --ignored tests::mandelbrot_gpu_and_cpu_share_the_smooth_color_field }
+Step "ignored test wiring" { python scripts/test-ignored-tests-run-somewhere.py }
 Step "one gate resolver" { python scripts/test-gate-cli.py }
 Step "am soak contract" { python scripts/test-am-soak.py }
 Step "am soak" { python scripts/am-soak.py }

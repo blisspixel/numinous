@@ -1,7 +1,7 @@
 # Playtests: packaged agentic sessions and the persona archive
 
-This file holds two kinds of record. The dated sections from the July 27
-external MCP session through the August 31 tenth packaged round record real
+This file holds two kinds of record. The dated packaged sections from the July 27
+external MCP session through the October 3 round record real
 agent sessions, most of them source-blind playtests of published builds:
 formative agent evidence on the named builds, never human evidence. Everything
 from the July 2026 six-round technical cohort onward is the persona review
@@ -2180,3 +2180,45 @@ treatment in a catalog of 355 leaves the pointer to it reading as a permanent
 one-room museum. Times Tables now carries the second treatment, deriving the
 envelope of its chord family in closed form and proving it is an epicycloid with
 one cusp fewer than the multiplier.
+
+## October 3 packaged agentic playtest, v0.4.0-alpha.31
+
+The owner supplied a source-blind Linux CLI and MCP playtest of
+`v0.4.0-alpha.31`, release commit
+`eedf450d337e890221139aff54e59a61967b4d91`. The archive SHA-256 was
+`1381ecfc7bbb2768d57231c5d1cb9612787ce6f8e816a021f7223b1a9a5f39e8`,
+matched against its sidecar. The stranger notes were sealed before documentation
+was opened, with SHA-256
+`e30f46dde55edf1ce6a77abe2cc4d724fee019a76a1c375e153124eb933918b1`.
+The raw files remain with the tester. This is formative agent evidence;
+the App was not opened, and audio bytes were inspected without listening.
+
+Times Tables again supported a shape wager and withheld its explanation until
+summoning. Studio's Euclidean rhythms, tracker patterns, and named pitches
+worked. Route Lab supported delivery comparison, improvement, undo, road edits,
+independent path endpoints, stepping, and cursor rewind while retaining the
+delivery comparison. Native random-map controls and endpoint pickers were
+explicitly untested because they were absent from the exercised protocol.
+
+The persistent failure was a bare unknown name. Both `plot_expression` and
+`sing_expression` accepted `zzzzz` as a default slider, produced a flat graph or
+A3 drone, and offered `save_creation`. Unknown function calls, empty expressions,
+undefined samples, and singing the zero reading were correctly refused. The
+tester named the bare-name acceptance as the first correction. The shared
+parser now refuses a standalone unknown slider name, including parentheses,
+before any creation result. Parameters within formulas remain valid. Core and
+MCP regressions cover the reported calls and the absence of a save door.
+
+The tester also reported that Mandelbrot's CPU PNG had only the near-black
+stage and two blue accent colors. The owner independently rejected its partial
+outline and abrupt bright outer band, requesting a multicolor fractal with a
+quiet background. CPU and GPU now use one core palette over smooth escape time,
+easing into the near-black outer field instead of threshold accent bands. The
+interior remains dark. Deterministic renders and a graphics-adapter parity
+check are technical evidence, not a replacement for the owner's visual review.
+
+The stranger pass also found that Times Tables' advertised lobe goal and its
+shape-identity wager can feel like different games, that `euclid(8,x)` is easy
+to mistake for a broken rhythm, and that Route Lab's opening does not make the
+choice between editing roads and taking the saving obvious. These are retained
+as authored-doorway feedback, not claimed corrected by the two fixes above.

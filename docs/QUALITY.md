@@ -138,6 +138,43 @@ resizing, reduced motion, and a full-white photosensitivity sweep. Rendered
 strips of room changes and dial input were inspected. These checks measure
 transition behavior; the known room-content flash limits remain open.
 
+The 2026-10-03 sound pass completed the Windows local quality gate and measured
+94.75% regions and 94.76% lines under the same workspace exclusions. The shared
+articulation measured 100% lines. A report including audio measured the reverb
+and limiter module at 100% lines and the audio runtime at 84.18% lines.
+Regressions cover decay, mono preservation, limiting, low-rate stability,
+interrupted washes, independent levels, and catalog loop boundaries. Settings
+frames were inspected at 320 by 240, 600 by 600, and 900 by 700; compact rows
+stay above their help and controls. Shared articulation changes the pre-master
+sources exported by CLI and described by MCP, so the audio goldens were
+refreshed with it. Their tolerances, visual hashes, and loop durations are
+unchanged. Listening comfort and physical GPU qualification remain open.
+
+The 2026-10-03 packaged-feedback follow-up measured 94.79% regions and lines
+under the same workspace exclusions. The shared Mandelbrot palette measured
+100% lines and the Mandelbrot room 99.04%. Regressions cover continuous color,
+uniform background corners, an independent orbit comparison for the interior
+shortcuts, and the existing general and red flash proxy across the App's
+measured speed ladder. A native Radeon 780M Vulkan check compares CPU and GPU
+pixels, allowing precision differences at the intricate boundary. Primary
+backend startup removed an observed OpenGL-driver teardown fault in repeated
+local process checks. Core and MCP regressions refuse bare unknown Studio
+names without a creation or save door while retaining named parameters in
+formulas. The packaged playtest and its remaining doorway findings are recorded
+in `PLAYTESTS.md`.
+
+The alpha 32 candidate on 2026-10-03 completed the full Windows release gate
+on its final source and dependency pins. The ordinary all-target run passed
+4,812 test cases with four diagnostics excluded; the full gate separately ran
+the catalog flash sweep and the native CPU/GPU color comparison. Coverage
+remained 94.79% regions and lines under the same exclusions. The complete
+3,065-frame App matrix, study plates, gallery, contact sheet, and audio
+artifacts were regenerated. Desktop and compact Mandelbrot frames and the
+fixed-scale Pickover frame were inspected. The color comparison is now a
+required software-Vulkan CI job, and local gates check ignored-test wiring.
+These are machine and rendering checks; physical lift qualification and
+listening comfort remain open.
+
 ## Evidence snapshot, 2026-09-01
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
@@ -272,7 +309,7 @@ transition behavior; the known room-content flash limits remain open.
   density so the terminal picture retains negative space.
   Programmatic room-bed tests preserve every authored interval in one register,
   require catalog and within-bed phrase diversity, and bound oscillator level,
-  RMS, adjacent sample steps, headroom, DC, exact seams, determinism, and common
+  RMS, adjacent sample steps, headroom, DC, continuous seams, determinism, and common
   device rates. This is structural audio regression coverage, not a perceptual
   fingerprint or listening result. A shared fixed-order analyzer additionally
   reports finite-sample integrity, clipping, RMS, crest, channel balance, DC,

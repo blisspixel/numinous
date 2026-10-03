@@ -5,22 +5,11 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
-### Added
-- One shared master chain for App sound. Every source plays on a room, music,
-  or effect bus. The buses share a reverb with a 2.2 second decay, at a
-  modest send for room sound, a drier one for game cues, and none for the
-  radio, then pass the master level and a soft limiter that replaces the hard
-  clip. Room changes wash the outgoing score into its tail over the visual
-  fade's nominal duration. Rapid changes interrupt smoothly; radio keeps
-  its track and position.
-- Settings holds separate Radio, Room Sound, and Effects levels beneath
-  Master, each persisted with the other options. The audio badge names the
-  level when the active source's own level is zero. A long Settings list steps
-  its rows down in whole pixels instead of running into the footer.
-- Every room-bed and `SoundSpec` note now speaks through one house
-  articulation: a sine lead blooms, a triangle lead plucks, anchors swell, and
-  each decays and releases exponentially instead of being switched on and off.
+## [0.4.0-alpha.32] - 2026-10-03
 
+### Added
+- A required software-Vulkan comparison of the CPU and GPU Mandelbrot field
+  on every pull request and main build, with exact-test execution checked.
 - Every App room change fades through the near-black stage, with a shorter
   plain fade under reduced motion. Rapid changes wait at the stage to keep
   arrivals at least half a second apart; deterministic full-white sweeps check
@@ -41,21 +30,27 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   packaged page to the same known-limit lists as the full manual.
 - `STUDIO.md` documents the closure, tones, slope, and partial readings, where
   each face shows them, and what stays a hypothesis.
+- One shared master chain for App sound. Every source plays on a room, music,
+  or effect bus. The buses share a reverb with a 2.2 second decay, at a
+  modest send for room sound, a drier one for game cues, and none for the
+  radio, then pass the master level and a soft limiter that replaces the hard
+  clip. Room changes wash the outgoing score into its tail over the visual
+  fade's nominal duration. Rapid changes interrupt smoothly; radio keeps
+  its track and position.
+- Settings holds separate Radio, Room Sound, and Effects levels beneath
+  Master, each persisted with the other options. The audio badge names the
+  level when the active source's own level is zero. A long Settings list steps
+  its rows down in whole pixels instead of running into the footer.
+- Every room-bed and `SoundSpec` note now speaks through one house
+  articulation: a sine lead blooms, a triangle lead plucks, anchors swell, and
+  each decays and releases exponentially instead of being switched on and off.
 
 ### Changed
-- The room bed's loop seam is continuous rather than silent: releases that run
-  past the end wrap to the start, so the loop never cuts its own tails. Room-bed
-  peak and RMS move accordingly, and MCP `listen_room` names the renderer
-  `numinous.chiptune.stereo.v2` and reports each event's articulation.
-- A game cue and a room event no longer replace each other; each bus has its
-  own one-shot slot.
-- App preferences move to schema 3, which adds music, room, and effect levels
-  (default 100 percent). Schemas 1 and 2 still load with those defaults and
-  retain every existing choice. Parsing stays all-or-nothing.
-- The Settings menu adjusts any numeric row through one shared path instead of
-  a single hard-wired Volume row, so left, right, and activation behave the
-  same for every level a row holds.
-
+- Mandelbrot uses a smooth multicolor escape-time field on both CPU and GPU,
+  with one palette owned by core. Violet, teal, amber, and rose ease into the
+  near-black outer field instead of two bright blue cutoff bands. The set's
+  interior stays dark; text retains escape-time weight marks. The main cardioid
+  and period-two bulb skip redundant interior iteration.
 - `DESIGN.md` designs Vibe, a radio-and-chill form of Watch in which a station
   plays through and the music chooses and paces the rooms, and the roadmap
   schedules it after the arc. Decision 10 records the first packaged Linux run
@@ -101,12 +96,37 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   exact octave, and the frequencies the voice really plays, and its `next` is
   a `play_room` call that hands over the Times Tables dial at K=2. The tool
   count and the Strange Loop default are unchanged.
-
-### Changed
 - `numinous.show-segment` is schema version 2: the `passage` look role,
   `segment.sound.octaveLock`, and a `play_room` hand-off in `next`.
+- The photosensitivity sweep measures the App's worst case: 60 frames a second
+  at every speed from normal to 8x, read from constants the App now shares with
+  the core. Coupled Tents, Gauss Map, and Ricker Map leave the flash list.
+  Cellular Automata, Julia Set, Lambda Map, and Pickover Attractor join it as
+  flashing at 8x only, and the access report says from what speed.
+- The room bed's loop seam is continuous rather than silent: releases that run
+  past the end wrap to the start, so the loop never cuts its own tails. Room-bed
+  peak and RMS move accordingly, and MCP `listen_room` names the renderer
+  `numinous.chiptune.stereo.v2` and reports each event's articulation.
+- A game cue and a room event no longer replace each other; each bus has its
+  own one-shot slot.
+- App preferences move to schema 3, which adds music, room, and effect levels
+  (default 100 percent). Schemas 1 and 2 still load with those defaults and
+  retain every existing choice. Parsing stays all-or-nothing.
+- The Settings menu adjusts any numeric row through one shared path instead of
+  a single hard-wired Volume row, so left, right, and activation behave the
+  same for every level a row holds.
 
 ### Fixed
+- Pickover keeps its mathematically bounded viewport instead of magnifying
+  each orbit to fill the frame. It uses only actual iterates, with no
+  substitute spiral, and leaves the measured flash-limit list through 8x.
+- GPU startup tries primary backends before initializing OpenGL, retaining
+  OpenGL as an offscreen fallback. Native HDR surfaces use primary backends.
+  This avoids an observed AMD OpenGL teardown crash while rendering on Vulkan.
+- Studio refuses a bare unknown name such as `zzzzz` instead of producing a
+  flat plot, an A3 drone, and a save door. The shared parser applies the rule
+  across faces and portable creations. Named parameters inside formulas such
+  as `sin(b*x)` still bind normally.
 - `numinous-app` launched without a display (over SSH, or on a headless
   Linux machine) now says it needs a desktop session, names `numinous` and
   `numinous-mcp` as the faces that need no window, and exits with status 1.
@@ -143,13 +163,16 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   digits run out. Its graph samples lie on the drawn graph.
 - Logistic Orbit draws 32 faithful legs instead of 200, which flashed at 8x.
 - The Rule 30 postcard shows Rule 30 rather than Rule 54.
-
-### Changed
-- The photosensitivity sweep measures the App's worst case: 60 frames a second
-  at every speed from normal to 8x, read from constants the App now shares with
-  the core. Coupled Tents, Gauss Map, and Ricker Map leave the flash list.
-  Cellular Automata, Julia Set, Lambda Map, and Pickover Attractor join it as
-  flashing at 8x only, and the access report says from what speed.
+- Game cues no longer scale by the master volume twice. Each plays at its own
+  level beneath Effects and Master, so a half-volume Cabinet no longer plays
+  its cues at a quarter.
+- Reverb damping remains finite and strictly stable at unusually low device
+  sample rates, avoiding unity feedback poles from coefficient rounding.
+- `NUMINOUS_MUTE` silences one launch without becoming the saved mute choice.
+  Previously the next settings save recorded it, and later launches stayed
+  muted with the switch unset.
+- Compact menus fit their visible rows above the help and controls, keeping
+  every selected Settings row reachable without overlapping its description.
 
 ## [0.4.0-alpha.31] - 2026-10-01
 

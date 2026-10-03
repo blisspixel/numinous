@@ -880,8 +880,14 @@ sweep found five rooms over the budget at 8x that the old regime missed.
 `logistic-orbit` drew a 200-leg cobweb from phase-driven parameters, the same
 defect, and peaked at 7 a second; it now draws 32 legs, each within about
 `1e-6` of the stated seed's true orbit, checked at `r = 4` against the closed
-form `sin^2(2^n theta)`. `cellular-automata` (5), `julia` (5), `lambda-map` (4)
-and `pickover` (4) are within budget at 1x, 2x and 4x and over it only at 8x.
+form `sin^2(2^n theta)`. Pickover's former four-flash measurement differed
+between builds. Its per-frame auto-fit magnified narrow orbits. The map has
+an invariant bound: `z' = sin(x)` gives `|z| <= 1`, so both other coordinates,
+sums of terms bounded by one, stay in `[-2,2]`. The projection now keeps those
+bounds instead of refitting each frame; an independent first-iterate check
+locks the scale, and the unchanged sweep passes through 8x. There is no
+substitute spiral or reset geometry. `cellular-automata` (5), `julia` (5), and
+`lambda-map` (4) are within budget at 1x, 2x and 4x and over it only at 8x.
 None of them redraws a fresh chaotic picture each frame, but within one cycle
 each one's whole-frame brightness swings by more than a tenth more than once,
 and 8x runs 2.4 cycles a second.

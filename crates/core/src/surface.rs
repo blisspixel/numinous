@@ -136,6 +136,14 @@ pub trait Surface {
     /// Mark a single point, clipping if out of bounds.
     fn plot(&mut self, x: i32, y: i32, mark: char);
 
+    /// Paint a sampled field color, with a meaningful glyph for text surfaces.
+    ///
+    /// Pixel surfaces replace the sample rather than accumulating ink. The
+    /// default keeps the glyph, so a field remains legible without color.
+    fn paint(&mut self, x: i32, y: i32, mark: char, _color: [u8; 3]) {
+        self.plot(x, y, mark);
+    }
+
     /// Draw a line between two points with Bresenham's algorithm, clipping out
     /// of bounds. Steps in `i64` so extreme coordinates cannot overflow.
     fn line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, mark: char) {
