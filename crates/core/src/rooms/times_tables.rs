@@ -44,6 +44,14 @@ impl TimesTables {
         Self { seed }
     }
 
+    /// The phase at which the untouched dial of the canonical variation reads
+    /// `k`: the inverse of the ordinary sweep, so a score can name an exact
+    /// multiplier and land the dial on it.
+    #[must_use]
+    pub const fn phase_for_multiplier(k: f64) -> f64 {
+        (k - K_MIN) / K_SWEEP
+    }
+
     fn phase_for(&self, t: f64) -> f64 {
         // Guard non-finite `t` like every other room: `f64::clamp` passes NaN
         // through, which would otherwise leak into the multiplier and produce a
