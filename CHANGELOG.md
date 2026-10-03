@@ -6,6 +6,21 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 ## [Unreleased]
 
 ### Added
+- One shared master chain for App sound. Every source plays on a room, music,
+  or effect bus. The buses share a reverb with a 2.2 second decay, at a
+  modest send for room sound, a drier one for game cues, and none for the
+  radio, then pass the master level and a soft limiter that replaces the hard
+  clip. Room changes wash the outgoing score into its tail over the visual
+  fade's nominal duration. Rapid changes interrupt smoothly; radio keeps
+  its track and position.
+- Settings holds separate Radio, Room Sound, and Effects levels beneath
+  Master, each persisted with the other options. The audio badge names the
+  level when the active source's own level is zero. A long Settings list steps
+  its rows down in whole pixels instead of running into the footer.
+- Every room-bed and `SoundSpec` note now speaks through one house
+  articulation: a sine lead blooms, a triangle lead plucks, anchors swell, and
+  each decays and releases exponentially instead of being switched on and off.
+
 - Every App room change fades through the near-black stage, with a shorter
   plain fade under reduced motion. Rapid changes wait at the stage to keep
   arrivals at least half a second apart; deterministic full-white sweeps check
@@ -28,6 +43,19 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   each face shows them, and what stays a hypothesis.
 
 ### Changed
+- The room bed's loop seam is continuous rather than silent: releases that run
+  past the end wrap to the start, so the loop never cuts its own tails. Room-bed
+  peak and RMS move accordingly, and MCP `listen_room` names the renderer
+  `numinous.chiptune.stereo.v2` and reports each event's articulation.
+- A game cue and a room event no longer replace each other; each bus has its
+  own one-shot slot.
+- App preferences move to schema 3, which adds music, room, and effect levels
+  (default 100 percent). Schemas 1 and 2 still load with those defaults and
+  retain every existing choice. Parsing stays all-or-nothing.
+- The Settings menu adjusts any numeric row through one shared path instead of
+  a single hard-wired Volume row, so left, right, and activation behave the
+  same for every level a row holds.
+
 - `DESIGN.md` designs Vibe, a radio-and-chill form of Watch in which a station
   plays through and the music chooses and paces the rooms, and the roadmap
   schedules it after the arc. Decision 10 records the first packaged Linux run

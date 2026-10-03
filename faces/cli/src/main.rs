@@ -3425,7 +3425,11 @@ fn watch(
             && let Some(player) = &player
         {
             let spec = room.sound(t);
-            player.set_samples(spec.render(player.sample_rate()));
+            let _ = player.set_samples(
+                numinous_audio::Bus::Room,
+                spec.render(player.sample_rate()),
+                numinous_audio::Transition::QUICK,
+            );
         }
         std::thread::sleep(frame_time);
         // Reduced motion holds the phase, so the loop keeps drawing and
@@ -3561,7 +3565,11 @@ fn tour_held(
         let _ = writeln!(out, "Enter for the next room, q to leave.\x1b[K");
         let _ = out.flush();
         if let Some(player) = player {
-            player.set_samples(room.sound(t).render(player.sample_rate()));
+            let _ = player.set_samples(
+                numinous_audio::Bus::Room,
+                room.sound(t).render(player.sample_rate()),
+                numinous_audio::Transition::QUICK,
+            );
             player.service();
         }
         let mut line = String::new();
@@ -3678,7 +3686,11 @@ fn tour(
                     && let Some(player) = &player
                 {
                     let spec = room.sound(t);
-                    player.set_samples(spec.render(player.sample_rate()));
+                    let _ = player.set_samples(
+                        numinous_audio::Bus::Room,
+                        spec.render(player.sample_rate()),
+                        numinous_audio::Transition::QUICK,
+                    );
                 }
                 std::thread::sleep(frame_time);
             }
@@ -4270,7 +4282,7 @@ fn sonify_wav_layer(
             let metrics = numinous_core::stereo_signal_metrics(&samples);
             write_wav(path, &samples, numinous_core::ROOM_BED_SOURCE_RATE, 2)?;
             Ok(format!(
-                "wrote {} (room bed, {:.2}s, {} events, stereo {} Hz, variation {})\nSignal: peak {:.5}, RMS {:.5}, crest {:.2} dB, balance {:+.2} dB, width {:.2} dB, max step {:.5}\nBoundary: stable pre-master bed only; no parameter voice, device resampling, crossfade, radio, or Studio mix.\n",
+                "wrote {} (room bed, {:.2}s, {} events, stereo {} Hz, variation {})\nSignal: peak {:.5}, RMS {:.5}, crest {:.2} dB, balance {:+.2} dB, width {:.2} dB, max step {:.5}\nBoundary: stable pre-master bed only; no reverb, parameter voice, device resampling, crossfade, radio, or Studio mix.\n",
                 terminal_safe_path(path),
                 arrangement.seconds(),
                 arrangement.notes.len(),

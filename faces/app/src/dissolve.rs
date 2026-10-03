@@ -155,6 +155,18 @@ impl Dissolve {
         };
     }
 
+    /// The ordinary audio wash shares the visual fade's nominal duration.
+    /// Rapid changes use the player's short, interruption-safe fade instead
+    /// of queuing a second long wash behind a picture already leaving.
+    pub(crate) fn audio_transition(&self, motion: Motion) -> numinous_audio::Transition {
+        if self.phase != Phase::Steady {
+            return numinous_audio::Transition::QUICK;
+        }
+        let timing = Timing::for_motion(motion);
+        numinous_audio::Transition::wash((timing.leave + timing.arrive) as f32)
+            .expect("the room fade duration is a valid audio wash")
+    }
+
     /// Whether no change of room is in progress.
     #[cfg(test)]
     pub(crate) fn is_steady(&self) -> bool {
@@ -287,6 +299,27 @@ mod tests {
     use super::{ARRIVAL_SPACING, Dissolve, FULL, Phase, REDUCED, STAGE, Timing, level_table};
     use numinous_core::Motion;
 
+    #[test]
+    fn audio_washes_share_the_fade_duration_and_interrupt_quickly() {
+        for (motion, seconds) in [(Motion::Full, 0.55), (Motion::Reduced, 0.2)] {
+            let mut dissolve = Dissolve::default();
+            assert_eq!(
+                dissolve.audio_transition(motion),
+                numinous_audio::Transition::wash(seconds).expect("valid wash")
+            );
+            dissolve.frame(vec![255; 16], 2, 2);
+            dissolve.begin(motion);
+            assert_eq!(
+                dissolve.audio_transition(motion),
+                numinous_audio::Transition::QUICK
+            );
+            dissolve.advance(10.0);
+            assert_eq!(
+                dissolve.audio_transition(motion),
+                numinous_audio::Transition::wash(seconds).expect("valid wash")
+            );
+        }
+    }
     const FPS: f64 = 60.0;
 
     fn uniform(rgb: [u8; 3], pixels: usize) -> Vec<u8> {

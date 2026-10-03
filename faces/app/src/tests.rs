@@ -1,7 +1,7 @@
 use super::{
     App, AudioProgram, Route, TestStateRoot, advance_gallery_phase, app_icon, append_crash_log_at,
     bounded_tick_seconds, effective_room_phase, fullscreen_toggle_target, julia_gpu_c,
-    julia_gpu_vertical_span, live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
+    julia_gpu_vertical_span, live_mandelbrot_gpu_view, mandelbrot_gpu_view, menu, radio_cache,
 };
 use crate::audio_runtime::{
     life_step_audio_owned, room_transient_audio_owned, selected_life_step_audio,
@@ -3424,11 +3424,157 @@ fn app_options_persist_one_versioned_preference_snapshot() {
         numinous_core::read_app_preferences_file(&path).expect("saved preferences"),
         numinous_core::AppPreferences {
             volume_percent: 55,
+            music_volume_percent: 100,
+            room_volume_percent: 100,
+            effect_volume_percent: 100,
             muted: true,
             era: numinous_core::Era::Phosphor,
             window_mode: numinous_core::WindowModePreference::Windowed,
             study_locale: numinous_core::study::StudyLocale::default(),
         }
+    );
+    let _ = std::fs::remove_file(path);
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
+fn source_levels_step_persist_and_never_leave_their_range() {
+    let mut app = headless("numinous_app_test_source_levels.txt");
+    let path = app.preferences_file.clone();
+    let _ = std::fs::remove_file(&path);
+    let adjust = |app: &mut App, setting, step| {
+        app.apply_menu_intent(menu::MenuIntent::Adjust(setting, step));
+    };
+
+    adjust(&mut app, menu::NumericSetting::RoomVolume, menu::Step::Down);
+    assert_eq!(app.room_volume_percent, 90);
+    assert_eq!(
+        app.banner.as_ref().expect("level banner").lines()[0],
+        "ROOM SOUND 90%"
+    );
+    for _ in 0..12 {
+        adjust(
+            &mut app,
+            menu::NumericSetting::MusicVolume,
+            menu::Step::Down,
+        );
+    }
+    assert_eq!(app.music_volume_percent, 0, "a level stops at silence");
+    adjust(&mut app, menu::NumericSetting::EffectVolume, menu::Step::Up);
+    assert_eq!(app.effect_volume_percent, 100, "a level stops at full");
+    assert!(
+        (app.volume - 0.45).abs() < f32::EPSILON,
+        "master is untouched"
+    );
+
+    let saved = numinous_core::read_app_preferences_file(&path).expect("saved preferences");
+    assert_eq!(saved.music_volume_percent, 0);
+    assert_eq!(saved.room_volume_percent, 90);
+    assert_eq!(saved.effect_volume_percent, 100);
+    assert_eq!(saved.volume_percent, 45);
+
+    app.muted = true;
+    adjust(&mut app, menu::NumericSetting::MusicVolume, menu::Step::Up);
+    assert_eq!(
+        app.banner.as_ref().expect("level banner").lines(),
+        ["RADIO 10%", "OUTPUT REMAINS MUTED"]
+    );
+    let _ = std::fs::remove_file(path);
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
+fn game_cues_keep_their_own_level_whatever_the_master_volume() {
+    // Master volume already scales every bus in the mixer. Cues used to be
+    // scaled by it a second time, so a half-volume Cabinet played its cues at
+    // a quarter. What a cue submits must not depend on the master at all.
+    use crate::game_runtime::GameCue;
+
+    let mut app = headless("numinous_app_test_cue_levels.txt");
+    for cue in [
+        GameCue::Crunch(3),
+        GameCue::Tick(true),
+        GameCue::Tick(false),
+        GameCue::Buzz(5),
+    ] {
+        let submitted = [0.1, 0.45, 1.0].map(|volume| {
+            app.volume = volume;
+            app.game_cue_submission(cue, 48_000)
+                .expect("an audible cue")
+        });
+        assert!(
+            submitted.windows(2).all(|pair| pair[0] == pair[1]),
+            "{cue:?} changed with the master volume"
+        );
+        assert_eq!(submitted[0].1, cue.level());
+        assert!(submitted[0].0.iter().any(|sample| sample.abs() > 0.01));
+    }
+    app.muted = true;
+    assert!(
+        app.game_cue_submission(GameCue::Tick(true), 48_000)
+            .is_none()
+    );
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
+fn a_launch_mute_silences_without_becoming_the_saved_choice() {
+    // NUMINOUS_MUTE used to set the one mute flag, so the next unrelated save
+    // wrote `muted true` and the following launch stayed silent with no
+    // switch set. The launch mute now changes only what plays.
+    let mut app = headless("numinous_app_test_launch_mute.txt");
+    let path = app.preferences_file.clone();
+    let _ = std::fs::remove_file(&path);
+    app.muted = true; // exactly what `resumed` does for NUMINOUS_MUTE
+
+    app.change_volume(0.1);
+
+    assert!(app.muted, "the launch stays silent");
+    let saved = numinous_core::read_app_preferences_file(&path).expect("saved preferences");
+    assert!(
+        !saved.muted,
+        "the saved choice is the player's, not the switch's"
+    );
+    assert_eq!(saved.volume_percent, 55);
+
+    // An explicit choice made during that launch is the player's, and persists.
+    app.toggle_mute();
+    assert!(!app.muted);
+    app.toggle_mute();
+    assert!(app.muted);
+    let saved = numinous_core::read_app_preferences_file(&path).expect("saved preferences");
+    assert!(saved.muted, "a mute the player chose is kept");
+    let _ = std::fs::remove_file(path);
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
+fn the_settings_volume_row_steps_through_the_shared_numeric_row_path() {
+    let mut app = headless("numinous_app_test_numeric_row.txt");
+    let path = app.preferences_file.clone();
+    let _ = std::fs::remove_file(&path);
+    app.show_help = true;
+    app.menu.open_home(menu::MenuOrigin::Room);
+    assert_eq!(
+        app.menu.activate_shortcut('s'),
+        Some(menu::MenuIntent::None)
+    );
+    assert_eq!(app.menu.focused(), menu::MenuItemId::MasterVolume);
+
+    let down = app
+        .menu
+        .adjust_focused(menu::Step::Down)
+        .expect("the volume row is numeric");
+    app.apply_menu_intent(down);
+    assert!((app.volume - 0.35).abs() < 1.0e-6);
+    let up = app.menu.activate_focused();
+    app.apply_menu_intent(up);
+    assert!((app.volume - 0.45).abs() < 1.0e-6);
+    assert_eq!(
+        numinous_core::read_app_preferences_file(&path)
+            .expect("saved preferences")
+            .volume_percent,
+        45
     );
     let _ = std::fs::remove_file(path);
     let _ = std::fs::remove_file(&app.journey_file);

@@ -626,7 +626,7 @@ impl App {
         self.studio = true;
         self.audio_program = AudioProgram::Studio;
         if let Some(player) = &self.player {
-            player.clear_oneshot();
+            player.clear_oneshot(numinous_audio::Bus::Room);
         }
         if let Some(window) = &self.window {
             window.set_title(&self.title());

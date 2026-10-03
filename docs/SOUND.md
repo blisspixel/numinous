@@ -2,19 +2,36 @@
 
 How Numinous *sounds*, and specifically how math *becomes* sound. This is the design bible for the "everything is an instrument" pillar. It complements `MUSIC.md` (which covers the two music engines and the radio stations); this doc covers the grammar of sonification, the synthesis architecture, and the per-room sound design.
 
-**Implementation status, 2026-07-18:** every catalog room ships a structured
+**Implementation status, 2026-10-03:** every catalog room ships a structured
 motif and deterministic sonification. The App's default room bed is a 128-step
 stereo macro-arrangement with a soft sine or triangle lead, a literal authored
-theme, two developed forms, a return, breathing consonant anchors, and a silent
-loop seam. Eight rhythm and accompaniment families replace one universal form;
-one shared register preserves authored intervals, and each motif keeps its own
-cadence. Catalog checks bound RMS, sample steps, headroom, DC, seams, and output
-at common device rates. Those checks do not establish listening comfort.
+theme, two developed forms, a return, breathing consonant anchors, and a
+continuous loop seam. Eight rhythm and accompaniment families replace one
+universal form; one shared register preserves authored intervals, and each
+motif keeps its own cadence. Every note speaks through one shared house
+articulation (built): a sine lead blooms over 12 ms and settles to 70 percent,
+a triangle lead plucks over 6 ms and settles to 45 percent, and the anchors
+swell over 40 ms. Each note decays exponentially while held and releases
+exponentially to exact silence after its gate, instead of the raised-cosine
+gate it replaced. The same articulation shapes every `SoundSpec` note, fitted
+inside the note's own duration. Because the bed is a loop, a release that runs
+past its end wraps to its start, so the loop seam is continuous rather than
+silent. A silent seam held only while notes were gated. With real releases it
+would mean either cutting the final tails, which clicks, or ending every phrase
+early, which leaves an audible hole once per loop, so each pass now carries
+the tails of the one before. Catalog checks bound RMS, sample steps, headroom,
+DC, the step across the seam, and output at common device rates. Those checks
+do not establish listening comfort, and the articulation timings are taste
+that no listening panel has confirmed.
 The App pre-renders each low-register bed once at 16 kHz, shares the immutable
 allocation with the mixer, and linearly resamples it to the device rate. The
 catalog source stays below two million interleaved samples, avoiding
-device-rate-scaled buffers and repeated copies on room input. Changed sources use a short,
-normalized crossfade. Master volume and window-focus state use smoothed gain,
+device-rate-scaled buffers and repeated copies on room input. Room changes
+wash the outgoing score into its reverb tail over the visual fade's nominal
+duration: 0.55 seconds in full motion and 0.2 seconds in reduced motion.
+Rapid changes use a short interruption from the audible mix, so a held arrow
+does not queue long washes. Radio keeps its track and position. Other changed
+sources use a short, normalized crossfade. Master volume and window-focus state use smoothed gain,
 so neither restarts the source; minimizing or switching away fades the App.
 Completed crossfade storage is retired by the callback and destroyed by the
 control thread, keeping large radio buffers out of real-time destruction and
@@ -81,11 +98,16 @@ states as one bounded stereo event, described below.
 CLI `sonify --layer room-bed` separately exports a deterministic PCM16
 projection of the stable 16 kHz stereo App source, while MCP
 `listen_room.ambient_bed` exposes its arrangement summary
-or complete bounded events and signal metrics. The shared analyzer measures
+or complete bounded events and signal metrics. The export is exactly one
+loop period, so its first frames carry the previous pass's release tails;
+looped, it is seamless. It stays stereo and pre-master whatever the App's mono
+or level settings, because player preferences change playback, never exported
+artifacts. The shared analyzer measures
 finite integrity, clipping, peak, RMS, crest, channel balance, DC, correlation,
 stereo side-to-mid ratio, adjacent steps, and silence fraction in fixed order.
 Those metrics describe the pre-master source only and do not measure comfort,
-fatigue, beauty, or musical quality. MCP never returns PCM or local paths.
+fatigue, beauty, or musical quality. The ambient-bed projection returns no PCM
+or local paths.
 The Show supplies the same moving phase to picture and voice on every frame and
 ignores retained hand input. Entering any modal game fades the parameter voice
 instead of leaking room audio across ownership boundaries.
@@ -145,10 +167,33 @@ consequence remain silent. Radio changes close an open gesture before room-score
 ownership can return. Native callback timing, physical-device behavior,
 participant discovery, and musician-led listening remain open.
 
-DSP is implemented locally without `fundsp`. A first shared gain and source
-bus is shipped. Sample-accurate event scheduling, per-Era voices, global
-tuning, richer spatialization, a soft limiter, and independent room, radio,
-and UI volume controls below remain design targets, not shipped claims.
+DSP is implemented locally without `fundsp`. One shared master chain is built.
+Every source plays on a room, music, or effect bus. The buses share one
+reverb: a feedback delay network with a Householder matrix, a
+2.2 second decay at low frequencies, faster damping of bright energy, and an
+18 ms pre-delay. Room sound sends 22 percent of its signal to it and game cues
+12 percent, so cues stay crisp. The radio is already mastered stereo and stays
+dry. The sum then passes the master level and a soft limiter that is exact
+below -3 dBFS and bends peaks toward a -0.3 dBFS ceiling. It is a memoryless
+knee, not a look-ahead limiter, so a peak that reaches it is gently saturated.
+The reverb flushes its tail to exact zero far below hearing, so a long silence
+never crosses the slow subnormal range. Studio formula audio and Watch Agent
+replay play on the room bus; game cues on the effect bus. A room event and a
+game cue no longer replace each other, because each bus has its own one-shot
+slot. Each bus also has its own level beneath master, set by the Radio, Room
+Sound, and Effects rows in Settings and persisted (built); its reverb send
+follows that level. Game cues play at their own fixed levels, so the master
+volume applies to them once. The mixer can also wash an outgoing source into
+the reverb as it fades. The App requests this on ordinary room changes, using
+the visual fade's nominal duration, and uses the short interruption-safe fade
+for rapid changes. Audio and presentation retain separate clocks, so this is
+not sample-accurate audiovisual scheduling. Existing shared reverb tails decay
+naturally when a source bus is lowered; master mute silences the full return.
+Exports stay
+pre-master. Sample-accurate event scheduling, per-Era voices, global tuning,
+richer spatialization, and gentle compression remain design targets, not
+shipped claims. The decay time and sends are taste chosen without a listening
+panel.
 
 ## Philosophy: synesthesia, not sound effects
 
@@ -176,7 +221,7 @@ The shared vocabulary every room draws from. Consistency here is what lets a pla
 
 ## Synthesis architecture
 
-- **A shared house voice + master bus.** One coherent synth identity and one master chain (reverb, gentle compression, limiter, global volume, mute) so the whole app sounds like one instrument, the way it looks like one place. Rooms request notes and drones; the bus keeps them coherent.
+- **A shared house voice + master bus.** One coherent synth identity and one master chain (reverb, gentle compression, limiter, global volume, mute) so the whole app sounds like one instrument, the way it looks like one place. Rooms request notes and drones; the bus keeps them coherent. Built: the shared articulation, the bus reverb, the soft limiter, the master level, and mute. Gentle compression is not built.
 - **Per-Era voices.** The synth voice swaps with the Visual Era (see `VISUALS.md` and `MUSIC.md`): 4-bit and 8-bit chiptune (pulse/triangle/noise), 16-bit FM, oscilloscope analog (pure sine/saw, the waveform you see), and the modern tuned house synth. One room, every Era, from one mapping.
 - **Sample-accurate scheduling.** Sound is scheduled ahead on the audio thread against the **audio clock, which is the app's master timeline**; visuals read from that clock. Nothing musical is fired from the render loop. This is what makes sight and sound feel locked together instead of loosely correlated.
 - **Global key and tempo target.** A future shared bus can hold one key and BPM
@@ -251,14 +296,17 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
   tracked-glider phase accent, and Galton ships one bounded all-ball wave
   texture with an exact newest-ball peg sequence. Tuned event layers and
   equivalent mathematical voices in other rooms remain planned.
-- **Transitions are washes (Designed).** Room changes carry a reverb wash through black, matching the built visual fade through the stage (see `VISUALS.md`). The shared audio bus remains a Sensory Lift candidate.
+- **Transitions are washes.** The mixer can fade an outgoing room source into
+  its reverb tail during the App fade through the stage (built). A rapid
+  change preserves the audible mix under the short interruption-safe fade.
+  The radio keeps playing through room changes.
 - **Reveal has a resolution.** Summoning a Revelation card lands on a small, satisfying harmonic resolution, the sonic version of the floor tilting.
 
 ## Accessibility & silence
 
 - **Beautiful in silence.** A prominent, graceful mute. The visuals must fully carry the experience with the sound off (the library, the office, the sleeping-roommate 2am). Muting is never a downgrade.
-- **Full control.** Independent volumes for room sonification, the radio (Engine B), and UI; a master; and a hard mute.
-- **No painful surprises.** No sudden loud onsets, no harsh strobing-audio; loudness is managed on the master bus. Reduce-motion never silences the room, and mute never freezes the visuals.
+- **Full control.** Independent volumes for room sonification, the radio (Engine B), and UI; a master; and a hard mute. Built: Settings holds Master, Radio, Room Sound, and Effects levels, each persisted, plus a hard mute. Interface navigation has no sound of its own yet, so Effects covers game cues.
+- **No painful surprises.** No sudden loud onsets, no harsh strobing-audio; loudness is managed on the master bus, which ends in a soft limiter (built). Reduce-motion never silences the room, and mute never freezes the visuals.
 
 ## Open questions
 1. How hard to quantize room sonification to the global radio key before a room stops sounding like *itself* (shared with `MUSIC.md`).

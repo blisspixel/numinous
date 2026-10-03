@@ -2361,6 +2361,9 @@ mod tests {
         let path = temp_file("preferences");
         let preferences = AppPreferences {
             volume_percent: 65,
+            music_volume_percent: 40,
+            room_volume_percent: 90,
+            effect_volume_percent: 0,
             muted: true,
             era: Era::EightBit,
             window_mode: WindowModePreference::Borderless,

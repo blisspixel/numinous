@@ -76,7 +76,10 @@ pub enum MenuItemId {
     Nim,
     Gauntlet,
     Arcade,
-    Volume,
+    MasterVolume,
+    MusicVolume,
+    RoomVolume,
+    EffectVolume,
     Mute,
     VisualEra,
     WindowMode,
@@ -105,7 +108,8 @@ pub enum MenuIntent {
     ConstructRoom,
     Close,
     Choose(MenuChoice),
-    VolumeDelta(i8),
+    /// Step one numeric Settings row down or up.
+    Adjust(NumericSetting, Step),
     ToggleMute,
     CycleEra,
     CycleWindowMode,
@@ -127,9 +131,58 @@ pub enum MenuIntent {
     LeaveWing,
 }
 
+/// A Settings value the player sets by stepping left and right.
+///
+/// A row whose action names one of these is a numeric row: left and right step
+/// it, and activating it steps it up, so every input family reaches the same
+/// value the same way.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NumericSetting {
+    /// The master level every sound passes through.
+    MasterVolume,
+    /// The radio, beneath master.
+    MusicVolume,
+    /// Room sound beneath master: the score, its voices and events, Studio,
+    /// and Shared Play replay.
+    RoomVolume,
+    /// Game cues, beneath master.
+    EffectVolume,
+}
+
+impl NumericSetting {
+    /// The row's title, also used by the App's level feedback.
+    #[must_use]
+    pub fn title(self) -> &'static str {
+        SETTINGS_ITEMS
+            .iter()
+            .find(|item| item.action == MenuAction::Adjust(self))
+            .map_or("", |item| item.title)
+    }
+}
+
+/// Which way a numeric row moves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Step {
+    Down,
+    Up,
+}
+
+impl Step {
+    /// The step as a sign, for settings measured on a number line.
+    #[must_use]
+    pub const fn sign(self) -> f32 {
+        match self {
+            Self::Down => -1.0,
+            Self::Up => 1.0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum MenuAction {
     Intent(MenuIntent),
+    /// A numeric row. Activation steps it up; left and right step either way.
+    Adjust(NumericSetting),
     Open(MenuRoute),
     Back,
 }
@@ -285,13 +338,34 @@ const GAME_ITEMS: [MenuItem; 6] = [
     },
 ];
 
-const SETTINGS_ITEMS: [MenuItem; 6] = [
+const SETTINGS_ITEMS: [MenuItem; 9] = [
     MenuItem {
-        id: MenuItemId::Volume,
-        title: "VOLUME",
+        id: MenuItemId::MasterVolume,
+        title: "MASTER",
         description: "PRESS LEFT OR RIGHT TO SET THE CABINET'S MASTER VOLUME.",
         shortcut: None,
-        action: MenuAction::Intent(MenuIntent::VolumeDelta(10)),
+        action: MenuAction::Adjust(NumericSetting::MasterVolume),
+    },
+    MenuItem {
+        id: MenuItemId::MusicVolume,
+        title: "RADIO",
+        description: "PRESS LEFT OR RIGHT TO SET THE RADIO BENEATH THE MASTER VOLUME.",
+        shortcut: None,
+        action: MenuAction::Adjust(NumericSetting::MusicVolume),
+    },
+    MenuItem {
+        id: MenuItemId::RoomVolume,
+        title: "ROOM SOUND",
+        description: "PRESS LEFT OR RIGHT TO SET EACH ROOM'S MUSIC AND VOICES, STUDIO, AND SHARED PLAY.",
+        shortcut: None,
+        action: MenuAction::Adjust(NumericSetting::RoomVolume),
+    },
+    MenuItem {
+        id: MenuItemId::EffectVolume,
+        title: "EFFECTS",
+        description: "PRESS LEFT OR RIGHT TO SET THE GAME CUES BENEATH THE MASTER VOLUME.",
+        shortcut: None,
+        action: MenuAction::Adjust(NumericSetting::EffectVolume),
     },
     MenuItem {
         id: MenuItemId::Mute,
@@ -500,7 +574,7 @@ fn default_focus(route: MenuRoute, origin: MenuOrigin) -> MenuItemId {
         MenuRoute::Modes if origin == MenuOrigin::Launch => MenuItemId::Watch,
         MenuRoute::Modes => MenuItemId::Play,
         MenuRoute::Games => MenuItemId::Quiz,
-        MenuRoute::Settings => MenuItemId::Volume,
+        MenuRoute::Settings => MenuItemId::MasterVolume,
         MenuRoute::Controls => MenuItemId::Back,
         MenuRoute::Wings => MenuItemId::Touch,
         MenuRoute::Pause(_) => MenuItemId::Resume,
@@ -690,14 +764,23 @@ impl MenuState {
         Some(self.apply(item.action))
     }
 
-    pub fn adjust_focused(&self, delta: i8) -> Option<MenuIntent> {
-        (self.route() == MenuRoute::Settings && self.focused == MenuItemId::Volume)
-            .then_some(MenuIntent::VolumeDelta(delta))
+    /// Step the focused row when it is numeric; `None` leaves left and right
+    /// free to move between rows.
+    #[must_use]
+    pub fn adjust_focused(&self, step: Step) -> Option<MenuIntent> {
+        state_items(self)
+            .into_iter()
+            .find(|item| item.id == self.focused)
+            .and_then(|item| match item.action {
+                MenuAction::Adjust(setting) => Some(MenuIntent::Adjust(setting, step)),
+                _ => None,
+            })
     }
 
     fn apply(&mut self, action: MenuAction) -> MenuIntent {
         match action {
             MenuAction::Intent(intent) => intent,
+            MenuAction::Adjust(setting) => MenuIntent::Adjust(setting, Step::Up),
             MenuAction::Open(route) => {
                 self.push(route);
                 MenuIntent::None
@@ -801,11 +884,33 @@ fn menu_line_step(scale: i32) -> i32 {
     7 * scale + 6
 }
 
+fn menu_row_height(scale: i32) -> i32 {
+    7 * scale + 16
+}
+
+/// The smallest text scale a desktop row uses. Its row stays above the
+/// 42-pixel touch target, and its type stays readable across the room.
+const MIN_DESKTOP_ROW_SCALE: i32 = 4;
+const COMPACT_ROW_TOP: i32 = 50;
+const COMPACT_ROW_STEP: i32 = 44;
+const COMPACT_ROW_HEIGHT: i32 = 42;
+
+/// The largest row scale, up to the page's own, at which `rows` rows fit in
+/// `available` pixels. A long list steps its rows down in whole pixels
+/// before it would run into the footer; when even the smallest rows cannot
+/// fit, they keep the smallest scale.
+fn fitting_row_scale(text_scale: i32, rows: usize, available: i32) -> i32 {
+    let rows = i32::try_from(rows).unwrap_or(i32::MAX);
+    (MIN_DESKTOP_ROW_SCALE..=text_scale.max(MIN_DESKTOP_ROW_SCALE))
+        .rev()
+        .find(|scale| menu_row_height(*scale).saturating_mul(rows) <= available)
+        .unwrap_or(MIN_DESKTOP_ROW_SCALE)
+}
+
 fn menu_footer_reserve(text_scale: i32, compact: bool) -> i32 {
-    if compact {
-        return 76;
-    }
-    4 * menu_line_step(menu_auxiliary_scale(text_scale, false)) + 30
+    // Two help lines, two control lines, and their margins. Reserve the
+    // longest footer before placing rows, independent of the selected item.
+    4 * menu_line_step(menu_auxiliary_scale(text_scale, compact)) + 30
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -813,6 +918,8 @@ pub struct MenuLayout {
     size: (usize, usize),
     compact: bool,
     items: Vec<MenuItemLayout>,
+    /// The text scale of the rows, shared by drawing and hit testing.
+    row_scale: i32,
 }
 
 impl MenuLayout {
@@ -822,6 +929,7 @@ impl MenuLayout {
         let text_scale = menu_text_scale(width, height, compact);
         let route_items = state_items(state);
         let mut placed = Vec::with_capacity(route_items.len());
+        let mut row_scale = text_scale;
         if compact && state.route() == MenuRoute::Controls {
             placed.push(MenuItemLayout {
                 id: MenuItemId::Back,
@@ -837,18 +945,25 @@ impl MenuLayout {
                 .iter()
                 .position(|item| item.id == state.focused)
                 .unwrap_or(0);
-            let visible_count = route_items.len().min(3);
+            let available = height as i32 - menu_footer_reserve(text_scale, true) - COMPACT_ROW_TOP;
+            let fitting = (available / COMPACT_ROW_STEP).clamp(1, 3) as usize;
+            let visible_count = route_items.len().min(fitting);
             let start = focused_index
-                .saturating_sub(1)
+                .saturating_sub(visible_count / 2)
                 .min(route_items.len() - visible_count);
-            for (visible_index, item) in route_items.iter().skip(start).take(3).enumerate() {
+            for (visible_index, item) in route_items
+                .iter()
+                .skip(start)
+                .take(visible_count)
+                .enumerate()
+            {
                 placed.push(MenuItemLayout {
                     id: item.id,
                     rect: Rect {
                         x: 24,
-                        y: 50 + visible_index as i32 * 44,
+                        y: COMPACT_ROW_TOP + visible_index as i32 * COMPACT_ROW_STEP,
                         width: (width as i32 - 48).max(1),
-                        height: 42,
+                        height: COMPACT_ROW_HEIGHT,
                     },
                 });
             }
@@ -873,11 +988,13 @@ impl MenuLayout {
                 .min(120 * text_scale)
                 .max(420)
                 .min((width as i32 - 48).max(1));
-            let row_height = 7 * text_scale + 16;
-            let total_height = row_height * route_items.len() as i32;
             let title_y = (height as i32 * 4 / 100).max(28);
             let content_top = title_y + 7 * (text_scale + 1) + 24;
             let content_bottom = height as i32 - menu_footer_reserve(text_scale, false);
+            row_scale =
+                fitting_row_scale(text_scale, route_items.len(), content_bottom - content_top);
+            let row_height = menu_row_height(row_scale);
+            let total_height = row_height * route_items.len() as i32;
             let available = (content_bottom - content_top).max(total_height);
             let top = content_top + (available - total_height) / 2;
             for (index, item) in route_items.iter().enumerate() {
@@ -896,6 +1013,7 @@ impl MenuLayout {
             size: (width, height),
             compact,
             items: placed,
+            row_scale,
         }
     }
 
@@ -951,6 +1069,9 @@ impl MenuLayout {
 #[derive(Debug, Clone, Copy)]
 pub struct MenuReadout<'a> {
     pub volume_percent: u8,
+    pub music_percent: u8,
+    pub room_percent: u8,
+    pub effect_percent: u8,
     pub muted: bool,
     pub era: &'a str,
     pub window_mode: &'a str,
@@ -963,7 +1084,10 @@ fn centered_x(text: &str, scale: i32, rect: Rect) -> i32 {
 
 fn item_value(id: MenuItemId, readout: MenuReadout<'_>) -> Option<String> {
     match id {
-        MenuItemId::Volume => Some(format!("{}%", readout.volume_percent)),
+        MenuItemId::MasterVolume => Some(format!("{}%", readout.volume_percent)),
+        MenuItemId::MusicVolume => Some(format!("{}%", readout.music_percent)),
+        MenuItemId::RoomVolume => Some(format!("{}%", readout.room_percent)),
+        MenuItemId::EffectVolume => Some(format!("{}%", readout.effect_percent)),
         MenuItemId::Mute => Some(if readout.muted { "ON" } else { "OFF" }.to_string()),
         MenuItemId::VisualEra => Some(readout.era.to_uppercase()),
         MenuItemId::WindowMode => Some(readout.window_mode.to_uppercase()),
@@ -1044,7 +1168,11 @@ pub fn draw_menu(
         let focused = item.id == state.focused;
         let hovered = state.hovered == Some(item.id);
         let pressed = state.pressed == Some(item.id);
-        let scale = text_scale;
+        let scale = if layout.compact {
+            text_scale
+        } else {
+            layout.row_scale
+        };
         let label_y = item_layout.rect.y + (item_layout.rect.height - 7 * scale) / 2;
         let cursor = if focused {
             ">"
@@ -1287,6 +1415,9 @@ mod tests {
     fn readout() -> MenuReadout<'static> {
         MenuReadout {
             volume_percent: 45,
+            music_percent: 100,
+            room_percent: 80,
+            effect_percent: 0,
             muted: false,
             era: "phosphor",
             window_mode: "windowed",
@@ -1350,11 +1481,12 @@ mod tests {
     }
 
     #[test]
-    fn compact_layout_shows_three_large_text_rows_with_full_hit_testing() {
+    fn compact_layout_keeps_full_hit_targets_and_fits_rows_to_height() {
         let state = MenuState::launch();
         let layout = MenuLayout::new(&state, 360, 240);
         assert!(layout.compact);
-        assert_eq!(layout.items.len(), 3);
+        assert_eq!(layout.items.len(), 2);
+        assert_eq!(MenuLayout::new(&state, 360, 300).items.len(), 3);
         let target = layout.items[0];
         assert!(target.rect.height >= 42);
         let point = (
@@ -1362,6 +1494,29 @@ mod tests {
             (target.rect.y + target.rect.height / 2) as f64 / 240.0,
         );
         assert_eq!(layout.item_at(point), Some(MenuItemId::Modes));
+    }
+
+    #[test]
+    fn every_compact_setting_stays_visible_above_the_help_and_controls() {
+        let mut settings = MenuState::launch();
+        let _ = settings.activate_shortcut('s');
+        for (width, height) in [(320, 180), (320, 240), (360, 240), (360, 300), (480, 599)] {
+            for item in state_items(&settings) {
+                settings.focus(item.id);
+                let layout = MenuLayout::new(&settings, width, height);
+                let footer_top = height as i32 - menu_footer_reserve(2, true);
+                assert!(layout.items.iter().any(|placed| placed.id == item.id));
+                for placed in &layout.items {
+                    assert!(placed.rect.height >= 42);
+                    assert!(placed.rect.y + placed.rect.height <= footer_top);
+                    let (x, y) = placed.rect.center();
+                    assert_eq!(
+                        layout.item_at((x as f64 / width as f64, y as f64 / height as f64)),
+                        Some(placed.id)
+                    );
+                }
+            }
+        }
     }
 
     #[test]
@@ -1493,18 +1648,147 @@ mod tests {
     }
 
     #[test]
-    fn options_use_one_volume_row_with_directional_adjustment() {
+    fn options_open_on_the_master_level_and_step_it_directionally() {
         let mut state = MenuState::launch();
         assert_eq!(state.activate_shortcut('s'), Some(MenuIntent::None));
         assert_eq!(state.route(), MenuRoute::Settings);
-        assert_eq!(state.focused(), MenuItemId::Volume);
+        assert_eq!(state.focused(), MenuItemId::MasterVolume);
+        let master = NumericSetting::MasterVolume;
         assert_eq!(
-            state.adjust_focused(-10),
-            Some(MenuIntent::VolumeDelta(-10))
+            state.adjust_focused(Step::Down),
+            Some(MenuIntent::Adjust(master, Step::Down))
         );
-        assert_eq!(state.adjust_focused(10), Some(MenuIntent::VolumeDelta(10)));
+        assert_eq!(
+            state.adjust_focused(Step::Up),
+            Some(MenuIntent::Adjust(master, Step::Up))
+        );
+        assert_eq!(
+            state.activate_focused(),
+            MenuIntent::Adjust(master, Step::Up),
+            "activating a numeric row steps it up"
+        );
         state.focus_next(1);
-        assert_eq!(state.adjust_focused(10), None);
+        assert_eq!(
+            state.adjust_focused(Step::Up),
+            Some(MenuIntent::Adjust(NumericSetting::MusicVolume, Step::Up)),
+            "the next row is the radio level"
+        );
+        assert!(state.focus(MenuItemId::Mute));
+        assert_eq!(state.adjust_focused(Step::Up), None, "mute is not a level");
+    }
+
+    #[test]
+    fn every_numeric_row_and_only_a_numeric_row_answers_left_and_right() {
+        // The adjustment comes from the row's own action, not from a
+        // hard-wired row name, so a new numeric row works on every input
+        // path the moment it is listed, and no other row can steal the arrows.
+        let routes = [
+            MenuRoute::Home,
+            MenuRoute::Modes,
+            MenuRoute::Games,
+            MenuRoute::Settings,
+            MenuRoute::Controls,
+            MenuRoute::Wings,
+            MenuRoute::Pause(ActivityKind::Quiz),
+        ];
+        let mut numeric_rows = 0;
+        for route in routes {
+            for item in items(route, true, true, true) {
+                let mut state = MenuState::launch();
+                state.stack = vec![route];
+                state.focused = item.id;
+                let adjusted = state.adjust_focused(Step::Down);
+                match item.action {
+                    MenuAction::Adjust(setting) => {
+                        numeric_rows += 1;
+                        assert_eq!(adjusted, Some(MenuIntent::Adjust(setting, Step::Down)));
+                    }
+                    _ => assert_eq!(adjusted, None, "{route:?} {:?}", item.id),
+                }
+            }
+        }
+        assert_eq!(numeric_rows, 4, "the Settings route lists the four levels");
+        for setting in [
+            NumericSetting::MasterVolume,
+            NumericSetting::MusicVolume,
+            NumericSetting::RoomVolume,
+            NumericSetting::EffectVolume,
+        ] {
+            assert!(!setting.title().is_empty(), "{setting:?} is a listed row");
+        }
+        assert_eq!(Step::Down.sign(), -1.0);
+        assert_eq!(Step::Up.sign(), 1.0);
+    }
+
+    #[test]
+    fn settings_offer_master_radio_room_and_effect_levels_with_their_values() {
+        let rows = items(MenuRoute::Settings, false, false, false);
+        let levels = rows
+            .iter()
+            .filter_map(|item| match item.action {
+                MenuAction::Adjust(setting) => Some((item.title, setting)),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            levels,
+            [
+                ("MASTER", NumericSetting::MasterVolume),
+                ("RADIO", NumericSetting::MusicVolume),
+                ("ROOM SOUND", NumericSetting::RoomVolume),
+                ("EFFECTS", NumericSetting::EffectVolume),
+            ]
+        );
+        let readout = readout();
+        assert_eq!(
+            [
+                MenuItemId::MasterVolume,
+                MenuItemId::MusicVolume,
+                MenuItemId::RoomVolume,
+                MenuItemId::EffectVolume,
+            ]
+            .map(|id| item_value(id, readout)),
+            [
+                Some("45%".to_string()),
+                Some("100%".to_string()),
+                Some("80%".to_string()),
+                Some("0%".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_long_list_steps_its_rows_down_instead_of_running_into_the_footer() {
+        let mut settings = MenuState::launch();
+        let _ = settings.activate_shortcut('s');
+        for (width, height) in [
+            (3840, 2160),
+            (2560, 1440),
+            (1920, 1080),
+            (1280, 720),
+            (900, 700),
+            (600, 600),
+        ] {
+            let layout = MenuLayout::new(&settings, width, height);
+            assert!(!layout.compact);
+            let text_scale = menu_text_scale(width, height, false);
+            let footer_top = height as i32 - menu_footer_reserve(text_scale, false);
+            let last = layout.items.last().expect("settings rows").rect;
+            assert!(
+                last.y + last.height <= footer_top,
+                "{width}x{height}: rows end at {} below the footer at {footer_top}",
+                last.y + last.height
+            );
+            assert!(layout.row_scale <= text_scale);
+            assert!(layout.row_scale >= MIN_DESKTOP_ROW_SCALE);
+            assert!(layout.items.iter().all(|item| item.rect.height >= 42));
+        }
+        // A short list keeps the page's own scale.
+        let home = MenuLayout::new(&MenuState::launch(), 900, 700);
+        assert_eq!(home.row_scale, menu_text_scale(900, 700, false));
+        assert_eq!(fitting_row_scale(6, 9, 461), 5);
+        assert_eq!(fitting_row_scale(6, 6, 461), 6);
+        assert_eq!(fitting_row_scale(6, 40, 461), MIN_DESKTOP_ROW_SCALE);
     }
 
     #[test]

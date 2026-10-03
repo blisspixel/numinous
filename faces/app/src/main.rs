@@ -407,6 +407,16 @@ struct App {
     muted: bool,
     /// Master volume, 0.0 to 1.0 ('[' and ']' step it globally).
     volume: f32,
+    /// The mute choice the player last made, which is what persists.
+    /// `NUMINOUS_MUTE` silences one launch without becoming that choice.
+    muted_preference: bool,
+    /// Radio level beneath master, as a whole percentage.
+    music_volume_percent: u8,
+    /// Room sound level beneath master: the score, its voices and events,
+    /// Studio, and Watch Agent replay.
+    room_volume_percent: u8,
+    /// Game cue level beneath master.
+    effect_volume_percent: u8,
     /// Window presentation saved for the next launch.
     preferred_window_mode: numinous_core::WindowModePreference,
     /// Player-selected study language, independent of room state and shell copy.
@@ -677,6 +687,10 @@ impl App {
             era: preferences.era,
             muted: preferences.muted,
             volume: f32::from(preferences.volume_percent) / 100.0,
+            muted_preference: preferences.muted,
+            music_volume_percent: preferences.music_volume_percent,
+            room_volume_percent: preferences.room_volume_percent,
+            effect_volume_percent: preferences.effect_volume_percent,
             preferred_window_mode: preferences.window_mode,
             study_locale: preferences.study_locale,
             study: None,
@@ -1245,9 +1259,7 @@ impl App {
                 self.banner = Some(feedback::wing_left());
                 self.close_menu();
             }
-            menu::MenuIntent::VolumeDelta(percent) => {
-                self.change_volume(f32::from(percent) / 100.0);
-            }
+            menu::MenuIntent::Adjust(setting, step) => self.adjust_setting(setting, step),
             menu::MenuIntent::ToggleMute => {
                 self.toggle_mute();
                 self.banner = Some(feedback::volume(self.volume, self.muted));
@@ -1310,7 +1322,7 @@ impl App {
                 menu::MenuIntent::None
             }
             Key::Named(NamedKey::ArrowLeft) => {
-                if let Some(intent) = self.menu.adjust_focused(-10) {
+                if let Some(intent) = self.menu.adjust_focused(menu::Step::Down) {
                     intent
                 } else {
                     self.menu.move_spatial(&layout, menu::Direction::Left);
@@ -1318,7 +1330,7 @@ impl App {
                 }
             }
             Key::Named(NamedKey::ArrowRight) => {
-                if let Some(intent) = self.menu.adjust_focused(10) {
+                if let Some(intent) = self.menu.adjust_focused(menu::Step::Up) {
                     intent
                 } else {
                     self.menu.move_spatial(&layout, menu::Direction::Right);
@@ -1448,7 +1460,10 @@ impl App {
     fn preferences(&self) -> numinous_core::AppPreferences {
         numinous_core::AppPreferences {
             volume_percent: (self.volume * 100.0).round().clamp(0.0, 100.0) as u8,
-            muted: self.muted,
+            music_volume_percent: self.music_volume_percent,
+            room_volume_percent: self.room_volume_percent,
+            effect_volume_percent: self.effect_volume_percent,
+            muted: self.muted_preference,
             era: self.era,
             window_mode: self.preferred_window_mode,
             study_locale: self.study_locale.clone(),
@@ -1628,9 +1643,9 @@ impl App {
     /// Cabinet entries, the three doors, and the console.
     ///
     /// The room state changes at once, so everything that reads it (grading,
-    /// audio, the title, the Journey visit) answers immediately. Only the
-    /// picture is staged: the dissolve dims the frame the old room last showed
-    /// to the stage and raises the new room from it.
+    /// the title, the Journey visit) answers immediately. Presentation fades
+    /// the old picture through the stage and washes its score into the shared
+    /// tail before settling into the new room. Radio keeps its playhead.
     fn enter_room(&mut self, index: usize, deal: Deal) {
         if index >= self.rooms.len() {
             return;
@@ -1645,7 +1660,7 @@ impl App {
             window.set_title(&self.title());
         }
         self.visit_current();
-        self.update_audio();
+        self.update_room_change_audio();
         self.dissolve.begin(self.motion);
     }
 
@@ -1747,22 +1762,18 @@ impl App {
                 None => vec![format!("unknown era '{name}'")],
             },
             Command::Mute => {
-                self.muted = true;
-                self.apply_master_gain();
+                self.set_muted(true);
                 self.banner = Some(feedback::volume(self.volume, self.muted));
-                self.persist_preferences();
                 vec!["muted".into()]
             }
             Command::Unmute => {
-                self.muted = false;
-                self.apply_master_gain();
+                self.set_muted(false);
                 self.banner = Some(feedback::volume(self.volume, self.muted));
-                self.persist_preferences();
                 vec!["unmuted".into()]
             }
             Command::Volume(v) => {
                 self.volume = v.clamp(0.0, 1.0);
-                self.apply_master_gain();
+                self.apply_levels();
                 self.banner = Some(feedback::volume(self.volume, self.muted));
                 self.persist_preferences();
                 vec![format!("volume {:.0}%", self.volume * 100.0)]
@@ -2218,6 +2229,9 @@ impl App {
             self.gamepad.controller_copy(),
             menu::MenuReadout {
                 volume_percent: (self.volume * 100.0).round().clamp(0.0, 100.0) as u8,
+                music_percent: self.music_volume_percent,
+                room_percent: self.room_volume_percent,
+                effect_percent: self.effect_volume_percent,
                 muted: self.muted,
                 era: self.era.name(),
                 window_mode,
@@ -2319,6 +2333,10 @@ impl App {
                 .and_then(|index| numinous_core::STATIONS.get(index))
                 .map(|station| station.name),
             self.volume,
+            audio_state::SourceLevels {
+                radio_percent: self.music_volume_percent,
+                room_percent: self.room_volume_percent,
+            },
             self.muted,
             self.window_active,
             self.player.is_some(),
@@ -2458,6 +2476,9 @@ impl ApplicationHandler for App {
         };
         self.gpu = numinous_gpu::FractalRenderer::new().ok();
         if std::env::var("NUMINOUS_MUTE").is_ok() {
+            // This launch only. The saved choice in `muted_preference` stays
+            // as the player left it, so the next settings save cannot record
+            // an environment switch as a mute the player chose.
             self.muted = true;
         }
         self.level_seen = self.journey.level();
