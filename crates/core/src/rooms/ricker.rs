@@ -1,11 +1,32 @@
 //! Ricker map: discrete population model with boom and bust.
 //!
-//! x' = x exp(r (1 - x)). See `docs/ROOMS.md`.
+//! `x' = x exp(r (1 - x))`. Taking logs, `ln x(n+1) - ln x(n) = r (1 - x(n))`,
+//! and the sum telescopes: along any orbit that stays bounded and away from 0
+//! the long-run mean population is exactly the carrying capacity 1. See
+//! `docs/ROOMS.md` and `docs/MATHEMATICS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
-const ORBIT: usize = 200;
+/// Generations discarded before anything is drawn, so the picture is the
+/// attractor and not the road to it.
+const BURN_IN: usize = 300;
+/// Cobweb legs drawn, newest brightest.
+const LEGS: usize = 16;
+/// Generations in the population strip.
+const GENERATIONS: usize = 48;
+/// The ambient growth rate breathes from here...
+const AMBIENT_LOW: f64 = 1.5;
+/// ...up by this much and back, once per cycle.
+const AMBIENT_SPAN: f64 = 2.0;
+/// A hand sets the growth rate from here...
+const HAND_LOW: f64 = 0.5;
+/// ...across this span.
+const HAND_SPAN: f64 = 3.5;
+/// The cobweb plot's bottom edge, as a fraction of the height.
+const PLOT_FLOOR: f64 = 0.72;
+/// The population strip's top edge, as a fraction of the height.
+const STRIP_TOP: f64 = 0.80;
 
 fn phase_unit(t: f64) -> f64 {
     if t.is_finite() {
@@ -25,16 +46,23 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn r_param(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
-    let s = if seed == 0 {
+fn seed_offset(seed: u64) -> f64 {
+    if seed == 0 {
         0.0
     } else {
         (seed % 5) as f64 * 0.05
-    };
+    }
+}
+
+/// The growth rate. Ambient play breathes it up and back down once per cycle,
+/// so the period doubling is crossed both ways and never jumps at the wrap.
+fn r_param(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+    let s = seed_offset(seed);
     if let Some((x, _)) = hand {
-        0.5 + x * 3.5 + s
+        HAND_LOW + x * HAND_SPAN + s
     } else {
-        1.5 + phase_unit(t) * 2.0 + s
+        let breath = (1.0 - (std::f64::consts::TAU * phase_unit(t)).cos()) / 2.0;
+        AMBIENT_LOW + breath * AMBIENT_SPAN + s
     }
 }
 
@@ -42,54 +70,105 @@ fn ricker(x: f64, r: f64) -> f64 {
     x * (r * (1.0 - x)).exp()
 }
 
-fn draw(canvas: &mut dyn Surface, r: f64, seed: u64) {
-    let (width, height) = canvas.draw_bounds();
-    if width == 0 || height == 0 {
-        return;
-    }
-    // Graph y = x exp(r(1-x))
-    let mut prev: Option<(i32, i32)> = None;
-    for i in 0..=width {
-        let x = i as f64 / width.saturating_sub(1).max(1) as f64 * 2.5;
-        let y = ricker(x, r).clamp(0.0, 3.0);
-        let px = i as i32;
-        let py = ((1.0 - y / 3.0) * height.saturating_sub(1) as f64).round() as i32;
-        if let Some(o) = prev {
-            canvas.line(o.0, o.1, px, py, '#');
-        }
-        prev = Some((px, py));
-    }
-    canvas.line(
-        0,
-        height.saturating_sub(1) as i32,
-        width.saturating_sub(1) as i32,
-        0,
-        '.',
-    );
+/// The hump's peak, `f(1/r) = e^(r-1) / r`: no population ever exceeds it
+/// after one generation.
+fn peak(r: f64) -> f64 {
+    (r - 1.0).exp() / r
+}
+
+/// The extent of both axes, fixed for a whole mode of play.
+///
+/// Five percent above the highest peak any rate in the mode's range can
+/// reach. The peak falls and then rises in `r`, so over an interval it is
+/// largest at an end. One extent for both axes keeps the drawn diagonal the
+/// true line `y = x`, and fixing it per mode means nothing is ever clamped to
+/// the frame edge and the axes never breathe with the rate.
+fn extent(hand: bool, seed: u64) -> f64 {
+    let (low, span) = if hand {
+        (HAND_LOW, HAND_SPAN)
+    } else {
+        (AMBIENT_LOW, AMBIENT_SPAN)
+    };
+    let low = low + seed_offset(seed);
+    1.05 * peak(low).max(peak(low + span))
+}
+
+/// The attractor sample: the generations after the burn-in, oldest first.
+fn attractor(r: f64, seed: u64) -> Vec<f64> {
     let mut x = if seed == 0 {
         0.3
     } else {
         0.1 + (seed % 20) as f64 * 0.02
     };
-    let mut px = ((x / 2.5) * width.saturating_sub(1) as f64).round() as i32;
-    let mut py = height.saturating_sub(1) as i32;
-    for i in 0..ORBIT {
-        let y = ricker(x, r);
-        if !y.is_finite() || y > 10.0 {
-            break;
+    for _ in 0..BURN_IN {
+        x = ricker(x, r);
+    }
+    (0..GENERATIONS)
+        .map(|_| {
+            x = ricker(x, r);
+            x
+        })
+        .collect()
+}
+
+fn draw(canvas: &mut dyn Surface, r: f64, extent: f64, seed: u64) {
+    let (width, height) = canvas.draw_bounds();
+    if width < 2 || height < 4 {
+        return;
+    }
+    let (right, bottom) = (width - 1, height - 1);
+    let floor = (bottom as f64 * PLOT_FLOOR).round();
+    let px = |x: f64| (x / extent * right as f64).round() as i32;
+    let py = |y: f64| (floor - y / extent * floor).round() as i32;
+
+    // The hump and the diagonal y = x, on equal axes.
+    let mut previous: Option<(i32, i32)> = None;
+    for column in 0..=right {
+        let x = column as f64 / right as f64 * extent;
+        let point = (column as i32, py(ricker(x, r)));
+        if let Some(last) = previous {
+            canvas.line(last.0, last.1, point.0, point.1, '#');
         }
-        let qx = ((x / 2.5).clamp(0.0, 1.0) * width.saturating_sub(1) as f64).round() as i32;
-        let qy =
-            ((1.0 - (y / 3.0).clamp(0.0, 1.0)) * height.saturating_sub(1) as f64).round() as i32;
-        canvas.line(px, py, qx, py, if i % 2 == 0 { '*' } else { '+' });
-        canvas.line(qx, py, qx, qy, if i % 2 == 0 { '*' } else { '+' });
-        let dx = ((y / 2.5).clamp(0.0, 1.0) * width.saturating_sub(1) as f64).round() as i32;
-        let dy =
-            ((1.0 - (y / 3.0).clamp(0.0, 1.0)) * height.saturating_sub(1) as f64).round() as i32;
-        canvas.line(qx, qy, dx, dy, '.');
-        px = dx;
-        py = dy;
-        x = y;
+        previous = Some(point);
+    }
+    canvas.line(0, floor as i32, right as i32, 0, '.');
+
+    // The last legs of the cobweb, faded by age, newest brightest. Oldest
+    // first, so on a character surface the newest mark is the one that stays.
+    let history = attractor(r, seed);
+    let legs = &history[GENERATIONS - LEGS - 1..];
+    for (index, pair) in legs.windows(2).enumerate() {
+        let (x, next) = (pair[0], pair[1]);
+        let age = LEGS - 1 - index;
+        let mark = ['#', '*', '+', '.'][(age * 4 / LEGS).min(3)];
+        canvas.line(px(x), py(x), px(x), py(next), mark);
+        canvas.line(px(x), py(next), px(next), py(next), mark);
+    }
+
+    // The population strip: one bar per generation, on the same scale. The
+    // bars' total area is proportional to the mean population, which the
+    // telescoping sum pins near 1 at every rate, so the strip's light holds
+    // steady while the bars boom and bust.
+    let strip_top = (bottom as f64 * STRIP_TOP).round();
+    let strip_height = bottom as f64 - strip_top;
+    let capacity = (bottom as f64 - strip_height / extent).round() as i32;
+    canvas.line(0, capacity, right as i32, capacity, '-');
+    for (generation, &x) in history.iter().enumerate() {
+        let left = generation * width / GENERATIONS;
+        let next = (generation + 1) * width / GENERATIONS;
+        let bar = (x / extent * strip_height).round() as i32;
+        if bar == 0 {
+            continue;
+        }
+        for column in left..next.saturating_sub(1).max(left + 1) {
+            canvas.line(
+                column as i32,
+                bottom as i32,
+                column as i32,
+                bottom as i32 - bar + 1,
+                '+',
+            );
+        }
     }
 }
 
@@ -115,7 +194,8 @@ impl Ricker {
 impl Room for Ricker {
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, r_param(t, None, self.seed), self.seed);
+        let r = r_param(t, None, self.seed);
+        draw(canvas, r, extent(false, self.seed), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -144,7 +224,8 @@ impl Room for Ricker {
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let r = r_param(t, hands.last().copied(), self.seed);
-        draw(canvas, r, self.seed ^ hands.len() as u64);
+        let seed = self.seed ^ hands.len() as u64;
+        draw(canvas, r, extent(!hands.is_empty(), self.seed), seed);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -154,28 +235,10 @@ impl Room for Ricker {
             return self.status(t);
         }
         let r = r_param(t, hands.last().copied(), self.seed);
-        // Fixed point at x=1; period-doubling cascade for larger r.
-        let mut x = if self.seed == 0 {
-            0.3
-        } else {
-            0.1 + (self.seed % 20) as f64 * 0.02
-        };
-        for _ in 0..40 {
-            x = ricker(x, r);
-            if !x.is_finite() {
-                break;
-            }
-        }
-        let mut mn = x;
-        let mut mx = x;
-        for _ in 0..80 {
-            x = ricker(x, r);
-            if !x.is_finite() {
-                break;
-            }
-            mn = mn.min(x);
-            mx = mx.max(x);
-        }
+        // The range the strip actually shows.
+        let history = attractor(r, self.seed ^ hands.len() as u64);
+        let mn = history.iter().copied().fold(f64::INFINITY, f64::min);
+        let mx = history.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         let band = if r < 2.0 {
             "stable"
         } else if r < 2.7 {
@@ -189,14 +252,18 @@ impl Room for Ricker {
     fn reveal(&self) -> &'static str {
         "The Ricker map is a classic discrete population model. As r rises, the \
          fixed point loses stability through period doubling into chaos: boom \
-         and bust written as a one-dimensional map."
+         and bust written as a one-dimensional map. However violent the swings, \
+         the booms and busts average out to the carrying capacity exactly."
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Ricker;
+    use super::{
+        GENERATIONS, Ricker, attractor, extent, peak, r_param, ricker,
+    };
     use crate::canvas::Canvas;
+    use crate::raster::Raster;
     use crate::room::{Room, RoomInput};
 
     #[test]
@@ -233,5 +300,84 @@ mod tests {
     #[test]
     fn motif_ok() {
         assert!(Ricker::new().motif().unwrap().line.len() >= 6);
+    }
+
+    #[test]
+    fn the_mean_population_is_the_carrying_capacity() {
+        // ln x(N) - ln x(0) = r * sum (1 - x(n)), so the mean over N
+        // generations differs from 1 by exactly (ln x(0) - ln x(N)) / (r N).
+        // Checked as an identity, then as the bound the strip relies on.
+        for r in [1.5, 2.2, 2.6, 2.9, 3.3, 3.7, 4.2] {
+            let mut x: f64 = 0.3;
+            let start = x;
+            let mut sum = 0.0;
+            let n = 100_000;
+            for _ in 0..n {
+                sum += x;
+                x = ricker(x, r);
+            }
+            let mean = sum / f64::from(n);
+            let predicted = 1.0 + (start.ln() - x.ln()) / (r * f64::from(n));
+            assert!((mean - predicted).abs() < 1e-9, "r {r}: {mean} vs {predicted}");
+            assert!((mean - 1.0).abs() < 1e-3, "r {r}: mean {mean}");
+        }
+        // Over the strip's own 48 generations the bound is
+        // ln(peak / smallest) / (48 r), a few percent even in deep chaos.
+        for r in [2.9, 3.3, 3.7, 4.2] {
+            let history = attractor(r, 0);
+            let mean = history.iter().sum::<f64>() / GENERATIONS as f64;
+            let low = ricker(peak(r), r);
+            let bound = (peak(r) / low).ln() / (GENERATIONS as f64 * r) + 1e-12;
+            assert!((mean - 1.0).abs() <= bound, "r {r}: mean {mean}, bound {bound}");
+        }
+    }
+
+    #[test]
+    fn no_population_ever_leaves_the_fixed_axes() {
+        // The hump's maximum is at x = 1/r, an exact calculus fact checked here
+        // by its neighbors, and the axes clear it for every reachable rate.
+        for r in [0.5, 1.5, 2.5, 3.5, 4.2] {
+            let top = ricker(1.0 / r, r);
+            assert!((top - peak(r)).abs() < 1e-12);
+            assert!(ricker(1.0 / r - 1e-4, r) < top && ricker(1.0 / r + 1e-4, r) < top);
+        }
+        for seed in 0..5 {
+            for i in 0..=100 {
+                let u = f64::from(i) / 100.0;
+                let ambient = r_param(u, None, seed);
+                let hand = r_param(0.0, Some((u, 0.5)), seed);
+                for (r, limit) in [(ambient, extent(false, seed)), (hand, extent(true, seed))] {
+                    assert!(peak(r) * 1.05 <= limit + 1e-12, "seed {seed} r {r}");
+                    for x in attractor(r, seed) {
+                        assert!(x > 0.0 && x < limit, "seed {seed} r {r}: {x}");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_strip_holds_its_light_while_the_rate_sweeps_into_chaos() {
+        // The strip's lit area tracks the mean population, which the telescoping
+        // sum pins near 1, so it stays within a narrow band from the stable
+        // regime into deep chaos even though every bar moves.
+        let strip_light = |r: f64| {
+            let mut raster = Raster::with_accent(240, 140, [40, 160, 80]);
+            super::draw(&mut raster, r, extent(false, 0), 0);
+            // Below the plot's floor at row 100 only the strip is drawn.
+            let rgba = raster.to_rgba();
+            crate::photosensitivity::frame_luminance(&rgba[105 * 240 * 4..])
+        };
+        let readings: Vec<f64> = [1.6, 2.2, 2.6, 2.9, 3.2, 3.5].map(strip_light).to_vec();
+        let low = readings.iter().copied().fold(f64::MAX, f64::min);
+        let high = readings.iter().copied().fold(f64::MIN, f64::max);
+        assert!(high - low < 0.15 * high, "strip light {readings:?}");
+    }
+
+    #[test]
+    fn ambient_rate_breathes_without_a_jump_at_the_wrap() {
+        assert!((r_param(0.0, None, 0) - 1.5).abs() < 1e-12);
+        assert!((r_param(0.999_999, None, 0) - 1.5).abs() < 1e-9);
+        assert!((r_param(0.5, None, 0) - 3.5).abs() < 1e-12);
     }
 }

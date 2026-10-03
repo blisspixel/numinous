@@ -3,11 +3,15 @@
 //! T_mu(x) = mu min(x, 1-x). Orbit cobweb and density.
 //! See `docs/ROOMS.md`.
 
+use crate::numerics::MapOrbit;
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
 const ORBIT: usize = 120;
 const DENSITY: usize = 2_000;
+const DENSITY_BURN_IN: usize = 40;
+/// Keeps the density orbit's dither stream apart from the cobweb's.
+const DENSITY_KEY: u64 = 0x7e47_d3a5_17c0_0b1e;
 
 fn phase_unit(t: f64) -> f64 {
     if t.is_finite() {
@@ -45,6 +49,24 @@ fn tent(x: f64, mu_v: f64) -> f64 {
     mu_v * x.min(1.0 - x)
 }
 
+/// The orbit the room draws, dithered so it cannot collapse.
+///
+/// At `mu = 2` every tent step is exact in binary floating point, so a plain
+/// orbit loses one binary digit per step and sits at `0` from about step 55
+/// on. That put 1,986 of 2,000 density samples at exactly 0 where the true
+/// invariant density is uniform. The shared dithered iterator keeps the orbit
+/// the shadow of a real one. See `docs/MATHEMATICS.md`.
+fn orbit(x0: f64, mu_v: f64, key: u64) -> impl Iterator<Item = f64> {
+    MapOrbit::dithered([x0], move |[x]| [tent(x, mu_v)], key).map(|[x]| x)
+}
+
+/// The density strip's samples: one long orbit after a burn-in.
+fn density_samples(mu_v: f64, key: u64) -> impl Iterator<Item = f64> {
+    orbit(0.3, mu_v, key ^ DENSITY_KEY)
+        .skip(DENSITY_BURN_IN)
+        .take(DENSITY)
+}
+
 fn draw(canvas: &mut dyn Surface, mu_v: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
@@ -67,10 +89,9 @@ fn draw(canvas: &mut dyn Surface, mu_v: f64, seed: u64) {
     };
     let mut prev_px = (x * width.saturating_sub(1) as f64).round() as i32;
     let mut prev_py = y0;
-    for i in 0..ORBIT {
-        let y = tent(x, mu_v);
+    for (i, y) in orbit(x, mu_v, seed).take(ORBIT).enumerate() {
         let px = (x * width.saturating_sub(1) as f64).round() as i32;
-        let py = ((1.0 - y.clamp(0.0, 1.0)) * height.saturating_sub(1) as f64).round() as i32;
+        let py = ((1.0 - y) * height.saturating_sub(1) as f64).round() as i32;
         canvas.line(
             prev_px,
             prev_py,
@@ -81,26 +102,15 @@ fn draw(canvas: &mut dyn Surface, mu_v: f64, seed: u64) {
         canvas.line(px, prev_py, px, py, if i % 2 == 0 { '*' } else { '+' });
         // Move along diagonal toward (y,y) for next vertical.
         let dx = (y * width.saturating_sub(1) as f64).round() as i32;
-        let dy = ((1.0 - y.clamp(0.0, 1.0)) * height.saturating_sub(1) as f64).round() as i32;
+        let dy = ((1.0 - y) * height.saturating_sub(1) as f64).round() as i32;
         canvas.line(px, py, dx, dy, '.');
         prev_px = dx;
         prev_py = dy;
         x = y;
-        if !x.is_finite() {
-            break;
-        }
     }
     // Bottom density strip from a long orbit.
-    x = 0.3;
     let mut bins = vec![0u32; width.max(1)];
-    for _ in 0..40 {
-        x = tent(x, mu_v);
-    }
-    for _ in 0..DENSITY {
-        x = tent(x, mu_v);
-        if !x.is_finite() {
-            break;
-        }
+    for x in density_samples(mu_v, seed) {
         let b = (x.clamp(0.0, 0.999) * width as f64) as usize;
         if b < bins.len() {
             bins[b] = bins[b].saturating_add(1);
@@ -205,9 +215,70 @@ impl Room for TentMap {
 
 #[cfg(test)]
 mod tests {
-    use super::{TentMap, tent};
+    use super::{DENSITY, TentMap, density_samples, mu, tent};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
+
+    /// Kolmogorov-Smirnov distance from the uniform distribution on `[lo, hi]`.
+    fn uniform_distance(mut samples: Vec<f64>, lo: f64, hi: f64) -> f64 {
+        samples.sort_by(f64::total_cmp);
+        let n = samples.len() as f64;
+        samples
+            .iter()
+            .enumerate()
+            .map(|(i, &x)| {
+                let cdf = ((x - lo) / (hi - lo)).clamp(0.0, 1.0);
+                (cdf - i as f64 / n).abs().max((cdf - (i + 1) as f64 / n).abs())
+            })
+            .fold(0.0, f64::max)
+    }
+
+    #[test]
+    fn the_density_strip_at_mu_two_is_uniform() {
+        // The ambient sweep ends on mu = 2 and a full drag reaches it, so this
+        // is a state players see, not a hypothetical one.
+        assert_eq!(mu(1.0, None, 0), 2.0);
+        assert_eq!(mu(0.0, Some((1.0, 0.5)), 0), 2.0);
+        // At mu = 2 the tent map preserves Lebesgue measure, so the invariant
+        // density is uniform on [0, 1]. The plain floating-point orbit put
+        // 1,986 of these 2,000 samples at exactly 0.
+        for key in [0, 1, 7, 42] {
+            let samples: Vec<f64> = density_samples(2.0, key).collect();
+            assert_eq!(samples.len(), DENSITY);
+            let at_zero = samples.iter().filter(|&&x| x == 0.0).count();
+            assert_eq!(at_zero, 0, "key {key}: the orbit collapsed onto 0");
+            // The 1 percent critical value for 2,000 independent uniform
+            // samples is 1.63 / sqrt(2000), about 0.036.
+            let distance = uniform_distance(samples.clone(), 0.0, 1.0);
+            assert!(distance < 0.036, "key {key}: KS distance {distance:.4}");
+            let mut tenths = [0usize; 10];
+            for x in samples {
+                tenths[((x * 10.0) as usize).min(9)] += 1;
+            }
+            for (tenth, &count) in tenths.iter().enumerate() {
+                assert!(
+                    (150..=250).contains(&count),
+                    "key {key}: tenth {tenth} holds {count} of an expected 200"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn below_mu_two_the_density_fills_exactly_the_core_interval() {
+        // For 1 < mu <= 2 the attractor is [T(T(1/2)), T(1/2)], that is
+        // [mu (1 - mu / 2), mu / 2]. An independent consequence of the map, so
+        // it checks that dithering neither leaks out of the core nor starves
+        // its ends.
+        for m in [1.5, 1.7, 1.9, 2.0] {
+            let (lo, hi) = (m * (1.0 - m / 2.0), m / 2.0);
+            let samples: Vec<f64> = density_samples(m, 3).collect();
+            let low = samples.iter().copied().fold(f64::MAX, f64::min);
+            let high = samples.iter().copied().fold(f64::MIN, f64::max);
+            assert!(low >= lo - 1e-12 && high <= hi + 1e-12, "mu {m}: [{low}, {high}]");
+            assert!(low - lo < 0.01 && hi - high < 0.01, "mu {m}: [{low}, {high}]");
+        }
+    }
 
     #[test]
     fn status_invites() {

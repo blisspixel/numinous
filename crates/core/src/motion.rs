@@ -90,6 +90,27 @@ impl Motion {
     }
 }
 
+/// Room phase cycles per second in the windowed App at normal speed.
+///
+/// Slightly above a quarter-cycle per second, so quiet rooms still feel alive
+/// without rushing the mathematics past readability. The App advances by this
+/// times the player's time scale; the photosensitivity sweep reads the same
+/// number, so the speed it certifies is the speed the App runs.
+pub const ROOM_CYCLES_PER_SECOND: f64 = 0.30;
+
+/// The slowest time scale a player can set in the App.
+pub const MIN_TIME_SCALE: f64 = 0.25;
+
+/// The fastest time scale a player can set in the App: eight times normal.
+///
+/// The photosensitivity sweep measures every room at this speed and at each
+/// doubling below it. Raising it raises what that sweep must certify.
+pub const MAX_TIME_SCALE: f64 = 8.0;
+
+/// The most frames per second the App presents, and so the finest steps a
+/// player can see a room's phase take.
+pub const APP_FRAMES_PER_SECOND: f64 = 60.0;
+
 #[cfg(test)]
 mod tests {
     use super::{Motion, REDUCED_MOTION_VAR, setting_is_on};

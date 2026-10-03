@@ -19,6 +19,31 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   phase.
 - Under reduced motion a screen shake becomes a still edge around the frame
   for the same frames, marking the moment without moving the picture.
+- Expanding maps no longer collapse in binary floating point. One shared core
+  iterator carries their orbits exactly or with a deterministic dither of at
+  most 2^-44 a step. The Tent Map's density at mu = 2 is now uniform; before,
+  1,986 of its 2,000 samples sat at exactly 0.
+- Coupled Tents draws a density cloud of its attractor and reports the exact
+  transverse exponent ln 2 + ln|1 - 2 eps|, which crosses zero at the true
+  threshold 1/4. It no longer falls to the origin and calls that synchrony.
+- Gauss Map keeps one seed per visit and reveals its legs over time. Rational
+  seeds end with a mark instead of an invented 0 <-> 0.5 cycle, which the
+  postcard used to show. The graph breaks at each jump, and the Gauss density
+  is drawn as a faint guide.
+- Ricker Map draws its attractor on equal axes that never clamp, with 16 faded
+  legs and a population strip whose light holds steady because the long-run
+  mean population is exactly 1.
+- Angle Doubling's step dial reaches 64 and shows where the machine's 53 binary
+  digits run out. Its graph samples lie on the drawn graph.
+- Logistic Orbit draws 32 faithful legs instead of 200, which flashed at 8x.
+- The Rule 30 postcard shows Rule 30 rather than Rule 54.
+
+### Changed
+- The photosensitivity sweep measures the App's worst case: 60 frames a second
+  at every speed from normal to 8x, read from constants the App now shares with
+  the core. Coupled Tents, Gauss Map, and Ricker Map leave the flash list.
+  Cellular Automata, Julia Set, Lambda Map, and Pickover Attractor join it as
+  flashing at 8x only, and the access report says from what speed.
 
 ## [0.4.0-alpha.31] - 2026-10-01
 

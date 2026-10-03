@@ -2934,6 +2934,7 @@ fn the_access_report_names_every_room_on_the_known_limit_lists() {
     const PLAYING: &str = include_str!("../../../docs/PLAYING.md");
     for room in numinous_core::KNOWN_OVER_FLASH_BUDGET
         .iter()
+        .map(|(room, _)| room)
         .chain(numinous_core::RESPONSE_INVISIBLE_WITHOUT_COLOR.iter())
     {
         assert!(
@@ -2953,6 +2954,47 @@ fn the_access_report_names_every_room_on_the_known_limit_lists() {
         report.contains("need a mouse or a controller"),
         "the keyboard-to-touch boundary must be stated"
     );
+}
+
+#[test]
+fn the_flash_disclosure_says_which_rooms_and_from_what_speed() {
+    // An empty list is a measured result, not a blank line in the report:
+    // it says how far the measurement reached and what it left out.
+    let none = crate::access::flash_disclosure(&[]);
+    assert!(none.starts_with("No room is known to flash"), "{none}");
+    assert!(none.contains("up to 8x"), "{none}");
+    assert!(none.contains("visualizer"), "{none}");
+    // Rooms are grouped by the slowest speed at which they go over, so the
+    // player learns when as well as which.
+    let some =
+        crate::access::flash_disclosure(&[("julia", 8.0), ("pickover", 4.0), ("farey", 8.0)]);
+    assert!(
+        some.contains(
+            "pickover\nflash faster than the WCAG budget allows when the App runs them\nat 4x"
+        ),
+        "{some}"
+    );
+    assert!(some.contains("julia, farey\nflash faster"), "{some}");
+    assert!(some.find("pickover") < some.find("julia"), "{some}");
+    assert!(!some.contains("No room"), "{some}");
+    // A long list wraps rather than running past eighty columns, and loses
+    // no name doing it.
+    let many: Vec<(&str, f64)> = ["cellular-automata", "magnet-fractal", "sierpinski-carpet"]
+        .repeat(4)
+        .into_iter()
+        .map(|room| (room, 8.0))
+        .collect();
+    let wrapped = crate::access::flash_disclosure(&many);
+    assert!(
+        wrapped.lines().all(|line| line.chars().count() <= 80),
+        "{wrapped}"
+    );
+    assert_eq!(wrapped.matches("sierpinski-carpet").count(), 4, "{wrapped}");
+    // The live report carries whichever of these the code's list produces.
+    let report = super::access_report(&super::access_settings(None, None, None));
+    assert!(report.contains(&crate::access::flash_disclosure(
+        &numinous_core::KNOWN_OVER_FLASH_BUDGET
+    )));
 }
 
 #[test]

@@ -602,9 +602,9 @@ impl App {
         self.input_mode = input_legend::InputMode::KeyboardMouse;
         if self.current_room_is_life() {
             self.time_scale = if lines.is_sign_positive() {
-                (self.time_scale * 2.0).min(8.0)
+                (self.time_scale * 2.0).min(numinous_core::MAX_TIME_SCALE)
             } else {
-                (self.time_scale / 2.0).max(0.25)
+                (self.time_scale / 2.0).max(numinous_core::MIN_TIME_SCALE)
             };
             return true;
         }
@@ -725,8 +725,12 @@ impl App {
             match command {
                 gamepad::Command::Left => self.switch(-1),
                 gamepad::Command::Right => self.switch(1),
-                gamepad::Command::Up => self.time_scale = (self.time_scale * 2.0).min(8.0),
-                gamepad::Command::Down => self.time_scale = (self.time_scale / 2.0).max(0.25),
+                gamepad::Command::Up => {
+                    self.time_scale = (self.time_scale * 2.0).min(numinous_core::MAX_TIME_SCALE)
+                }
+                gamepad::Command::Down => {
+                    self.time_scale = (self.time_scale / 2.0).max(numinous_core::MIN_TIME_SCALE)
+                }
                 _ => {}
             }
         }
@@ -969,10 +973,10 @@ impl App {
             gamepad::Command::PreviousRoom if !self.modal_mode_active() => self.switch(-1),
             gamepad::Command::NextRoom if !self.modal_mode_active() => self.switch(1),
             gamepad::Command::Slower => {
-                self.time_scale = (self.time_scale / 2.0).max(0.25);
+                self.time_scale = (self.time_scale / 2.0).max(numinous_core::MIN_TIME_SCALE);
             }
             gamepad::Command::Faster => {
-                self.time_scale = (self.time_scale * 2.0).min(8.0);
+                self.time_scale = (self.time_scale * 2.0).min(numinous_core::MAX_TIME_SCALE);
             }
             gamepad::Command::Up
             | gamepad::Command::Down
@@ -987,7 +991,8 @@ impl App {
             gamepad::Command::PhaseDelta(delta)
                 if !self.modal_mode_active() && self.current_room_is_life() =>
             {
-                self.time_scale = (self.time_scale * 2.0_f64.powf(delta * 4.0)).clamp(0.25, 8.0);
+                self.time_scale = (self.time_scale * 2.0_f64.powf(delta * 4.0))
+                    .clamp(numinous_core::MIN_TIME_SCALE, numinous_core::MAX_TIME_SCALE);
             }
             gamepad::Command::PhaseDelta(delta) if !self.modal_mode_active() => {
                 self.t = (self.t + delta).rem_euclid(1.0);
