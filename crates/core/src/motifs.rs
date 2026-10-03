@@ -7,6 +7,7 @@
 //! room and structured notation over MCP. See `docs/MUSIC.md` and the July
 //! review, finding 6.
 
+use crate::articulation::Articulation;
 use crate::chiptune::{Arrangement, ChipNote, Pattern, Step, Voice, pitch};
 
 /// Fixed source rate for the stable stereo room bed used by every face.
@@ -91,6 +92,9 @@ impl Motif {
     /// rhythms, so rooms neither share one stencil nor repeat one bar sequence
     /// forever. The literal theme opens and returns around two developments.
     /// Short root and fifth anchors leave explicit gaps instead of one drone.
+    /// A sine lead blooms and a triangle lead plucks; the anchors swell. Every
+    /// note keeps ringing after its gate, and the loop carries those tails
+    /// across its seam.
     #[must_use]
     pub fn arrangement(&self) -> Arrangement {
         let pattern = self.pattern();
@@ -115,6 +119,11 @@ impl Motif {
                     level,
                     pan: [-0.24, -0.08, 0.08, 0.24]
                         [(melody_event + cycle + self.style_index()) % 4],
+                    articulation: if voice == Voice::Sine {
+                        Articulation::Bloom
+                    } else {
+                        Articulation::Pluck
+                    },
                 });
             }
 
@@ -134,6 +143,7 @@ impl Motif {
                     voice: Voice::Sine,
                     level: if is_fifth { 0.026 } else { 0.045 },
                     pan: if is_fifth { 0.1 } else { -0.1 },
+                    articulation: Articulation::Swell,
                 });
                 if relative_step % 16 == 0 {
                     let companion_is_fifth = !is_fifth;
@@ -148,6 +158,7 @@ impl Motif {
                         voice: Voice::Sine,
                         level: if companion_is_fifth { 0.018 } else { 0.032 },
                         pan: if companion_is_fifth { 0.1 } else { -0.1 },
+                        articulation: Articulation::Swell,
                     });
                 }
             }
@@ -268,6 +279,15 @@ mod tests {
         pitch,
     };
     use crate::stereo_signal_metrics;
+    use crate::{Articulation, Voice};
+
+    /// The step across a stereo loop's seam, from its last frame to its first.
+    fn seam_step(samples: &[f32]) -> f32 {
+        let last = samples.len() - 2;
+        (samples[0] - samples[last])
+            .abs()
+            .max((samples[1] - samples[last + 1]).abs())
+    }
 
     const TEST_MOTIF: Motif = Motif {
         key: "A minor",
@@ -390,15 +410,32 @@ mod tests {
     #[test]
     fn arrangement_has_a_quiet_anchor_real_stereo_and_clean_seam() {
         let arrangement = TEST_MOTIF.arrangement();
-        assert!(arrangement.notes.iter().any(|note| {
-            note.voice == super::Voice::Sine && (2..=8).contains(&note.step_count)
-        }));
+        assert!(
+            arrangement
+                .notes
+                .iter()
+                .any(|note| { note.voice == Voice::Sine && (2..=8).contains(&note.step_count) })
+        );
+        for note in &arrangement.notes {
+            let expected = if note.level <= 0.045 {
+                Articulation::Swell
+            } else if note.voice == Voice::Sine {
+                Articulation::Bloom
+            } else {
+                Articulation::Pluck
+            };
+            assert_eq!(note.articulation, expected, "{note:?}");
+        }
         let samples = arrangement.render_stereo(48_000);
         assert!(samples.iter().all(|sample| (-1.0..=1.0).contains(sample)));
         let peak = samples.iter().copied().map(f32::abs).fold(0.0, f32::max);
         assert!(peak < 0.45, "room bed peak was {peak}");
-        assert_eq!(&samples[..2], &[0.0, 0.0]);
-        assert_eq!(&samples[samples.len() - 2..], &[0.0, 0.0]);
+        let metrics = stereo_signal_metrics(&samples);
+        let seam = seam_step(&samples);
+        assert!(
+            f64::from(seam) <= metrics.max_step,
+            "the seam steps by {seam}, more than anywhere inside the loop"
+        );
         assert!(samples.chunks_exact(2).any(|frame| frame[0] != frame[1]));
 
         for channel in 0..2 {
@@ -470,14 +507,17 @@ mod tests {
             let samples = arrangement.render_stereo(ROOM_BED_SOURCE_RATE);
             assert!(!samples.is_empty(), "{} must make sound", meta.id);
             assert!(samples.len() <= 2_000_000, "{} source allocation", meta.id);
-            assert_eq!(&samples[..2], &[0.0, 0.0], "{} attack seam", meta.id);
-            assert_eq!(
-                &samples[samples.len() - 2..],
-                &[0.0, 0.0],
-                "{} release seam",
+            assert!(
+                seam_step(&samples) < 0.09,
+                "{} loop seam is not continuous",
                 meta.id
             );
             let metrics = stereo_signal_metrics(&samples);
+            assert!(
+                f64::from(seam_step(&samples)) <= metrics.max_step + 1.0e-6,
+                "{} loop boundary steps more than its interior",
+                meta.id
+            );
             assert_eq!(metrics.trailing_samples, 0, "{} stereo frames", meta.id);
             assert_eq!(metrics.non_finite_samples, 0, "{} finite signal", meta.id);
             assert_eq!(metrics.subnormal_samples, 0, "{} subnormal signal", meta.id);

@@ -5,7 +5,34 @@ use std::fmt;
 use crate::{Era, study::StudyLocale};
 
 /// Current on-disk preferences schema.
-pub const PREFERENCES_SCHEMA_VERSION: u8 = 2;
+pub const PREFERENCES_SCHEMA_VERSION: u8 = 3;
+
+/// Every schema this build reads, oldest first.
+///
+/// Older documents stay readable so an upgrade never discards a player's
+/// settings. A field a schema did not have takes its default, and a field it
+/// did not have is rejected if it appears, so a damaged or hand-edited file
+/// cannot pass as a newer one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Schema {
+    /// Master volume, mute, Visual Era, and window mode.
+    V1,
+    /// Adds the study language.
+    V2,
+    /// Adds the music, room, and effect levels.
+    V3,
+}
+
+impl Schema {
+    fn from_header(header: &str) -> Option<Self> {
+        match header {
+            "NUMINOUS_PREFERENCES 1" => Some(Self::V1),
+            "NUMINOUS_PREFERENCES 2" => Some(Self::V2),
+            "NUMINOUS_PREFERENCES 3" => Some(Self::V3),
+            _ => None,
+        }
+    }
+}
 
 /// The window presentation requested for the next App launch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -45,6 +72,13 @@ impl WindowModePreference {
 pub struct AppPreferences {
     /// Master volume as an exact percentage.
     pub volume_percent: u8,
+    /// Recorded music, the radio, as a percentage beneath the master level.
+    pub music_volume_percent: u8,
+    /// Room sound as a percentage beneath the master level: the room score,
+    /// its mathematical voices and events, Studio, and Watch Agent replay.
+    pub room_volume_percent: u8,
+    /// Game cues as a percentage beneath the master level.
+    pub effect_volume_percent: u8,
     /// Whether all App sound is muted.
     pub muted: bool,
     /// Visual treatment applied to the rendered room.
@@ -59,6 +93,9 @@ impl Default for AppPreferences {
     fn default() -> Self {
         Self {
             volume_percent: 45,
+            music_volume_percent: 100,
+            room_volume_percent: 100,
+            effect_volume_percent: 100,
             muted: false,
             era: Era::Modern,
             window_mode: WindowModePreference::Windowed,
@@ -78,11 +115,14 @@ impl AppPreferences {
             Era::Modern => "modern",
         };
         format!(
-            "NUMINOUS_PREFERENCES {PREFERENCES_SCHEMA_VERSION}\nvolume_percent {}\nmuted {}\nera {era}\nwindow_mode {}\nstudy_locale {}\n",
+            "NUMINOUS_PREFERENCES {PREFERENCES_SCHEMA_VERSION}\nvolume_percent {}\nmusic_volume_percent {}\nroom_volume_percent {}\neffect_volume_percent {}\nmuted {}\nera {era}\nwindow_mode {}\nstudy_locale {}\n",
             self.volume_percent,
+            self.music_volume_percent,
+            self.room_volume_percent,
+            self.effect_volume_percent,
             self.muted,
             self.window_mode.name(),
-            self.study_locale
+            self.study_locale,
         )
     }
 
@@ -90,7 +130,9 @@ impl AppPreferences {
     ///
     /// Unknown, duplicate, missing, or out-of-range fields are rejected as one
     /// unit so a damaged file cannot apply a surprising partial configuration.
-    /// Schema 1 retains all four original settings and defaults study to English.
+    /// Schemas 1 and 2 stay readable: schema 1 defaults study to English, and
+    /// both default the music, room, and effect levels to 100 percent, so an
+    /// upgraded install keeps its existing source and master levels.
     ///
     /// # Errors
     ///
@@ -100,14 +142,13 @@ impl AppPreferences {
         let header = lines
             .next()
             .ok_or_else(|| PreferencesError::new("preferences file is empty"))?;
-        let legacy = header == "NUMINOUS_PREFERENCES 1";
-        if !legacy && header != format!("NUMINOUS_PREFERENCES {PREFERENCES_SCHEMA_VERSION}") {
-            return Err(PreferencesError::new(
-                "preferences schema is missing or unsupported",
-            ));
-        }
+        let schema = Schema::from_header(header)
+            .ok_or_else(|| PreferencesError::new("preferences schema is missing or unsupported"))?;
 
         let mut volume_percent = None;
+        let mut music_volume_percent = None;
+        let mut room_volume_percent = None;
+        let mut effect_volume_percent = None;
         let mut muted = None;
         let mut era = None;
         let mut window_mode = None;
@@ -128,13 +169,19 @@ impl AppPreferences {
             match key {
                 "volume_percent" => set_once(
                     &mut volume_percent,
-                    value
-                        .parse::<u8>()
-                        .ok()
-                        .filter(|value| *value <= 100)
-                        .ok_or_else(|| {
-                            PreferencesError::new("volume_percent must be between 0 and 100")
-                        })?,
+                    parse_percent(value, "volume_percent must be between 0 and 100")?,
+                )?,
+                "music_volume_percent" if schema >= Schema::V3 => set_once(
+                    &mut music_volume_percent,
+                    parse_percent(value, "music_volume_percent must be between 0 and 100")?,
+                )?,
+                "room_volume_percent" if schema >= Schema::V3 => set_once(
+                    &mut room_volume_percent,
+                    parse_percent(value, "room_volume_percent must be between 0 and 100")?,
+                )?,
+                "effect_volume_percent" if schema >= Schema::V3 => set_once(
+                    &mut effect_volume_percent,
+                    parse_percent(value, "effect_volume_percent must be between 0 and 100")?,
                 )?,
                 "muted" => set_once(
                     &mut muted,
@@ -159,7 +206,7 @@ impl AppPreferences {
                     WindowModePreference::parse(value)
                         .ok_or_else(|| PreferencesError::new("window_mode is not recognized"))?,
                 )?,
-                "study_locale" if !legacy => set_once(
+                "study_locale" if schema >= Schema::V2 => set_once(
                     &mut study_locale,
                     StudyLocale::parse(value)
                         .map_err(|error| PreferencesError::new(error.to_string()))?,
@@ -172,18 +219,37 @@ impl AppPreferences {
             }
         }
 
+        let current = schema >= Schema::V3;
+        let full = |value: Option<u8>, message| {
+            if current {
+                required(value, message)
+            } else {
+                Ok(100)
+            }
+        };
         Ok(Self {
             volume_percent: required(volume_percent, "volume_percent is missing")?,
+            music_volume_percent: full(music_volume_percent, "music_volume_percent is missing")?,
+            room_volume_percent: full(room_volume_percent, "room_volume_percent is missing")?,
+            effect_volume_percent: full(effect_volume_percent, "effect_volume_percent is missing")?,
             muted: required(muted, "muted is missing")?,
             era: required(era, "era is missing")?,
             window_mode: required(window_mode, "window_mode is missing")?,
-            study_locale: if legacy {
-                StudyLocale::default()
-            } else {
+            study_locale: if schema >= Schema::V2 {
                 required(study_locale, "study_locale is missing")?
+            } else {
+                StudyLocale::default()
             },
         })
     }
+}
+
+fn parse_percent(value: &str, message: &'static str) -> Result<u8, PreferencesError> {
+    value
+        .parse::<u8>()
+        .ok()
+        .filter(|value| *value <= 100)
+        .ok_or_else(|| PreferencesError::new(message))
 }
 
 fn set_once<T>(slot: &mut Option<T>, value: T) -> Result<(), PreferencesError> {
@@ -219,13 +285,18 @@ impl std::error::Error for PreferencesError {}
 
 #[cfg(test)]
 mod tests {
-    use super::{AppPreferences, PREFERENCES_SCHEMA_VERSION, WindowModePreference};
+    use super::{AppPreferences, PREFERENCES_SCHEMA_VERSION, Schema, WindowModePreference};
     use crate::Era;
+
+    const CURRENT_PREFIX: &str = "NUMINOUS_PREFERENCES 3\nvolume_percent 45\nmusic_volume_percent 100\nroom_volume_percent 100\neffect_volume_percent 100\nmuted false\nera modern\nwindow_mode windowed\nstudy_locale en\n";
 
     #[test]
     fn current_preferences_round_trip_in_stable_order() {
         let preferences = AppPreferences {
             volume_percent: 70,
+            music_volume_percent: 30,
+            room_volume_percent: 0,
+            effect_volume_percent: 85,
             muted: true,
             era: Era::Vector,
             window_mode: WindowModePreference::Exclusive,
@@ -235,10 +306,21 @@ mod tests {
         assert_eq!(
             text,
             format!(
-                "NUMINOUS_PREFERENCES {PREFERENCES_SCHEMA_VERSION}\nvolume_percent 70\nmuted true\nera vector\nwindow_mode exclusive\nstudy_locale ja-jp\n"
+                "NUMINOUS_PREFERENCES {PREFERENCES_SCHEMA_VERSION}\nvolume_percent 70\nmusic_volume_percent 30\nroom_volume_percent 0\neffect_volume_percent 85\nmuted true\nera vector\nwindow_mode exclusive\nstudy_locale ja-jp\n"
             )
         );
         assert_eq!(AppPreferences::try_from_text(&text), Ok(preferences));
+    }
+
+    #[test]
+    fn the_written_header_is_the_newest_schema_this_build_reads() {
+        let text = AppPreferences::default().to_text();
+        let header = text.lines().next().expect("header");
+        assert_eq!(Schema::from_header(header), Some(Schema::V3));
+        assert_eq!(
+            AppPreferences::try_from_text(&text),
+            Ok(AppPreferences::default())
+        );
     }
 
     #[test]
@@ -251,9 +333,55 @@ mod tests {
             "NUMINOUS_PREFERENCES 1\nvolume_percent 45\nmuted false\nera modern\n",
             "NUMINOUS_PREFERENCES 1\nvolume_percent 45\nvolume_percent 50\nmuted false\nera modern\nwindow_mode windowed\n",
             "NUMINOUS_PREFERENCES 1\nvolume_percent 45\nmuted false\nera modern\nwindow_mode windowed\nsurprise yes\n",
+            "NUMINOUS_PREFERENCES 4\nvolume_percent 45\nmuted false\nera modern\nwindow_mode windowed\n",
         ] {
             assert!(AppPreferences::try_from_text(text).is_err(), "{text:?}");
         }
+    }
+
+    #[test]
+    fn the_current_schema_requires_and_bounds_every_level() {
+        let complete = CURRENT_PREFIX;
+        assert_eq!(
+            AppPreferences::try_from_text(complete),
+            Ok(AppPreferences::default())
+        );
+        for key in [
+            "music_volume_percent",
+            "room_volume_percent",
+            "effect_volume_percent",
+        ] {
+            let missing = complete
+                .lines()
+                .filter(|line| !line.starts_with(key))
+                .map(|line| format!("{line}\n"))
+                .collect::<String>();
+            assert!(
+                AppPreferences::try_from_text(&missing).is_err(),
+                "{key} must be required"
+            );
+            let duplicated = format!("{complete}{key} 100\n");
+            assert!(
+                AppPreferences::try_from_text(&duplicated).is_err(),
+                "{key} must not repeat"
+            );
+        }
+        for level in ["101", "255", "-1", "50.5", "loud"] {
+            for key in [
+                "music_volume_percent",
+                "room_volume_percent",
+                "effect_volume_percent",
+            ] {
+                let text = complete.replace(&format!("{key} 100"), &format!("{key} {level}"));
+                assert!(
+                    AppPreferences::try_from_text(&text).is_err(),
+                    "{key} {level} must be rejected"
+                );
+            }
+        }
+        let edges = complete.replace("music_volume_percent 100", "music_volume_percent 0");
+        let parsed = AppPreferences::try_from_text(&edges).expect("edge values are legal");
+        assert_eq!(parsed.music_volume_percent, 0);
     }
 
     #[test]
@@ -270,6 +398,35 @@ mod tests {
             Ok(preferences)
         );
         assert!(AppPreferences::try_from_text(&format!("{text}study_locale ja\n")).is_err());
+    }
+
+    #[test]
+    fn legacy_schemas_upgrade_to_full_levels_without_admitting_new_fields() {
+        let version_one = "NUMINOUS_PREFERENCES 1\nvolume_percent 17\nmuted true\nera phosphor\nwindow_mode borderless\n";
+        let version_two = format!(
+            "{}study_locale ja\n",
+            version_one.replace("PREFERENCES 1", "PREFERENCES 2")
+        );
+        for legacy in [version_one.to_string(), version_two] {
+            let upgraded = AppPreferences::try_from_text(&legacy).expect("legacy schema");
+            assert_eq!(upgraded.volume_percent, 17, "master level survives");
+            assert_eq!(upgraded.music_volume_percent, 100);
+            assert_eq!(upgraded.room_volume_percent, 100);
+            assert_eq!(upgraded.effect_volume_percent, 100);
+            let rewritten = upgraded.to_text();
+            assert!(rewritten.starts_with("NUMINOUS_PREFERENCES 3\n"));
+            assert_eq!(AppPreferences::try_from_text(&rewritten), Ok(upgraded));
+            for newer in [
+                "music_volume_percent 50\n",
+                "room_volume_percent 50\n",
+                "effect_volume_percent 50\n",
+            ] {
+                assert!(
+                    AppPreferences::try_from_text(&format!("{legacy}{newer}")).is_err(),
+                    "an older schema must not carry {newer:?}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -291,5 +448,7 @@ mod tests {
         ] {
             assert!(AppPreferences::try_from_text(&format!("{prefix}{suffix}")).is_err());
         }
+        let without_study = CURRENT_PREFIX.replace("study_locale en\n", "");
+        assert!(AppPreferences::try_from_text(&without_study).is_err());
     }
 }

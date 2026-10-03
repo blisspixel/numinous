@@ -18,6 +18,8 @@ pub(crate) enum AudioSource {
 pub(crate) struct AudioState {
     source: AudioSource,
     volume_percent: u8,
+    /// The active source's own level beneath master.
+    source_level_percent: u8,
     muted: bool,
     active: bool,
 }
@@ -27,8 +29,17 @@ impl AudioState {
         Self {
             source,
             volume_percent: volume_percent.min(100),
+            source_level_percent: 100,
             muted,
             active,
+        }
+    }
+
+    /// The same state with the active source's level beneath master.
+    pub(crate) fn with_source_level(self, percent: u8) -> Self {
+        Self {
+            source_level_percent: percent.min(100),
+            ..self
         }
     }
 
@@ -48,6 +59,12 @@ impl AudioState {
             format!("{source}: MUTED")
         } else if self.volume_percent == 0 {
             format!("{source}: VOL 0")
+        } else if self.source_level_percent == 0 {
+            let level = match self.source {
+                AudioSource::Radio(_) => "RADIO",
+                _ => "ROOM SOUND",
+            };
+            format!("{source}: {level} 0")
         } else if !self.active {
             format!("{source}: BACKGROUND SILENT")
         } else {

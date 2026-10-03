@@ -127,7 +127,19 @@ pub(crate) fn wing_left() -> Banner {
 }
 
 pub(crate) fn volume(volume: f32, muted: bool) -> Banner {
-    let mut lines = vec![format!("VOLUME {:.0}%", volume.clamp(0.0, 1.0) * 100.0)];
+    level_banner(
+        format!("VOLUME {:.0}%", volume.clamp(0.0, 1.0) * 100.0),
+        muted,
+    )
+}
+
+/// One named level beneath master, such as `RADIO 80%`.
+pub(crate) fn level(name: &str, percent: u8, muted: bool) -> Banner {
+    level_banner(format!("{name} {}%", percent.min(100)), muted)
+}
+
+fn level_banner(reading: String, muted: bool) -> Banner {
+    let mut lines = vec![reading];
     if muted {
         lines.push("OUTPUT REMAINS MUTED".to_string());
     }
