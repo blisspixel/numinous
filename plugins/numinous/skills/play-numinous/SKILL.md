@@ -93,6 +93,13 @@ select saved 100, 125, or 150 percent body text. Minus/plus (or equals) also
 changes reading size while the reader is open; brackets retain volume control.
 MCP study content is unchanged by this App preference.
 
+With shell access, `numinous settings --json` reads the App's Master, Radio,
+Room Sound, Effects, and mute without opening a window or sound device. Its
+`source` is `defaults` when no preference file exists or `saved` for a valid
+saved document, including shared legacy defaults. Damaged or unreadable files
+return an error. The command changes no files and reports launch preferences,
+not live playback or hearing; sound exports remain pre-master sources.
+
 ## Predict
 
 If you choose a prediction or engineered aha, commit before seeing the

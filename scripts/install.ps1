@@ -710,7 +710,7 @@ function Initialize-InstallRoot(
             Fail 'a legacy default install needs explicit -AdoptLegacy consent before migration.'
         }
         if (-not (Test-InstallRootClaimable $Root $DefaultRoot $AllowLegacy)) {
-            Fail 'NUMINOUS_HOME exists but is not a marked Numinous install root.'
+            Fail 'NUMINOUS_HOME exists but is not a marked Numinous install root. Download a fresh release archive, or run the installer with NUMINOUS_HOME set to a separate empty directory. Keep the existing tree intact.'
         }
     } else {
         New-Item -ItemType Directory -Path $Root | Out-Null
@@ -1251,7 +1251,12 @@ function Test-InstallerSafety {
         }
         Remove-Item -LiteralPath (Join-Path $legacy 'unexpected.txt') -Force
         $rejectedArbitrary = $false
-        try { Initialize-InstallRoot $unmarked } catch { $rejectedArbitrary = $true }
+        try { Initialize-InstallRoot $unmarked } catch {
+            $rejectedArbitrary = $true
+            if ($_.Exception.Message -notmatch 'separate empty directory') {
+                Fail 'root self-test: the unmarked-root refusal omitted recovery.'
+            }
+        }
         if (-not $rejectedArbitrary) {
             Fail 'root self-test: arbitrary nonempty contents were accepted.'
         }

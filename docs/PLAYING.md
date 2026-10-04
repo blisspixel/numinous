@@ -157,6 +157,15 @@ stay master-only. Options persist those levels, mute, Visual Era, and window
 mode in the versioned local preference store. `numinous forget` inventories that store;
 `numinous forget --confirm --all-local` erases it with the other managed local
 state. A selective Journey or journal erasure leaves Options intact.
+
+`numinous settings` reads those audio levels and mute without opening the App
+or a sound device. Add `--json` for a snapshot with `source` set to `defaults`
+or `saved`. Missing preferences use the same first-run defaults as the App;
+older saved schemas receive the App's defaults for absent fields. Damaged,
+oversized, or unreadable files are refused without modification. This command
+does not load or repair Journey or scores. The values describe launch
+preferences, not the running mixer, device availability, or heard audio.
+
 Settings also carries a full-size Skip Track row. It advances the current
 station without hiding the action in the small footer legend.
 Radio stations appear only when compatible local tracks are present. Visible

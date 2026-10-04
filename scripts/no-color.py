@@ -87,6 +87,8 @@ class Probe(NamedTuple):
 # stdin. That also keeps a probe from waiting on a player who is not there.
 PROBES: tuple[Probe, ...] = (
     Probe(["access"]),
+    Probe(["settings"]),
+    Probe(["settings", "--json"]),
     Probe(["rooms"]),
     Probe(["describe", "lorenz"]),
     Probe(["reveal", "lorenz"], journey="visited lorenz\n"),

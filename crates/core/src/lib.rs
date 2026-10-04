@@ -219,9 +219,9 @@ pub use persistence::{
     export_project_document_file, import_project_file, inspect_journal_file, inspect_local_state,
     keep_project_file, load_journal_file, load_journey_file, load_scoreboard_file,
     lock_local_state, persist_app_preferences_file, persist_journey_delta,
-    read_app_preferences_file, read_journey_file, read_project_document_file, record_journal_file,
-    record_score_file, remove_persisted_file, resolve_local_state_paths, try_load_journal_file,
-    try_load_project_file,
+    read_app_preferences_file, read_app_preferences_snapshot, read_journey_file,
+    read_project_document_file, record_journal_file, record_score_file, remove_persisted_file,
+    resolve_local_state_paths, try_load_journal_file, try_load_project_file,
 };
 pub use photosensitivity::{
     DARK_CEILING, GENERAL_FLASH_DELTA, MAX_FLASHES_PER_SECOND, count_flashes, flashes_per_second,
@@ -233,8 +233,8 @@ pub use predict::{
     prediction_rate_window,
 };
 pub use preferences::{
-    AppPreferences, PREFERENCES_SCHEMA_VERSION, PreferencesError, StudyTextSize,
-    WindowModePreference,
+    AppPreferences, AppPreferencesSnapshot, PREFERENCES_SCHEMA_VERSION, PreferencesError,
+    PreferencesSource, StudyTextSize, WindowModePreference,
 };
 pub use project::{
     CreationFact, CreationKind, CreationStatus, EvidenceFact, EvidenceStatus, IncompatibleNext,

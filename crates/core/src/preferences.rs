@@ -7,6 +7,35 @@ use crate::{Era, study::StudyLocale};
 /// Current on-disk preferences schema.
 pub const PREFERENCES_SCHEMA_VERSION: u8 = 4;
 
+/// Where one read-only App preference snapshot came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PreferencesSource {
+    /// No saved file exists, so the App uses its defaults.
+    Defaults,
+    /// A complete supported saved document was read successfully.
+    Saved,
+}
+
+impl PreferencesSource {
+    /// Stable name for a preferences inspection result.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Defaults => "defaults",
+            Self::Saved => "saved",
+        }
+    }
+}
+
+/// App launch preferences and their read provenance, without device state.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppPreferencesSnapshot {
+    /// The same admitted values the App uses on launch.
+    pub preferences: AppPreferences,
+    /// Whether those values came from a saved document or first-run defaults.
+    pub source: PreferencesSource,
+}
+
 /// Every schema this build reads, oldest first.
 ///
 /// Older documents stay readable so an upgrade never discards a player's

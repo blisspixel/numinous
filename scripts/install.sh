@@ -274,7 +274,7 @@ validate_install_root() {
             [ "${ADOPT_LEGACY:-0}" -eq 1 ] \
                 || fail "a legacy default install needs explicit --adopt-legacy consent"
         else
-            fail "NUMINOUS_HOME exists but is not a marked Numinous install root"
+            fail "NUMINOUS_HOME exists but is not a marked Numinous install root. Download a fresh release archive, or run the installer with NUMINOUS_HOME set to a separate empty directory. Keep the existing tree intact."
         fi
     fi
 }
@@ -1171,6 +1171,15 @@ run_self_test() {
     mkdir "$unmarked"
     printf '%s\n' keep >"$unmarked/keep.txt"
     printf '%s\n' 'not a marker' >"$unmarked/.numinous-install-root"
+    if root_refusal=$( (NUMINOUS_HOME="$unmarked"; validate_install_root) 2>&1); then
+        fail "root self-test: an unmarked root was accepted"
+    fi
+    case "$root_refusal" in
+        *"separate empty directory"*) ;;
+        *) fail "root self-test: the unmarked-root refusal omitted recovery" ;;
+    esac
+    [ "$(cat "$unmarked/keep.txt")" = keep ] \
+        || fail "root self-test: the rejected update changed existing files"
     if remove_install_root "$unmarked" >/dev/null 2>&1; then
         fail "uninstall self-test: an unmarked root was accepted"
     fi

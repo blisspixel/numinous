@@ -71,7 +71,7 @@ hosts can also load the [portable plugin](plugins/numinous).
 
 ## Current state
 
-**0.5.0-alpha.2** is a playable alpha with 356 catalog rooms, games, Journey,
+**0.5.0-alpha.3** is a playable alpha with 356 catalog rooms, games, Journey,
 Studio, controllers, and built-in music. It is still under development:
 Sensory Alpha is active, refining the shared visual and sonic identity.
 Understanding Alpha's qualifying study remains open; human playtests are optional
@@ -89,6 +89,8 @@ the saved-creation Gallery stays bounded while discovering the newest files.
 
 The App's study reader offers saved 100, 125, and 150 percent body text through
 Settings > Reading Text and A-/A+ controls, retaining your place as words reflow.
+`numinous settings` reports the App's saved audio levels or first-run defaults
+without a window or sound card; add `--json` for a machine-readable snapshot.
 
 The [roadmap](https://github.com/blisspixel/numinous/blob/main/docs/ROADMAP.md#now)
 owns what is built and what comes next.
