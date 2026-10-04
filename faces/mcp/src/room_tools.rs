@@ -354,15 +354,14 @@ pub(super) fn listen_room_tool(args: &Value) -> Value {
     // The room's own sonification, as sound rather than as a table of it. This
     // is the mathematical voice, not the ambient bed: what the room is doing
     // right now at this phase, under this hand.
-    let audible = match audible::requested(args) {
-        Ok(true) => match audible::block(&spec) {
-            Ok(rendered) => Some(rendered),
-            Err(message) => return tool_error(&message),
-        },
-        Ok(false) => None,
+    let audible = match audible::Wav::requested(args, &spec) {
+        Ok(delivery) => delivery,
         Err(message) => return tool_error(&message),
     };
-    if audible.is_some() {
+    if let Some(notice) = audible.notice() {
+        lines.push(notice.to_owned());
+    }
+    if audible.is_attached() {
         lines.push(
             "A WAV of this room at this phase follows as an audio \
              attachment. Whether your client can surface it as sound is \
@@ -376,7 +375,8 @@ pub(super) fn listen_room_tool(args: &Value) -> Value {
         "title": room.meta().title,
         "t": t,
         "variation": variation,
-        "audio": audible.as_ref().map(|(_, described)| described.clone()),
+        "audio": audible.descriptor(),
+        "audioOmission": audible.omission(),
         "pokes": inputs.pokes,
         "gesture": if inputs.gesture.is_empty() { Value::Null } else { gesture_json(&inputs.gesture) },
         "duration_seconds": spec.duration,
@@ -446,10 +446,7 @@ pub(super) fn listen_room_tool(args: &Value) -> Value {
         lines.push("Encounter receipt attached.".to_string());
     }
     let result = tool_structured(&lines.join("\n"), structured);
-    match audible {
-        Some((block, _)) => audible::attach(result, block),
-        None => result,
-    }
+    audible.attach(result)
 }
 
 /// The `reveal_room` tool: optional concept + revelation (the learn surface).

@@ -362,6 +362,15 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   deep cuts expose their unlock level without leaking their text. Scores and
   forget previews are similarly structured, and confirmed erasure reports only
   successful filesystem outcomes.
+- **Bounded WAV delivery (built):** `audio: true` on `listen_room`, `watch_show`,
+  or `sing_expression` keeps the successful notation result when the requested
+  WAV exceeds the encoded attachment budget. `audio` is null, `audioOmission`
+  records reason, exact requested bytes, limit, rate, duration, and a readable
+  recovery; Show puts both fields under `segment.sound`. Compact replies retain
+  the notice, receipts record no encoded audio as delivered, and Show replay
+  and continuation remain followable. Size preflight uses core's exact WAV
+  byte length before synthesis. The CLI's full pre-master export remains
+  available through `sonify` or `sing`; no shorter-sound control is implied.
 - **Caller-paced Show for minds (built):** `watch_show` projects the core-owned
   six-room Strange Loop score as one complete cue per call. Core fixes route
   order, nonspoiling questions, exact arrival, postcard, and curtain phases,
@@ -389,8 +398,9 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   the frequencies the room's voice really plays at each step. Its `next` is
   not null: it is a `play_room` call on `times-tables` at the K=2 phase with
   the same width and height, followed verbatim by a regression. Adding the
-  score moved `numinous.show-segment` to schema version 2 (the `passage` role,
-  `octaveLock`, and the `play_room` hand-off); the tool count is unchanged and
+  score introduced the `passage` role, `octaveLock`, and the `play_room` hand-off.
+  `numinous.show-segment` is now schema version 3, adding the explicit WAV
+  omission. The tool count is unchanged and
   the no-argument default is still the Strange Loop.
 - **Show direction in core (built, App playback designed):** `numinous-core`
   holds a director profile for every catalog room. Most are derived from the

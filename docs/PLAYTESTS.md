@@ -2222,3 +2222,37 @@ shape-identity wager can feel like different games, that `euclid(8,x)` is easy
 to mistake for a broken rhythm, and that Route Lab's opening does not make the
 choice between editing roads and taking the saving obvious. These are retained
 as authored-doorway feedback, not claimed corrected by the two fixes above.
+
+## October 3 packaged agentic playtest, v0.4.0-alpha.32
+
+The owner supplied a stranger-then-docs Linux CLI and MCP round on
+`v0.4.0-alpha.32`, commit `f2818aad28482dd7a765411a95c518e1493c220a`.
+The published archive matched SHA-256
+`9cd24c284ad604d0e43570c4599ed0f8a66fbc5bc9863c34272eb4532c175b62`.
+The stranger notes were sealed before the docs pass with SHA-256
+`f72f05129aaa2343da170d469da3c4c7c39bf7a577c40b4130cfa610a069b38b`;
+the release blurb had already been visible. Raw files remain with the tester.
+
+The bare-name refusal held on plot, sing, and save, with no output file or save
+door. The suggested named-parameter formula worked. Zero-reading singing
+remained refused while the proof plate plotted. Mandelbrot's CPU still showed
+a continuous multicolor edge on near-black, with dark corners and interior.
+Route Lab's comparison, improvement, undo, and stepped path still played.
+Terminal reduced motion held phase and changed the tour to manual advance.
+
+The new failure was optional audio discarding a useful result. Mandelbrot's
+full room voice exceeded the MCP encoded WAV limit. Both `listen_room` and its
+Overture cue returned an error without their notes, suggesting a shorter sound
+despite offering no duration control. The WAV budget now applies only to the
+attachment: notes, receipt availability, Show looks, and continuation survive
+with an explicit omission. Full and compact regressions cover the reported
+calls, and an audio-enabled Overture is followed through its final handoff.
+Full-length CLI exports remain available and are documented in packaged PLAY.
+
+The tester used the published archive directly because an older loose tree
+was not a marked install root. The update refusal protects that tree; it was
+not evidence of a failed update of a supported install. No audio was heard,
+and neither the native App, GPU rendering, room-change wash, persisted sound
+levels, nor native Route Lab controls were exercised. Pre-master exports
+remain explicitly separate from the App mix. These are formative observations,
+not evidence that native sensory qualification is complete.

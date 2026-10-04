@@ -46,11 +46,16 @@ numinous-app     a window; A/D switch rooms, touch or use a controller hand
 numinous         or live in the terminal, in full color
 ```
 
-Later, `numinous update` installs the newest published release without touching
+For an installer-created installation, `numinous update` installs the newest
+published release without touching
 your Journey, scores, Cairn, or journal. It refreshes the launcher too. Use
 `numinous uninstall` to remove the managed program and its launchers while
 keeping that player-owned state and App settings. On Windows, the same action
 is available from Installed Apps.
+
+A loose archive or source checkout is not a managed install root. Use a fresh
+archive directly, or install into a separate location. An existing unmarked
+`NUMINOUS_HOME` is refused rather than overwritten.
 
 (From a clone, `cargo run --release --bin numinous-app` works directly.)
 
@@ -419,8 +424,22 @@ the App, PageDown after `another-ratio` opens `closing-voices`, then
 `shorter-window`, then `wandering-voices`.
 
 Pass `audio: true` to `sing_expression` or to `listen_room` and the reply also
-carries a real WAV in an audio content block, beside the notation rather than
-instead of it. That is a sound sent, which is not the same as a sound heard.
+carries a real WAV when it fits in the 1,500,000-byte encoded attachment budget,
+beside the notation rather than instead of it. A longer voice still returns
+its notes successfully and names the size limit in `audioOmission`; no WAV
+was sent. `watch_show` uses the same rule, with the omission under
+`segment.sound.audioOmission`, and its `next` still works. This applies in
+compact replies too. To keep Mandelbrot's complete room voice locally:
+
+```text
+numinous sonify mandelbrot --layer mathematical --t 0 --out mandelbrot.wav
+```
+
+For another listen, carry its room, phase, variation, and hand to `sonify` using
+`--t`, `--variation`, `--poke`, or `--gesture`; `numinous sonify --help` names
+their forms. Studio uses `numinous sing "sin(x)" --out melody.wav` with its
+window, parameter, and scale controls. These CLI files remain pre-master.
+A WAV attachment is a sound sent, which is not the same as a sound heard.
 Whether it reaches you is your client's to answer, not ours: a host is free to
 drop an audio block, or to hand you the bytes and no ear. One player decoded the
 file, counted its samples, and still wrote "I did not hear the two hills," and

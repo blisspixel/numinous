@@ -12,7 +12,7 @@
 //! model passes it. So a melody leaves here as a real WAV file rather than as a
 //! description of one, and whether it can be heard stops being our excuse.
 
-use numinous_core::SoundSpec;
+use numinous_core::{SoundSpec, counted};
 use serde_json::{Value, json};
 
 /// Sample rate for sound sent down the wire.
@@ -24,9 +24,8 @@ pub(super) const WIRE_SAMPLE_RATE: u32 = 16_000;
 
 /// The most encoded audio one reply will carry, in bytes.
 ///
-/// A refusal that names this number and what was asked for is more useful than
-/// a reply that silently drops the sound, and far more useful than one that
-/// buries a caller under a megabyte they did not ask for.
+/// An oversized attachment is explicitly omitted. The successful tool result
+/// retains its notes and continuation instead of losing them to a size error.
 pub(super) const MAX_WIRE_AUDIO_BYTES: usize = 1_500_000;
 
 /// Whether this call asked to be able to hear the result.
@@ -50,21 +49,78 @@ fn flag(arguments: &Value, name: &'static str) -> Result<bool, String> {
     }
 }
 
-/// Render a sound to a protocol audio block, or say why it will not fit.
-///
-/// The error names the budget, the size, and the seconds, in the same shape the
-/// dwell budget uses, so a caller who is refused knows what to ask for instead.
-pub(super) fn block(spec: &SoundSpec) -> Result<(Value, Value), String> {
-    let wav = spec.wav(WIRE_SAMPLE_RATE);
-    let encoded_len = base64_len(wav.len());
-    if encoded_len > MAX_WIRE_AUDIO_BYTES {
-        let seconds =
-            MAX_WIRE_AUDIO_BYTES as f64 / base64_len(WIRE_SAMPLE_RATE as usize * 2) as f64;
-        return Err(format!(
-            "One reply carries at most {MAX_WIRE_AUDIO_BYTES} bytes of encoded audio, which is about {seconds:.0} seconds at {WIRE_SAMPLE_RATE} Hz. This sound is {:.1} seconds and would encode to {encoded_len} bytes. Ask for a shorter sound, or leave 'audio' off and read the notes.",
-            spec.duration
-        ));
+/// A WAV delivery decision, independent of the successful notation result.
+#[derive(Debug)]
+pub(super) enum Wav {
+    NotRequested,
+    Attached { block: Value, descriptor: Value },
+    Omitted { descriptor: Value },
+}
+
+impl Wav {
+    /// Validate opt-in and decide the attachment budget before rendering.
+    pub(super) fn requested(arguments: &Value, spec: &SoundSpec) -> Result<Self, String> {
+        Ok(if requested(arguments)? {
+            block(spec)
+        } else {
+            Self::NotRequested
+        })
     }
+
+    pub(super) fn is_attached(&self) -> bool {
+        matches!(self, Self::Attached { .. })
+    }
+
+    pub(super) fn descriptor(&self) -> Value {
+        match self {
+            Self::Attached { descriptor, .. } => descriptor.clone(),
+            _ => Value::Null,
+        }
+    }
+
+    pub(super) fn omission(&self) -> Value {
+        match self {
+            Self::Omitted { descriptor } => descriptor.clone(),
+            _ => Value::Null,
+        }
+    }
+
+    pub(super) fn notice(&self) -> Option<&str> {
+        match self {
+            Self::Omitted { descriptor } => descriptor["message"].as_str(),
+            _ => None,
+        }
+    }
+
+    pub(super) fn attach(self, result: Value) -> Value {
+        match self {
+            Self::Attached { block, .. } => attach(result, block),
+            _ => result,
+        }
+    }
+}
+
+/// Render a bounded WAV, or describe its omission without allocating PCM.
+fn block(spec: &SoundSpec) -> Wav {
+    let encoded_len = base64_len(spec.wav_byte_len(WIRE_SAMPLE_RATE));
+    if encoded_len > MAX_WIRE_AUDIO_BYTES {
+        let message = format!(
+            "WAV omitted: this {:.1} second sound would encode to {}, above the {MAX_WIRE_AUDIO_BYTES} byte attachment limit. The notes and the rest of the result remain available in this reply. The full sound can be written locally with the CLI's sonify command for a room, or sing for a Studio expression.",
+            spec.duration,
+            counted(encoded_len, "byte")
+        );
+        return Wav::Omitted {
+            descriptor: json!({
+                "reason": "encoded_size_limit",
+                "durationSeconds": spec.duration,
+                "sampleRate": WIRE_SAMPLE_RATE,
+                "requestedEncodedBytes": encoded_len,
+                "limitEncodedBytes": MAX_WIRE_AUDIO_BYTES,
+                "message": message,
+            }),
+        };
+    }
+    let wav = spec.wav(WIRE_SAMPLE_RATE);
     let encoded = base64(&wav);
     let described = json!({
         "mimeType": "audio/wav",
@@ -74,10 +130,10 @@ pub(super) fn block(spec: &SoundSpec) -> Result<(Value, Value), String> {
         "durationSeconds": spec.duration,
         "encodedBytes": encoded.len(),
     });
-    Ok((
-        json!({ "type": "audio", "data": encoded, "mimeType": "audio/wav" }),
-        described,
-    ))
+    Wav::Attached {
+        block: json!({ "type": "audio", "data": encoded, "mimeType": "audio/wav" }),
+        descriptor: described,
+    }
 }
 
 /// Wrap a melody as a MIDI resource block, or say why it will not fit.
@@ -126,7 +182,7 @@ pub(super) fn attach(mut result: Value, audio: Value) -> Value {
 
 /// How many bytes `len` raw bytes become once encoded.
 fn base64_len(len: usize) -> usize {
-    len.div_ceil(3) * 4
+    len.div_ceil(3).saturating_mul(4)
 }
 
 /// Standard base64 with padding, written here so this path needs no dependency.
@@ -157,8 +213,8 @@ fn base64(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_WIRE_AUDIO_BYTES, WIRE_SAMPLE_RATE, attach, base64, block, midi_block, midi_requested,
-        requested,
+        MAX_WIRE_AUDIO_BYTES, WIRE_SAMPLE_RATE, Wav, attach, base64, block, midi_block,
+        midi_requested, requested,
     };
     use numinous_core::SoundSpec;
     use serde_json::json;
@@ -187,7 +243,13 @@ mod tests {
     #[test]
     fn a_melody_leaves_as_a_playable_file() {
         let spec = SoundSpec::arpeggio(&[261.63, 329.63, 392.0], 1.0, 0.4);
-        let (audio, described) = block(&spec).expect("a one second melody fits");
+        let Wav::Attached {
+            block: audio,
+            descriptor: described,
+        } = block(&spec)
+        else {
+            panic!("a one second melody fits");
+        };
         assert_eq!(audio["type"], "audio");
         assert_eq!(audio["mimeType"], "audio/wav");
         assert_eq!(described["sampleRate"], WIRE_SAMPLE_RATE);
@@ -209,12 +271,18 @@ mod tests {
     }
 
     #[test]
-    fn a_sound_too_long_to_send_is_refused_with_its_own_numbers() {
-        let spec = SoundSpec::tone(440.0, 600.0, 0.3);
-        let error = block(&spec).expect_err("ten minutes cannot fit one reply");
-        assert!(error.contains(&MAX_WIRE_AUDIO_BYTES.to_string()), "{error}");
-        assert!(error.contains("600.0 seconds"), "{error}");
-        assert!(error.contains("shorter"), "{error}");
+    fn an_oversized_sound_keeps_a_typed_omission_without_synthesis() {
+        // Rendering this duration would exhaust memory. Preflight must omit it.
+        let spec = SoundSpec::tone(440.0, f32::MAX, 0.3);
+        let audio = block(&spec);
+        assert!(!audio.is_attached());
+        assert!(audio.descriptor().is_null());
+        assert_eq!(audio.omission()["reason"], "encoded_size_limit");
+        assert_eq!(audio.omission()["limitEncodedBytes"], MAX_WIRE_AUDIO_BYTES);
+        assert!(audio.notice().unwrap().contains("notes"));
+        assert!(!audio.notice().unwrap().contains("shorter"));
+        let result = json!({"isError": false, "structuredContent": {"notes": [440]}});
+        assert_eq!(audio.attach(result.clone()), result);
     }
 
     #[test]
@@ -225,6 +293,41 @@ mod tests {
         assert_eq!(requested(&json!({"audio": true})), Ok(true));
         assert!(requested(&json!({"audio": "yes"})).is_err());
         assert!(requested(&json!({"audio": 1})).is_err());
+        let spec = SoundSpec::tone(440.0, 1.0, 0.1);
+        let quiet = Wav::requested(&json!({}), &spec).unwrap();
+        assert!(!quiet.is_attached());
+        assert!(quiet.descriptor().is_null());
+        assert!(quiet.omission().is_null());
+        assert!(quiet.notice().is_none());
+        assert_eq!(
+            quiet.attach(json!({"notes": [440]})),
+            json!({"notes": [440]})
+        );
+        assert!(Wav::requested(&json!({"audio": "yes"}), &spec).is_err());
+    }
+
+    #[test]
+    fn the_wav_budget_boundary_uses_the_actual_encoded_file_size() {
+        for (duration, fits) in [(35.154, true), (35.155, false)] {
+            let spec = SoundSpec::tone(440.0, duration, 0.1);
+            let encoded_bytes = base64(&spec.wav(WIRE_SAMPLE_RATE)).len();
+            assert_eq!(encoded_bytes <= MAX_WIRE_AUDIO_BYTES, fits);
+            let audio = Wav::requested(&json!({"audio": true}), &spec).unwrap();
+            assert_eq!(audio.is_attached(), fits);
+            if fits {
+                assert_eq!(audio.descriptor()["encodedBytes"], encoded_bytes);
+                assert!(audio.omission().is_null());
+                assert!(audio.notice().is_none());
+            } else {
+                assert_eq!(audio.omission()["requestedEncodedBytes"], encoded_bytes);
+                assert!(
+                    audio
+                        .notice()
+                        .unwrap()
+                        .contains(&numinous_core::counted(encoded_bytes, "byte"))
+                );
+            }
+        }
     }
 
     #[test]

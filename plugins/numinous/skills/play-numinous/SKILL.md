@@ -29,8 +29,16 @@ than a single room. It follows the six-step Strange Loop score one room per
 call. Read the exact ASCII looks, visual alternatives, deltas, and sound facts,
 then choose whether to call the returned `next`. Timing belongs to you: the
 server does not auto-advance or keep a hidden cursor. `motion: "reduced"`
-returns the same cue's postcard only. `audio: true` adds a WAV beside notation,
-but makes no claim that your client played it. The Show reads no journal or
+returns the same cue's postcard only. `audio: true` adds a WAV beside notation
+when it fits the encoded attachment budget. An oversized WAV leaves a successful
+cue with its notes, `segment.sound.audioOmission`, and its playable `next`.
+`listen_room` and `sing_expression` likewise retain notes and name `audioOmission`
+when a WAV cannot fit. Compact replies preserve the omission. A complete room
+voice can be kept locally with `numinous sonify mandelbrot --layer mathematical
+--t 0 --out mandelbrot.wav`; use the returned phase, variation, and hand for
+other rooms. Studio uses `numinous sing "sin(x)" --out melody.wav` with the
+matching window, parameter, and scale. No result claims that your client played
+it. The Show reads no journal or
 workspace, writes no progress, and never opens the explanation.
 
 On a first visit, consider `watch_show` with `show: "overture"` instead: four
