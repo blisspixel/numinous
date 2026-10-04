@@ -13,6 +13,17 @@ pub(super) struct ActiveStudy {
 }
 
 impl App {
+    pub(super) fn set_study_text_size(&mut self, size: numinous_core::StudyTextSize) {
+        if self.study_text_size != size {
+            self.study_text_size = size;
+            if let Some(study) = self.study.as_mut() {
+                study.reader.set_text_size(size);
+            }
+            self.menu.clear_pointer();
+            self.persist_preferences();
+        }
+    }
+
     fn study_entry_available(&self) -> bool {
         self.activity_kind().is_none()
             && !self.console.is_open()
@@ -44,7 +55,10 @@ impl App {
             return false;
         }
         let reader = match StudyReader::new(self.rooms[self.current].as_ref(), &self.study_locale) {
-            Ok(reader) => reader,
+            Ok(mut reader) => {
+                reader.set_text_size(self.study_text_size);
+                reader
+            }
             Err(_) => {
                 self.banner = Some(super::feedback::Banner::status(
                     "THE READER COULD NOT OPEN",
@@ -79,6 +93,7 @@ impl App {
         match intent {
             ReaderIntent::None => {}
             ReaderIntent::Close => self.close_room_study(),
+            ReaderIntent::TextSize(size) => self.set_study_text_size(size),
             ReaderIntent::Language(locale) => {
                 let Some(study) = self.study.as_ref() else {
                     return;
@@ -86,6 +101,7 @@ impl App {
                 let depth = study.reader.depth();
                 if let Ok(mut reader) = StudyReader::new(self.rooms[self.current].as_ref(), &locale)
                 {
+                    reader.set_text_size(self.study_text_size);
                     reader.navigate(ReaderCommand::Select(depth));
                     if let Some(study) = self.study.as_mut() {
                         study.reader = reader;
@@ -135,6 +151,21 @@ impl App {
         }
         self.input_mode = input_legend::InputMode::KeyboardMouse;
         self.study_keys.insert(command_key);
+        // The reader owns size keys while open. Brackets retain their global
+        // audio meaning, and closing the reader restores minus and equals.
+        if let Key::Character(text) = key {
+            let larger = match text.as_str() {
+                "+" | "=" => Some(true),
+                "-" => Some(false),
+                _ => None,
+            };
+            if let Some(larger) = larger {
+                if !repeat {
+                    self.navigate_study(ReaderCommand::TextSize(larger));
+                }
+                return true;
+            }
+        }
         if self.handle_global_audio_key(key, repeat) {
             return true;
         }

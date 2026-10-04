@@ -6,8 +6,8 @@
 use std::sync::Arc;
 
 use numinous_core::{
-    Room, RoomStudy, StudyDepth, StudyInline, StudyLocale, StudyPart, StudyTranslationStatus,
-    rooms_with_authored_depth,
+    Room, RoomStudy, StudyDepth, StudyInline, StudyLocale, StudyPart, StudyTextSize,
+    StudyTranslationStatus, rooms_with_authored_depth,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -40,6 +40,8 @@ pub enum ReaderCommand {
     Back,
     /// Request the other pilot reading language.
     Language,
+    /// Request one larger or smaller body size, retaining reading position.
+    TextSize(bool),
 }
 
 /// A reader action requiring its App owner.
@@ -51,6 +53,8 @@ pub enum ReaderIntent {
     Close,
     /// Replace the document using the requested content language.
     Language(StudyLocale),
+    /// Apply and persist the requested reading size through the App owner.
+    TextSize(StudyTextSize),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -58,6 +62,7 @@ enum Target {
     Back,
     Language,
     Depth(StudyDepth),
+    TextSize(bool),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -68,9 +73,17 @@ struct Geometry {
     tabs: [TextViewport; 3],
     body: TextViewport,
     footer: TextViewport,
+    smaller: TextViewport,
+    larger: TextViewport,
 }
 
 impl Geometry {
+    fn footer_width(width: u32, compact: bool) -> u32 {
+        Self::content_width(width, compact)
+            .saturating_sub(100)
+            .max(1)
+    }
+
     fn content_width(width: u32, compact: bool) -> u32 {
         let inset = if compact { 12 } else { 28 };
         width.saturating_sub(inset * 2).clamp(1, 780)
@@ -122,7 +135,24 @@ impl Geometry {
                 available.saturating_sub(12).max(1),
                 footer_y.saturating_sub(body_y + gap).max(1),
             ),
-            footer: rect(x, footer_y, available, footer_height),
+            footer: rect(
+                x,
+                footer_y,
+                Self::footer_width(width, compact),
+                footer_height,
+            ),
+            smaller: rect(
+                x + available.saturating_sub(96),
+                footer_y,
+                44,
+                footer_height,
+            ),
+            larger: rect(
+                x + available.saturating_sub(44),
+                footer_y,
+                44,
+                footer_height,
+            ),
         }
     }
 
@@ -140,6 +170,12 @@ impl Geometry {
         }
         if inside(self.language) {
             return Some(Target::Language);
+        }
+        if inside(self.smaller) {
+            return Some(Target::TextSize(false));
+        }
+        if inside(self.larger) {
+            return Some(Target::TextSize(true));
         }
         self.tabs
             .into_iter()
@@ -160,6 +196,8 @@ struct Composition {
     tabs: [Arc<TextLayout>; 3],
     body: Arc<TextLayout>,
     footer: Arc<TextLayout>,
+    smaller: Arc<TextLayout>,
+    larger: Arc<TextLayout>,
 }
 
 /// An optional room document and its independent per-depth reading positions.
@@ -168,6 +206,7 @@ pub struct StudyReader {
     document: RoomStudy,
     title: String,
     depth: StudyDepth,
+    text_size: StudyTextSize,
     scroll: [f32; 3],
     anchors: [usize; 3],
     depth_layouts: [Option<(u32, u32)>; 3],
@@ -186,6 +225,7 @@ impl StudyReader {
             document,
             title: room.meta().title.to_string(),
             depth: StudyDepth::Explanation,
+            text_size: StudyTextSize::default(),
             scroll: [0.0; 3],
             anchors: [0; 3],
             depth_layouts: [None; 3],
@@ -204,6 +244,21 @@ impl StudyReader {
     /// The depth currently selected; absence of content is never an unlock.
     pub fn depth(&self) -> StudyDepth {
         self.depth
+    }
+
+    /// Current body text size, independent of the reader's navigation chrome.
+    pub fn text_size(&self) -> StudyTextSize {
+        self.text_size
+    }
+
+    /// Reflow at the requested size while retaining source positions at each depth.
+    pub fn set_text_size(&mut self, size: StudyTextSize) {
+        if self.text_size != size {
+            self.remember_anchor();
+            self.text_size = size;
+            self.composition = None;
+            self.clear_pointer();
+        }
     }
 
     /// Pixel position within the current shaped body.
@@ -237,6 +292,9 @@ impl StudyReader {
         });
         let target = match command {
             ReaderCommand::Back => return ReaderIntent::Close,
+            ReaderCommand::TextSize(larger) => {
+                return ReaderIntent::TextSize(self.text_size.stepped(larger));
+            }
             ReaderCommand::Language => {
                 let tag = if self.document.locale.requested.language() == "ja" {
                     "en"
@@ -316,6 +374,7 @@ impl StudyReader {
             Some(Target::Back) => ReaderIntent::Close,
             Some(Target::Language) => self.navigate(ReaderCommand::Language),
             Some(Target::Depth(depth)) => self.navigate(ReaderCommand::Select(depth)),
+            Some(Target::TextSize(larger)) => self.navigate(ReaderCommand::TextSize(larger)),
             None => ReaderIntent::None,
         }
     }
@@ -465,9 +524,9 @@ impl StudyReader {
         match mode {
             InputMode::KeyboardMouse if compact => {
                 if ja {
-                    "上下: スクロール  左右: 深さ".to_string()
+                    "上下スクロール 左右深さ".to_string()
                 } else {
-                    "Up/Down: scroll | Left/Right: depth".to_string()
+                    "Up/Down scroll | Left/Right depth".to_string()
                 }
             }
             InputMode::KeyboardMouse => {
@@ -479,7 +538,7 @@ impl StudyReader {
                 }
             }
             InputMode::Controller if compact => format!(
-                "{}/{}: {} | {}/{}: {}",
+                "{}/{} {} | {}/{} {}",
                 controller.action_token(ControllerAction::Up),
                 controller.action_token(ControllerAction::Down),
                 if ja { "スクロール" } else { "scroll" },
@@ -522,7 +581,7 @@ impl StudyReader {
             self.clear_pointer();
         }
         let compact = width < 600 || height < 500;
-        let size = if compact { 14.0 } else { 20.0 };
+        let size = if compact { 14.0 } else { 20.0 } * f32::from(self.text_size.percent()) / 100.0;
         let chrome_size = if compact { 12.0 } else { 20.0 };
         // Scientific text keeps its own measured line spacing. Compact chrome
         // has fewer jobs and smaller type, so it need not consume body-sized rows.
@@ -530,10 +589,12 @@ impl StudyReader {
         let footer_text = self.footer_text(mode, controller, compact);
         let footer = self.prose(
             &footer_text,
-            Geometry::content_width(width, compact),
+            Geometry::footer_width(width, compact),
             chrome_size,
         )?;
         let geometry = Geometry::new(width, height, compact, line, footer.height().ceil() as u32);
+        let smaller = self.prose("A-", geometry.smaller.width, chrome_size)?;
+        let larger = self.prose("A+", geometry.larger.width, chrome_size)?;
         let ja = self.japanese();
         let back_label = if ja { "戻る" } else { "Back" };
         let back_text = if compact {
@@ -584,7 +645,7 @@ impl StudyReader {
             .collect();
         let body = self.text.layout(&spans, geometry.body.width, size)?;
         let index = self.depth_index();
-        let body_geometry = (geometry.body.width, size as u32);
+        let body_geometry = (geometry.body.width, size.to_bits());
         if self.depth_layouts[index] != Some(body_geometry) {
             self.scroll[index] = body.scroll_for_source_offset(self.anchors[index]);
         }
@@ -601,6 +662,8 @@ impl StudyReader {
             tabs,
             body,
             footer,
+            smaller,
+            larger,
         });
         Ok(())
     }
@@ -636,6 +699,24 @@ impl StudyReader {
             (&view.back, geometry.back, FOREGROUND),
             (&view.language, geometry.language, FOREGROUND),
             (&view.footer, geometry.footer, SECONDARY),
+            (
+                &view.smaller,
+                geometry.smaller,
+                if self.text_size == StudyTextSize::Standard {
+                    SECONDARY
+                } else {
+                    FOREGROUND
+                },
+            ),
+            (
+                &view.larger,
+                geometry.larger,
+                if self.text_size == StudyTextSize::ExtraLarge {
+                    SECONDARY
+                } else {
+                    FOREGROUND
+                },
+            ),
         ] {
             self.text.draw(layout, &mut rgba, dims, rect, 0.0, color)?;
         }
@@ -989,6 +1070,103 @@ mod tests {
         );
         reader.navigate(ReaderCommand::Pages(i8::MIN));
         assert_eq!(reader.scroll(), 0.0);
+    }
+
+    #[test]
+    fn larger_body_sizes_reflow_both_languages_without_losing_content_or_controls() {
+        for locale in ["en", "ja"] {
+            for dimensions in [(360, 240), (900, 700)] {
+                let mut reader = reader("lissajous", locale);
+                for depth in StudyDepth::ALL {
+                    reader.navigate(ReaderCommand::Select(depth));
+                    let mut source = None;
+                    let mut previous_line = 0.0;
+                    for size in StudyTextSize::ALL {
+                        reader.set_text_size(size);
+                        draw(&mut reader, dimensions, InputMode::KeyboardMouse);
+                        let view = reader.composition.as_ref().unwrap();
+                        let source = source.get_or_insert_with(|| view.body.source().to_string());
+                        assert_eq!(view.body.source(), source);
+                        assert!(view.body.line_height() > previous_line);
+                        previous_line = view.body.line_height();
+                        assert!(view.body.width() <= view.geometry.body.width as f32);
+                        assert!(view.body.missing_glyphs().is_empty());
+                        assert!(view.geometry.body.height as f32 >= 3.0 * view.body.line_height());
+                        for (layout, rect) in [
+                            (&view.smaller, view.geometry.smaller),
+                            (&view.larger, view.geometry.larger),
+                        ] {
+                            assert!(
+                                layout.width() <= rect.width as f32
+                                    && layout.height() <= rect.height as f32
+                            );
+                            assert!(rect.y as u32 + rect.height <= dimensions.1);
+                        }
+                        reader.navigate(ReaderCommand::End);
+                        let view = reader.composition.as_ref().unwrap();
+                        assert_eq!(
+                            reader.scroll(),
+                            view.body.max_scroll(view.geometry.body.height)
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn text_size_changes_keep_each_depth_at_its_source_position() {
+        let mut reader = reader("lissajous", "en");
+        let mut anchors = [0; 3];
+        for (index, depth) in StudyDepth::ALL.into_iter().enumerate() {
+            reader.navigate(ReaderCommand::Select(depth));
+            draw(&mut reader, (360, 240), InputMode::KeyboardMouse);
+            reader.navigate(ReaderCommand::Pages(1));
+            anchors[index] = reader
+                .composition
+                .as_ref()
+                .unwrap()
+                .body
+                .source_offset_at_scroll(reader.scroll());
+        }
+        reader.set_text_size(StudyTextSize::ExtraLarge);
+        for (index, depth) in StudyDepth::ALL.into_iter().enumerate() {
+            reader.navigate(ReaderCommand::Select(depth));
+            draw(&mut reader, (360, 240), InputMode::KeyboardMouse);
+            let view = reader.composition.as_ref().unwrap();
+            assert_eq!(
+                reader.scroll(),
+                view.body
+                    .scroll_for_source_offset(anchors[index])
+                    .min(view.body.max_scroll(view.geometry.body.height))
+            );
+        }
+    }
+
+    #[test]
+    fn text_size_buttons_require_matching_fresh_presses_and_cancel_on_reflow() {
+        let mut reader = reader("lissajous", "en");
+        draw(&mut reader, (360, 240), InputMode::Controller);
+        let target = center(reader.composition.as_ref().unwrap().geometry.larger);
+        assert_eq!(reader.pointer_up(target), ReaderIntent::None);
+        reader.pointer_down(target);
+        draw(&mut reader, (360, 240), InputMode::KeyboardMouse);
+        assert_eq!(
+            reader.pointer_up(target),
+            ReaderIntent::TextSize(StudyTextSize::Large)
+        );
+        reader.pointer_down(target);
+        reader.set_text_size(StudyTextSize::Large);
+        draw(&mut reader, (360, 240), InputMode::KeyboardMouse);
+        assert_eq!(reader.pointer_up(target), ReaderIntent::None);
+        let smaller = center(reader.composition.as_ref().unwrap().geometry.smaller);
+        reader.pointer_down(target);
+        assert_eq!(reader.pointer_up(smaller), ReaderIntent::None);
+        reader.pointer_down(smaller);
+        assert_eq!(
+            reader.pointer_up(smaller),
+            ReaderIntent::TextSize(StudyTextSize::Standard)
+        );
     }
 
     #[test]

@@ -82,6 +82,11 @@ An unwritten depth returns an availability error. Study calls stay outside the
 Shared Play broadcast. The existing `reveal_room` path remains available after
 one play for ordinary rooms and consolidation for engineered wager rooms.
 
+In the native App, Settings > Reading Text and the reader's A-/A+ buttons
+select saved 100, 125, or 150 percent body text. Minus/plus (or equals) also
+changes reading size while the reader is open; brackets retain volume control.
+MCP study content is unchanged by this App preference.
+
 ## Predict
 
 If you choose a prediction or engineered aha, commit before seeing the

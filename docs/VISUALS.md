@@ -167,9 +167,11 @@ The App study reader is a separate, opaque reading surface on the same
 near-black stage. Bundled Noto Sans, Noto Sans JP, and Noto Sans Math supply
 case-preserving prose and linear mathematical notation. Measured text wraps
 inside a clipped, scrollable body; depth, language, and return controls stay
-fixed. Source positions anchor resizing, and the room's clock and accepted
+fixed. Body text offers persisted 100, 125, and 150 percent sizes through
+Settings and reader controls. Source positions anchor resizing and size
+changes, and the room's clock and accepted
 input history are held while reading. Cabinet and room HUD lettering keep
-their existing pixel faces.
+their existing pixel faces. General Cabinet and HUD text scaling remains open.
 
 This reading boundary does not add Unicode naming or IME editing to Studio,
 translate the full App shell, or provide complete Unicode glyph coverage. It

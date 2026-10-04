@@ -5,6 +5,22 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+## [0.4.0-alpha.34] - 2026-10-03
+
+### Added
+- Saved study body text sizes at 100, 125, and 150 percent, selectable from
+  Settings > Reading Text, A-/A+ buttons, or minus/plus in the reader.
+  Source anchors retain each depth's reading position through reflow. Size
+  survives language and room changes and relaunch; earlier preference schemas
+  retain all existing settings and default to 100 percent. Brackets keep their
+  volume shortcuts while reading. Native reader plates cover every size in
+  English and Japanese, with first and final pages at both supported windows.
+
+### Fixed
+- Desktop Cabinet lists page around the selected row when their minimum
+  readable rows cannot all fit. Every Settings row remains reachable by arrows
+  or controller navigation and stays above the help and controls footer.
+
 ## [0.4.0-alpha.33] - 2026-10-03
 
 ### Fixed

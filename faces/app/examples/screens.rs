@@ -32,7 +32,13 @@ fn draw_cabinet_menu_state(
     state: &numinous_app::menu::MenuState,
     mode: numinous_app::input_legend::InputMode,
 ) {
-    draw_cabinet_menu_state_with_display(raster, state, mode, false);
+    draw_cabinet_menu_state_with_display(
+        raster,
+        state,
+        mode,
+        false,
+        numinous_core::StudyTextSize::default(),
+    );
 }
 
 fn draw_cabinet_menu_state_with_display(
@@ -40,6 +46,7 @@ fn draw_cabinet_menu_state_with_display(
     state: &numinous_app::menu::MenuState,
     mode: numinous_app::input_legend::InputMode,
     fullscreen: bool,
+    study_text_size: numinous_core::StudyTextSize,
 ) {
     let audio = audio_state::describe(
         audio_state::Program::RoomScore,
@@ -57,6 +64,7 @@ fn draw_cabinet_menu_state_with_display(
         mode,
         numinous_app::input_legend::ControllerFace::Generic.into(),
         numinous_app::menu::MenuReadout {
+            study_text_size,
             volume_percent: 45,
             music_percent: 100,
             room_percent: 100,
@@ -296,6 +304,8 @@ fn expected_dimensions(relative: &str) -> (usize, usize) {
         Some("games" | "overlays" | "flows" | "menu") => {
             if relative.contains("-fullscreen-") {
                 FULLSCREEN_SIZE
+            } else if relative.contains("-medium-") {
+                (600, 520)
             } else if relative.contains("-small-") {
                 SMALL_SIZE
             } else {
@@ -2277,6 +2287,7 @@ fn main() {
             &fullscreen_state,
             numinous_app::input_legend::InputMode::KeyboardMouse,
             true,
+            numinous_core::StudyTextSize::default(),
         );
         save(
             &fullscreen,
@@ -2299,6 +2310,35 @@ fn main() {
             ),
             &mut manifest,
         );
+        let mut reading = numinous_app::menu::MenuState::launch();
+        let _ = reading.activate_shortcut('s');
+        reading.focus(numinous_app::menu::MenuItemId::StudyTextSize);
+        for (label, size) in [
+            ("small", SMALL_SIZE),
+            ("medium", (600, 520)),
+            ("default", DEFAULT_SIZE),
+        ] {
+            for text_size in numinous_core::StudyTextSize::ALL {
+                let mut frame = room_screen(room, 0.12, &[], size, 0, false, 1);
+                draw_cabinet_menu_state_with_display(
+                    &mut frame,
+                    &reading,
+                    numinous_app::input_legend::InputMode::KeyboardMouse,
+                    false,
+                    text_size,
+                );
+                save(
+                    &frame,
+                    &format!(
+                        "menu/reading-{}-{label}-{}x{}.png",
+                        text_size.percent(),
+                        size.0,
+                        size.1
+                    ),
+                    &mut manifest,
+                );
+            }
+        }
         println!("wrote {} menu previews", manifest.len());
         return;
     }

@@ -5,7 +5,7 @@ use std::fmt;
 use crate::{Era, study::StudyLocale};
 
 /// Current on-disk preferences schema.
-pub const PREFERENCES_SCHEMA_VERSION: u8 = 3;
+pub const PREFERENCES_SCHEMA_VERSION: u8 = 4;
 
 /// Every schema this build reads, oldest first.
 ///
@@ -21,6 +21,8 @@ enum Schema {
     V2,
     /// Adds the music, room, and effect levels.
     V3,
+    /// Adds the study reader's body text size.
+    V4,
 }
 
 impl Schema {
@@ -29,6 +31,7 @@ impl Schema {
             "NUMINOUS_PREFERENCES 1" => Some(Self::V1),
             "NUMINOUS_PREFERENCES 2" => Some(Self::V2),
             "NUMINOUS_PREFERENCES 3" => Some(Self::V3),
+            "NUMINOUS_PREFERENCES 4" => Some(Self::V4),
             _ => None,
         }
     }
@@ -67,6 +70,58 @@ impl WindowModePreference {
     }
 }
 
+/// Body text size in the optional study reader.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum StudyTextSize {
+    /// The existing size, responsive to the window.
+    #[default]
+    Standard,
+    /// One quarter larger than the responsive size.
+    Large,
+    /// One half larger than the responsive size.
+    ExtraLarge,
+}
+
+impl StudyTextSize {
+    /// Every admitted size, smallest first.
+    pub const ALL: [Self; 3] = [Self::Standard, Self::Large, Self::ExtraLarge];
+
+    /// Exact percentage relative to the reader's responsive body size.
+    #[must_use]
+    pub const fn percent(self) -> u8 {
+        match self {
+            Self::Standard => 100,
+            Self::Large => 125,
+            Self::ExtraLarge => 150,
+        }
+    }
+
+    /// Stable on-disk percentage.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Standard => "100",
+            Self::Large => "125",
+            Self::ExtraLarge => "150",
+        }
+    }
+
+    /// Step toward a larger or smaller size, staying at the ends.
+    #[must_use]
+    pub fn stepped(self, larger: bool) -> Self {
+        match (self, larger) {
+            (Self::Standard, true) | (Self::ExtraLarge, false) => Self::Large,
+            (Self::Large, true) => Self::ExtraLarge,
+            (Self::Large, false) => Self::Standard,
+            _ => self,
+        }
+    }
+
+    fn parse(value: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|size| size.name() == value)
+    }
+}
+
 /// Player-selected App preferences.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppPreferences {
@@ -87,6 +142,8 @@ pub struct AppPreferences {
     pub window_mode: WindowModePreference,
     /// Requested language for optional room study, separate from shell translation.
     pub study_locale: StudyLocale,
+    /// Body size in optional room study, independent of gameplay rendering.
+    pub study_text_size: StudyTextSize,
 }
 
 impl Default for AppPreferences {
@@ -100,6 +157,7 @@ impl Default for AppPreferences {
             era: Era::Modern,
             window_mode: WindowModePreference::Windowed,
             study_locale: StudyLocale::default(),
+            study_text_size: StudyTextSize::default(),
         }
     }
 }
@@ -115,7 +173,7 @@ impl AppPreferences {
             Era::Modern => "modern",
         };
         format!(
-            "NUMINOUS_PREFERENCES {PREFERENCES_SCHEMA_VERSION}\nvolume_percent {}\nmusic_volume_percent {}\nroom_volume_percent {}\neffect_volume_percent {}\nmuted {}\nera {era}\nwindow_mode {}\nstudy_locale {}\n",
+            "NUMINOUS_PREFERENCES {PREFERENCES_SCHEMA_VERSION}\nvolume_percent {}\nmusic_volume_percent {}\nroom_volume_percent {}\neffect_volume_percent {}\nmuted {}\nera {era}\nwindow_mode {}\nstudy_locale {}\nstudy_text_size {}\n",
             self.volume_percent,
             self.music_volume_percent,
             self.room_volume_percent,
@@ -123,6 +181,7 @@ impl AppPreferences {
             self.muted,
             self.window_mode.name(),
             self.study_locale,
+            self.study_text_size.name(),
         )
     }
 
@@ -132,7 +191,8 @@ impl AppPreferences {
     /// unit so a damaged file cannot apply a surprising partial configuration.
     /// Schemas 1 and 2 stay readable: schema 1 defaults study to English, and
     /// both default the music, room, and effect levels to 100 percent, so an
-    /// upgraded install keeps its existing source and master levels.
+    /// upgraded install keeps its existing source and master levels. Schemas
+    /// before 4 retain the standard reading size.
     ///
     /// # Errors
     ///
@@ -153,6 +213,7 @@ impl AppPreferences {
         let mut era = None;
         let mut window_mode = None;
         let mut study_locale = None;
+        let mut study_text_size = None;
         for line in lines {
             let mut parts = line.split_whitespace();
             let key = parts
@@ -211,6 +272,12 @@ impl AppPreferences {
                     StudyLocale::parse(value)
                         .map_err(|error| PreferencesError::new(error.to_string()))?,
                 )?,
+                "study_text_size" if schema >= Schema::V4 => set_once(
+                    &mut study_text_size,
+                    StudyTextSize::parse(value).ok_or_else(|| {
+                        PreferencesError::new("study_text_size must be 100, 125, or 150")
+                    })?,
+                )?,
                 _ => {
                     return Err(PreferencesError::new(
                         "preferences contain an unknown field",
@@ -239,6 +306,11 @@ impl AppPreferences {
                 required(study_locale, "study_locale is missing")?
             } else {
                 StudyLocale::default()
+            },
+            study_text_size: if schema >= Schema::V4 {
+                required(study_text_size, "study_text_size is missing")?
+            } else {
+                StudyTextSize::default()
             },
         })
     }
@@ -285,10 +357,12 @@ impl std::error::Error for PreferencesError {}
 
 #[cfg(test)]
 mod tests {
-    use super::{AppPreferences, PREFERENCES_SCHEMA_VERSION, Schema, WindowModePreference};
+    use super::{
+        AppPreferences, PREFERENCES_SCHEMA_VERSION, Schema, StudyTextSize, WindowModePreference,
+    };
     use crate::Era;
 
-    const CURRENT_PREFIX: &str = "NUMINOUS_PREFERENCES 3\nvolume_percent 45\nmusic_volume_percent 100\nroom_volume_percent 100\neffect_volume_percent 100\nmuted false\nera modern\nwindow_mode windowed\nstudy_locale en\n";
+    const CURRENT_PREFIX: &str = "NUMINOUS_PREFERENCES 4\nvolume_percent 45\nmusic_volume_percent 100\nroom_volume_percent 100\neffect_volume_percent 100\nmuted false\nera modern\nwindow_mode windowed\nstudy_locale en\nstudy_text_size 100\n";
 
     #[test]
     fn current_preferences_round_trip_in_stable_order() {
@@ -301,12 +375,13 @@ mod tests {
             era: Era::Vector,
             window_mode: WindowModePreference::Exclusive,
             study_locale: "ja-JP".parse().unwrap(),
+            study_text_size: StudyTextSize::ExtraLarge,
         };
         let text = preferences.to_text();
         assert_eq!(
             text,
             format!(
-                "NUMINOUS_PREFERENCES {PREFERENCES_SCHEMA_VERSION}\nvolume_percent 70\nmusic_volume_percent 30\nroom_volume_percent 0\neffect_volume_percent 85\nmuted true\nera vector\nwindow_mode exclusive\nstudy_locale ja-jp\n"
+                "NUMINOUS_PREFERENCES {PREFERENCES_SCHEMA_VERSION}\nvolume_percent 70\nmusic_volume_percent 30\nroom_volume_percent 0\neffect_volume_percent 85\nmuted true\nera vector\nwindow_mode exclusive\nstudy_locale ja-jp\nstudy_text_size 150\n"
             )
         );
         assert_eq!(AppPreferences::try_from_text(&text), Ok(preferences));
@@ -316,7 +391,7 @@ mod tests {
     fn the_written_header_is_the_newest_schema_this_build_reads() {
         let text = AppPreferences::default().to_text();
         let header = text.lines().next().expect("header");
-        assert_eq!(Schema::from_header(header), Some(Schema::V3));
+        assert_eq!(Schema::from_header(header), Some(Schema::V4));
         assert_eq!(
             AppPreferences::try_from_text(&text),
             Ok(AppPreferences::default())
@@ -333,7 +408,7 @@ mod tests {
             "NUMINOUS_PREFERENCES 1\nvolume_percent 45\nmuted false\nera modern\n",
             "NUMINOUS_PREFERENCES 1\nvolume_percent 45\nvolume_percent 50\nmuted false\nera modern\nwindow_mode windowed\n",
             "NUMINOUS_PREFERENCES 1\nvolume_percent 45\nmuted false\nera modern\nwindow_mode windowed\nsurprise yes\n",
-            "NUMINOUS_PREFERENCES 4\nvolume_percent 45\nmuted false\nera modern\nwindow_mode windowed\n",
+            "NUMINOUS_PREFERENCES 5\nvolume_percent 45\nmuted false\nera modern\nwindow_mode windowed\n",
         ] {
             assert!(AppPreferences::try_from_text(text).is_err(), "{text:?}");
         }
@@ -414,7 +489,9 @@ mod tests {
             assert_eq!(upgraded.room_volume_percent, 100);
             assert_eq!(upgraded.effect_volume_percent, 100);
             let rewritten = upgraded.to_text();
-            assert!(rewritten.starts_with("NUMINOUS_PREFERENCES 3\n"));
+            assert!(rewritten.starts_with(&format!(
+                "NUMINOUS_PREFERENCES {PREFERENCES_SCHEMA_VERSION}\n"
+            )));
             assert_eq!(AppPreferences::try_from_text(&rewritten), Ok(upgraded));
             for newer in [
                 "music_volume_percent 50\n",
@@ -450,5 +527,67 @@ mod tests {
         }
         let without_study = CURRENT_PREFIX.replace("study_locale en\n", "");
         assert!(AppPreferences::try_from_text(&without_study).is_err());
+    }
+
+    #[test]
+    fn reading_size_upgrades_preserve_language_and_every_audio_level() {
+        let legacy = "NUMINOUS_PREFERENCES 3\nvolume_percent 17\nmusic_volume_percent 23\nroom_volume_percent 31\neffect_volume_percent 47\nmuted true\nera phosphor\nwindow_mode borderless\nstudy_locale ja\n";
+        let upgraded = AppPreferences::try_from_text(legacy).unwrap();
+        assert_eq!(upgraded.study_text_size, StudyTextSize::Standard);
+        assert_eq!(upgraded.study_locale.as_str(), "ja");
+        assert_eq!(upgraded.volume_percent, 17);
+        assert_eq!(upgraded.music_volume_percent, 23);
+        assert_eq!(upgraded.room_volume_percent, 31);
+        assert_eq!(upgraded.effect_volume_percent, 47);
+        assert!(upgraded.muted);
+        assert_eq!(upgraded.era, Era::Phosphor);
+        assert_eq!(upgraded.window_mode, WindowModePreference::Borderless);
+        assert_eq!(
+            AppPreferences::try_from_text(&upgraded.to_text()),
+            Ok(upgraded)
+        );
+        assert!(AppPreferences::try_from_text(&format!("{legacy}study_text_size 125\n")).is_err());
+    }
+
+    #[test]
+    fn reading_size_is_required_strict_and_round_trips_at_every_admitted_size() {
+        for size in StudyTextSize::ALL {
+            let preferences = AppPreferences {
+                study_text_size: size,
+                ..AppPreferences::default()
+            };
+            assert_eq!(
+                AppPreferences::try_from_text(&preferences.to_text()),
+                Ok(preferences)
+            );
+        }
+        let prefix = CURRENT_PREFIX.replace("study_text_size 100\n", "");
+        for suffix in [
+            "",
+            "study_text_size 99\n",
+            "study_text_size 200\n",
+            "study_text_size 125.0\n",
+            "study_text_size large\n",
+            "study_text_size 125 extra\n",
+            "study_text_size 100\nstudy_text_size 125\n",
+        ] {
+            assert!(
+                AppPreferences::try_from_text(&format!("{prefix}{suffix}")).is_err(),
+                "{suffix:?}"
+            );
+        }
+        assert_eq!(
+            StudyTextSize::Standard.stepped(false),
+            StudyTextSize::Standard
+        );
+        assert_eq!(
+            StudyTextSize::ExtraLarge.stepped(true),
+            StudyTextSize::ExtraLarge
+        );
+        assert_eq!(StudyTextSize::Large.stepped(false), StudyTextSize::Standard);
+        assert_eq!(
+            StudyTextSize::Large.stepped(true),
+            StudyTextSize::ExtraLarge
+        );
     }
 }

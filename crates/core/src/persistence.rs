@@ -2368,6 +2368,7 @@ mod tests {
             era: Era::EightBit,
             window_mode: WindowModePreference::Borderless,
             study_locale: "haw".parse().unwrap(),
+            study_text_size: crate::StudyTextSize::Large,
         };
 
         assert_eq!(

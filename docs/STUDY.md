@@ -57,6 +57,7 @@ message and leaves the other depths accessible.
 | Change depth | Left/Right or click a depth tab |
 | Open Mathematics directly | Enter |
 | Change English/Japanese preference | L or the language button |
+| Change body text size | A-/A+ buttons, minus/plus (or equals), or Settings > Reading Text |
 | Return | Esc, E, ?, or Back |
 
 With default controller bindings, Select opens or closes study, the D-pad
@@ -66,11 +67,17 @@ returns. The reader's controller labels follow the loaded bindings.
 
 The reader preserves case and wraps prose, linear equations, and reference
 URLs. Its buttons stay fixed while the body scrolls. Each depth retains its
-position while the reader is open; resizing anchors the view to the text.
+position while the reader is open; resizing and changing text size anchor the
+view to the text. Reading Text offers 100, 125, or 150 percent of the reader's
+responsive body size; Left/Right steps the selected Settings row. Navigation
+keeps its existing size, leaving space for
+the body even in a small window. Brackets still adjust volume while reading.
 Changing language keeps the selected depth and starts that text at the top.
 Closing returns to the room or Cabinet page that opened it, with room tuning,
 phase, and accepted input history retained. The language choice is saved as a
-preference, separately from Journey.
+preference, separately from Journey. Reading size is also saved, retained
+across language and room changes, and used on the next launch. Older
+preferences retain their language and audio levels and start at 100 percent.
 
 The seven staged room experiments are a separate choice: press **U** in room
 play or select **EXPERIMENT** in the Cabinet where offered. The chosen path
