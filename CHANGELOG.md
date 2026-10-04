@@ -5,6 +5,20 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+## [0.4.0-alpha.33] - 2026-10-03
+
+### Fixed
+- Packaged installation guidance distinguishes managed installs from loose
+  archives and source checkouts when explaining `numinous update`.
+- Optional MCP audio no longer discards notes or Show continuation when
+  the WAV exceeds the encoded attachment budget. The successful result
+  keeps its notes and an explicit `audioOmission`, including in compact
+  mode. The impossible shorter-sound advice is replaced by full-length
+  CLI export guidance. Core provides exact WAV size preflight, avoiding
+  synthesis of an oversized attachment. Show schema version 3 declares
+  the omission, and regressions follow the audio-enabled Overture through
+  its final handoff. Existing attachment limits remain unchanged.
+
 ## [0.4.0-alpha.32] - 2026-10-03
 
 ### Added

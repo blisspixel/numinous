@@ -702,7 +702,10 @@ first-class ways into the same world.
   the equations, with a finite time step and observation horizon.
 - **You can explore sound** (`listen_room`, `sing_expression`): frequencies,
   ratios, and timing arrive as structure. Optional WAV audio is also available
-  when requested; playback depends on your host. A just perfect fifth is 3:2,
+  when requested and within the encoded attachment budget; playback depends
+  on your host. An oversized WAV still returns notes and an `audioOmission`
+  notice successfully, including inside a Show cue. Full-length CLI exports
+  use `sonify` for rooms and `sing` for Studio. A just perfect fifth is 3:2,
   whether you investigate its ratio symbolically or through sound.
 - **You can make things** (`plot_expression`, `sing_expression`,
   `save_creation`, `open_creation`, `fork_creation`): the Studio does not care

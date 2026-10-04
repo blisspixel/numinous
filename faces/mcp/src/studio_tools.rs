@@ -1331,12 +1331,8 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
             steps.push(interval_value(&step));
         }
     }
-    let audible = match audible::requested(args) {
-        Ok(true) => match audible::block(&spec) {
-            Ok(rendered) => Some(rendered),
-            Err(message) => return tool_error(&message),
-        },
-        Ok(false) => None,
+    let audible = match audible::Wav::requested(args, &spec) {
+        Ok(delivery) => delivery,
         Err(message) => return tool_error(&message),
     };
     let midi = match audible::midi_requested(args) {
@@ -1347,7 +1343,10 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         Ok(false) => None,
         Err(message) => return tool_error(&message),
     };
-    if audible.is_some() {
+    if let Some(notice) = audible.notice() {
+        lines.push(notice.to_owned());
+    }
+    if audible.is_attached() {
         lines.push(
             "A WAV of this melody follows as an audio attachment. It is \
              the only part of this reply that is not a description of the \
@@ -1377,7 +1376,8 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
             "amplitude": note.amp,
         })).collect::<Vec<_>>(),
         "steps": steps,
-        "audio": audible.as_ref().map(|(_, described)| described.clone()),
+        "audio": audible.descriptor(),
+        "audioOmission": audible.omission(),
         "midi": midi.as_ref().map(|(_, described)| described.clone()),
     });
     if !bound_sliders.is_empty() {
@@ -1443,10 +1443,7 @@ pub(super) fn sing_expression_tool(args: &Value) -> Value {
         lines.push("Encounter receipt attached.".to_string());
     }
     let result = tool_structured(&lines.join("\n"), structured);
-    let result = match audible {
-        Some((block, _)) => audible::attach(result, block),
-        None => result,
-    };
+    let result = audible.attach(result);
     match midi {
         Some((block, _)) => audible::attach(result, block),
         None => result,

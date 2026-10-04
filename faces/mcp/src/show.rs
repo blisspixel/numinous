@@ -11,7 +11,7 @@ use numinous_core::{
 use serde_json::{Value, json};
 
 const SHOW_SCHEMA: &str = "numinous.show-segment";
-const SHOW_SCHEMA_VERSION: u32 = 2;
+const SHOW_SCHEMA_VERSION: u32 = 3;
 const MAX_RETURNED_NOTES: usize = 64;
 
 fn score_ids() -> Vec<&'static str> {
@@ -91,7 +91,7 @@ pub(super) fn catalog_entry() -> Value {
                 "audio": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Attach one WAV of the sound at the cue's still. Notation and exact note facts are always returned."
+                    "description": "Attach one WAV of the sound at the cue's still when it fits the encoded attachment budget. Notation and exact note facts are always returned; segment.sound.audioOmission explains an oversized WAV, and continuation still works."
                 }
             },
             "additionalProperties": false
@@ -327,6 +327,24 @@ fn output_schema() -> Value {
                             },
                             "description": {"type": "string"},
                             "octaveLock": octave_lock,
+                            "audioOmission": {
+                                "oneOf": [
+                                    {"type": "null"},
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "reason": {"type": "string", "enum": ["encoded_size_limit"]},
+                                            "durationSeconds": {"type": "number", "minimum": 0},
+                                            "sampleRate": {"type": "integer", "enum": [super::audible::WIRE_SAMPLE_RATE]},
+                                            "requestedEncodedBytes": {"type": "integer", "minimum": super::audible::MAX_WIRE_AUDIO_BYTES + 1},
+                                            "limitEncodedBytes": {"type": "integer", "enum": [super::audible::MAX_WIRE_AUDIO_BYTES]},
+                                            "message": {"type": "string"}
+                                        },
+                                        "required": ["reason", "durationSeconds", "sampleRate", "requestedEncodedBytes", "limitEncodedBytes", "message"],
+                                        "additionalProperties": false
+                                    }
+                                ]
+                            },
                             "audio": {
                                 "oneOf": [
                                     {"type": "null"},
@@ -346,7 +364,7 @@ fn output_schema() -> Value {
                                 ]
                             }
                         },
-                        "required": ["phase", "durationSeconds", "noteCount", "returnedNoteCount", "truncated", "motif", "notes", "description", "octaveLock", "audio"],
+                        "required": ["phase", "durationSeconds", "noteCount", "returnedNoteCount", "truncated", "motif", "notes", "description", "octaveLock", "audio", "audioOmission"],
                         "additionalProperties": false
                     }
                 },
@@ -564,13 +582,9 @@ pub(super) fn tool(arguments: &Value) -> Value {
             "encodes": motif.encodes,
         })
     });
-    let audible = if audio_requested {
-        match super::audible::block(&sound_spec) {
-            Ok(audio) => Some(audio),
-            Err(message) => return super::tool_error(&message),
-        }
-    } else {
-        None
+    let audible = match super::audible::Wav::requested(arguments, &sound_spec) {
+        Ok(delivery) => delivery,
+        Err(message) => return super::tool_error(&message),
     };
     let sound_description = format!(
         "The sound at the cue's still lasts {:.2} seconds and contains {}. Up to {MAX_RETURNED_NOTES} exact note facts follow whether or not audio was requested; returnedNoteCount and truncated state the boundary.",
@@ -587,7 +601,10 @@ pub(super) fn tool(arguments: &Value) -> Value {
             motif.encodes
         ));
     }
-    if audible.is_some() {
+    if let Some(notice) = audible.notice() {
+        text.push_str(&format!(" {notice}"));
+    }
+    if audible.is_attached() {
         text.push_str(" A WAV follows. Whether a client surfaces it as sound is outside this result; the notation and note facts remain complete.");
     }
     let octave_lock = cue
@@ -663,7 +680,8 @@ pub(super) fn tool(arguments: &Value) -> Value {
                 "notes": notes,
                 "description": sound_description,
                 "octaveLock": octave_lock,
-                "audio": audible.as_ref().map(|(_, descriptor)| descriptor.clone()),
+                "audio": audible.descriptor(),
+                "audioOmission": audible.omission(),
             }
         },
         "delivery": {
@@ -671,7 +689,7 @@ pub(super) fn tool(arguments: &Value) -> Value {
             "colorUsed": false,
             "ansiUsed": false,
             "audioRequested": audio_requested,
-            "audioContentIndex": audible.as_ref().map(|_| 1),
+            "audioContentIndex": audible.is_attached().then_some(1),
             "hearingClaim": Value::Null,
             "observerAudioOmitted": false,
         },
@@ -690,10 +708,7 @@ pub(super) fn tool(arguments: &Value) -> Value {
         "leave": {"tool": "list_rooms", "arguments": {}},
     });
     let result = super::tool_structured(&text, structured);
-    match audible {
-        Some((audio, _)) => super::audible::attach(result, audio),
-        None => result,
-    }
+    audible.attach(result)
 }
 
 /// The replayable request shape every continuation of one call shares.
@@ -844,6 +859,9 @@ pub(super) fn compact_summary(structured: &Value) -> Option<String> {
     let next_tool = next
         .and_then(|value| value.get("tool"))
         .and_then(Value::as_str);
+    if let Some(notice) = segment["sound"]["audioOmission"]["message"].as_str() {
+        summary.push_str(&format!(" {notice}"));
+    }
     if next_tool == Some("play_room") {
         summary.push_str(&format!(
             " The score ends by handing you {}: call play_room with the returned next arguments and turn the dial yourself.",
@@ -1041,6 +1059,56 @@ mod tests {
     }
 
     #[test]
+    fn overture_with_audio_continues_past_an_oversized_voice() {
+        for mode in ["full", "compact"] {
+            let mut call = json!({"tool": "watch_show", "arguments": {
+                "show": "overture", "audio": true, "response_mode": mode,
+                "width": 40, "height": 12
+            }});
+            let mut omitted = false;
+            loop {
+                let result = dispatch(&call);
+                assert_eq!(result["isError"], false, "{result}");
+                if result["structuredContent"]["segment"]["room"] == "mandelbrot" {
+                    let sound = &result["structuredContent"]["segment"]["sound"];
+                    assert_eq!(sound["audioOmission"]["reason"], "encoded_size_limit");
+                    assert_eq!(sound["returnedNoteCount"], sound["noteCount"]);
+                    assert!(!sound["notes"].as_array().unwrap().is_empty());
+                    assert!(sound["audio"].is_null());
+                    assert!(result["structuredContent"]["delivery"]["audioContentIndex"].is_null());
+                    assert!(
+                        result["content"][0]["text"]
+                            .as_str()
+                            .unwrap()
+                            .contains("WAV omitted")
+                    );
+                    let compact =
+                        super::super::apply_response_mode("watch_show", Some(mode), result.clone());
+                    assert!(
+                        compact["content"][0]["text"]
+                            .as_str()
+                            .unwrap()
+                            .contains("WAV omitted")
+                    );
+                    let viewer = viewer_result(&result);
+                    assert_eq!(
+                        viewer["structuredContent"]["delivery"]["observerAudioOmitted"],
+                        true
+                    );
+                    assert_eq!(viewer["content"].as_array().unwrap().len(), 1);
+                    omitted = true;
+                }
+                call = result["structuredContent"]["next"].clone();
+                if call["tool"] == "play_room" {
+                    assert_eq!(dispatch(&call)["isError"], false);
+                    break;
+                }
+            }
+            assert!(omitted, "the reported cue was not exercised");
+        }
+    }
+
+    #[test]
     fn success_matches_the_declared_closed_output_schema() {
         let entry = catalog_entry();
         for arguments in [
@@ -1048,6 +1116,7 @@ mod tests {
             json!({"position": 5, "seed": 99}),
             json!({"motion": "reduced", "audio": true}),
             json!({"show": "overture"}),
+            json!({"show": "overture", "position": 1, "audio": true}),
             json!({"show": "overture", "position": 3}),
             json!({"show": "overture", "position": 3, "motion": "reduced", "audio": true}),
         ] {

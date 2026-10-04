@@ -155,6 +155,9 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
                 structured.get("note_count")?.as_u64()?,
                 structured.get("duration_seconds")?.as_f64()?
             );
+            if let Some(notice) = structured["audioOmission"]["message"].as_str() {
+                summary.push_str(&format!(" {notice}"));
+            }
             if structured.get("encounter").is_some() {
                 summary.push_str(" Encounter receipt attached.");
             }

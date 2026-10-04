@@ -15,7 +15,7 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 Reviewed 2026-10-03.
 
-**Current release state: 0.4.0-alpha.32, Understanding Alpha active with its
+**Current release state: 0.4.0-alpha.33, Understanding Alpha active with its
 exit open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile
 Alpha agent-and-machine exits are met and stay CI-locked. The alpha suffix
 says the 0.4 exit remains open: external registration, calibration,
@@ -328,6 +328,10 @@ and curated facts about the world stay out with the external call.
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
 
+- **Alpha 33 (2026-10-03):** oversized MCP WAV attachments retain their notes,
+  explicit omission, and Show continuation in full and compact replies,
+  with preflight before synthesis and a documented full-length CLI export
+  (`INTERFACES.md`, `PLAYTESTS.md`).
 - **Alpha 32 (2026-10-03):** room transitions through the stage and damped drag dials and
   Studio knobs, with reduced-motion behavior and a transition flash guard;
   shared sound articulation, reverb, limiting, room-change washes, and separate

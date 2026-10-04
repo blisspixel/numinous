@@ -3858,6 +3858,49 @@ fn a_room_can_be_heard_and_asking_to_hear_stays_opt_in() {
 }
 
 #[test]
+fn an_oversized_room_wav_preserves_notes_and_receipt_in_both_response_modes() {
+    let quiet = handle_request(&json!({
+        "jsonrpc":"2.0","id":1,"method":"tools/call",
+        "params":{"name":"listen_room","arguments":{"id":"mandelbrot","audio":false}}
+    }))
+    .unwrap();
+    for mode in ["full", "compact"] {
+        let heard = handle_request(&json!({
+            "jsonrpc":"2.0","id":2,"method":"tools/call",
+            "params":{"name":"listen_room","arguments":{
+                "id":"mandelbrot","t":0,"audio":true,"receipt":true,"response_mode":mode
+            }}
+        }))
+        .unwrap();
+        let result = &heard["result"];
+        assert_eq!(result["isError"], false, "{result}");
+        let structured = &result["structuredContent"];
+        assert_eq!(
+            structured["notes"],
+            quiet["result"]["structuredContent"]["notes"]
+        );
+        assert!(structured["audio"].is_null());
+        assert_eq!(structured["audioOmission"]["reason"], "encoded_size_limit");
+        assert_eq!(structured["audioOmission"]["durationSeconds"], 48.0);
+        assert_eq!(
+            structured["audioOmission"]["requestedEncodedBytes"],
+            2_048_060
+        );
+        assert!(structured["encounter"].is_object());
+        assert!(
+            result["content"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|block| block["type"] == "text")
+        );
+        let text = result["content"][0]["text"].as_str().unwrap();
+        assert!(text.contains("WAV omitted"), "{text}");
+        assert!(!text.contains("shorter"), "{text}");
+    }
+}
+
+#[test]
 fn a_function_with_no_finite_samples_is_refused_not_sung_as_silence() {
     // Zero notes reported as a successful 0.1 second melody is the singing
     // twin of "nothing to plot". The terminal face refuses it; this face

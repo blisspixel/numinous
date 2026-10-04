@@ -32,7 +32,9 @@ irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.p
 ```
 
 Open the installed Numinous launcher, or run `numinous-app` from a new terminal.
-Use `numinous update` for later releases. You can also download a platform
+Use `numinous update` for later releases of an installer-created installation.
+A loose archive or source checkout is not an install root; download a fresh
+archive or use the installer in a separate location. You can download a platform
 archive from [Releases](https://github.com/blisspixel/numinous/releases).
 
 For a digital mind, point an MCP client at the installed server:
@@ -69,7 +71,7 @@ hosts can also load the [portable plugin](plugins/numinous).
 
 ## Current state
 
-**0.4.0-alpha.32** is a playable alpha with 356 catalog rooms, games, Journey,
+**0.4.0-alpha.33** is a playable alpha with 356 catalog rooms, games, Journey,
 Studio, controllers, and built-in music. It is still under development:
 Understanding Alpha, the milestone that tests whether play builds lasting
 understanding, is active.

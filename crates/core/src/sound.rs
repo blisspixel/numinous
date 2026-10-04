@@ -11,6 +11,9 @@ use std::f32::consts::TAU;
 
 use crate::articulation::{Articulation, Envelope};
 
+const WAV_HEADER_BYTES: usize = 44;
+const MAX_WAV_SAMPLES: usize = (u32::MAX as usize - WAV_HEADER_BYTES) / 2;
+
 /// A single sine note.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Note {
@@ -180,12 +183,7 @@ impl SoundSpec {
     #[must_use]
     pub fn render(&self, sample_rate: u32) -> Vec<f32> {
         let rate = sample_rate.max(1) as f32;
-        let duration = if self.duration.is_finite() {
-            self.duration.max(0.0)
-        } else {
-            0.0
-        };
-        let total = (duration * rate) as usize;
+        let total = self.sample_count(sample_rate);
         let mut buffer = vec![0.0f32; total];
         for note in &self.notes {
             if !note.freq.is_finite()
@@ -229,6 +227,24 @@ impl SoundSpec {
     pub fn wav(&self, sample_rate: u32) -> Vec<u8> {
         wav_bytes(&self.render(sample_rate), sample_rate)
     }
+
+    /// Exact size of the mono PCM16 WAV, without rendering or allocating it.
+    ///
+    /// Uses the same sample rounding and container limit as [`Self::wav`].
+    /// Protocol faces can reject an oversized attachment before synthesis.
+    #[must_use]
+    pub fn wav_byte_len(&self, sample_rate: u32) -> usize {
+        WAV_HEADER_BYTES + self.sample_count(sample_rate).min(MAX_WAV_SAMPLES) * 2
+    }
+
+    fn sample_count(&self, sample_rate: u32) -> usize {
+        let duration = if self.duration.is_finite() {
+            self.duration.max(0.0)
+        } else {
+            0.0
+        };
+        (duration * sample_rate.max(1) as f32) as usize
+    }
 }
 
 /// Wrap mono samples in a 16-bit PCM WAV container.
@@ -238,17 +254,16 @@ impl SoundSpec {
 /// can only send text can still send a sound.
 #[must_use]
 pub fn wav_bytes(samples: &[f32], sample_rate: u32) -> Vec<u8> {
-    const HEADER: usize = 44;
     const BITS: u16 = 16;
     const CHANNELS: u16 = 1;
     let rate = sample_rate.max(1);
     // A WAV size field is 32 bits, so the container itself sets the ceiling.
     // Truncating loudly here is better than writing a header that lies.
-    let max_samples = ((u32::MAX as usize - HEADER) / 2).min(samples.len());
+    let max_samples = MAX_WAV_SAMPLES.min(samples.len());
     let samples = &samples[..max_samples];
     let data_len = samples.len() * 2;
     let block_align = CHANNELS * BITS / 8;
-    let mut bytes = Vec::with_capacity(HEADER + data_len);
+    let mut bytes = Vec::with_capacity(WAV_HEADER_BYTES + data_len);
     // The header, field by field in the order a decoder reads them. Every size
     // is computed from the samples actually written above, because a decoder
     // trusts these numbers over the file they describe.
@@ -281,6 +296,18 @@ pub fn wav_bytes(samples: &[f32], sample_rate: u32) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn wav_size_preflight_matches_actual_bytes_and_sample_rounding() {
+        for duration in [-1.0, 0.0, 0.001, 0.333_333, 1.5, f32::NAN, f32::INFINITY] {
+            for rate in [0, 3, 16_000, 44_100] {
+                let spec = super::SoundSpec::tone(440.0, duration, 0.1);
+                assert_eq!(spec.wav_byte_len(rate), spec.wav(rate).len());
+            }
+        }
+        let huge = super::SoundSpec::tone(440.0, f32::MAX, 0.1);
+        assert_eq!(huge.wav_byte_len(16_000), u32::MAX as usize - 1);
+    }
+
     use super::{Note, ParametricSound, SoundSpec, wav_bytes};
     use crate::Motif;
 
