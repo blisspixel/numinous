@@ -90,6 +90,11 @@ newest first, and Enter opens one paused. F forks the chosen creation:
 editable and singing at once, in the creation's own era, with the parent's
 link remembered so the next share records the descent.
 
+Discovery keeps the wall's retained creations bounded throughout the scan,
+not just after sorting the folder. Newest files come first, with the path
+breaking equal timestamps deterministically. The folder remains the archive;
+only the retained wall resolves its local remix lineage.
+
 **4. Lineage that credits generously.** Every fork records "descends from,"
 building a visible remix tree, but avoid the failure Scratch's own researchers
 documented (automatic attribution falls short and demotivates original authors).

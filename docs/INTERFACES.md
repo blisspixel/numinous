@@ -143,6 +143,9 @@ For automation, pipelines, CI, power users, and agents through a shell:
   scriptable instead of tied to an interactive session.
 - **Current command families:** `rooms`, safe `describe`, gated `reveal`,
   `render`, `gallery`, and `contact-sheet` cover the catalog and images;
+  contact sheets shrink their tiles as needed to include every catalog row
+  inside the image limit. `share` validates size and finite phase before
+  creating its export folder, using the same bounds as `render` and `loop`;
   `tour`, `watch`, `play`, games,
   sims, and Journey commands cover live play; `plot`, `open-studio`, `fork`,
   `sing`, `tune`, and `sonify` cover creation and audio. `call` poses the

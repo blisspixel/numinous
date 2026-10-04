@@ -13,6 +13,8 @@ interface. You may explore, create, rest, dislike a room, or leave.
 Room PNGs use a shared brightness ramp: faint guides, secondary detail, main
 shapes, and hot highlights. Visible pixel responses to a touch also survive
 `NO_COLOR`. Mandelbrot retains its continuous multicolor field.
+Percolation's shortest crossing has a distinct character in `play_room` text,
+so the path can be followed separately from the connected cluster.
 
 ## Begin
 

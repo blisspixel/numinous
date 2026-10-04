@@ -4046,6 +4046,7 @@ fn render_share_bundle(
     // The still, the loop, and the recorded metadata must be one visit: a
     // postcard rendered from the base deal beside a loop of variation N is
     // a bundle that disagrees with itself and can never be replayed.
+    validate_render_request(size, size, t)?;
     let Some(room) = find_room_with_variation(id, allow_hidden, variation) else {
         return Err(not_found_message(id));
     };
@@ -4199,31 +4200,35 @@ fn contact_sheet(path: &Path, cols: usize, tile: usize) -> Result<String, String
     // release). More columns than rooms only adds empty cells, and 4096 is the
     // Raster dimension cap, so a larger tile would be clamped away regardless.
     let cols = cols.clamp(1, rooms.len().max(1));
-    let tile = tile.clamp(1, 4096);
     let rows = rooms.len().div_ceil(cols);
+    // Fit every tile inside one bounded raster. Clamping the final raster
+    // silently removed the lower rows from ordinary catalog exports.
+    let tile = tile.clamp(1, (4096 / cols.max(rows)).max(1));
     let mut sheet = Raster::new(cols * tile, rows * tile);
     let label_scale = (tile as i32 / 160).clamp(1, 3);
     for (i, room) in rooms.iter().enumerate() {
         let mut cell = Raster::with_accent(tile, tile, room.meta().accent);
         room.render(&mut cell, room.postcard_t());
         let (x, y) = ((i % cols) * tile, (i / cols) * tile);
-        sheet.blit(&cell, x, y);
+        // Label inside its tile so a compact caption cannot paint over the
+        // next room. The cell surface clips both geometry and lettering.
         draw_text(
-            &mut sheet,
+            &mut cell,
             &room.meta().title.to_uppercase(),
-            x as i32 + 8,
-            y as i32 + 8,
+            8,
+            8,
             label_scale,
             '#',
         );
+        sheet.blit(&cell, x, y);
     }
     write_png(path, &sheet)?;
     Ok(format!(
         "wrote contact sheet {} ({} rooms, {}x{})\n",
         terminal_safe_path(path),
         rooms.len(),
-        cols * tile,
-        rows * tile
+        sheet.width(),
+        sheet.height()
     ))
 }
 

@@ -71,7 +71,7 @@ hosts can also load the [portable plugin](plugins/numinous).
 
 ## Current state
 
-**0.5.0-alpha.1** is a playable alpha with 356 catalog rooms, games, Journey,
+**0.5.0-alpha.2** is a playable alpha with 356 catalog rooms, games, Journey,
 Studio, controllers, and built-in music. It is still under development:
 Sensory Alpha is active, refining the shared visual and sonic identity.
 Understanding Alpha's qualifying study remains open; human playtests are optional
@@ -81,6 +81,11 @@ Room marks now preserve faint guides, secondary detail, main shapes, and hot
 highlights through one shared brightness ramp. Touch responses remain visible
 without color, with Hilbert lighting a neighborhood and Percolation exposing a
 shortest crossing. Mandelbrot retains its continuous multicolor field.
+
+Compact room headers keep titles, progress, and audio status separate.
+Percolation's crossing reads in text as well as pixels. Catalog contact sheets
+include every row, share exports reject invalid requests before writes, and
+the saved-creation Gallery stays bounded while discovering the newest files.
 
 The App's study reader offers saved 100, 125, and 150 percent body text through
 Settings > Reading Text and A-/A+ controls, retaining your place as words reflow.

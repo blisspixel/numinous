@@ -1,8 +1,8 @@
 //! The local Gallery: a wall of saved creations discovered from disk, drawn
 //! as exact thumbnails, so opening one is a keystroke rather than a filename.
 //!
-//! Local-first by design (see `docs/CREATOR.md`): the wall is a bounded scan
-//! of one folder, the same folder the share keys already write into, so it
+//! Local-first by design (see `docs/CREATOR.md`): discovery bounds the retained
+//! wall while scanning the folder the share keys already write into, so it
 //! works before any server exists. Studio thumbnails show their saved window
 //! and knob. Route questions show their authored network and current street walk.
 //! Opening a tile delivers the admitted creation behind that preview.
@@ -197,7 +197,7 @@ pub(crate) fn discover(parent: &Path) -> Option<Vec<GalleryEntry>> {
                 extension.eq_ignore_ascii_case("num") || extension.eq_ignore_ascii_case("project")
             }) && let Some(entry) = entry_at(path)
             {
-                entries.push(entry);
+                retain_entry(&mut entries, entry);
             }
         } else if kind.is_dir()
             && item
@@ -213,19 +213,28 @@ pub(crate) fn discover(parent: &Path) -> Option<Vec<GalleryEntry>> {
                 .map(|metadata| metadata.file_type().is_file())
                 .unwrap_or(false);
             if is_regular_file && let Some(entry) = entry_at(capsule) {
-                entries.push(entry);
+                retain_entry(&mut entries, entry);
             }
         }
     }
-    // Newest first; the path breaks timestamp ties so the order is stable.
-    entries.sort_by(|a, b| {
-        b.modified
-            .cmp(&a.modified)
-            .then_with(|| a.path.cmp(&b.path))
-    });
-    entries.truncate(MAX_GALLERY_ENTRIES);
     resolve_lineage(&mut entries);
     Some(entries)
+}
+
+/// Keep only the newest validated entries while scanning. The folder remains
+/// the archive; its size cannot grow the retained wall beyond its display cap.
+fn retain_entry(entries: &mut Vec<GalleryEntry>, entry: GalleryEntry) {
+    let position = entries.partition_point(|existing| {
+        entry
+            .modified
+            .cmp(&existing.modified)
+            .then_with(|| existing.path.cmp(&entry.path))
+            .is_lt()
+    });
+    if position < MAX_GALLERY_ENTRIES {
+        entries.insert(position, entry);
+        entries.truncate(MAX_GALLERY_ENTRIES);
+    }
 }
 
 /// The wall itself: discovered entries and one selection.
@@ -816,6 +825,35 @@ mod tests {
         let entries = discover(&dir).expect("a readable folder discovers");
         assert_eq!(entries.len(), MAX_GALLERY_ENTRIES, "the wall is capped");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn scanning_retains_a_bounded_recent_wall_with_stable_timestamp_ties() {
+        let dir = scratch("bounded-scan");
+        save(&dir, "source.num", "sin(x)");
+        let mut entries = Vec::new();
+        // Permute discovery order and make timestamp ties intentional. Sorting
+        // after all files were loaded used to satisfy the final display cap
+        // while leaving peak retained creations proportional to folder size.
+        for item in 0..97 {
+            let index = item * 37 % 97;
+            let mut entry = super::entry_at(dir.join("source.num")).expect("creation");
+            entry.path = dir.join(format!("c{index:03}.num"));
+            entry.modified = std::time::SystemTime::UNIX_EPOCH
+                + std::time::Duration::from_secs(index as u64 / 3);
+            super::retain_entry(&mut entries, entry);
+            assert!(entries.len() <= MAX_GALLERY_ENTRIES);
+        }
+        let mut expected: Vec<_> = (0..97).collect();
+        expected.sort_by_key(|index| (std::cmp::Reverse(index / 3), *index));
+        let actual: Vec<_> = entries.iter().map(|entry| entry.path.clone()).collect();
+        let expected: Vec<_> = expected
+            .into_iter()
+            .take(MAX_GALLERY_ENTRIES)
+            .map(|index| dir.join(format!("c{index:03}.num")))
+            .collect();
+        assert_eq!(actual, expected);
+        std::fs::remove_dir_all(dir).expect("cleanup");
     }
 
     #[test]

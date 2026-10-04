@@ -44,14 +44,25 @@ fn open_p(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
 /// right-column cell reached closes a shortest crossing. Empty when the
 /// cluster does not span.
 fn shortest_crossing(cluster: &[bool], w: usize, h: usize) -> Vec<bool> {
+    // A grid predecessor needs a direction, not a machine-sized index. The
+    // unseen state also owns visitation, avoiding a second full-grid buffer.
+    #[derive(Clone, Copy)]
+    #[repr(u8)]
+    enum Parent {
+        Unseen,
+        Start,
+        Left,
+        Right,
+        Above,
+        Below,
+    }
     let mut on_path = vec![false; w * h];
-    let mut previous = vec![usize::MAX; w * h];
-    let mut reached = vec![false; w * h];
+    let mut previous = vec![Parent::Unseen; w * h];
     let mut queue = std::collections::VecDeque::new();
     for y in 0..h {
         let i = y * w;
         if cluster[i] {
-            reached[i] = true;
+            previous[i] = Parent::Start;
             queue.push_back(i);
         }
     }
@@ -61,21 +72,29 @@ fn shortest_crossing(cluster: &[bool], w: usize, h: usize) -> Vec<bool> {
             let mut at = i;
             loop {
                 on_path[at] = true;
-                if previous[at] == usize::MAX {
-                    return on_path;
-                }
-                at = previous[at];
+                at = match previous[at] {
+                    Parent::Start => return on_path,
+                    Parent::Left => at - 1,
+                    Parent::Right => at + 1,
+                    Parent::Above => at - w,
+                    Parent::Below => at + w,
+                    Parent::Unseen => unreachable!("a queued cell has a predecessor"),
+                };
             }
         }
-        for (dx, dy) in [(1i32, 0), (0, -1), (0, 1), (-1, 0)] {
+        for (dx, dy, parent) in [
+            (1i32, 0, Parent::Left),
+            (0, -1, Parent::Below),
+            (0, 1, Parent::Above),
+            (-1, 0, Parent::Right),
+        ] {
             let (nx, ny) = (x as i32 + dx, y as i32 + dy);
             if nx < 0 || ny < 0 || nx >= w as i32 || ny >= h as i32 {
                 continue;
             }
             let j = ny as usize * w + nx as usize;
-            if cluster[j] && !reached[j] {
-                reached[j] = true;
-                previous[j] = i;
+            if cluster[j] && matches!(previous[j], Parent::Unseen) {
+                previous[j] = parent;
                 queue.push_back(j);
             }
         }
@@ -144,9 +163,8 @@ fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) -> f64 {
     // The open/closed pattern is the picture, so it is drawn as shape rather
     // than as shades of one slab: a closed site draws nothing and leaves the
     // stage showing, an open site is faint, the cluster joined to the left
-    // edge is the idea, and once that cluster spans it runs hot, with its
-    // shortest crossing drawn a second time so the path that appeared at the
-    // threshold burns through it.
+    // edge is the idea. Once it spans, its shortest crossing runs hot so the
+    // path reads as a separate glyph in text and a brighter stroke in pixels.
     let crossing = if right_touch {
         shortest_crossing(&seen, w, h)
     } else {
@@ -156,7 +174,7 @@ fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) -> f64 {
         for x in 0..w {
             let i = y * w + x;
             let ch = if seen[i] {
-                if right_touch { '#' } else { '*' }
+                '*'
             } else if open[i] {
                 '.'
             } else {
@@ -312,6 +330,81 @@ mod tests {
             true, false, false,
         ];
         assert!(super::shortest_crossing(&stranded, 3, 2).is_empty());
+    }
+
+    #[test]
+    fn a_spanning_path_is_distinct_in_text_and_pixels() {
+        // At p=1 the shortest crossing is one straight row. The rest of the
+        // open grid must remain visible without looking like part of the path.
+        let mut canvas = Canvas::new(32, 18);
+        super::draw(&mut canvas, 1.0, 0);
+        let text = canvas.to_text();
+        let rows: Vec<_> = text.lines().collect();
+        assert_eq!(rows[0], "#".repeat(32));
+        assert_eq!(rows[1], "*".repeat(32));
+        assert_eq!(text.chars().filter(|mark| *mark == '#').count(), 32);
+
+        let mut raster = crate::Raster::new(32, 18);
+        super::draw(&mut raster, 1.0, 0);
+        let pixels = raster.to_rgba();
+        let lightness = |y: usize| {
+            let i = (y * 32 + 16) * 4;
+            crate::dichromacy::lightness([pixels[i], pixels[i + 1], pixels[i + 2]])
+        };
+        assert!(lightness(0) > lightness(1) + 10.0);
+    }
+
+    #[test]
+    fn crossing_reconstruction_follows_turns_in_every_direction() {
+        let mut cluster = vec![false; 9 * 7];
+        let corners = [(0, 4), (2, 4), (2, 6), (6, 6), (6, 2), (4, 2), (4, 0), (8, 0)];
+        for segment in corners.windows(2) {
+            let [(x0, y0), (x1, y1)] = [segment[0], segment[1]];
+            for y in y0.min(y1)..=y0.max(y1) {
+                for x in x0.min(x1)..=x0.max(x1) {
+                    cluster[y * 9 + x] = true;
+                }
+            }
+        }
+        assert_eq!(cluster.iter().filter(|cell| **cell).count(), 21);
+        assert_eq!(super::shortest_crossing(&cluster, 9, 7), cluster);
+    }
+
+    #[test]
+    fn every_small_grid_crossing_matches_independent_distance_relaxation() {
+        for mask in 0..512 {
+            let cluster: Vec<_> = (0..9).map(|i| mask & (1 << i) != 0).collect();
+            let mut distances = [usize::MAX; 9];
+            for y in 0..3 {
+                if cluster[y * 3] {
+                    distances[y * 3] = 0;
+                }
+            }
+            // Bellman-Ford relaxation on the grid is an independent oracle
+            // for the queue-based search and its reconstructed path length.
+            for _ in 0..9 {
+                for i in 0..9 {
+                    if !cluster[i] || distances[i] == usize::MAX {
+                        continue;
+                    }
+                    for j in 0..9 {
+                        let adjacent = (i / 3 == j / 3 && i.abs_diff(j) == 1)
+                            || (i % 3 == j % 3 && i.abs_diff(j) == 3);
+                        if adjacent && cluster[j] {
+                            distances[j] = distances[j].min(distances[i] + 1);
+                        }
+                    }
+                }
+            }
+            let distance = [distances[2], distances[5], distances[8]].into_iter().min().unwrap();
+            let path = super::shortest_crossing(&cluster, 3, 3);
+            if distance == usize::MAX {
+                assert!(path.is_empty(), "mask {mask}");
+            } else {
+                assert_eq!(path.iter().filter(|cell| **cell).count(), distance + 1, "mask {mask}");
+                assert!(path.iter().zip(&cluster).all(|(path, open)| !path || *open));
+            }
+        }
     }
 
     #[test]

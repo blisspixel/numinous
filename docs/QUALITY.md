@@ -189,6 +189,23 @@ Representative room plates and compact study, footer, and audio-state
 frames were inspected. These are functional and rendering checks, not
 participant enjoyment, disability usability, or current physical promotion.
 
+The `v0.5.0-alpha.2` polish source on 2026-10-04 completed the full Windows
+release gate, with no optional checks skipped. The ordinary all-target run
+passed 4,843 test cases with the same four diagnostics excluded; the catalog
+flash sweep and CPU/GPU color comparison ran separately in the full gate.
+Coverage measured 95.13% regions and 94.99% lines under the same exclusions,
+improving alpha 1's 94.81% regions and lines. Regressions preserve composed
+title and explanation pixels, complete contact-sheet rows and contained
+captions, refusal before export writes, and bounded retained Gallery order.
+An independent distance-relaxation oracle covers every three-by-three grid
+for Percolation's compact shortest-crossing search. The complete 3,065-frame
+App matrix, study plates, gallery, contact sheet, and audio artifacts were
+regenerated. Compact Times Tables, Hilbert, Wireworld, Percolation, and Gallery
+frames, full-size Lissajous and Mandelbrot, and refreshed public screenshots
+were inspected. Visual and audio goldens retained their existing contracts.
+These are functional and rendering checks; general text scaling, participant
+claims, and current physical lift promotion remain open.
+
 ## Evidence snapshot, 2026-09-01
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
