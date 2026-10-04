@@ -5,6 +5,26 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+## [0.5.0-alpha.2] - 2026-10-04
+
+### Fixed
+- Room titles fit beside Journey progress at compact sizes, with audio status
+  in a separate row and spectrum bars below progress inside the header. Long Show title cards
+  also fit their viewport. Composition checks cover every catalog title at
+  the compact size, including large Journey numbers.
+- Percolation's shortest crossing uses a distinct character in the CLI and
+  MCP picture, as well as brighter pixel ink. Search predecessors use compact
+  directions that also record visitation instead of separate index and visit
+  buffers; turn and shortest-path regressions preserve the mathematical answer.
+- Contact sheets fit every catalog row inside the bounded image instead of
+  silently cropping the lower rooms. Captions stay inside their own tile, and
+  the report names the actual dimensions.
+  Share exports reject invalid size and phase before creating any output.
+- Gallery discovery retains only the newest displayable creations while
+  scanning, with stable timestamp ties, rather than loading the whole archive
+  before applying its display cap. Invalid files and links remain excluded,
+  and retained remix lineage follows the final wall order.
+
 ## [0.5.0-alpha.1] - 2026-10-04
 
 ### Added

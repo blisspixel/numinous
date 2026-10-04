@@ -73,9 +73,16 @@ App's 60 frames a second. The music visualizer, which can push a room faster
 still, is not measured. Every room's visible pixel response to a touch
 also shows through `NO_COLOR`. The shared mark ramp separates faint guides,
 secondary detail, main shapes, and hot highlights; Hilbert lights a neighborhood,
-Percolation exposes the shortest crossing, and Wireworld separates its electron
+Percolation exposes the shortest crossing with a distinct character in the CLI
+and MCP picture as well as brighter pixel ink, and Wireworld separates its electron
 head and tail. `numinous access` reports the remaining flash limits from the
 same code that enforces them.
+
+Compact App headers reserve separate space for the title, Journey progress,
+and audio status. `numinous contact-sheet` fits every catalog row into its
+image by reducing tile size when needed. `numinous share` refuses zero or
+oversized dimensions and nonfinite or out-of-range phase before creating
+output, using the same size and phase limits as `render` and `loop`.
 
 If motion, color, or stereo are a problem for you, three switches are waiting.
 Set `NUMINOUS_REDUCED_MOTION=1` and the terminal views stop moving on their

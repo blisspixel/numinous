@@ -172,9 +172,13 @@ Settings and reader controls. Source positions anchor resizing and size
 changes, and the room's clock and accepted
 input history are held while reading. Cabinet and room HUD lettering keep
 their existing pixel faces. General Cabinet and HUD text scaling remains open.
-The compact 360 by 240 Hilbert and Wireworld plates also show long titles and
-status badges competing for the header. That pass must reserve separate space
-for the title and status before claiming the compact layout is complete.
+The room header reserves separate space for titles, Journey progress, and
+audio status. Titles reduce their pixel scale to fit beside progress before
+truncating; Show title cards use the same fit rule. Spectrum bars sit below
+progress inside the reserved header strip. Composition checks preserve every catalog title in a 360 by 240
+frame with the largest Journey value and active audio indicators, while
+retaining the room's own readouts and footer controls. This fixes header
+collisions; it does not close the general text scaling work.
 
 This reading boundary does not add Unicode naming or IME editing to Studio,
 translate the full App shell, or provide complete Unicode glyph coverage. It
@@ -278,7 +282,8 @@ Fixed mono thresholds follow the rendered catalog rather than adapting per
 frame. Sweeps require distinct drawn accent levels, increasing lightness, and
 visible pixel touch responses through the same mono renderer players use.
 Hilbert's focus is a lit neighborhood, Percolation leaves closed sites dark
-and exposes a shortest left-to-right crossing, and Wireworld's conductor,
+and exposes a shortest left-to-right crossing with distinct text marks and
+pixel brightness, and Wireworld's conductor,
 head, and tail use different roles. The audit in
 `evidence/color-independence.json` is regenerated from current room sources;
 remaining warning and spectral collisions are still recorded in the roadmap.

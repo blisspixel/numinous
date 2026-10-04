@@ -1935,6 +1935,56 @@ fn contact_sheet_survives_absurd_dimensions() {
 }
 
 #[test]
+fn contact_sheet_keeps_the_last_catalog_row_inside_the_image() {
+    let path = std::env::temp_dir().join("numinous_contact_complete_test.png");
+    let message = super::contact_sheet(&path, 3, 64).expect("complete contact sheet");
+    let mut reader = png::Decoder::new(std::io::BufReader::new(
+        std::fs::File::open(&path).expect("sheet"),
+    ))
+    .read_info()
+    .expect("PNG header");
+    let mut image = vec![0; reader.output_buffer_size().expect("bounded PNG")];
+    let info = reader.next_frame(&mut image).expect("PNG pixels");
+    let rows = numinous_core::all_rooms().len().div_ceil(3);
+    assert_eq!(info.width as usize / 3, info.height as usize / rows);
+    assert_eq!(info.height as usize % rows, 0);
+    assert!(message.contains(&format!("{}x{}", info.width, info.height)));
+    // The final catalog tile must contain rendered room pixels, not a
+    // cropped-away row or an empty cell substituted for it.
+    let tile = info.width as usize / 3;
+    let last = numinous_core::all_rooms().len() - 1;
+    let (left, top) = (last % 3 * tile, last / 3 * tile);
+    assert!((top..top + tile).any(|y| {
+        (left..left + tile).any(|x| {
+            let i = (y * info.width as usize + x) * 4;
+            image[i..i + 3] != numinous_core::palette::STAGE
+        })
+    }));
+    for (column, room) in numinous_core::all_rooms().iter().take(3).enumerate() {
+        let mut expected = numinous_core::Raster::with_accent(tile, tile, room.meta().accent);
+        room.render(&mut expected, room.postcard_t());
+        numinous_core::draw_text(
+            &mut expected,
+            &room.meta().title.to_uppercase(),
+            8,
+            8,
+            1,
+            '#',
+        );
+        let expected = expected.to_rgba();
+        for y in 0..tile {
+            let start = (y * info.width as usize + column * tile) * 4;
+            assert_eq!(
+                &image[start..start + tile * 4],
+                &expected[y * tile * 4..(y + 1) * tile * 4],
+                "a neighboring caption painted over tile {column}"
+            );
+        }
+    }
+    std::fs::remove_file(path).expect("cleanup");
+}
+
+#[test]
 fn play_frame_shows_the_room() {
     let room = numinous_core::room_by_id("times-tables").expect("room");
     let frame = super::play_frame(room.as_ref(), 0.0, 30, 15);
@@ -5485,6 +5535,35 @@ fn the_share_bundle_still_and_loop_are_the_same_visit() {
         "the still must render the recorded variation, not the base deal"
     );
     let _ = std::fs::remove_dir_all(&parent);
+}
+
+#[test]
+fn invalid_share_requests_are_refused_before_creating_output() {
+    let parent =
+        std::env::temp_dir().join(format!("numinous-share-invalid-{}", std::process::id()));
+    assert!(!parent.exists(), "fixture must start absent");
+    for (size, phase) in [
+        (0, 0.0),
+        (4097, 0.0),
+        (usize::MAX, 0.0),
+        (32, f64::NAN),
+        (32, f64::INFINITY),
+        (32, -0.1),
+        (32, 1.0),
+    ] {
+        let error = super::render_share_bundle(
+            "lissajous",
+            &parent,
+            size,
+            phase,
+            false,
+            numinous_core::Era::Modern,
+            0,
+        )
+        .expect_err("invalid share request");
+        assert!(error.starts_with("Render"), "{error}");
+        assert!(!parent.exists(), "invalid input created export state");
+    }
 }
 
 #[test]

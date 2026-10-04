@@ -74,16 +74,11 @@ impl AudioState {
 }
 
 pub(crate) fn draw_audio_state(raster: &mut Raster, state: &AudioState, width: usize) {
+    // Status occupies the first row; titles and journey progress start below it.
     let scale = if width >= 720 { 2 } else { 1 };
-    let level_reserve = if scale == 2 { 110 } else { 0 };
-    let label = fit_footer_text(
-        &state.label(),
-        width.saturating_sub(20 + level_reserve) as i32,
-        scale,
-    );
+    let label = fit_footer_text(&state.label(), width.saturating_sub(20) as i32, scale);
     let x = width
         .saturating_sub(label.chars().count() * 6 * scale as usize)
-        .saturating_sub(level_reserve)
         .saturating_sub(10) as i32;
     numinous_core::draw_text(raster, &label, x, 2, scale, '*');
 }
@@ -99,11 +94,16 @@ pub(crate) fn draw_spectrum_meter(
         return;
     }
     let bar_w = 3i32;
-    let max_h = 16i32.min(height as i32 / 8).max(4);
+    let max_h = 16i32
+        .min(height as i32 / 8)
+        .max(4)
+        .min(7 * footer_scale(width) + 1);
     let left = (width as i32)
         .saturating_sub(8 + numinous_core::BAND_COUNT as i32 * (bar_w + 1))
         .max(0);
-    let bottom = 20i32.min(height as i32 - 1).max(0);
+    // The title reserves this right-hand strip. Place bars below progress,
+    // inside the header, so they cannot paint over explanation or room art.
+    let bottom = (header_bottom(width) - 2).min(height as i32 - 1).max(0);
     for (i, &level) in bands.iter().enumerate() {
         let h = ((level.clamp(0.0, 1.0) * max_h as f32).round() as i32).max(1);
         let x0 = left + i as i32 * (bar_w + 1);
@@ -227,6 +227,14 @@ fn footer_scale(width: usize) -> i32 {
     (width as i32 / 400).clamp(1, 4)
 }
 
+fn header_title_y(width: usize) -> i32 {
+    if width >= 720 { 18 } else { 10 }
+}
+
+fn header_bottom(width: usize) -> i32 {
+    header_title_y(width) + 7 * (footer_scale(width) + 1) + 4
+}
+
 fn fit_footer_text(text: &str, pixel_budget: i32, scale: i32) -> String {
     let columns = (pixel_budget / (6 * scale.max(1))).max(0) as usize;
     let length = text.chars().count();
@@ -239,6 +247,14 @@ fn fit_footer_text(text: &str, pixel_budget: i32, scale: i32) -> String {
     let mut fitted = text.chars().take(columns - 3).collect::<String>();
     fitted.push_str("...");
     fitted
+}
+
+fn fit_title(text: &str, pixel_budget: i32, preferred_scale: i32) -> (String, i32) {
+    let mut scale = preferred_scale;
+    while scale > 1 && text.chars().count() as i32 * 6 * scale > pixel_budget {
+        scale -= 1;
+    }
+    (fit_footer_text(text, pixel_budget, scale), scale)
 }
 
 fn footer_copy(
@@ -334,11 +350,12 @@ pub(crate) fn draw_room_chrome(
     };
     if !state.the_show && !state.studio && !state.show_help && !state.show_journey {
         if reveal_lines.is_empty() {
-            let title_bottom = 14 + 7 * (scale + 1);
+            let title_bottom = header_bottom(width);
             raster.clear_rows(0, title_bottom);
             raster.line(0, title_bottom - 1, width as i32 - 1, title_bottom - 1, '-');
         } else {
-            let reveal_bottom = 18 + (2 + reveal_lines.len() as i32) * 9 * scale;
+            let reveal_bottom =
+                header_title_y(width) + 8 + (2 + reveal_lines.len() as i32) * 9 * scale;
             raster.clear_rows(0, reveal_bottom);
             raster.line(
                 0,
@@ -364,12 +381,17 @@ pub(crate) fn draw_room_chrome(
         let held = !state.motion.animates();
         if state.t < SHOW_TITLE_CARD_UNTIL || held {
             raster.dim_rows((content_bottom - 34 * scale).max(0), content_bottom, 45);
+            let (title, title_scale) = fit_title(
+                &room.meta().title.to_uppercase(),
+                width as i32 * 8 / 10,
+                scale + 1,
+            );
             numinous_core::draw_text(
                 raster,
-                &room.meta().title.to_uppercase(),
+                &title,
                 width as i32 / 10,
                 content_bottom - 24 * scale,
-                scale + 1,
+                title_scale,
                 '#',
             );
         }
@@ -401,14 +423,11 @@ pub(crate) fn draw_room_chrome(
     }
 
     if !state.the_show && !state.studio {
-        numinous_core::draw_text(
-            raster,
-            &room.meta().title.to_uppercase(),
-            10,
-            10,
-            scale + 1,
-            '#',
-        );
+        let level = journey_level_label(state.level);
+        let level_scale = 1;
+        let lx = width as i32 - (level.len() as i32 * 6 * level_scale) - 10;
+        let (title, title_scale) = fit_title(&room.meta().title.to_uppercase(), lx - 20, scale + 1);
+        numinous_core::draw_text(raster, &title, 10, header_title_y(width), title_scale, '#');
         if !arrival.is_empty() {
             let footer_band_top = height as i32 - 24 * footer_scale;
             let line_count = arrival.len() as i32;
@@ -423,10 +442,7 @@ pub(crate) fn draw_room_chrome(
                 );
             }
         }
-        let level = journey_level_label(state.level);
-        let level_scale = 1;
-        let lx = width as i32 - (level.len() as i32 * 6 * level_scale) - 10;
-        let ly = if scale > 1 { 20 } else { 10 };
+        let ly = header_title_y(width);
         numinous_core::draw_text(raster, &level, lx, ly, level_scale, '#');
     }
 
@@ -437,7 +453,7 @@ pub(crate) fn draw_room_chrome(
                 raster,
                 line,
                 10,
-                10 + (2 + i as i32) * line_height,
+                header_title_y(width) + (2 + i as i32) * line_height,
                 scale,
                 '#',
             );
@@ -898,10 +914,8 @@ mod tests {
             assert!(changed.iter().all(|&(x, y)| x < width && y < 20));
             assert!(changed.iter().any(|&(x, _)| x >= width / 2));
             let scale = if width >= 720 { 2 } else { 1 };
-            let level_reserve = if scale == 2 { 110 } else { 0 };
             let x = width
                 .saturating_sub(label.chars().count() * 6 * scale)
-                .saturating_sub(level_reserve)
                 .saturating_sub(10);
             for token in [":", "VOL", "45%"] {
                 let offset = label.find(token).expect("audio token") * 6 * scale;
@@ -912,9 +926,69 @@ mod tests {
                     "{token} must have visible pixels at width {width}"
                 );
             }
-            if width >= 720 {
-                assert!(changed.iter().any(|&(_, y)| y >= 9));
-                assert!(changed.iter().all(|&(x, _)| x < width - 110));
+            assert!(changed.iter().all(|&(_, y)| y < 2 + 7 * scale));
+        }
+    }
+
+    #[test]
+    fn composed_header_preserves_long_titles_progress_and_audio() {
+        let rooms = numinous_core::all_rooms();
+        for (width, height) in [(360, 240), (720, 480), (900, 700), (1600, 700)] {
+            for room in &rooms {
+                let id = room.meta().id;
+                if width != 360
+                    && !matches!(id, "hilbert" | "wireworld" | "mandelbrot" | "route-lab")
+                {
+                    continue;
+                }
+                let mut raster = Raster::new(width, height);
+                let state = RoomChrome {
+                    t: 0.35,
+                    room_card: 0,
+                    show_info: false,
+                    show_help: false,
+                    show_journey: false,
+                    banner_active: false,
+                    the_show: false,
+                    studio: false,
+                    muted: false,
+                    level: u32::MAX,
+                    input_mode: InputMode::KeyboardMouse,
+                    controller_face: ControllerFace::Generic.into(),
+                    motion: numinous_core::Motion::Full,
+                };
+                draw_room_chrome(&mut raster, room.as_ref(), &state, &[], None, width, height);
+                let before = raster.to_rgba();
+                draw_audio_state(&mut raster, &AudioState::no_device(), width);
+                draw_spectrum_meter(
+                    &mut raster,
+                    &[1.0; numinous_core::BAND_COUNT],
+                    width,
+                    height,
+                );
+                let after = raster.to_rgba();
+                let title_y = header_title_y(width) as usize;
+                let header_bottom = header_bottom(width) as usize;
+                // Composing the audio badge and full meter must preserve every
+                // title and progress pixel, including large journey numbers.
+                for y in title_y..header_bottom - 1 {
+                    for x in 0..width {
+                        let pixel = (y * width + x) * 4;
+                        if before[pixel..pixel + 3] != numinous_core::palette::STAGE {
+                            assert_eq!(
+                                before[pixel..pixel + 4],
+                                after[pixel..pixel + 4],
+                                "{id} header at {width}"
+                            );
+                        }
+                    }
+                }
+                let level = journey_level_label(state.level);
+                let right = width as i32 - level.len() as i32 * 6 - 10;
+                let title = room.meta().title.to_uppercase();
+                let (fitted, scale) = fit_title(&title, right - 20, footer_scale(width) + 1);
+                assert_eq!(fitted, title, "{id} must retain its full title at {width}");
+                assert!(10 + title.len() as i32 * 6 * scale < right);
             }
         }
     }
@@ -1492,5 +1566,67 @@ mod tests {
             .filter(|pixel| *pixel != [10, 11, 15, 255])
             .count();
         assert!(lower_lit > 100, "room art remains visible below the panel");
+    }
+
+    #[test]
+    fn inspection_at_the_audio_scale_boundary_preserves_title_and_prose() {
+        let room = room("golden-angle");
+        for width in [720, 799] {
+            let height = 480;
+            let mut raster = Raster::new(width, height);
+            draw_room_chrome(
+                &mut raster,
+                room.as_ref(),
+                &RoomChrome {
+                    t: 0.0,
+                    room_card: 0,
+                    show_info: true,
+                    show_help: false,
+                    show_journey: false,
+                    banner_active: false,
+                    the_show: false,
+                    studio: false,
+                    muted: false,
+                    level: 1,
+                    input_mode: InputMode::KeyboardMouse,
+                    controller_face: ControllerFace::Generic.into(),
+                    motion: numinous_core::Motion::Full,
+                },
+                &[],
+                None,
+                width,
+                height,
+            );
+            draw_audio_state(&mut raster, &AudioState::no_device(), width);
+            draw_spectrum_meter(
+                &mut raster,
+                &[1.0; numinous_core::BAND_COUNT],
+                width,
+                height,
+            );
+
+            let mut expected = Raster::new(width, height);
+            numinous_core::draw_text(
+                &mut expected,
+                &room.meta().title.to_uppercase(),
+                10,
+                18,
+                2,
+                '#',
+            );
+            let panel = numinous_core::explain_text(room.meta().id, room.reveal());
+            let lines = numinous_core::wrap_text(&panel.to_uppercase(), width / 6 - 4);
+            numinous_core::draw_text(&mut expected, &lines[0], 10, 36, 1, '#');
+            let actual = raster.to_rgba();
+            for (i, pixel) in expected.to_rgba().chunks_exact(4).enumerate() {
+                if pixel[..3] != numinous_core::palette::STAGE {
+                    assert_eq!(
+                        &actual[i * 4..i * 4 + 4],
+                        pixel,
+                        "inspection glyph at width {width}"
+                    );
+                }
+            }
+        }
     }
 }
