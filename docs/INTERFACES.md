@@ -153,6 +153,14 @@ For automation, pipelines, CI, power users, and agents through a shell:
   number against the truth, the same engine the App's U key and the MCP
   `predict` tool speak. `bench` is the fixed game gauntlet, not the planned
   performance harness.
+- **Read-only App preferences:** `settings` names Master, Radio, Room Sound,
+  Effects, and mute; `settings --json` adds a versioned
+  `numinous.app-audio-settings` schema, saved/default provenance, and an explicit
+  read-only App-playback scope. Both use the core's bounded preference reader
+  and strict parser without loading progression. Missing files use defaults;
+  malformed or unreadable files fail without mutation. The result describes
+  launch preferences rather than a running mixer or sound device. The MCP
+  tool inventory and pre-master export contract are unchanged.
 
 ### Tier B: live terminal modes
 

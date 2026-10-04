@@ -31,6 +31,7 @@ mod render_input;
 #[path = "../../shared/route_json.rs"]
 mod route_json;
 mod route_lab;
+mod settings;
 mod studio;
 mod study;
 #[path = "../../shared/study_json.rs"]
@@ -102,6 +103,12 @@ enum Command {
     },
     /// Show the accessibility switches and which of them are on right now.
     Access,
+    /// Read saved App audio levels or first-run defaults, without a sound device.
+    Settings {
+        /// Emit machine-readable levels, mute, and saved/default provenance.
+        #[arg(long)]
+        json: bool,
+    },
     /// Install the latest verified GitHub release without touching play history.
     Update,
     /// Remove the managed installation without touching play history.
@@ -846,9 +853,12 @@ fn cli_main() -> ExitCode {
         Ok(cli) => cli,
         Err(error) => return report_cli_parse_error(error),
     };
-    // Direct study has no progression dependency, including reading the
-    // profile. Keep this route ahead of Journey and score loading.
+    // These commands have no progression dependency, including reading the
+    // profile. Keep their routes ahead of Journey and score loading.
     let command = match cli.command {
+        Some(command @ Command::Settings { .. }) => {
+            return run(command, &mut Journey::default());
+        }
         Some(Command::RouteLab { request, json, out }) => {
             return emit(route_lab::report_with_output(
                 request.as_deref(),
@@ -1546,6 +1556,9 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 ))
             );
             ExitCode::SUCCESS
+        }
+        Command::Settings { json } => {
+            emit(settings::report(&local_state_paths().preferences, json))
         }
         Command::Update => maintain_installation(MaintenanceAction::Update),
         Command::Uninstall => maintain_installation(MaintenanceAction::Uninstall),

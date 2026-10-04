@@ -2256,3 +2256,36 @@ and neither the native App, GPU rendering, room-change wash, persisted sound
 levels, nor native Route Lab controls were exercised. Pre-master exports
 remain explicitly separate from the App mix. These are formative observations,
 not evidence that native sensory qualification is complete.
+
+## October 4 packaged agentic playtest, v0.5.0-alpha.2
+
+The owner supplied a stranger-then-docs Linux CLI and MCP round on
+`v0.5.0-alpha.2`, commit `a7b83221ef1e591e82cfecb92db9a2546d89d05a`.
+The published archive matched SHA-256
+`7b82cbb87bd30db79a90896d52da016bf1b29dad50d0339e5bb0815c00e56657`.
+The stranger notes were sealed before README and PLAY with SHA-256
+`0c3a892a6cdaed1bbbacbb5e1cb2604644a107ad4b104d3f41a78584e782be6c`.
+Raw files remain with the tester. This is formative agent evidence, not
+physical sensory qualification or a claim about heard audio.
+
+The prior seals held: bare unknown Studio names were refused across plot,
+sing, and save; the zero reading remained a silent proof; and Mandelbrot's
+long optional WAV kept all its notes with accurate omission facts and a
+usable CLI file recovery. The CPU Mandelbrot still matched the prior picture
+byte for byte. Route Lab's comparison, improvement, undo, and stepped path
+played, reduced motion held terminal phase and waited for manual tour advance,
+the Overture returned its cues, and the contact sheet included the catalog.
+
+The first requested change was a read-only audio-settings view on a non-App
+face. `numinous settings` and its JSON mode now report the same core launch
+preferences the App reads, with saved/default provenance. Process regressions
+cover missing and saved files, legacy defaults, damaged progress, malformed
+preferences, size limits, and preservation of every existing file. This is
+built follow-up to the report, not something the tester had already observed.
+
+An old unmarked archive again refused update. Ownership validation remains
+intact; both installers now name the fresh-archive or separate-empty-directory
+recovery in the refusal itself. The native window, GPU, settings controls,
+level persistence through that UI, room-transition wash, and sound were not
+exercised by the tester. The new inspection command exposes saved facts; it
+does not turn those remaining native checks into completed measurements.

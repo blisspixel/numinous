@@ -19,6 +19,15 @@ The shared mark ramp, accent band, and color-free touch responses are checked
 against the live catalog. Intentional rendering changes update visual goldens
 after review; attachment, flash, and coverage budgets remain enforced.
 
+For a downloaded player without a window or sound card, `numinous settings`
+and `numinous settings --json` inspect the App's audio preferences. The JSON
+distinguishes first-run defaults from saved levels and includes mute. This is
+a read-only launch snapshot, not a live mixer or device receipt. CLI process
+regressions cover missing, saved, legacy, damaged, and oversized preferences,
+preserve existing bytes, and keep settings inspection independent of damaged
+progress files. Installer self-tests retain the unmarked-root refusal and
+check that it names a fresh archive or separate empty installation directory.
+
 - **Rust** (edition 2024; pinned to 1.97.1 in `rust-toolchain.toml`, with a
   1.89 MSRV checked separately in CI). Install from
   <https://rustup.rs>. On Windows, cargo lands in `%USERPROFILE%\.cargo\bin`; if a

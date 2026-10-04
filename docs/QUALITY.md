@@ -206,6 +206,18 @@ were inspected. Visual and audio goldens retained their existing contracts.
 These are functional and rendering checks; general text scaling, participant
 claims, and current physical lift promotion remain open.
 
+The `v0.5.0-alpha.3` feedback source on 2026-10-04 completed the full Windows
+release gate with no optional checks skipped. The ordinary all-target run
+passed 4,847 cases with the same four diagnostic exclusions; the flash sweep
+and CPU/GPU comparison passed separately. Coverage retained 95.13% regions
+and increased line coverage to 95.00% under unchanged exclusions. CLI process
+regressions cover read-only audio settings, saved/default provenance, legacy
+defaults, damaged progress, and refusal without mutation. Both installer
+self-tests preserve protected roots and check actionable recovery. Visual
+and audio goldens stayed unchanged, and the complete 3,065-frame App matrix,
+study plates, gallery, contact sheet, and audio artifacts were regenerated.
+These checks do not claim live device state or heard audio.
+
 ## Evidence snapshot, 2026-09-01
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,

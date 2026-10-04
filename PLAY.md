@@ -136,6 +136,15 @@ station. Settings also holds Master, Radio, Room Sound, and Effects levels.
 Left and right step each by ten points, and they are kept with your other
 settings. Start pauses a live game behind the menu without discarding it.
 
+Without a window or sound card, run `numinous settings` to read Master, Radio,
+Room Sound, Effects, and mute. `numinous settings --json` reports the same
+values with `source: "defaults"` when no preferences are saved, or
+`source: "saved"` for a valid saved file. It uses the App's shared reader,
+including defaults for fields absent from older schemas. Damaged or unreadable
+preferences produce an error instead of a default snapshot. The command
+changes no files. These are App launch preferences, not live device or hearing
+facts; CLI and MCP sound exports remain pre-master sources.
+
 ### Make something in the Studio
 
 Tab, or Create in the Cabinet, opens the Studio: type a formula and it draws

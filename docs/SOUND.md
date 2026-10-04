@@ -305,7 +305,7 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 ## Accessibility & silence
 
 - **Beautiful in silence.** A prominent, graceful mute. The visuals must fully carry the experience with the sound off (the library, the office, the sleeping-roommate 2am). Muting is never a downgrade.
-- **Full control.** Independent volumes for room sonification, the radio (Engine B), and UI; a master; and a hard mute. Built: Settings holds Master, Radio, Room Sound, and Effects levels, each persisted, plus a hard mute. Interface navigation has no sound of its own yet, so Effects covers game cues.
+- **Full control.** Independent volumes for room sonification, the radio (Engine B), and UI; a master; and a hard mute. Built: Settings holds Master, Radio, Room Sound, and Effects levels, each persisted, plus a hard mute. `numinous settings` and its `--json` mode expose those saved launch preferences or first-run defaults through the same bounded core reader, without changing files or opening an audio device. They do not observe a live mixer or change pre-master exports. Interface navigation has no sound of its own yet, so Effects covers game cues.
 - **No painful surprises.** No sudden loud onsets, no harsh strobing-audio; loudness is managed on the master bus, which ends in a soft limiter (built). Reduce-motion never silences the room, and mute never freezes the visuals.
 
 ## Open questions

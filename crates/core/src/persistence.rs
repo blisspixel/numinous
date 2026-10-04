@@ -16,7 +16,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::project::{
     MAX_PROJECT_FILE_BYTES, ProjectChain, ProjectDocument, ProjectDraft, ProjectError, ProjectStore,
 };
-use crate::{AppPreferences, Journal, JournalRecord, Journey, Scoreboard};
+use crate::{
+    AppPreferences, AppPreferencesSnapshot, Journal, JournalRecord, Journey, PreferencesSource,
+    Scoreboard,
+};
 
 const LOCK_RETRIES: usize = 2500;
 const LOCK_SLEEP: Duration = Duration::from_millis(2);
@@ -914,10 +917,29 @@ pub fn read_journey_file(path: &Path) -> io::Result<Journey> {
 /// Returns an error for unreadable, oversized, unsupported, or malformed
 /// preference files. Callers should surface that failure and retain defaults.
 pub fn read_app_preferences_file(path: &Path) -> io::Result<AppPreferences> {
+    read_app_preferences_snapshot(path).map(|snapshot| snapshot.preferences)
+}
+
+/// Inspect App launch preferences without creating, repairing, or saving files.
+///
+/// Missing files return defaults with explicit provenance. Supported older
+/// schemas use the same migration defaults as an App launch.
+///
+/// # Errors
+/// Returns an error for unreadable, oversized, unsupported, or malformed files,
+/// rather than presenting a failed read as a missing preferences document.
+pub fn read_app_preferences_snapshot(path: &Path) -> io::Result<AppPreferencesSnapshot> {
     match read_local_text_bounded(path, MAX_PREFERENCES_FILE_BYTES) {
         Ok(text) => AppPreferences::try_from_text(&text)
+            .map(|preferences| AppPreferencesSnapshot {
+                preferences,
+                source: PreferencesSource::Saved,
+            })
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error)),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(AppPreferences::default()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(AppPreferencesSnapshot {
+            preferences: AppPreferences::default(),
+            source: PreferencesSource::Defaults,
+        }),
         Err(error) => Err(error),
     }
 }
@@ -1943,8 +1965,9 @@ mod tests {
         Journey, LocalStateEraseSelection, LocalStatePaths, Scoreboard, erase_journal_file,
         erase_local_state, erase_project_file, import_project_file, inspect_local_state,
         keep_project_file, load_journey_file, load_scoreboard_file, persist_app_preferences_file,
-        persist_journey_delta, read_app_preferences_file, record_journal_file, record_score_file,
-        remove_persisted_file, resolve_local_state_paths_with, try_load_project_file,
+        persist_journey_delta, read_app_preferences_file, read_app_preferences_snapshot,
+        record_journal_file, record_score_file, remove_persisted_file,
+        resolve_local_state_paths_with, try_load_project_file,
     };
     use crate::{AppPreferences, Era, WindowModePreference};
     use std::collections::BTreeMap;
@@ -2375,13 +2398,23 @@ mod tests {
             read_app_preferences_file(&path).expect("missing preferences use defaults"),
             AppPreferences::default()
         );
+        let missing = read_app_preferences_snapshot(&path).expect("first-run snapshot");
+        assert_eq!(missing.source, crate::PreferencesSource::Defaults);
+        assert!(!path.exists(), "inspection must not create preferences");
         persist_app_preferences_file(&path, preferences.clone()).expect("persist preferences");
+        let saved = read_app_preferences_snapshot(&path).expect("saved snapshot");
+        assert_eq!(saved.source, crate::PreferencesSource::Saved);
+        assert_eq!(saved.preferences, preferences);
         assert_eq!(
             read_app_preferences_file(&path).expect("read preferences"),
             preferences
         );
 
         std::fs::write(&path, b"broken preferences\n").expect("malformed fixture");
+        assert_eq!(
+            read_app_preferences_snapshot(&path).unwrap_err().kind(),
+            io::ErrorKind::InvalidData
+        );
         let error = persist_app_preferences_file(&path, AppPreferences::default())
             .expect_err("malformed state must not be overwritten");
         assert_eq!(error.kind(), io::ErrorKind::InvalidData);

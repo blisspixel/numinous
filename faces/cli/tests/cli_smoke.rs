@@ -87,6 +87,135 @@ impl Drop for ProjectCliFixture {
 }
 
 #[test]
+fn public_settings_reports_defaults_without_creating_profile_files() {
+    let fixture = ProjectCliFixture::new("settings-defaults");
+    let report = fixture.json(&["settings", "--json"]);
+    let defaults = numinous_core::AppPreferences::default();
+    assert_eq!(report["schema"], "numinous.app-audio-settings");
+    assert_eq!(report["schemaVersion"], 1);
+    assert_eq!(report["source"], "defaults");
+    assert_eq!(report["readOnly"], true);
+    assert_eq!(report["scope"], "app-playback-preferences");
+    assert_eq!(report["levels"]["masterPercent"], defaults.volume_percent);
+    assert_eq!(
+        report["levels"]["radioPercent"],
+        defaults.music_volume_percent
+    );
+    assert_eq!(
+        report["levels"]["roomSoundPercent"],
+        defaults.room_volume_percent
+    );
+    assert_eq!(
+        report["levels"]["effectsPercent"],
+        defaults.effect_volume_percent
+    );
+    assert_eq!(report["muted"], defaults.muted);
+    let text = fixture.run(&["settings"]);
+    assert!(text.status.success());
+    let text = String::from_utf8(text.stdout).unwrap();
+    assert!(text.contains("APP AUDIO SETTINGS (defaults)"));
+    for label in ["Master:", "Radio:", "Room Sound:", "Effects:", "Muted:"] {
+        assert!(text.contains(label), "{label}");
+    }
+    assert_eq!(std::fs::read_dir(&fixture.root).unwrap().count(), 0);
+}
+
+#[test]
+fn public_settings_preserves_saved_levels_and_ignores_damaged_progress() {
+    let fixture = ProjectCliFixture::new("settings-saved");
+    let preferences = numinous_core::AppPreferences {
+        volume_percent: 17,
+        music_volume_percent: 23,
+        room_volume_percent: 31,
+        effect_volume_percent: 47,
+        muted: true,
+        ..Default::default()
+    };
+    let files = [
+        ("preferences.txt", preferences.to_text()),
+        ("journey.txt", "damaged journey\n".into()),
+        ("scores.txt", "damaged scores\n".into()),
+    ];
+    for (name, text) in &files {
+        std::fs::write(fixture.root.join(name), text).unwrap();
+    }
+    for _ in 0..3 {
+        let output = fixture.run(&["settings", "--json"]);
+        assert!(output.status.success());
+        assert!(
+            output.stderr.is_empty(),
+            "settings must not inspect progress"
+        );
+        let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(report["source"], "saved");
+        assert_eq!(
+            report["levels"],
+            serde_json::json!({
+                "masterPercent": 17, "radioPercent": 23,
+                "roomSoundPercent": 31, "effectsPercent": 47,
+            })
+        );
+        assert_eq!(report["muted"], true);
+        for (name, text) in &files {
+            assert_eq!(
+                std::fs::read_to_string(fixture.root.join(name)).unwrap(),
+                *text
+            );
+        }
+        assert_eq!(
+            std::fs::read_dir(&fixture.root).unwrap().count(),
+            files.len()
+        );
+    }
+}
+
+#[test]
+fn public_settings_uses_shared_legacy_defaults_without_upgrading_the_file() {
+    let fixture = ProjectCliFixture::new("settings-legacy");
+    let legacy =
+        "NUMINOUS_PREFERENCES 1\nvolume_percent 17\nmuted true\nera modern\nwindow_mode windowed\n";
+    let path = fixture.root.join("preferences.txt");
+    std::fs::write(&path, legacy).unwrap();
+    let report = fixture.json(&["settings", "--json"]);
+    assert_eq!(report["source"], "saved");
+    assert_eq!(report["levels"]["masterPercent"], 17);
+    for name in ["radioPercent", "roomSoundPercent", "effectsPercent"] {
+        assert_eq!(report["levels"][name], 100);
+    }
+    assert_eq!(std::fs::read_to_string(path).unwrap(), legacy);
+    assert_eq!(std::fs::read_dir(&fixture.root).unwrap().count(), 1);
+}
+
+#[test]
+fn public_settings_refuses_damaged_or_oversized_files_without_mutation() {
+    let fixture = ProjectCliFixture::new("settings-damaged");
+    let path = fixture.root.join("preferences.txt");
+    for data in [
+        vec![],
+        b"unsupported preferences\n".to_vec(),
+        vec![b'x'; 4097],
+    ] {
+        std::fs::write(&path, &data).unwrap();
+        for arguments in [&["settings"][..], &["settings", "--json"][..]] {
+            let output = fixture.run(arguments);
+            assert!(!output.status.success());
+            assert!(output.stdout.is_empty());
+            assert!(
+                String::from_utf8(output.stderr)
+                    .unwrap()
+                    .contains("Could not read saved App settings")
+            );
+            assert_eq!(std::fs::read(&path).unwrap(), data);
+            assert_eq!(std::fs::read_dir(&fixture.root).unwrap().count(), 1);
+        }
+    }
+    std::fs::remove_file(&path).unwrap();
+    std::fs::create_dir(&path).unwrap();
+    assert!(!fixture.run(&["settings", "--json"]).status.success());
+    assert!(path.is_dir());
+}
+
+#[test]
 fn public_native_route_question_roundtrip_preserves_document_and_open_next() {
     assert_route_question_roundtrip(
         "native-route-question",

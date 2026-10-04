@@ -5,6 +5,21 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+## [0.5.0-alpha.3] - 2026-10-04
+
+### Added
+- `numinous settings` and `numinous settings --json` report Master, Radio,
+  Room Sound, Effects, and mute without a window or sound card. A shared core
+  snapshot distinguishes first-run defaults from valid saved preferences,
+  including legacy defaults. Inspection reads no progression and changes no
+  files; malformed, oversized, or unreadable preferences return an error.
+  These are App launch settings, not a claim about live or heard playback.
+
+### Fixed
+- The protected unmarked-install refusal names its recovery: download a fresh
+  archive or install into a separate empty directory, keeping the old tree
+  intact. Both installers retain their existing ownership checks.
+
 ## [0.5.0-alpha.2] - 2026-10-04
 
 ### Fixed
