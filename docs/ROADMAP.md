@@ -999,9 +999,10 @@ on equal terms. This is a values commitment, not a feature, and it holds from
 
 ### Cross-cutting tracks (every version, always on)
 
-- **The quality loops (`QUALITY.md`):** the commit loop is partially enforced.
-  Nightly, content-evaluation, agent-playtest, human-playtest, and refinement
-  loops remain explicitly designed work.
+- **The quality loops (`QUALITY.md`):** the commit floor, nightly machine soak,
+  source-bound catalog audits, and scripted hallway, tactile, and first-contact
+  checks are enforced. Independent content evaluation, voluntary participant
+  feedback, and the continuing refinement loop still need separate evidence.
 - **Beauty QA:** a deterministic matrix of 3065 screens covers eight states per room
   plus every persistent game display branch, overlays, The Show, Studio, and
   reset and phase flows, plus a five-frame persistent Life sequence, with 14
@@ -1012,18 +1013,20 @@ on equal terms. This is a values commitment, not a feature, and it holds from
   plus coarse support, adjacent-tile, and color-change floors. A single-writer
   guard prevents competing generators from corrupting the evidence directory,
   but automated perceptual regression does not exist. Before 1.0, add that
-  harness and human screen-by-screen reviews of every room, Era, mode, overlay,
-  and game state.
-- **The hallway test and diverse focus groups:** run the five-strangers test for
-  0.2, then repeat formative sessions at later gates. Before 1.0, include every
-  face, non-English speakers, children, and assistive-technology users.
+  harness and review the composed states of every room, Era, mode, overlay,
+  and game. Human screen reviews are optional feedback, not a release gate.
+- **The hallway test and diverse focus groups:** source-blind agent rounds
+  exercise every face before a candidate. Human stranger sessions and diverse
+  groups, including non-English speakers, children, and assistive-technology
+  users, are optional feedback. Only sessions actually run support usability
+  claims about those participants.
 - **Fun for digital minds:** if a digital mind separately consents to a
   playtest, treat its voluntary report as first-class participant feedback,
   never a consciousness test or player score. Existing synthetic playtest
   personas are design input, not observation of a digital being.
 - **Performance budget:** the app enforces an adaptive 33 ms room-render target
-  on the measured Windows machine. Nightly soak and representative hardware
-  coverage remain future gates.
+  on the measured Windows machine. Nightly machine soak is enforced;
+  representative physical hardware coverage remains open.
 - **Math correctness:** tests and cited references support current claims.
   Independent mathematical review remains a release gate and is not staffed.
 - **Accessibility:** hard mute and keyboard plus pointer operation ship today.
@@ -1040,7 +1043,10 @@ on equal terms. This is a values commitment, not a feature, and it holds from
 ### Definition of done for a 1.0 room
 
 A room is complete for 1.0 only when **all** are true. Catalog presence in an
-alpha does not imply that it has cleared this bar:
+alpha does not imply that it has cleared this bar. On the release track,
+hallway checks use source-blind agent sessions and committed room scorecards.
+Human awe and flow remain optional observations and are claimed only when
+measured; a scripted pass does not establish them:
 - [ ] Awe in <10 seconds with zero words (passes the hallway test).
 - [ ] Toy layer is fun with no goal and has no fail state.
 - [ ] Makes tuned, musical sound that reinforces the math.
