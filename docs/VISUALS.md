@@ -172,6 +172,9 @@ Settings and reader controls. Source positions anchor resizing and size
 changes, and the room's clock and accepted
 input history are held while reading. Cabinet and room HUD lettering keep
 their existing pixel faces. General Cabinet and HUD text scaling remains open.
+The compact 360 by 240 Hilbert and Wireworld plates also show long titles and
+status badges competing for the header. That pass must reserve separate space
+for the title and status before claiming the compact layout is complete.
 
 This reading boundary does not add Unicode naming or IME editing to Studio,
 translate the full App shell, or provide complete Unicode glyph coverage. It

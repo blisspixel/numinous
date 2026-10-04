@@ -175,6 +175,20 @@ required software-Vulkan CI job, and local gates check ignored-test wiring.
 These are machine and rendering checks; physical lift qualification and
 listening comfort remain open.
 
+The `v0.5.0-alpha.1` Sensory Alpha source on 2026-10-04 completed the full
+Windows release gate. The ordinary all-target run passed 4,832 test cases
+with four diagnostics excluded; the full gate separately ran the catalog
+flash sweep and native CPU/GPU color comparison. Coverage measured 94.81%
+regions and lines under the existing exclusions, matching the preceding
+release. Catalog checks cover mark lightness, accent contrast, color-free
+touch visibility, remaining dichromacy distinctions, and Rule 30's named
+ambient evolution. Only the Life and Galton flagship image goldens changed;
+audio golden metrics remained unchanged. The complete 3,065-frame App matrix,
+study plates, gallery, contact sheet, and audio artifacts were regenerated.
+Representative room plates and compact study, footer, and audio-state
+frames were inspected. These are functional and rendering checks, not
+participant enjoyment, disability usability, or current physical promotion.
+
 ## Evidence snapshot, 2026-09-01
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
@@ -443,9 +457,12 @@ targets until their harnesses and fixtures exist in the repository.
 - **Determinism tests**: same seed produces the identical frame and audio (bit-exact on the same GPU; within tolerance cross-GPU). A `.num` seed file / `numinous://` link round-trips to the exact state it captured.
 - **Style + house-rules guard**: automated check that copy and code contain no emojis, no em-dashes, and no AI/tool attribution (all CI-enforced), plus lint, type, and format (see `ENGINEERING.md`).
 
-### 2. Nightly loop (designed, not implemented)
+### 2. Nightly loop (machine checks enforced; physical fleet open)
 
-No nightly workflow or real-hardware runner fleet exists yet. The intended scope is:
+The nightly workflow runs scripted play, creator parity, accessibility sweeps,
+flash and color audits, composed-screen contracts, and machine soak. It does
+not establish participant enjoyment or replace a real-hardware runner fleet.
+The broader physical and endurance scope remains:
 - **Performance regression:** track frame time per room, Era, and GPU tier
   against a declared budget. The current adaptive live-render measurement and
   focused five-flagship reference gate are starting points, not the planned
@@ -467,21 +484,22 @@ line of UI copy would run through an automated evaluation before it ships.
 - **Calibration is mandatory**: the judge is validated against a **human-labeled golden set** and must hit 75 to 90 percent agreement before we trust it, and it is re-calibrated as content grows. We actively counter known judge biases (verbosity, position, self-preference), and give the judge a human-written exemplar as a quality anchor.
 - **Math correctness is a separate, stricter gate.** No AI has the final word on whether the math is right. Every mathematical claim is checked against known results / a computer-algebra system *and* signed off by a human mathematician. A wrong sign or a fudged theorem is a release blocker (see `VISION.md` on PhD-real rigor). The AI judge flags dubious claims for the human; it never clears them.
 
-### 4. Playtest loop (agent bar for 0.2; human bar for 0.8 / 1.0)
+### 4. Playtest loop (machine release track; optional human feedback)
 - **Agent and machine bar (0.2):** `scripts/agent-hallway.py` and focused App/MCP
   tests on Times Tables and Buffon engineered ahas. Generation-before-reveal must
   hold; cold open must not leak punchline reveal. This is the standing 0.2 proof
   under founder policy (no pre-0.2 wait on recruited humans).
-- **Formalized human hallway (0.8 / 1.0):** five-plus strangers (a mix of
-  math-lovers and math-avoiders), no explanation, a written protocol. Count
-  unprompted "whoa"s, spontaneous shares, "just one more" continuations, and
-  where attention drops. Repeatable, scored, run at late phase gates (see
-  `ROADMAP.md`).
+- **Optional human hallway:** five-plus strangers (a mix of math-lovers and
+  math-avoiders), no explanation, a written protocol. Count unprompted
+  "whoa"s, spontaneous shares, "just one more" continuations, and where
+  attention drops. These observations inform refinement and support claims
+  about those sessions; recruiting participants does not gate a release.
 
 #### Running the hallway test (the facilitator sheet)
 
 The F9 capture path and facilitator protocol are implemented. No stranger cohort
-has completed this gate yet. A session needs one facilitator, one machine, and
+has completed this protocol yet. An optional session needs one facilitator,
+one machine, and
 five to fifteen minutes per person.
 
 1. **Setup (once).** `cargo run --bin numinous-app`. Sound on (do not launch
@@ -510,19 +528,24 @@ five to fifteen minutes per person.
 5. **Afterwards (optional, adds the tracked number).** Have them fill the
    short GEQ or flow scale (the note has fields for the score and which
    instrument); staple the answer to the note by filename.
-6. **Scoring the gate.** Across five-plus people: at least one unprompted
-   "whoa," at least one who keeps playing past "done," at least one who asks
-   to share. That is the 0.2 exit bar (`ROADMAP.md`); count honestly, and
-   where the bar fails, the notes name the room to fix.
+6. **Scoring the observations.** Across five-plus people: record unprompted
+   "whoa"s, continued play past "done," and requests to share. Count honestly;
+   where the intended response is absent, the notes name the room to refine.
+   This protocol does not close a machine release gate.
 
 Do not batch the fixes invisibly: each session's notes become the next
 cycle's fix list, and the test reruns at the next gate.
-The hallway result gates the milestone claim, not ongoing engineering. While
-participants are being arranged, reproduced defects and structured simulated
-review continue to drive 0.3 depth, input, accessibility, audio, and quality
-work. Simulated review never substitutes for participant evidence.
+Human hallway results support only the participant claims actually measured.
+They do not gate version progression or publication. Reproduced defects,
+source-blind agent rounds, and machine checks drive continuing depth, input,
+accessibility, audio, and quality work. Simulated review never substitutes
+for participant evidence.
 - **Validated instruments**, so "is it fun" becomes a number we can track over time: administer the **Game Experience Questionnaire (GEQ)** (Immersion, Flow, Competence, Affect, Tension, Challenge), a **Flow scale (FSS-2 / DFS-2)**, and/or the **GUESS** satisfaction scale after sessions. These are psychometrically validated; we are not inventing a fun-meter, we are using the field's.
-- **Per-room Fun Scorecard**: combine hallway metrics, GEQ/flow scores, and telemetry proxies into one score per room. A room that "works" but scores low on awe/flow gets refined or cut. This is a real release gate, not a vibe.
+- **Per-room Fun Scorecard:** commit the room's interaction, discovery,
+  depth, clarity, and recovery evidence. Source-blind agent review and machine
+  checks support the release track. Add human hallway metrics, GEQ/flow scores,
+  and voluntary-return observations only when collected, without inventing a
+  participant score from scripted proxies. Weak rooms get refined or cut.
 - **Digital-mind participants (see `DIGITAL_MINDS.md`):** when a real system
   participates, ask about its experience and preserve its report as participant
   data without treating a compression-progress metric as proof of fun or
@@ -677,9 +700,10 @@ The dated landing notes are in the
 - **0.3 to 0.5**: add property, perceptual, audio, accessibility, and performance
   harnesses as their corresponding product systems mature.
 - **0.6 to 0.9**: real-platform execution, soak, packaging, release provenance,
-  and human stranger / a11y sessions for keep, cut, and tuning.
-- **1.0 and later**: automation may assist refinement, but representative human
-  playtests and mathematical review still close First Light.
+  with optional human stranger / a11y sessions for keep, cut, and tuning.
+- **1.0 and later**: the machine exits and independent mathematical review
+  close First Light. Human playtests remain optional feedback and support only
+  the participant claims actually observed.
 
 ## Anti-patterns
 
