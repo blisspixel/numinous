@@ -15,7 +15,7 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 Reviewed 2026-10-03.
 
-**Current release state: 0.4.0-alpha.33, Understanding Alpha active with its
+**Current release state: 0.4.0-alpha.34, Understanding Alpha active with its
 exit open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile
 Alpha agent-and-machine exits are met and stay CI-locked. The alpha suffix
 says the 0.4 exit remains open: external registration, calibration,
@@ -52,7 +52,7 @@ with the labels from `RESEARCH.md`.
 
 | # | Next move | Evidence today | Done when | Owner doc |
 |---|---|---|---|---|
-| 1 | **The Sensory Lift** | Measured: the GPU post stack and direct surface pass their integrated-GPU budgets, and a Windows physical pair passed on the Framework 13 reference at an earlier revision. In progress: the closed set needs all six physical receipts at one frozen revision; the first native macOS attempt was refused because the console session was locked, and the Linux probe is built and awaits a desktop session. Built: room changes through the dark stage, critically damped drag dials and Studio knobs, a transition flash guard, and one shared master chain with reverb, shaped envelopes, independent music, effect, and room levels, and room-change audio washes; audio goldens follow the new articulation. Built: one smooth Mandelbrot color field across CPU and GPU, with the main cardioid and period-two bulb answered in closed form. In progress on an unmerged branch: the ink ramp and soft light inside `Raster` (`lift-light`). Designed: player text scale and the accent lightness band | The six physical receipts close the set, the lift is promoted, and the visual goldens re-baseline once, deliberately, with it | `PERFORMANCE.md`, `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md` |
+| 1 | **The Sensory Lift** | Measured: the GPU post stack and direct surface pass their integrated-GPU budgets, and a Windows physical pair passed on the Framework 13 reference at an earlier revision. In progress: the closed set needs all six physical receipts at one frozen revision; the first native macOS attempt was refused because the console session was locked, and the Linux probe is built and awaits a desktop session. Built: room changes through the dark stage, critically damped drag dials and Studio knobs, a transition flash guard, and one shared master chain with reverb, shaped envelopes, independent music, effect, and room levels, and room-change audio washes; audio goldens follow the new articulation. Built: one smooth Mandelbrot color field across CPU and GPU, with the main cardioid and period-two bulb answered in closed form. In progress on an unmerged branch: the ink ramp and soft light inside `Raster` (`lift-light`). Built: persisted study body text sizes with source-anchored reflow. Open: general Cabinet and HUD text scaling. Designed: the accent lightness band | The six physical receipts close the set, the lift is promoted, and the visual goldens re-baseline once, deliberately, with it | `PERFORMANCE.md`, `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md` |
 | 2 | **Mathematical honesty and photosensitivity** | Built: an exact or dithered iterator for the expanding maps, so no slope-2 map collapses to zero in binary floating point; Coupled Tents, Gauss Map, Ricker, and Pickover redrawn honestly and inside the measured flash budget; the flash sweep measured at the App's 60 frames a second up to its fastest 8x speed. Open: three rooms flash only at 8x (decisions entry 2) | The 8x remainder carries an owner ruling, either a speed cap or tour pacing, and no room presents a floating-point artifact as dynamics | `MATHEMATICS.md`, decisions entry 2 |
 | 3 | **The arc** | Built: the three-door threshold in the App and over MCP; the caller-paced Show for minds; an App Show that names each room without printing its reveal unasked; core Show director profiles with seeded, contrast-aware ordering that keeps staged answers unperformed; the Front Hall collection; and The Overture as a core score that minds can play over MCP `watch_show`. Designed: App playback of the Overture, after the lift's audio bus | A first visit meets an authored opening rather than catalog order, and the App plays it in the lifted light | `DESIGN.md`, `INSIGHTS.md` |
 | 4 | **Vibe: radio and chill** | Built: the radio's three stations of original tracks on a live broadcast clock, a music visualizer that already quickens The Show with the mix's energy, and per-room tempo and key in the core Show director. Designed: one lean-back mode where a station plays through and the music chooses and paces the rooms, with screensaver manners (`DESIGN.md`, "Vibe: radio and chill") | Numinous can be left on for hours like a radio: the music leads, rooms change on its seams inside the certified flash envelope, no text or prompts appear, and any touch hands the current room back | `DESIGN.md`, `MUSIC.md` |
@@ -175,11 +175,12 @@ longer hides a status that fit at a smaller size. A width sweep and composed
 native raster regression require the default window to preserve both fields.
 Explicit user-selected text scaling remains the separate decision below.
 
-**9. Should player-set text scaling and separate music, effect and room volume
-be built?** Both are named 0.5 deliverables and neither exists. The 0.5 row has
-never claimed them. Text scale is threaded through dozens of call sites and the
-interface fits text by truncation, so a player-set scale reshapes every screen
-and interacts with every fitting rule.
+**9. General App text scaling remains open; separate source volumes are built.**
+Settings persists independent music, effect, and room levels beneath master.
+The study reader now offers persisted 100, 125, and 150 percent body text,
+reflowing around source positions without enlarging its navigation. General
+Cabinet and HUD scaling is still open: their scale crosses many fitting rules,
+and a player-set scale must preserve every screen's readable controls.
 
 **10. Clean-machine execution, App and device evidence, and code signing.**
 Needs real machines, at least two GPU vendors, and certificates. The physical
@@ -328,6 +329,9 @@ and curated facts about the world stay out with the external call.
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
 
+- **Alpha 34 (2026-10-03):** persisted study body text sizes with source-anchored
+  reflow, fixed navigation, and Settings pagination at medium window sizes
+  (`STUDY.md`, `VISUALS.md`).
 - **Alpha 33 (2026-10-03):** oversized MCP WAV attachments retain their notes,
   explicit omission, and Show continuation in full and compact replies,
   with preflight before synthesis and a documented full-length CLI export
@@ -893,7 +897,7 @@ survival to one wallet or one person's attention.
 | 0.2 Flagship | Met + CI-locked | agent-hallway, ahas, goldens |
 | 0.3 Tactile | Met + CI-locked | agent-tactile, first-contact |
 | 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort owner-blocked |
-| 0.5 Sensory | Partial | Built: flagship visual and audio goldens, reduced motion, `NO_COLOR` across all terminal surfaces, mono downmix, source-bound color-independence sweeps (`docs/evidence/color-independence.json`), and regression-locked Studio gaps, reading visibility, cursor visibility, native footer scaling, and independent music, effect, and room volumes. Open: physical Sensory Lift promotion, perceptual regression, and text scale. Automated evidence does not establish human sensory or disability usability |
+| 0.5 Sensory | Partial | Built: flagship visual and audio goldens, reduced motion, `NO_COLOR` across all terminal surfaces, mono downmix, source-bound color-independence sweeps (`docs/evidence/color-independence.json`), and regression-locked Studio gaps, reading visibility, cursor visibility, native footer scaling, persisted study body text sizes, and independent music, effect, and room volumes. Open: physical Sensory Lift promotion, perceptual regression, and general Cabinet and HUD text scaling. Automated evidence does not establish human sensory or disability usability |
 | 0.6 Portable | Partial | Built: release packaging; engagement smoke judged on signal and PNG geometry against a freshly built binary through one shared resolver; provenance and SBOM; a nightly install, play, and uninstall roundtrip on three operating systems that keeps every player-owned file byte-identical; commit-pinned workflow actions; all 42 bundled tracks decoded nightly on each platform; and every ignored test named by a workflow or script. Open: physical clean-machine sessions and signing |
 | 0.7 Creator | Partial | Built: the CLI creator gate (12 checks); CLI and MCP parity (20 plot and 14 sing cases through face-neutral core types, with measured WAV pitch); exact App reopen, F4 share with `melody.mid`, the F5 Gallery with its remix tree; capsule versions 3 to 7; Euclidean rhythms, pattern text, step grid, tracker formulas, piano roll, and named pitches. Open: MusicXML |
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |

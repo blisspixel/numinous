@@ -421,6 +421,7 @@ struct App {
     preferred_window_mode: numinous_core::WindowModePreference,
     /// Player-selected study language, independent of room state and shell copy.
     study_locale: numinous_core::study::StudyLocale,
+    study_text_size: numinous_core::StudyTextSize,
     study: Option<study_runtime::ActiveStudy>,
     /// Command-key identities currently down, including presses before study.
     pressed_keys: std::collections::HashSet<Key>,
@@ -693,6 +694,7 @@ impl App {
             effect_volume_percent: preferences.effect_volume_percent,
             preferred_window_mode: preferences.window_mode,
             study_locale: preferences.study_locale,
+            study_text_size: preferences.study_text_size,
             study: None,
             pressed_keys: std::collections::HashSet::new(),
             study_keys: std::collections::HashSet::new(),
@@ -1467,6 +1469,7 @@ impl App {
             era: self.era,
             window_mode: self.preferred_window_mode,
             study_locale: self.study_locale.clone(),
+            study_text_size: self.study_text_size,
         }
     }
 
@@ -2228,6 +2231,7 @@ impl App {
             self.input_mode,
             self.gamepad.controller_copy(),
             menu::MenuReadout {
+                study_text_size: self.study_text_size,
                 volume_percent: (self.volume * 100.0).round().clamp(0.0, 100.0) as u8,
                 music_percent: self.music_volume_percent,
                 room_percent: self.room_volume_percent,

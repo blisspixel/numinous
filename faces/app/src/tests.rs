@@ -3431,6 +3431,7 @@ fn app_options_persist_one_versioned_preference_snapshot() {
             era: numinous_core::Era::Phosphor,
             window_mode: numinous_core::WindowModePreference::Windowed,
             study_locale: numinous_core::study::StudyLocale::default(),
+            study_text_size: numinous_core::StudyTextSize::default(),
         }
     );
     let _ = std::fs::remove_file(path);

@@ -420,7 +420,12 @@ and Japanese study content; its Japanese text is a reviewed draft, not a claim
 of native-speaker validation. Other room text falls back explicitly to English.
 This does not add Unicode naming or IME input to Studio, translate the full
 App shell, or establish complete glyph coverage. [Study](STUDY.md) describes
-the remaining boundaries and the saved study-language preference.
+the remaining boundaries and the saved study-language preference. Settings >
+Reading Text offers 100, 125, or 150 percent body text; the reader's A-/A+
+buttons or minus/plus keys (equals also enlarges) change it in place. Reading
+position follows the reflow, and the size persists across rooms and launches.
+Brackets retain their volume shortcuts while reading. This setting applies
+to the study body, with general Cabinet and HUD text scaling still open.
 
 ---
 

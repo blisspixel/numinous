@@ -83,6 +83,7 @@ pub enum MenuItemId {
     Mute,
     VisualEra,
     WindowMode,
+    StudyTextSize,
     SkipTrack,
     Controls,
     /// One wing of the catalog, by its position in the shared wing list.
@@ -147,6 +148,8 @@ pub enum NumericSetting {
     RoomVolume,
     /// Game cues, beneath master.
     EffectVolume,
+    /// The optional study reader's body text size.
+    StudyTextSize,
 }
 
 impl NumericSetting {
@@ -338,7 +341,7 @@ const GAME_ITEMS: [MenuItem; 6] = [
     },
 ];
 
-const SETTINGS_ITEMS: [MenuItem; 9] = [
+const SETTINGS_ITEMS: [MenuItem; 10] = [
     MenuItem {
         id: MenuItemId::MasterVolume,
         title: "MASTER",
@@ -394,6 +397,13 @@ const SETTINGS_ITEMS: [MenuItem; 9] = [
         description: "PLAY THE NEXT CACHED TRACK ON THE CURRENT RADIO STATION.",
         shortcut: Some('n'),
         action: MenuAction::Intent(MenuIntent::SkipRadioTrack),
+    },
+    MenuItem {
+        id: MenuItemId::StudyTextSize,
+        title: "READING TEXT",
+        description: "SET THE STUDY READER'S BODY TEXT SIZE. ITS WORDS REFLOW TO FIT.",
+        shortcut: None,
+        action: MenuAction::Adjust(NumericSetting::StudyTextSize),
     },
     MenuItem {
         id: MenuItemId::Back,
@@ -742,6 +752,17 @@ impl MenuState {
         if let Some(next) = layout.neighbor(self.focused, direction) {
             self.focused = next;
             self.clear_pointer();
+        } else if matches!(direction, Direction::Up | Direction::Down) {
+            let route_items = state_items(self);
+            let current = route_items.iter().position(|item| item.id == self.focused);
+            let delta = if direction == Direction::Up { -1 } else { 1 };
+            if let Some(next) = current
+                .and_then(|index| index.checked_add_signed(delta))
+                .and_then(|index| route_items.get(index))
+            {
+                self.focused = next.id;
+                self.clear_pointer();
+            }
         }
     }
 
@@ -994,10 +1015,25 @@ impl MenuLayout {
             row_scale =
                 fitting_row_scale(text_scale, route_items.len(), content_bottom - content_top);
             let row_height = menu_row_height(row_scale);
-            let total_height = row_height * route_items.len() as i32;
-            let available = (content_bottom - content_top).max(total_height);
+            let available = (content_bottom - content_top).max(row_height);
+            let visible_count = route_items
+                .len()
+                .min((available / row_height).max(1) as usize);
+            let focused_index = route_items
+                .iter()
+                .position(|item| item.id == state.focused)
+                .unwrap_or(0);
+            let start = focused_index
+                .saturating_sub(visible_count / 2)
+                .min(route_items.len() - visible_count);
+            let total_height = row_height * visible_count as i32;
             let top = content_top + (available - total_height) / 2;
-            for (index, item) in route_items.iter().enumerate() {
+            for (index, item) in route_items
+                .iter()
+                .skip(start)
+                .take(visible_count)
+                .enumerate()
+            {
                 placed.push(MenuItemLayout {
                     id: item.id,
                     rect: Rect {
@@ -1068,6 +1104,7 @@ impl MenuLayout {
 
 #[derive(Debug, Clone, Copy)]
 pub struct MenuReadout<'a> {
+    pub study_text_size: numinous_core::StudyTextSize,
     pub volume_percent: u8,
     pub music_percent: u8,
     pub room_percent: u8,
@@ -1091,6 +1128,7 @@ fn item_value(id: MenuItemId, readout: MenuReadout<'_>) -> Option<String> {
         MenuItemId::Mute => Some(if readout.muted { "ON" } else { "OFF" }.to_string()),
         MenuItemId::VisualEra => Some(readout.era.to_uppercase()),
         MenuItemId::WindowMode => Some(readout.window_mode.to_uppercase()),
+        MenuItemId::StudyTextSize => Some(format!("{}%", readout.study_text_size.percent())),
         _ => None,
     }
 }
@@ -1194,7 +1232,7 @@ pub fn draw_menu(
         } else {
             item_layout.rect.x + 12 * scale
         };
-        let label_x = if input_mode == InputMode::KeyboardMouse {
+        let label_x = if input_mode == InputMode::KeyboardMouse && item.shortcut.is_some() {
             if layout.compact {
                 item_layout.rect.x + 80
             } else {
@@ -1305,7 +1343,7 @@ pub fn draw_menu(
         }
     }
 
-    if layout.compact && state.route() != MenuRoute::Controls {
+    if layout.items.len() < state_items(state).len() && state.route() != MenuRoute::Controls {
         let route_items = state_items(state);
         let position = route_items
             .iter()
@@ -1313,7 +1351,8 @@ pub fn draw_menu(
             .unwrap_or(0)
             + 1;
         let counter = format!("{position} / {}", route_items.len());
-        menu_font::draw_text(raster, &counter, 12, 42, 1, '*');
+        let scale = if layout.compact { 1 } else { auxiliary_scale };
+        menu_font::draw_text(raster, &counter, 12, 42, scale, '*');
     }
     layout
 }
@@ -1414,6 +1453,7 @@ mod tests {
 
     fn readout() -> MenuReadout<'static> {
         MenuReadout {
+            study_text_size: numinous_core::StudyTextSize::default(),
             volume_percent: 45,
             music_percent: 100,
             room_percent: 80,
@@ -1707,12 +1747,16 @@ mod tests {
                 }
             }
         }
-        assert_eq!(numeric_rows, 4, "the Settings route lists the four levels");
+        assert_eq!(
+            numeric_rows, 5,
+            "the Settings route lists audio levels and reading size"
+        );
         for setting in [
             NumericSetting::MasterVolume,
             NumericSetting::MusicVolume,
             NumericSetting::RoomVolume,
             NumericSetting::EffectVolume,
+            NumericSetting::StudyTextSize,
         ] {
             assert!(!setting.title().is_empty(), "{setting:?} is a listed row");
         }
@@ -1737,6 +1781,7 @@ mod tests {
                 ("RADIO", NumericSetting::MusicVolume),
                 ("ROOM SOUND", NumericSetting::RoomVolume),
                 ("EFFECTS", NumericSetting::EffectVolume),
+                ("READING TEXT", NumericSetting::StudyTextSize),
             ]
         );
         let readout = readout();
@@ -1789,6 +1834,37 @@ mod tests {
         assert_eq!(fitting_row_scale(6, 9, 461), 5);
         assert_eq!(fitting_row_scale(6, 6, 461), 6);
         assert_eq!(fitting_row_scale(6, 40, 461), MIN_DESKTOP_ROW_SCALE);
+    }
+
+    #[test]
+    fn paged_desktop_settings_keep_every_row_reachable_and_clear_of_the_footer() {
+        for size in [(600, 520), (600, 600), (900, 700)] {
+            let mut state = MenuState::launch();
+            let _ = state.activate_shortcut('s');
+            let ids: Vec<_> = state_items(&state).iter().map(|item| item.id).collect();
+            for (direction, expected) in [
+                (Direction::Down, ids.clone()),
+                (Direction::Up, ids.iter().rev().copied().collect()),
+            ] {
+                for (index, id) in expected.into_iter().enumerate() {
+                    if index > 0 {
+                        let layout = MenuLayout::new(&state, size.0, size.1);
+                        state.move_spatial(&layout, direction);
+                    }
+                    assert_eq!(state.focused(), id);
+                    let layout = MenuLayout::new(&state, size.0, size.1);
+                    let item = layout.items.iter().find(|item| item.id == id).unwrap();
+                    let footer_top = size.1 as i32
+                        - menu_footer_reserve(menu_text_scale(size.0, size.1, false), false);
+                    assert!(item.rect.y + item.rect.height <= footer_top);
+                    let point = (
+                        (item.rect.x + item.rect.width / 2) as f64 / size.0 as f64,
+                        (item.rect.y + item.rect.height / 2) as f64 / size.1 as f64,
+                    );
+                    assert_eq!(layout.item_at(point), Some(id));
+                }
+            }
+        }
     }
 
     #[test]

@@ -71,10 +71,13 @@ hosts can also load the [portable plugin](plugins/numinous).
 
 ## Current state
 
-**0.4.0-alpha.33** is a playable alpha with 356 catalog rooms, games, Journey,
+**0.4.0-alpha.34** is a playable alpha with 356 catalog rooms, games, Journey,
 Studio, controllers, and built-in music. It is still under development:
 Understanding Alpha, the milestone that tests whether play builds lasting
 understanding, is active.
+
+The App's study reader offers saved 100, 125, and 150 percent body text through
+Settings > Reading Text and A-/A+ controls, retaining your place as words reflow.
 
 The [roadmap](https://github.com/blisspixel/numinous/blob/main/docs/ROADMAP.md#now)
 owns what is built and what comes next.

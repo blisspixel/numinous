@@ -113,7 +113,12 @@ to your place. U chooses or leaves a staged experiment where offered; Enter
 advances its earned connection. Other rooms keep the optional number
 prediction: aim with the hand or arrow keys and press Enter.
 [Study](https://github.com/blisspixel/numinous/blob/main/docs/STUDY.md)
-explains the reader, available depths, and language choice.
+explains the reader, available depths, and language choice. Settings > Reading
+Text selects 100, 125, or 150 percent body text; Left/Right steps the selected
+size in Settings. Inside the reader, click A-/A+
+or press minus/plus (equals also enlarges). The words reflow around your
+reading position; navigation stays fixed. Your size is saved for later rooms
+and launches. Brackets still change volume while reading.
 
 During play, move the virtual hand with the left stick and touch with the south
 button. The bumpers change rooms, the D-pad drives games, the triggers change

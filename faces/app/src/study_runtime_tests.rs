@@ -691,6 +691,84 @@ fn explicit_study_language_changes_only_the_preference_and_reader() {
 }
 
 #[test]
+fn explicit_reading_size_changes_only_the_preference_and_reader_and_survives_reopening() {
+    use super::menu::{NumericSetting, Step};
+    use numinous_core::StudyTextSize;
+
+    let mut app = room_app("lissajous", "study-size-preference");
+    assert!(app.open_room_study());
+    let before = RetainedPlay::capture(&app);
+    let mut expected = app.preferences();
+    assert!(app.handle_study_key(&key("="), false));
+    expected.study_text_size = StudyTextSize::Large;
+    assert_eq!(
+        app.study.as_ref().unwrap().reader.text_size(),
+        expected.study_text_size
+    );
+    assert_eq!(
+        numinous_core::read_app_preferences_file(&app.preferences_file).unwrap(),
+        expected
+    );
+    let after = files_below(&before.root);
+    let preference = app.preferences_file.strip_prefix(&before.root).unwrap();
+    assert_eq!(after.len(), before.files.len());
+    for (path, contents) in &before.files {
+        if path != preference {
+            assert_eq!(&after[path], contents);
+        }
+    }
+    assert!(app.handle_study_key(&key("="), true));
+    assert_eq!(files_below(&before.root), after);
+    assert_eq!(app.study_text_size, StudyTextSize::Large);
+    assert!(app.handle_study_key(&key("L"), false));
+    assert_eq!(
+        app.study.as_ref().unwrap().reader.text_size(),
+        StudyTextSize::Large
+    );
+    app.close_room_study();
+    assert!(app.open_room_study());
+    assert_eq!(
+        app.study.as_ref().unwrap().reader.text_size(),
+        StudyTextSize::Large
+    );
+    before.assert_play_unchanged(&app);
+    app.adjust_setting(NumericSetting::StudyTextSize, Step::Up);
+    assert_eq!(
+        app.study.as_ref().unwrap().reader.text_size(),
+        StudyTextSize::ExtraLarge
+    );
+    let at_limit = files_below(&before.root);
+    assert!(app.handle_study_key(&key("+"), false));
+    assert_eq!(
+        files_below(&before.root),
+        at_limit,
+        "a size at its limit must not rewrite preferences"
+    );
+    assert!(app.handle_study_key(&key("-"), false));
+    assert_eq!(app.study_text_size, StudyTextSize::Large);
+    app.close_room_study();
+    app.adjust_setting(NumericSetting::StudyTextSize, Step::Down);
+    assert!(app.open_room_study());
+    assert_eq!(
+        app.study.as_ref().unwrap().reader.text_size(),
+        StudyTextSize::Standard
+    );
+    before.assert_play_unchanged(&app);
+}
+
+#[test]
+fn reader_size_keys_leave_brackets_available_for_volume() {
+    let mut app = room_app("lissajous", "study-size-volume-keys");
+    assert!(app.open_room_study());
+    let initial_volume = app.volume;
+    assert!(app.handle_study_key(&key("="), false));
+    assert_eq!(app.volume, initial_volume);
+    assert!(app.handle_study_key(&key("]"), false));
+    assert!(app.volume > initial_volume);
+    assert_eq!(app.study_text_size, numinous_core::StudyTextSize::Large);
+}
+
+#[test]
 fn study_shortcuts_leave_existing_text_and_activity_owners_in_control() {
     let mut app = room_app("lissajous", "study-studio-key-owner");
     app.enter_studio();

@@ -3,7 +3,7 @@
 //! Run from the workspace root:
 //! `cargo run -p numinous-app --example study_screens`.
 //! The example writes `renders/study/`: requested English and Japanese, all
-//! three depths, both supported sizes, and explicit unavailable-depth/language
+//! three depths, both supported windows, all reading sizes, and unavailable-depth/language
 //! cases. Each case records the first and last viewport using the live reader.
 //! The JSON inventory distinguishes requested, document and block languages.
 
@@ -14,7 +14,7 @@ use std::path::Path;
 
 use numinous_app::input_legend::{ControllerCopy, InputMode};
 use numinous_app::study_reader::{ReaderCommand, StudyReader};
-use numinous_core::{StudyDepth, StudyLocale, room_by_id};
+use numinous_core::{StudyDepth, StudyLocale, StudyTextSize, room_by_id};
 use serde_json::{Value, json};
 
 type CaptureResult<T> = Result<T, Box<dyn Error>>;
@@ -25,6 +25,7 @@ struct Case {
     locale: &'static str,
     depth: StudyDepth,
     size: (u32, u32),
+    text_size: StudyTextSize,
 }
 
 fn capture(case: Case, directory: &Path) -> CaptureResult<Vec<Value>> {
@@ -32,6 +33,7 @@ fn capture(case: Case, directory: &Path) -> CaptureResult<Vec<Value>> {
         .ok_or_else(|| io::Error::other(format!("missing room {}", case.room)))?;
     let locale = StudyLocale::parse(case.locale)?;
     let mut reader = StudyReader::new(room.as_ref(), &locale)?;
+    reader.set_text_size(case.text_size);
     reader.navigate(ReaderCommand::Select(case.depth));
     let (width, height) = case.size;
     let mut frames = Vec::with_capacity(2);
@@ -62,10 +64,11 @@ fn capture(case: Case, directory: &Path) -> CaptureResult<Vec<Value>> {
             );
         }
         let filename = format!(
-            "{}-{}-{}-{width}x{height}-{position}.png",
+            "{}-{}-{}-{width}x{height}-text{}-{position}.png",
             case.room,
             case.locale,
-            case.depth.as_str()
+            case.depth.as_str(),
+            case.text_size.percent()
         );
         let file = File::create(directory.join(&filename))?;
         let mut encoder = png::Encoder::new(BufWriter::new(file), width, height);
@@ -85,6 +88,7 @@ fn capture(case: Case, directory: &Path) -> CaptureResult<Vec<Value>> {
             "depth_available": document.has_depth(case.depth),
             "width": width,
             "height": height,
+            "text_size_percent": case.text_size.percent(),
             "position": position,
             "scroll_pixels": reader.scroll(),
             "input": "keyboard_mouse",
@@ -99,40 +103,44 @@ fn main() -> CaptureResult<()> {
     std::fs::create_dir_all(directory)?;
     let mut frames = Vec::new();
     for size in [(360, 240), (900, 700)] {
-        for locale in ["en", "ja"] {
-            for depth in StudyDepth::ALL {
+        for text_size in StudyTextSize::ALL {
+            for locale in ["en", "ja"] {
+                for depth in StudyDepth::ALL {
+                    frames.extend(capture(
+                        Case {
+                            room: "lissajous",
+                            locale,
+                            depth,
+                            size,
+                            text_size,
+                        },
+                        directory,
+                    )?);
+                }
+            }
+            for (room, locale, depth) in [
+                ("times-tables", "en", StudyDepth::Mathematics),
+                ("times-tables", "ja", StudyDepth::Explanation),
+                ("lissajous", "haw", StudyDepth::Mathematics),
+            ] {
                 frames.extend(capture(
                     Case {
-                        room: "lissajous",
+                        room,
                         locale,
                         depth,
                         size,
+                        text_size,
                     },
                     directory,
                 )?);
             }
-        }
-        for (room, locale, depth) in [
-            ("times-tables", "en", StudyDepth::Mathematics),
-            ("times-tables", "ja", StudyDepth::Explanation),
-            ("lissajous", "haw", StudyDepth::Mathematics),
-        ] {
-            frames.extend(capture(
-                Case {
-                    room,
-                    locale,
-                    depth,
-                    size,
-                },
-                directory,
-            )?);
         }
     }
     let mut inventory = BufWriter::new(File::create(directory.join("index.json"))?);
     serde_json::to_writer_pretty(
         &mut inventory,
         &json!({
-            "schema": "numinous.study-screens.v1",
+            "schema": "numinous.study-screens.v2",
             "version": env!("CARGO_PKG_VERSION"),
             "frames": frames,
         }),

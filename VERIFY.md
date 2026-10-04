@@ -81,8 +81,10 @@ action.
 The study parity harness requires paths to both freshly built binaries:
 `python scripts/study-parity.py --cli target/debug/numinous.exe --mcp target/debug/numinous-mcp.exe`
 on Windows; omit `.exe` and use `python3` on macOS or Linux. Use the actual
-Cargo target directory if overridden. `cargo run -p numinous-app --example study_screens --locked` writes the reader's first and final pages for both
-supported sizes to `renders/study/`. These are deterministic native renderer
+Cargo target directory if overridden.
+`cargo run -p numinous-app --example study_screens --locked` writes the
+reader's first and final pages for both supported windows and every reading
+size to `renders/study/`. These are deterministic native renderer
 plates, not a substitute for window, input-device, or participant testing.
 
 ## 2. Or run the gates individually

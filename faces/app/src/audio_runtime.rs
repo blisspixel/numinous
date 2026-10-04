@@ -194,6 +194,9 @@ impl App {
             menu::NumericSetting::EffectVolume => {
                 self.change_bus_level(Bus::Effect, setting, step);
             }
+            menu::NumericSetting::StudyTextSize => {
+                self.set_study_text_size(self.study_text_size.stepped(step == menu::Step::Up));
+            }
         }
     }
 
