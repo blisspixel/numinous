@@ -149,10 +149,13 @@ fn draw(canvas: &mut dyn Surface, g: &[u8]) {
     let chh = (height / H).max(1) as i32;
     for y in 0..H {
         for x in 0..W {
+            // Three lights, one per state: faint copper, the fading tail,
+            // and the hot electron head, so an electron reads as a comet on
+            // the wire rather than a bright dot on a bright wire.
             let mark = match g[idx(x, y)] {
                 HEAD => '#',
                 TAIL => '+',
-                CONDUCTOR => '*',
+                CONDUCTOR => '.',
                 _ => continue,
             };
             let px0 = (x as i32 * width as i32) / W as i32;

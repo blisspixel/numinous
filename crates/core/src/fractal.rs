@@ -1,7 +1,7 @@
 //! Shared escape-time color field for Mandelbrot pixels and GPU uniforms.
 
 /// Near-black outer field and interior, identical to the room stage.
-pub const MANDELBROT_STAGE: [u8; 3] = [10, 11, 15];
+pub const MANDELBROT_STAGE: [u8; 3] = crate::palette::STAGE;
 
 /// RGB knots and their smooth escape counts, in ascending order.
 ///

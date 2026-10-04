@@ -402,17 +402,11 @@ NO_COLOR                  No color in the terminal faces: rooms, chrome and
 NUMINOUS_REDUCED_MOTION=1 NO_COLOR=1 numinous show
 ```
 
-Two things are known to be wrong and are not fixed yet, so you can decide for
-yourself rather than find out the hard way. cellular-automata, julia,
-and lambda-map flash faster than the WCAG 2.3.1 budget allows when
-the App runs them at its fastest speed, 8x. At normal speed and up to 4x they
-stay within it, and every other room stays within it all the way to 8x, at the
-App's 60 frames a second. The music visualizer, which can push a room faster
-still, is not measured. hilbert, magnet-fractal, percolation, and
-wireworld answer a touch in a way the color-free renderer cannot show, so
-under `NO_COLOR` they look like they ignored you. `numinous access` prints
-these same lists straight from the code that enforces them, so the two can
-never disagree.
+Every room's answer to a touch shows under `NO_COLOR`. Three rooms,
+cellular-automata, julia, and lambda-map, flash faster than the measured WCAG
+2.3.1 budget at the App's fastest speed, 8x. They stay within it at 1x, 2x,
+and 4x. The music visualizer's additional acceleration is not measured.
+`numinous access` prints the same speed limits from the enforcing code.
 
 The App's optional study surface preserves Unicode case and mathematical
 notation with bundled fonts, wrapping, and scrolling. Lissajous has English

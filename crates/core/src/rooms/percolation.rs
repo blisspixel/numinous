@@ -37,6 +37,52 @@ fn open_p(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     }
 }
 
+/// The fewest cluster cells joining the left edge to the right edge, as a
+/// mask over the grid.
+///
+/// Breadth-first from every cluster cell on the left column, so the first
+/// right-column cell reached closes a shortest crossing. Empty when the
+/// cluster does not span.
+fn shortest_crossing(cluster: &[bool], w: usize, h: usize) -> Vec<bool> {
+    let mut on_path = vec![false; w * h];
+    let mut previous = vec![usize::MAX; w * h];
+    let mut reached = vec![false; w * h];
+    let mut queue = std::collections::VecDeque::new();
+    for y in 0..h {
+        let i = y * w;
+        if cluster[i] {
+            reached[i] = true;
+            queue.push_back(i);
+        }
+    }
+    while let Some(i) = queue.pop_front() {
+        let (x, y) = (i % w, i / w);
+        if x == w - 1 {
+            let mut at = i;
+            loop {
+                on_path[at] = true;
+                if previous[at] == usize::MAX {
+                    return on_path;
+                }
+                at = previous[at];
+            }
+        }
+        for (dx, dy) in [(1i32, 0), (0, -1), (0, 1), (-1, 0)] {
+            let (nx, ny) = (x as i32 + dx, y as i32 + dy);
+            if nx < 0 || ny < 0 || nx >= w as i32 || ny >= h as i32 {
+                continue;
+            }
+            let j = ny as usize * w + nx as usize;
+            if cluster[j] && !reached[j] {
+                reached[j] = true;
+                previous[j] = i;
+                queue.push_back(j);
+            }
+        }
+    }
+    Vec::new()
+}
+
 fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) -> f64 {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
@@ -95,17 +141,31 @@ fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) -> f64 {
             break;
         }
     }
+    // The open/closed pattern is the picture, so it is drawn as shape rather
+    // than as shades of one slab: a closed site draws nothing and leaves the
+    // stage showing, an open site is faint, the cluster joined to the left
+    // edge is the idea, and once that cluster spans it runs hot, with its
+    // shortest crossing drawn a second time so the path that appeared at the
+    // threshold burns through it.
+    let crossing = if right_touch {
+        shortest_crossing(&seen, w, h)
+    } else {
+        Vec::new()
+    };
     for y in 0..h {
         for x in 0..w {
             let i = y * w + x;
             let ch = if seen[i] {
                 if right_touch { '#' } else { '*' }
             } else if open[i] {
-                '+'
-            } else {
                 '.'
+            } else {
+                continue;
             };
             canvas.plot(x as i32, y as i32, ch);
+            if crossing.get(i).copied().unwrap_or(false) {
+                canvas.plot(x as i32, y as i32, '#');
+            }
         }
     }
     // Open-probability meter: domain consequence even when masks look busy.
@@ -230,6 +290,44 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn the_crossing_is_a_shortest_left_to_right_path_through_the_cluster() {
+        // Two ways across: along the bottom in five cells, or over the top
+        // with a detour in seven. The crossing takes the bottom.
+        #[rustfmt::skip]
+        let cluster = [
+            true,  true,  false, true,  true,
+            false, true,  true,  true,  false,
+            true,  true,  true,  true,  true,
+        ];
+        let path = super::shortest_crossing(&cluster, 5, 3);
+        assert_eq!(path.iter().filter(|cell| **cell).count(), 5);
+        assert!(path[10..15].iter().all(|cell| *cell));
+        // A cluster that never reaches the right edge has no crossing.
+        #[rustfmt::skip]
+        let stranded = [
+            true, true, false,
+            true, false, false,
+        ];
+        assert!(super::shortest_crossing(&stranded, 3, 2).is_empty());
+    }
+
+    #[test]
+    fn closed_sites_leave_the_stage_and_a_drag_changes_the_lit_shape() {
+        // Closed sites draw nothing, so how much of the field is lit is how
+        // open it is: the answer to a drag is a change of shape, which a
+        // player without color can see.
+        let room = Percolation::new();
+        let lit = |x: f64| {
+            let mut raster = crate::Raster::new(120, 70);
+            room.render_poked(&mut raster, 0.35, &[(x, 0.5)]);
+            raster.lit_count()
+        };
+        let (sparse, dense) = (lit(0.1), lit(0.9));
+        assert!(sparse > 0 && sparse * 3 < dense, "{sparse} lit at low p, {dense} at high p");
+        assert!(dense < 120 * 70, "a closed site must leave the stage showing");
     }
 
     #[test]

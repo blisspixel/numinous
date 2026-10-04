@@ -5,9 +5,10 @@ The map of the docs. Use the reading paths to find your way in, and the
 doc that owns it, and every other doc links to that home rather than restating
 it. If you find yourself duplicating a concept, stop and link instead.
 
-**Status:** 0.4.0-alpha.34. The 0.1 Public Foundation, 0.2 Flagship Proof, and
-0.3 Tactile Alpha agent-and-machine exits are met. Understanding Alpha is the
-active line, and its 0.4 exit remains open. The headless core, CLI, MCP
+**Status:** 0.5.0-alpha.1. The 0.1 Public Foundation, 0.2 Flagship Proof, and
+0.3 Tactile Alpha agent-and-machine exits are met. Sensory Alpha is the
+active line, with its machine qualification still open. Understanding Alpha's
+qualifying study remains open independently. Human playtests are optional. The headless core, CLI, MCP
 server, windowed App, GPU and audio adapters, 356 catalog rooms plus hidden
 content, 6 sims, 11+ games, Journey, standard-controller input, Studio, and a
 built-in 42-track radio are built.

@@ -120,6 +120,12 @@ pass by weakening it.
 
 ## When you finish a change
 
+Keep `main` as the durable branch. Use one temporary work branch for a bounded
+change, finish its integration and required checks, then delete it after merge.
+Account for unfinished work before retiring an old branch; never discard it
+merely to make the branch list shorter. A release finishes with passing main
+and a tidy branch list, not with several workstreams left apart.
+
 Update `CHANGELOG.md` (the `[Unreleased]` section). If you completed a
 roadmap item, update its row in **Next, in order** in `docs/ROADMAP.md` and its
 release line under **Recently built**, and put the standing description in the

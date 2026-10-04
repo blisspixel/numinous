@@ -9,7 +9,7 @@
 use crate::surface::{MAX_DIM, Surface};
 
 /// The near-black background (the Numinous stage).
-const BACKGROUND: [u8; 3] = [10, 11, 15];
+const BACKGROUND: [u8; 3] = crate::palette::STAGE;
 
 /// The accent used when a room does not specify one.
 const DEFAULT_ACCENT: [u8; 3] = [36, 120, 180];
@@ -18,6 +18,132 @@ const DEFAULT_ACCENT: [u8; 3] = [36, 120, 180];
 fn scale(color: [u8; 3], factor: f32) -> [u8; 3] {
     let ch = |c: u8| (f32::from(c) * factor).round().clamp(0.0, 255.0) as u8;
     [ch(color[0]), ch(color[1]), ch(color[2])]
+}
+
+/// What a mark means on a pixel surface, which decides how it is lit.
+///
+/// Rooms speak only in marks. The terminal shows each mark as itself, and a
+/// reader of `' . : + * #'` sees an ordered ramp of weight without being
+/// told; a pixel surface has to light each mark so that ramp survives. This
+/// is that table, written once, and the vocabulary `docs/VISUALS.md` names.
+///
+/// | Mark | Role | Pixel ink |
+/// | --- | --- | --- |
+/// | `' '` | [`MarkRole::Empty`] | nothing |
+/// | `'.'` `':'` | [`MarkRole::Faint`] | the accent at 0.35 |
+/// | `'-'` | [`MarkRole::Structure`] | fixed near-black blue |
+/// | `'+'` `'x'` `'='` | [`MarkRole::Secondary`] | the accent at 0.6 |
+/// | `'*'` `'o'` and any other | [`MarkRole::Idea`] | the accent |
+/// | `'#'` | [`MarkRole::Hot`] | the accent at 1.7 |
+/// | `'!'` | [`MarkRole::Warning`] | fixed red, always with a shape cue |
+/// | `'@'` `'%'` `'&'` `'~'` | the four spectral inks | fixed magenta, green, amber, violet |
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum MarkRole {
+    /// `' '`: nothing is drawn. A room that fills its field with spaces
+    /// leaves the stage showing, as the terminal does.
+    Empty,
+    /// `'.'` and `':'`: guides, unlit field, older history.
+    Faint,
+    /// `'-'`: chrome structure such as rules, meters and axes.
+    Structure,
+    /// `'+'`, `'x'` and `'='`: secondary detail beside the idea.
+    Secondary,
+    /// `'*'`, `'o'` and every mark not named elsewhere: the idea itself.
+    Idea,
+    /// `'#'`: the hot core, emphasis, the brightest level.
+    Hot,
+    /// `'!'`: something is wrong here. Never alone; a shape says it too.
+    Warning,
+    /// `'@'`: the magenta spectral ink.
+    Magenta,
+    /// `'%'`: the green spectral ink.
+    Green,
+    /// `'&'`: the amber spectral ink.
+    Amber,
+    /// `'~'`: the violet spectral ink.
+    Violet,
+}
+
+impl MarkRole {
+    /// Every role, in ramp order then the fixed inks.
+    pub const ALL: [MarkRole; 11] = [
+        MarkRole::Empty,
+        MarkRole::Faint,
+        MarkRole::Structure,
+        MarkRole::Secondary,
+        MarkRole::Idea,
+        MarkRole::Hot,
+        MarkRole::Warning,
+        MarkRole::Magenta,
+        MarkRole::Green,
+        MarkRole::Amber,
+        MarkRole::Violet,
+    ];
+
+    /// The role a mark plays.
+    #[must_use]
+    pub fn of(mark: char) -> MarkRole {
+        match mark {
+            ' ' => MarkRole::Empty,
+            '.' | ':' => MarkRole::Faint,
+            '-' => MarkRole::Structure,
+            '+' | 'x' | '=' => MarkRole::Secondary,
+            '#' => MarkRole::Hot,
+            '!' => MarkRole::Warning,
+            '@' => MarkRole::Magenta,
+            '%' => MarkRole::Green,
+            '&' => MarkRole::Amber,
+            '~' => MarkRole::Violet,
+            _ => MarkRole::Idea,
+        }
+    }
+
+    /// The one mark that stands for this role wherever a record names it, so
+    /// two marks that light alike are written down alike.
+    #[must_use]
+    pub fn mark(self) -> char {
+        match self {
+            MarkRole::Empty => ' ',
+            MarkRole::Faint => '.',
+            MarkRole::Structure => '-',
+            MarkRole::Secondary => '+',
+            MarkRole::Idea => '*',
+            MarkRole::Hot => '#',
+            MarkRole::Warning => '!',
+            MarkRole::Magenta => '@',
+            MarkRole::Green => '%',
+            MarkRole::Amber => '&',
+            MarkRole::Violet => '~',
+        }
+    }
+
+    /// Whether this role is a level of the room's own accent: faint,
+    /// secondary, the idea, or hot. The other roles are fixed inks.
+    #[must_use]
+    pub fn is_accent_level(self) -> bool {
+        matches!(
+            self,
+            MarkRole::Faint | MarkRole::Secondary | MarkRole::Idea | MarkRole::Hot
+        )
+    }
+
+    /// The color this role adds for a raster drawing in `accent`.
+    #[must_use]
+    pub fn ink(self, accent: [u8; 3]) -> [u8; 3] {
+        match self {
+            MarkRole::Empty => [0, 0, 0],
+            MarkRole::Faint => scale(accent, 0.35),
+            MarkRole::Structure => [16, 20, 34],
+            MarkRole::Secondary => scale(accent, 0.6),
+            MarkRole::Idea => accent,
+            MarkRole::Hot => scale(accent, 1.7),
+            MarkRole::Warning => [230, 72, 72],
+            MarkRole::Magenta => [216, 40, 190],
+            MarkRole::Green => [56, 224, 132],
+            MarkRole::Amber => [242, 148, 36],
+            MarkRole::Violet => [116, 72, 232],
+        }
+    }
 }
 
 /// A fixed-size RGB pixel buffer that rooms draw into, in a room's accent color.
@@ -77,8 +203,9 @@ impl Raster {
         })
     }
 
-    /// The color added for a mark: semantic interface colors plus four
-    /// spectral inks that rooms can combine additively for prismatic light.
+    /// The color added for a mark, by the role it plays (see [`MarkRole`]):
+    /// the accent ramp, the semantic interface colors, and four spectral
+    /// inks that rooms can combine additively for prismatic light.
     ///
     /// Public so a surface can ask what its own marks will look like. The App
     /// draws its chrome and games with the same marks rooms use, against its
@@ -88,16 +215,7 @@ impl Raster {
     /// kind of second copy that drifts.
     #[must_use]
     pub fn ink(&self, mark: char) -> [u8; 3] {
-        match mark {
-            '#' => scale(self.accent, 1.7),
-            '!' => [230, 72, 72],
-            '-' => [16, 20, 34],
-            '@' => [216, 40, 190],
-            '%' => [56, 224, 132],
-            '&' => [242, 148, 36],
-            '~' => [116, 72, 232],
-            _ => self.accent,
-        }
+        MarkRole::of(mark).ink(self.accent)
     }
 
     /// The pixels as a tightly packed RGBA byte buffer (`width * height * 4`),
@@ -280,7 +398,7 @@ impl Surface for Raster {
 
 #[cfg(test)]
 mod tests {
-    use super::{BACKGROUND, Raster};
+    use super::{BACKGROUND, MarkRole, Raster};
     use crate::surface::Surface;
 
     #[test]
@@ -408,7 +526,11 @@ mod tests {
     /// record built from pair queries could only list the pairs somebody
     /// thought to ask for, and would call the catalog covered on that basis.
     fn room_palettes() -> Vec<(String, [u8; 3], Vec<char>)> {
-        const CANDIDATES: [char; 9] = ['#', '!', '@', '%', '&', '~', '*', '+', '.'];
+        // Every mark the ink table gives a role, except the space, which
+        // draws nothing and so cannot be told apart from anything.
+        const CANDIDATES: [char; 14] = [
+            '.', ':', '-', '+', 'x', '=', '*', 'o', '#', '!', '@', '%', '&', '~',
+        ];
         let mut pending = vec![std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/rooms")];
         let mut found: Vec<(String, [u8; 3], Vec<char>)> = Vec::new();
         while let Some(dir) = pending.pop() {
@@ -457,6 +579,51 @@ mod tests {
         }
         found.sort();
         found
+    }
+
+    /// The levels of its own accent a room draws, one mark for each: faint,
+    /// secondary, the idea, hot. Two marks with one role are one light, so
+    /// listing both would record a distinction the room never made.
+    fn accent_levels(marks: &[char]) -> Vec<char> {
+        let mut levels: Vec<char> = marks
+            .iter()
+            .map(|mark| MarkRole::of(*mark))
+            .filter(|role| role.is_accent_level())
+            .map(MarkRole::mark)
+            .collect();
+        levels.sort_unstable();
+        levels.dedup();
+        levels
+    }
+
+    /// The name a shrink-only list records a mark under.
+    ///
+    /// The lists were written when every ordinary mark painted the plain
+    /// accent, so their `'*'` names any ordinary level of the accent: faint,
+    /// secondary, or the idea. `'#'` names the hot level, and the fixed inks
+    /// name themselves. Keeping that grain means splitting one light into
+    /// three cannot make a list grow, while a fold at any ordinary level still
+    /// holds its room's entry until every level is clear.
+    fn list_name(mark: char) -> char {
+        match MarkRole::of(mark) {
+            MarkRole::Faint | MarkRole::Secondary | MarkRole::Idea => '*',
+            role => role.mark(),
+        }
+    }
+
+    /// The accent levels each named room draws, read once from the sources.
+    fn accent_levels_by_room() -> Vec<(String, Vec<char>)> {
+        room_palettes()
+            .into_iter()
+            .map(|(id, _, marks)| (id, accent_levels(&marks)))
+            .collect()
+    }
+
+    fn levels_of<'a>(levels: &'a [(String, Vec<char>)], id: &str) -> &'a [char] {
+        levels
+            .iter()
+            .find(|(room, _)| room == id)
+            .map_or(&[], |(_, marks)| marks.as_slice())
     }
 
     /// Every room whose source draws with all of `marks`, as `(id, accent)`.
@@ -518,8 +685,10 @@ mod tests {
         // What has to hold is that a player who cannot use color still sees the
         // warning, and the renderer that player is given is `to_mono`. So the
         // question is put to `to_mono` directly: does the warning cell come out
-        // as a different block character than the ordinary one?
+        // as a different block character than every level of the accent the
+        // room draws beside it?
         let rooms = rooms_drawing_with('!');
+        let levels = accent_levels_by_room();
         assert!(
             rooms.len() >= 4,
             "only {} rooms found drawing with the warning ink, so the scan is broken \
@@ -528,9 +697,11 @@ mod tests {
         );
 
         let warning = mono_glyph(Raster::new(1, 1).ink('!'));
+        let mut compared = 0;
         for (id, accent) in rooms {
             let raster = Raster::with_accent(1, 1, accent);
-            for ordinary in ['.', '#'] {
+            for &ordinary in levels_of(&levels, &id) {
+                compared += 1;
                 let against = mono_glyph(raster.ink(ordinary));
                 assert_ne!(
                     warning, against,
@@ -539,6 +710,10 @@ mod tests {
                 );
             }
         }
+        assert!(
+            compared >= 4,
+            "only {compared} levels compared against the warning"
+        );
     }
 
     /// Rooms where a mark that carries meaning is told apart from the room's
@@ -554,8 +729,8 @@ mod tests {
     /// Each entry is measured by `crate::dichromacy`, and both halves of its
     /// rule have to hold: ordinary vision separates the pair comfortably and at
     /// least one dichromacy folds it together. A pair that is close for
-    /// everyone is a contrast defect and belongs to
-    /// [`MARK_LEVELS_COLLAPSE_WITHOUT_COLOR`], not here.
+    /// everyone is a contrast defect, which the color-free sweeps catch, not
+    /// this list.
     ///
     /// Shrink-only, like its neighbours: the test below fails if the list grows,
     /// and fails if an entry stops colliding and is not removed. Fixing an entry
@@ -564,9 +739,8 @@ mod tests {
     /// defect to patch. Tracked in `docs/ROADMAP.md` under 0.5 Sensory.
     /// Each entry is the room and the ordinary mark the warning is lost
     /// against, so a later fix that separates it from one level and not the
-    /// other cannot be mistaken for a clean room. Measured against both `'*'`
-    /// and `'#'`: the warning stays clear of the brighter level everywhere,
-    /// which is why every entry here names the plain accent.
+    /// other cannot be mistaken for a clean room. Measured against every level
+    /// of its own accent the room draws beside the warning.
     const MEANING_LOST_TO_COLOR_BLINDNESS: [(&str, char); 2] =
         [("cult-of-pi", '*'), ("laplace-clock", '*')];
 
@@ -586,17 +760,20 @@ mod tests {
             rooms.len()
         );
 
-        // Against both ordinary levels, the same pair the color-free check
-        // uses. A room draws the accent and the accent at 1.7, and a warning
-        // that stays clear of one can still be lost against the other, so
-        // checking only the plain accent would leave half the question unasked.
+        // Against every accent level the room draws, the same levels the
+        // color-free check uses. A warning that stays clear of one level can
+        // still be lost against another, so checking only one would leave the
+        // rest of the question unasked.
+        let levels = accent_levels_by_room();
         let warning = Raster::new(1, 1).ink('!');
         let mut lost = Vec::new();
         for (id, accent) in rooms {
             let raster = Raster::with_accent(1, 1, accent);
-            for ordinary in ['*', '#'] {
-                if dichromacy::color_alone(warning, raster.ink(ordinary)) {
-                    lost.push((id.clone(), ordinary));
+            for &ordinary in levels_of(&levels, &id) {
+                let entry = (id.clone(), list_name(ordinary));
+                if dichromacy::color_alone(warning, raster.ink(ordinary)) && !lost.contains(&entry)
+                {
+                    lost.push(entry);
                 }
             }
         }
@@ -624,18 +801,17 @@ mod tests {
     /// property of the palette meeting one room's accent.
     const SPECTRAL_INKS: [char; 4] = ['@', '%', '&', '~'];
 
-    /// Marks that all paint the plain accent. Normalised to `'*'` when a pair
-    /// is recorded, because a room drawing `'@'` beside `'+'` and a room
-    /// drawing `'@'` beside `'.'` have the same defect, and counting them
-    /// separately would report one collision three times.
-    const ORDINARY_MARKS: [char; 3] = ['*', '+', '.'];
+    /// Every mark that draws a level of the room's own accent. A pair is
+    /// recorded under [`list_name`], because a room drawing `'@'` beside
+    /// `'x'` and a room drawing it beside `'.'` have one defect in one list
+    /// entry, and counting them separately would report it twice.
+    const ACCENT_LEVEL_MARKS: [char; 8] = ['.', ':', '+', 'x', '=', '*', 'o', '#'];
 
     /// Every spectral pair a color-blind player cannot separate, as
     /// `(room, first mark, second mark)` with the pair in character order.
     ///
     /// The third list of its kind and the one the other two do not reach.
-    /// [`MARK_LEVELS_COLLAPSE_WITHOUT_COLOR`] is about the two accent-derived
-    /// levels and is measured without color at all;
+    /// [`LEVELS_FOLD_FOR_A_DICHROMAT`] is about the accent's own levels;
     /// [`MEANING_LOST_TO_COLOR_BLINDNESS`] is about the warning ink. Neither
     /// looks at the spectral inks, and those are where the largest collapse in
     /// the catalog turns out to be: `times-tables` separates `'@'` from its
@@ -675,17 +851,16 @@ mod tests {
     fn the_spectral_inks_stay_apart_for_a_color_blind_player_outside_the_known_list() {
         use crate::dichromacy;
 
-        // Every pair a spectral ink can form: with another spectral ink, with
-        // the accent at 1.7, and with the plain accent. Scanning one pairing
-        // and not the others would report a clean palette by not having looked.
+        // Every pair a spectral ink can form: with another spectral ink and
+        // with every level of the accent. Scanning one pairing and not the
+        // others would report a clean palette by not having looked.
         let mut pairs: Vec<(char, char)> = Vec::new();
         for (index, &spectral) in SPECTRAL_INKS.iter().enumerate() {
             for &other in SPECTRAL_INKS.iter().skip(index + 1) {
                 pairs.push((spectral, other));
             }
-            pairs.push((spectral, '#'));
-            for &ordinary in &ORDINARY_MARKS {
-                pairs.push((spectral, ordinary));
+            for &level in &ACCENT_LEVEL_MARKS {
+                pairs.push((spectral, level));
             }
         }
 
@@ -698,15 +873,9 @@ mod tests {
                 if !dichromacy::color_alone(raster.ink(a), raster.ink(b)) {
                     continue;
                 }
-                // Every ordinary mark paints the accent, so record one name for
-                // all three rather than the same defect three times.
-                let normalise = |mark: char| {
-                    if ORDINARY_MARKS.contains(&mark) {
-                        '*'
-                    } else {
-                        mark
-                    }
-                };
+                // One name for every ordinary level, so the same defect is
+                // not recorded under several.
+                let normalise = list_name;
                 let (mut first, mut second) = (normalise(a), normalise(b));
                 if first > second {
                     std::mem::swap(&mut first, &mut second);
@@ -922,22 +1091,22 @@ mod tests {
 
     /// Rooms whose two accent-derived levels fold together for a dichromat.
     ///
-    /// The same defect [`MARK_LEVELS_COLLAPSE_WITHOUT_COLOR`] records, measured
-    /// through a different eye. That list is what a player with no color at all
-    /// loses; this is what a player who has color and fewer distinctions loses,
-    /// and the two sets do not overlap at all, so neither stands in for the
-    /// other.
+    /// The dichromat's half of the question the color-free sweep below asks.
+    /// That sweep is what a player with no color at all loses, and it is now
+    /// empty; this is what a player who has color and fewer distinctions
+    /// loses. Seven rooms when it was measured. `buddhabrot` left when its
+    /// accent moved into the lightness band, and `phantom-jam` when its
+    /// ordinary marks took their own levels of the ink ramp. These five sit
+    /// inside the band, warm or green, where the hot level clamps in one
+    /// channel and a dichromat loses the other.
     ///
-    /// Tracked under the same owner decision, because the answer is the same
-    /// one: whether the ink scale or the shade thresholds should change, which
-    /// changes what all 354 rooms look like.
-    const LEVELS_FOLD_FOR_A_DICHROMAT: [&str; 7] = [
-        "buddhabrot",
+    /// Tracked under the same owner decision, because the remaining answer is
+    /// a palette choice for each of them.
+    const LEVELS_FOLD_FOR_A_DICHROMAT: [&str; 5] = [
         "julia",
         "kaprekar",
         "landauer",
         "logistic-cobweb",
-        "phantom-jam",
         "van-der-pol",
     ];
 
@@ -1087,71 +1256,19 @@ mod tests {
         }
     }
 
-    /// Rooms that draw both `'#'` and `'*'` and whose accent makes the two the
-    /// same character once color is gone.
-    ///
-    /// `'#'` is the accent at 1.7, and every other ordinary mark is the accent
-    /// itself, so a room drawing both is drawing two levels. Rooms use that as
-    /// a depth: in `burning-ship` `'#'` is the interior of the set and `'*'` is
-    /// a point that escaped late, and in `josephus` it is how far through the
-    /// elimination a seat was. That is the picture's own information, not
-    /// decoration.
-    ///
-    /// It survives `to_mono` in most rooms and not in these, for two reasons
-    /// that pull in opposite directions. A bright accent multiplied by 1.7
-    /// clamps, so both levels arrive at full and both read as a solid block. A
-    /// dark accent multiplied by 1.7 is still dark, so both land in the
-    /// faintest shade. Either way a player without color sees one level where
-    /// the room drew two.
-    ///
-    /// This is a record of a real limitation, not a permission slip. The test
-    /// below fails if the list grows, if an entry stops colliding and is not
-    /// removed, or if a room outside it starts colliding. Fixing it means
-    /// changing either the ink scale or the shade thresholds, and both change
-    /// what all 354 rooms look like, so it is a decision about the product
-    /// rather than a defect to patch. Tracked in `docs/ROADMAP.md` under 0.5
-    /// Sensory.
-    const MARK_LEVELS_COLLAPSE_WITHOUT_COLOR: [&str; 17] = [
-        "attention",
-        "burning-ship",
-        "dla-frost",
-        "gamblers-ruin",
-        "goldbach",
-        "henon-heiles",
-        "hofstadter-q",
-        "josephus",
-        "liouville",
-        "magnet-fractal",
-        "moser-debruijn",
-        "rabi",
-        "ruler-function",
-        "seifert",
-        "sinai-billiard",
-        "twin-primes",
-        "zipf",
-    ];
-
     #[test]
-    fn the_rooms_that_lose_a_level_are_named_where_the_owner_reads() {
-        // The companion of the check in `registry.rs`. Seventeen room names are
-        // a decision about the ink scale or the shade thresholds, and a
-        // decision nobody can see is not waiting on anyone.
-        // Matched inside backticks: a bare substring would accept `zipff`.
-        let section = crate::roadmap_decisions();
-        for room in MARK_LEVELS_COLLAPSE_WITHOUT_COLOR {
-            assert!(
-                section.contains(&format!("`{room}`")),
-                "{room} loses a level without color and is not named in the \
-                 roadmap's decisions section"
-            );
-        }
-    }
-
-    #[test]
-    fn two_drawn_levels_stay_two_levels_without_color_outside_the_known_list() {
-        // Scanned once and used twice. Reading the sources again for the count
-        // would be the same question asked of the disk a second time, and two
-        // answers that are meant to agree are two answers that can differ.
+    fn two_drawn_levels_stay_two_levels_without_color() {
+        // `'#'` is the accent at 1.7 and `'*'` the accent itself, so a room
+        // drawing both is drawing two levels, and rooms use that as depth: in
+        // `burning-ship` `'#'` is the interior of the set and `'*'` a point
+        // that escaped late. A bright accent times 1.7 clamps and a dark one
+        // stays dark, and either way the color-free renderer used to show one
+        // level where seventeen rooms drew two.
+        //
+        // The accent band removed both ends, and the shade steps sit where
+        // no banded accent's two levels share a glyph, so this now holds for
+        // every room with no exceptions. A room that starts colliding is a
+        // defect to fix, not a list to grow.
         let drawing_both = rooms_drawing_with_all(&['#', '*']);
 
         // Proof the scan looked at something. A scan that found no room drawing
@@ -1163,7 +1280,7 @@ mod tests {
             drawing_both.len()
         );
 
-        let mut colliding: Vec<String> = drawing_both
+        let colliding: Vec<String> = drawing_both
             .into_iter()
             .filter(|(_, accent)| {
                 let raster = Raster::with_accent(1, 1, *accent);
@@ -1171,21 +1288,9 @@ mod tests {
             })
             .map(|(id, _)| id)
             .collect();
-        colliding.sort();
-
-        let known: Vec<String> = MARK_LEVELS_COLLAPSE_WITHOUT_COLOR
-            .iter()
-            .map(|id| (*id).to_string())
-            .collect();
-        let newly: Vec<&String> = colliding.iter().filter(|id| !known.contains(id)).collect();
         assert!(
-            newly.is_empty(),
-            "these rooms newly lose a level without color and must be fixed or tracked: {newly:?}"
-        );
-        let fixed: Vec<&String> = known.iter().filter(|id| !colliding.contains(id)).collect();
-        assert!(
-            fixed.is_empty(),
-            "these no longer collide and must leave MARK_LEVELS_COLLAPSE_WITHOUT_COLOR: {fixed:?}"
+            colliding.is_empty(),
+            "these rooms lose a level without color: {colliding:?}"
         );
     }
 
@@ -1198,12 +1303,101 @@ mod tests {
         let colliding = Raster::with_accent(1, 1, [230, 72, 72]);
         assert_eq!(
             warning,
-            mono_glyph(colliding.ink('.')),
+            mono_glyph(colliding.ink('*')),
             "an accent equal to the warning ink must be indistinguishable from it"
         );
         // And that it is not returning one character for every input.
         assert_ne!(warning, mono_glyph([255, 255, 255]));
         assert_ne!(warning, mono_glyph([0, 0, 0]));
+    }
+
+    /// The least CIELAB difference, for ordinary vision, between two marks of
+    /// different roles when each is drawn alone on the stage.
+    ///
+    /// A just-noticeable difference between flat patches is about 2.3
+    /// (Mahy, Van Eycken and Oosterlinck 1994). Ten is about four of those:
+    /// the floor for two levels a player reads as different at a glance,
+    /// rather than different if they look for it.
+    const DISTINCT_ROLES: f64 = 10.0;
+
+    #[test]
+    fn every_room_draws_its_mark_roles_distinguishably() {
+        // The defect this exists for: the raster once painted every ordinary
+        // mark as the same accent, so `percolation` drew its closed sites,
+        // open sites and cluster as one slab, `wireworld` lost the electron's
+        // tail, and every escape-time field flattened to two tones. Nothing
+        // objected, because no test asked whether two marks a room draws for
+        // two different reasons come out as two different lights.
+        let mut collapsed = Vec::new();
+        let mut pairs = 0usize;
+        for (id, accent, marks) in room_palettes() {
+            let mut roles: Vec<MarkRole> = marks.iter().map(|mark| MarkRole::of(*mark)).collect();
+            roles.sort_unstable();
+            roles.dedup();
+            let shown = |role: MarkRole| {
+                let ink = role.ink(accent);
+                [0, 1, 2].map(|channel| BACKGROUND[channel].saturating_add(ink[channel]))
+            };
+            for (index, first) in roles.iter().enumerate() {
+                for second in &roles[index + 1..] {
+                    pairs += 1;
+                    let apart = crate::dichromacy::distance(shown(*first), shown(*second));
+                    if apart < DISTINCT_ROLES {
+                        collapsed.push(format!(
+                            "{id}: {first:?} and {second:?} are {apart:.1} apart"
+                        ));
+                    }
+                }
+            }
+        }
+        assert!(
+            pairs > 1_000,
+            "only {pairs} role pairs found, so the scan is broken rather than the catalog plain"
+        );
+        assert!(
+            collapsed.is_empty(),
+            "these rooms draw two roles a player cannot tell apart:\n{}",
+            collapsed.join("\n")
+        );
+    }
+
+    #[test]
+    fn the_ink_ramp_climbs_in_role_order_for_every_accent() {
+        // Faint, secondary, the idea, hot: each lighter than the last for
+        // every room, so the ramp a terminal reader sees in the glyphs
+        // `. + * #` is the ramp a pixel reader sees in the light. Before the
+        // ink table, the first three were one color and the ramp was a slab.
+        for room in crate::rooms::ROOM_CATALOG {
+            let raster = Raster::with_accent(1, 1, room.accent);
+            let ramp =
+                ['.', '+', '*', '#'].map(|mark| crate::dichromacy::lightness(raster.ink(mark)));
+            assert!(
+                ramp.windows(2).all(|pair| pair[0] < pair[1]),
+                "{} climbs {ramp:?}",
+                room.id
+            );
+        }
+        for (mark, role) in [
+            (':', MarkRole::Faint),
+            ('x', MarkRole::Secondary),
+            ('=', MarkRole::Secondary),
+            ('o', MarkRole::Idea),
+            ('|', MarkRole::Idea),
+        ] {
+            assert_eq!(MarkRole::of(mark), role, "{mark:?}");
+        }
+        for role in MarkRole::ALL {
+            assert_eq!(
+                MarkRole::of(role.mark()),
+                role,
+                "{role:?} names a mark of another role"
+            );
+        }
+        // A space is the stage: it adds no light at all.
+        assert_eq!(Raster::new(1, 1).ink(' '), [0, 0, 0]);
+        let mut empty = Raster::new(2, 2);
+        empty.plot(0, 0, ' ');
+        assert_eq!(empty.lit_count(), 0, "a space draws nothing");
     }
 
     #[test]

@@ -69,7 +69,21 @@ fn curve(order: u32) -> Vec<(f64, f64)> {
     pts
 }
 
-fn draw(canvas: &mut dyn Surface, pts: &[(f64, f64)], highlight: Option<usize>) {
+/// How far along the thread, either side of a touched point, the lit
+/// neighbourhood reaches: a thirty-second of the whole curve.
+const NEIGHBOURHOOD: usize = 32;
+
+/// The stroke radius of the lit neighbourhood, in surface units.
+///
+/// A terminal cell is too coarse to widen, so the stroke only thickens once
+/// there are pixels to spare. Widening is what lets the answer read without
+/// color: the neighbourhood becomes a filled patch beside a thread of
+/// hairlines, a change of shape rather than of shade.
+fn neighbourhood_radius(width: usize, height: usize) -> i32 {
+    (width.min(height) / 60).min(2) as i32
+}
+
+fn draw(canvas: &mut dyn Surface, pts: &[(f64, f64)], focus: Option<usize>) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 || pts.len() < 2 {
         return;
@@ -80,11 +94,37 @@ fn draw(canvas: &mut dyn Surface, pts: &[(f64, f64)], highlight: Option<usize>) 
             (p.1.clamp(0.0, 1.0) * height.saturating_sub(1) as f64).round() as i32,
         )
     };
+    // Untouched, the whole thread is the idea. A touch lights the stretch of
+    // thread either side of the touched point and lets the rest fall back to
+    // a faint guide. The lit stretch is a compact patch of the square, which
+    // is the reveal made visible: neighbours along the thread stay
+    // neighbours in the plane.
+    let reach = (pts.len() / NEIGHBOURHOOD).max(1);
+    let radius = neighbourhood_radius(width, height);
+    // Every segment joins two neighbouring grid points, so it runs along an
+    // axis and its widened stroke is a rectangle. The patch is collected and
+    // plotted once per pixel, so the joints of the thread are no brighter
+    // than its runs.
+    let mut patch: Vec<(i32, i32)> = Vec::new();
     for (i, w) in pts.windows(2).enumerate() {
         let a = to_px(w[0]);
         let b = to_px(w[1]);
-        let ch = if highlight == Some(i) { '#' } else { '*' };
-        canvas.line(a.0, a.1, b.0, b.1, ch);
+        match focus {
+            None => canvas.line(a.0, a.1, b.0, b.1, '*'),
+            Some(f) if i.abs_diff(f) <= reach => {
+                for y in a.1.min(b.1) - radius..=a.1.max(b.1) + radius {
+                    for x in a.0.min(b.0) - radius..=a.0.max(b.0) + radius {
+                        patch.push((x, y));
+                    }
+                }
+            }
+            Some(_) => canvas.line(a.0, a.1, b.0, b.1, '.'),
+        }
+    }
+    patch.sort_unstable();
+    patch.dedup();
+    for (x, y) in patch {
+        canvas.plot(x, y, '#');
     }
 }
 
@@ -225,6 +265,35 @@ mod tests {
         let mut c = Canvas::new(40, 28);
         Hilbert::new().render(&mut c, 0.4);
         assert!(c.ink_count() > 20);
+    }
+
+    #[test]
+    fn a_touch_lights_a_compact_patch_and_dims_the_rest() {
+        // The reveal is that neighbours along the thread stay neighbours in
+        // the square. A touch lights a stretch of thread, and the lit cells
+        // must form a patch, not a scatter across the canvas.
+        let mut canvas = Canvas::new(120, 120);
+        Hilbert::new().render_poked(&mut canvas, 0.35, &[(0.3, 0.6)]);
+        let text = canvas.to_text();
+        let lit: Vec<(usize, usize)> = text
+            .lines()
+            .enumerate()
+            .flat_map(|(y, line)| {
+                line.chars()
+                    .enumerate()
+                    .filter(|(_, mark)| *mark == '#')
+                    .map(move |(x, _)| (x, y))
+            })
+            .collect();
+        assert!(lit.len() > 20, "only {} lit cells", lit.len());
+        let span = |axis: fn(&(usize, usize)) -> usize| {
+            lit.iter().map(axis).max().unwrap_or(0) - lit.iter().map(axis).min().unwrap_or(0)
+        };
+        assert!(
+            span(|cell| cell.0) * span(|cell| cell.1) < 120 * 120 / 4,
+            "the lit stretch spreads over the whole square"
+        );
+        assert!(text.contains('.'), "the rest of the thread falls back to a guide");
     }
 
     #[test]

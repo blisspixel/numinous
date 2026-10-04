@@ -81,14 +81,10 @@ pub(crate) fn access_report(settings: &[AccessSetting]) -> String {
         }
         out.push('\n');
     }
-    // The counts and names come from the same public lists the tests enforce,
-    // so this report cannot drift from the code.
-    out.push_str(&format!(
-        "Known and not yet fixed, so you can decide for yourself:\n\
-         {} answer a touch\n\
-         in a way the color-free renderer cannot show.\n",
-        numinous_core::RESPONSE_INVISIBLE_WITHOUT_COLOR.join(", "),
-    ));
+    // The names come from the same public list the tests enforce, so this
+    // report cannot drift from the code. Every room's answer to a touch now
+    // shows in the color-free renderer, and a catalog test holds that.
+    out.push_str("Every room's answer to a touch shows under NO_COLOR.\n");
     out.push_str(&flash_disclosure(&numinous_core::KNOWN_OVER_FLASH_BUDGET));
     out.push('\n');
     out.push_str(

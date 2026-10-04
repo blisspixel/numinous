@@ -42,7 +42,7 @@ macro_rules! catalog_rooms {
                 wing: "Emergence",
                 blurb: "Jump halfway to a random corner of a triangle, over and over, and pure chance \
                         resolves into a perfect Sierpinski fractal. t tunes the jump fraction.",
-                accent: [40, 200, 170],
+                accent: [2, 187, 158],
             }
         ),
         (
@@ -92,7 +92,7 @@ macro_rules! catalog_rooms {
                 blurb: "Sand flees a singing plate and draws the silence: nodal curves of a free square \
                         plate under two mode numbers. t walks the mode gallery; DRAG tunes n and m, and \
                         the drive tone is the figure.",
-                accent: [200, 190, 120],
+                accent: [177, 167, 99],
             }
         ),
         (
@@ -157,7 +157,7 @@ macro_rules! catalog_rooms {
                 blurb: "Burn toward lightspeed; relativistic aberration pours the whole sky into a \
                         burning ring ahead. One closed-form transform per star (McKinley 1979). t \
                         burns ambient beta.",
-                accent: [255, 200, 80],
+                accent: [208, 158, 35],
             }
         ),
         (
@@ -170,7 +170,7 @@ macro_rules! catalog_rooms {
                 blurb: "Pull and release to launch a probe past suns. Gravity assists are discovered, \
                         not taught; missed shots become comets, never failures. t advances the mission \
                         clock; HOLD grows a sun under the hand.",
-                accent: [240, 180, 60],
+                accent: [213, 156, 33],
             }
         ),
         (
@@ -209,7 +209,7 @@ macro_rules! catalog_rooms {
                 blurb: "Fling a moon around a sun: every bound path is an ellipse with the sun at a \
                         focus. Equal areas in equal times is the metronome. t advances the orbit; \
                         a drag flings a moon.",
-                accent: [220, 200, 100],
+                accent: [184, 166, 68],
             }
         ),
         (
@@ -337,7 +337,7 @@ macro_rules! catalog_rooms {
                 blurb: "Typed formulas crawl across a blackboard. Exact counterexamples erase the \
                         bad; coefficient proof stamps the survivor. Time runs a complete finite \
                         search.",
-                accent: [120, 220, 170],
+                accent: [84, 184, 136],
             }
         ),
         (
@@ -373,7 +373,7 @@ macro_rules! catalog_rooms {
                 wing: "Motion & Dynamics",
                 blurb: "Io, Europa, Ganymede lock 1:2:4; the Laplace angle avoids the triple \
                         conjunction. t turns the clock.",
-                accent: [220, 180, 100],
+                accent: [199, 160, 81],
             }
         ),
         (
@@ -384,7 +384,7 @@ macro_rules! catalog_rooms {
                 title: "The Message That Heals",
                 wing: "Number & Pattern",
                 blurb: "Hamming(7,4) parity bits heal single flips mid-flight until noise wins.",
-                accent: [100, 200, 140],
+                accent: [84, 185, 126],
             }
         ),
         (
@@ -396,7 +396,7 @@ macro_rules! catalog_rooms {
                 wing: "Shape & Space",
                 blurb: "Most rooms light everywhere from any lamp; Tokarsky built one that does not. \
                         A marked dark point stays unlit. t turns the beam.",
-                accent: [80, 80, 120],
+                accent: [101, 100, 142],
             }
         ),
         (
@@ -420,7 +420,7 @@ macro_rules! catalog_rooms {
                 wing: "Shape & Space",
                 blurb: "Fourteen pulsar ticks around the Sun, one longer home mark: a toy of the \
                         Pioneer plaque. t pulses the periods.",
-                accent: [200, 200, 120],
+                accent: [169, 170, 92],
             }
         ),
         (
@@ -566,7 +566,7 @@ macro_rules! catalog_rooms {
                 wing: "Emergence",
                 blurb: "Diffusion-limited aggregation: random walkers freeze on contact and grow \
                         lightning and coral. t grows the swarm.",
-                accent: [180, 220, 255],
+                accent: [130, 170, 204],
             }
         ),
         (
@@ -591,7 +591,7 @@ macro_rules! catalog_rooms {
                 wing: "Shape & Space",
                 blurb: "A Steiner chain of circles fits between two boundaries and closes from every \
                         angle. t sets count.",
-                accent: [160, 200, 180],
+                accent: [135, 174, 155],
             }
         ),
         (
@@ -615,7 +615,7 @@ macro_rules! catalog_rooms {
                 wing: "Emergence",
                 blurb: "Wireworld: four states, electrons on copper, gates you can watch. t steps the \
                         clock.",
-                accent: [255, 200, 40],
+                accent: [206, 159, 0],
             }
         ),
         (
@@ -627,7 +627,7 @@ macro_rules! catalog_rooms {
                 wing: "Fractals",
                 blurb: "Buddhabrot: density of escaping Mandelbrot orbits paints a ghostly figure. t \
                         deepens iterations.",
-                accent: [200, 180, 255],
+                accent: [174, 155, 228],
             }
         ),
         (
@@ -675,7 +675,7 @@ macro_rules! catalog_rooms {
                 wing: "Fractals",
                 blurb: "Koch snowflake: every generation multiplies the coast by 4/3. Perimeter runs \
                         away; area stays finite.",
-                accent: [140, 200, 255],
+                accent: [110, 171, 225],
             }
         ),
         (
@@ -698,7 +698,7 @@ macro_rules! catalog_rooms {
                 title: "The Chemical Garden",
                 wing: "Emergence",
                 blurb: "A seeded chemical field: tune feed and kill, then watch it evolve.",
-                accent: [80, 200, 160],
+                accent: [63, 185, 146],
             }
         ),
         (
@@ -710,7 +710,7 @@ macro_rules! catalog_rooms {
                 wing: "Number & Pattern",
                 blurb: "Eratosthenes: cross out multiples, primes remain. \
                         Variation shifts the strike animation seed.",
-                accent: [220, 180, 60],
+                accent: [199, 161, 40],
             }
         ),
         (
@@ -744,7 +744,7 @@ macro_rules! catalog_rooms {
                 title: "The Uncertainty Dial",
                 wing: "Waves & Sound",
                 blurb: "Narrower in time, wider in frequency: you cannot own both.",
-                accent: [255, 200, 80],
+                accent: [208, 158, 35],
             }
         ),
         (
@@ -768,7 +768,7 @@ macro_rules! catalog_rooms {
                 wing: "Number & Pattern",
                 blurb: "One query lights a few keys; the rest go dim. Softmax weights are the story. t \
                         warms temperature.",
-                accent: [255, 220, 100],
+                accent: [193, 164, 43],
             }
         ),
         (
@@ -798,7 +798,7 @@ macro_rules! catalog_rooms {
                         which ones count is the whole difference between a \
                         game you cannot win and one you can. t turns the \
                         rulebook.",
-                accent: [90, 220, 130],
+                accent: [53, 189, 102],
             }
         ),
         (
@@ -845,7 +845,7 @@ macro_rules! catalog_rooms {
                 wing: "Shape & Space",
                 blurb: "A film pulled between pins finds the least length it can. Wobble the pins and \
                         watch the angle its junctions keep choosing. t wobbles pins.",
-                accent: [180, 220, 255],
+                accent: [130, 170, 204],
             }
         ),
         (
@@ -869,7 +869,7 @@ macro_rules! catalog_rooms {
                 wing: "Number & Pattern",
                 blurb: "Gaps between primes as a landscape; twins are calm. Open \
                         doors stay open.",
-                accent: [100, 200, 140],
+                accent: [84, 185, 126],
             }
         ),
         (
@@ -881,7 +881,7 @@ macro_rules! catalog_rooms {
                 wing: "Shape & Space",
                 blurb: "A sphere can turn inside out without creases if you allow it to pass through \
                         itself smoothly.",
-                accent: [120, 180, 255],
+                accent: [108, 169, 243],
             }
         ),
         (
@@ -916,7 +916,7 @@ macro_rules! catalog_rooms {
                 title: "The Learning Clock",
                 wing: "Number & Pattern",
                 blurb: "Train task A, then B: does A survive? Continual learning as a felt trade.",
-                accent: [80, 200, 160],
+                accent: [63, 185, 146],
             }
         ),
         (
@@ -939,7 +939,7 @@ macro_rules! catalog_rooms {
                 wing: "Shape & Space",
                 blurb: "Objects and arrows; compose two maps into one path. Category-lite without a \
                         jargon wall.",
-                accent: [200, 180, 100],
+                accent: [184, 165, 86],
             }
         ),
         (
@@ -950,7 +950,7 @@ macro_rules! catalog_rooms {
                 title: "The Aperiodic Floor",
                 wing: "Shape & Space",
                 blurb: "Penrose kites from Robinson triangles: inflation never yields a lattice.",
-                accent: [220, 180, 60],
+                accent: [199, 161, 40],
             }
         ),
         (
@@ -961,7 +961,7 @@ macro_rules! catalog_rooms {
                 title: "The Ladder of Approximations",
                 wing: "Number & Pattern",
                 blurb: "Continued fractions peel best rationals from a real. Golden is the hardest.",
-                accent: [160, 200, 100],
+                accent: [138, 178, 80],
             }
         ),
         (
@@ -1029,7 +1029,7 @@ macro_rules! catalog_rooms {
                 title: "Cult of Pi",
                 wing: "Number & Pattern",
                 blurb: "The exact digits of pi enter a finite channel, age, and develop faults. Click to restore and hold one local patch exact, but no finite screen can ever contain all of pi.",
-                accent: [40, 210, 90],
+                accent: [0, 191, 76],
             }
         ),
         (
@@ -1068,7 +1068,7 @@ macro_rules! catalog_rooms {
                 wing: "Emergence",
                 blurb: "Aim at a quiet patch and place five living cells. Birth with 3 neighbors and \
                         survival with 2 or 3 make that glider move by itself.",
-                accent: [90, 210, 120],
+                accent: [65, 188, 100],
             }
         ),
         (
@@ -1081,7 +1081,7 @@ macro_rules! catalog_rooms {
                 blurb: "Drop grains; four topples to neighbors; self-organized criticality blooms a \
                         fractal mandala. Catastrophe is the resting state. t pours the center; HOLD \
                         pours under the hand.",
-                accent: [220, 170, 70],
+                accent: [207, 158, 58],
             }
         ),
         (
@@ -1152,7 +1152,7 @@ macro_rules! catalog_rooms {
                 wing: "Chaos & Order",
                 blurb: "Sweep the growth rate of x into r x (1 - x) across the screen and plot where \
                         the population lands: one value, then two, then four, then chaos. t zooms in.",
-                accent: [230, 200, 60],
+                accent: [191, 165, 12],
             }
         ),
         (
@@ -1164,7 +1164,7 @@ macro_rules! catalog_rooms {
                 wing: "Emergence",
                 blurb: "One ant, two rules: turn on the color under you, flip it, step. It makes chaos \
                         for ten thousand steps and then builds a highway forever. t runs the clock.",
-                accent: [120, 200, 220],
+                accent: [96, 177, 197],
             }
         ),
         (
@@ -1188,7 +1188,7 @@ macro_rules! catalog_rooms {
                 wing: "Signals & Codes",
                 blurb: "A stream of bits that looks like noise until you line it up at the right width. \
                         The length is a semiprime, so it has one nontrivial rectangle up to rotation.",
-                accent: [120, 230, 180],
+                accent: [73, 185, 138],
             }
         ),
         (
@@ -1212,7 +1212,7 @@ macro_rules! catalog_rooms {
                 wing: "Change",
                 blurb: "Ride the tangent line along a curve. The board's tilt is the slope, and the \
                         tilt traces its own curve below as you go: the derivative, drawing itself.",
-                accent: [255, 190, 70],
+                accent: [215, 155, 31],
             }
         ),
         (
@@ -1248,7 +1248,7 @@ macro_rules! catalog_rooms {
                 wing: "Chance & Order",
                 blurb: "Sixty walkers stumble one random step at a time. None knows where it is going; \
                         together they obey the square root law. The circle is the law; t is the clock.",
-                accent: [140, 220, 160],
+                accent: [103, 182, 125],
             }
         ),
         (
@@ -1260,7 +1260,7 @@ macro_rules! catalog_rooms {
                 wing: "Shape & Space",
                 blurb: "Fourteen wells in a desert; every point belongs to its nearest one. The \
                         borders are the ties. Giraffes, dragonflies, and mud cracks all know this map.",
-                accent: [235, 180, 90],
+                accent: [209, 157, 68],
             }
         ),
         (
@@ -1272,7 +1272,7 @@ macro_rules! catalog_rooms {
                 wing: "Shape & Space",
                 blurb: "A band with a half twist: one side, one edge. The ant walks a full lap and \
                         arrives on the other side without crossing anything. Two laps to get home.",
-                accent: [120, 200, 255],
+                accent: [91, 174, 227],
             }
         ),
         (
@@ -1284,7 +1284,7 @@ macro_rules! catalog_rooms {
                 wing: "Change",
                 blurb: "Half the square, then half of what's left, then half of that, forever. \
                         Infinitely many tiles, and they fit exactly. The sum of the halves is one.",
-                accent: [200, 160, 255],
+                accent: [187, 148, 241],
             }
         ),
         (
@@ -1296,7 +1296,7 @@ macro_rules! catalog_rooms {
                 wing: "Open Problems",
                 blurb: "Every even number, tested: how many ways is it two primes? The counts plot \
                         into a comet. That it never touches zero is unproven. Nobody knows. Go on.",
-                accent: [255, 220, 140],
+                accent: [193, 162, 85],
             }
         ),
         (
@@ -1374,7 +1374,7 @@ macro_rules! catalog_rooms {
                 wing: "Emergence",
                 blurb: "Elementary cellular automaton Rule 30: one black cell becomes structured \
                         chaos.",
-                accent: [40, 40, 40],
+                accent: [104, 104, 104],
             }
         ),
         (
@@ -1440,7 +1440,7 @@ macro_rules! catalog_rooms {
                 title: "Peano's Path",
                 wing: "Fractals",
                 blurb: "A continuous curve that fills the square (order recursion).",
-                accent: [100, 200, 80],
+                accent: [86, 187, 68],
             }
         ),
         (
@@ -1550,7 +1550,7 @@ macro_rules! catalog_rooms {
                 title: "Josephus Circle",
                 wing: "Number & Pattern",
                 blurb: "Every k-th seat is removed until one remains.",
-                accent: [160, 40, 40],
+                accent: [183, 62, 57],
             }
         ),
         (
@@ -1594,7 +1594,7 @@ macro_rules! catalog_rooms {
                 title: "Clifford Attractor",
                 wing: "Motion & Dynamics",
                 blurb: "Sin/cos iterated map with dense organic attractors.",
-                accent: [80, 200, 160],
+                accent: [63, 185, 146],
             }
         ),
         (
@@ -1649,7 +1649,7 @@ macro_rules! catalog_rooms {
                 title: "Gumowski-Mira",
                 wing: "Motion & Dynamics",
                 blurb: "Accelerator beam map that paints butterfly-like attractors.",
-                accent: [100, 60, 180],
+                accent: [121, 79, 201],
             }
         ),
         (
@@ -1682,7 +1682,7 @@ macro_rules! catalog_rooms {
                 title: "Thomas Attractor",
                 wing: "Motion & Dynamics",
                 blurb: "Cyclically symmetric continuous chaos.",
-                accent: [80, 200, 120],
+                accent: [66, 187, 109],
             }
         ),
         (
@@ -1814,7 +1814,7 @@ macro_rules! catalog_rooms {
                 title: "Sinai Billiard",
                 wing: "Shape & Space",
                 blurb: "Square table with a circular scatterer: hard chaos.",
-                accent: [100, 60, 40],
+                accent: [138, 94, 72],
             }
         ),
         (
@@ -1825,7 +1825,7 @@ macro_rules! catalog_rooms {
                 title: "Henon-Heiles",
                 wing: "Motion & Dynamics",
                 blurb: "Tune a galactic orbit's energy and open its escape barriers.",
-                accent: [80, 40, 180],
+                accent: [120, 73, 218],
             }
         ),
         (
@@ -2067,7 +2067,7 @@ macro_rules! catalog_rooms {
                 title: "Magnet Fractal",
                 wing: "Fractals",
                 blurb: "Type-I magnet set: rational map escape portrait.",
-                accent: [80, 40, 160],
+                accent: [123, 77, 202],
             }
         ),
         (
@@ -2144,7 +2144,7 @@ macro_rules! catalog_rooms {
                 title: "Blancmange Curve",
                 wing: "Fractals",
                 blurb: "Takagi's continuous graph with no tangent anywhere.",
-                accent: [220, 180, 200],
+                accent: [194, 155, 175],
             }
         ),
         (
@@ -2221,7 +2221,7 @@ macro_rules! catalog_rooms {
                 title: "Poincare Disc",
                 wing: "Shape & Space",
                 blurb: "Hyperbolic plane inside a circle.",
-                accent: [100, 60, 180],
+                accent: [121, 79, 201],
             }
         ),
         (
@@ -2309,7 +2309,7 @@ macro_rules! catalog_rooms {
                 title: "Lemniscate",
                 wing: "Shape & Space",
                 blurb: "Bernoulli infinity draws both lobes. Watch the pen.",
-                accent: [160, 40, 120],
+                accent: [176, 57, 134],
             }
         ),
         (
@@ -2386,7 +2386,7 @@ macro_rules! catalog_rooms {
                 title: "Hyperbolic Tiling",
                 wing: "Shape & Space",
                 blurb: "{7,3}-style lattice in the Poincare disc.",
-                accent: [120, 40, 160],
+                accent: [147, 67, 187],
             }
         ),
         (
@@ -2419,7 +2419,7 @@ macro_rules! catalog_rooms {
                 title: "Euclid Algorithm",
                 wing: "Number & Pattern",
                 blurb: "Square-cutting dance that finds gcd.",
-                accent: [80, 80, 180],
+                accent: [94, 92, 194],
             }
         ),
         (
@@ -2441,7 +2441,7 @@ macro_rules! catalog_rooms {
                 title: "Hofstadter Q",
                 wing: "Number & Pattern",
                 blurb: "Chaotic integer recursion as a skyline.",
-                accent: [100, 40, 160],
+                accent: [135, 73, 195],
             }
         ),
         (
@@ -2606,7 +2606,7 @@ macro_rules! catalog_rooms {
                 title: "Circular Caustic",
                 wing: "Shape & Space",
                 blurb: "Reflected parallel light envelopes a nephroid.",
-                accent: [220, 180, 40],
+                accent: [199, 162, 10],
             }
         ),
         (
@@ -2639,7 +2639,7 @@ macro_rules! catalog_rooms {
                 title: "Epitrochoid",
                 wing: "Shape & Space",
                 blurb: "Outer rolling roulette draws itself. Watch the pen.",
-                accent: [80, 60, 180],
+                accent: [108, 83, 207],
             }
         ),
         (
@@ -2793,7 +2793,7 @@ macro_rules! catalog_rooms {
                 title: "Interference",
                 wing: "Waves & Sound",
                 blurb: "Two sources paint bright and dark fringes.",
-                accent: [60, 80, 200],
+                accent: [76, 91, 213],
             }
         ),
         (
@@ -2804,7 +2804,7 @@ macro_rules! catalog_rooms {
                 title: "Diffraction",
                 wing: "Waves & Sound",
                 blurb: "Single-slit sinc squared intensity pattern.",
-                accent: [100, 60, 180],
+                accent: [121, 79, 201],
             }
         ),
         (
@@ -2881,7 +2881,7 @@ macro_rules! catalog_rooms {
                 title: "Cassini Ovals",
                 wing: "Shape & Space",
                 blurb: "Two-foci product curves draw themselves. Watch the pen.",
-                accent: [140, 60, 120],
+                accent: [156, 75, 135],
             }
         ),
         (
@@ -2892,7 +2892,7 @@ macro_rules! catalog_rooms {
                 title: "Foucault Pendulum",
                 wing: "Motion & Dynamics",
                 blurb: "Swing plane precesses with sin(latitude).",
-                accent: [50, 90, 160],
+                accent: [66, 103, 174],
             }
         ),
         (
@@ -2947,7 +2947,7 @@ macro_rules! catalog_rooms {
                 title: "Pseudosphere",
                 wing: "Shape & Space",
                 blurb: "Constant K=-1 from a spun tractrix.",
-                accent: [120, 50, 140],
+                accent: [146, 75, 166],
             }
         ),
         (
@@ -2958,7 +2958,7 @@ macro_rules! catalog_rooms {
                 title: "Airy Disk",
                 wing: "Waves & Sound",
                 blurb: "Circular aperture diffraction rings.",
-                accent: [200, 180, 40],
+                accent: [185, 167, 21],
             }
         ),
         (
@@ -2991,7 +2991,7 @@ macro_rules! catalog_rooms {
                 title: "Watt Curve",
                 wing: "Shape & Space",
                 blurb: "Midpoint of a two-bar linkage.",
-                accent: [90, 90, 40],
+                accent: [107, 107, 56],
             }
         ),
         (
@@ -3002,7 +3002,7 @@ macro_rules! catalog_rooms {
                 title: "Devil Curve",
                 wing: "Shape & Space",
                 blurb: "Quartic figure-eight of Gabriele.",
-                accent: [120, 30, 30],
+                accent: [170, 74, 68],
             }
         ),
         (
@@ -3024,7 +3024,7 @@ macro_rules! catalog_rooms {
                 title: "Rabi Flopping",
                 wing: "Waves & Sound",
                 blurb: "Two-level drive: detune slows full flips.",
-                accent: [80, 40, 160],
+                accent: [123, 77, 202],
             }
         ),
         (
@@ -3057,7 +3057,7 @@ macro_rules! catalog_rooms {
                 title: "Hippopede",
                 wing: "Shape & Space",
                 blurb: "Proclus horse-fetter draws itself. Watch the pen.",
-                accent: [100, 70, 50],
+                accent: [130, 97, 76],
             }
         ),
         (
@@ -3114,7 +3114,7 @@ macro_rules! catalog_rooms {
                 title: "Bessel J0",
                 wing: "Waves & Sound",
                 blurb: "Cylindrical wave zeros as rings.",
-                accent: [50, 90, 150],
+                accent: [67, 104, 166],
             }
         ),
         (
@@ -3125,7 +3125,7 @@ macro_rules! catalog_rooms {
                 title: "Hermite Wave",
                 wing: "Waves & Sound",
                 blurb: "Harmonic oscillator Hermite modes.",
-                accent: [90, 40, 140],
+                accent: [132, 79, 182],
             }
         ),
         (
@@ -3158,7 +3158,7 @@ macro_rules! catalog_rooms {
                 title: "Cauchy Lorentz",
                 wing: "Chance & Order",
                 blurb: "Heavy-tailed density with no mean.",
-                accent: [120, 40, 100],
+                accent: [157, 75, 134],
             }
         ),
         (
@@ -3180,7 +3180,7 @@ macro_rules! catalog_rooms {
                 title: "Seifert Film",
                 wing: "Shape & Space",
                 blurb: "A surface spanning a link.",
-                accent: [80, 60, 140],
+                accent: [113, 90, 174],
             }
         ),
         (
@@ -3191,7 +3191,7 @@ macro_rules! catalog_rooms {
                 title: "Trefoil Knot",
                 wing: "Shape & Space",
                 blurb: "Simplest nontrivial knot.",
-                accent: [140, 50, 80],
+                accent: [166, 73, 102],
             }
         ),
         (
@@ -3202,7 +3202,7 @@ macro_rules! catalog_rooms {
                 title: "Hopf Fibration",
                 wing: "Shape & Space",
                 blurb: "S3 fibers as linked circles.",
-                accent: [40, 80, 160],
+                accent: [68, 100, 183],
             }
         ),
         (
@@ -3213,7 +3213,7 @@ macro_rules! catalog_rooms {
                 title: "Filled Julia",
                 wing: "Fractals",
                 blurb: "Filled set for z^2+c.",
-                accent: [20, 100, 140],
+                accent: [38, 110, 151],
             }
         ),
         (
@@ -3224,7 +3224,7 @@ macro_rules! catalog_rooms {
                 title: "Figure-Eight Knot",
                 wing: "Shape & Space",
                 blurb: "Second simplest prime knot.",
-                accent: [100, 70, 40],
+                accent: [130, 98, 66],
             }
         ),
         (
@@ -3257,7 +3257,7 @@ macro_rules! catalog_rooms {
                 title: "Torus Knot",
                 wing: "Shape & Space",
                 blurb: "T(p,q) winds the torus both ways.",
-                accent: [120, 50, 100],
+                accent: [152, 79, 130],
             }
         ),
         (
@@ -3268,7 +3268,7 @@ macro_rules! catalog_rooms {
                 title: "Whitney Umbrella",
                 wing: "Shape & Space",
                 blurb: "Cross-cap singularity x=uv, y=u, z=v^2.",
-                accent: [90, 70, 40],
+                accent: [123, 101, 69],
             }
         ),
         (
@@ -3279,7 +3279,7 @@ macro_rules! catalog_rooms {
                 title: "Roman Surface",
                 wing: "Shape & Space",
                 blurb: "Steiner immersion of the projective plane.",
-                accent: [140, 40, 80],
+                accent: [170, 69, 106],
             }
         ),
         (
@@ -3312,7 +3312,7 @@ macro_rules! catalog_rooms {
                 title: "Kolakoski Sequence",
                 wing: "Number & Pattern",
                 blurb: "Self-describing runs of 1 and 2.",
-                accent: [80, 100, 40],
+                accent: [91, 111, 50],
             }
         ),
         (
@@ -3323,7 +3323,7 @@ macro_rules! catalog_rooms {
                 title: "Beatty Sequence",
                 wing: "Number & Pattern",
                 blurb: "floor(n r) and floor(n s) partition N.",
-                accent: [100, 60, 120],
+                accent: [130, 88, 150],
             }
         ),
         (
@@ -3345,7 +3345,7 @@ macro_rules! catalog_rooms {
                 title: "Minkowski Question Mark",
                 wing: "Number & Pattern",
                 blurb: "?(x) maps CF to dyadics, flattens jumps.",
-                accent: [60, 40, 140],
+                accent: [113, 85, 192],
             }
         ),
         (
@@ -3356,7 +3356,7 @@ macro_rules! catalog_rooms {
                 title: "Ruler Function",
                 wing: "Number & Pattern",
                 blurb: "2-adic height of n: paper ruler marks.",
-                accent: [40, 90, 70],
+                accent: [64, 114, 93],
             }
         ),
         (
@@ -3367,7 +3367,7 @@ macro_rules! catalog_rooms {
                 title: "Moser-de Bruijn",
                 wing: "Number & Pattern",
                 blurb: "Sums of distinct powers of 4.",
-                accent: [90, 50, 90],
+                accent: [132, 90, 132],
             }
         ),
         (
@@ -3378,7 +3378,7 @@ macro_rules! catalog_rooms {
                 title: "Mertens Function",
                 wing: "Number & Pattern",
                 blurb: "M(n) = sum mu(k): Mobius partial sums.",
-                accent: [70, 50, 130],
+                accent: [114, 89, 175],
             }
         ),
         (
@@ -3389,7 +3389,7 @@ macro_rules! catalog_rooms {
                 title: "Liouville Function",
                 wing: "Number & Pattern",
                 blurb: "lambda(n) by total prime factors; L(n) sum.",
-                accent: [100, 40, 100],
+                accent: [144, 81, 143],
             }
         ),
         (
@@ -3422,7 +3422,7 @@ macro_rules! catalog_rooms {
                 title: "Paperfold Sequence",
                 wing: "Number & Pattern",
                 blurb: "Regular fold bits draw a dragon path.",
-                accent: [50, 90, 140],
+                accent: [68, 105, 157],
             }
         ),
         (
@@ -3433,7 +3433,7 @@ macro_rules! catalog_rooms {
                 title: "Sylvester Sequence",
                 wing: "Number & Pattern",
                 blurb: "Double-exponential Egyptian fraction of 1.",
-                accent: [120, 60, 40],
+                accent: [151, 87, 65],
             }
         ),
         (
@@ -3455,7 +3455,7 @@ macro_rules! catalog_rooms {
                 title: "Brownian Motion",
                 wing: "Chance & Order",
                 blurb: "Wiener path from Gaussian steps.",
-                accent: [80, 80, 40],
+                accent: [107, 106, 65],
             }
         ),
         (
@@ -3477,7 +3477,7 @@ macro_rules! catalog_rooms {
                 title: "Coupon Collector",
                 wing: "Chance & Order",
                 blurb: "Expected waits n H_n to finish a set.",
-                accent: [100, 80, 30],
+                accent: [123, 101, 50],
             }
         ),
         (
@@ -3488,7 +3488,7 @@ macro_rules! catalog_rooms {
                 title: "Zipf Law",
                 wing: "Chance & Order",
                 blurb: "Rank-frequency power law 1/k^s.",
-                accent: [90, 50, 110],
+                accent: [130, 87, 150],
             }
         ),
         (
@@ -3499,7 +3499,7 @@ macro_rules! catalog_rooms {
                 title: "Gamblers Ruin",
                 wing: "Chance & Order",
                 blurb: "Random walk absorbed at 0 or N.",
-                accent: [130, 40, 40],
+                accent: [169, 74, 70],
             }
         ),
         (
@@ -3522,7 +3522,7 @@ macro_rules! catalog_rooms {
                 wing: "Number & Pattern",
                 blurb: "Add up one over every square number, forever. The climb settles; the whole \
                         question is on what.",
-                accent: [120, 40, 100],
+                accent: [157, 75, 134],
             }
         ),
         (
@@ -3533,7 +3533,7 @@ macro_rules! catalog_rooms {
                 title: "Stirling Approx",
                 wing: "Number & Pattern",
                 blurb: "n! vs sqrt(2 pi n)(n/e)^n on a log scale.",
-                accent: [80, 60, 140],
+                accent: [113, 90, 174],
             }
         ),
         (
@@ -3544,7 +3544,7 @@ macro_rules! catalog_rooms {
                 title: "Benford Law",
                 wing: "Chance & Order",
                 blurb: "Leading digits: log law P(d)=log(1+1/d).",
-                accent: [40, 90, 120],
+                accent: [62, 109, 140],
             }
         ),
         (
@@ -3555,7 +3555,7 @@ macro_rules! catalog_rooms {
                 title: "Central Limit",
                 wing: "Chance & Order",
                 blurb: "Means of uniforms become a bell as n grows.",
-                accent: [60, 100, 60],
+                accent: [73, 114, 73],
             }
         ),
         (
@@ -3566,7 +3566,7 @@ macro_rules! catalog_rooms {
                 title: "Wallis Product",
                 wing: "Number & Pattern",
                 blurb: "Product (4k^2)/(4k^2-1) -> pi/2.",
-                accent: [100, 50, 80],
+                accent: [141, 87, 118],
             }
         ),
         (
@@ -3621,7 +3621,7 @@ macro_rules! catalog_rooms {
                 title: "Butterfly Curve",
                 wing: "Shape & Space",
                 blurb: "Temple-Fay wings draw themselves. Watch the pen.",
-                accent: [160, 50, 100],
+                accent: [174, 64, 112],
             }
         ),
         (
@@ -3643,7 +3643,7 @@ macro_rules! catalog_rooms {
                 title: "Simple Pendulum",
                 wing: "Motion & Dynamics",
                 blurb: "Phase portrait: librations and rotations.",
-                accent: [40, 80, 140],
+                accent: [69, 103, 166],
             }
         ),
         (
@@ -3676,7 +3676,7 @@ macro_rules! catalog_rooms {
                 title: "Escape Velocity",
                 wing: "Motion & Dynamics",
                 blurb: "v_esc = sqrt(2GM/r); circular is slower by sqrt(2).",
-                accent: [50, 50, 120],
+                accent: [101, 95, 171],
             }
         ),
         (
@@ -3687,7 +3687,7 @@ macro_rules! catalog_rooms {
                 title: "Coupled Oscillators",
                 wing: "Motion & Dynamics",
                 blurb: "Two masses, three springs: normal modes.",
-                accent: [80, 100, 50],
+                accent: [91, 111, 60],
             }
         ),
         (
@@ -3698,7 +3698,7 @@ macro_rules! catalog_rooms {
                 title: "Prism Dispersion",
                 wing: "Waves & Sound",
                 blurb: "n(lambda) splits white light in a prism.",
-                accent: [140, 40, 120],
+                accent: [165, 65, 143],
             }
         ),
         (
@@ -3720,7 +3720,7 @@ macro_rules! catalog_rooms {
                 title: "Gaussian Primes",
                 wing: "Number & Pattern",
                 blurb: "Primes on the Z[i] lattice.",
-                accent: [70, 90, 150],
+                accent: [83, 101, 163],
             }
         ),
         (
@@ -3731,7 +3731,7 @@ macro_rules! catalog_rooms {
                 title: "Quadratic Residues",
                 wing: "Number & Pattern",
                 blurb: "Legendre symbol checkerboard mod p.",
-                accent: [120, 80, 60],
+                accent: [136, 95, 74],
             }
         ),
         (
@@ -3742,7 +3742,7 @@ macro_rules! catalog_rooms {
                 title: "Zeckendorf",
                 wing: "Number & Pattern",
                 blurb: "Unique Fibonacci base, no adjacent 1s.",
-                accent: [100, 70, 130],
+                accent: [122, 91, 153],
             }
         ),
         (
@@ -3786,7 +3786,7 @@ macro_rules! catalog_rooms {
                 title: "Bayes Update",
                 wing: "Chance & Order",
                 blurb: "Prior times likelihood becomes posterior.",
-                accent: [100, 80, 120],
+                accent: [116, 96, 137],
             }
         ),
         (
@@ -3808,7 +3808,7 @@ macro_rules! catalog_rooms {
                 title: "Markov Chain",
                 wing: "Chance & Order",
                 blurb: "Memoryless walk on states.",
-                accent: [90, 60, 100],
+                accent: [125, 93, 135],
             }
         ),
         (
@@ -3830,7 +3830,7 @@ macro_rules! catalog_rooms {
                 title: "Mutual Information",
                 wing: "Chance & Order",
                 blurb: "How much X tells you about Y.",
-                accent: [110, 90, 50],
+                accent: [122, 101, 61],
             }
         ),
         (
@@ -3841,7 +3841,7 @@ macro_rules! catalog_rooms {
                 title: "Klein Bottle",
                 wing: "Shape & Space",
                 blurb: "A bottle with no inside: non-orientable surface.",
-                accent: [80, 50, 120],
+                accent: [122, 89, 163],
             }
         ),
         (
@@ -3852,7 +3852,7 @@ macro_rules! catalog_rooms {
                 title: "Cross-Cap",
                 wing: "Shape & Space",
                 blurb: "RP2 immersion: a cap that crosses itself.",
-                accent: [100, 60, 80],
+                accent: [134, 92, 112],
             }
         ),
         (
@@ -3863,7 +3863,7 @@ macro_rules! catalog_rooms {
                 title: "Boy Surface",
                 wing: "Shape & Space",
                 blurb: "RP2 immersed without a free boundary.",
-                accent: [60, 90, 110],
+                accent: [78, 108, 128],
             }
         ),
         (
@@ -3874,7 +3874,7 @@ macro_rules! catalog_rooms {
                 title: "Solid Torus",
                 wing: "Shape & Space",
                 blurb: "Meridian disk spinning inside a doughnut.",
-                accent: [70, 100, 90],
+                accent: [80, 110, 100],
             }
         ),
         (
@@ -3885,7 +3885,7 @@ macro_rules! catalog_rooms {
                 title: "Hopf Link",
                 wing: "Shape & Space",
                 blurb: "Two circles, each through the other once.",
-                accent: [90, 70, 100],
+                accent: [118, 96, 128],
             }
         ),
         (
@@ -3896,7 +3896,7 @@ macro_rules! catalog_rooms {
                 title: "Unknot",
                 wing: "Shape & Space",
                 blurb: "A tangled circle that is still the unknot.",
-                accent: [50, 80, 100],
+                accent: [78, 108, 129],
             }
         ),
         (
@@ -3907,7 +3907,7 @@ macro_rules! catalog_rooms {
                 title: "Gamma Function",
                 wing: "Analysis",
                 blurb: "log|Gamma| with poles at nonpositive integers.",
-                accent: [100, 70, 50],
+                accent: [130, 97, 76],
             }
         ),
         (
@@ -3918,7 +3918,7 @@ macro_rules! catalog_rooms {
                 title: "Error Function",
                 wing: "Analysis",
                 blurb: "erf(x): signed Gaussian mass.",
-                accent: [60, 100, 80],
+                accent: [72, 112, 92],
             }
         ),
         (
@@ -3929,7 +3929,7 @@ macro_rules! catalog_rooms {
                 title: "Fresnel Integrals",
                 wing: "Analysis",
                 blurb: "C(t), S(t) clothoid spiral to (1/2,1/2).",
-                accent: [80, 90, 120],
+                accent: [93, 103, 134],
             }
         ),
         (
@@ -3940,7 +3940,7 @@ macro_rules! catalog_rooms {
                 title: "Lambert W",
                 wing: "Analysis",
                 blurb: "Inverse of w e^w, principal branch.",
-                accent: [90, 80, 60],
+                accent: [114, 103, 82],
             }
         ),
         (
@@ -3951,7 +3951,7 @@ macro_rules! catalog_rooms {
                 title: "Sinc Interpolation",
                 wing: "Analysis",
                 blurb: "Whittaker-Shannon reconstruction from samples.",
-                accent: [50, 90, 110],
+                accent: [70, 109, 130],
             }
         ),
         (
@@ -3962,7 +3962,7 @@ macro_rules! catalog_rooms {
                 title: "Dirichlet Eta",
                 wing: "Analysis",
                 blurb: "Alternating zeta: eta(s)=sum (-1)^{n-1}/n^s.",
-                accent: [70, 70, 110],
+                accent: [101, 100, 142],
             }
         ),
         (
@@ -3984,7 +3984,7 @@ macro_rules! catalog_rooms {
                 title: "Twin Primes",
                 wing: "Number & Pattern",
                 blurb: "Primes that come in pairs (p, p+2).",
-                accent: [90, 70, 50],
+                accent: [122, 100, 79],
             }
         ),
         (
@@ -3995,7 +3995,7 @@ macro_rules! catalog_rooms {
                 title: "Perfect Numbers",
                 wing: "Number & Pattern",
                 blurb: "Even perfects from Mersenne primes.",
-                accent: [110, 90, 40],
+                accent: [123, 102, 51],
             }
         ),
         (
@@ -4006,7 +4006,7 @@ macro_rules! catalog_rooms {
                 title: "Napoleon Theorem",
                 wing: "Shape & Space",
                 blurb: "Equilateral flaps make a new equilateral.",
-                accent: [70, 80, 100],
+                accent: [94, 104, 125],
             }
         ),
         (
@@ -4018,7 +4018,7 @@ macro_rules! catalog_rooms {
                 wing: "Waves & Sound",
                 blurb: "Smith chart: the infinite impedance plane folded into a unit \
                         circle of reflection. Phase walks the line.",
-                accent: [60, 200, 180],
+                accent: [37, 185, 166],
             }
         ),
         (
@@ -4042,7 +4042,7 @@ macro_rules! catalog_rooms {
                 wing: "Shape & Space",
                 blurb: "Every pure qubit state is a point on a sphere. |0> and |1> \
                         are poles; the equator is equal superpositions.",
-                accent: [100, 200, 255],
+                accent: [70, 176, 230],
             }
         ),
         (
@@ -4074,7 +4074,7 @@ macro_rules! hidden_rooms {
                     "One, two, three, four. You were not told about this room, which means you ",
                     "found it, which means it is yours."
                 ),
-                accent: [240, 220, 120],
+                accent: [183, 167, 69],
             }
         ),
         }
@@ -4162,7 +4162,7 @@ macro_rules! source_id_array {
 #[cfg(test)]
 pub(crate) const ROOM_SOURCE_IDS: &[(&str, &str)] = &catalog_rooms!(source_id_array);
 
-const HIDDEN_ROOM_METADATA: &[RoomMeta] = &hidden_rooms!(metadata_array);
+pub(crate) const HIDDEN_ROOM_METADATA: &[RoomMeta] = &hidden_rooms!(metadata_array);
 
 macro_rules! implement_room_metadata {
     ($(($module:ident, $room:ident, $metadata:expr)),* $(,)?) => {
@@ -4272,7 +4272,7 @@ mod tests {
     // The reviewed catalog with Route Lab appended and its opening invitation
     // focused on delivery order and round-trip cost. Existing doorways retain
     // their order and metadata.
-    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x334a_95e3_b59f_c76c;
+    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0xe5f2_a275_1cc5_1097;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {

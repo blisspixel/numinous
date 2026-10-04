@@ -85,9 +85,10 @@ fn draw(canvas: &mut dyn Surface, theta: f64, seed: u64) {
     let bx = width.saturating_sub(4) as i32;
     let by0 = height as i32 / 2;
     canvas.line(bx, by0 - bar_h, bx, by0 + bar_h, '|');
-    // Lambda marks: bright when path ~ n lambda (lambda toy = 1).
+    // Lambda marks: bright when path ~ n lambda (lambda toy = 1), a
+    // secondary glow off the peak so the crystal planes stay the faintest.
     let bright = detune < 0.12;
-    let ch = if bright { '*' } else { '.' };
+    let ch = if bright { '*' } else { '+' };
     // Detector arc.
     let steps = 24;
     let mut prev: Option<(i32, i32)> = None;
