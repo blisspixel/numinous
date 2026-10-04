@@ -85,7 +85,7 @@ pub(crate) fn draw_audio_state(raster: &mut Raster, state: &AudioState, width: u
         .saturating_sub(label.chars().count() * 6 * scale as usize)
         .saturating_sub(level_reserve)
         .saturating_sub(10) as i32;
-    numinous_core::draw_text(raster, &label, x, 2, scale, '.');
+    numinous_core::draw_text(raster, &label, x, 2, scale, '*');
 }
 
 /// Draw a compact room-bed spectrum meter under the audio badge (visualizer path).
@@ -396,7 +396,7 @@ pub(crate) fn draw_room_chrome(
             10,
             height as i32 - 11 * scale,
             scale,
-            '.',
+            '*',
         );
     }
 
@@ -450,16 +450,16 @@ pub(crate) fn draw_room_chrome(
         let action = fit_footer_text(&footer.action, budget.action, budget.scale);
         let status = fit_footer_text(&footer.status, budget.status, budget.scale);
         if state.room_card == 0 || state.show_info || state.banner_active {
-            numinous_core::draw_text(raster, &action, 10, height as i32 - 19 * scale, scale, '.');
+            numinous_core::draw_text(raster, &action, 10, height as i32 - 19 * scale, scale, '*');
         }
-        numinous_core::draw_text(raster, &status, 10, height as i32 - 10 * scale, scale, '.');
+        numinous_core::draw_text(raster, &status, 10, height as i32 - 10 * scale, scale, '*');
         numinous_core::draw_text(
             raster,
             &footer.controls,
             controls_x,
             height as i32 - 10 * scale,
             scale,
-            '.',
+            '*',
         );
     }
 }
@@ -556,14 +556,14 @@ mod tests {
                 );
                 let mut expected = Raster::new(width, height);
                 let y = height as i32 - 10 * budget.scale;
-                numinous_core::draw_text(&mut expected, status, 10, y, budget.scale, '.');
+                numinous_core::draw_text(&mut expected, status, 10, y, budget.scale, '*');
                 numinous_core::draw_text(
                     &mut expected,
                     &footer.controls,
                     budget.controls_x,
                     y,
                     budget.scale,
-                    '.',
+                    '*',
                 );
                 let actual = raster.to_rgba();
                 let blank = Raster::new(width, height).to_rgba();
@@ -697,7 +697,7 @@ mod tests {
                     10,
                     height as i32 - 10 * budget.scale,
                     budget.scale,
-                    '.',
+                    '*',
                 );
                 let blank = Raster::new(width, height).to_rgba();
                 for (index, (wanted, empty)) in expected

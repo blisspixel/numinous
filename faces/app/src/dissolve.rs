@@ -18,7 +18,7 @@ use numinous_core::Motion;
 /// The near-black stage every room is drawn on (`docs/VISUALS.md`). A channel
 /// above it dims toward it; a channel already at or below it is left alone, so
 /// an era whose stage is darker keeps its own black.
-pub(crate) const STAGE: [u8; 3] = [10, 11, 15];
+pub(crate) const STAGE: [u8; 3] = numinous_core::palette::STAGE;
 
 /// The flash guard. An arriving room may begin to rise at most once in this
 /// many seconds, however fast rooms are changed.

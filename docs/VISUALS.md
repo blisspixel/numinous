@@ -249,6 +249,46 @@ Color is data, never decoration. Rules:
   and color-vision deficiencies, and pair hue with brightness or shape. That
   complete validation has not happened yet and remains in the 0.5 gate.
 
+## Mark lightness and the accent band (Built)
+
+The core owns both contracts in `palette` and `Raster::MarkRole`. Room accents
+keep CIELAB lightness from 40 to 72 and at least 3:1 contrast against the
+near-black stage. Accents outside the band were moved at the same CIELAB hue,
+reducing chroma only when the sRGB gamut required it. Every catalog and hidden
+accent is checked; these are graphical contrast measurements, not a claim
+that every text face or display is accessible.
+
+| Marks | Role | Accent multiplier |
+| --- | --- | --- |
+| `.` `:` | Faint guide | 0.35 |
+| `+` `x` `=` | Secondary detail | 0.6 |
+| `*` `o` and other ordinary marks | Main idea | 1.0 |
+| `#` | Hot highlight | 1.7 |
+
+Spaces draw nothing. Rules use a fixed dark structural ink; warning and spectral
+marks retain their semantic inks. The terminal keeps the original characters,
+while the raster uses their roles for lightness. App footer and audio labels
+use main-idea ink so reducing guide lightness does not dim readable controls.
+Mandelbrot's sampled color field remains independent of the mark ramp.
+
+Fixed mono thresholds follow the rendered catalog rather than adapting per
+frame. Sweeps require distinct drawn accent levels, increasing lightness, and
+visible pixel touch responses through the same mono renderer players use.
+Hilbert's focus is a lit neighborhood, Percolation leaves closed sites dark
+and exposes a shortest left-to-right crossing, and Wireworld's conductor,
+head, and tail use different roles. The audit in
+`evidence/color-independence.json` is regenerated from current room sources;
+remaining warning and spectral collisions are still recorded in the roadmap.
+Flagship image goldens are deliberately rebased for this shared rendering
+change. The existing audio golden metrics remain unchanged. This software
+rendering contract does not promote the optional GPU post stack without its
+closed physical pacing set.
+
+The adjusted Rule 30 accent exposed a fast-speed flash in its automatic rule
+gallery. Ambient growth now keeps Rule 30 and variations move the seed;
+choosing other rule bytes remains an explicit hand action. The full-catalog
+flash sweep checks this change against the existing shrink-only budget.
+
 ## Target motion design
 
 Rooms currently animate deterministically from phase, and the app can reduce

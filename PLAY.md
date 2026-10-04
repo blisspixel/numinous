@@ -65,18 +65,17 @@ plain room fade. Quick room changes may briefly wait on the dark stage.
 
 ### Before you start: flashing, motion, color, and sound
 
-Two things are known to be wrong and are not fixed yet, so you can decide for
-yourself rather than find out the hard way. cellular-automata, julia,
+One remaining flash limit is disclosed before play: cellular-automata, julia,
 and lambda-map flash faster than the WCAG 2.3.1 budget allows when
 the App runs them at its fastest speed, 8x. At normal speed and up to 4x they
 stay within it, and every other room stays within it all the way to 8x, at the
 App's 60 frames a second. The music visualizer, which can push a room faster
-still, is not measured. hilbert,
-magnet-fractal, percolation, and wireworld answer a touch in a way the
-color-free renderer cannot show, so under `NO_COLOR` they look like they
-ignored you. `numinous access` prints this same list straight from the code
-that enforces it, so the two can never disagree. It also shows which of the
-switches below are on right now.
+still, is not measured. Every room's visible pixel response to a touch
+also shows through `NO_COLOR`. The shared mark ramp separates faint guides,
+secondary detail, main shapes, and hot highlights; Hilbert lights a neighborhood,
+Percolation exposes the shortest crossing, and Wireworld separates its electron
+head and tail. `numinous access` reports the remaining flash limits from the
+same code that enforces them.
 
 If motion, color, or stereo are a problem for you, three switches are waiting.
 Set `NUMINOUS_REDUCED_MOTION=1` and the terminal views stop moving on their

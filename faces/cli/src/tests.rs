@@ -2946,14 +2946,9 @@ fn the_access_report_names_every_room_on_the_known_limit_lists() {
     // every listed room appears in the report itself.
     let report = super::access_report(&super::access_settings(None, None, None));
     const PLAYING: &str = include_str!("../../../docs/PLAYING.md");
-    // The packaged page carries the same warning: a player who installed a
-    // release cannot open docs/PLAYING.md, and this is a safety disclosure.
+    // Packaged players must receive the same safety disclosure.
     const PLAY: &str = include_str!("../../../PLAY.md");
-    for room in numinous_core::KNOWN_OVER_FLASH_BUDGET
-        .iter()
-        .map(|(room, _)| room)
-        .chain(numinous_core::RESPONSE_INVISIBLE_WITHOUT_COLOR.iter())
-    {
+    for &(room, _) in &numinous_core::KNOWN_OVER_FLASH_BUDGET {
         assert!(
             report.contains(room),
             "the access report no longer names {room}"

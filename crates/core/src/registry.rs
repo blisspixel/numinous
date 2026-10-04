@@ -128,18 +128,6 @@ pub const KNOWN_OVER_FLASH_BUDGET: [(&str, f64); 3] = [
     ("lambda-map", 8.0),
 ];
 
-/// Rooms whose answer to a touch the color-free renderer cannot show,
-/// measured 2026-08-05.
-///
-/// The first three need the room to answer with shape rather than only
-/// brightness; `magnet-fractal` changes both-lit cells by too little
-/// luminance to survive the block-character floor. A record of a real
-/// defect, not a permission slip, public for the same reason as
-/// [`KNOWN_OVER_FLASH_BUDGET`]: the player-facing report and the enforcing
-/// tests must read one list.
-pub const RESPONSE_INVISIBLE_WITHOUT_COLOR: [&str; 4] =
-    ["hilbert", "magnet-fractal", "percolation", "wireworld"];
-
 /// The longest rejected id a not-found message will echo back. Beyond this the
 /// tail is dropped, so a hostile or accidental megabyte cannot become the
 /// message.
@@ -779,31 +767,11 @@ mod tests {
         // reviewer found in an earlier rule of mine.
         let section = crate::roadmap_decisions();
 
-        let flashing: Vec<&str> = KNOWN_OVER_FLASH_BUDGET
-            .iter()
-            .map(|&(room, _)| room)
-            .collect();
-        let lists = [
-            ("KNOWN_OVER_FLASH_BUDGET", &flashing[..]),
-            (
-                "RESPONSE_INVISIBLE_WITHOUT_COLOR",
-                &RESPONSE_INVISIBLE_WITHOUT_COLOR[..],
-            ),
-        ];
-        // A list may empty out as its rooms are fixed, but if every list were
-        // empty this would check nothing at all.
-        assert!(
-            lists.iter().any(|(_, rooms)| !rooms.is_empty()),
-            "every known-failure list is empty, so this checks nothing"
-        );
-        for (list, rooms) in lists {
-            for room in rooms {
-                assert!(
-                    section.contains(&format!("`{room}`")),
-                    "{room} is on {list} but is not named in the roadmap's decisions \
-                     section, so nobody reading the repository knows it is waiting"
-                );
-            }
+        for (room, _) in KNOWN_OVER_FLASH_BUDGET {
+            assert!(
+                section.contains(&format!("`{room}`")),
+                "{room} is on KNOWN_OVER_FLASH_BUDGET but is not named in the roadmap's decisions section"
+            );
         }
     }
 
@@ -1498,44 +1466,14 @@ mod tests {
         );
     }
 
-    /// Rooms whose touch response is still invisible in the color-free
-    /// renderer, remeasured 2026-08-05 at 120 by 70 after `to_mono` learned to
-    /// shade a cell whose halves are both lit.
-    ///
-    /// This list was 21. Shading a both-lit cell recovered 15 of them, and
-    /// moving the shade thresholds onto the catalog's measured ink recovered
-    /// two more. These four fail for two different reasons, measured at the
-    /// level of individual cells rather than guessed at:
-    ///
-    /// `hilbert`, `percolation` and `wireworld` change only cells with one
-    /// half below the lit floor `crate::ansi` uses. Such a cell renders as a half
-    /// block, which says which half is lit and nothing about how brightly.
-    /// The change can be large and still invisible: one `hilbert` cell moves
-    /// its lit half from 174 to 251 and keeps the same glyph. No threshold
-    /// helps, because no threshold is consulted.
-    ///
-    /// `magnet-fractal` does change both-lit cells, but by about 22 luminance
-    /// inside the widest band, which spans the floor up to 128.
-    ///
-    /// So the first three need the room to answer with shape rather than only
-    /// brightness. Encoding brightness into a half-lit cell would need a glyph
-    /// that means "lower half, dimly", and the block characters do not have
-    /// one; the nearest candidates encode how much of the cell is filled,
-    /// which would say something false about where the ink is.
-    ///
-    /// The list is a record of a real defect, not a permission slip. The test
-    /// below fails if it grows, if an entry starts responding and is not
-    /// removed, or if a room outside it goes quiet. Tracked in
-    /// `docs/ROADMAP.md` under 0.5 Sensory; the list itself is the public
-    /// one the access report prints.
-    use super::RESPONSE_INVISIBLE_WITHOUT_COLOR;
-
     /// Rooms whose picture does not change at all under a center poke,
     /// measured 2026-08-05 at 120 by 70. They still answer on the status line,
     /// which `poke_changes_status_for_every_catalog_room` enforces, but the
-    /// plate itself is unmoved. Same shrink-only contract as above.
-    const NO_VISUAL_RESPONSE_TO_A_POKE: [&str; 7] = [
-        "brusselator",
+    /// plate itself is unmoved. `brusselator` left when its marks took their
+    /// own levels of the ink ramp. A record of a real defect, not a permission
+    /// slip: the test below fails if it grows, or if an entry starts moving
+    /// and is not removed.
+    const NO_VISUAL_RESPONSE_TO_A_POKE: [&str; 6] = [
         "cesaro",
         "koch-snowflake",
         "laplace-clock",
@@ -1551,6 +1489,16 @@ mod tests {
         // matter of taste: render the room before and after a center poke,
         // strip the color with the same renderer NO_COLOR selects, and require
         // the two to differ.
+        //
+        // Every room passes the color-free half. It once failed 21: shading a
+        // cell whose halves are both lit recovered 15, moving the shade steps
+        // onto the catalog's measured ink two more, and the last four fell to
+        // the ink table. `hilbert`, `percolation` and `wireworld` changed only
+        // half-lit cells, whose glyph says which half is lit and not how
+        // brightly, so they now answer with shape: a lit patch of thread, open
+        // sites against a dark stage, an electron's head and tail in three
+        // lights. `magnet-fractal` moved both-lit cells by about 22 luminance
+        // inside one band; its escape ramp now spans the band.
         use crate::ansi::{to_ansi, to_mono};
         const SIZE: (usize, usize) = (120, 70);
 
@@ -1570,42 +1518,35 @@ mod tests {
             }
         }
 
-        for (measured, known, label) in [
-            (
-                &invisible_without_color,
-                &RESPONSE_INVISIBLE_WITHOUT_COLOR[..],
-                "answer in a way the color-free renderer cannot show",
-            ),
-            (
-                &unmoved,
-                &NO_VISUAL_RESPONSE_TO_A_POKE[..],
-                "do not change their picture at all",
-            ),
-        ] {
-            let mut fresh: Vec<&str> = measured
-                .iter()
-                .copied()
-                .filter(|id| !known.contains(id))
-                .collect();
-            fresh.sort_unstable();
-            assert!(
-                fresh.is_empty(),
-                "rooms that newly {label}: {}",
-                fresh.join(", ")
-            );
+        invisible_without_color.sort_unstable();
+        assert!(
+            invisible_without_color.is_empty(),
+            "these rooms answer a touch in a way the color-free renderer cannot show: {}",
+            invisible_without_color.join(", ")
+        );
 
-            let mut fixed: Vec<&str> = known
-                .iter()
-                .copied()
-                .filter(|id| !measured.contains(id))
-                .collect();
-            fixed.sort_unstable();
-            assert!(
-                fixed.is_empty(),
-                "these no longer {label} and must leave their list: {}",
-                fixed.join(", ")
-            );
-        }
+        let mut fresh: Vec<&str> = unmoved
+            .iter()
+            .copied()
+            .filter(|id| !NO_VISUAL_RESPONSE_TO_A_POKE.contains(id))
+            .collect();
+        fresh.sort_unstable();
+        assert!(
+            fresh.is_empty(),
+            "rooms that newly do not change their picture at all: {}",
+            fresh.join(", ")
+        );
+        let mut fixed: Vec<&str> = NO_VISUAL_RESPONSE_TO_A_POKE
+            .iter()
+            .copied()
+            .filter(|id| !unmoved.contains(id))
+            .collect();
+        fixed.sort_unstable();
+        assert!(
+            fixed.is_empty(),
+            "these now change their picture and must leave NO_VISUAL_RESPONSE_TO_A_POKE: {}",
+            fixed.join(", ")
+        );
     }
 
     #[test]

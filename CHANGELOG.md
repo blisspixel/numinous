@@ -5,6 +5,33 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+## [0.5.0-alpha.1] - 2026-10-04
+
+### Added
+- A shared brightness ramp for faint guides, secondary detail, main shapes,
+  and hot highlights, with all catalog and hidden accents checked against a
+  CIELAB lightness band and graphical contrast floor. Catalog sweeps check
+  mark separation, mono visibility, and dichromacy; the current audit and
+  flagship visual goldens follow the intentional rendering change.
+
+### Fixed
+- Hilbert lights a neighborhood along its thread; Percolation leaves closed
+  sites dark and exposes a shortest crossing; Wireworld separates conductor,
+  electron head, and tail. Visible pixel touch responses across the catalog
+  now survive the color-free renderer. Mandelbrot keeps its smooth multicolor
+  field. App control labels retain readable main-idea ink.
+- Rule 30 keeps its named rule during ambient growth. Variations move the
+  initial seed and the player's dial still reaches other rule bytes. This
+  removes an unasked rule-changing gallery that both mislabeled the picture
+  and exceeded the measured flash budget after the accent change.
+- The package minor now follows active Sensory Alpha work. Understanding
+  Alpha's qualifying study remains open independently. Human playtests remain
+  optional, with no machine gate waived.
+- The Sensory Lift branch work is reconciled with main, including the refused
+  native macOS pacing attempt. Historical receipts stay explicitly separate
+  from current qualification. The roadmap now gives the bounded execution
+  path to First Light, and work branches retire after integration.
+
 ## [0.4.0-alpha.34] - 2026-10-03
 
 ### Added

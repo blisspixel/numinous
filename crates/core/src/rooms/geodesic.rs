@@ -83,14 +83,14 @@ fn draw(canvas: &mut dyn Surface, alpha: f64, seed: u64) {
         }
         prev = Some((px, py));
     }
-    // Equator.
+    // Equator, a guide like the outline.
     prev = None;
     for i in 0..=48 {
         let th = 2.0 * std::f64::consts::PI * (i as f64 / 48.0);
         let px = (cx + r * th.cos()).round() as i32;
         let py = cy.round() as i32;
         if let Some((ox, oy)) = prev {
-            canvas.line(ox, oy, px, py, '-');
+            canvas.line(ox, oy, px, py, '.');
         }
         prev = Some((px, py));
     }

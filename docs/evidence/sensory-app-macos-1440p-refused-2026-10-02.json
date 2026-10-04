@@ -1,0 +1,105 @@
+{
+  "schema": "numinous.sensory-app-platform",
+  "schemaVersion": 1,
+  "evidence": {
+    "class": "physical-reference-pacing",
+    "timingAuthority": "physical-reference-candidate",
+    "correctnessClaim": "the deterministic fully composed App frame completed through the production direct surface presenter on this runtime",
+    "pacingClaim": "the recorded acquire-through-present-request samples are a candidate result for this named physical reference only",
+    "excludes": [
+      "compositor completion",
+      "display scanout",
+      "input latency",
+      "perceptual quality"
+    ]
+  },
+  "build": {
+    "packageVersion": "0.4.0-alpha.31",
+    "revision": "eedf450d337e890221139aff54e59a61967b4d91",
+    "profile": "release",
+    "binarySha256": "9e325d1282dc07c59e86bda0bb38cf4d89946da9d7f6aabc4c81f980029349dc"
+  },
+  "platform": {
+    "os": "macos",
+    "architecture": "aarch64",
+    "family": "unix",
+    "githubActions": false,
+    "machine": "Apple Mac mini (Macmini9,1, Apple M1)",
+    "osVersion": "macOS 27.0 (26A428)",
+    "powerState": "ac"
+  },
+  "adapter": {
+    "name": "Apple M1",
+    "vendorId": 0,
+    "deviceId": 0,
+    "deviceType": "IntegratedGpu",
+    "driver": "",
+    "driverInfo": "",
+    "backend": "Metal",
+    "physicalGpu": true
+  },
+  "surface": {
+    "requestedWidth": 2560,
+    "requestedHeight": 1440,
+    "actualWidth": 2560,
+    "actualHeight": 1440,
+    "format": "Bgra8UnormSrgb",
+    "presentMode": "Fifo",
+    "desiredMaximumFrameLatency": 1
+  },
+  "source": {
+    "room": "times-tables",
+    "variation": 17,
+    "phase": 0.375,
+    "width": 2560,
+    "height": 1440,
+    "byteLength": 14745600,
+    "litPixels": 179290,
+    "allAlphaOpaque": true,
+    "firstRenderSha256": "bd48503300fc556d706e5cac9151ca616043c0ac1b24c6e8850c65a36935f2bc",
+    "repeatRenderSha256": "bd48503300fc556d706e5cac9151ca616043c0ac1b24c6e8850c65a36935f2bc",
+    "deterministic": true,
+    "components": [
+      "core room render_input",
+      "App input feedback",
+      "App room chrome",
+      "App audio badge",
+      "App spectrum meter",
+      "core Modern era transform"
+    ]
+  },
+  "warmups": 30,
+  "samples": 120,
+  "presentedFrames": 0,
+  "skippedFrames": 121,
+  "suboptimalFrames": 0,
+  "acquireMs": {
+    "raw": [],
+    "p50": null,
+    "p95": null,
+    "maximum": null
+  },
+  "renderAndPresentMs": {
+    "raw": [],
+    "p50": null,
+    "p95": null,
+    "maximum": null
+  },
+  "boundaryMs": {
+    "raw": [],
+    "p50": null,
+    "p95": null,
+    "maximum": null
+  },
+  "boundaryBudgetMs": 50.0,
+  "checkEnforced": true,
+  "failures": [
+    "presentation surface remained unavailable for too many frames",
+    "completed 0 of 30 warmups",
+    "retained 0 of 120 acquire samples",
+    "retained 0 of 120 render and present samples",
+    "retained 0 of 120 boundary samples",
+    "physical pacing observed 121 skipped frames"
+  ],
+  "verdict": "fail"
+}

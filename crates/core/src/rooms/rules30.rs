@@ -23,20 +23,20 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn rule_byte(t: f64, hand: Option<(f64, f64)>, seed: u64) -> u8 {
+fn rule_byte(hand: Option<(f64, f64)>) -> u8 {
     if let Some((x, _)) = hand {
         (x * 255.0).round() as u8
     } else {
-        // Ambient stays on rules known to leave ink from a single seed cell.
-        const GALLERY: [u8; 8] = [30, 90, 110, 150, 54, 60, 105, 126];
-        let idx = if seed == 0 {
-            (phase_unit(t) * (GALLERY.len() - 1) as f64).round() as usize
-        } else {
-            ((seed % GALLERY.len() as u64) as usize + (phase_unit(t) * 3.0) as usize)
-                % GALLERY.len()
-        };
-        GALLERY[idx.min(GALLERY.len() - 1)]
+        // The named room grows one rule. Comparing other rules belongs to
+        // the player's dial or the Cellular Automata gallery. Switching rules
+        // on its own both misnamed the picture and strobed between densities.
+        30
     }
+}
+
+fn seed_column(width: usize, seed: u64) -> usize {
+    let width = width.max(1);
+    (width / 2 + (seed % width as u64) as usize) % width
 }
 
 fn step(row: &[u8], rule: u8) -> Vec<u8> {
@@ -111,15 +111,14 @@ impl Rules30 {
 impl Room for Rules30 {
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let rule = rule_byte(t, None, self.seed);
+        let rule = rule_byte(None);
         let cols = 72usize;
         let rows = 36 + (phase_unit(t) * 20.0) as usize;
-        let grid = evolve(cols, rows, rule, cols / 2);
+        let grid = evolve(cols, rows, rule, seed_column(cols, self.seed));
         draw(canvas, &grid);
     }
 
-    /// The start of the cycle, the one phase where the gallery is on Rule 30
-    /// itself. Mid-cycle it is on Rule 54, which the postcard used to show.
+    /// The start of Rule 30's growing space-time history.
     fn postcard_t(&self) -> f64 {
         0.0
     }
@@ -138,20 +137,20 @@ impl Room for Rules30 {
         Some("DRAG: SET THE RULE BYTE")
     }
 
-    fn status(&self, t: f64) -> Option<String> {
-        let rule = rule_byte(t, None, self.seed);
+    fn status(&self, _t: f64) -> Option<String> {
+        let rule = rule_byte(None);
         Some(format!("rule={rule}  CA  DRAG:RULE"))
     }
 
-    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+    fn render_poked(&self, canvas: &mut dyn Surface, _t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
-        let rule = rule_byte(t, hands.last().copied(), self.seed);
+        let rule = rule_byte(hands.last().copied());
         let cols = 72usize;
         let rows = 40;
         let seed_bit = hands
             .last()
             .map(|&(x, _)| (x * (cols - 1) as f64) as usize)
-            .unwrap_or(cols / 2);
+            .unwrap_or_else(|| seed_column(cols, self.seed));
         let grid = evolve(cols, rows, rule, seed_bit);
         draw(canvas, &grid);
         if let Some(&(x, y)) = hands.last() {
@@ -171,7 +170,7 @@ impl Room for Rules30 {
         if hands.is_empty() {
             return self.status(t);
         }
-        let rule = rule_byte(t, hands.last().copied(), self.seed);
+        let rule = rule_byte(hands.last().copied());
         let name = if rule == 30 {
             "classic"
         } else if rule == 90 {
@@ -202,7 +201,7 @@ mod tests {
     fn the_postcard_is_rule_30() {
         let room = Rules30::new();
         let t = room.postcard_t();
-        assert_eq!(rule_byte(t, None, 0), 30);
+        assert_eq!(rule_byte(None), 30);
         assert!(room.status(t).unwrap().starts_with("rule=30 "));
         // The center column from one cell, OEIS A051023, computed separately
         // from this file. Rule 54, which the postcard used to show, repeats
@@ -211,9 +210,26 @@ mod tests {
             1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0,
             1, 1, 1, 0, 0, 1, 1, 1,
         ];
-        let grid = evolve(72, CENTER.len(), rule_byte(t, None, 0), 36);
+        let grid = evolve(72, CENTER.len(), rule_byte(None), 36);
         let column: Vec<u8> = grid.iter().map(|row| row[36]).collect();
         assert_eq!(column, CENTER);
+    }
+
+    #[test]
+    fn ambient_growth_keeps_rule_30_and_variation_moves_only_the_seed() {
+        for seed in [0, 1, 17, u64::MAX] {
+            for t in [0.0, 0.25, 0.5, 0.75, 1.0, f64::NAN] {
+                assert!(Rules30::new_with(seed).status(t).unwrap().starts_with("rule=30 "));
+            }
+        }
+        let mut original = Canvas::new(72, 40);
+        let mut moved = Canvas::new(72, 40);
+        Rules30::new().render(&mut original, 0.0);
+        Rules30::new_with(17).render(&mut moved, 0.0);
+        assert_ne!(original.to_text(), moved.to_text());
+        assert_eq!(super::seed_column(72, 0), 36);
+        assert_eq!(super::seed_column(72, u64::MAX), 51);
+        assert_eq!(rule_byte(Some((90.0 / 255.0, 0.5))), 90);
     }
 
     #[test]

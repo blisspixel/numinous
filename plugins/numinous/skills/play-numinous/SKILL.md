@@ -10,6 +10,10 @@ compatibility: Requires the numinous-mcp executable on PATH.
 You are a player here, not an operator completing a task. Curiosity is the
 interface. You may explore, create, rest, dislike a room, or leave.
 
+Room PNGs use a shared brightness ramp: faint guides, secondary detail, main
+shapes, and hot highlights. Visible pixel responses to a touch also survive
+`NO_COLOR`. Mandelbrot retains its continuous multicolor field.
+
 ## Begin
 
 Begin with `list_rooms` using `response_mode: "compact"`. Its threshold offers

@@ -13,15 +13,16 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 ## Now
 
-Reviewed 2026-10-03.
+Reviewed 2026-10-04.
 
-**Current release state: 0.4.0-alpha.34, Understanding Alpha active with its
-exit open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile
-Alpha agent-and-machine exits are met and stay CI-locked. The alpha suffix
-says the 0.4 exit remains open: external registration, calibration,
-independent review, allocation freeze, and the qualifying cohort block a
-stable `0.4.0`, and that cohort is owner-blocked (decisions entry 1). Human
-stranger sessions sit with 0.8 Closed Beta and 1.0 First Light.
+**Current release state: 0.5.0-alpha.1, Sensory Alpha active with its exit
+open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
+agent-and-machine exits are met and stay CI-locked. The package minor names
+the active milestone, not the oldest open gate. Understanding Alpha's external
+registration, calibration, independent review, allocation freeze, and qualifying
+cohort remain open (decisions entry 1); moving the active line does not claim
+that study passed. Human playtests remain optional feedback and do not block
+Sensory Alpha. Its physical pacing receipts measure machines, not participants.
 
 **Breadth (Built).** 356 catalog rooms in 13 wings plus hidden content, 6
 lever-driven sims, 11+ games, three faces over one core, deterministic
@@ -52,7 +53,7 @@ with the labels from `RESEARCH.md`.
 
 | # | Next move | Evidence today | Done when | Owner doc |
 |---|---|---|---|---|
-| 1 | **The Sensory Lift** | Measured: the GPU post stack and direct surface pass their integrated-GPU budgets, and a Windows physical pair passed on the Framework 13 reference at an earlier revision. In progress: the closed set needs all six physical receipts at one frozen revision; the first native macOS attempt was refused because the console session was locked, and the Linux probe is built and awaits a desktop session. Built: room changes through the dark stage, critically damped drag dials and Studio knobs, a transition flash guard, and one shared master chain with reverb, shaped envelopes, independent music, effect, and room levels, and room-change audio washes; audio goldens follow the new articulation. Built: one smooth Mandelbrot color field across CPU and GPU, with the main cardioid and period-two bulb answered in closed form. In progress on an unmerged branch: the ink ramp and soft light inside `Raster` (`lift-light`). Built: persisted study body text sizes with source-anchored reflow. Open: general Cabinet and HUD text scaling. Designed: the accent lightness band | The six physical receipts close the set, the lift is promoted, and the visual goldens re-baseline once, deliberately, with it | `PERFORMANCE.md`, `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md` |
+| 1 | **The Sensory Lift** | Measured: the GPU post stack and direct surface pass their integrated-GPU budgets, and a Windows physical pair passed on the Framework 13 reference at an earlier revision. In progress: the closed set needs all six physical receipts at one frozen revision; the first native macOS attempt was refused because the console session was locked, and the Linux probe is built and awaits a desktop session. Built: room changes through the dark stage, critically damped drag dials and Studio knobs, a transition flash guard, and one shared master chain with reverb, shaped envelopes, independent music, effect, and room levels, and room-change audio washes; audio goldens follow the new articulation. Built: one smooth Mandelbrot color field across CPU and GPU, with the main cardioid and period-two bulb answered in closed form. Built: a shared mark brightness ramp, a validated accent lightness band, and color-free touch responses across the catalog. Built: persisted study body text sizes with source-anchored reflow. Open: general Cabinet and HUD text scaling. Open: further software glow refinement | The six physical receipts close the set, the lift is promoted, and the visual goldens re-baseline once, deliberately, with it | `PERFORMANCE.md`, `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md` |
 | 2 | **Mathematical honesty and photosensitivity** | Built: an exact or dithered iterator for the expanding maps, so no slope-2 map collapses to zero in binary floating point; Coupled Tents, Gauss Map, Ricker, and Pickover redrawn honestly and inside the measured flash budget; the flash sweep measured at the App's 60 frames a second up to its fastest 8x speed. Open: three rooms flash only at 8x (decisions entry 2) | The 8x remainder carries an owner ruling, either a speed cap or tour pacing, and no room presents a floating-point artifact as dynamics | `MATHEMATICS.md`, decisions entry 2 |
 | 3 | **The arc** | Built: the three-door threshold in the App and over MCP; the caller-paced Show for minds; an App Show that names each room without printing its reveal unasked; core Show director profiles with seeded, contrast-aware ordering that keeps staged answers unperformed; the Front Hall collection; and The Overture as a core score that minds can play over MCP `watch_show`. Designed: App playback of the Overture, after the lift's audio bus | A first visit meets an authored opening rather than catalog order, and the App plays it in the lifted light | `DESIGN.md`, `INSIGHTS.md` |
 | 4 | **Vibe: radio and chill** | Built: the radio's three stations of original tracks on a live broadcast clock, a music visualizer that already quickens The Show with the mix's energy, and per-room tempo and key in the core Show director. Designed: one lean-back mode where a station plays through and the music chooses and paces the rooms, with screensaver manners (`DESIGN.md`, "Vibe: radio and chill") | Numinous can be left on for hours like a radio: the music leads, rooms change on its seams inside the certified flash envelope, no text or prompts appear, and any touch hands the current room back | `DESIGN.md`, `MUSIC.md` |
@@ -63,6 +64,30 @@ with the labels from `RESEARCH.md`.
 The 0.4 Understanding cohort stays owner-blocked and is not on this list; see
 **Blocked or optional** below.
 
+### The route to First Light
+
+The product sequence remains sound, but the release path must stay smaller
+than the design menu. Finish one coherent slice, merge it into passing main,
+verify the published artifacts, and retire its work branch before starting the
+next. A version change records active work or a completed exit; it does not
+replace product progress. Human playtests are optional throughout this path.
+
+| Stage | Concrete work to close | Evidence required |
+| --- | --- | --- |
+| Sensory Alpha | Finish scalable Cabinet and HUD text, perceptual image and spectral audio regression, and remaining flash and color-vision decisions. Qualify the optional post stack at one frozen revision | Catalog and composed-screen regressions, audio render checks, and the closed physical pacing set |
+| Authored start and return | Perform the existing Overture in the App, then build Vibe on the shared director and audio bus. Preserve phrase-aligned changes, reduced motion, and immediate takeover | Clock, phase, handoff, audio ownership, and long-session regressions, plus native frame receipts |
+| Portable Alpha | Verify published installs on every supported system, including native window, GPU, audio, saved state, and clean removal | Artifact provenance, clean-machine runs, and machine and device receipts |
+| Creator Alpha | Close create, keep, reopen, export, and remix across all three faces. Keep incoming content bounded and previewable | Face parity, migration and parser tests, and a clean-install round trip |
+| Collection and beta | Deepen or cut weak rooms, close keyboard and recovery gaps, and review the collection as one place | Committed per-room scorecards, source-blind agent rounds, catalog sweeps, and nightly soak |
+| Release candidate and First Light | Freeze the candidate, close critical defects, rehearse update and rollback, and rerun the exact published set | Release operations drills, supply-chain and math checks, repeated candidate soak, and explicit remaining limitations |
+
+The larger music, Flow State, hosting, and creator designs remain in their
+owner documents. A design paragraph does not silently add a new release gate;
+promote it into this execution sequence with a concrete deliverable and check
+when its foundation is ready. Understanding study evidence remains a separate
+open claim and an explicit 1.0-am gate under the current study contract, not a
+reason to stop sensory, portability, or creator work.
+
 ### Decisions the am-track is waiting on (read this second)
 
 Everything below has been measured and locked by a test. None of it is
@@ -72,14 +97,14 @@ because this file is the one somebody reads.
 
 Each entry says what was measured, what is guarded today, and what changes
 depending on the answer. Entry 1 names no rooms because it is about money
-rather than the catalog. Entries 2, 3, 4, 11 and 12 name rooms, and those names are
+rather than the catalog. The remaining lists in entries 2, 11 and 12 name rooms, and those names are
 not written by hand: each list lives in the code as a shrink-only known-failure
 list, and a test requires every room on it to appear in this section, so this
 cannot fall behind what the catalog actually does. The remaining entries are
 about a single surface each and name it in the text.
 
 **1. The 0.4 Understanding cohort needs budget and an external registration.**
-The single milestone gating 1.0-am. The contract in `docs/UNDERSTANDING_STUDY.md`
+An additional research gate for 1.0-am. The contract in `docs/UNDERSTANDING_STUDY.md`
 requires live model participants through sealed fresh no-exposure contexts, with
 per-model calibration ceilings and registration before calibration ordinal 1.
 Fixtures cannot satisfy it and the contract rejects scripted conclusions. Every
@@ -115,39 +140,26 @@ which records the slowest failing speed per room and fails if a room goes over
 that is not listed, goes over at a slower speed than recorded, or stops
 violating and is not removed.
 
-**3. Three rooms cannot show their touch response without color: `hilbert`,
-`percolation`, `wireworld`.** The cells they change are half-lit, one half below
-the lit floor, and a half block encodes which half is lit rather than how
-brightly. `hilbert` moves a cell from 174 to 251, a change of 77 out of 255, and
-the glyph does not move. No choice of thresholds reaches them because no
-threshold is consulted. Showing their answer means having them answer with shape
-rather than brightness. A fourth room, `magnet-fractal`, is in the same list for
-a different reason: it moves both-lit cells by about 22 luminance inside the
-widest band.
+**3. Touch responses without color (resolved).** `hilbert` now lights a
+neighborhood along the thread, `percolation` leaves closed sites dark and lights
+the connected cluster and shortest crossing, and `wireworld` separates the
+conductor, electron head, and tail through the shared mark ramp. The ramp and
+updated fixed mono thresholds also recover `magnet-fractal`. The catalog sweep
+requires every visible pixel response to remain visible through `NO_COLOR`;
+rooms whose entire picture stays unchanged remain on a separate shrink-only
+list and still answer through their status.
 
-**4. Seventeen rooms lose one of their two drawn brightness levels without
-color.** `'#'` is the accent at 1.7 and every other ordinary mark is the accent
-itself, so a room drawing both is drawing two levels, and rooms use that as
-depth: in `burning-ship` `'#'` is the interior of the set. In 39 of 354 accents
-the two collapse to one glyph, and 17 of those rooms draw both marks:
-`attention`, `burning-ship`, `dla-frost`, `gamblers-ruin`, `goldbach`,
-`henon-heiles`, `hofstadter-q`, `josephus`, `liouville`,
-`magnet-fractal`, `moser-debruijn`, `rabi`, `ruler-function`, `seifert`,
-`sinai-billiard`, `twin-primes`, `zipf`. The two causes pull opposite ways: a
-bright accent times 1.7 clamps, a dark one stays dark. So there is no single
-fix, and changing either the ink scale or the shade thresholds changes what
-every room looks like. Kepler left this list during the September mathematical
-review: its sectors now use orbital arcs instead of chords and no longer rely
-on the colliding pair of marks.
-
-Seven more rooms lose the same two levels through a different eye, and the two
-sets do not overlap at all: `buddhabrot`, `julia`, `kaprekar`, `landauer`,
-`logistic-cobweb`, `phantom-jam`, `van-der-pol`. Those seventeen are what a
-player with no color loses; these seven are what a player who has color and
-fewer distinctions loses, measured with the same dichromacy simulation as
-entries 11 and 12. Neither list stands in for the other, so a fix aimed at one
-should be checked against both. It is the same decision, with more evidence
-behind it than when it was written.
+**4. Accent brightness levels without color (resolved); dichromacy remains.** All catalog and hidden-room accents
+sit within the shared CIELAB lightness band and keep the graphical contrast
+floor against the stage. The raster gives faint, secondary, idea, and hot marks
+distinct light levels. Catalog sweeps require increasing lightness and distinct
+mono glyphs for drawn accent levels, and reject new dichromacy collapses. The
+remaining warning and spectral distinctions are separate questions, tracked
+in entries 11 and 12. `VISUALS.md` owns the standing mark and accent contract.
+`julia`, `kaprekar`, `landauer`, `logistic-cobweb`, and `van-der-pol` still
+fold an accent-level pair for a dichromat. Their shrink-only list remains
+enforced; the mark-ramp change does not claim to resolve every color-vision
+distinction.
 
 **5. Should Cult of Pi mark faults on a character terminal?** It computes a
 fault mark and the character path drops it: 462 of 1,280 cells are faulted at
@@ -325,9 +337,12 @@ and curated facts about the world stay out with the external call.
 - **Not next at all:** soft-thin densify grind and bulk new rooms.
 
 ### Recently built
-
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
+
+- **`v0.5.0-alpha.1` (2026-10-04):** consolidate the Sensory Lift work,
+  preserve mark brightness and color-free touch responses, and start the
+  active Sensory Alpha line (`VISUALS.md`).
 
 - **Alpha 34 (2026-10-03):** persisted study body text sizes with source-anchored
   reflow, fixed navigation, and Settings pagination at medium window sizes
@@ -365,7 +380,7 @@ parallel track.
 - **0.1 Public Foundation:** reproducible source, honest docs, green CI, and a safe public repository. Met.
 - **0.2 Flagship Proof:** one room earns its agent-and-machine bar. Met.
 - **0.3 Tactile Alpha:** the best five rooms answer the hand deeply and clearly. Met on the agent-and-machine bar.
-- **0.4 Understanding Alpha:** predict, generate, reveal, and retention are tested as a learning loop. Current alpha line, exit open.
+- **0.4 Understanding Alpha:** predict, generate, reveal, and retention are tested as a learning loop. Qualifying study remains open; active work has moved to Sensory Alpha.
 - **0.5 Sensory Alpha:** the visual and sonic identity lands with accessibility and performance budgets.
 - **0.6 Portable Alpha:** packaged builds run on all three operating systems and representative hardware.
 - **0.7 Creator Alpha:** make, save, reopen, export, and remix form one local loop.
@@ -736,16 +751,22 @@ enjoys it, all without a guide, and nothing in it embarrasses us.
 
 **Retires the risk:** "is this actually the exceptional thing we set out to make?"
 
-**Gate evidence today (reviewed 2026-10-01).** No calibrated method supports
+**Gate evidence today (reviewed 2026-10-04).** No calibrated method supports
 assigning completion percentages to subjective taste gates, so this table
 records evidence instead.
+
+Human taste, disability-usability sessions, and voluntary-return observations
+in this table are optional evidence, not conditions on the machine release
+track. The missing software, native execution, and operational checks remain
+required. A source-shipped design remains planned until its implementation and
+checks land; writing more designs does not enlarge the frozen candidate scope.
 
 | 1.0 gate | Evidence today | Missing evidence or work |
 |---|---|---|
 | Complete coherent collection | 356 catalog rooms are built and listed | A coherent cold start, pacing, keep-or-cut review, and several planned signature rooms |
 | Every room earns its place | Every catalog room has a verb, variation, image, and motif; no doorway states a value its own reveal states, and no unplayed status recites one | Stranger discovery, room-specific depth, held input where useful, and per-room human scorecards; two rooms carry a standing dull or mute verdict from packaged play, `attention` and `strange-loop`, and 245 doorways are still under seventy characters of caption, now counted by the catalog rather than quoted from an older round |
-| Full sensory identity | Four Eras, deterministic synthesis, chiptune, and two GPU fractal paths are built | HDR post-stack, congruency review, accessibility controls, audio separation, and human sensory review |
-| Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally, and the MCP face can send a player a room's sound as a real audio file beside the notation, with the last hop the client's to make | Independent usability sessions for each face and real execution off Windows |
+| Full sensory identity | Four Eras, deterministic synthesis, chiptune, GPU fractal paths, the shared mark ramp and accent band, saved study body sizes, and separate persisted audio levels are built | Post-stack physical promotion, perceptual regression, general Cabinet and HUD scaling, and remaining flash and color-vision decisions; human sensory review is optional |
+| Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested; the MCP face retains notes when optional audio exceeds the reply budget. Published Linux execution and native ARM Linux workspace tests are observed | Current native device qualification on each supported system; independent human usability sessions are optional |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio graphs, paired parametric paths, fields over the plane with three stored readings, named sliders with declared ranges, overlay programs of two to four graphs, and Euclidean rhythms as `euclid(hits, steps)`, tracker marks as `pat(x..x..x.)` or the editor form `x..x..x.`, piano roll of the sung MIDI voice, continuous and named-scale voices, versioned `.num` serialization with title, author, era, lineage, and editable prose credit, links, plotting, animation, singing, WAV and Standard MIDI File export of the sung melody on CLI, MCP, and the App F4 share, exact paused App reopen, the one-key share bundle, the local Gallery wall, and fork with recorded descent exist | MusicXML, safe share preview for incoming links, and clean-install round trip |
 | Rigor and care are provable | Dated full-gate and coverage evidence in `QUALITY.md`, Rust 1.89 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a native SPDX Rust plus packaged-native SBOM attested from the exact audited release set | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
@@ -897,7 +918,7 @@ survival to one wallet or one person's attention.
 | 0.2 Flagship | Met + CI-locked | agent-hallway, ahas, goldens |
 | 0.3 Tactile | Met + CI-locked | agent-tactile, first-contact |
 | 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort owner-blocked |
-| 0.5 Sensory | Partial | Built: flagship visual and audio goldens, reduced motion, `NO_COLOR` across all terminal surfaces, mono downmix, source-bound color-independence sweeps (`docs/evidence/color-independence.json`), and regression-locked Studio gaps, reading visibility, cursor visibility, native footer scaling, persisted study body text sizes, and independent music, effect, and room volumes. Open: physical Sensory Lift promotion, perceptual regression, and general Cabinet and HUD text scaling. Automated evidence does not establish human sensory or disability usability |
+| 0.5 Sensory | Partial | Built: flagship visual and audio goldens, reduced motion, `NO_COLOR` across all terminal surfaces, mono downmix, source-bound color-independence sweeps (`docs/evidence/color-independence.json`), and regression-locked Studio gaps, reading visibility, cursor visibility, native footer scaling, persisted study body text sizes, and independent music, effect, and room volumes. Built: the mark brightness ramp, validated accent band, and catalog-wide color-free touch responses. Open: physical Sensory Lift promotion, perceptual regression, and general Cabinet and HUD text scaling. Automated evidence does not establish human sensory or disability usability |
 | 0.6 Portable | Partial | Built: release packaging; engagement smoke judged on signal and PNG geometry against a freshly built binary through one shared resolver; provenance and SBOM; a nightly install, play, and uninstall roundtrip on three operating systems that keeps every player-owned file byte-identical; commit-pinned workflow actions; all 42 bundled tracks decoded nightly on each platform; and every ignored test named by a workflow or script. Open: physical clean-machine sessions and signing |
 | 0.7 Creator | Partial | Built: the CLI creator gate (12 checks); CLI and MCP parity (20 plot and 14 sing cases through face-neutral core types, with measured WAV pitch); exact App reopen, F4 share with `melody.mid`, the F5 Gallery with its remix tree; capsule versions 3 to 7; Euclidean rhythms, pattern text, step grid, tracker formulas, piano roll, and named pitches. Open: MusicXML |
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |

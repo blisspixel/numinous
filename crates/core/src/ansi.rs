@@ -89,10 +89,14 @@ const SHADES: [char; 4] = ['\u{2591}', '\u{2592}', '\u{2593}', '\u{2588}'];
 /// Boundaries between the shades, on the same 0 to 255 luminance scale as
 /// [`LIT_FLOOR`].
 ///
-/// These are the quartiles of what the catalog actually draws: the median
-/// both-lit cell across all 354 rooms sits at 152, with quarters at 128 and
-/// 203. Splitting there gives each shade about a quarter of the ink, measured
-/// at 24.3, 24.8, 25.0 and 26.0 percent.
+/// They sit at the quartiles of what the catalog actually draws. With the
+/// ink table's four accent levels and every accent inside the lightness band,
+/// the both-lit cells of the whole catalog (96 by 56, phase 0.35) have their
+/// quarters at 99, 154 and 199. The steps sit within a few units of those,
+/// where no room's hot and plain levels share a glyph and no warning cell
+/// shares one with the levels around it, and each shade then carries 25.3,
+/// 20.8, 26.8 and 27.1 percent of the ink. The quartiles of the previous ink,
+/// when every ordinary mark painted the plain accent, were 128, 152 and 203.
 ///
 /// Round numbers were tried first and were much worse. Even thirds of the
 /// range put the lightest shade below 64, where almost nothing is drawn: it
@@ -104,7 +108,7 @@ const SHADES: [char; 4] = ['\u{2591}', '\u{2592}', '\u{2593}', '\u{2588}'];
 /// Fixed rather than derived from the frame: an adaptive threshold would make
 /// a still picture change as its neighbours changed, and two frames apart
 /// could then differ for no reason the player caused.
-const SHADE_STEPS: [u32; 3] = [128, 152, 203];
+const SHADE_STEPS: [u32; 3] = [102, 146, 198];
 
 /// A pixel counts as lit above this luminance. The stage is near-black and
 /// strokes glow, so the floor only has to clear the unlit background.
@@ -178,9 +182,10 @@ mod tests {
         // A known and deliberate limit, written down so nobody assumes
         // otherwise. When one half is below the floor, the glyph is a half
         // block, and a half block has no room left to carry brightness. Three
-        // catalog rooms answer a touch only in cells of this shape and so stay
-        // invisible without color however large the change is; they are named
-        // in the registry's RESPONSE_INVISIBLE_WITHOUT_COLOR list.
+        // catalog rooms once answered a touch only in cells of this shape and
+        // so stayed invisible without color however large the change was; they
+        // were redrawn to answer with shape instead, which is the fix this
+        // limit asks for.
         //
         // Encoding brightness here would need a glyph meaning a dim lower
         // half. The block characters do not have one. The nearest candidates

@@ -126,8 +126,17 @@ fn encode(linear: f64) -> u8 {
     (encoded * 255.0).round() as u8
 }
 
+/// CIELAB lightness L*, 0 for black through 100 for white.
+///
+/// The lightness the color-free renderer and the dichromacy audits both turn
+/// on when hue fails, which is why the mark ramp is checked in it.
+#[must_use]
+pub fn lightness(rgb: [u8; 3]) -> f64 {
+    lab(rgb)[0]
+}
+
 /// CIELAB, D65, from sRGB.
-fn lab(rgb: [u8; 3]) -> [f64; 3] {
+pub(crate) fn lab(rgb: [u8; 3]) -> [f64; 3] {
     let table = crate::photosensitivity::linear_channel_table();
     let (r, g, b) = (
         table[rgb[0] as usize],
@@ -333,14 +342,7 @@ mod tests {
 #[cfg(test)]
 pub(crate) mod audit {
     use super::{Dichromacy, color_alone, distance, worst_case};
-
-    /// Every mark that paints something other than the plain accent, plus the
-    /// one representative for the marks that do paint it.
-    const INK_MARKS: [char; 6] = ['#', '!', '@', '%', '&', '~'];
-
-    /// Marks that all paint the plain accent. Recorded as `'*'` whichever one a
-    /// room happens to use.
-    const ORDINARY: [char; 3] = ['*', '+', '.'];
+    use crate::raster::MarkRole;
 
     /// One room's measured worst pair.
     pub(crate) struct RoomAudit {
@@ -354,14 +356,18 @@ pub(crate) mod audit {
     /// closest for a dichromat.
     pub(crate) fn audit_room(id: &str, accent: [u8; 3], drawn: &[char]) -> RoomAudit {
         let raster = crate::raster::Raster::with_accent(1, 1, accent);
-        // Collapse the accent-painting marks to one name: a room drawing '*'
-        // and '.' is drawing one color, and pairing them with each other would
-        // record a distinction the room never made.
+        // One name per role: marks with one role are one light, and pairing
+        // them with each other would record a distinction the room never
+        // made. Empty draws nothing and structure is a near-black rule, a
+        // contrast question rather than a color one, so neither is audited.
         let mut marks: Vec<char> = Vec::new();
         for &mark in drawn {
-            let name = if ORDINARY.contains(&mark) { '*' } else { mark };
-            if (INK_MARKS.contains(&name) || name == '*') && !marks.contains(&name) {
-                marks.push(name);
+            let role = MarkRole::of(mark);
+            if matches!(role, MarkRole::Empty | MarkRole::Structure) {
+                continue;
+            }
+            if !marks.contains(&role.mark()) {
+                marks.push(role.mark());
             }
         }
         marks.sort_unstable();

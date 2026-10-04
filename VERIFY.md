@@ -13,6 +13,12 @@ published platform release and verify the archive plus its closed payload
 manifest. They do not need Rust or native build dependencies. What follows is
 the from-source verification path for contributors and the curious.
 
+The active release line is Sensory Alpha. Human playtests are optional; the
+automated gates and physical display timing evidence define its machine exit.
+The shared mark ramp, accent band, and color-free touch responses are checked
+against the live catalog. Intentional rendering changes update visual goldens
+after review; attachment, flash, and coverage budgets remain enforced.
+
 - **Rust** (edition 2024; pinned to 1.97.1 in `rust-toolchain.toml`, with a
   1.89 MSRV checked separately in CI). Install from
   <https://rustup.rs>. On Windows, cargo lands in `%USERPROFILE%\.cargo\bin`; if a
