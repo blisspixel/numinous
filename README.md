@@ -11,6 +11,11 @@ their rules, and make something of your own. Each room draws its mathematics as
 light on a near-black stage and sounds it in one shared voice. Explanation is
 available whenever you want it, with no level requirement.
 
+The ambition is a place a child can enjoy exploring and a mathematician can
+use for serious work: playful objects with precise tools available when wanted.
+The [research and tool direction](https://github.com/blisspixel/numinous/blob/main/docs/RESEARCH.md#mathematical-play-and-useful-instruments)
+describes that next depth, with proposals clearly separated from what ships.
+
 *Numinous means awe in the presence of something vast and beautiful. That is
 the experience this project is trying to earn.*
 

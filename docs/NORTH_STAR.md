@@ -17,6 +17,22 @@ findings in `docs/evidence/exceptional-blockers-2026-08.json` and
 
 ## The power is real
 
+The same mathematical object should welcome a child playing with its shape,
+a mathematician investigating its behavior, and a digital player working
+through structured actions. A graphing calculator is a useful reference for
+this freedom: improvisation and serious calculation can happen on the same
+surface. Numinous should make both exceptionally good. That is a design
+target, not a claim of demonstrated enjoyment across ages or disciplines.
+
+Beauty and awe remain reasons to be here. Making a pattern, hearing a ratio,
+or watching a shape settle needs no lesson or achievement to justify it.
+When a player wants precision, the same object should expose its definition,
+assumptions, measurements, numerical limits, and reusable result. Study and
+tools are available by choice. Progression never gates them. The
+[mathematical play survey](RESEARCH.md#mathematical-play-and-useful-instruments)
+and [native tool direction](INTERFACES.md#native-mathematical-tools)
+turn this ambition into concrete proposals.
+
 An RPG gives a player new abilities. Here the ability should belong to the
 player's understanding: notice an invariant, predict a new case, construct a
 desired motion, or recognize the same law in another room. A badge can celebrate
@@ -45,9 +61,10 @@ room review and its limits. Fix a false lesson before building a quest around it
 
 **Understanding that changes what is possible.** The generic prediction system
 reports closeness to one sampled readout, and seven room-owned staged ahas ship.
-Neither alone proves transferable understanding. The next designed slice is one
-capability quest connecting an audited room to a portable Studio construction,
-with contrasting cases and a new application. See `PROGRESSION.md`.
+Neither alone proves transferable understanding. The Returning home trial,
+App walk, and overlay cycle reading now connect Lissajous play to a portable
+Studio construction. Broader capability quests and transfer evidence remain
+open. See `PROGRESSION.md`.
 
 **Continuity that serves the player's inquiry.** Journal, exact room recall,
 receipts, process-local workspace, and portable creations exist. Project chains

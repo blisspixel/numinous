@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Numinous | Mathematical play atlas</title>
+<style>
+:root{color-scheme:dark;--bg:#101719;--panel:#172124;--line:#34484b;--ink:#edf4ed;--muted:#b7c8c7;--accent:#b8ebc0;--gold:#efd394}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,sans-serif}a{color:var(--accent)}button,input,select{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:.5rem .65rem}button{cursor:pointer}button:hover{border-color:var(--accent)}:focus-visible{outline:3px solid var(--gold);outline-offset:3px}header{padding:2.5rem 4vw 1.5rem;border-bottom:1px solid var(--line)}.eyebrow{color:var(--accent);letter-spacing:.15em;font-size:.76rem;text-transform:uppercase}h1{font-family:Georgia,serif;font-size:clamp(2rem,5vw,3.5rem);font-weight:400;line-height:1.1;margin:.65rem 0 1rem}header p{max-width:76ch;margin:.5rem 0}.muted,small{color:var(--muted)}.toolbar{display:flex;flex-wrap:wrap;gap:.8rem;padding:1.2rem 4vw;align-items:end}.toolbar label{display:grid;gap:.3rem;font-size:.8rem}.search{flex:1;min-width:230px}.toolbar input{width:100%}.stats{margin:0 4vw 1rem;color:var(--muted)}main{display:grid;grid-template-columns:minmax(270px,32%) minmax(0,1fr);gap:1.2rem;margin:0 4vw 3rem}.list-panel,.detail{border:1px solid var(--line);border-radius:12px;background:var(--panel)}.list-panel{align-self:start;overflow:hidden}.list-head{padding:1rem;border-bottom:1px solid var(--line)}#list{max-height:76vh;overflow:auto;padding:.4rem}#list button{display:block;width:100%;text-align:left;border:0;border-radius:6px;background:transparent;padding:.85rem;margin:.2rem 0}#list button[aria-current=true]{background:#2b4142;box-shadow:inset 3px 0 var(--accent)}#list button:hover{background:#233639}.paper-title{display:block;line-height:1.35;margin:.3rem 0}.tag{display:inline-block;font-size:.73rem;padding:.12rem .5rem;border:1px solid #516765;border-radius:20px;color:var(--accent);margin:.1rem .2rem .1rem 0}.detail{padding:1.5rem;min-height:600px}h2{font:400 1.9rem/1.25 Georgia,serif;margin:.6rem 0 1rem}h3{font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:1.5rem 0 .35rem}p{margin:.45rem 0}.detail-top{display:flex;gap:.5rem;justify-content:space-between;flex-wrap:wrap}.links{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0}.reading{border-left:2px solid var(--line);padding-left:.9rem;font-size:.86rem;color:var(--muted)}.graph-wrap{margin-top:1.6rem;border-top:1px solid var(--line);padding-top:1rem}#network{width:100%;height:auto;display:block;background:#111b1d;border-radius:8px}.node-button{display:inline-block;margin:.2rem;font-size:.8rem}.legend{display:flex;flex-wrap:wrap;gap:1rem;font-size:.78rem;color:var(--muted)}.legend span:before{content:'';display:inline-block;width:8px;height:8px;background:var(--dot);border-radius:50%;margin-right:.35rem}details{margin:1rem 0}summary{cursor:pointer;color:var(--accent)}footer{border-top:1px solid var(--line);padding:1.5rem 4vw;color:var(--muted);font-size:.84rem}.empty{padding:2rem}#related{padding-left:1.3rem}#related li{margin:.45rem 0}#related button{text-align:left;font-size:.9rem}code{overflow-wrap:anywhere}.pill-row{margin:.7rem 0}.buttons{display:flex;gap:.5rem;flex-wrap:wrap}@media(max-width:760px){main{grid-template-columns:1fr}.detail{padding:1rem}#list{max-height:290px}header{padding-top:1.5rem}.toolbar{gap:.5rem}h2{font-size:1.5rem}}
+</style>
+</head>
+<body>
+<header>
+<div class="eyebrow">Numinous / Research atlas</div>
+<h1>Mathematics to enter,<br>play with, and use.</h1>
+<p>Find a paper, imagine an interaction, follow a connection. A possibility space for beautiful experiences, meaningful games, and useful instruments.</p>
+<p class="muted">Every feature idea here is proposed. Mathematical hooks summarize manuscript claims at the recorded reading depth; this survey does not verify their proofs.</p>
+</header>
+<div class="toolbar">
+<label class="search">Search papers, actions, concepts, or rooms<input id="search" type="search" placeholder="Try transport, wave, a room ID, or a family number"></label>
+<label>Shared instrument<select id="capability"><option value="">All instruments and research</option></select></label>
+<label>Roadmap destination<select id="work-item"><option value="">All work items</option></select></label>
+<label>Research promise<select id="priority"><option value="">All research priorities</option><option>prototype</option><option>explore</option><option>background</option></select></label>
+<label>Reading scope<select id="scope"><option value="">All reading scopes</option><option value="abstract">Abstract</option><option value="introduction-and-statement">Introduction and statement</option><option value="selected-construction">Selected construction</option></select></label>
+<button id="reset">Reset filters</button>
+</div>
+<p id="stats" class="stats" role="status" aria-live="polite"></p>
+<main>
+<section class="list-panel" aria-label="Paper results"><div class="list-head">Choose a paper <span id="result-count" class="muted"></span></div><div id="list"></div></section>
+<article class="detail" aria-label="Selected paper">
+<div class="detail-top"><span id="identity" class="eyebrow"></span><span id="priority-tag" class="tag"></span></div>
+<h2 id="title"></h2>
+<p id="family" class="muted"></p>
+<div class="links"><a id="note">Read Markdown research note</a><a id="pdf" target="_blank" rel="noopener">Read pinned PDF</a><a id="source" target="_blank" rel="noopener">Inspect manuscript source</a><button id="copy-link">Copy paper link</button></div>
+<p id="reading" class="reading"></p>
+<h3>What is interesting</h3><p id="hook"></p>
+<h3>Play and experience</h3><p id="play"></p>
+<h3>Useful depth</h3><p id="expert"></p>
+<h3>Visual or sonic expression</h3><p id="sensory"></p>
+<h3>What makes it hard</h3><p id="caveat"></p>
+<h3>The next question</h3><p id="question"></p>
+<p id="implementation" class="muted"></p>
+<section aria-label="Source-anchored construction review">
+<h3>Inside the construction</h3><div id="insights"></div>
+<h3>A reusable asset</h3><p id="asset"></p>
+<h3>A deeper play loop</h3><p id="deep-play"></p>
+<h3>A concrete expert workflow</h3><p id="deep-expert"></p>
+<details><summary>Read sections and unresolved questions</summary><ul id="source-sections"></ul><ul id="open-questions"></ul></details>
+<h3>Paper-to-paper transfers</h3><div id="transfers"></div>
+<h3>Roadmap disposition</h3><p id="disposition"></p><div id="work-items"></div>
+</section>
+<h3>Existing room connections</h3><div id="rooms" class="pill-row"></div>
+<h3>Concepts</h3><div id="concepts" class="pill-row"></div>
+<section class="graph-wrap" aria-label="Knowledge graph neighborhood">
+<h3>Follow a connection</h3><p class="muted">Select a graph node or a labeled connection below it. Family membership comes from the catalog; other edges are research interpretations and proposed reuse, not proof dependencies.</p>
+<label>Connection lens <select id="graph-lens"><option value="all">All relationships</option><option value="transfers">Paper-to-paper transfers</option><option value="rooms">Existing room connections</option><option value="work">Roadmap work and prerequisites</option><option value="concepts">Concepts</option><option value="catalog">Catalog and capability grouping</option></select></label>
+<div class="legend"><span style="--dot:#edf4ed">paper</span><span style="--dot:#efd394">family</span><span style="--dot:#90c8eb">concept</span><span style="--dot:#b8ebc0">room</span><span style="--dot:#d6b3e9">capability</span><span style="--dot:#f0b997">work item</span></div>
+<svg id="network" viewBox="0 0 760 400" role="img" aria-label="Local connection graph"></svg>
+<p id="graph-status" class="muted"></p><div id="connections"></div>
+<details><summary>Inspect direct relationships and their evidence</summary><div id="edge-evidence"></div></details>
+<details open><summary id="related-title">Connected papers</summary><ul id="related"></ul></details>
+</section>
+</article>
+</main>
+<footer>
+<p id="provenance"></p>
+<p>Prototype means promising to investigate, not ready to ship. Explore means unresolved representation or implementation. Background means no faithful near-term interaction established. Linked rooms may provide prerequisites rather than the paper's full mathematical setting.</p>
+<div class="buttons"><button id="download-papers">Download paper data</button><button id="download-graph">Download typed graph</button><button id="download-opportunities">Download work items</button></div>
+<p>This offline research attachment does not change the application. Rebuild with <code>cargo run -p numinous-cli --example math_atlas</code>; validate with <code>cargo run -p numinous-cli --example math_atlas -- --check</code>.</p>
+</footer>
+<script id="atlas-data" type="application/json">__ATLAS_DATA__</script>
+<script>
+'use strict';
+const {atlas,graph}=JSON.parse(document.getElementById('atlas-data').textContent);
+const $=id=>document.getElementById(id), papers=atlas.papers;
+const byId=new Map(papers.map(p=>[p.paper_id,p])), nodes=new Map(graph.nodes.map(n=>[n.id,n]));
+const adjacency=new Map();
+for(const e of graph.edges){for(const id of [e.source,e.target]){if(!adjacency.has(id))adjacency.set(id,[]);adjacency.get(id).push(e);}}
+const searchText=new Map(papers.map(p=>[p.paper_id,JSON.stringify(p).toLowerCase()]));
+let selected=papers.find(p=>p.priority==='prototype')?.paper_id||papers[0].paper_id, visible=[],graphCenter=selected;
+function el(tag,text,className){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;}
+function choose(id,changeHash=true){if(!byId.has(id))return;selected=id;showPaper(byId.get(id));renderList();if(changeHash)history.replaceState(null,'','#'+id);}
+function filter(){const q=$('search').value.toLowerCase().trim(), priority=$('priority').value,scope=$('scope').value,work=$('work-item').value,cap=atlas.capabilities.find(c=>c.id===$('capability').value);
+visible=papers.filter(p=>(!q||(byId.has(q)?p.paper_id===q:searchText.get(p.paper_id).includes(q)))&&(!priority||p.priority===priority)&&(!scope||p.reading_scope===scope)&&(!cap||cap.families.includes(p.family_id))&&(!work||p.roadmap_assignment.work_item_ids.includes(work)));
+$('result-count').textContent='('+visible.length+')';$('stats').textContent=visible.length+' matching manuscripts / '+papers.length+' indexed manuscripts / '+new Set(papers.map(p=>p.family_id)).size+' families. All records are research proposals.';
+if(visible.length&&!visible.some(p=>p.paper_id===selected))choose(visible[0].paper_id);else renderList();}
+function renderList(){const list=$('list');list.replaceChildren();if(!visible.length){list.append(el('p','No matches. Try a broader concept or reset the filters.','empty'));return;}
+for(const p of visible){const b=el('button');b.type='button';b.setAttribute('aria-current',String(p.paper_id===selected));b.append(el('small',p.paper_id+' / family '+p.family_id),el('span',p.title,'paper-title'),el('span',p.priority,'tag'));b.addEventListener('click',()=>choose(p.paper_id));list.append(b);}}
+function pills(id,values,prefix){const host=$(id);host.replaceChildren();if(!values.length){host.append(el('p','No direct existing-room connection identified.','muted'));return;}for(const value of values){const b=el('button',value,'node-button');b.addEventListener('click',()=>showGraph(prefix+value));host.append(b);}}
+function showPaper(p){$('identity').textContent=p.paper_id+' / family '+p.family_id;$('priority-tag').textContent=p.priority;$('title').textContent=p.title;$('family').textContent=p.family_title;
+$('note').href='papers/'+p.paper_id+'.md';$('pdf').href=p.source_url;$('source').href=p.manuscript_url;$('reading').textContent='Reading scope: '+p.reading_scope+'. '+(p.reading_note||'Catalog abstract inspected; no proof verification.');
+for(const [id,key]of Object.entries({hook:'mathematical_hook',play:'playful_entry',expert:'expert_use',sensory:'visual_sound',caveat:'caveat',question:'next_question'}))$(id).textContent=p[key];
+$('implementation').textContent='Proposed contribution: '+p.contribution_kind+'. Implementation estimate: '+p.implementation+'.';pills('rooms',p.existing_room_ids,'room:');pills('concepts',p.connections,'concept:');showAudit(p);showGraph(p.paper_id);}
+function showAudit(p){const a=p.insight_audit,host=$('insights');host.replaceChildren();
+for(const insight of a.extracted_insights){const d=el('details');d.open=true;d.append(el('summary',insight.kind+': '+insight.insight),el('p',insight.numinous_application),el('p','Boundary: '+insight.limitation,'reading'),el('small','Source: '+insight.source_locator));host.append(d);}
+$('asset').textContent=a.reusable_asset;$('deep-play').textContent=a.playful_loop;$('deep-expert').textContent=a.expert_workflow;
+const sections=$('source-sections');sections.replaceChildren();for(const s of a.source_sections){const li=el('li'),link=el('a',s.locator);link.href='https://github.com/openai/math/blob/'+atlas.source_commit+'/'+s.source_path.split('/').map(encodeURIComponent).join('/');link.target='_blank';link.rel='noopener';li.append(link,el('p',s.read_for,'muted'));sections.append(li);}
+const questions=$('open-questions');questions.replaceChildren();for(const q of a.open_questions)questions.append(el('li',q));
+const transfers=$('transfers');transfers.replaceChildren();for(const t of a.cross_paper_connections){const d=el('details'),summary=el('summary',t.relation+' / '+t.paper_id),b=el('button',byId.get(t.paper_id).title);b.addEventListener('click',()=>{resetFilters(false);choose(t.paper_id);});d.append(summary,el('p',t.rationale),el('p','Transfer boundary: '+t.transfer_boundary,'reading'),b);transfers.append(d);}if(!a.cross_paper_connections.length)transfers.append(el('p','No specific paper-to-paper transfer asserted.','muted'));
+const r=p.roadmap_assignment;$('disposition').textContent=r.status+': '+r.rationale;const items=$('work-items');items.replaceChildren();
+for(const id of r.work_item_ids){const item=atlas.opportunities.find(w=>w.id===id),d=el('details');d.open=id===r.primary_work_item;d.append(el('summary',item.title+' / '+item.stage+' / Designed'));for(const [label,key]of [['First gesture','gesture'],['Game','game'],['Expert task','expert_workflow'],['Core seam','core_seam'],['Check','validation'],['Scope','scope'],['Revisit or reject','revisit_or_reject']])d.append(el('p',label+': '+item[key]));const b=el('button','Follow this work item');b.addEventListener('click',()=>showGraph('work:'+id));d.append(b);items.append(d);}}
+function edgeVisible(e){const lens=$('graph-lens').value;if(lens==='all')return true;if(lens==='transfers')return byId.has(e.source)&&byId.has(e.target);if(lens==='rooms')return e.relation==='possible-room-connection';if(lens==='work')return e.relation==='roadmap-disposition'||e.relation==='proposed-prerequisite';if(lens==='concepts')return e.relation==='conceptual-connection';return e.relation==='catalog-member'||e.relation==='possible-shared-capability';}
+function neighbors(id){return(adjacency.get(id)||[]).filter(edgeVisible).map(e=>({id:e.source===id?e.target:e.source,edge:e}));}
+function showGraph(id){if(!nodes.has(id))return;graphCenter=id;const center=nodes.get(id);let around=neighbors(id);const order={'work-item':0,family:1,capability:2,room:3,concept:4,paper:5};around.sort((a,b)=>(order[nodes.get(a.id).kind]-order[nodes.get(b.id).kind])||a.id.localeCompare(b.id));
+const unique=[...new Map(around.map(a=>[a.id,a])).values()];const shown=unique.slice(0,24);const svg=$('network');svg.replaceChildren();const ns='http://www.w3.org/2000/svg';const colors={paper:'#edf4ed',family:'#efd394',concept:'#90c8eb',room:'#b8ebc0',capability:'#d6b3e9','work-item':'#f0b997'};
+function shape(tag,attrs){const x=document.createElementNS(ns,tag);for(const[k,v]of Object.entries(attrs))x.setAttribute(k,v);return x;}
+function drawNode(n,x,y,isCenter){const g=shape('g',{transform:'translate('+x+' '+y+')'});const c=shape('circle',{r:isCenter?15:7,fill:colors[n.kind]});const title=shape('title',{});title.textContent=n.kind+': '+n.label;g.append(c,title);const t=shape('text',{y:isCenter?32:19,'text-anchor':'middle',fill:colors[n.kind],'font-size':isCenter?13:10});t.textContent=n.label.length>32?n.label.slice(0,29)+'...':n.label;g.append(t);g.style.cursor='pointer';g.addEventListener('click',()=>{if(n.kind==='paper')choose(n.id);else showGraph(n.id);});svg.append(g);}
+shown.forEach((a,i)=>{const angle=-Math.PI/2+2*Math.PI*i/shown.length,x=380+285*Math.cos(angle),y=195+150*Math.sin(angle);svg.append(shape('line',{x1:380,y1:195,x2:x,y2:y,stroke:'#425c60','stroke-width':1}));drawNode(nodes.get(a.id),x,y,false);});drawNode(center,380,195,true);
+$('graph-status').textContent=center.kind+': '+center.label+'. Showing '+shown.length+' of '+unique.length+' neighbors across '+around.length+' directed relationships.'+(unique.length>shown.length?' Use the lists and search for the remaining connections.':'');
+const links=$('connections');links.replaceChildren();for(const a of shown){const n=nodes.get(a.id),b=el('button',n.kind+': '+n.label+' ('+a.edge.relation+')','node-button');b.addEventListener('click',()=>{if(n.kind==='paper')choose(n.id);else showGraph(n.id);});links.append(b);}
+const evidence=$('edge-evidence');evidence.replaceChildren();for(const a of around){const e=a.edge,d=el('details');d.append(el('summary',e.source+' -> '+e.target+' / '+e.relation),el('p','Evidence: '+e.evidence));if(e.rationale)d.append(el('p',e.rationale));if(e.transfer_boundary)d.append(el('p','Transfer boundary: '+e.transfer_boundary,'reading'));if(e.status)d.append(el('p','Disposition: '+e.status));const target=nodes.get(a.id),b=el('button','Follow '+target.label);b.addEventListener('click',()=>{if(target.kind==='paper'){resetFilters(false);choose(target.id);}else showGraph(target.id);});d.append(b);evidence.append(d);}if(!around.length)evidence.append(el('p','No direct relationship in this lens. This is not a claim that no mathematical connection exists.','muted'));
+const related=new Map(),describe=e=>e.source+' -> '+e.target+' ('+e.relation+')';function addRelated(pid,path,direct){if(!related.has(pid))related.set(pid,{paths:new Set(),direct});const r=related.get(pid);r.paths.add(path);r.direct=r.direct||direct;}for(const a of around){if(byId.has(a.id))addRelated(a.id,describe(a.edge),true);for(const b of neighbors(a.id))if(byId.has(b.id))addRelated(b.id,describe(a.edge)+'; '+describe(b.edge),false);}related.delete(selected);
+const list=$('related');list.replaceChildren();const sorted=[...related.keys()].sort((a,b)=>Number(related.get(b).direct)-Number(related.get(a).direct)||a.localeCompare(b));$('related-title').textContent='Connected papers ('+sorted.length+' within two edges)';for(const pid of sorted){const p=byId.get(pid),li=el('li'),b=el('button',pid+' / '+p.title);b.addEventListener('click',()=>{resetFilters(false);choose(pid);});const r=related.get(pid),paths=el('details');paths.append(el('summary',r.direct?'Direct relationship':'Two-edge discovery path, not an implied transfer'));for(const path of r.paths)paths.append(el('p',path,'reading'));li.append(b,paths);list.append(li);}if(!sorted.length)list.append(el('li','No other paper within two edges.'));
+}
+function resetFilters(refresh=true){$('search').value='';$('priority').value='';$('scope').value='';$('capability').value='';$('work-item').value='';if(refresh)filter();else{visible=papers.slice();$('result-count').textContent='('+visible.length+')';$('stats').textContent=papers.length+' indexed manuscripts. Filters reset.';}}
+function download(name,value){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'}));const a=el('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+$('download-papers').addEventListener('click',()=>download('numinous-math-papers.json',atlas));$('download-graph').addEventListener('click',()=>download('numinous-math-graph.json',graph));
+$('download-opportunities').addEventListener('click',()=>download('numinous-math-opportunities.json',atlas.opportunities));
+for(const id of ['search','priority','scope','work-item'])$(id).addEventListener(id==='search'?'input':'change',filter);$('reset').addEventListener('click',()=>resetFilters());
+for(const item of atlas.opportunities){const option=el('option',item.title+' / '+item.stage);option.value=item.id;$('work-item').append(option);}
+for(const cap of atlas.capabilities){const option=el('option',cap.label);option.value=cap.id;$('capability').append(option);}
+$('capability').addEventListener('change',()=>{filter();if($('capability').value)showGraph('capability:'+$('capability').value);});
+$('graph-lens').addEventListener('change',()=>showGraph(graphCenter));
+$('copy-link').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(location.href.split('#')[0]+'#'+selected);$('copy-link').textContent='Copied';}catch{$('copy-link').textContent='Paper link is in the address bar';}});
+window.addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(byId.has(id)){resetFilters(false);choose(id,false);}});
+$('provenance').textContent='Source revision '+atlas.source_commit+'. Survey '+atlas.review_date+'. '+graph.nodes.length+' typed nodes and '+graph.edges.length+' edges. Source retrieval and reading scope are recorded separately.';
+filter();const initial=location.hash.slice(1);choose(byId.has(initial)?initial:selected,false);
+</script>
+</body>
+</html>

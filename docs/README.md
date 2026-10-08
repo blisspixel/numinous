@@ -40,6 +40,15 @@ Designed, and Hypothesis have the meanings defined in [RESEARCH.md](RESEARCH.md)
 - **Checking the evidence:** [RESEARCH.md](RESEARCH.md) for the evidence base,
   then [UNDERSTANDING_STUDY.md](UNDERSTANDING_STUDY.md) for the predeclared 0.4
   comparison and acceptance contract.
+- **Exploring new mathematical instruments:** the
+  [paper survey and connected ideas](RESEARCH.md#mathematical-play-and-useful-instruments),
+  its [interactive research atlas](evidence/math-atlas/index.html), and the
+  [CLI and terminal tool comparison](INTERFACES.md#native-mathematical-tools).
+  [MATHEMATICAL_PLAY.md](MATHEMATICAL_PLAY.md) turns that research into scoped
+  work with a [complete manuscript register](evidence/math-atlas/coverage.md).
+  [RESEARCH_GRAPH.md](RESEARCH_GRAPH.md) connects per-paper Markdown notes,
+  qualified relationships, open questions and future experiment workflows.
+  The atlas is a research attachment, not the shipped Constellation feature.
 
 ## The docs, grouped
 
@@ -51,6 +60,11 @@ Designed, and Hypothesis have the meanings defined in [RESEARCH.md](RESEARCH.md)
   are and are not, the name.
 - [RESEARCH.md](RESEARCH.md) the evidence base: what makes it fun, prior art,
   sources, and the five evidence labels.
+- [MATHEMATICAL_PLAY.md](MATHEMATICAL_PLAY.md) the research-to-product contract:
+  shared objects for play and useful work, selection rules, transfer boundaries,
+  and the generated manuscript/work-item register.
+- [RESEARCH_GRAPH.md](RESEARCH_GRAPH.md) how source-anchored paper sidecars and
+  inspectable connections can support research and prototype decisions.
 
 **Experience design**
 - [DESIGN.md](DESIGN.md) the design bible: the three-layer room model, the
@@ -239,6 +253,8 @@ in doubt, this table decides where a thing belongs.
 | Scope discipline, the definition of no, the three-products hierarchy | [SCOPE.md](SCOPE.md) |
 | Consequential decisions and their rationale | [decisions/](decisions/) |
 | Research findings and sources | [RESEARCH.md](RESEARCH.md) |
+| Paper sidecars, research graph semantics and evaluation | [RESEARCH_GRAPH.md](RESEARCH_GRAPH.md) |
+| Turning the mathematical paper atlas into scoped play and tool work, transfer contracts and complete manuscript accounting | [MATHEMATICAL_PLAY.md](MATHEMATICAL_PLAY.md) |
 
 ## Conventions
 

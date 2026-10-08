@@ -37,6 +37,8 @@ The bar is: would this make one mind reach for another and share the discovery?
 - A **curated museum of awe**, the greatest hits of "how can math do that?"
 - A **toy box** with no fail states, no timers, no pressure, you play.
 - A **game** for the moments you want a goal and a hit of flow.
+- A **useful mathematical workspace**, with precise tools available directly
+  when a player wants to investigate, calculate, compare, or export a result.
 - A **generative-art engine** quietly running under all of it, so every frame is beautiful.
 - **Shareable by design**, built to escape the app as clips and links.
 
@@ -86,13 +88,14 @@ rewrite, ignore, or leave. Compassion is expressed in how the project treats
 beings and their agency: through honesty, consent, accessibility, creative
 freedom, and care for shared spaces. It is not preached through a score screen.
 
-## An instrument, not a game (the sharpening)
+## An instrument, a game, and an experience
 
-An external review (July 2026) named this, and it is right: the truest kin of
-Numinous are not games but **instruments**, Ableton, Blender, Desmos,
-TouchDesigner, the OP-1, Dreams. You never "beat" a piano; you become more
-expressive. Numinous lives there. This has three consequences worth stating as
-law (the enforcement lives in `SCOPE.md`):
+Instrument references such as Ableton, Blender, Desmos, TouchDesigner, the
+OP-1, and Dreams clarify the freedom Numinous wants to offer. You never "beat"
+a piano; you become more expressive. Games contribute meaningful challenges,
+choices, discovery, and the pleasure of getting better. Useful tools let the
+same player arrive with a question and leave with a trustworthy result. These
+uses belong together (the scope boundary lives in `SCOPE.md`):
 
 - **The room is the thing; everything else is a multiplier or subordinate to
   it.** The instrument (the playable rooms) is what matters; the Studio raises
@@ -106,16 +109,22 @@ law (the enforcement lives in `SCOPE.md`):
   watches, sends it to a friend. Every room should hold dozens. Design for that
   moment.
 
-And the competitive posture: most ambitious software tries to become
-*indispensable* (habitual use because it solves a problem). We aim at something
-rarer, to be **beloved** (repeated use because people want to return to the
-experience). Favor beloved over indispensable in every decision, even when it
-means saying no to a clever feature.
+Numinous should be beloved and useful. Someone can return for a beautiful
+experience, a good game, a precise calculation, or all of them. A child and a
+specialist should be able to use the same object at different depths. Tools
+must preserve that inviting experience, and the experience must preserve the
+mathematical precision that makes a tool worth trusting. Study and tools are
+available immediately, with no progression requirement. [MATHEMATICAL_PLAY.md](MATHEMATICAL_PLAY.md)
+turns that ambition into paired play and expert tasks.
 
 ## What we are NOT
 
 - **Not edtech / not a classroom tool.** No grade levels, no curriculum alignment, no "learning objectives," no worksheets. (If teachers love it anyway, and they will, great. But we never design *for* the classroom, because that's how you kill the cool.)
-- **Not a calculator or a CAS.** Wolfram Alpha already exists and it's incredible. We're the *emotional* counterpart, the part that makes you feel why anyone built Wolfram Alpha in the first place.
+- **No promise of a universal calculator or CAS.** Bounded native calculation,
+  exact inputs, useful inspection, and reusable results belong in Numinous.
+  General symbolic mathematics and unrestricted factual queries need separate
+  scope decisions. [INTERFACES.md](INTERFACES.md#native-mathematical-tools)
+  distinguishes current capabilities from the proposed tool direction.
 - **Not gamified drills.** No "solve 10 problems to earn a star." The math *is* the play; we never bolt a game onto a chore.
 - **Not a lecture with a play button.** 3Blue1Brown is the gold standard of explanation and we bow to it, but we are the *other* half: you don't watch, you touch. The wonder is offered first; explanation is always a choice, there whenever you ask, even before a first touch.
 - **Not ugly, ever.** No default-Bootstrap, no clip-art, no Comic Sans irony. Restraint is the aesthetic.
@@ -130,7 +139,12 @@ This matters because it is the source of everything above, and it is a filter fo
 
 That culture is not a fun fact; it is a spec. It commits us to two things that usually pull in opposite directions, and to holding both at full strength:
 
-- **PhD-real rigor.** The math is correct at a level that would satisfy the obsessives who built it. No lies-to-children, no hand-waving, no "close enough." Every phenomenon is the actual object, every insight is genuinely true, every simplification is in the *telling* and never in the *fact* (see `INSIGHTS.md`). The people making this would notice, and be offended by, a wrong sign or a fudged theorem. So there are none. This rigor is *why* a math nerd trusts it and falls in love; the moment it feels dumbed-down, we have lost the exact audience we are building for.
+- **PhD-real rigor.** Correctness is a requirement, not a blanket claim that
+  no mistakes remain. Keep definitions, assumptions, exact results,
+  approximations, and unverified claims distinguishable. Simplify the telling
+  without falsifying the mathematics (see `INSIGHTS.md`). A specialist should
+  be able to inspect the evidence and limits behind a result; a newcomer
+  deserves the same mathematical honesty.
 - **Stoned-playful, retro-joy delivery.** That same rigor is delivered with the loose, delighted, retro-gaming, 2am energy of people enjoying themselves. This is the direct source of the retro **Visual Eras** (people who love old games, `DESIGN.md`), the hours-you-could-watch-high **Benchmark mode** (`DESIGN.md`), the obsessive **easter-egg lore** (`LORE.md`), and the deadpan **comedy radio** (`MUSIC.md`). The obsession shows up as *care lavished on tiny secret details*, the exact thing this audience loves to find.
 
 The synthesis, and the whole product in one line: **the most rigorous math, delivered by the most joyful, playful, retro-brained people, having the best time.** When a decision is hard, ask which choice the PhD-and-game-nerd-who-just-got-high would find more delightful and more *correct*. Do that one.

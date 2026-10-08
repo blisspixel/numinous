@@ -76,6 +76,192 @@ check. A freely chosen artifact or return is behavior with context, not a
 consciousness or welfare measure. `PROGRESSION.md` owns the designed capability
 quest and `DIGITAL_DEVELOPMENT.md` owns resumable player-chosen inquiry.
 
+## Mathematical play and useful instruments
+
+**Research synthesis, 2026-10-08. Designed proposals and Hypotheses.** Numinous
+is an experience, a game, and a creative instrument. Fun, beauty, and power
+must develop together. A child should be able to enter through a satisfying
+gesture or a curious game; a mathematician should be able to stay for an
+interesting construction, a trustworthy measurement, or a useful result.
+Digital players should have comparably expressive actions and inspectable
+state. Those are intended possibilities to test, not claims that every age,
+discipline, or kind of mind already enjoys the product.
+
+The rooms remain the product. A player may wander, listen, doodle, cooperate,
+try a challenge, or investigate a question. They do not have to become a
+researcher. A useful tool earns its place by making the world more responsive
+and enabling something worth doing there. An expert can also arrive with a
+specific task and use the instrument directly, without a game or progression
+requirement. The same object supports both approaches.
+
+### The paper atlas and what was actually reviewed
+
+The [interactive atlas](evidence/math-atlas/index.html) contains a separate
+record for every manuscript indexed in the pinned
+[research repository catalog](https://github.com/openai/math/blob/fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb/CONTENTS.md).
+Open the downloaded HTML in a browser; it includes its data and needs no
+service or account. Search by mathematical idea, proposed action, room, or
+paper title. The [paper data](evidence/math-atlas/papers.json) and
+[typed graph](evidence/math-atlas/graph.json) are also available independently.
+The viewer derives its coverage counts from the records rather than from a
+hand-maintained total.
+
+The survey begins with catalog abstracts and adds selected introductions,
+statements and body constructions at the scope recorded for each manuscript.
+The complete TeX source tree for the indexed manuscripts was retrieved for the
+construction review; retrieval is not proof review. Each deeper record names
+the source sections actually inspected, the extracted mechanism, a reusable
+asset, its limits and the next questions. The
+[coverage register](evidence/math-atlas/coverage.md) derives the current reading
+coverage and paper-by-paper dispositions from the canonical records.
+The [source manifest](evidence/math-atlas/sources.json) pins the revision,
+individual source URLs, hashes, and coverage. Full PDFs remain linked at that
+revision rather than copied into this repository. No claim here establishes
+the correctness of every manuscript or every attached formalization.
+
+This distinction matters. The source's
+[change history](https://github.com/openai/math/blob/fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb/history.md)
+records withdrawals and repairs. Individual records retain relevant conflicts
+between abstracts and statements, difficult constants, dimension restrictions,
+and numerical limitations. A manuscript's claimed theorem is research input;
+a Numinous readout must be justified by its own implementation and checks.
+
+Each paper record asks: what is mathematically interesting; what could someone
+touch, hear, build, or play; what would a specialist actually use; which existing
+rooms connect; what makes implementation hard; and what should be investigated
+next? Companion papers have separate records. Some contribute a construction,
+some expose a false intuition, and some remain background because no faithful,
+useful interaction is yet apparent. The priority labels mean:
+
+- **Prototype:** a promising bounded interaction or reusable tool to investigate.
+  It does not mean the manuscript's algorithm is practical or approved to ship.
+- **Explore:** a concrete connection with unresolved representation, algorithm,
+  numerical, or experience-design questions.
+- **Background:** useful conceptual context or specialist study, with no
+  defensible near-term mechanic established.
+
+The graph connects papers to families, concepts, proposed capabilities,
+existing room identifiers and scoped work items. Reasoned paper-to-paper
+transfers retain both a rationale and a boundary on what carries over.
+Room and concept edges are design interpretations,
+not claims of theorem implication, proof dependency, or current implementation.
+An edge to a knot room may mean a prerequisite experience, not that the room
+models the paper's higher-dimensional topology. The atlas is a research
+attachment, distinct from the planned in-product Constellation.
+
+The canonical records are `papers.json`, `sources.json` and `opportunities.json`.
+Every paper has a generated Markdown research sidecar, linked from the register
+and its atlas card. [RESEARCH_GRAPH.md](RESEARCH_GRAPH.md) explains how these
+notes, qualified connections and open questions can support better decisions,
+and what remains to be evaluated. Rebuild the sidecars, graph, work register
+and offline viewer with `cargo run -p numinous-cli --example math_atlas --locked`;
+append `-- --check` to validate coverage, cited-source provenance, work-item
+references and dependencies, live room identifiers, and reproducible
+outputs without writing. The example is documentation tooling and adds no
+runtime command or dependency. Its Rust tests also check the committed atlas
+against those inputs, so the workspace test gate detects drift. When the source
+corpus changes, review its
+withdrawals, corrections, and new paths before replacing the pinned snapshot.
+Paper IDs are local to that snapshot; the pinned source path is the identity
+to use when reconciling a later survey.
+
+### Experiences with depth
+
+The strongest proposals make mathematics tangible before asking for its name.
+The following are candidate experiences, not shipped additions. Family numbers
+are lookup keys in the atlas. They are not a claim that every companion paper
+supports every feature in its row.
+
+| Experience and first pleasure | A meaningful game or creative act | Useful mathematical depth | Connections and boundary |
+| --- | --- | --- | --- |
+| **Stepping stones among primes.** Hop across a glowing Gaussian-prime field | Find a route with a limited jump; trade maps with someone else | Exact finite connectivity, shortest paths, cut witnesses, and adjustable search windows | Gaussian primes and Route Lab. A bounded search cannot prove an infinite moat claim; find the family by its title |
+| **Pour a fraction.** Partition a length into distinct reciprocal pieces | Make an exact target with your own rule, then arrange the pieces into a rhythm | Rational arithmetic, denominator budgets, and comparison of decompositions | Egyptian fractions, rhythm, and number trees; family 025. The asymptotic theorem does not supply a practical shortest decomposition |
+| **Shape a wave.** Flip signs or move harmonic weights and hear the result | Make a desired timbre while controlling peaks, or discover a striking waveform | Spectrum, energy, autocorrelation, and crest factor under a stated normalization | Fourier, Studio, and pulse codes; families 076 and 179. A polynomial theorem does not promise pleasant music or a faster transform |
+| **Balance a constellation.** Choose signs for vectors and watch the running sums move | Keep every partial sum near the center, then invent a difficult constellation | Discrepancy, exact small baselines, heuristic comparisons, and witnesses | Vector geometry and optimization; family 097. Worst-case guarantees and practical performance are separate |
+| **Build a network that surprises you.** Move roads or switch edges | Defeat a greedy route, restore connectivity, or design a resilient network | Exact versus heuristic costs, preserved degree sequences, spectral gaps, and reproducible graph samples | Route Lab and random graphs; families 110, 131, 174, and 178. Polynomial-time existence can conceal unusable constants or exponents |
+| **Bounce and draw.** Aim a ray and let its path write a pattern | Find a caustic, make an almost-returning orbit, or build a changing light instrument | Collision geometry, return residuals, invariant curves, and sensitivity | Elliptical and Sinai billiards, caustics, standard map; families 143, 146, 147, and 150. Finite trajectories do not prove mixing or entropy |
+| **Weave a random surface.** Flip tiles or arrows and watch ridges rearrange | Make a loop, a mountain, or a pattern while preserving local rules | Height functions, local moves, boundary conditions, correlation estimates, and sampler diagnostics | Percolation, tilings, Ising, and Voronoi; families 211, 213, 216, 224, 225, and 226. Some tempting moves are biased samplers |
+| **Send a fragile message.** Damage, shuffle, or partly erase a pattern | Invent a code, recover a partner's picture, or build a fair guessing game | Entropy, mutual information, reconstruction ambiguity, and explicit channel models | Message Heals, information rooms, and permutations; families 119, 122, and 238. Successful examples do not establish capacity or universal decoding |
+| **Make one shape become another.** Paint mass and move its destinations | Choreograph a morph, split a stream, or find the cheapest rearrangement | Coupling tables, transport cost, mass conservation, regularization, and residuals | Voronoi, Delaunay, geometry, and probability; families 360, 373, and 374. A transport plan and a deterministic map are different objects |
+| **Sculpt the other side.** Deform a convex body while its polar changes | Design a pair of shapes that answer one another | Support functions, exact polygon operations, volume products, and covering estimates | Duality, inversion, norm geometry; families 087, 323, and 329. Preserve the chosen origin and metric, and label high-dimensional analogies |
+| **Find a shape's quiet lines.** Change a domain and explore its modes | Trace nodal patterns, combine modes, or build a visual instrument | Eigenvalue residuals, mode selection, nodal length, extrema, and mesh convergence | Chladni, spherical harmonics, heat kernel; families 350 and 369. Closed surfaces, membranes, plates, and Neumann heat modes use different operators and boundaries |
+| **Squeeze a periodic bubble.** Add volume until a ball becomes a tube or slab | Discover the shape changes by play, or challenge a proposed transition point | Analytic candidate areas, periodic boundary conditions, and crossover values | Soap film and torus geometry; family 354. Comparing candidates does not independently prove global optimality |
+| **Feel an unseen interior.** Send probes from a boundary and inspect the response | Hide an inclusion for another player to locate | Forward models, inverse fitting, identifiability, regularization, and sensitivity | Heat and elastic deformation; families 365 and 372. Rough coefficients and incomplete data can defeat uniqueness |
+| **Draw a boundary that wants to settle.** Paint an image and reshape its regions | Create a mosaic while balancing smoothness and boundary length | Segmentation energy, local minima, junction geometry, and refinement | Soap film and Voronoi; family 366. A numerical relaxation is not a certified continuum minimizer |
+| **Program with currents.** Arrange reversible shear gates and follow a tracer | Make a small fluid circuit, run it backward, or route it around obstacles | Exact finite maps, volume preservation with transverse compensation for area-changing coding sheets, detector definitions, and error budgets | Wet Oracle, Wireworld, and Route Lab; family 376. Finite gate play does not prove universal flow computation or solve halting |
+| **Build spaces from pieces.** Snap cells together and collapse free faces | Make two different-looking objects with the same checked invariant | Exact boundary matrices, homology, coefficient choice, and move certificates | Topological rooms, finite groups, and graphs; families 310, 312, 314, and 318. Equal homology does not mean equivalent spaces |
+
+These experiences can carry optional authored challenges, personal constraints,
+cooperative making, or friendly comparisons. They also need satisfying
+unstructured play: immediate response, reversible actions, expressive control,
+and room to watch. A game layer should arise from the mathematics, such as
+finding a shorter route, keeping an invariant, or constructing a counterexample.
+Rewards cannot substitute for an interesting action. Exact tools and study
+remain directly accessible at every point.
+
+### Connections worth building across rooms
+
+A room transition becomes meaningful when it carries something the player
+made. These proposed paths are stronger than links based only on shared words:
+
+- **A signed wave becomes a code.** Keep a coefficient sequence from a waveform,
+  inspect its autocorrelation, then send it through a noisy channel. Preserve
+  normalization and distinguish an audio mapping from a communications model.
+- **A tile picture becomes a landscape.** Carry a valid arrow or tile state
+  into its height function, inspect loops or slopes, then compare a sampled
+  ensemble. Each transformation needs explicit boundary conventions.
+- **A random walk becomes geometry.** Carry a finite graph from Route Lab into
+  a transition matrix, compare mixing and spectral data, and inspect the same
+  walk under different distance norms. A transition matrix is not an adjacency
+  matrix; the conversion must be explicit.
+- **A shape becomes a spectrum.** Carry a declared domain into a chosen
+  operator and boundary condition, inspect its modes, then compose a visual
+  or sonic piece. Export the discretization as well as the picture.
+- **A drawing becomes a transport problem.** Carry painted mass into a coupling,
+  compare a deterministic assignment with a split plan, and keep the resulting
+  morph and its cost. The image's brightness must have an explicit mass meaning.
+- **A norm becomes a game board.** Carry a convex unit ball into a distance
+  inspector, then into vector balancing, graph embedding, or a random walk.
+  A change of norm changes the problem, not just its color palette.
+
+The reusable objects suggested by these paths are bounded matrices, graphs,
+curves, fields, distributions, shapes, and finite complexes. Prioritize only
+those with a concrete room and a real user task. The existing core Studio
+creation and project-chain boundaries should hold saved questions and results;
+this survey does not propose another general notebook or parallel math engine.
+
+### Choosing a first slice
+
+First deepen an existing object with a useful readout or comparison. Route
+counterexamples, waveform/autocorrelation exploration, and inspectable curve
+calculations fit existing product structure particularly well. A bounded
+matrix workbench is a strong shared-tool candidate, but requires a numerical
+contract. Transport painting and periodic bubbles are compelling experience
+prototypes with more new modeling work. High-dimensional classification and
+operator-algebra papers often belong in study lenses or prerequisite maps;
+forcing them into decorative rooms would lose their mathematical content.
+
+Before promoting a candidate, answer these questions together:
+
+1. What enjoyable action works before terminology or instructions?
+2. What can someone make, discover, solve, or express that they could not do
+   with the current object?
+3. What concrete expert task would justify returning, and can its result be
+   exported with assumptions and error information?
+4. Which existing rooms, creations, or core operations does it deepen?
+5. What finite model is actually implemented, and what does the cited theorem
+   establish beyond that model?
+6. Does the App, CLI, and MCP interaction preserve agency and mathematical
+   meaning while using each face's strengths?
+7. What observation would persuade us that this is fun, beautiful, or useful,
+   and what failure would make us revise the design?
+
+The [native tool comparison](INTERFACES.md#native-mathematical-tools) owns the
+CLI and terminal implications. [MATHEMATICAL_PLAY.md](MATHEMATICAL_PLAY.md)
+owns the execution contract and complete work register; [ROADMAP.md](ROADMAP.md)
+owns selection and ordering. The atlas is deliberately a larger possibility space than the next
+release can responsibly take on.
+
 ## 1. What may support engagement and learning
 
 No single theory defines fun. Flow is one useful lens, while self-determination
@@ -175,7 +361,7 @@ Each Wing in `ROOMS.md` is really one of these awe-types made playable. The frac
 | **Zachtronics** (Opus Magnum…) | Engineering as elegant play; "make it prettier/smaller." | The optional-elegance challenge (our Aha layer, e.g. Euclidea room). | We lead with beauty and no-pressure play; the puzzle is optional. |
 | **Manifold Garden / Euclidea / Miegakure** | Math *as* the world; elegance as win condition. | Geometry/space as an inhabitable place (our Shape & Space wing). | Ours is a *collection* of phenomena, not one world. |
 | **Ryoji Ikeda** | Data/math as sublime minimalist sight-and-sound. | The entire aesthetic and audio ambition: black, precise, overwhelming. | We're playable and warm, not gallery-cold. |
-| **Wolfram (Alpha / NKS)** | Serious computation; the "computational universe"; Rule 30. | The seriousness of the math; Rule 30/110 literally become rooms. | Wolfram is the *utility*; we're the *emotion*, the feeling that made someone build Wolfram. |
+| **Wolfram (Alpha / NKS)** | Serious computation; the "computational universe"; Rule 30. | Useful calculations, inspectable representations, and rule-based exploration. | Numinous connects precise native tools to rooms, kept creations, playful experiments, and mathematical awe. |
 | **Coolmath Games / classroom math games** | Reach, "math + fun" brand. | (Cautionary.) A reminder of what to avoid. | We are the opposite of edtech drills, no worksheets, no grade levels, beautiful by default. |
 
 **The gap we are exploring:** the references above each cover part of the idea,

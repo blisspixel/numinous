@@ -24,11 +24,14 @@ The review named something true: we are, if we are not careful, building three
 products at once. They are not equally important, and naming the hierarchy is
 what keeps the build honest.
 
-1. **The playable mathematical instrument (the rooms).** This is *the thing*.
-   Everything else exists to make someone spend one more minute inside it, never
-   the reverse. The nearest kin are not games; they are Ableton, Blender,
-   Desmos, TouchDesigner, the OP-1, Dreams. You never "beat" a piano; you become
-   more expressive. That is where Numinous lives.
+1. **The playable mathematical instrument (the rooms).** This is *the thing*:
+   an experience and a kind of game, beautiful to inhabit, fun to play, and
+   powerful to use. Everything else should make an encounter more worthwhile
+   on the player's own terms. Instrument references include Ableton, Blender,
+   Desmos, TouchDesigner, the OP-1, and Dreams. You can improvise, make something,
+   take on a challenge, or do precise work with the same mathematical object.
+   You never "beat" a piano; you become more expressive. That is where Numinous
+   lives. [NORTH_STAR.md](NORTH_STAR.md) owns this shared ambition.
 2. **The Studio (the multiplier).** How experts stay forever and how the ceiling
    goes to infinity. Excellent, and subordinate to product 1: it is the room
    authoring itself (see `STUDIO.md`, `CREATOR.md`).

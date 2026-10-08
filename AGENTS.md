@@ -57,8 +57,11 @@ would be proud of: correct, simple, principled.
 Product truth lives in `numinous-core`: rooms, grading, persistence, Studio
 capsules, Journey, study content, and protocol-neutral request types. The
 three faces translate transport and presentation. They do not reimplement
-rules. Python in `scripts/` drives compiled binaries as black boxes and must
-not become a second owner of domain facts.
+rules. Rust is the default for new product code and maintained tooling. Use
+Python only when Rust is a poor fit for the concrete task, with the reason
+recorded in its owner document. Existing Python harnesses in `scripts/` drive
+compiled binaries as black boxes and must not become a second owner of domain
+facts. `docs/ENGINEERING.md` owns the language boundary.
 
 Before adding a shared helper, parser, persistence path, or catalog, find the
 existing one. Face-local adapters are for transport. Do not reopen the stack:

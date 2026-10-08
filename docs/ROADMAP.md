@@ -13,7 +13,7 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 ## Now
 
-Reviewed 2026-10-04.
+Reviewed 2026-10-08.
 
 **Current release state: 0.5.0-alpha.3, Sensory Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
@@ -64,6 +64,44 @@ with the labels from `RESEARCH.md`.
 The 0.4 Understanding cohort stays owner-blocked and is not on this list; see
 **Blocked or optional** below.
 
+### Mathematical play and instrument backlog
+
+**Designed, source-anchored opportunity review.** The paper survey feeds room
+depth and creator work; it does not displace the ordered work above. Its
+[execution contract](MATHEMATICAL_PLAY.md) preserves the same ambition for a
+child, a specialist and a digital player: an inviting, beautiful experience,
+meaningful free play and games, and directly accessible mathematical tools.
+
+The [work register and complete manuscript accounting](evidence/math-atlas/coverage.md)
+assign every indexed paper to candidate work, a research lens, or an explicit
+deferral. Each candidate has a first gesture, game, expert task, core seam,
+dependencies, validation, scope and rejection condition. The
+[interactive atlas](evidence/math-atlas/index.html) carries source sections,
+selected construction insights, open questions and reasoned paper-to-paper
+transfers. Coverage of the catalog is not a claim that all insights or proofs
+have been exhausted. All proposed instruments remain Designed.
+
+The [research graph direction](RESEARCH_GRAPH.md) starts with a Markdown
+sidecar per paper and inspectable relationship evidence. Its next designed
+slice is one curated object-and-operation trail, followed by a comparison
+against search and notes alone. An executable graph door requires a checked
+core operation; adding links alone does not establish usefulness or learning.
+
+| Order within this backlog | Bounded next action | Selection or completion evidence |
+| --- | --- | --- |
+| Existing-object slice | Start with a Route Lab comparison and replayable witness. Compare curve inspection and waveform/correlation only if they offer a stronger paired play and expert task | One enjoyable reversible action and one independently checked useful result on the same saved object; create, compare, keep, reopen and export agree across faces |
+| Shared mathematical object | Select one bounded matrix, convex polygon, finite probability or complex object that serves named rooms and a concrete user task | Owned core representation, finite limits, exact or numerical status, independent fixtures and export; no duplicated parser or mathematical backend |
+| Expressive prototype | Select transport painting, a tile/periodic-surface experience, a spectral instrument or reversible circuits after its object exists | Faithful model and invariant checks plus a playable creation loop; source theorem scope stays distinct from the implementation |
+| Specialist construction spike | Reconstruct one useful exact algebraic certificate, explicit flow box or inverse-probe model | Explicit source data, a bounded reproducible calculation and a clear transfer boundary; defer if the essential construction cannot be represented honestly |
+| Persistent terminal workspace | Adapt useful core operations inside the CLI face | Keyboard, cancellation, resize and recovery checks; the same object and mathematical agency remain available through App and MCP |
+
+The first slice includes only the shared reading/export work it actually
+needs. Promote one candidate into **Next, in order** with its own deliverable
+and checks when its foundations are ready. A large design menu is not a
+commitment to ship every paper as a room, and a research-lens disposition must
+retain the question that could make it useful later. Rust remains the default
+for implementation and maintained research tooling.
+
 ### The route to First Light
 
 The product sequence remains sound, but the release path must stay smaller
@@ -90,10 +128,10 @@ reason to stop sensory, portability, or creator work.
 
 ### Decisions the am-track is waiting on (read this second)
 
-Everything below has been measured and locked by a test. None of it is
-unfinished automation: each one is a choice about what Numinous should be, and
-the am-track cannot make it. They are listed here rather than in a working note
-because this file is the one somebody reads.
+The entries below separate measured behavior and its regression locks from
+product choices and designed boundaries. They name decisions about what
+Numinous should be rather than silently treating those decisions as unfinished
+automation. They live here because this is the authoritative plan.
 
 Each entry says what was measured, what is guarded today, and what changes
 depending on the answer. Entry 1 names no rooms because it is about money
@@ -109,7 +147,8 @@ requires live model participants through sealed fresh no-exposure contexts, with
 per-model calibration ceilings and registration before calibration ordinal 1.
 Fixtures cannot satisfy it and the contract rejects scripted conclusions. Every
 other item on this list could be answered and 1.0-am would still wait on this
-one. Recorded as OPTIONAL PAID VALIDATION and not run.
+one. The paid run has not been authorized or performed. Choosing when to fund
+it is optional; satisfying this evidence gate before claiming 1.0-am is not.
 
 **2. Flashing past WCAG 2.3.1: four chaotic rooms are resolved; three
 rooms flash only at 8x speed: `cellular-automata`, `julia`, `lambda-map`.**
@@ -270,11 +309,12 @@ turn taken a decade later meets the same room. It would also send a player's
 own expressions off the machine, in a product whose privacy posture is that
 play writes nothing and keeps nothing.
 
-There is also a difference in register that matters more than the plumbing. An
-answer engine is propositional: it is built to tell you things. This product is
-built so that a truth is met rather than told, and it withholds explanations
-until they are earned. Importing a question-answering surface would import
-exactly the voice every doorway rule here exists to keep out.
+The useful product direction is freely chosen play with useful mathematical
+instruments. A player can meet a relationship through manipulation, ask for an
+explanation immediately, or use an exact calculation directly. Study and tools
+are never earned access. Graphing calculators and computational tools provide
+valuable precedents for serious work and open-ended play on the same object.
+The interface should preserve that freedom and the rooms' sensory character.
 
 And the composition already works, one level up, without anything being built.
 A digital mind playing over MCP can hold both servers at once, compute in one
@@ -297,6 +337,16 @@ hypothesis: one integer, and no topology command.
 Polar plots, 3D, and the live pattern transforms stay where `STUDIO.md`
 already plans them. A natural-language question, step-by-step homework,
 and curated facts about the world stay out with the external call.
+
+**Research update, 2026-10-08:** the [native tool comparison](INTERFACES.md#native-mathematical-tools)
+now distinguishes existing behavior from proposed CLI and persistent terminal
+tools, including matrix inspection, bounded solving, fitting, transport, and
+reproducible comparisons. The [paper atlas](RESEARCH.md#mathematical-play-and-useful-instruments)
+has a separate analysis for each indexed manuscript. Its
+[execution contract and work register](MATHEMATICAL_PLAY.md) give every paper
+an explicit destination and define scoped candidates. These remain Designed
+proposals and Hypotheses; selection follows the mathematical-play backlog
+above without adding release gates or reordering **Next, in order**.
 
 ### Standing gates
 
@@ -502,8 +552,9 @@ read-only App viewer, with no private host or protocol data in the stream.
 
 ### 0.4 Understanding Alpha
 
-**Status:** active. The method is prepared and CI-locked; the qualifying
-cohort is owner-blocked (decisions entry 1).
+**Status:** qualifying evidence open. The method is prepared and CI-locked;
+the qualifying cohort is owner-blocked (decisions entry 1). Active product
+work is on Sensory Alpha.
 
 **Goal:** determine whether play produces a durable model, not only a striking frame.
 

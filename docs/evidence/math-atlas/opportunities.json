@@ -1,0 +1,313 @@
+{
+  "schema": "numinous.math-opportunities.v1",
+  "review_date": "2026-10-08",
+  "evidence_status": "Designed research backlog; no runtime feature is claimed built.",
+  "selection_policy": "Preserve the active release sequence. First compare the existing-object slices by concrete play and expert tasks; promote one bounded slice, not the whole backlog.",
+  "items": [
+    {
+      "id": "object-readings",
+      "title": "Keep the object, expose the calculation",
+      "stage": "foundation",
+      "core_seam": "Studio creations and Route Lab saved state",
+      "dependencies": [],
+      "gesture": "Move a curve crossing or a route point and pin a comparison without leaving the scene.",
+      "game": "Make two different-looking creations share a measured property, or improve a route and keep the witness.",
+      "expert_workflow": "Inspect values, units, domains, method status, resource limits and export replayable numeric data.",
+      "validation": "A saved object reopens with the same calculation inputs across App, CLI and MCP; unsupported cases are explicit.",
+      "scope": "No second expression parser, persistence format owner, or general notebook.",
+      "revisit_or_reject": "Reject a universal result schema that erases operation-specific evidence.",
+      "status": "designed"
+    },
+    {
+      "id": "graph-workbench",
+      "title": "Make a network, challenge its answer",
+      "stage": "first-slice",
+      "core_seam": "Route Lab maps, route comparisons, later typed finite graphs",
+      "dependencies": [
+        "object-readings"
+      ],
+      "gesture": "Drag a town, close an edge or change a cost and see the route reorganize.",
+      "game": "Design a tiny map that defeats a heuristic; trade a counterexample and repair it.",
+      "expert_workflow": "Compare exact bounded baselines with heuristics; later inspect degree-preserving moves, transitions and walk statistics.",
+      "validation": "Recompute cost and feasibility independently; round-trip the full graph including directedness and edge semantics.",
+      "scope": "Route certificates first; scheduling and subgroup posets are different adapters, never relabeled road maps.",
+      "revisit_or_reject": "Stop if imported graph semantics silently change or a heuristic gains an optimality label.",
+      "status": "designed"
+    },
+    {
+      "id": "wave-code-instrument",
+      "title": "A wave becomes a message",
+      "stage": "first-slice",
+      "core_seam": "Studio coefficient sequences, harmonic sound and future sequence analysis",
+      "dependencies": [
+        "object-readings"
+      ],
+      "gesture": "Flip or drag coefficients and hear a declared timbre mapping while correlation peaks change.",
+      "game": "Build a quiet sidelobe pattern or send a friend's drawing through a chosen noisy channel.",
+      "expert_workflow": "Export exact finite coefficients, correlation conventions, normalization and seeded channel trials.",
+      "validation": "Check direct sums on tiny sequences, complex conjugation and boundary conventions; playback loudness remains bounded.",
+      "scope": "A short sequence/correlation instrument first; communications capacity is a separate mathematical claim.",
+      "revisit_or_reject": "Revise if audio is decoration or uncontrolled loudness masks the mathematical change.",
+      "status": "designed"
+    },
+    {
+      "id": "curve-inspector",
+      "title": "A curve you can question",
+      "stage": "first-slice",
+      "core_seam": "Existing Studio expression and slider objects",
+      "dependencies": [
+        "object-readings"
+      ],
+      "gesture": "Drag a bracket around a moving zero; watch the crossing answer immediately.",
+      "game": "Find parameters giving a chosen crossing, slope or area; ignore the challenge and draw freely.",
+      "expert_workflow": "Bracketed root finding and bounded parameter sweeps on the supported grammar, with endpoint/domain checks and sample export.",
+      "validation": "Endpoint zeros, no sign change, discontinuities, non-finite values and cancellation have separate outcomes; brackets carry the continuity assumptions.",
+      "scope": "One root operation first; fitting, integration and symbolic calculus each need a later contract.",
+      "revisit_or_reject": "Stop if the same expression is interpreted differently by the plot and the calculator.",
+      "status": "designed"
+    },
+    {
+      "id": "matrix-workbench",
+      "title": "Transformations with receipts",
+      "stage": "shared-object",
+      "core_seam": "New bounded finite matrix object in core",
+      "dependencies": [
+        "object-readings"
+      ],
+      "gesture": "Pull a shape's axes or edit entries; follow the transformed grid and selected vectors.",
+      "game": "Undo a deformation, preserve an area or construct two transformations that fail to commute.",
+      "expert_workflow": "Small real matrix products, solves and selected decompositions with residuals, conditioning and precision limits.",
+      "validation": "Verify exact small fixtures and independent residuals; handle singular/repeated/ill-conditioned inputs and preserve basis conventions.",
+      "scope": "Small real matrices first; complex channels, sparse operators and semidefinite optimization are separate extensions.",
+      "revisit_or_reject": "Reject a broad solver dependency until ownership, determinism and numerical failure behavior are explicit.",
+      "status": "designed"
+    },
+    {
+      "id": "probability-instrument",
+      "title": "Make randomness inspectable",
+      "stage": "shared-object",
+      "core_seam": "Bounded finite distributions, seeded sampling and declared transition kernels",
+      "dependencies": [
+        "object-readings"
+      ],
+      "gesture": "Reweight a handful of outcomes or move a transition and watch a repeatable ensemble respond.",
+      "game": "Invent a fair guessing game or discover two mechanisms that look similar in small samples.",
+      "expert_workflow": "Compare exact finite expectations with seeded estimates, uncertainty summaries and mixing diagnostics under a declared sampling law.",
+      "validation": "Finite enumeration baselines, probability normalization, seed replay and explicit correlated-sample handling; no universal convergence claim from a short run.",
+      "scope": "Finite distributions and one chosen walk first; continuum probability and inferred statistical models need separate contracts.",
+      "revisit_or_reject": "Reject an unexplained sampling bias or a confidence label without its assumptions.",
+      "status": "designed"
+    },
+    {
+      "id": "convex-metric-tools",
+      "title": "Sculpt the ruler",
+      "stage": "shared-object",
+      "core_seam": "Exact finite polygons, declared origin and norm",
+      "dependencies": [
+        "object-readings"
+      ],
+      "gesture": "Pull a polygon and watch its polar and distance circles respond.",
+      "game": "Balance vectors inside a chosen unit ball or make a short path become long by changing its ruler.",
+      "expert_workflow": "Inspect support functions, dual norms, polygon products and finite metric/embedding witnesses.",
+      "validation": "Exact rational polygon fixtures, origin-interiority checks and explicit degeneracy behavior; preserve scale and norm conventions.",
+      "scope": "Two-dimensional exact constructions first; high-dimensional theorems remain context.",
+      "revisit_or_reject": "Reject forced connections to cosmological expansion or generic category rooms based on names alone.",
+      "status": "designed"
+    },
+    {
+      "id": "finite-topology",
+      "title": "Build a space and inspect its invariant",
+      "stage": "shared-object",
+      "core_seam": "Finite complexes, coefficient domains and exact boundary matrices",
+      "dependencies": [
+        "object-readings",
+        "matrix-workbench"
+      ],
+      "gesture": "Snap cells together and remove a free face while cycles rearrange.",
+      "game": "Build different shapes with equal checked homology, then discover what the invariant misses.",
+      "expert_workflow": "Compute bounded boundary operators and homology; inspect move certificates, subgroup chains and signed cancellations.",
+      "validation": "Check boundary squared equals zero, coefficient selection and explicit small complexes; reject malformed incidence data.",
+      "scope": "Finite combinatorial objects first; smooth four-manifold and chromatic claims are specialist lenses.",
+      "revisit_or_reject": "Stop if equal homology is presented as equivalent spaces or a planar knot models arbitrary four-dimensional geometry.",
+      "status": "designed"
+    },
+    {
+      "id": "exact-number-play",
+      "title": "Arrange exact arithmetic",
+      "stage": "shared-object",
+      "core_seam": "Bounded integers, rationals and finite search witnesses",
+      "dependencies": [
+        "object-readings"
+      ],
+      "gesture": "Arrange reciprocal pieces or prime patterns and see exact relations close.",
+      "game": "Find a decomposition, trade a finite counterexample or compose a numerical mosaic.",
+      "expert_workflow": "Export exact fractions, divisibility witnesses, bounded search results and explicit limits.",
+      "validation": "Independent arithmetic fixtures, overflow/resource handling and seeded/replayable enumeration.",
+      "scope": "Small exact domains first; enormous asymptotic constants are not a practical algorithm.",
+      "revisit_or_reject": "Stop if finite searches imply universal number-theoretic conclusions.",
+      "status": "designed"
+    },
+    {
+      "id": "transport-painting",
+      "title": "Make a drawing travel",
+      "stage": "experience-prototype",
+      "core_seam": "New bounded mass distributions and finite coupling object",
+      "dependencies": [
+        "object-readings",
+        "graph-workbench"
+      ],
+      "gesture": "Paint two piles of light and move mass between them with visible conservation.",
+      "game": "Make a surprising morph or find a cheaper way to meet the same destinations.",
+      "expert_workflow": "Inspect a tiny coupling table, marginal residuals, cost and regularization; compare with a deterministic assignment.",
+      "validation": "Tiny rational instances have independently checked feasible/optimal baselines; distinguish plan, map and numerical interpolation.",
+      "scope": "Start with a finite grid and declared cost; continuum map regularity is source context.",
+      "revisit_or_reject": "Stop if a beautiful interpolation loses mass or conceals splitting.",
+      "status": "designed"
+    },
+    {
+      "id": "surface-play",
+      "title": "Tiles, bubbles and boundaries",
+      "stage": "experience-prototype",
+      "core_seam": "Typed finite tile states and separately defined periodic geometry",
+      "dependencies": [
+        "object-readings"
+      ],
+      "gesture": "Flip a legal tile, sculpt a periodic bubble or paint a boundary that settles.",
+      "game": "Make a mountain, preserve a winding rule or challenge a proposed low-perimeter shape.",
+      "expert_workflow": "Export boundary conventions, energy/area, legal moves and sampling diagnostics; compare analytic candidate families.",
+      "validation": "Legality and invariants are exact for discrete states; periodic area estimates expose mesh refinement and candidate restrictions.",
+      "scope": "Tile landscapes and periodic bubbles are separate bounded prototypes; no arbitrary minimal-surface solver.",
+      "revisit_or_reject": "Reject a claimed sampler with unexplained bias or a candidate comparison labeled global proof.",
+      "status": "designed"
+    },
+    {
+      "id": "spectral-instrument",
+      "title": "Hear and see a chosen operator",
+      "stage": "experience-prototype",
+      "core_seam": "Declared domain, operator, boundary conditions and modes",
+      "dependencies": [
+        "object-readings",
+        "matrix-workbench"
+      ],
+      "gesture": "Reshape a domain and trace a mode's quiet lines; optionally compose with it.",
+      "game": "Keep a nodal pattern while changing the shape, or build a visual score.",
+      "expert_workflow": "Inspect eigenpairs, residuals, discretization and convergence; export mesh and operator with readings.",
+      "validation": "Analytic reference domains and mesh comparisons constrain error; distinguish membrane, plate, heat and spherical operators.",
+      "scope": "Start with one operator and a bounded mesh; audio mapping is explicit rather than asserted physics.",
+      "revisit_or_reject": "Stop if changing boundary conditions is treated as a palette change or a residual is called an error bound without assumptions.",
+      "status": "designed"
+    },
+    {
+      "id": "reversible-circuits",
+      "title": "Programs you can play backward",
+      "stage": "experience-prototype",
+      "core_seam": "Exact finite maps and reversible gate compositions",
+      "dependencies": [
+        "object-readings"
+      ],
+      "gesture": "Arrange gates, release a tracer and run the finite program backward.",
+      "game": "Route a message around obstacles or build a small reversible puzzle for a partner.",
+      "expert_workflow": "Inspect state transitions, inverse composition and the invariant each gate preserves.",
+      "validation": "Round-trip every bounded state for tiny circuits; distinguish planar area from compensated spatial volume.",
+      "scope": "Finite maps before continuous flow; arbitrary halting and robust continuum universality stay out of scope.",
+      "revisit_or_reject": "Stop if a visual fluid metaphor hides irreversible truncation or changes the detector definition.",
+      "status": "designed"
+    },
+    {
+      "id": "algebra-certificates",
+      "title": "Exact constructions you can inspect",
+      "stage": "research-spike",
+      "core_seam": "Bounded sparse polynomials, finite algebras and explicit certificate readers",
+      "dependencies": [
+        "object-readings",
+        "exact-number-play"
+      ],
+      "gesture": "Change a small polynomial or finite table and see which relation survives.",
+      "game": "Build a tiny example that separates two invariants, or repair a failed identity.",
+      "expert_workflow": "Recompute finite recurrences, signed boundary cancellations or positivity witnesses with explicit coefficient domains and nonreduced structure.",
+      "validation": "Check exact identities independently, preserve ideals rather than only zero sets, and report degree, coefficient and enumeration limits.",
+      "scope": "Select one source construction and one finite domain; no general computer algebra system or automatic theorem prover.",
+      "revisit_or_reject": "Defer if the claimed certificate cannot be reconstructed from explicit source data.",
+      "status": "designed"
+    },
+    {
+      "id": "flow-laboratory",
+      "title": "A flow whose boundaries you can test",
+      "stage": "research-spike",
+      "core_seam": "Bounded explicit vector fields, event states and selected exact polynomial checks",
+      "dependencies": [
+        "object-readings",
+        "curve-inspector"
+      ],
+      "gesture": "Place a seed in a small flow box and watch its path answer changes to the field.",
+      "game": "Find an escaping trajectory or construct a box whose checked faces keep paths inside.",
+      "expert_workflow": "Inspect a source-specified low-dimensional ODE, equilibria, face signs, trajectories and step refinement with declared parameter restrictions.",
+      "validation": "Exact polynomial boundary fixtures and equilibrium checks sit beside numerical trajectories; report solver limits and distinguish tangency from inward crossing.",
+      "scope": "One explicit field before an arbitrary-equation interface; sections of a high-dimensional geometric object remain sections.",
+      "revisit_or_reject": "Stop if an attractive trajectory is mistaken for a global existence or stability proof.",
+      "status": "designed"
+    },
+    {
+      "id": "inverse-probes",
+      "title": "Feel an unseen interior",
+      "stage": "research-spike",
+      "core_seam": "One bounded forward model plus noisy measurements",
+      "dependencies": [
+        "object-readings",
+        "matrix-workbench"
+      ],
+      "gesture": "Send a probe, watch its response and move a guess about the hidden shape.",
+      "game": "Hide a simple inclusion for another player to discover with a limited probe budget.",
+      "expert_workflow": "Explore sensitivity, regularization and non-identifiability through repeatable forward/inverse comparisons.",
+      "validation": "Recover only within a declared model; include ambiguous examples, noise sweeps and residuals on held-out measurements.",
+      "scope": "Choose one tractable finite model before a room; rough-coefficient uniqueness is not implied.",
+      "revisit_or_reject": "Stop if the experience rewards a single hidden answer when measurements admit several.",
+      "status": "designed"
+    },
+    {
+      "id": "terminal-workspace",
+      "title": "A place to stay with the instrument",
+      "stage": "interface",
+      "core_seam": "CLI presentation over existing core requests",
+      "dependencies": [
+        "object-readings",
+        "curve-inspector"
+      ],
+      "gesture": "Nudge a parameter, switch plot/table views and keep a comparison without restarting a command.",
+      "game": "Follow a self-chosen investigation or challenge with keyboard-only reversible actions.",
+      "expert_workflow": "Cancellable sweeps, readable exact input, structured export, focus and terminal restoration.",
+      "validation": "Same inputs/results across CLI, TUI and MCP; resize, interruption, no-color and narrow layouts retain meaning.",
+      "scope": "TUI stays inside the CLI face after core operations justify it; no new mathematical backend.",
+      "revisit_or_reject": "Stop if persistence or numerical rules migrate into presentation code.",
+      "status": "designed"
+    },
+    {
+      "id": "construction-lenses",
+      "title": "Preserve specialist constructions without forcing a room",
+      "stage": "research",
+      "core_seam": "Existing study and project-chain boundaries",
+      "dependencies": [],
+      "gesture": "Offer a faithful finite prerequisite or an inspectable construction only when its connection is explained.",
+      "game": "Let a player pose a question, keep an example or compare two models without fabricated scoring.",
+      "expert_workflow": "Retain source locators, reusable assets, transfer boundaries and unresolved questions for later work.",
+      "validation": "Every indexed paper has a source-grounded disposition; theorem claims and design inferences are visibly distinct.",
+      "scope": "A tracked research destination, not a promise to implement every paper or a claim of exhausted insight.",
+      "revisit_or_reject": "Promote only after an actual bounded object and worthwhile action emerge; otherwise retain the research lens.",
+      "status": "designed"
+    },
+    {
+      "id": "deferred-research",
+      "title": "Keep the difficult remainder visible",
+      "stage": "deferred",
+      "core_seam": "Research atlas only",
+      "dependencies": [],
+      "gesture": "No invented interaction is required.",
+      "game": "No game is claimed until a faithful model is found.",
+      "expert_workflow": "Preserve the obstacle and the next question that could change the decision.",
+      "validation": "A specific paper-level reason explains deferral and the condition for revisiting it.",
+      "scope": "High-dimensional, inaccessible or impractical constructions can remain deferred indefinitely.",
+      "revisit_or_reject": "Do not convert lack of understanding into a decorative visualization.",
+      "status": "designed"
+    }
+  ]
+}

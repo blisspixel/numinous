@@ -175,6 +175,149 @@ current dependency or command.
 
 ---
 
+## Native mathematical tools
+
+**Designed direction, reviewed 2026-10-08.** A useful instrument should let
+someone improvise a curve, measure it, find an interesting parameter, compare
+alternatives, and take the result away. The same actions can support a child's
+play, a specialist's investigation, and a digital player's inquiry. Expertise
+changes the desired precision and vocabulary; it need not select a different
+world. The research rationale and paper-specific opportunities live in
+[RESEARCH.md](RESEARCH.md#mathematical-play-and-useful-instruments).
+
+### What the computational reference suggests
+
+The comparison below uses the current official example pages for Wolfram
+Alpha. These establish advertised capabilities, not independently measured
+accuracy, latency, or suitability. Proposed Numinous adaptations are design
+inferences. Numinous's built column is grounded in `faces/cli/src/main.rs`,
+`faces/cli/src/studio.rs`, and the core Studio and Route Lab implementations;
+their owner documents remain the detailed contracts. A room depicting a topic
+does not imply an arbitrary-input solver for that topic.
+
+| Reference capability | Built Numinous foothold | Proposed native tool and playful entry | Scope and priority |
+| --- | --- | --- | --- |
+| [Functions, parametric curves, implicit regions, polar and 3D plots](https://www.wolframalpha.com/examples/mathematics/plotting-and-graphics) | Studio graphs, paired parametric expressions, scalar plane fields, overlays, saved sliders, and image export | Scrub a parameter while inspecting intersections, coordinate samples, contour levels, and the represented domain. Preserve a useful curve as a creation | First deepen existing plot inspection. Polar, implicit-region, and general 3D authoring require their own core contracts; they are not implied by existing rooms |
+| [Arithmetic, algebra, and calculus](https://www.wolframalpha.com/examples/mathematics) | Restricted expression evaluation, specialized exact cycle readings, and a bounded symbolic slope grammar | Ask for a root in a bracket, slope at a point, extremum on an interval, or area over a declared domain. Drag the bracket or integration bounds directly | Extend one validated grammar and numerical operation at a time. General symbolic integration, limits, simplification, and equation solving remain outside the immediate slice |
+| [Matrices, eigenvalues, decompositions, and vector operations](https://www.wolframalpha.com/calculators/mathematics-linear-algebra) | Rooms about transformations, quantum states, and spectra | A bounded matrix object with editable entries, rank, conditioning, residuals, eigenvectors, and a linked picture. Stretch a shape or mix a small quantum state | High-value research prototype. Start with small real matrices and explicit supported decompositions; complex states and sparse operators follow separate validation |
+| [Descriptive statistics, fitting, distributions, and inference](https://www.wolframalpha.com/examples/mathematics/statistics) | Probability rooms and experiment readouts | Import bounded points, fit a line or supported model, pull one point, and watch residuals change. Compare seeded samples with a reference distribution | Start with descriptive summaries and fitted residuals. Inferential claims require declared assumptions; a fit alone never validates a model |
+| [Optimization and numerical methods](https://www.wolframalpha.com/examples/mathematics/applied-mathematics) | Route Lab's shortest paths, bounded exact tours, heuristics, and inspectable comparisons | Share a compare operation: exact small baseline, heuristic candidate, objective gap, cost, and a replayable witness. Add bracketed scalar optimization before general constrained optimization | Deepen Route Lab first. Keep method, feasible set, stopping reason, and optimality status visible; a local solution is not a global certificate |
+| [Differential equations](https://www.wolframalpha.com/examples/mathematics) | Many dedicated dynamical rooms; no arbitrary-equation solver implied | A bounded phase portrait with initial-condition gestures, event markers, and step-size comparison. Revisit one trajectory exactly | Explore after a small validated equation grammar. Stiff systems, PDEs, and unbounded simulation need separate numerical designs |
+| [Units and dimensional analysis](https://www.wolframalpha.com/examples/science-and-technology/units-and-measures) | Named physical quantities in particular rooms and audio controls; no general unit algebra | Make time, frequency, length, and dimensionless controls explicit; reject adding incompatible quantities and preserve units in exports | Begin with unit metadata on existing readouts. A conversion engine needs a small owned unit vocabulary and tests; world facts and industrial standards are separate data products |
+| [Data input, interactive output, and downloads](https://www.wolframalpha.com/pro/) | Portable Studio and route creations, kept project chains, and existing image/audio exports | Import a bounded table or matrix, inspect it, compare a modification, export numeric values and metadata, and reopen the same question later | Reuse creation and project boundaries. Numeric CSV and consistent versioned JSON are proposed extensions, not universal existing command options |
+| [Step-by-step linear algebra](https://www.wolframalpha.com/examples/pro-features/step-by-step-solutions/step-by-step-linear-algebra/) | Immediate study at chosen depths and selected room explanations | Let a player inspect row operations, a path certificate, a residual, or a failed constraint behind the current result | Prefer checkable operation traces tied to the actual object. A universal homework tutor and unrestricted generated proofs are outside this proposal |
+| [Custom graphs, combinatorics, sequences and recurrences](https://www.wolframalpha.com/examples/mathematics/discrete-mathematics) | Route Lab maps and dedicated discrete rooms | Supply a bounded adjacency table, count a small family, inspect a recurrence, or challenge a graph property with an exported witness | Graph semantics and resource limits come first. A guessed sequence continuation is one possible model, never a uniquely determined answer |
+| [Exact number theory and continued fractions](https://www.wolframalpha.com/examples/mathematics/number-theory) | Dedicated arithmetic and approximation experiences | Arrange rational pieces, inspect divisibility, or compare a continued-fraction convergent with its error | Exact bounded arithmetic is a useful shared object. State overflow/search limits; an unsuccessful finite search does not settle an unbounded equation |
+| [Probability events, finite trials and distribution properties](https://www.wolframalpha.com/examples/mathematics/probability) | Probability rooms and seeded experiments | Reweight outcomes, compare exact finite expectation with a sample, or design a guessing game and inspect its law | Separate exact probability from empirical frequency. Correlation, stopping rules and the chosen distribution belong in the result |
+| [Finite groups, finite fields and polynomial structure](https://www.wolframalpha.com/examples/mathematics/algebra) | Dedicated group and algebra rooms; no general arbitrary-input algebra engine | Compose explicit permutations, inspect a tiny multiplication table, or replay a source-derived polynomial certificate | One exact finite domain at a time. Preserve coefficient rings, ideals and nonreduced structure when relevant; a point plot is not a complete algebraic object |
+
+The reference's breadth is useful inspiration. The product opportunity is a
+coherent set of local instruments whose results remain connected to their
+objects, sounds, rooms, and saved experiments. No external service is required
+by this design. A player may independently compose other tools with the MCP
+face. [Roadmap decision 13](ROADMAP.md#decisions-the-am-track-is-waiting-on-read-this-second)
+records the native boundary.
+
+The reference comparison is broader than the selected backlog. Its value is
+in workflows as well as operations: enter an object, see the interpretation,
+inspect several useful views, change an assumption, and take away an answer.
+Numinous can support that pattern locally while keeping its rooms and creations
+central. A future query surface should show the parsed expression, variable
+domains and requested operation before a long calculation; ambiguous wording
+must not silently choose a different problem. Arbitrary natural-language
+understanding is not required for the first useful tools.
+
+[MATHEMATICAL_PLAY.md](MATHEMATICAL_PLAY.md) owns selection and the paired play
+and expert acceptance tasks. Its [work register](evidence/math-atlas/coverage.md)
+connects these native capabilities to individual manuscript constructions.
+
+### A concrete CLI workflow
+
+The proposed interaction sequence is **define, inspect, vary, compare, keep,
+export**. These are capability names, not new executable commands. Existing
+`plot`, `open-studio`, `fork`, Route Lab, and project operations are the starting
+surface. Final command spelling must follow the existing parser after the
+core requests exist.
+
+For example, define a curve with a named coefficient and bounded domain.
+Inspect a bracketed zero and the local slope. Vary the coefficient over an
+explicit finite sample grid. Compare the zero against a second curve or a
+previous run. Keep the curve and the selected question in the existing project
+chain. Export the samples and calculation metadata for use elsewhere. A child
+can approach this through a moving crossing point; an expert can approach the
+same state through tolerances and residuals; an MCP player can manipulate the
+same typed parameters and choose what to inspect next.
+
+Every proposed calculation needs a core result that includes:
+
+- The object definition, parameter values, domain, units where applicable,
+  and explicit random seed or input sequence when randomness is involved.
+- The method and result status: exact within a supported domain, certified
+  bound, numerical approximation, heuristic, or unsupported operation.
+- Appropriate evidence, such as a residual, bracket, convergence comparison,
+  feasibility witness, or exact finite certificate. Residual size alone is
+  not an error bound for an ill-conditioned problem.
+- Precision and resource limits, the stopping reason, and enough version and
+  provenance information to replay with a compatible implementation.
+
+Plain-text output should make the answer and its limits easy to read. A
+versioned structured representation should carry the same facts, with numeric
+table export where useful. Plot pixels are never a replacement for the sampled
+values. A phase portrait is never a proof of global stability. Unsupported
+operations must say what is supported without inventing a result.
+
+### A persistent terminal workspace
+
+**Designed, not built.** The existing live terminal modes remain documented
+above. A later TUI would stay inside the CLI face, adapting the same core
+objects and requests. It would not introduce a fourth owner of mathematical
+behavior or require reopening the pinned dependency stack now.
+
+The useful layout has a searchable object list, a central plot or table, an
+inspector for selected values and assumptions, and a compact action/history
+area. A narrow terminal shows one of these at a time. A matrix can switch
+between its entries, transformed geometry, spectrum, and residual table without
+changing the underlying object. A curve can switch between picture, sample
+table, and root bracket. A route can switch between a map and its cost ledger.
+
+Keyboard operations should select a parameter, nudge it, type an exact value,
+pause, step, reset, undo, pin a comparison, and keep an artifact. A bounded
+sweep should be cancellable and preserve completed samples with their status.
+Optional sound can map a selected quantity to pitch or rhythm, with the mapping
+named; an eigenvalue is not automatically an audible physical frequency.
+Animation and sound can be disabled independently. Tables and textual state
+must retain the meaning when color or graphics are unavailable.
+
+A persistent workspace also needs predictable focus, visible units and
+bounds, discoverable keys, search that respects text entry, terminal resize
+behavior, and safe restoration of the terminal after cancellation or failure.
+ASCII output is the portable floor. Rich terminal graphics are a presentation
+option to evaluate later, not a prerequisite for useful computation.
+
+### Candidate implementation order
+
+This is a sequence within the proposed tool direction, not a replacement for
+the active roadmap:
+
+1. **Inspect and export what already exists.** Improve numeric readings,
+   comparison, and replay on Studio and Route Lab. Demonstrate one useful
+   expert task and one inviting free-play interaction on the same object.
+2. **Bounded calculation on existing expressions.** Choose one operation such
+   as bracketed roots or a parameter sweep. Define discontinuity handling,
+   precision limits, cancellation, and unsupported cases before adding breadth.
+3. **One reusable object family.** Compare a matrix workbench with finite
+   graph tools using the paper atlas. Pick the smaller slice with real uses
+   across rooms and independently checkable results.
+4. **Persistent terminal editing.** Add the TUI only when the core operations
+   already justify staying in a workspace. App and MCP receive equivalent
+   mathematical capabilities through their own presentation.
+
+Success requires both ends: voluntary expressive play and successful concrete
+work, such as recovering a root with a bracket, exporting a fit with residuals,
+or finding a certified improvement to a route. Test these separately with the
+relevant participants. Neither a theorem citation nor a working CLI proves
+that the experience is delightful or useful to every specialist.
+
 ## Face 3: The MCP server (designing an experience for a mind)
 
 **The user:** an AI agent, a mind that cannot (necessarily) see or hear, that perceives through text and acts through tools, with a goal it is pursuing. **The UX we are going for, in one line:** *an agent can learn math by doing it and play expressively, and comes away with grounded understanding, not just text about math.*

@@ -66,12 +66,20 @@ and the published crate records for
   persistence semantics, and protocol-neutral request behavior belong in the
   Rust workspace, normally in `numinous-core`. Faces translate transport and
   presentation around those shared types instead of reimplementing them.
-- **Python stays outside the product boundary.** Scripts may drive compiled
+- **Rust is the default for new code and maintained tooling.** Use another
+  language only when Rust is a poor fit for the concrete task, such as a
+  specialized analysis workflow whose established libraries materially reduce
+  the work and risk. Record that reason at the tool's owner boundary. Familiarity
+  or a shorter script alone is not enough. Documentation builders and reusable
+  validators should use the existing Rust workspace when it is a reasonable fit.
+- **Python stays outside the product boundary and needs that exception for new
+  tooling.** Existing scripts may drive compiled
   executables as black boxes, inspect installers and release artifacts, collect
   study evidence, or check cross-platform packaging. A script must not become
   a second owner of domain rules. When a Python harness needs a product fact,
   expose that fact through a typed Rust interface or machine-readable artifact.
-  Do not rewrite a stable black-box harness merely to change its language.
+  Existing stable black-box harnesses remain supported; migrate them when their
+  work requires a substantive change that makes the Rust boundary worthwhile.
 - **Make illegal states unrepresentable.** Lean on the type system: newtypes over raw primitives (no primitive obsession, especially for units, ids, seeds, and mathematical quantities), enums for state, `#[non_exhaustive]` on public enums/structs where forward-compat matters.
 - **All public types derive `Debug`** (and `Clone`/`PartialEq`/`Eq`/`Hash` where sensible). Follow the Rust API Guidelines for naming and common-trait implementation.
 - **Errors are typed at library boundaries, contextual at the app.** Library crates return concrete error enums (`thiserror`-style); binaries/faces use a context-carrying error (`anyhow`/`eyre`-style). 

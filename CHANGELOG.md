@@ -5,6 +5,32 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Documentation
+- Clarify the shared ambition of mathematical beauty, unrestricted play, and
+  useful instruments for casual and expert inquiry across the three faces.
+  Reconcile the vision's former separation of useful calculation from play.
+- Add a manuscript-by-manuscript research atlas with pinned sources, reading
+  scope, proposed interactions, expert uses, existing-room connections, and a
+  typed knowledge graph. Research proposals remain separate from built features.
+- Deepen the atlas with source-anchored construction reviews, reusable assets,
+  reasoned paper-to-paper transfers and explicit roadmap dispositions. Add a
+  scoped work register with play, expert tasks, dependencies and validation;
+  lock its source coverage and generated outputs through the Rust builder.
+- Generate a Markdown research sidecar for every paper and connect it to the
+  atlas and work register. Add graph relationship lenses, directional evidence,
+  distinct neighbors and explained discovery paths. Document research on
+  mathematical graph structure and a task-based evaluation plan. Keep proposed
+  Constellation discovery annotations separate from access to tools and from
+  claims of demonstrated understanding.
+- Compare computational reference features with current native capabilities
+  and proposed CLI and terminal tools. Correct the roadmap's outdated claim
+  that explanations must be earned and the north star's capability-quest status.
+  Align the Understanding Alpha section with the active Sensory Alpha line and
+  distinguish an optional funding decision from the required evidence gate.
+- Establish Rust as the default for new maintained tooling as well as product
+  code, with other languages reserved for a concrete poor fit. The research
+  atlas builder uses the Rust workspace and the live core room catalog.
+
 ## [0.5.0-alpha.3] - 2026-10-04
 
 ### Added

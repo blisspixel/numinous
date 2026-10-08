@@ -237,6 +237,12 @@ into coefficients, a series command, and an infinite sum stay out, and the
 Fourier sketch below stays a sketch. Player evidence remains open for the
 built readings as well as the hypotheses.
 
+The [native tool direction](INTERFACES.md#native-mathematical-tools) compares
+proposed inspect, calculate, compare, and export operations with what already
+ships. The [paper survey](RESEARCH.md#mathematical-play-and-useful-instruments)
+supplies concrete play and expert-use candidates. Both are research directions;
+the shipped vocabulary and readings above remain the implementation boundary.
+
 ## The one-liner
 
 > **A live, forgiving audiovisual math playground where one bounded program

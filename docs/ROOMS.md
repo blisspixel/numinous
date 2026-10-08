@@ -25,6 +25,12 @@ the registry and public `ROOM_CATALOG` are generated from it. Rendering,
 interaction, sound, and revelations remain in the room's own module. Hidden
 content follows a separate declaration and never appears in listed discovery.
 
+The [mathematical play survey](RESEARCH.md#mathematical-play-and-useful-instruments)
+and its [paper atlas](evidence/math-atlas/index.html) map possible deeper
+interactions, games, useful instruments, and connections onto existing rooms.
+Those research links are proposals or prerequisites, not additions to this
+implemented catalog. Prefer a richer existing object over another shallow room.
+
 Every room is scored on two axes to help sequencing:
 
 - **Wow** (1-5): how hard it hits a first-timer. Our whole product is wow-per-second.
