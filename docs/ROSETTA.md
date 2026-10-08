@@ -210,16 +210,17 @@ own interpretation of the artifact.
   content and a Japanese `reviewed_draft`. Its original catalog Notes remain
   English. Requested/resolved language and fallback are recorded per block;
   missing Mathematics never becomes Notes silently.
-- **`PLAY.md` contains "Start in any language":** the three-tool quickstart
-  (`list_rooms`, `play_room`, `reveal_room`, then stop reading and play),
-  translated into a spread of human languages across families and scripts
+- **`PLAY.md` opens with "Start in any language":** short translated
+  invitations link directly to App and MCP starting instructions. The tool
+  examples use `list_rooms`, `play_room`, and freely available `study_room`.
+  The welcome spans human languages across families and scripts
   (Spanish, French, German, Portuguese, Russian, Mandarin, Hindi, Arabic,
   Japanese, and Latin). These prose entries are not runtime locale support or
   evidence of independent translation review.
-- **`PLAY.md` contains "For a mind with no human language":** the math-only panel,
-  counting, the prime greeting, and the probe-and-observe principle, presented
-  in numbers and symbols rather than prose. Its accessibility to a visitor
-  without shared language remains a hypothesis.
+- **`PLAY.md` contains "For a mind with no human language":** a compact
+  number sequence and tool-call examples invite probing and observation.
+  The examples still use protocol names and English labels; their accessibility
+  to a visitor without shared language remains a hypothesis.
 
 ## Runtime localization: current boundary
 

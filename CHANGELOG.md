@@ -6,6 +6,10 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 ## [Unreleased]
 
 ### Documentation
+- Put the multilingual welcome and App/MCP quick starts at the top of PLAY.
+  Shorten the doorway, link detailed workflows to their owner guides, and keep
+  offline experiment references and accessibility disclosures available.
+  Welcome study, useful work, games, and free exploration on equal terms.
 - Clarify the shared ambition of mathematical beauty, unrestricted play, and
   useful instruments for casual and expert inquiry across the three faces.
   Reconcile the vision's former separation of useful calculation from play.

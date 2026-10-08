@@ -35,10 +35,10 @@ draws the room. `--poke 0.75,0.92` accepts the opening saving, while
 `--poke 0.5,0.78` changes BD to 5 and makes nearest-next optimal. MCP uses the
 same coordinates in `pokes`. Each call replays its supplied history.
 CLI `route-lab --json` and MCP `route_lab` carry working state for custom street
-networks, with explicit actions and followable next calls. [PLAY.md](../PLAY.md)
-documents the request shape and portable route/project commands; [Route
-Lab](ROUTE_LAB.md) explains the mathematics and native editor. O or Cabinet
-CONSTRUCT opens network authoring. Its Maps, View, Roads, Stops, Order, Search,
+networks, with explicit actions and followable next calls. [Route Lab](ROUTE_LAB.md)
+documents the request shape, portable route/project commands, mathematics,
+and native editor. O or Cabinet CONSTRUCT opens network authoring. Its Maps,
+View, Roads, Stops, Order, Search,
 and Keep pages share pointer, keyboard, and controller controls. Maps generates
 seeded RANDOM networks; Search picks independent START and END junctions. KEEP
 QUESTION stores a chosen question and network in the existing project chain.
@@ -172,8 +172,8 @@ Radio stations appear only when compatible local tracks are present. Visible
 controller legends infer Xbox or PlayStation face names from known product
 names and use generic compass names for unknown pads. They reflect the effective
 button routing, including remapped and unbound actions; custom routing is
-documented in `../PLAY.md`. The Studio can be entered, tuned, and left with a
-controller, but formula entry requires a keyboard and the footer states that
+documented under [Remap a controller](#remap-a-controller). The Studio can be
+entered, tuned, and left with a controller, but formula entry requires a keyboard and the footer states that
 boundary.
 The reverse boundary holds too, stated rather than implied: the keyboard
 reaches every menu, game, quiz, and formula, but the hand verbs inside App
@@ -380,6 +380,33 @@ NUMINOUS_JOURNEY="$HOME/.numinous-journey-try" NUMINOUS_SCORES="$HOME/.numinous-
 
 Removing or replacing an existing profile is never part of an update and
 should happen only by the player's explicit choice.
+
+### Remap a controller
+
+To remap standard controller buttons, create `.numinous-bindings.json` in your
+home directory. For example:
+
+```json
+{
+  "South": "Pause",
+  "West": "PrimaryDown",
+  "North": "CycleRadio"
+}
+```
+
+Supported button names are `South`, `East`, `North`, `West`, `Start`, `Select`,
+`LeftThumb`, `RightThumb`, `LeftTrigger`, `RightTrigger`, `LeftTrigger2`,
+`RightTrigger2`, and the four `DPad` directions. Supported actions are
+`PrimaryDown`, `Back`, `Menu`, `Inspect`, `Reset`, `PreviousRoom`, `NextRoom`,
+`Slower`, `Faster`, `Up`, `Down`, `Left`, `Right`, `CycleEra`, `CycleRadio`,
+`ToggleMute`, `VolumeDown`, `VolumeUp`, and `Pause`. Remapped primary buttons
+keep correct hold and release behavior. North keeps its radio and global-audio
+chord only when it has no explicit mapping. Stick axes retain their fixed
+virtual-hand and time-scrub roles. Controller legends are derived from the
+effective routing table at App startup and use the active Xbox, PlayStation, or
+generic button names. An action with no route says `UNBOUND`; when several
+buttons route the same action, compact copy names the first stable button and
+the number of additional routes.
 
 ### Accessibility
 

@@ -91,8 +91,9 @@ boundary. These are correctness and functional evidence, not measured enjoyment.
 CLI `numinous route-lab --json` and private MCP `route_lab` open the canonical
 workbench. Plain `numinous route-lab` instead gives a readable comparison and
 street walk. Both faces use `faces/shared/route_json.rs`; core owns every validation,
-edit, route comparison, and solver event. [PLAY.md](../PLAY.md) and the packaged
-skill document the request actions and followable next calls for installed players.
+edit, route comparison, and solver event. The
+[packaged play reference](../plugins/numinous/skills/play-numinous/SKILL.md#route-lab)
+also documents the request actions and followable next calls offline.
 
 A request optionally supplies `snapshot` and an explicit `action`. The snapshot
 contains `revision`, `current`, `undo`, and `trace`. `current` describes junctions,
@@ -140,6 +141,27 @@ participant comprehension has not been measured.
 The snapshot is caller-carried continuation across requests or processes.
 It carries session history without a profile write. [Route state and
 caller-paced calculation](decisions/0002-route-workbench.md) owns that boundary.
+
+### Try a request
+
+Call MCP `route_lab` with this request to record an opening A-to-D search:
+
+```json
+{"action":{"type":"trace","from":0,"to":3}}
+```
+
+Follow the returned `next` to reveal an event. To rewind, send the returned
+`snapshot` with `action: {"type":"step","cursor":0}`. The CLI accepts the
+same request JSON with `numinous route-lab --request '<JSON>'`, or reads it
+from stdin with `--request -`.
+
+Other action types are `evaluate`, `road_cost` (`from`, `to`, `cost`),
+`road_open` (`from`, `to`, `open`), `stops` (`stops`, depot first), `depot`
+(`depot`), `order` (`order`), `greedy`, `improve`, and `undo`. `network`
+replaces the complete network atomically using `current` with the same fields
+as `snapshot.current`. Roads use positive integer costs and are undirected;
+declare each connection once. Junction IDs run from zero through
+`junctions - 1`. Carry the resulting snapshot into each later request.
 
 ## Native network authoring and kept routes, built
 
@@ -218,8 +240,23 @@ both capsule and snapshot, preserving its parent. A capsule-only save preserves
 that creation's network. The transport remains stateless and writes no file.
 CLI `route-lab --out delivery.route` writes an explicit new export file.
 CLI project keep, import, export, and JSON resume use the existing chain; MCP
-`project` previews followable route calls. [PLAY.md](../PLAY.md) gives installed
-players the literal commands and request fields.
+`project` previews followable route calls.
+
+To keep and export a question from the CLI, choose new output paths:
+
+```text
+numinous route-lab --out delivery.route
+numinous project keep --question "What changes when a road closes?" --route delivery.route
+numinous project export --out delivery.project
+numinous project resume --json
+```
+
+Use `numinous project import delivery.project --confirm` to import deliberately.
+Over MCP, keep the returned route capsule with `project`: `op: "keep"`, your
+`question`, `rooms: ["route-lab"]`, `creation: <capsule>`, and
+`next: {"tool":"route_lab","arguments":{"capsule":<capsule>,"action":"open"}}`.
+Replace `<capsule>` with the returned text. `op: "resume"` previews that exact
+next call without executing it.
 
 Route-containing project documents and chains use version 2 headers. Studio-only
 version 1 bytes and identities remain unchanged; both supported versions reopen.
