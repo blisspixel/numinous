@@ -26,7 +26,7 @@
       "dependencies": [
         "object-readings"
       ],
-      "gesture": "Drag a town, close an edge or change a cost and see the route reorganize.",
+      "gesture": "Close a road or change its cost and see the route reorganize.",
       "game": "Design a tiny map that defeats a heuristic; trade a counterexample and repair it.",
       "expert_workflow": "Compare exact bounded baselines with heuristics; later inspect degree-preserving moves, transitions and walk statistics.",
       "validation": "Recompute cost and feasibility independently; round-trip the full graph including directedness and edge semantics.",

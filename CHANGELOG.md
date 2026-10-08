@@ -6,6 +6,11 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 ## [Unreleased]
 
 ### Documentation
+- Define research-derived games around patterns, relationships and real
+  mathematical moves, with visual, auditory and inspectable consequences.
+  Review digital-player choice and curiosity research, audit current support,
+  and specify an optional formative study without treating activity as proof
+  of enjoyment. Keep these game and study proposals labeled as Designed.
 - Put the multilingual welcome and App/MCP quick starts at the top of PLAY.
   Shorten the doorway, link detailed workflows to their owner guides, and keep
   offline experiment references and accessibility disclosures available.

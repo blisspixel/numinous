@@ -43,6 +43,44 @@ silence, repetition and simply watching remain complete choices. Reduced
 motion, color-free readings, bounded flashes and the existing shared audio
 chain apply to every new instrument.
 
+## Patterns and relationships are the play
+
+The central pleasure to design for is noticing a relationship, changing it,
+and discovering what follows. Repetition, symmetry, interference, recurrence,
+invariants, and a small change with a large consequence can sustain play
+before a score or explanation appears. This is a design hypothesis about the
+experience, not a claim that every player enjoys the same patterns.
+
+A game gives that curiosity an optional aim: make two rhythms meet, preserve
+a shape while changing its parts, find where an apparent rule breaks, or make
+a puzzle for someone else. The moves must change the mathematical object.
+The visible or audible response must follow that change, and a result should
+be inspectable and reproducible. Free exploration remains available alongside
+the challenge, including after its target has been reached.
+
+These are Designed game sketches within the existing work items:
+
+| Game invitation | What the player changes | Visual and auditory response | Research or useful mathematical task |
+| --- | --- | --- | --- |
+| Make the voices meet | Oscillator frequencies and observation window | Traces approach or miss recurrence; tones expose the chosen frequency relationship | Compare exact periods, approximate returns, and the half-period trap; extend the existing Returning home construction |
+| Tame the echoes | A finite sequence's signs or coefficients | Shifted copies and correlation peaks update; an optional sound mapping follows the selected lag and value | Search for low sidelobes under declared periodic or aperiodic correlation conventions; inspect exact sums in `wave-code-instrument` |
+| Fool the route finder | Road costs, closures, and delivery order | The chosen street walk changes; an optional cost sonification accompanies the numeric comparison | Construct a heuristic counterexample and compare with the bounded exact optimum in `graph-workbench`; moving a drawn point alone does not change road cost |
+| Paint a moving balance | Finite masses, sites, and target amounts | Weighted cells reorganize; an optional mapped pulse exposes marginal error | Inspect mass conservation, cost, and the cell-mass Jacobian, using the [power-cell construction](evidence/math-atlas/papers/p708.md) |
+| Find the hidden order | Point arrangement and interaction width | Spatial and frequency views change together; selected spectral quantities can drive declared sound mappings | Compare finite energies and truncation effects using the [reciprocal-energy construction](evidence/math-atlas/papers/p178.md) |
+
+Distinguish a discovery new to this player, a verified result for a bounded
+instance, and an advance on an open research question. A saved example can be
+real mathematical work without proving the source paper's theorem. Each
+challenge must name the model, legal moves, objective, assumptions, verification
+method, and what remains unknown. A solver result and a sound cue have different
+evidential roles; musical resolution alone cannot certify optimality or truth.
+
+For digital players, expose the same relationships through precise actions,
+compact observations, comparable states, and optional sensory attachments.
+A client that receives only text still needs room to experiment and create.
+[Digital play research](DIGITAL_DEVELOPMENT.md#october-2026-interest-and-freely-chosen-play)
+owns the evidence, current gaps, and optional evaluation of what players choose.
+
 ## From a manuscript to a candidate
 
 A source theorem is not a product specification. For each paper, retain the
@@ -82,7 +120,7 @@ The first selection round compares existing-object slices:
 
 | Candidate | First playable action | Concrete useful job | Why consider it early |
 | --- | --- | --- | --- |
-| `graph-workbench` | Move a town to defeat a route heuristic, then repair the route | Export a replayable comparison with a checked finite baseline | Route Lab already owns maps, algorithms and comparisons |
+| `graph-workbench` | Change roads or costs to defeat a route heuristic, then repair the route | Export a replayable comparison with a checked finite baseline | Route Lab already owns maps, algorithms and comparisons |
 | `wave-code-instrument` | Flip coefficients and hear/see a pattern change | Inspect finite autocorrelation with explicit conventions | Studio already keeps coefficient-based sound creations |
 | `curve-inspector` | Move a bracket and follow a zero as a slider changes | Export a bounded root/sweep result with domain and stopping status | Studio already owns the expression and parameters |
 

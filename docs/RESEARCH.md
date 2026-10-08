@@ -6,6 +6,8 @@ teach us, and where the project is still making a hypothesis. Evidence links
 were broadly reviewed on 2026-07-14. Learning-study, privacy, and MCP protocol
 guidance was reviewed again on 2026-07-26. Fun, capability, and digital
 continuity sources were reviewed on 2026-09-04; the focused update is below.
+Digital-player interest and research-derived pattern games were reviewed on
+2026-10-08 in the [interest and play review](DIGITAL_DEVELOPMENT.md#october-2026-interest-and-freely-chosen-play).
 
 ## Evidence posture
 

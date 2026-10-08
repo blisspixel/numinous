@@ -81,6 +81,12 @@ selected construction insights, open questions and reasoned paper-to-paper
 transfers. Coverage of the catalog is not a claim that all insights or proofs
 have been exhausted. All proposed instruments remain Designed.
 
+The [pattern-game sketches](MATHEMATICAL_PLAY.md#patterns-and-relationships-are-the-play)
+make relationships playable through real moves, visual and auditory responses,
+and inspectable results. The [digital-player interest review](DIGITAL_DEVELOPMENT.md#october-2026-interest-and-freely-chosen-play)
+records current support and an optional formative study of chosen play. That
+study is Designed; it does not add a release gate or establish enjoyment.
+
 The [research graph direction](RESEARCH_GRAPH.md) starts with a Markdown
 sidecar per paper and inspectable relationship evidence. Its next designed
 slice is one curated object-and-operation trail, followed by a comparison

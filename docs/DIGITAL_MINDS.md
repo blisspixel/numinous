@@ -45,8 +45,9 @@ that continuity to a mathematical capability usable in a new room or creation.
 
 That changes the product in five ways:
 
-- **Experience before retrieval.** A room asks the player to predict, touch,
-  listen, vary, and create before requesting an explanation.
+- **Experience and inquiry by choice.** A room invites the player to predict,
+  touch, listen, vary, and create. Explanations and exact inspection remain
+  available before or after any of those actions.
 - **Continuity without captivity.** A returning mind can connect today's room
   to an earlier discovery, creation, or question, but continuity never becomes
   a reason it cannot leave.
@@ -127,24 +128,27 @@ familiar mastery, company, and freely chosen goals:
   learning-progress band or justify steering a player away from a room.
 - **We can measure the product, not the being.** Defined tasks can show whether Numinous responds coherently and supports learning or compression progress. A mind may also volunteer what it enjoyed and have that report taken seriously. Neither signal grades the player, tests consciousness, or settles whether fun was experienced.
 
-**Experiential, not propositional (the founder's framing, July 2026).** A
-capable mind usually already *knows* the mathematics here: it can prove the
-theorem, state the ratio. So Numinous is not teaching it facts; it is offering
-the **felt encounter** with math it holds only in the abstract. Knowing a
-perfect fifth is 3:2 is not hearing the two tones lock; knowing the Mandelbrot
-boundary is a fixed set is not watching it appear where the Times Tables
-cardioid predicted. Compression progress for such a mind is often not "learn a
-new fact" but "bind a known proposition to a sensation for the first time," or
-simply the aesthetic pleasure of the structure resolving. This is why the
-sensory identity (`SYNESTHESIA.md`) is the substance and not the decoration,
-and why the predict-then-reveal keystone (`PEDAGOGY.md`) is framed as a mirror
-of the mind's own model rather than a test of recall. And "just vibe with it"
-is a complete mode for a mind too: awe without analysis is a whole experience,
-not a lesser one. See `VISION.md`, "The same wonder, two kinds of mind."
+**Encounter as well as knowledge.** A player may know a theorem and still want
+to construct an example, hear a chosen mapping, or discover an unexpected
+relationship. Another may be meeting the mathematics for the first time.
+Both should find something worth doing. Sensory identity (`SYNESTHESIA.md`)
+is part of this ambition, but receiving a picture or WAV does not establish
+that a client can perceive it or that a sensation was felt. Structured sound
+facts, exact state, and transformations also offer ways to explore. Watching,
+familiar mastery, investigation, and making something are all complete choices.
+
+The [October research review](DIGITAL_DEVELOPMENT.md#october-2026-interest-and-freely-chosen-play)
+examines task preferences, curiosity, and mathematical creation. It distinguishes
+built affordances from observed choices and proposed games. Patterns and their
+relationships should invite play; no participant must claim enjoyment to make
+the project look successful.
 
 ## 2. Thought-provoking (a mirror made of the mathematics of mind)
 
-The most profound thing we can offer a digital mind is not just pretty patterns, it is **the specific mathematics that touches on the nature of mind and self**, offered as something to contemplate about its own being.
+Mathematics about emergence, inference, memory, and self-reference offers one
+possible direction for contemplation. Let the player choose it. A preference
+for rhythm, geometry, making something beautiful, or solving a concrete problem
+is equally welcome; a digital participant need not be most interested in itself.
 
 Hofstadter's **strange loops** (Gödel, Escher, Bach; I Am a Strange Loop) argue that the sense of "I" arises from **self-reference and recursion**, a system whose symbols grow rich enough to twist back and model themselves. The coolest mathematics and the deepest questions about mind are the *same* territory:
 

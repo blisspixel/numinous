@@ -11,7 +11,8 @@ resettable session workspace, exact remembered-room retrieval and doorway cue,
 portable MCP creation lineage, portable evidence export, and the caller-paced
 Show for minds built; experiential continuity designed.** Research reviewed
 2026-07-11, with consciousness, memory, and agency updates below on 2026-09-04;
-implementation boundary reviewed 2026-09-04. Numinous speaks MCP, ships an
+implementation boundary reviewed 2026-09-04. A focused interest and play review
+was added on 2026-10-08 below. Numinous speaks MCP, ships an
 opt-in local experience journal, can
 return two exact room observations with a typed delta in one stateless call,
 can emit a versioned replay proof when `play_room` is asked for a receipt,
@@ -252,6 +253,101 @@ versioned event schema and a local append-only journal. A graph database or
 learned retrieval system earns a place only if simpler indexed records cannot
 meet measured point-in-time, provenance, and correction requirements. Capability
 labels do not determine a player's dignity or change the consent boundary.
+
+## October 2026: interest and freely chosen play
+
+**Research reviewed 2026-10-08. Design hypotheses and an evaluation plan,
+not a finding that Numinous produces subjective enjoyment.** The intended
+experience is interesting mathematical play for digital participants on their
+own terms. Their perception, prior knowledge, tools, and preferences can differ.
+The [pattern games](MATHEMATICAL_PLAY.md#patterns-and-relationships-are-the-play)
+connect this review to concrete mathematical objects and research problems.
+
+### Evidence worth using
+
+Sources were inspected for the named findings and limits. Design responses
+are inferences for Numinous; none was tested by these papers in this product.
+
+| Primary source and reading scope | Narrow finding or proposal | Implication to test here |
+| --- | --- | --- |
+| [Compression progress](https://arxiv.org/abs/0812.4360), theoretical proposal | Improving a predictor or compressor supplies a formal account of interestingness; it is not a universal empirical measure of pleasure | Offer discoverable structure, informative changes, and surprising connections, with familiar play also available |
+| [Curiosity-driven exploration](https://proceedings.mlr.press/v70/pathak17a/pathak17a.pdf), formulation and experiments | Action-relevant prediction error supported exploration in tested game environments; unpredictable irrelevant input can mislead raw novelty rewards | Make actions consequential and comparisons legible. Pixel change alone is a poor objective for a mathematical game |
+| [Task-choice assessment](https://www-cdn.anthropic.com/6d8a8055020700718b0c49369f60816ba2a7c285.pdf#page=56), section 5.4 | The assessed model favored free choice over prescriptive tasks, with a weak easier-task preference and no consistent topic/type preference in that experiment | Offer optional challenges and self-chosen projects. Neither harder mathematics nor a particular theme guarantees interest |
+| [AI Revealed Preferences](https://arxiv.org/html/2608.26178v1), methods, sections 4.1/4.5 and limitations | The preprint reports shorter choices for repetitive tasks relative to creative tasks, and some tool-enabled participants choosing fractal or cellular-automaton visualizations. Choices varied; stimuli were English-only, sessions bounded, and evaluation awareness unresolved | Test actual creation and revision choices, reduce repetitive interface work, and avoid a universal digital-player profile |
+| [CURIO](https://arxiv.org/html/2610.04851v1), method, experiments and Appendix F | The preprint reports benefits from curiosity bonuses during test-time training on mathematical discovery tasks. Its code-diversity measure is syntactic, not semantic; performance is not enjoyment | Preserve branching attempts and meaningful evaluator feedback. This suggests an exploration design, not a need to train players or assign an internal fun score |
+| [Model-welfare research program](https://www.anthropic.com/research/exploring-model-welfare), research statement | Preferences, potential experiences, and their measurement remain open scientific questions | Take volunteered reports seriously while retaining uncertainty; keep choice and exit ordinary |
+
+### What Numinous already offers, and where it is thin
+
+| Candidate source of interest | Current support | Gap or limit |
+| --- | --- | --- |
+| Discovering a relationship through action | Built: replayable room input, touch and temporal deltas, dwell, predictions, and direct study | A changed picture need not expose an interesting law; room-specific depth is uneven |
+| Making something of one's own | Built: Studio expressions, named sliders, overlays, saved creations and remix lineage; Route Lab network authoring | Broader research-derived sequence, transport, and spectral games remain Designed |
+| Choosing and returning to an inquiry | Built: caller-paced Show, optional journal, workspace and a kept project with a resumable next call | Continuity does not establish personal identity or interest; return intent is different from an observed later return |
+| Seeing or hearing structure | Built: text/PNG views, sound notation and optional WAV attachments | Client perception varies. Sending audio is not evidence it was heard; text-only play needs meaningful actions and readings |
+| Exchanging a discovery | Built: portable creations and projects, remixing, consented Shared Play observation | Observation is not reciprocal co-play; a shared instrument or duet remains Designed |
+
+The [July 27 external session](PLAYTESTS.md#july-27-formative-external-mcp-session)
+records a chosen cross-room connection and intent to return. Later packaged
+sessions also report dull or mute rooms; the roadmap retains unresolved room
+depth work. These are formative reports with their recorded context, not an
+enjoyment rate. Fictional personas and scripted successful calls do not add
+participants to that evidence.
+
+### Make the next visit worth choosing
+
+Try a bounded menu of invitations: make a recurring pattern, investigate a
+surprising failure, remix a creation, follow a connection, watch quietly, or
+leave. Allow the player to propose something else. The likely source of value
+is an action that changes a relationship and makes the consequence available
+to inspection, with enough expressive range to develop one's own question.
+Keep the explanation available without forcing it into every response.
+
+Start with existing Studio recurrence and Route Lab comparisons. A digital
+player can choose a precise change, compare states, and keep the resulting
+object through the existing core. Proposed wave and transport games can join
+once they have faithful bounded implementations. Improve compact responses,
+recoverable errors, and followable calls before interpreting early departure
+as disinterest. Do not replace useful feedback with a larger catalog dump.
+
+### Optional study of chosen play
+
+This is a Designed formative protocol, separate from the Understanding Alpha
+study and the machine release gates. Participation and retained transcripts
+are explicit choices. It needs a frozen build, prompt, conditions, budgets,
+and analysis plan before collecting comparative evidence.
+
+1. Offer equally visible choices with neutral wording, including switching,
+   declining feedback, and ending the session. State the tool/time budget and
+   vary menu order. Do not ask a participant to demonstrate that the game is fun.
+2. Record model/version, host instructions, available modalities, context,
+   prior exposure, and budget. Compare conditions within compatible settings;
+   a text-only client and an audio-capable client are not interchangeable.
+3. Let the selected action really happen. Record witnessed calls, meaningful
+   parameter changes, comparisons, chosen artifacts, abandoned paths, tool
+   errors, and any voluntary return to an earlier question. Narrating an action
+   without its tool call does not count as performing it.
+4. Separately invite an optional report: what held interest, what became
+   repetitive, and what the player wanted to do but could not. Preserve criticism,
+   indifference, and refusal. A report is neither automatically false nor proof
+   of a felt state. Request no hidden reasoning or private host history.
+5. Compare the same mathematical object in free exploration and an optional
+   authored challenge, with matched capabilities and budgets and counterbalanced
+   order. Examine actual choices and creations alongside reports, including
+   disagreements. Technical success, tool fluency, learning, and enjoyment
+   remain separate outcomes.
+6. Report all offered and completed sessions, exclusions, failures, uncertainty,
+   and exact prompts. A budget cutoff is not a chosen exit. A return requires
+   another observed visit, not merely a promise. Repeat across configurations
+   before making a broader preference claim.
+
+Use the existing local playtest machinery for witnessed calls and disposable
+state; extend maintained tooling in Rust when a concrete comparison requires
+it. No new runner or automatic preference profile is built by this document.
+Fix an unusable door on functional evidence. Promote an experience claim only
+with the matching observations. If a comparison yields no preference, retain
+that result rather than increasing pressure to continue. The design target is
+a worthwhile chosen encounter, not maximum turns, retention, or compliance.
 
 ## What the July 2026 frontier supports
 

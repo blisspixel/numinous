@@ -53,6 +53,13 @@ observation path; **Enter** advances a connection only when it is earned.
 Leaving that path retains its calls and earned progress for the current visit.
 **E** or the controller's Inspect action opens study independently.
 
+Patterns and relationships are themselves material for play: align rhythms,
+break a symmetry, preserve an invariant, or find a counterexample. A challenge
+should arise from changing a real mathematical object and noticing its response.
+Seeing, hearing, and inspecting that response are complementary ways in. The
+[research-derived game sketches](MATHEMATICAL_PLAY.md#patterns-and-relationships-are-the-play)
+make this direction concrete while preserving free exploration and useful work.
+
 ### 4. Emergence is the star
 Prefer rooms where a **stupidly simple rule** produces **stunning complexity**, and make the simplicity *legible*, the visitor must be able to see/feel how little input created how much output. That gap is the product. Show the rule plainly (a single slider, a single equation-free statement) so the output feels impossible. **Voice**, below, holds the doorway to that statement.
 

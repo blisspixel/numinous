@@ -36,7 +36,7 @@ is an opportunity assignment, not a commitment to implement the entire paper.
 
 **Make a network, challenge its answer.** Stage: first-slice. Assigned manuscripts: 50.
 
-- **First gesture:** Drag a town, close an edge or change a cost and see the route reorganize.
+- **First gesture:** Close a road or change its cost and see the route reorganize.
 - **Game:** Design a tiny map that defeats a heuristic; trade a counterexample and repair it.
 - **Expert workflow:** Compare exact bounded baselines with heuristics; later inspect degree-preserving moves, transitions and walk statistics.
 - **Core seam:** Route Lab maps, route comparisons, later typed finite graphs

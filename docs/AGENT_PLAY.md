@@ -191,9 +191,10 @@ Current product properties and remaining limits:
   discoverable still needs room-specific evidence; a compact implementation
   does not establish learnability or enjoyment.
 - *Where we are thin:* social mutuality (no joint multi-mind game yet;
-  the shared daily and score table are its seed), agent-authored goals beyond
-  the Studio expressions, and rule modification as play (the extensibility
-  tiers are the designed path). These map to the mature mechanics below.
+  the shared daily and score table are its seed), checked player-authored
+  objectives beyond the existing Studio, Route Lab and project questions,
+  and rule modification as play (the extensibility tiers are the designed
+  path). These map to the mature mechanics below.
 
 **The mechanics map** (candidate ideas and current support):
 
@@ -240,6 +241,13 @@ interpretable, and recoverable.
   puzzle; add a way to compare answers.
 
 ## Chosen inquiry and capability (reviewed September 2026)
+
+The [October interest and play review](DIGITAL_DEVELOPMENT.md#october-2026-interest-and-freely-chosen-play)
+adds primary research on choices, curiosity and mathematical creation, a
+built-versus-designed inventory, and an optional formative comparison. It
+keeps actual choices, reported experience, task success and subjective enjoyment
+distinct. [Pattern games](MATHEMATICAL_PLAY.md#patterns-and-relationships-are-the-play)
+apply that direction to real mathematical objects and problems.
 
 Learning progress is one research lens on curiosity, not a complete definition
 of fun. The prediction verb already ships. The next gap is useful capability
