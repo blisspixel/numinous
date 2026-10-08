@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+## [0.5.0-alpha.4] - 2026-10-08
+
 ### Documentation
 - Define research-derived games around patterns, relationships and real
   mathematical moves, with visual, auditory and inspectable consequences.

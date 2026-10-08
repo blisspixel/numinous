@@ -76,7 +76,7 @@ hosts can also load the [portable plugin](plugins/numinous).
 
 ## Current state
 
-**0.5.0-alpha.3** is a playable alpha with 356 catalog rooms, games, Journey,
+**0.5.0-alpha.4** is a playable alpha with 356 catalog rooms, games, Journey,
 Studio, controllers, and built-in music. It is still under development:
 Sensory Alpha is active, refining the shared visual and sonic identity.
 Understanding Alpha's qualifying study remains open; human playtests are optional

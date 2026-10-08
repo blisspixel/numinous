@@ -15,7 +15,7 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 Reviewed 2026-10-08.
 
-**Current release state: 0.5.0-alpha.3, Sensory Alpha active with its exit
+**Current release state: 0.5.0-alpha.4, Sensory Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are met and stay CI-locked. The package minor names
 the active milestone, not the oldest open gate. Understanding Alpha's external
@@ -393,8 +393,15 @@ above without adding release gates or reordering **Next, in order**.
 - **Not next at all:** soft-thin densify grind and bulk new rooms.
 
 ### Recently built
+
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
+
+- **`v0.5.0-alpha.4` (2026-10-08):** a shorter packaged play guide with the
+  multilingual welcome and App/MCP quick starts first; source-anchored research
+  notes, an offline atlas, and scoped game/tool proposals in the repository.
+  Research tooling is built; proposed instruments and the digital-play study
+  remain Designed. See [release notes](releases/v0.5.0-alpha.4.md).
 
 - **`v0.5.0-alpha.3` (2026-10-04):** inspect shared App audio preferences
   without a window or sound card, preserving saved/default provenance and
