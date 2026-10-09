@@ -315,7 +315,9 @@ validate_install_root() {
     if [ -e "$NUMINOUS_HOME" ] && [ ! -d "$NUMINOUS_HOME" ]; then
         fail "NUMINOUS_HOME exists but is not a directory"
     fi
-    assert_private_install_ancestors "$NUMINOUS_HOME"
+    # Preserve rejection even when a caller uses this function as a condition.
+    assert_private_install_ancestors "$NUMINOUS_HOME" \
+        || fail "the install path is not protected from replacement"
     if [ -d "$NUMINOUS_HOME" ] \
         && ! install_marker_is_valid "$NUMINOUS_HOME" \
         && ! directory_is_empty "$NUMINOUS_HOME"; then
@@ -331,7 +333,7 @@ validate_install_root() {
 
 remove_install_root() (
     NUMINOUS_HOME="$1"
-    validate_install_root
+    validate_install_root || fail "the install root could not be validated"
     [ -e "$NUMINOUS_HOME" ] || exit 0
     if install_marker_is_valid "$NUMINOUS_HOME"; then
         root_kind=marked
@@ -343,8 +345,9 @@ remove_install_root() (
     else
         fail "refusing to remove an unmarked install root: $NUMINOUS_HOME"
     fi
-    cd "$install_parent"
-    assert_private_install_ancestors "$NUMINOUS_HOME"
+    cd "$install_parent" || fail "the install parent is no longer accessible"
+    assert_private_install_ancestors "$NUMINOUS_HOME" \
+        || fail "the install path is not protected from replacement"
     [ ! -L "$install_name" ] \
         || fail "refusing to remove a symbolic-link install root: $NUMINOUS_HOME"
     if [ "$root_kind" = marked ]; then
