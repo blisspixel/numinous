@@ -22,6 +22,8 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 - The supply-chain job installs cargo-deny 0.20.2 and runs the same check
   the Docker action ran. Building that action pulled a Rust image from
   Docker Hub, and a rate limit there failed the job before the check.
+- A non-finite frequency is not named as a pitch. A NaN was called A4,
+  and an infinite frequency overflowed the octave arithmetic.
 
 ## [0.5.0-alpha.6] - 2026-10-09
 

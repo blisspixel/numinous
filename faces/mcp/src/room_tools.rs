@@ -144,8 +144,12 @@ pub(super) fn returning_home_construction() -> Value {
 }
 
 /// The nearest note name (twelve-tone, A4 = 440 Hz) for a frequency.
+///
+/// A non-finite or non-positive frequency has no name. A NaN would
+/// otherwise be called A4, and an infinite frequency overflows the octave
+/// arithmetic.
 pub(super) fn note_name(freq: f32) -> String {
-    if freq <= 0.0 {
+    if !freq.is_finite() || freq <= 0.0 {
         return "-".to_string();
     }
     const NAMES: [&str; 12] = [
