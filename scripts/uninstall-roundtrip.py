@@ -328,7 +328,11 @@ def roundtrip(
     soundtrack: tuple[Path, Path, Path] | None = None,
 ) -> list[dict[str, Any]]:
     checks: list[dict[str, Any]] = []
-    workspace = Path(tempfile.mkdtemp(prefix="numinous-uninstall-roundtrip-"))
+    # A shared temporary directory can grant other accounts replacement rights.
+    # Exercise the same private ancestry required of a real installation.
+    workspace = Path(tempfile.mkdtemp(
+        prefix=".numinous-uninstall-roundtrip-", dir=Path.home()
+    ))
     install_root = workspace / "install"
     profile = workspace / "profile"
     profile.mkdir(parents=True)

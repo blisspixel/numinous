@@ -24,6 +24,7 @@ automatic merges.
 | `png`, `pollster`, `ureq` | **0.18.1, 1.0.1, 3.4.1** | Current image, blocking-future, and synchronous HTTP baselines. HTTP redirects remain disabled for the credentialed music request and error bodies remain bounded. |
 | `gilrs` | **0.11.2** | Current cross-platform gamepad input. Linux CI installs `libudev-dev`. |
 | Study text | **cosmic-text 0.19.0**, **unicode-script 0.5.8**, **unicode-segmentation 1.13.3** | App-only shaping and grapheme handling, with explicit bundled Noto fonts. [Decision 1](decisions/0001-study-text.md) records costs and limits. |
+| Broadcast authentication | **hmac 0.13**, **sha2 0.11** | The shared broadcast crate uses the standard HMAC-SHA256 construction for fresh, role-separated pairing proofs. Authentication stays outside the dependency-free core. |
 | Test runner | **cargo test** | Enforced today. `cargo-nextest` is a possible speed improvement, not a current dependency. |
 | Supply chain | **cargo-deny**, **cargo-audit**, and SPDX 2.3 | Deny and audit are enforced in CI. Tagged releases add a locked all-feature Rust graph plus exact packaged executable hashes and header-declared PE, ELF, and Mach-O imports, with a separate keyless attestation. Embedded per-binary Rust reachability remains planned hardening. |
 | Coverage | **cargo-llvm-cov** | Tracked, not fetishized (see Testing). |
@@ -52,6 +53,12 @@ and the published crate records for
 [`png` 0.18.1](https://crates.io/crates/png/0.18.1),
 [`pollster` 1.0.1](https://crates.io/crates/pollster/1.0.1), and
 [`ureq` 3.3.0](https://crates.io/crates/ureq/3.3.0).
+
+The broadcast authentication dependency supplies a maintained implementation
+of the standard keyed MAC construction. Its
+[HMAC API](https://docs.rs/hmac/0.13.0/hmac/) composes with the existing SHA-256
+dependency. Pairing authenticates a fresh transcript before either face accepts
+a session, and never sends the invitation's raw capability over the socket.
 
 ## Formatting and linting (zero-warning policy)
 

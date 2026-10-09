@@ -63,6 +63,25 @@ impl GalleryCreation {
 /// The most creations one wall shows. Discovery is newest first, so the cap
 /// keeps the wall recent rather than complete; the folder stays the archive.
 pub(crate) const MAX_GALLERY_ENTRIES: usize = 24;
+const MAX_GALLERY_SCAN_ENTRIES: usize = 256;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DiscoveryError {
+    Unreadable,
+    TooLarge,
+}
+
+fn bounded_entries<T>(
+    entries: impl Iterator<Item = std::io::Result<T>>,
+) -> Result<Vec<T>, DiscoveryError> {
+    // Count every directory result, including errors and unsupported names,
+    // before metadata or content work. One extra entry detects a partial scan.
+    let entries: Vec<_> = entries.take(MAX_GALLERY_SCAN_ENTRIES + 1).collect();
+    if entries.len() > MAX_GALLERY_SCAN_ENTRIES {
+        return Err(DiscoveryError::TooLarge);
+    }
+    Ok(entries.into_iter().flatten().collect())
+}
 /// Fixed columns keep tiles readable at the default window width.
 const COLUMNS: usize = 4;
 
@@ -179,15 +198,16 @@ fn resolve_lineage(entries: &mut [GalleryEntry]) {
 /// `creation.num` inside `numinous-share-studio-*` bundle folders. One level,
 /// no symlinks, newest first, capped at [`MAX_GALLERY_ENTRIES`].
 ///
-/// Returns `None` when the folder itself cannot be read: an unreadable wall
+/// Returns an error when the folder cannot be read or exceeds the scan budget.
+/// An unreadable or oversized wall
 /// is a fact to report, not an empty one, and the caller must not tell the
 /// player their creations do not exist. Individual entries that fail to read
 /// mid-scan are still skipped one by one, so a single broken file cannot
 /// hide the rest of the wall.
-pub(crate) fn discover(parent: &Path) -> Option<Vec<GalleryEntry>> {
+pub(crate) fn discover(parent: &Path) -> Result<Vec<GalleryEntry>, DiscoveryError> {
     let mut entries: Vec<GalleryEntry> = Vec::new();
-    let dir = std::fs::read_dir(parent).ok()?;
-    for item in dir.flatten() {
+    let dir = std::fs::read_dir(parent).map_err(|_| DiscoveryError::Unreadable)?;
+    for item in bounded_entries(dir)? {
         // `file_type` on the entry does not follow links, so a link that
         // points outside the folder is skipped rather than followed.
         let Ok(kind) = item.file_type() else { continue };
@@ -218,7 +238,7 @@ pub(crate) fn discover(parent: &Path) -> Option<Vec<GalleryEntry>> {
         }
     }
     resolve_lineage(&mut entries);
-    Some(entries)
+    Ok(entries)
 }
 
 /// Keep only the newest validated entries while scanning. The folder remains
@@ -243,7 +263,7 @@ pub(crate) struct GalleryPanel {
     selected: usize,
     /// Whether the folder could be read at all. An unreadable folder must
     /// not wear the empty wall's copy: NOTHING SAVED YET is a claim.
-    readable: bool,
+    discovery_error: Option<DiscoveryError>,
 }
 
 impl GalleryPanel {
@@ -251,7 +271,7 @@ impl GalleryPanel {
     pub(crate) fn open(parent: &Path) -> Self {
         let discovered = discover(parent);
         Self {
-            readable: discovered.is_some(),
+            discovery_error: discovered.as_ref().err().copied(),
             entries: discovered.unwrap_or_default(),
             selected: 0,
         }
@@ -381,7 +401,11 @@ impl GalleryPanel {
             return;
         }
         let scale = (width as i32 / 450).clamp(1, 3);
-        let title = format!("THE GALLERY  {} SAVED", self.entries.len());
+        let title = if self.discovery_error.is_some() {
+            "THE GALLERY".to_string()
+        } else {
+            format!("THE GALLERY  {} SAVED", self.entries.len())
+        };
         numinous_core::draw_text(raster, &title, 10, 10, scale, '#');
         let footer_top = height as i32 - 16 * scale;
         raster.clear_rows(footer_top, height as i32);
@@ -397,13 +421,16 @@ impl GalleryPanel {
             scale,
             '#',
         );
-        if !self.readable {
+        if let Some(error) = self.discovery_error {
             // An unreadable folder is a fact, not an empty wall: claiming
             // NOTHING SAVED YET here would tell the player their creations
             // do not exist when the folder simply refused to answer.
             numinous_core::draw_text(
                 raster,
-                "THE FOLDER COULD NOT BE READ",
+                match error {
+                    DiscoveryError::Unreadable => "THE FOLDER COULD NOT BE READ",
+                    DiscoveryError::TooLarge => "FOLDER TOO LARGE TO BROWSE",
+                },
                 10,
                 10 + 24 * scale,
                 scale + 1,
@@ -411,7 +438,12 @@ impl GalleryPanel {
             );
             numinous_core::draw_text(
                 raster,
-                "YOUR CREATIONS MAY STILL EXIST  CHECK ITS PERMISSIONS",
+                match error {
+                    DiscoveryError::Unreadable => {
+                        "YOUR CREATIONS MAY STILL EXIST  CHECK ITS PERMISSIONS"
+                    }
+                    DiscoveryError::TooLarge => "OPEN A SMALLER FOLDER OR OPEN A CREATION DIRECTLY",
+                },
                 10,
                 10 + 44 * scale,
                 scale,
@@ -683,6 +715,33 @@ mod tests {
     use super::{GalleryPanel, MAX_GALLERY_ENTRIES, discover};
     use numinous_core::{Raster, StudioCreation};
     use std::path::Path;
+
+    #[test]
+    fn discovery_counts_all_entries_before_any_candidate_work() {
+        let mut consumed = 0;
+        let entries = std::iter::from_fn(|| {
+            consumed += 1;
+            assert!(consumed <= super::MAX_GALLERY_SCAN_ENTRIES + 1);
+            Some(Err::<(), _>(std::io::Error::other("unreadable entry")))
+        });
+        assert_eq!(
+            super::bounded_entries(entries),
+            Err(super::DiscoveryError::TooLarge)
+        );
+        assert_eq!(consumed, super::MAX_GALLERY_SCAN_ENTRIES + 1);
+        let dir = scratch("oversized");
+        for index in 0..=super::MAX_GALLERY_SCAN_ENTRIES {
+            std::fs::write(dir.join(format!("ignored-{index}.txt")), b"").unwrap();
+        }
+        assert!(matches!(
+            discover(&dir),
+            Err(super::DiscoveryError::TooLarge)
+        ));
+        let panel = GalleryPanel::open(&dir);
+        assert_eq!(panel.discovery_error, Some(super::DiscoveryError::TooLarge));
+        assert!(panel.selected_creation().is_none());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 
     fn scratch(name: &str) -> std::path::PathBuf {
         let dir =
@@ -1112,7 +1171,7 @@ mod tests {
         std::fs::write(&blocked, "a file where a folder must go").expect("blocker");
 
         assert!(
-            discover(&blocked).is_none(),
+            discover(&blocked).is_err(),
             "an unreadable folder is not an empty one"
         );
         let panel = GalleryPanel::open(&blocked);

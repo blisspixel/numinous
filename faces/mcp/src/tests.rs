@@ -1637,7 +1637,9 @@ fn consented_handler_emits_public_play_and_keeps_control_and_progress_private() 
     let host = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept");
         configure_handshake_stream(&stream).expect("handshake bounds");
-        write_handshake_proof(&mut stream, &gate.host_proof()).expect("host proof");
+        let hello = numinous_broadcast::read_handshake_hello_stream(&stream).expect("hello");
+        let proof = gate.host_proof(&hello).expect("host proof");
+        write_handshake_proof(&mut stream, &proof).expect("host proof");
         let mut reader = BufReader::new(stream.try_clone().expect("clone"));
         let request = read_handshake_request(&mut reader).expect("request");
         let PairingVerdict::Accepted { session_id } = gate.verify(&request, SystemTime::now())

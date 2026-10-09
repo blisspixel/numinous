@@ -83,7 +83,7 @@ jobs:
           payload="dist/numinous-v${version}-${{ matrix.target }}.tar.gz"
           soundtrack="smoke-dist/numinous-v${version}-soundtrack.tar.gz"
           soundtrack_content="$soundtrack.content.sha256"
-          export NUMINOUS_HOME="${RUNNER_TEMP}/numinous-release-smoke"
+          export NUMINOUS_HOME="${HOME}/.numinous-release-smoke"
           bash scripts/install.sh --no-modify-path \
             --release-archive "$payload" --release-checksum "$payload.sha256" \
             --soundtrack-archive "$soundtrack" --soundtrack-checksum "$soundtrack.sha256" \
@@ -111,7 +111,7 @@ jobs:
           $payload = "dist/numinous-v$version-${{ matrix.target }}.zip"
           $soundtrack = "smoke-dist/numinous-v$version-soundtrack.tar.gz"
           $soundtrackContent = "$soundtrack.content.sha256"
-          $env:NUMINOUS_HOME = Join-Path $env:RUNNER_TEMP 'numinous-release-smoke'
+          $env:NUMINOUS_HOME = Join-Path $HOME '.numinous-release-smoke'
           ./scripts/install.ps1 -NoModifyPath `
             -ReleaseArchive $payload -ReleaseChecksum "$payload.sha256" `
             -SoundtrackArchive $soundtrack -SoundtrackChecksum "$soundtrack.sha256" `

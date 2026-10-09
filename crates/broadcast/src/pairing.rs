@@ -1,8 +1,9 @@
 use crate::fingerprint::{Compatibility, WIRE_VERSION};
 use crate::hex;
-use crate::wire::{HandshakeProof, HandshakeRequest, SessionId};
+use crate::wire::{HandshakeHello, HandshakeProof, HandshakeRequest, SessionId};
 use getrandom::fill;
-use sha2::{Digest, Sha256};
+use hmac::{Hmac, KeyInit, Mac};
+use sha2::Sha256;
 use std::error::Error;
 use std::fmt;
 use std::net::{Ipv4Addr, SocketAddrV4};
@@ -16,8 +17,8 @@ pub const MAX_PAIRING_CODE_BYTES: usize = 128;
 pub const PAIRING_TTL: Duration = Duration::from_secs(5 * 60);
 /// Failed handshakes allowed before an offer is revoked.
 pub const MAX_HANDSHAKE_ATTEMPTS: u8 = 8;
-const PREFIX: &str = "numinous1";
-const HOST_PROOF_DOMAIN: &[u8] = b"numinous local broadcast host proof v1\0";
+const PREFIX: &str = "numinous2";
+const PROOF_DOMAIN: &[u8] = b"numinous local broadcast transcript v2\0";
 
 #[derive(Clone, Copy)]
 struct Capability([u8; 16]);
@@ -28,26 +29,22 @@ impl Capability {
         fill(&mut bytes).map_err(|_| PairingError::RandomUnavailable)?;
         Ok(Self(bytes))
     }
+}
 
-    fn matches_hex(&self, candidate: &str) -> bool {
-        let decoded = hex::decode::<16>(candidate);
-        let bytes = decoded.unwrap_or([0; 16]);
-        bool::from(self.0.ct_eq(&bytes)) && decoded.is_some()
+impl HandshakeHello {
+    /// Draws a fresh, nonsecret challenge for exactly one connection.
+    pub fn generate() -> Result<Self, PairingError> {
+        Ok(Self {
+            wire_version: WIRE_VERSION,
+            nonce: fresh_nonce()?,
+        })
     }
+}
 
-    fn host_proof(&self) -> [u8; 32] {
-        let mut digest = Sha256::new();
-        digest.update(HOST_PROOF_DOMAIN);
-        digest.update(WIRE_VERSION.to_be_bytes());
-        digest.update(self.0);
-        digest.finalize().into()
-    }
-
-    fn matches_host_proof_hex(&self, candidate: &str) -> bool {
-        let decoded = hex::decode::<32>(candidate);
-        let bytes = decoded.unwrap_or([0; 32]);
-        bool::from(self.host_proof().ct_eq(&bytes)) && decoded.is_some()
-    }
+fn fresh_nonce() -> Result<String, PairingError> {
+    let mut bytes = [0; 32];
+    fill(&mut bytes).map_err(|_| PairingError::RandomUnavailable)?;
+    Ok(hex::encode(&bytes))
 }
 
 /// A parsed guest-side target containing a one-use secret capability.
@@ -101,20 +98,63 @@ impl PairingCode {
         SocketAddrV4::new(Ipv4Addr::LOCALHOST, self.port.get())
     }
 
-    /// Builds the bounded authentication request sent to the local listener.
-    #[must_use]
-    pub fn handshake_request(&self, compatibility: Compatibility) -> HandshakeRequest {
-        HandshakeRequest {
-            wire_version: WIRE_VERSION,
-            capability: hex::encode(&self.capability.0),
-            compatibility,
+    /// Builds a guest proof only after the fresh host transcript is verified.
+    pub fn handshake_request(
+        &self,
+        hello: &HandshakeHello,
+        proof: &HandshakeProof,
+        compatibility: Compatibility,
+    ) -> Result<HandshakeRequest, PairingError> {
+        if !self.verifies_host_proof(hello, proof)
+            || !proof.compatibility.is_compatible_with(&compatibility)
+        {
+            return Err(PairingError::InvalidCode);
         }
+        Ok(HandshakeRequest {
+            wire_version: WIRE_VERSION,
+            proof: hex::encode(
+                &self
+                    .transcript_proof(b"guest", proof)
+                    .ok_or(PairingError::InvalidCode)?,
+            ),
+            compatibility,
+        })
     }
 
-    /// Verifies the server-first proof before any guest bytes are written.
+    /// Verifies the host proof against the fresh challenge sent on this connection.
     #[must_use]
-    pub fn verifies_host_proof(&self, proof: &HandshakeProof) -> bool {
-        proof.wire_version == WIRE_VERSION && self.capability.matches_host_proof_hex(&proof.proof)
+    pub fn verifies_host_proof(&self, hello: &HandshakeHello, proof: &HandshakeProof) -> bool {
+        hello.wire_version == WIRE_VERSION
+            && proof.wire_version == WIRE_VERSION
+            && hello.nonce == proof.client_nonce
+            && self.matches_transcript(b"host", proof, &proof.proof)
+    }
+
+    fn transcript_proof(&self, role: &[u8], proof: &HandshakeProof) -> Option<[u8; 32]> {
+        let client = hex::decode::<32>(&proof.client_nonce)?;
+        let server = hex::decode::<32>(&proof.server_nonce)?;
+        let mut mac = Hmac::<Sha256>::new_from_slice(&self.capability.0).ok()?;
+        mac.update(PROOF_DOMAIN);
+        mac.update(role);
+        mac.update(&proof.wire_version.to_be_bytes());
+        mac.update(&self.port.get().to_be_bytes());
+        mac.update(&self.expires_at_unix_ms.to_be_bytes());
+        mac.update(&client);
+        mac.update(&server);
+        mac.update(proof.session_id.to_string().as_bytes());
+        mac.update(&proof.consent_epoch.to_be_bytes());
+        mac.update(&proof.compatibility.wire_version.to_be_bytes());
+        mac.update(&proof.compatibility.replay_abi_version.to_be_bytes());
+        mac.update(proof.compatibility.fingerprint.as_bytes());
+        Some(mac.finalize().into_bytes().into())
+    }
+
+    fn matches_transcript(&self, role: &[u8], proof: &HandshakeProof, candidate: &str) -> bool {
+        let Some(expected) = self.transcript_proof(role, proof) else {
+            return false;
+        };
+        let decoded = hex::decode::<32>(candidate);
+        bool::from(expected.ct_eq(&decoded.unwrap_or([0; 32]))) && decoded.is_some()
     }
 
     fn encode(&self) -> String {
@@ -193,6 +233,7 @@ impl PairingOffer {
             deadline: self.deadline,
             failures: 0,
             revoked: false,
+            challenge: None,
         }
     }
 }
@@ -215,16 +256,42 @@ pub struct PairingGate {
     deadline: Instant,
     failures: u8,
     revoked: bool,
+    challenge: Option<HandshakeProof>,
 }
 
 impl PairingGate {
-    /// Builds the server-first proof sent before reading guest data.
-    #[must_use]
-    pub fn host_proof(&self) -> HandshakeProof {
-        HandshakeProof {
-            wire_version: WIRE_VERSION,
-            proof: hex::encode(&self.code.capability.host_proof()),
+    /// Replaces the per-connection challenge and authenticates its transcript.
+    pub fn host_proof(&mut self, hello: &HandshakeHello) -> Result<HandshakeProof, PairingError> {
+        self.challenge = None;
+        if self.revoked
+            || hello.wire_version != WIRE_VERSION
+            || hex::decode::<32>(&hello.nonce).is_none()
+        {
+            return Err(PairingError::InvalidCode);
         }
+        let consent =
+            crate::consent::ConsentMachine::new(self.session_id, self.compatibility.clone());
+        consent
+            .begin_awaiting()
+            .map_err(|_| PairingError::InvalidCode)?;
+        let consent_epoch = consent.allow().map_err(|_| PairingError::InvalidCode)?;
+        let mut proof = HandshakeProof {
+            wire_version: WIRE_VERSION,
+            client_nonce: hello.nonce.clone(),
+            server_nonce: fresh_nonce()?,
+            session_id: self.session_id,
+            consent_epoch,
+            compatibility: self.compatibility.clone(),
+            proof: String::new(),
+        };
+        proof.proof = hex::encode(
+            &self
+                .code
+                .transcript_proof(b"host", &proof)
+                .ok_or(PairingError::InvalidCode)?,
+        );
+        self.challenge = Some(proof.clone());
+        Ok(proof)
     }
 
     /// Verifies one bounded handshake without reflecting secret material.
@@ -249,11 +316,15 @@ impl PairingGate {
             self.revoked = true;
             return PairingVerdict::Expired;
         }
+        let challenge = self.challenge.take();
         let valid = request.wire_version == WIRE_VERSION
             && request
                 .compatibility
                 .is_compatible_with(&self.compatibility)
-            && self.code.capability.matches_hex(&request.capability);
+            && challenge.is_some_and(|proof| {
+                self.code
+                    .matches_transcript(b"guest", &proof, &request.proof)
+            });
         if valid {
             self.revoked = true;
             return PairingVerdict::Accepted {
@@ -355,213 +426,220 @@ fn unix_millis(time: SystemTime) -> Result<u64, PairingError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        MAX_HANDSHAKE_ATTEMPTS, MAX_PAIRING_CODE_BYTES, PAIRING_TTL, PairingCode, PairingError,
-        PairingOffer, PairingVerdict,
-    };
+    use super::*;
     use crate::Compatibility;
-    use std::error::Error;
-    use std::net::{Ipv4Addr, SocketAddrV4};
-    use std::num::NonZeroU16;
-    use std::time::{Duration, Instant, UNIX_EPOCH};
 
     fn compatibility() -> Compatibility {
-        Compatibility::from_catalogs(["life"], ["lorenz"], ["munch"]).expect("valid compatibility")
+        Compatibility::from_catalogs(["life"], ["lorenz"], ["munch"]).expect("compatibility")
     }
 
     fn offer() -> PairingOffer {
-        PairingOffer::generate(NonZeroU16::new(31_337).expect("nonzero port"), UNIX_EPOCH)
-            .expect("pairing offer")
+        PairingOffer::generate(NonZeroU16::new(31_337).unwrap(), UNIX_EPOCH).unwrap()
+    }
+
+    fn prepare(offer: PairingOffer) -> (PairingCode, PairingGate) {
+        let code = PairingCode::parse(&offer.display_code(), UNIX_EPOCH).unwrap();
+        (code, offer.into_gate(compatibility()))
+    }
+
+    fn request(code: &PairingCode, gate: &mut PairingGate) -> HandshakeRequest {
+        let hello = HandshakeHello::generate().unwrap();
+        let proof = gate.host_proof(&hello).unwrap();
+        code.handshake_request(&hello, &proof, compatibility())
+            .unwrap()
     }
 
     #[test]
-    fn generated_code_is_bounded_loopback_only_and_round_trips() {
+    fn codes_are_bounded_loopback_only_expiring_and_versioned() {
         let offer = offer();
         let encoded = offer.display_code();
         assert!(encoded.len() <= MAX_PAIRING_CODE_BYTES);
         assert!(!format!("{offer:?}").contains(&encoded));
-        let decoded = PairingCode::parse(&encoded, UNIX_EPOCH).expect("valid code");
+        let code = PairingCode::parse(&encoded, UNIX_EPOCH).unwrap();
         assert_eq!(
-            decoded.endpoint(),
+            code.endpoint(),
             SocketAddrV4::new(Ipv4Addr::LOCALHOST, 31_337)
         );
-        assert_eq!(decoded.handshake_request(compatibility()).wire_version, 1);
-    }
-
-    #[test]
-    fn malformed_oversized_zero_port_and_expired_codes_fail_closed() {
+        assert_eq!(code.encode(), encoded);
+        for bad in [
+            "x".repeat(MAX_PAIRING_CODE_BYTES + 1),
+            "numinous2.0.300000.00000000000000000000000000000000".into(),
+            "numinous1.1.300000.00000000000000000000000000000000".into(),
+            format!("{encoded}.extra"),
+            "non-ascii-\u{00e9}".into(),
+        ] {
+            assert!(matches!(
+                PairingCode::parse(&bad, UNIX_EPOCH),
+                Err(PairingError::InvalidCode)
+            ));
+        }
         assert!(matches!(
-            PairingCode::parse(&"x".repeat(MAX_PAIRING_CODE_BYTES + 1), UNIX_EPOCH),
-            Err(PairingError::InvalidCode)
-        ));
-        assert!(matches!(
-            PairingCode::parse(
-                "numinous1.0.300000.00000000000000000000000000000000",
-                UNIX_EPOCH
-            ),
-            Err(PairingError::InvalidCode)
-        ));
-        assert!(matches!(
-            PairingCode::parse(
-                "numinous2.1.300000.00000000000000000000000000000000",
-                UNIX_EPOCH
-            ),
-            Err(PairingError::InvalidCode)
-        ));
-        let code = offer().display_code();
-        assert!(matches!(
-            PairingCode::parse(&code, UNIX_EPOCH + PAIRING_TTL),
+            PairingCode::parse(&encoded, UNIX_EPOCH + PAIRING_TTL),
             Err(PairingError::Expired)
         ));
     }
 
     #[test]
-    fn successful_handshake_is_one_use_and_debug_redacts_the_capability() {
-        let offer = offer();
-        let code = offer.display_code();
-        let request = PairingCode::parse(&code, UNIX_EPOCH)
-            .expect("valid code")
-            .handshake_request(compatibility());
-        assert!(!format!("{request:?}").contains(&request.capability));
-        let mut gate = offer.into_gate(compatibility());
-        let proof = gate.host_proof();
-        let code = PairingCode::parse(&code, UNIX_EPOCH).expect("valid code");
-        assert!(code.verifies_host_proof(&proof));
+    fn successful_pairing_is_one_use_and_never_transmits_the_capability() {
+        let (code, mut gate) = prepare(offer());
+        let hello = HandshakeHello::generate().unwrap();
+        let proof = gate.host_proof(&hello).unwrap();
+        let request = code
+            .handshake_request(&hello, &proof, compatibility())
+            .unwrap();
+        let secret = hex::encode(&code.capability.0);
+        for wire in [
+            serde_json::to_string(&hello).unwrap(),
+            serde_json::to_string(&proof).unwrap(),
+            serde_json::to_string(&request).unwrap(),
+            format!("{code:?} {gate:?} {proof:?} {request:?}"),
+        ] {
+            assert!(!wire.contains(&secret));
+        }
+        assert!(!format!("{request:?}").contains(&request.proof));
         assert!(!format!("{proof:?}").contains(&proof.proof));
-        assert!(matches!(
-            gate.verify(&request, UNIX_EPOCH),
-            PairingVerdict::Accepted { .. }
-        ));
+        assert!(
+            matches!(gate.verify(&request, UNIX_EPOCH), PairingVerdict::Accepted { session_id } if session_id == proof.session_id)
+        );
         assert_eq!(gate.verify(&request, UNIX_EPOCH), PairingVerdict::Revoked);
+        assert!(gate.host_proof(&hello).is_err());
     }
 
     #[test]
-    fn host_proof_is_capability_bound_and_strictly_versioned() {
-        let first = offer();
-        let first_code = PairingCode::parse(&first.display_code(), UNIX_EPOCH).expect("first code");
-        let first_proof = first.into_gate(compatibility()).host_proof();
-        assert!(first_code.verifies_host_proof(&first_proof));
-
-        let second = offer();
-        let second_code =
-            PairingCode::parse(&second.display_code(), UNIX_EPOCH).expect("second code");
-        assert!(!second_code.verifies_host_proof(&first_proof));
-        let mut wrong_version = first_proof;
-        wrong_version.wire_version += 1;
-        assert!(!first_code.verifies_host_proof(&wrong_version));
-        wrong_version.wire_version -= 1;
-        wrong_version.proof = "not-hex".to_string();
-        assert!(!first_code.verifies_host_proof(&wrong_version));
-    }
-
-    #[test]
-    fn eight_failed_handshakes_revoke_the_offer() {
-        let offer = offer();
-        let mut request = PairingCode::parse(&offer.display_code(), UNIX_EPOCH)
-            .expect("valid code")
-            .handshake_request(compatibility());
-        request.capability = "00".repeat(16);
-        let mut gate = offer.into_gate(compatibility());
-        for remaining in (1..MAX_HANDSHAKE_ATTEMPTS).rev() {
-            assert_eq!(
-                gate.verify(&request, UNIX_EPOCH),
-                PairingVerdict::Rejected {
-                    attempts_remaining: remaining
-                }
+    fn proofs_bind_fresh_challenges_roles_endpoint_and_session_metadata() {
+        let (code, mut gate) = prepare(offer());
+        let hello = HandshakeHello::generate().unwrap();
+        let proof = gate.host_proof(&hello).unwrap();
+        assert!(code.verifies_host_proof(&hello, &proof));
+        let fresh = HandshakeHello::generate().unwrap();
+        assert!(!code.verifies_host_proof(&fresh, &proof));
+        let (other_code, _) = prepare(offer());
+        assert!(!other_code.verifies_host_proof(&hello, &proof));
+        let mut changed_code = code.clone();
+        changed_code.port = NonZeroU16::new(31_338).unwrap();
+        assert!(!changed_code.verifies_host_proof(&hello, &proof));
+        changed_code = code.clone();
+        changed_code.expires_at_unix_ms += 1;
+        assert!(!changed_code.verifies_host_proof(&hello, &proof));
+        for change in 0..7 {
+            let mut bad = proof.clone();
+            match change {
+                0 => bad.wire_version += 1,
+                1 => bad.server_nonce = "00".repeat(32),
+                2 => bad.session_id = SessionId::generate().unwrap(),
+                3 => bad.consent_epoch += 1,
+                4 => bad.compatibility.replay_abi_version += 1,
+                5 => bad.proof = "not-hex".into(),
+                _ => bad.proof = hex::encode(&code.transcript_proof(b"guest", &proof).unwrap()),
+            }
+            assert!(!code.verifies_host_proof(&hello, &bad));
+            assert!(
+                code.handshake_request(&hello, &bad, compatibility())
+                    .is_err()
             );
         }
-        assert_eq!(gate.verify(&request, UNIX_EPOCH), PairingVerdict::Revoked);
+        let mut bad_hello = hello;
+        bad_hello.nonce = "not-hex".into();
+        assert!(gate.host_proof(&bad_hello).is_err());
+    }
+
+    #[test]
+    fn recorded_guest_proof_fails_after_a_new_connection_challenge() {
+        let (code, mut gate) = prepare(offer());
+        let hello = HandshakeHello::generate().unwrap();
+        let first = gate.host_proof(&hello).unwrap();
+        let old = code
+            .handshake_request(&hello, &first, compatibility())
+            .unwrap();
+        let second = gate.host_proof(&hello).unwrap();
+        assert_ne!(first.server_nonce, second.server_nonce);
+        assert!(matches!(
+            gate.verify(&old, UNIX_EPOCH),
+            PairingVerdict::Rejected { .. }
+        ));
+        let good = request(&code, &mut gate);
+        assert!(matches!(
+            gate.verify(&good, UNIX_EPOCH),
+            PairingVerdict::Accepted { .. }
+        ));
+    }
+
+    #[test]
+    fn eight_complete_invalid_proofs_revoke_the_offer() {
+        let (code, mut gate) = prepare(offer());
+        for index in 1..=MAX_HANDSHAKE_ATTEMPTS {
+            let mut bad = request(&code, &mut gate);
+            bad.proof = "00".repeat(32);
+            let expected = if index == MAX_HANDSHAKE_ATTEMPTS {
+                PairingVerdict::Revoked
+            } else {
+                PairingVerdict::Rejected {
+                    attempts_remaining: MAX_HANDSHAKE_ATTEMPTS - index,
+                }
+            };
+            assert_eq!(gate.verify(&bad, UNIX_EPOCH), expected);
+        }
         assert!(gate.is_revoked());
     }
 
     #[test]
-    fn same_roster_semantic_mismatch_is_rejected_before_content() {
-        let offer = offer();
-        let code = PairingCode::parse(&offer.display_code(), UNIX_EPOCH).expect("valid code");
-        let different = Compatibility::from_catalogs(["life"], ["lorenz"], ["quiz"])
-            .expect("valid compatibility");
-        let request = code.handshake_request(different);
-        let mut gate = offer.into_gate(compatibility());
-        assert_eq!(
-            gate.verify(&request, UNIX_EPOCH),
-            PairingVerdict::Rejected {
-                attempts_remaining: MAX_HANDSHAKE_ATTEMPTS - 1
-            }
+    fn semantic_mismatch_is_rejected_before_content() {
+        let (code, mut gate) = prepare(offer());
+        let different = Compatibility::from_catalogs(["life"], ["lorenz"], ["quiz"]).unwrap();
+        let hello = HandshakeHello::generate().unwrap();
+        let proof = gate.host_proof(&hello).unwrap();
+        assert!(
+            code.handshake_request(&hello, &proof, different.clone())
+                .is_err()
         );
+        let mut bad = code
+            .handshake_request(&hello, &proof, compatibility())
+            .unwrap();
+        bad.compatibility = different;
+        assert!(matches!(
+            gate.verify(&bad, UNIX_EPOCH),
+            PairingVerdict::Rejected { .. }
+        ));
     }
 
     #[test]
-    fn expiry_is_checked_again_at_the_host_gate() {
-        let initial_offer = offer();
-        let request = PairingCode::parse(&initial_offer.display_code(), UNIX_EPOCH)
-            .expect("valid code")
-            .handshake_request(compatibility());
-        let mut gate = initial_offer.into_gate(compatibility());
+    fn expiry_and_backward_clock_cannot_extend_a_gate() {
+        let (code, mut gate) = prepare(offer());
+        let request = request(&code, &mut gate);
         assert_eq!(
-            gate.verify(
-                &request,
-                UNIX_EPOCH + PAIRING_TTL + Duration::from_millis(1)
-            ),
+            gate.verify(&request, UNIX_EPOCH + PAIRING_TTL),
             PairingVerdict::Expired
         );
-    }
-
-    #[test]
-    fn backward_wall_clock_cannot_extend_the_host_deadline() {
-        let monotonic_start = Instant::now();
+        let start = Instant::now();
         let offer = PairingOffer::generate_at(
-            NonZeroU16::new(31_337).expect("nonzero port"),
+            NonZeroU16::new(31_337).unwrap(),
             UNIX_EPOCH + Duration::from_secs(60),
-            monotonic_start,
+            start,
         )
-        .expect("pairing offer");
-        let request =
-            PairingCode::parse(&offer.display_code(), UNIX_EPOCH + Duration::from_secs(60))
-                .expect("valid code")
-                .handshake_request(compatibility());
-        let mut gate = offer.into_gate(compatibility());
+        .unwrap();
+        let (code, mut gate) = prepare(offer);
+        let request = self::request(&code, &mut gate);
         assert_eq!(
-            gate.verify_at(
-                &request,
-                UNIX_EPOCH,
-                monotonic_start + PAIRING_TTL + Duration::from_millis(1)
-            ),
+            gate.verify_at(&request, UNIX_EPOCH, start + PAIRING_TTL),
             PairingVerdict::Expired
         );
     }
 
     #[test]
-    fn explicit_revocation_clock_failure_and_debug_are_fail_closed() {
-        let initial_offer = offer();
-        let request = PairingCode::parse(&initial_offer.display_code(), UNIX_EPOCH)
-            .expect("valid code")
-            .handshake_request(compatibility());
-        let mut gate = initial_offer.into_gate(compatibility());
-        assert!(format!("{gate:?}").contains("PairingGate"));
-        assert!(!format!("{gate:?}").contains(&request.capability));
+    fn explicit_revocation_and_clock_failure_are_fail_closed() {
+        let (code, mut gate) = prepare(offer());
+        let request = request(&code, &mut gate);
         assert_eq!(
             gate.verify(&request, UNIX_EPOCH - Duration::from_millis(1)),
             PairingVerdict::Revoked
         );
-        assert!(gate.is_revoked());
-
-        let mut revoked = offer().into_gate(compatibility());
+        let (_, mut revoked) = prepare(offer());
         revoked.revoke();
-        assert!(revoked.is_revoked());
         assert_eq!(
             revoked.verify(&request, UNIX_EPOCH),
             PairingVerdict::Revoked
         );
-    }
-
-    #[test]
-    fn extra_code_parts_and_public_error_categories_are_rejected() {
-        let code = format!("{}.extra", offer().display_code());
-        assert!(matches!(
-            PairingCode::parse(&code, UNIX_EPOCH),
-            Err(PairingError::InvalidCode)
-        ));
-        let errors = [
+        for (error, text) in [
             (PairingError::InvalidCode, "invalid pairing code"),
             (PairingError::Expired, "pairing code expired"),
             (
@@ -572,9 +650,8 @@ mod tests {
                 PairingError::RandomUnavailable,
                 "operating-system randomness is unavailable",
             ),
-        ];
-        for (error, expected) in errors {
-            assert_eq!(error.to_string(), expected);
+        ] {
+            assert_eq!(error.to_string(), text);
             assert!(error.source().is_none());
         }
     }

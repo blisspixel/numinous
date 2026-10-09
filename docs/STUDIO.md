@@ -186,7 +186,12 @@ and 17 cycles on a period of 12. `shorter-window` keeps those formulas on
 `wandering-voices` reports `12*sqrt(2)` and no positive common period. The
 least period is exact: frequencies 2 and 4 have period `1/2`, and
 commensurate square roots keep a period. Closure is the only period claim any
-reading makes.
+reading makes. Exact radical simplification has a fixed work budget shared by
+App, CLI, MCP, and project previews. A frequency whose exact arithmetic exceeds
+that budget reports an unsupported closure reading; it does not substitute an
+approximate period or reject an otherwise valid creation. Ordinary plotting
+and numerical play remain available. Exact partial readings follow the same
+bounded arithmetic boundary.
 
 **Tones.** When closure names two frequencies, they sound as sustained sines.
 Frequency `1` is 110 Hz, and each other named frequency is 110 Hz times its

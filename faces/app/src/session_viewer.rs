@@ -1930,7 +1930,6 @@ fn listener_worker(
     shared: &Arc<Mutex<SharedState>>,
     control: &Arc<WorkerControl>,
 ) {
-    let mut attempts = 0_u8;
     loop {
         if control.is_cancelled() {
             return;
@@ -1941,14 +1940,10 @@ fn listener_worker(
         }
         match listener.accept() {
             Ok((stream, peer)) => {
-                attempts = attempts.saturating_add(1);
                 if !peer.ip().is_loopback()
                     || stream.set_nonblocking(false).is_err()
                     || control.install(&stream).is_err()
                 {
-                    if attempts >= numinous_broadcast::MAX_HANDSHAKE_ATTEMPTS {
-                        gate.revoke();
-                    }
                     control.clear_stream();
                     continue;
                 }
@@ -1965,9 +1960,7 @@ fn listener_worker(
                     }
                     HandshakeOutcome::Rejected => {
                         control.clear_stream();
-                        if attempts >= numinous_broadcast::MAX_HANDSHAKE_ATTEMPTS
-                            || gate.is_revoked()
-                        {
+                        if gate.is_revoked() {
                             gate.revoke();
                             set_terminal_status(shared, ViewerStatus::PairingRejected);
                             return;
@@ -1999,9 +1992,16 @@ fn handshake(
     shared: &Arc<Mutex<SharedState>>,
     control: &Arc<WorkerControl>,
 ) -> HandshakeOutcome {
-    if configure_handshake_stream(&stream).is_err()
-        || write_handshake_proof_stream(&stream, &gate.host_proof()).is_err()
-    {
+    if configure_handshake_stream(&stream).is_err() {
+        return HandshakeOutcome::Rejected;
+    }
+    let proof = numinous_broadcast::read_handshake_hello_stream(&stream)
+        .ok()
+        .and_then(|hello| gate.host_proof(&hello).ok());
+    let Some(proof) = proof else {
+        return HandshakeOutcome::Rejected;
+    };
+    if write_handshake_proof_stream(&stream, &proof).is_err() {
         return HandshakeOutcome::Rejected;
     }
     let request = match read_handshake_request_stream(&stream) {
@@ -3406,15 +3406,19 @@ mod tests {
             configure_handshake_stream(&stream).expect("handshake deadlines");
             let reader_stream = stream.try_clone().expect("reader clone");
             let mut reader = BufReader::new(reader_stream);
+            let hello = numinous_broadcast::HandshakeHello::generate().expect("challenge");
+            numinous_broadcast::write_handshake_hello(&mut stream, &hello).expect("hello");
             let proof = read_handshake_proof(&mut reader).expect("host proof");
-            assert!(pairing.verifies_host_proof(&proof));
-            let mut request = pairing.handshake_request(compatibility.clone());
-            let replacement = if request.capability.starts_with('0') {
+            assert!(pairing.verifies_host_proof(&hello, &proof));
+            let mut request = pairing
+                .handshake_request(&hello, &proof, compatibility.clone())
+                .expect("request");
+            let replacement = if request.proof.starts_with('0') {
                 "1"
             } else {
                 "0"
             };
-            request.capability.replace_range(0..1, replacement);
+            request.proof.replace_range(0..1, replacement);
             write_handshake_request(&mut stream, &request).expect("invalid request");
             assert_eq!(
                 read_handshake_response(&mut reader).expect("rejection"),
@@ -3590,6 +3594,26 @@ mod tests {
         let mut viewer = SessionViewer::default();
         viewer.open().expect("open viewer");
         let code = viewer.pairing_code().expect("pairing code");
+        let pairing = PairingCode::parse(&code, SystemTime::now()).expect("parse code");
+        for _ in 0..numinous_broadcast::MAX_HANDSHAKE_ATTEMPTS * 2 {
+            let stream = TcpStream::connect(pairing.endpoint()).expect("abandoned connection");
+            stream
+                .shutdown(Shutdown::Both)
+                .expect("disconnect without a request");
+            let mut malformed =
+                TcpStream::connect(pairing.endpoint()).expect("malformed connection");
+            configure_handshake_stream(&malformed).expect("bounded malformed connection");
+            let hello = numinous_broadcast::HandshakeHello::generate().expect("challenge");
+            numinous_broadcast::write_handshake_hello(&mut malformed, &hello).expect("hello");
+            numinous_broadcast::read_handshake_proof_stream(&malformed).expect("host proof");
+            malformed
+                .write_all(b"not a request\n")
+                .expect("malformed request");
+            assert_eq!(
+                numinous_broadcast::read_handshake_response_stream(&malformed).expect("rejection"),
+                HandshakeResponse::Rejected
+            );
+        }
         let guest = thread::spawn(move || {
             let pairing = PairingCode::parse(&code, SystemTime::now()).expect("parse code");
             let compatibility = numinous_compatibility().expect("compatibility");
@@ -3597,11 +3621,15 @@ mod tests {
             configure_handshake_stream(&stream).expect("handshake deadlines");
             let reader_stream = stream.try_clone().expect("reader clone");
             let mut reader = BufReader::new(reader_stream);
+            let hello = numinous_broadcast::HandshakeHello::generate().expect("challenge");
+            numinous_broadcast::write_handshake_hello(&mut stream, &hello).expect("hello");
             let proof = read_handshake_proof(&mut reader).expect("host proof");
-            assert!(pairing.verifies_host_proof(&proof));
+            assert!(pairing.verifies_host_proof(&hello, &proof));
             write_handshake_request(
                 &mut stream,
-                &pairing.handshake_request(compatibility.clone()),
+                &pairing
+                    .handshake_request(&hello, &proof, compatibility.clone())
+                    .expect("request"),
             )
             .expect("handshake request");
             let response = read_handshake_response(&mut reader).expect("handshake response");

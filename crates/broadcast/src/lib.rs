@@ -23,12 +23,13 @@ pub use fingerprint::{
     REPLAY_ABI_VERSION, WIRE_VERSION,
 };
 pub use framing::{
-    FrameError, configure_handshake_stream, configure_public_stream, read_handshake_proof,
-    read_handshake_proof_stream, read_handshake_request, read_handshake_request_stream,
-    read_handshake_response, read_handshake_response_stream, read_public_message,
-    write_handshake_proof, write_handshake_proof_stream, write_handshake_request,
-    write_handshake_request_stream, write_handshake_response, write_handshake_response_stream,
-    write_public_message,
+    FrameError, configure_handshake_stream, configure_public_stream, read_handshake_hello,
+    read_handshake_hello_stream, read_handshake_proof, read_handshake_proof_stream,
+    read_handshake_request, read_handshake_request_stream, read_handshake_response,
+    read_handshake_response_stream, read_public_message, write_handshake_hello,
+    write_handshake_hello_stream, write_handshake_proof, write_handshake_proof_stream,
+    write_handshake_request, write_handshake_request_stream, write_handshake_response,
+    write_handshake_response_stream, write_public_message,
 };
 pub use pairing::{
     MAX_HANDSHAKE_ATTEMPTS, MAX_PAIRING_CODE_BYTES, PAIRING_TTL, PairingCode, PairingError,
@@ -42,7 +43,7 @@ pub use projection::{
 pub use queue::{EventQueueStatus, MAX_QUEUED_BYTES, MAX_QUEUED_EVENTS, PreparedEvent};
 pub use receiver::{PublicReceiver, ReceiveError, ReceiveOutcome, ReceiverState};
 pub use wire::{
-    ControlMarker, EventEnvelope, HANDSHAKE_TIMEOUT, HandshakeProof, HandshakeRequest,
-    HandshakeResponse, MAX_EVENT_BYTES, MAX_HANDSHAKE_BYTES, MAX_JSON_DEPTH, PUBLIC_WRITE_TIMEOUT,
-    SequenceRange, SessionId, SessionIdError, WireMessage,
+    ControlMarker, EventEnvelope, HANDSHAKE_TIMEOUT, HandshakeHello, HandshakeProof,
+    HandshakeRequest, HandshakeResponse, MAX_EVENT_BYTES, MAX_HANDSHAKE_BYTES, MAX_JSON_DEPTH,
+    PUBLIC_WRITE_TIMEOUT, SequenceRange, SessionId, SessionIdError, WireMessage,
 };

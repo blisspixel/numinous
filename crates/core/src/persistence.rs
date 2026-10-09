@@ -1400,11 +1400,12 @@ pub(crate) fn append_local_file_bounded(
     max_bytes: u64,
 ) -> io::Result<()> {
     let _lock = PersistLock::acquire(path)?;
-    let mut file = OpenOptions::new()
+    let mut file = private_file_options()
         .create(true)
         .read(true)
         .append(true)
         .open(path)?;
+    restrict_private_file(&file)?;
     let appended_bytes = u64::try_from(bytes.len()).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -1428,6 +1429,42 @@ pub(crate) fn append_local_file_bounded(
         ));
     }
     file.write_all(bytes)
+}
+
+/// Append a diagnostic entry using the same lock and private-file policy as
+/// player state. On Unix, new and existing files are restricted to their owner
+/// before writing. Other platforms retain the containing directory's ACL policy.
+pub fn append_crash_log_file(path: &Path, entry: &str) -> io::Result<()> {
+    append_local_file_bounded(path, entry.as_bytes(), u64::MAX)
+}
+
+fn private_file_options() -> OpenOptions {
+    let mut options = OpenOptions::new();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    // Set a portable property too, so the builder is mutable on every platform.
+    options.write(true);
+    options
+}
+
+fn restrict_private_file(file: &File) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(fs::Permissions::from_mode(0o600))?;
+        if file.metadata()?.permissions().mode() & 0o077 != 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "local state file permissions are not private",
+            ));
+        }
+    }
+    #[cfg(not(unix))]
+    let _ = file;
+    Ok(())
 }
 
 fn merge_journey_delta(before: &Journey, after: &Journey, latest: &mut Journey) {
@@ -1555,7 +1592,7 @@ impl PersistLock {
                 thread::sleep(LOCK_SLEEP);
                 continue;
             }
-            match OpenOptions::new()
+            match private_file_options()
                 .write(true)
                 .create_new(true)
                 .open(&lock_path)
@@ -1672,7 +1709,7 @@ fn should_retry_lock(error: &io::Error) -> bool {
 
 fn recover_stale_lock(lock_path: &Path) -> bool {
     let recovery_path = recovery_path_for(lock_path);
-    let Ok(mut marker) = OpenOptions::new()
+    let Ok(mut marker) = private_file_options()
         .write(true)
         .create_new(true)
         .open(&recovery_path)
@@ -1880,7 +1917,7 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
 fn allocate_temp_file(path: &Path) -> io::Result<(PathBuf, File)> {
     for _ in 0..16 {
         let temp = temp_path_for(path);
-        match OpenOptions::new().write(true).create_new(true).open(&temp) {
+        match private_file_options().create_new(true).open(&temp) {
             Ok(file) => return Ok((temp, file)),
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
             Err(error) => return Err(error),
@@ -1969,6 +2006,55 @@ mod tests {
         record_journal_file, record_score_file, remove_persisted_file,
         resolve_local_state_paths_with, try_load_project_file,
     };
+
+    #[cfg(unix)]
+    #[test]
+    fn private_state_permissions_ignore_umask() {
+        use std::os::unix::fs::PermissionsExt;
+        if std::env::var_os("NUMINOUS_PRIVATE_MODE_CHILD").is_none() {
+            let status = std::process::Command::new("/bin/sh")
+                .args(["-c", "umask 000; exec \"$1\" --exact persistence::tests::private_state_permissions_ignore_umask", "permission-test"])
+                .arg(std::env::current_exe().unwrap())
+                .env("NUMINOUS_PRIVATE_MODE_CHILD", "1")
+                .status().unwrap();
+            assert!(status.success());
+            return;
+        }
+        let root = temp_file("private-mode-directory");
+        std::fs::create_dir_all(&root).unwrap();
+        let path = root.join("state");
+        let assert_private = |path: &std::path::Path| {
+            assert_eq!(
+                std::fs::metadata(path).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+        };
+        let (temp, file) = super::allocate_temp_file(&path).unwrap();
+        assert_private(&temp);
+        drop(file);
+        std::fs::remove_file(temp).unwrap();
+        super::atomic_write(&path, b"original").unwrap();
+        assert_private(&path);
+        super::atomic_write(&path, b"replacement").unwrap();
+        assert_private(&path);
+        assert_eq!(std::fs::read(&path).unwrap(), b"replacement");
+        for append in [false, true] {
+            let target = root.join(if append { "diagnostic" } else { "cairn" });
+            std::fs::write(&target, b"before").unwrap();
+            std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o666)).unwrap();
+            if append {
+                super::append_crash_log_file(&target, "after").unwrap();
+            } else {
+                super::append_local_file_bounded(&target, b"after", 100).unwrap();
+            }
+            assert_private(&target);
+            assert_eq!(std::fs::read(&target).unwrap(), b"beforeafter");
+        }
+        let lock = super::PersistLock::acquire(&path).unwrap();
+        assert_private(&super::lock_path_for(&path));
+        drop(lock);
+        std::fs::remove_dir_all(root).unwrap();
+    }
     use crate::{AppPreferences, Era, WindowModePreference};
     use std::collections::BTreeMap;
     use std::ffi::OsString;

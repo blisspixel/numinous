@@ -1,6 +1,6 @@
 use crate::wire::{
-    HANDSHAKE_TIMEOUT, HandshakeProof, HandshakeRequest, HandshakeResponse, MAX_EVENT_BYTES,
-    MAX_HANDSHAKE_BYTES, MAX_JSON_DEPTH, PUBLIC_WRITE_TIMEOUT, WireMessage,
+    HANDSHAKE_TIMEOUT, HandshakeHello, HandshakeProof, HandshakeRequest, HandshakeResponse,
+    MAX_EVENT_BYTES, MAX_HANDSHAKE_BYTES, MAX_JSON_DEPTH, PUBLIC_WRITE_TIMEOUT, WireMessage,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use std::error::Error;
@@ -21,7 +21,33 @@ pub fn configure_public_stream(stream: &TcpStream) -> io::Result<()> {
     stream.set_write_timeout(Some(PUBLIC_WRITE_TIMEOUT))
 }
 
-/// Reads one bounded server-first handshake proof.
+/// Reads one bounded guest challenge.
+pub fn read_handshake_hello<R: BufRead>(reader: &mut R) -> Result<HandshakeHello, FrameError> {
+    read_json(reader, MAX_HANDSHAKE_BYTES)
+}
+
+/// Reads a guest challenge under an absolute two-second deadline.
+pub fn read_handshake_hello_stream(stream: &TcpStream) -> Result<HandshakeHello, FrameError> {
+    read_handshake_stream(stream)
+}
+
+/// Writes one bounded guest challenge.
+pub fn write_handshake_hello<W: Write>(
+    writer: &mut W,
+    hello: &HandshakeHello,
+) -> Result<(), FrameError> {
+    write_json(writer, hello, MAX_HANDSHAKE_BYTES)
+}
+
+/// Writes a guest challenge under an absolute two-second deadline.
+pub fn write_handshake_hello_stream(
+    stream: &TcpStream,
+    hello: &HandshakeHello,
+) -> Result<(), FrameError> {
+    write_handshake_stream(stream, hello)
+}
+
+/// Reads one bounded host handshake proof.
 pub fn read_handshake_proof<R: BufRead>(reader: &mut R) -> Result<HandshakeProof, FrameError> {
     read_json(reader, MAX_HANDSHAKE_BYTES)
 }
@@ -31,7 +57,7 @@ pub fn read_handshake_proof_stream(stream: &TcpStream) -> Result<HandshakeProof,
     read_handshake_stream(stream)
 }
 
-/// Writes one bounded server-first handshake proof.
+/// Writes one bounded host handshake proof.
 pub fn write_handshake_proof<W: Write>(
     writer: &mut W,
     proof: &HandshakeProof,
@@ -537,6 +563,11 @@ mod tests {
     fn public_framing_apis_round_trip_each_wire_class() {
         let proof = HandshakeProof {
             wire_version: 1,
+            client_nonce: "11".repeat(32),
+            server_nonce: "22".repeat(32),
+            session_id: SessionId::from_bytes([3; 16]),
+            consent_epoch: 1,
+            compatibility: compatibility(),
             proof: "11".repeat(32),
         };
         let mut proof_bytes = Vec::new();
@@ -547,7 +578,7 @@ mod tests {
         );
         let request = HandshakeRequest {
             wire_version: 1,
-            capability: "00".repeat(16),
+            proof: "00".repeat(32),
             compatibility: compatibility(),
         };
         let mut request_bytes = Vec::new();
@@ -614,6 +645,11 @@ mod tests {
         let (server, _) = listener.accept().expect("accept loopback");
         let mut bytes = serde_json::to_vec(&HandshakeProof {
             wire_version: 1,
+            client_nonce: "11".repeat(32),
+            server_nonce: "22".repeat(32),
+            session_id: SessionId::from_bytes([3; 16]),
+            consent_epoch: 1,
+            compatibility: compatibility(),
             proof: "11".repeat(32),
         })
         .expect("serialize proof");

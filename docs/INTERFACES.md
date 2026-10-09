@@ -850,14 +850,16 @@ The implementation has these hard boundaries:
   one-use pairing code containing a version, loopback endpoint, and 128-bit
   operating-system-random capability. It never binds a public interface, puts
   the capability in a command line or log, writes a discovery file, or opens a
-  remote service. The code expires after five minutes. Before the MCP producer
-  writes any guest byte, the listener must send a strict server-first SHA-256
-  proof bound to the capability and wire version. The producer compares that
-  proof in constant time, then sends the bounded authentication request. This
-  prevents an untrusted MCP client from turning a forged code into a
-  cross-protocol write to an unrelated loopback service. The host verifies the
-  capability in constant time and rejects invalid or expired codes without
-  echoing their contents.
+  remote service. The code expires after five minutes. Pairing uses wire
+  version 2 and requires matching updated App and MCP binaries. The producer
+  first sends a bounded, fresh nonsecret challenge. The listener replies with
+  its own fresh challenge and an HMAC-SHA256 host proof. Separate host and guest
+  proof roles bind both challenges, the endpoint, invitation expiry, wire
+  version, session ID, initial live consent epoch, and replay compatibility.
+  The producer verifies the host before sending its guest proof; the raw
+  capability never travels over the socket. Proof comparison is constant time,
+  and the accepted response must match the authenticated session metadata.
+  Invalid or expired invitations are rejected without echoing their contents.
 - Human enablement opens the listener but broadcasts no play. The human may
   offer the pairing code to the MCP guest, which must explicitly allow the
   broadcast through a bounded `broadcast_session` control tool. That call is
@@ -906,10 +908,12 @@ The implementation has these hard boundaries:
 
 The first contract fixes its resource limits rather than leaving them to an
 implementation guess: pairing codes are at most 128 bytes and expire after five
-minutes; a code permits one live connection and is revoked after eight failed
-handshakes; the MCP producer also refuses further starts after eight failures
-for that process lifetime; the proof, request, and response frames are each at
-most 4 KiB with a two-second deadline; each event is at most 64 KiB with JSON
+minutes; a code permits one live connection and is revoked after eight complete
+failed authentication requests. Abandoned connections and malformed frames
+do not consume that invitation budget. The MCP producer also refuses further
+starts after eight failures for that process lifetime; the hello, proof,
+request, and response frames are each at most 4 KiB with a two-second deadline;
+each event is at most 64 KiB with JSON
 depth at most 16 and a two-second write deadline; the writer queue holds at most
 64 events or 4 MiB; and the viewer ring holds at most 256 events or 16 MiB.
 Framing reads incrementally through
@@ -994,7 +998,7 @@ is a transport endpoint, not a player session; continuity remains explicit in
 tool arguments or player-owned local persistence.
 
 The one process-local viewer broadcast is owned by the concrete stdio
-connection object that successfully presented the pairing capability. Changing
+connection object that successfully authenticated the pairing invitation. Changing
 optional caller metadata cannot create, transfer, or revoke that ownership.
 Each shipped process has one stdin and stdout connection, and the control path
 remains serialized with its broadcast lifecycle. A future multiplexed or remote

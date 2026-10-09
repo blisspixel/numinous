@@ -401,6 +401,13 @@ Visual Era, and window mode. Core owns bounded reads, lock coordination, atomic
 replacement, inventory, and complete erasure. The App owns only applying those
 values to its window and audio adapters. Unsupported or malformed preference
 documents apply no partial state and are preserved for diagnosis.
+The same core persistence boundary creates private atomic-write temporaries,
+append files, locks, and recovery markers with owner-only Unix permissions.
+App crash logs use the shared append helper; existing append files are tightened
+before writing. Read-only inspection does not change existing file permissions;
+old files become private when replaced or appended. On Windows, files inherit
+the containing directory's ACL; this Unix mode policy does not establish a
+separate Windows ACL boundary.
 Core also owns `TemporalPair`, the exact validated origin and destination used
 for two-observation room comparison. MCP renders both observations through the
 ordinary `Room` contract and projects their existing `Canvas::delta`; no room
@@ -521,7 +528,8 @@ specified and tested.
   limits. There is no automated beauty screenshot job.
 - **Local session broadcast, native room, Studio, game, and sound viewer, and subprocess proof built:**
   the App and MCP production faces remain independent. The shared broadcast
-  crate owns one-use loopback pairing, server-first host proof, strict bounded
+  crate owns one-use loopback pairing with fresh mutual challenges and
+  role-separated HMAC-SHA256 proofs, strict bounded
   framing, replay compatibility identity, typed public tool events, atomic
   consent epochs, ordered control barriers, and a fixed event queue. MCP adds
   one consent control, an exhaustive 23-public, 9-private, 1-control policy,

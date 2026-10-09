@@ -50,7 +50,8 @@ process, while portable creations reopen with fresh undo/search.
 
 **Install once.** One command downloads and verifies the latest published
 release, then puts `numinous`, `numinous-app`, and `numinous-mcp` on your PATH.
-No Rust toolchain is needed. macOS or Linux:
+No Rust toolchain is needed. Install [GitHub CLI](https://cli.github.com/) first
+for signed archive verification. macOS or Linux:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh
@@ -67,9 +68,40 @@ Applications folder on macOS, or the Linux application menu. Run
 `numinous update` any time to install the latest GitHub release. Re-running the
 installer does the same. `numinous uninstall` removes the managed program and
 launchers while leaving Journey, scores, Cairn, journal, and settings alone.
+Custom install roots must have a trusted owner and ancestry that other local
+accounts cannot replace. The installer checks the whole path before installing
+or removing it. On macOS and Linux, owners must be the current user or root;
+group- or world-writable ancestors are refused unless sticky permissions protect
+their trusted-owned children. macOS ACL allow entries granting deletion, child
+deletion, permission changes, or ownership changes are conservatively refused,
+even when addressed to a trusted account. On Windows, untrusted owners or effective allow
+rules granting deletion, child deletion, permission changes, or ownership changes
+are refused. Create-only permissions on an ancestor are allowed. Use a dedicated
+directory inside your private home when a shared location is refused. These
+checks trust the current account and system administrators; they do not protect
+against those principals changing paths concurrently. Windows policy errs on
+the side of refusal when a dangerous allow rule also has a deny rule.
 The large built-in soundtrack is retained when its verified audio content is
 unchanged, even when binary release metadata changes. Pass
 `--source` (Windows: `-Source`) only to build the current `main` branch locally.
+
+Downloaded binary and soundtrack archives must pass provenance verification
+before extraction. The installer resolves the tag's commit through repository
+Git objects, then pins the repository, tag, source and signer commit, and release
+attestation workflow. A missing verifier or invalid provenance stops installation.
+The published bundle supports verification without a GitHub login; trust metadata
+still requires a network connection. Older releases using a different signing
+workflow require the manual procedure in [VERIFY.md](../VERIFY.md).
+
+Developer and packaging tests may explicitly supply local archives with
+`--release-archive` and `--release-checksum`, plus `--soundtrack-archive`,
+`--soundtrack-checksum`, and `--soundtrack-content-checksum` (PowerShell:
+`-ReleaseArchive`, `-ReleaseChecksum`, `-SoundtrackArchive`,
+`-SoundtrackChecksum`, and `-SoundtrackContentChecksum`). These local inputs are
+caller-trusted and do not carry an installer provenance guarantee. Checksums,
+safe extraction, and closed payload manifests are still required. A local input
+never disables provenance verification for a different archive downloaded during
+the same installation.
 
 **Start the app:** open the installed `Numinous` launcher, type `numinous-app`
 in a new terminal, or run this from a clone:
