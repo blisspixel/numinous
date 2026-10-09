@@ -42,8 +42,9 @@ commit on `main` has one human author.
 `actions/upload-artifact` v7.0.1, `actions/download-artifact` v8.0.1,
 `actions/attest` v4.2.2, `taiki-e/install-action` v2.87.10,
 `actions/dependency-review-action` v5.0.0, `github/codeql-action` v4.38.0,
-`EmbarkStudios/cargo-deny-action` v2.1.1, and `dtolnay/rust-toolchain` pinned
-to the 1.97.1 and 1.89.0 channel commits named in the workflows.
+`cargo-deny` 0.20.2 through `taiki-e/install-action`, and
+`dtolnay/rust-toolchain` pinned to the 1.97.1 and 1.89.0 channel commits
+named in the workflows.
 Bump pins through review when a manual check shows a newer release.
 
 The release evidence for the major stack lines comes from the official

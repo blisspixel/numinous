@@ -122,12 +122,21 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertNotIn("uses: actions/attest@", self.workflow)
 
     def test_ci_install_actions_are_current_immutable_and_exact(self) -> None:
-        self.assertEqual(self.ci_workflow.count(INSTALL_ACTION), 2)
-        self.assertEqual(self.ci_workflow.count("uses: taiki-e/install-action@"), 2)
+        # cargo-audit, cargo-llvm-cov, and cargo-deny. Deny is installed as a
+        # binary: the Docker action pulls a Rust image from Docker Hub, and a
+        # rate limit there fails the job before the check runs.
+        self.assertEqual(self.ci_workflow.count(INSTALL_ACTION), 3)
+        self.assertEqual(self.ci_workflow.count("uses: taiki-e/install-action@"), 3)
         self.assertNotRegex(
             self.ci_workflow,
             r"taiki-e/install-action@(v|main|master)",
         )
+        self.assertIn("tool: cargo-deny@0.20.2\n", self.supply_chain)
+        self.assertIn(
+            "cargo deny --log-level warn --manifest-path ./Cargo.toml --all-features check\n",
+            self.supply_chain,
+        )
+        self.assertNotIn("EmbarkStudios/cargo-deny-action", self.ci_workflow)
 
     def test_dependency_review_is_pr_only_read_only_and_strict(self) -> None:
         self.assertEqual(self.ci_workflow.count(DEPENDENCY_REVIEW_ACTION), 1)
