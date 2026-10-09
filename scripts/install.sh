@@ -263,7 +263,8 @@ assert_private_install_ancestors() (
                 || fail "install path ACL permits replacement: $current"
         fi
         if [ $((permissions & 0022)) -ne 0 ]; then
-            [ "$current" != "$install_root" ] && [ $((permissions & 01000)) -ne 0 ] \
+            # BSD stat's low permission field omits special bits.
+            [ "$current" != "$install_root" ] && [ -k "$current" ] \
                 || fail "install path permits replacement by another account: $current"
         fi
         [ "$current" != / ] || break
