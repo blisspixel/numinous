@@ -19,6 +19,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 - An interval whose cent count overflows is not named an octave. The
   tolerance check treated a non-finite size as close enough, and the
   semitone index then became zero.
+- The supply-chain job installs cargo-deny 0.20.2 and runs the same check
+  the Docker action ran. Building that action pulled a Rust image from
+  Docker Hub, and a rate limit there failed the job before the check.
 
 ## [0.5.0-alpha.6] - 2026-10-09
 

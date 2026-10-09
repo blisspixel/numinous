@@ -170,7 +170,15 @@ jobs:
           fail-on-scopes: runtime, development, unknown
           fail-on-severity: moderate
           show-patched-versions: true
-      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+      # The Docker action builds from a Docker Hub Rust image. An anonymous
+      # pull of that image is rate limited, and the job then fails before
+      # the check runs. This is the same cargo-deny 0.20.2 release that
+      # image pins, with the action's default arguments.
+      - uses: taiki-e/install-action@fa23953489c080190314742a9b907f8e97c6767c # v2.87.10
+        with:
+          tool: cargo-deny@0.20.2
+      - name: cargo deny
+        run: cargo deny --log-level warn --manifest-path ./Cargo.toml --all-features check
 
   # Dual supply-chain path: deny owns licenses/bans/sources; audit owns the
   # RustSec advisory database with project-local ignores in .cargo/audit.toml.
