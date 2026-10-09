@@ -25,6 +25,7 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   installed payloads. GitHub CLI is now required for downloaded installations.
 - Reject managed install paths whose ownership or ancestor permissions allow
   replacement by other local accounts, including macOS and Windows ACLs.
+  Preserve POSIX permission-check failures in conditional callers.
   Normal private-root uninstall continues to preserve player-owned state.
 
 ### Documentation
