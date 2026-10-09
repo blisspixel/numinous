@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+## [0.5.0-alpha.5] - 2026-10-08
+
 ### Added
 - Settings > Interface Text saves Cabinet and room lettering at 100, 125, or
   150 percent of the window's own pixel scale. The same choice sizes the room
