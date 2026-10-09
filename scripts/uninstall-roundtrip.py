@@ -95,6 +95,34 @@ def native_tool_env(env: dict[str, str]) -> dict[str, str]:
     return patched
 
 
+def protect_private_workspace(path: Path) -> None:
+    """Apply the installer's private-directory policy to one workspace.
+
+    Windows refuses an install whose ancestor another account can replace. A
+    directory created under a profile inherits replacement rights that the
+    profile itself exposes only as inherit-only rules, and the ancestor check
+    ignores those inherit-only rules. This calls the installer's own protect
+    mode, so the roundtrip meets that check without weakening it. Other
+    platforms do not walk directory ACLs.
+    """
+    if platform.system() != "Windows":
+        return
+    run(
+        [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(ROOT / "scripts" / "install.ps1"),
+            "-ProtectDirectory",
+            str(path),
+        ],
+        dict(os.environ),
+        "protect the roundtrip workspace",
+    )
+
+
 def isolated_profile_env(
     base: dict[str, str], profile: Path, install_root: Path
 ) -> dict[str, str]:
@@ -333,32 +361,35 @@ def roundtrip(
     workspace = Path(tempfile.mkdtemp(
         prefix=".numinous-uninstall-roundtrip-", dir=Path.home()
     ))
-    install_root = workspace / "install"
-    profile = workspace / "profile"
-    profile.mkdir(parents=True)
-    (profile / "Desktop").mkdir()
-    if platform.system() == "Windows":
-        (
-            profile
-            / "AppData"
-            / "Roaming"
-            / "Microsoft"
-            / "Windows"
-            / "Start Menu"
-            / "Programs"
-        ).mkdir(parents=True)
-    # A caller testing a published release supplies that release's own
-    # soundtrack, so the install exercises the shipped music rather than a
-    # stand-in. Without one, a single local track is packaged here, which keeps
-    # this gate off the network when it is run from a clone.
-    if soundtrack is None:
-        soundtrack = build_local_soundtrack(workspace / "soundtrack-src")
-
-    # Isolate shell launchers, Windows profile caches, and every player-owned
-    # file so the roundtrip cannot touch whoever is running it.
-    env = isolated_profile_env(dict(os.environ), profile, install_root)
-
     try:
+        # Protect before any child is created, so the workspace the ancestor
+        # check walks is already private. NUMINOUS_HOME stays workspace/install.
+        protect_private_workspace(workspace)
+        install_root = workspace / "install"
+        profile = workspace / "profile"
+        profile.mkdir(parents=True)
+        (profile / "Desktop").mkdir()
+        if platform.system() == "Windows":
+            (
+                profile
+                / "AppData"
+                / "Roaming"
+                / "Microsoft"
+                / "Windows"
+                / "Start Menu"
+                / "Programs"
+            ).mkdir(parents=True)
+        # A caller testing a published release supplies that release's own
+        # soundtrack, so the install exercises the shipped music rather than a
+        # stand-in. Without one, a single local track is packaged here, which keeps
+        # this gate off the network when it is run from a clone.
+        if soundtrack is None:
+            soundtrack = build_local_soundtrack(workspace / "soundtrack-src")
+
+        # Isolate shell launchers, Windows profile caches, and every player-owned
+        # file so the roundtrip cannot touch whoever is running it.
+        env = isolated_profile_env(dict(os.environ), profile, install_root)
+
         run(
             installer_command(archive, checksum, tag, soundtrack, uninstall=False),
             env,

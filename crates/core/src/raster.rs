@@ -11,6 +11,12 @@ use crate::surface::{MAX_DIM, Surface};
 /// The near-black background (the Numinous stage).
 const BACKGROUND: [u8; 3] = crate::palette::STAGE;
 
+/// Columns of the fixed luminance grid used as a plate signature.
+const APPEARANCE_COLUMNS: usize = 8;
+/// Rows of the fixed luminance grid used as a plate signature.
+const APPEARANCE_ROWS: usize = 5;
+const APPEARANCE_BLOCKS: usize = APPEARANCE_COLUMNS * APPEARANCE_ROWS;
+
 /// The accent used when a room does not specify one.
 const DEFAULT_ACCENT: [u8; 3] = [36, 120, 180];
 
@@ -235,6 +241,53 @@ impl Raster {
         self.pixels.iter().filter(|&&p| p != BACKGROUND).count()
     }
 
+    /// Block-mean luminance on the fixed plate grid.
+    ///
+    /// Each value is the half-up mean of integer luma
+    /// `(54*R + 183*G + 19*B) >> 8` over the pixels in that block. The weights
+    /// sum to 256. This is a regression signature, not the WCAG relative
+    /// luminance used for contrast. Spans are `start = i * total / parts`, so
+    /// every pixel belongs to exactly one block. A block that receives no
+    /// pixel is zero. An empty raster is all zeros.
+    #[must_use]
+    pub fn appearance_blocks(&self) -> [u8; APPEARANCE_BLOCKS] {
+        let mut out = [0u8; APPEARANCE_BLOCKS];
+        if self.width == 0 || self.height == 0 || self.pixels.is_empty() {
+            return out;
+        }
+        for row in 0..APPEARANCE_ROWS {
+            let y0 = row * self.height / APPEARANCE_ROWS;
+            let y1 = (row + 1) * self.height / APPEARANCE_ROWS;
+            for column in 0..APPEARANCE_COLUMNS {
+                let x0 = column * self.width / APPEARANCE_COLUMNS;
+                let x1 = (column + 1) * self.width / APPEARANCE_COLUMNS;
+                let mut sum = 0u64;
+                let mut count = 0u64;
+                for y in y0..y1 {
+                    for x in x0..x1 {
+                        let pixel = self.pixels[y * self.width + x];
+                        let luma = (54 * u32::from(pixel[0])
+                            + 183 * u32::from(pixel[1])
+                            + 19 * u32::from(pixel[2]))
+                            >> 8;
+                        sum += u64::from(luma);
+                        count += 1;
+                    }
+                }
+                if let Some(mean) = sum.saturating_add(count / 2).checked_div(count) {
+                    out[row * APPEARANCE_COLUMNS + column] = u8::try_from(mean).unwrap_or(u8::MAX);
+                }
+            }
+        }
+        out
+    }
+
+    /// Lowercase hex of [`Self::appearance_blocks`], two digits per block.
+    #[must_use]
+    pub fn appearance_signature(&self) -> String {
+        appearance_hex(&self.appearance_blocks())
+    }
+
     /// Fill a rectangle with the accent scaled by `level` in `0..=1`.
     ///
     /// This is for pictures whose marks are a ramp of brightness rather than
@@ -366,6 +419,26 @@ impl Raster {
     }
 }
 
+/// Largest absolute difference between two block signatures.
+#[must_use]
+pub fn appearance_distance(left: &[u8; APPEARANCE_BLOCKS], right: &[u8; APPEARANCE_BLOCKS]) -> u8 {
+    left.iter()
+        .zip(right)
+        .map(|(a, b)| a.abs_diff(*b))
+        .max()
+        .unwrap_or(0)
+}
+
+fn appearance_hex(blocks: &[u8; APPEARANCE_BLOCKS]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(APPEARANCE_BLOCKS * 2);
+    for byte in blocks {
+        out.push(char::from(HEX[usize::from(byte >> 4)]));
+        out.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
+    out
+}
+
 impl Surface for Raster {
     fn width(&self) -> usize {
         self.width
@@ -398,7 +471,7 @@ impl Surface for Raster {
 
 #[cfg(test)]
 mod tests {
-    use super::{BACKGROUND, MarkRole, Raster};
+    use super::{BACKGROUND, MarkRole, Raster, appearance_distance};
     use crate::surface::Surface;
 
     #[test]
@@ -1429,6 +1502,52 @@ mod tests {
         assert_eq!(bytes.len(), 3 * 2 * 4);
         assert_eq!(bytes[0..3], BACKGROUND);
         assert_eq!(bytes[3], 255);
+    }
+
+    #[test]
+    fn appearance_signature_is_stable_local_and_discriminating() {
+        let blank = Raster::new(64, 40);
+        let blocks = blank.appearance_blocks();
+        assert_eq!(appearance_distance(&blocks, &blocks), 0);
+        let stage_luma = u8::try_from(
+            (54 * u32::from(BACKGROUND[0])
+                + 183 * u32::from(BACKGROUND[1])
+                + 19 * u32::from(BACKGROUND[2]))
+                >> 8,
+        )
+        .unwrap_or(u8::MAX);
+        assert!(blocks.iter().all(|&block| block == stage_luma));
+        assert_eq!(blank.appearance_signature().len(), blocks.len() * 2);
+
+        let mut one = blank.clone();
+        let mut rgba = one.to_rgba();
+        rgba[0] = 255;
+        rgba[1] = 255;
+        rgba[2] = 255;
+        one.set_rgba(&rgba);
+        let distance = appearance_distance(&blocks, &one.appearance_blocks());
+        assert_eq!(
+            distance, 4,
+            "one white pixel in an 8 by 8 block of the stage moves that block by 4"
+        );
+
+        let mut filled = Raster::new(64, 40);
+        filled.set_rgba(&vec![255u8; 64 * 40 * 4]);
+        let far = appearance_distance(&blocks, &filled.appearance_blocks());
+        assert!(
+            far >= 32,
+            "a blank plate and a white plate must not share a signature, got {far}"
+        );
+
+        let mut tiny = Raster::new(1, 1);
+        tiny.set_rgba(&[255, 255, 255, 255]);
+        let tiny_blocks = tiny.appearance_blocks();
+        assert_eq!(tiny_blocks[tiny_blocks.len() - 1], 255);
+        assert!(
+            tiny_blocks[..tiny_blocks.len() - 1]
+                .iter()
+                .all(|&block| block == 0)
+        );
     }
 
     #[test]

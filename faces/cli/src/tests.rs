@@ -1397,6 +1397,14 @@ fn render_png_writes_a_non_empty_file() {
     )
     .expect("render png");
     assert!(message.contains("wrote"));
+    let signature = message
+        .lines()
+        .find_map(|line| line.strip_prefix("Appearance: "))
+        .expect("png report names the block signature");
+    assert!(
+        signature.len().is_multiple_of(2) && signature.bytes().all(|byte| byte.is_ascii_hexdigit()),
+        "{signature}"
+    );
     let size = std::fs::metadata(&path).expect("file exists").len();
     assert!(size > 0, "png should not be empty");
     let _ = std::fs::remove_file(&path);
@@ -1538,6 +1546,18 @@ fn room_bed_export_exactly_quantizes_the_shared_stereo_source() {
     .expect("repeat room bed");
     assert!(report.contains("room bed, 40.00s, 79 events, stereo 16000 Hz"));
     assert!(report.contains("stable pre-master bed only"));
+    let spectrum = report
+        .split("spectrum ")
+        .nth(1)
+        .and_then(|rest| rest.lines().next())
+        .expect("room bed report names the spectral fingerprint");
+    let bands: Vec<&str> = spectrum.split_whitespace().collect();
+    assert_eq!(bands.len(), numinous_core::BAND_COUNT);
+    assert_eq!(
+        bands.last().copied(),
+        Some("0.00000"),
+        "the air band is above the room-bed Nyquist frequency: {spectrum}"
+    );
 
     let bytes = std::fs::read(&first).expect("WAV bytes");
     assert_eq!(bytes, std::fs::read(&second).expect("repeat WAV"));

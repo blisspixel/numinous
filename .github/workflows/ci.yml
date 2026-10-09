@@ -279,6 +279,7 @@ jobs:
       - name: Windows Python contract tests
         if: runner.os == 'Windows'
         run: |
+          python scripts/test-uninstall-roundtrip.py
           python scripts/test-mcp-play.py
           python scripts/test-local-agent-playtest.py
           python scripts/test-understanding-study.py

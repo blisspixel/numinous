@@ -3,10 +3,17 @@
 
 Renders deterministic CLI PNG plates and room-bed WAV files for the five
 tactile flagships, then compares portable gates to a committed manifest.
-PNG content hashes must match exactly. Room-bed audio gates on peak, RMS, and
-size band (WAV SHA-256 is recorded as a host reference only, because float
-paths can differ across OS targets). Use --update after intentional product
-changes. This is machine regression evidence, not human sensory judgment.
+PNG content hashes must match exactly. Each plate also prints a fixed-grid
+luminance signature; the gate allows a maximum block delta of
+APPEARANCE_MAX_DELTA. Exact CPU plates are distance 0. That tolerance is for
+a future plate that is not byte-identical, and it does not relax the hash.
+Room-bed audio gates on peak, RMS, size band, and a normalized spectral
+fingerprint. SPECTRUM_ABSOLUTE_TOLERANCE is absolute per band because the
+bands are already scaled so the loudest is 1. WAV SHA-256 is recorded as a
+host reference only, because float paths can differ across OS targets.
+Use --update after intentional product changes. An update refuses to replace
+a PNG hash. This is machine regression evidence, not human sensory judgment,
+and it does not classify diffs.
 """
 
 from __future__ import annotations
@@ -30,6 +37,10 @@ from gate_cli import resolve_cli  # noqa: E402
 
 MANIFEST = ROOT / "docs" / "evidence" / "goldens" / "flagship-manifest.json"
 GOLDEN_DIR = ROOT / "docs" / "evidence" / "goldens" / "flagship"
+SCHEMA = "numinous-flagship-goldens-v3"
+# Written gate. Do not widen it from the manifest: verify rejects a mismatch.
+APPEARANCE_MAX_DELTA = 2
+SPECTRUM_ABSOLUTE_TOLERANCE = 1e-3
 WIDTH = 64
 HEIGHT = 40
 FLAGSHIPS = (
@@ -44,6 +55,11 @@ ERA_PROBE_ROOM = "times-tables"
 ERAS = ("modern", "phosphor", "8bit", "vector")
 SIGNAL_RE = re.compile(
     r"peak\s+(?P<peak>[-+0-9.eE]+),\s+RMS\s+(?P<rms>[-+0-9.eE]+)",
+    re.IGNORECASE,
+)
+APPEARANCE_RE = re.compile(r"^Appearance: (?P<hex>[0-9a-f]+)$", re.MULTILINE)
+SPECTRUM_RE = re.compile(
+    r"spectrum\s+(?P<bands>[-+0-9.eE]+(?:\s+[-+0-9.eE]+)*)",
     re.IGNORECASE,
 )
 
@@ -120,6 +136,10 @@ def capture_room(
             "",
         ),
     }
+    appearance = APPEARANCE_RE.search(render_out)
+    if appearance is None or len(appearance.group("hex")) % 2 != 0:
+        raise RuntimeError(f"missing appearance signature for {room_id} era {era}")
+    entry["appearance"] = appearance.group("hex")
     if audio:
         wav = work / f"{room_id}.wav"
         sonify_out = run_capture(
@@ -142,6 +162,10 @@ def capture_room(
         entry["wav_bytes"] = wav.stat().st_size
         entry["audio_peak"] = float(match.group("peak"))
         entry["audio_rms"] = float(match.group("rms"))
+        spectrum = SPECTRUM_RE.search(sonify_out)
+        if spectrum is None:
+            raise RuntimeError(f"missing spectral fingerprint for {room_id}: {sonify_out[-400:]}")
+        entry["spectrum"] = [float(part) for part in spectrum.group("bands").split()]
     return entry
 
 
@@ -179,6 +203,64 @@ def compare_entry(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]
         # Same bed duration should keep size within a small absolute band.
         if abs(exp_b - got_b) > max(64, exp_b // 1000):
             defects.append(f"wav_bytes: expected ~{exp_b} got {got_b}")
+    defects.extend(compare_appearance(expected, actual))
+    if "audio_peak" in expected:
+        defects.extend(compare_spectrum(expected, actual))
+    return defects
+
+
+def compare_appearance(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]:
+    """Maximum absolute block delta of the fixed-grid luminance signature."""
+    left = expected.get("appearance")
+    right = actual.get("appearance")
+    if not isinstance(left, str) or not isinstance(right, str):
+        return ["appearance: missing fixed-grid signature"]
+    distance = block_distance(left, right)
+    if distance is None:
+        return [f"appearance: malformed signature {left!r} vs {right!r}"]
+    if distance > APPEARANCE_MAX_DELTA:
+        return [
+            f"appearance: max block delta {distance} exceeds {APPEARANCE_MAX_DELTA}"
+        ]
+    return []
+
+
+def block_distance(left: str, right: str) -> int | None:
+    if (
+        not left
+        or len(left) != len(right)
+        or len(left) % 2 != 0
+        or any(char not in "0123456789abcdef" for char in left + right)
+    ):
+        return None
+    distance = 0
+    for index in range(0, len(left), 2):
+        distance = max(
+            distance,
+            abs(int(left[index:index + 2], 16) - int(right[index:index + 2], 16)),
+        )
+    return distance
+
+
+def compare_spectrum(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]:
+    """Absolute per-band tolerance on the normalized whole-bed fingerprint."""
+    left = expected.get("spectrum")
+    right = actual.get("spectrum")
+    if not isinstance(left, list) or not isinstance(right, list) or not left:
+        return ["spectrum: missing fingerprint"]
+    if len(left) != len(right):
+        return [f"spectrum: expected {len(left)} bands got {len(right)}"]
+    defects: list[str] = []
+    for index, (exp, got) in enumerate(zip(left, right, strict=True)):
+        try:
+            delta = abs(float(exp) - float(got))
+        except (TypeError, ValueError):
+            return [f"spectrum: band {index} was not a number"]
+        if delta > SPECTRUM_ABSOLUTE_TOLERANCE:
+            defects.append(
+                f"spectrum band {index}: expected {exp} got {got} "
+                f"(absolute tolerance {SPECTRUM_ABSOLUTE_TOLERANCE})"
+            )
     return defects
 
 
@@ -187,13 +269,59 @@ def entry_key(entry: dict[str, Any]) -> str:
     return f"{entry['id']}@{era}"
 
 
+def keep_recorded_plate(entry: dict[str, Any], previous: dict[str, Any]) -> None:
+    """Keep the committed plate bytes when the new render still matches them.
+
+    The luminance signature and spectral fingerprint are added beside the
+    existing hash. A PNG hash change is a rebaseline, and this update refuses
+    it. Peak, RMS, and size stay on their existing tolerances; when they still
+    pass, the recorded numbers stay so a host float does not churn the file.
+    """
+    name = entry_key(entry)
+    if entry["png_sha256"] != previous["png_sha256"]:
+        raise RuntimeError(
+            f"refusing to rebaseline {name} PNG hash: "
+            f"expected {previous['png_sha256']} got {entry['png_sha256']}"
+        )
+    for key in ("png_bytes", "png_mean_byte", "render_status_line"):
+        if entry.get(key) != previous.get(key):
+            raise RuntimeError(
+                f"refusing to rebaseline {name} {key}: "
+                f"expected {previous.get(key)!r} got {entry.get(key)!r}"
+            )
+    if "audio_peak" in previous:
+        for key, tolerance in (("audio_peak", 1e-4), ("audio_rms", 1e-4)):
+            expected = float(previous[key])
+            actual = float(entry[key])
+            if abs(expected - actual) > tolerance * max(1.0, abs(expected)):
+                raise RuntimeError(
+                    f"refusing to rebaseline {name} {key}: expected {expected} got {actual}"
+                )
+        expected_bytes = int(previous["wav_bytes"])
+        actual_bytes = int(entry["wav_bytes"])
+        if abs(expected_bytes - actual_bytes) > max(64, expected_bytes // 1000):
+            raise RuntimeError(
+                f"refusing to rebaseline {name} wav_bytes: "
+                f"expected ~{expected_bytes} got {actual_bytes}"
+            )
+        for key in ("wav_sha256", "wav_bytes", "audio_peak", "audio_rms"):
+            entry[key] = previous[key]
+
+
 def update_goldens(cli: list[str]) -> dict[str, Any]:
+    previous = {
+        entry_key(room): room
+        for room in (load_manifest().get("rooms", []) if MANIFEST.is_file() else [])
+    }
     GOLDEN_DIR.mkdir(parents=True, exist_ok=True)
     rooms: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory(prefix="numinous-goldens-") as tmp:
         work = Path(tmp)
         for room_id in FLAGSHIPS:
             entry = capture_room(cli, room_id, work, era="modern", audio=True)
+            old = previous.get(entry_key(entry))
+            if old is not None:
+                keep_recorded_plate(entry, old)
             (GOLDEN_DIR / f"{room_id}.png").write_bytes((work / f"{room_id}.png").read_bytes())
             rooms.append(entry)
         for era in ERAS:
@@ -202,6 +330,9 @@ def update_goldens(cli: list[str]) -> dict[str, Any]:
             entry = capture_room(
                 cli, ERA_PROBE_ROOM, work, era=era, audio=False
             )
+            old = previous.get(entry_key(entry))
+            if old is not None:
+                keep_recorded_plate(entry, old)
             src = work / f"{ERA_PROBE_ROOM}-{era}.png"
             (GOLDEN_DIR / f"{ERA_PROBE_ROOM}-{era}.png").write_bytes(src.read_bytes())
             rooms.append(entry)
@@ -214,8 +345,10 @@ def update_goldens(cli: list[str]) -> dict[str, Any]:
     if len(set(era_hashes.values())) != len(era_hashes):
         raise RuntimeError(f"era plates are not distinct: {era_hashes}")
     manifest = {
-        "schemaVersion": "numinous-flagship-goldens-v2",
+        "schemaVersion": SCHEMA,
         "evidenceClass": "agent-machine-regression",
+        "appearanceMaxDelta": APPEARANCE_MAX_DELTA,
+        "spectrumAbsoluteTolerance": SPECTRUM_ABSOLUTE_TOLERANCE,
         "width": WIDTH,
         "height": HEIGHT,
         "layer": "room-bed",
@@ -227,8 +360,27 @@ def update_goldens(cli: list[str]) -> dict[str, Any]:
     return manifest
 
 
+def require_manifest_contract(manifest: dict[str, Any]) -> None:
+    """Fail closed when the file is an older schema or names a looser gate."""
+    if manifest.get("schemaVersion") != SCHEMA:
+        raise RuntimeError(
+            f"flagship manifest schema {manifest.get('schemaVersion')!r} is not {SCHEMA}"
+        )
+    if manifest.get("appearanceMaxDelta") != APPEARANCE_MAX_DELTA:
+        raise RuntimeError(
+            "flagship manifest appearance tolerance does not match "
+            f"{APPEARANCE_MAX_DELTA}"
+        )
+    if manifest.get("spectrumAbsoluteTolerance") != SPECTRUM_ABSOLUTE_TOLERANCE:
+        raise RuntimeError(
+            "flagship manifest spectrum tolerance does not match "
+            f"{SPECTRUM_ABSOLUTE_TOLERANCE}"
+        )
+
+
 def verify_goldens(cli: list[str]) -> dict[str, Any]:
     manifest = load_manifest()
+    require_manifest_contract(manifest)
     expected_rooms = {entry_key(room): room for room in manifest["rooms"]}
     defects: list[dict[str, Any]] = []
     actual_rooms: list[dict[str, Any]] = []

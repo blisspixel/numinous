@@ -111,9 +111,69 @@ pub fn low_band_onset(previous: &[f32; BAND_COUNT], current: &[f32; BAND_COUNT])
 ///
 /// Offline path for room beds and CLI/MCP listen exports. Live App paths also
 /// feed output-mix or loopback captures through the same band pipeline.
+/// This is the visualizer window: only the last 2048 frames.
 #[must_use]
 pub fn arrangement_spectrum(samples: &[f32], sample_rate: u32) -> [f32; BAND_COUNT] {
     normalize_bands(&band_energies(samples, 2, sample_rate))
+}
+
+/// Whole-buffer spectral fingerprint on the same seven band centers.
+///
+/// [`band_energies`] measures only its last 2048 frames, which is the live
+/// visualizer window. A room bed can change timbre before that tail, so this
+/// averages the raw energies of every non-overlapping window and then
+/// normalizes. A buffer of at most 2048 frames matches [`normalize_bands`] of
+/// [`band_energies`] on that same buffer. A remainder shorter than 16 frames
+/// is omitted, matching the analyzer's own minimum. Silence, fewer than 16
+/// frames, a zero rate, or an unsupported channel count returns zeros.
+///
+/// The air band stays zero when its center is at or above 0.48 of the sample
+/// rate. At the 16 kHz room-bed rate that center is above Nyquist, so the air
+/// band of a room bed is zero. The result is gain-invariant: scaling a finite
+/// non-silent buffer does not change the normalized bands.
+#[must_use]
+pub fn spectral_fingerprint(
+    samples: &[f32],
+    channels: usize,
+    sample_rate: u32,
+) -> [f32; BAND_COUNT] {
+    if samples.is_empty() || sample_rate == 0 || !(channels == 1 || channels == 2) {
+        return [0.0; BAND_COUNT];
+    }
+    let frames = samples.len() / channels;
+    if frames < 16 {
+        return [0.0; BAND_COUNT];
+    }
+    const WINDOW: usize = 2_048;
+    if frames <= WINDOW {
+        return normalize_bands(&band_energies(samples, channels, sample_rate));
+    }
+    let mut sums = [0.0f32; BAND_COUNT];
+    let mut windows = 0u32;
+    let mut start = 0usize;
+    while start < frames {
+        let remaining = frames - start;
+        if remaining < 16 {
+            break;
+        }
+        let window = remaining.min(WINDOW);
+        let sample_start = start * channels;
+        let sample_end = (start + window) * channels;
+        let energies = band_energies(&samples[sample_start..sample_end], channels, sample_rate);
+        for (sum, energy) in sums.iter_mut().zip(energies) {
+            *sum += energy;
+        }
+        windows += 1;
+        start += window;
+    }
+    if windows == 0 {
+        return [0.0; BAND_COUNT];
+    }
+    let scale = windows as f32;
+    for sum in &mut sums {
+        *sum /= scale;
+    }
+    normalize_bands(&sums)
 }
 
 /// Lever-style controls derived from spectrum bands (visualizer to room params).
@@ -248,8 +308,8 @@ mod tests {
     use super::{
         BAND_COUNT, BAND_NAMES, SpectrumBarLayout, SpectrumLevers, arrangement_spectrum,
         band_energies, bass_mid_treble, draw_spectrum_bars, levers_from_bands, low_band_onset,
-        normalize_bands, spectrum_hand_point, spectrum_phase_nudge, spectrum_should_poke,
-        spectrum_time_scale,
+        normalize_bands, spectral_fingerprint, spectrum_hand_point, spectrum_phase_nudge,
+        spectrum_should_poke, spectrum_time_scale,
     };
 
     fn sine_stereo(freq: f32, rate: u32, frames: usize) -> Vec<f32> {
@@ -385,5 +445,94 @@ mod tests {
         assert!(!spectrum_should_poke(&quiet));
         let (x, y) = spectrum_hand_point(&loud);
         assert!((0.05..=0.95).contains(&x) && (0.05..=0.95).contains(&y));
+    }
+
+    fn peak_band(bands: &[f32; BAND_COUNT]) -> usize {
+        bands
+            .iter()
+            .enumerate()
+            .max_by(|left, right| left.1.total_cmp(right.1))
+            .map(|(index, _)| index)
+            .unwrap_or(0)
+    }
+
+    #[test]
+    fn spectral_fingerprint_is_quiet_for_silence_and_hostile_input() {
+        assert_eq!(spectral_fingerprint(&[], 2, 16_000), [0.0; BAND_COUNT]);
+        assert_eq!(
+            spectral_fingerprint(&[0.0; 30], 2, 16_000),
+            [0.0; BAND_COUNT]
+        );
+        assert_eq!(
+            spectral_fingerprint(&[0.1; 64], 3, 16_000),
+            [0.0; BAND_COUNT]
+        );
+        assert_eq!(spectral_fingerprint(&[0.1; 64], 2, 0), [0.0; BAND_COUNT]);
+    }
+
+    #[test]
+    fn a_short_buffer_matches_the_visualizer_window() {
+        let samples = sine_stereo(440.0, 16_000, 2_048);
+        assert_eq!(
+            spectral_fingerprint(&samples, 2, 16_000),
+            normalize_bands(&band_energies(&samples, 2, 16_000))
+        );
+        let shorter = sine_stereo(440.0, 16_000, 512);
+        assert_eq!(
+            spectral_fingerprint(&shorter, 2, 16_000),
+            normalize_bands(&band_energies(&shorter, 2, 16_000))
+        );
+    }
+
+    #[test]
+    fn distinct_tones_do_not_share_a_fingerprint() {
+        let bass = spectral_fingerprint(&sine_stereo(150.0, 16_000, 2_048), 2, 16_000);
+        let mid = spectral_fingerprint(&sine_stereo(1_000.0, 16_000, 2_048), 2, 16_000);
+        assert_ne!(
+            peak_band(&bass),
+            peak_band(&mid),
+            "bass {bass:?} mid {mid:?}"
+        );
+        assert_eq!(bass[BAND_COUNT - 1], 0.0, "air is above Nyquist at 16 kHz");
+        assert_eq!(mid[BAND_COUNT - 1], 0.0, "air is above Nyquist at 16 kHz");
+        assert!(
+            bass.iter()
+                .all(|band| band.is_finite() && (0.0..=1.0).contains(band)),
+            "{bass:?}"
+        );
+        let quiet: Vec<f32> = sine_stereo(1_000.0, 16_000, 2_048)
+            .into_iter()
+            .map(|sample| sample * 0.25)
+            .collect();
+        let gained = spectral_fingerprint(&quiet, 2, 16_000);
+        for (index, (left, right)) in mid.iter().zip(gained).enumerate() {
+            assert!(
+                (left - right).abs() < 1e-5,
+                "band {index} moved under gain: {left} vs {right}"
+            );
+        }
+        assert_eq!(
+            spectral_fingerprint(&sine_stereo(1_000.0, 16_000, 2_048), 2, 16_000),
+            mid
+        );
+    }
+
+    #[test]
+    fn a_long_buffer_keeps_timbre_from_before_the_tail() {
+        let mut samples = sine_stereo(150.0, 16_000, 2_048);
+        samples.extend(sine_stereo(1_000.0, 16_000, 2_048));
+        let tail = arrangement_spectrum(&samples, 16_000);
+        let whole = spectral_fingerprint(&samples, 2, 16_000);
+        assert_ne!(
+            tail, whole,
+            "the tail window must not stand in for the whole bed"
+        );
+        let (bass, mid, _) = bass_mid_treble(&tail);
+        assert!(mid > bass, "the tail is the later tone: {tail:?}");
+        assert!(
+            whole[1] > 0.2,
+            "the earlier bass tone must survive in the fingerprint: {whole:?}"
+        );
+        assert_eq!(whole[BAND_COUNT - 1], 0.0);
     }
 }

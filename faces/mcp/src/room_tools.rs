@@ -220,6 +220,8 @@ fn ambient_bed_value(motif: numinous_core::Motif, include_events: bool) -> Resul
             })
             .collect::<Vec<_>>();
         let metrics = numinous_core::stereo_signal_metrics(&samples);
+        let fingerprint =
+            numinous_core::spectral_fingerprint(&samples, 2, numinous_core::ROOM_BED_SOURCE_RATE);
         value["events"] = json!(events);
         value["signal_metrics"] = json!({
             "scope": "pre_master_room_bed",
@@ -241,6 +243,7 @@ fn ambient_bed_value(motif: numinous_core::Motif, include_events: bool) -> Resul
             "side_to_mid_db": metrics.side_to_mid_db,
             "max_step": metrics.max_step,
             "zero_sample_fraction": metrics.zero_sample_fraction,
+            "spectral_bands": fingerprint,
         });
     }
 

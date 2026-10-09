@@ -17,8 +17,11 @@
 # ~\.numinous-scores, ~\.numinous-cairn, ~\.numinous-journal, and
 # ~\.numinous-preferences stay yours.
 #
-# Options: -Uninstall, -NoModifyPath, -AdoptLegacy, -Source, -SelfTest.
-# Set NUMINOUS_HOME to install somewhere other than ~\.numinous.
+# Options: -Uninstall, -NoModifyPath, -AdoptLegacy, -Source, -SelfTest,
+# -ProtectDirectory. Set NUMINOUS_HOME to install somewhere other than
+# ~\.numinous. -ProtectDirectory applies this script's private-directory
+# policy to one existing directory and exits. It is how a test workspace
+# meets the ancestor check without weakening that check.
 [CmdletBinding()]
 param(
     [switch]$Uninstall,
@@ -26,6 +29,7 @@ param(
     [switch]$AdoptLegacy,
     [switch]$Source,
     [switch]$SelfTest,
+    [string]$ProtectDirectory = '',
     [string]$ReleaseArchive = '',
     [string]$ReleaseChecksum = '',
     [string]$SoundtrackArchive = '',
@@ -121,6 +125,97 @@ function Assert-PrivateInstallAncestors([string]$Path) {
         if ([string]::IsNullOrEmpty($parent) -or $parent -eq $current) { break }
         $current = $parent
     }
+}
+
+function Set-DirectoryAccessControl(
+    [string]$Path,
+    [Security.AccessControl.DirectorySecurity]$Acl
+) {
+    # Persist only the sections changed on this descriptor. Set-Acl can also
+    # request audit-policy access, which an ordinary account does not possess.
+    if ($PSVersionTable.PSEdition -eq 'Core') {
+        [IO.FileSystemAclExtensions]::SetAccessControl((Get-Item -LiteralPath $Path), $Acl)
+    } else {
+        [IO.Directory]::SetAccessControl($Path, $Acl)
+    }
+}
+
+function Protect-InstallDirectory([string]$Path) {
+    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent().User
+    $system = New-Object Security.Principal.SecurityIdentifier('S-1-5-18')
+    $existing = Get-Acl -LiteralPath $Path
+    if ($existing.AreAccessRulesProtected -and
+        $existing.GetOwner([Security.Principal.SecurityIdentifier]).Value -eq
+            $currentUser.Value) {
+        $explicitRules = @($existing.GetAccessRules(
+            $true,
+            $false,
+            [Security.Principal.SecurityIdentifier]))
+        $expectedIdentities = @($currentUser.Value, $system.Value)
+        $safeRules = @($explicitRules | Where-Object {
+            $_.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and
+            ($_.FileSystemRights -band [Security.AccessControl.FileSystemRights]::FullControl) -eq
+                [Security.AccessControl.FileSystemRights]::FullControl -and
+            $_.IdentityReference.Value -in $expectedIdentities
+        })
+        if ($explicitRules.Count -eq 2 -and $safeRules.Count -eq 2 -and
+            @($safeRules.IdentityReference.Value | Sort-Object -Unique).Count -eq 2) {
+            return
+        }
+    }
+    $acl = New-Object Security.AccessControl.DirectorySecurity
+    $acl.SetAccessRuleProtection($true, $false)
+    $inheritance = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor `
+        [Security.AccessControl.InheritanceFlags]::ObjectInherit
+    $propagation = [Security.AccessControl.PropagationFlags]::None
+    $allow = [Security.AccessControl.AccessControlType]::Allow
+    foreach ($identity in @($currentUser, $system)) {
+        $rule = New-Object Security.AccessControl.FileSystemAccessRule(
+            $identity,
+            [Security.AccessControl.FileSystemRights]::FullControl,
+            $inheritance,
+            $propagation,
+            $allow)
+        [void]$acl.AddAccessRule($rule)
+    }
+    $acl.SetOwner($currentUser)
+    Set-DirectoryAccessControl $Path $acl
+}
+
+if (-not [string]::IsNullOrWhiteSpace($ProtectDirectory)) {
+    $conflicting = @()
+    if ($Uninstall) { $conflicting += '-Uninstall' }
+    if ($NoModifyPath) { $conflicting += '-NoModifyPath' }
+    if ($AdoptLegacy) { $conflicting += '-AdoptLegacy' }
+    if ($Source) { $conflicting += '-Source' }
+    if ($SelfTest) { $conflicting += '-SelfTest' }
+    if ($ReleaseArchive) { $conflicting += '-ReleaseArchive' }
+    if ($ReleaseChecksum) { $conflicting += '-ReleaseChecksum' }
+    if ($SoundtrackArchive) { $conflicting += '-SoundtrackArchive' }
+    if ($SoundtrackChecksum) { $conflicting += '-SoundtrackChecksum' }
+    if ($SoundtrackContentChecksum) { $conflicting += '-SoundtrackContentChecksum' }
+    if ($ReleaseTag) { $conflicting += '-ReleaseTag' }
+    if ($WaitForProcessId -ne 0) { $conflicting += '-WaitForProcessId' }
+    if ($DeleteInstaller) { $conflicting += '-DeleteInstaller' }
+    try {
+        if ($conflicting.Count -gt 0) {
+            Fail ("-ProtectDirectory prepares one ordinary directory and takes no other " +
+                "installer action: " + ($conflicting -join ', '))
+        }
+        $protectFull = [IO.Path]::GetFullPath($ProtectDirectory)
+        $protectItem = Get-Item -LiteralPath $protectFull -Force -ErrorAction Stop
+        if (-not $protectItem.PSIsContainer -or
+            ($protectItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            Fail '-ProtectDirectory requires an ordinary directory that already exists.'
+        }
+        Protect-InstallDirectory $protectItem.FullName
+    } catch {
+        Write-Host "numinous install: $($_.Exception.Message)" -ForegroundColor Red
+        if ($PSCommandPath) { exit 1 }
+        throw
+    }
+    if ($PSCommandPath) { exit 0 }
+    return
 }
 
 function Resolve-InstallRoot([string]$Path, [string]$HomePath) {
@@ -476,61 +571,6 @@ function Remove-DirectoryOrJunction([string]$Path) {
 
 function Test-DirectoryEmpty([string]$Path) {
     return @(Get-ChildItem -LiteralPath $Path -Force).Count -eq 0
-}
-
-function Set-DirectoryAccessControl(
-    [string]$Path,
-    [Security.AccessControl.DirectorySecurity]$Acl
-) {
-    # Persist only the sections changed on this descriptor. Set-Acl can also
-    # request audit-policy access, which an ordinary account does not possess.
-    if ($PSVersionTable.PSEdition -eq 'Core') {
-        [IO.FileSystemAclExtensions]::SetAccessControl((Get-Item -LiteralPath $Path), $Acl)
-    } else {
-        [IO.Directory]::SetAccessControl($Path, $Acl)
-    }
-}
-
-function Protect-InstallDirectory([string]$Path) {
-    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent().User
-    $system = New-Object Security.Principal.SecurityIdentifier('S-1-5-18')
-    $existing = Get-Acl -LiteralPath $Path
-    if ($existing.AreAccessRulesProtected -and
-        $existing.GetOwner([Security.Principal.SecurityIdentifier]).Value -eq
-            $currentUser.Value) {
-        $explicitRules = @($existing.GetAccessRules(
-            $true,
-            $false,
-            [Security.Principal.SecurityIdentifier]))
-        $expectedIdentities = @($currentUser.Value, $system.Value)
-        $safeRules = @($explicitRules | Where-Object {
-            $_.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and
-            ($_.FileSystemRights -band [Security.AccessControl.FileSystemRights]::FullControl) -eq
-                [Security.AccessControl.FileSystemRights]::FullControl -and
-            $_.IdentityReference.Value -in $expectedIdentities
-        })
-        if ($explicitRules.Count -eq 2 -and $safeRules.Count -eq 2 -and
-            @($safeRules.IdentityReference.Value | Sort-Object -Unique).Count -eq 2) {
-            return
-        }
-    }
-    $acl = New-Object Security.AccessControl.DirectorySecurity
-    $acl.SetAccessRuleProtection($true, $false)
-    $inheritance = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor `
-        [Security.AccessControl.InheritanceFlags]::ObjectInherit
-    $propagation = [Security.AccessControl.PropagationFlags]::None
-    $allow = [Security.AccessControl.AccessControlType]::Allow
-    foreach ($identity in @($currentUser, $system)) {
-        $rule = New-Object Security.AccessControl.FileSystemAccessRule(
-            $identity,
-            [Security.AccessControl.FileSystemRights]::FullControl,
-            $inheritance,
-            $propagation,
-            $allow)
-        [void]$acl.AddAccessRule($rule)
-    }
-    $acl.SetOwner($currentUser)
-    Set-DirectoryAccessControl $Path $acl
 }
 
 function New-RustupStage([string]$Parent) {
@@ -1279,7 +1319,39 @@ function Test-ReleaseProvenance {
     Say 'Windows installer provenance policy: pass.'
 }
 
+function Test-ProtectedWorkspaceMeetsTheAncestorCheck {
+    # A new directory under a profile can inherit replacement rights that the
+    # profile itself exposes only as inherit-only rules. The ancestor check
+    # ignores inherit-only rules and refuses the child. Protecting that child
+    # with this script's own policy must make the same check accept it.
+    $workspace = Join-Path $HOME ('.numinous-protect-test-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $workspace | Out-Null
+    try {
+        $install = Join-Path $workspace 'install'
+        $everyone = New-Object Security.Principal.SecurityIdentifier('S-1-1-0')
+        $acl = Get-Acl -LiteralPath $workspace
+        $rule = New-Object Security.AccessControl.FileSystemAccessRule(
+            $everyone,
+            [Security.AccessControl.FileSystemRights]::Delete,
+            [Security.AccessControl.AccessControlType]::Allow)
+        $acl.AddAccessRule($rule)
+        Set-DirectoryAccessControl $workspace $acl
+        $rejected = $false
+        try { [void](Resolve-InstallRoot $install $HOME) } catch {
+            $rejected = $_.Exception.Message -like '*replacement by another account*'
+        }
+        if (-not $rejected) {
+            Fail 'protect self-test: an explicit replacement grant was accepted.'
+        }
+        Protect-InstallDirectory $workspace
+        [void](Resolve-InstallRoot $install $HOME)
+    } finally {
+        Remove-DirectoryOrJunction $workspace
+    }
+}
+
 function Test-InstallerSafety {
+    Test-ProtectedWorkspaceMeetsTheAncestorCheck
     Test-ReleaseProvenance
     if (-not (Have 'tar')) { Fail 'installer safety self-test requires tar.exe.' }
     $releaseFixture = @(
