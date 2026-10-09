@@ -18,7 +18,7 @@ serde_json = { workspace = true }
 sha2 = { workspace = true }
 
 [dev-dependencies]
-numinous-app = { version = "0.5.0-alpha.5", path = "../app" }
+numinous-app = { version = "0.5.0-alpha.6", path = "../app" }
 
 [lints]
 workspace = true

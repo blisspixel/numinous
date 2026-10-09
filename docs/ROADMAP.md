@@ -13,9 +13,9 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 ## Now
 
-Reviewed 2026-10-08.
+Reviewed 2026-10-09.
 
-**Current release state: 0.5.0-alpha.5, Sensory Alpha active with its exit
+**Current release state: 0.5.0-alpha.6, Sensory Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are met and stay CI-locked. The package minor names
 the active milestone, not the oldest open gate. Understanding Alpha's external
@@ -399,6 +399,14 @@ above without adding release gates or reordering **Next, in order**.
 
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
+
+- **`v0.5.0-alpha.6` (2026-10-09):** the Windows install roundtrip protects its
+  workspace with the installer's own private-directory policy before the
+  ancestor check. Flagship plates gate a fixed-grid luminance signature beside
+  the exact PNG hash, and room beds gate a normalized spectral fingerprint.
+  Physical receipts, flash and color-vision rulings, catalog-wide perceptual
+  comparison, and further glow remain open.
+  See [release notes](releases/v0.5.0-alpha.6.md).
 
 - **`v0.5.0-alpha.5` (2026-10-08):** persisted Interface Text at 100, 125, and
   150 percent for Cabinet menus, room HUD lettering, and the pause, banner,

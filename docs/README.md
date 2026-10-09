@@ -5,7 +5,7 @@ The map of the docs. Use the reading paths to find your way in, and the
 doc that owns it, and every other doc links to that home rather than restating
 it. If you find yourself duplicating a concept, stop and link instead.
 
-**Status:** 0.5.0-alpha.5. The 0.1 Public Foundation, 0.2 Flagship Proof, and
+**Status:** 0.5.0-alpha.6. The 0.1 Public Foundation, 0.2 Flagship Proof, and
 0.3 Tactile Alpha agent-and-machine exits are met. Sensory Alpha is the
 active line, with its machine qualification still open. Understanding Alpha's
 qualifying study remains open independently. Human playtests are optional. The headless core, CLI, MCP

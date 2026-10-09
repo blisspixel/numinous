@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+## [0.5.0-alpha.6] - 2026-10-09
+
 ### Fixed
 - The Windows install, play, and uninstall roundtrip protects its workspace
   with the installer's own private-directory policy before the ancestor check
