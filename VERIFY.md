@@ -28,6 +28,10 @@ preserve existing bytes, and keep settings inspection independent of damaged
 progress files. Installer self-tests retain the unmarked-root refusal and
 check that it names a fresh archive or separate empty installation directory.
 
+Private state writes request owner-only Unix file permissions. Existing append
+files are tightened before writing; read-only inspection leaves permissions
+unchanged. Windows files continue to inherit their containing directory's ACL.
+
 - **Rust** (edition 2024; pinned to 1.97.1 in `rust-toolchain.toml`, with a
   1.89 MSRV checked separately in CI). Install from
   <https://rustup.rs>. On Windows, cargo lands in `%USERPROFILE%\.cargo\bin`; if a

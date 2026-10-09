@@ -164,6 +164,8 @@ Readings are available for recognized forms, not arbitrary expressions:
 - **Closure:** `structuredContent.closure` reports the period or aperiodicity
   of a supported oscillator pair, including the half-period trap where position
   returns but velocity reverses. Overlaid voices report cycles in the window.
+  Exact analysis has a fixed work budget; a valid creation can still play when
+  its exact reading is unsupported.
 - **Tones:** recognized paired frequencies become sustained tones in the App.
   Frequency 1 maps to 110 Hz; other frequencies scale from it. `sqrt(2)` is
   not replaced by a nearby ratio. The sung melody remains the sampled curve.
@@ -225,8 +227,9 @@ See [accessibility](https://github.com/blisspixel/numinous/blob/main/docs/PLAYIN
 ## Keep, share, or leave
 
 Keep an experiment when you want to return to it. Studio creations and Route
-Lab questions can be saved and shared. MCP `project` keeps a chosen question
-and next call; resume previews that call without running it. The experience
+Lab questions can be saved and shared. Gallery refuses oversized folders;
+open a smaller folder or open a creation directly. MCP `project` keeps a chosen
+question and next call; resume previews that call without running it. The experience
 journal is opt-in through `record_journal`; play does not write journal text.
 `workspace` is optional process-local state and ends with its server process.
 
