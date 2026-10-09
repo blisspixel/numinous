@@ -4582,6 +4582,9 @@ fn note_names_are_correct() {
     assert_eq!(super::note_name(880.0), "A5");
     assert_eq!(super::note_name(261.63), "C4");
     assert_eq!(super::note_name(0.0), "-");
+    assert_eq!(super::note_name(f32::NAN), "-");
+    assert_eq!(super::note_name(f32::INFINITY), "-");
+    assert_eq!(super::note_name(f32::NEG_INFINITY), "-");
 }
 
 #[test]
