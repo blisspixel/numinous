@@ -1,6 +1,8 @@
 {
-  "schemaVersion": "numinous-flagship-goldens-v2",
+  "schemaVersion": "numinous-flagship-goldens-v3",
   "evidenceClass": "agent-machine-regression",
+  "appearanceMaxDelta": 2,
+  "spectrumAbsoluteTolerance": 0.001,
   "width": 64,
   "height": 40,
   "layer": "room-bed",
@@ -20,10 +22,20 @@
       "png_bytes": 1376,
       "png_mean_byte": 118.180959,
       "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4",
+      "appearance": "4018212d3c281816110b3e3838440f0b0b12574f5751220b0b0b6e919e660e0b0b0b1b4f571e0b0b",
       "wav_sha256": "8fb8a867214c4dcca8e0a6c2c677ba9ed37390fb7c724880bba1152688ec9856",
       "wav_bytes": 2560044,
       "audio_peak": 0.13019,
-      "audio_rms": 0.0257
+      "audio_rms": 0.0257,
+      "spectrum": [
+        0.1009,
+        1.0,
+        5e-05,
+        1e-05,
+        1e-05,
+        0.0,
+        0.0
+      ]
     },
     {
       "id": "double-pendulum",
@@ -34,10 +46,20 @@
       "png_bytes": 291,
       "png_mean_byte": 109.360825,
       "render_status_line": "Status: TWINS 0.000",
+      "appearance": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b1f3c16220b0b0b0b0e31320b0b0b0b0b0b0b0b0b0b0b",
       "wav_sha256": "b00bf9afd894cc667d24798f6ab5bdb2bceed71a2af1cd2b45c716d27db5e6ec",
       "wav_bytes": 2792768,
       "audio_peak": 0.12964,
-      "audio_rms": 0.03368
+      "audio_rms": 0.03368,
+      "spectrum": [
+        1.0,
+        0.67672,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     {
       "id": "game-of-life",
@@ -48,10 +70,20 @@
       "png_bytes": 864,
       "png_mean_byte": 124.858796,
       "render_status_line": "Status: GEN 0  LIVE 1874",
+      "appearance": "2d342621282d2f212f21432634372637212d2a341e1e26211c323e1c3232232a2a28322823262a26",
       "wav_sha256": "fd3abee3f5789b20985b3b5b69a0cb8bb3038b7642083529b25c8379da53491b",
       "wav_bytes": 2194328,
       "audio_peak": 0.11471,
-      "audio_rms": 0.02295
+      "audio_rms": 0.02295,
+      "spectrum": [
+        1.0,
+        0.0203,
+        0.00505,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     {
       "id": "galton-board",
@@ -62,10 +94,20 @@
       "png_bytes": 456,
       "png_mean_byte": 112.02193,
       "render_status_line": "Status: PICK COIN",
+      "appearance": "0b12130e1513120b0b0b0f14180f0b0b0c1217151817120c0c1211101011120c0b0b0b0b0b0b0b0b",
       "wav_sha256": "40b782bfd30fb6e020ee8757b3dc686290ddeade45c3e357a00f5a0af373186d",
       "wav_bytes": 2048044,
       "audio_peak": 0.12504,
-      "audio_rms": 0.02313
+      "audio_rms": 0.02313,
+      "spectrum": [
+        1.0,
+        0.23571,
+        0.00203,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     {
       "id": "buffon-needle",
@@ -76,10 +118,20 @@
       "png_bytes": 1407,
       "png_mean_byte": 123.943141,
       "render_status_line": "Status: L/D 1.00  CROSS CHANCE 0.637",
+      "appearance": "8a625a5e4f834f5c47384a3347544f48283d57355d793b5b294a6d603247726f615f57554e54644c",
       "wav_sha256": "311d98ac5b8e803d048a42c35ef4ce70f6d48c92d5ef0ed966e453f06ddebd63",
       "wav_bytes": 3233728,
       "audio_peak": 0.13325,
-      "audio_rms": 0.02387
+      "audio_rms": 0.02387,
+      "spectrum": [
+        3e-05,
+        0.00293,
+        1.0,
+        0.00053,
+        0.0,
+        0.0,
+        0.0
+      ]
     },
     {
       "id": "times-tables",
@@ -89,7 +141,8 @@
       "png_sha256": "f7dc4251a0dcd22460bbc8c408e7518ed8ba70fa34514906f77d1d8cc684a1e6",
       "png_bytes": 2896,
       "png_mean_byte": 124.681285,
-      "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4"
+      "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4",
+      "appearance": "29101620291b100f0b072c25252d0907070b44363e3e1b0707074d6a714e0a07070713393f160707"
     },
     {
       "id": "times-tables",
@@ -99,7 +152,8 @@
       "png_sha256": "ed569a24cab66496d58d1e7b3e8c60151c6c127875fce4db8d45f0a8ca004e08",
       "png_bytes": 742,
       "png_mean_byte": 120.161725,
-      "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4"
+      "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4",
+      "appearance": "3b0d182938200d0d08003a2b2b3b0500000b54444f501c00000071989a6405000000134c50170000"
     },
     {
       "id": "times-tables",
@@ -109,7 +163,8 @@
       "png_sha256": "63641d3453850a766385ff9105a5dd9d13519c608c71b7bfa619b6b99cc674e3",
       "png_bytes": 2386,
       "png_mean_byte": 124.895641,
-      "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4"
+      "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4",
+      "appearance": "3e131f374b2b131308004d3d3e50050000096b5c69622200000088abbf8a04000000175a681c0000"
     }
   ]
 }

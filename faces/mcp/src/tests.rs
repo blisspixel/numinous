@@ -4214,6 +4214,29 @@ fn listen_room_projects_every_bed_event_without_binary_transport() {
                 .as_str()
                 .is_some_and(|text| text.contains("not a pleasantness score"))
         );
+        let spectral = bed["signal_metrics"]["spectral_bands"]
+            .as_array()
+            .expect("whole-bed spectral fingerprint");
+        assert_eq!(
+            spectral.len(),
+            numinous_core::BAND_COUNT,
+            "{}",
+            room.meta().id
+        );
+        assert!(
+            spectral.iter().all(|band| {
+                band.as_f64()
+                    .is_some_and(|value| value.is_finite() && (0.0..=1.0).contains(&value))
+            }),
+            "{} fingerprint was not a normalized band vector: {spectral:?}",
+            room.meta().id
+        );
+        assert_eq!(
+            spectral.last().and_then(serde_json::Value::as_f64),
+            Some(0.0),
+            "{} air band is above the room-bed Nyquist frequency",
+            room.meta().id
+        );
         assert_no_binary_transport_fields(structured);
         assert!(
             serde_json::to_vec(structured)

@@ -474,9 +474,13 @@ Six loops define the intended refinement engine. Their status is explicit below.
 
 ### 1. Commit loop (partially enforced)
 
-The current workflow enforces the checks in the evidence snapshot. The richer
-property, GPU-golden, perceptual image, and spectral audio systems below are
-targets until their harnesses and fixtures exist in the repository.
+The current workflow enforces the checks in the evidence snapshot. Flagship
+plates now also compare a fixed-grid luminance signature, and room beds now
+also compare a normalized spectral fingerprint from the existing analyzer.
+Both tolerances are written in `scripts/flagship-goldens.py`, beside the exact
+PNG hash. Catalog-wide SSIM, a perceptual hash of every composed screen, GPU
+goldens, and the designed classifier below remain targets until those
+harnesses exist.
 - **Unit tests** on every math kernel.
 - **Property-based tests** (`proptest`-style): invariants across random inputs. Chaos Game points stay in the hull; Game of Life obeys its four rules exactly; a "closed" curve actually closes; bounded energy stays bounded; no NaN or infinity ever escapes a kernel.
 - **Golden-reference tests**: GPU compute output vs. the independent CPU/analytic reference, within tolerance (the oracle, above).

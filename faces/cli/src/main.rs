@@ -3908,6 +3908,7 @@ fn render_png(
         raster.width(),
         raster.height()
     );
+    report.push_str(&format!("Appearance: {}\n", raster.appearance_signature()));
     report.push_str(&render_guidance(room.as_ref(), t, input));
     Ok(report)
 }
@@ -4298,9 +4299,19 @@ fn sonify_wav_layer(
             }
             let samples = arrangement.render_stereo(numinous_core::ROOM_BED_SOURCE_RATE);
             let metrics = numinous_core::stereo_signal_metrics(&samples);
+            let fingerprint = numinous_core::spectral_fingerprint(
+                &samples,
+                2,
+                numinous_core::ROOM_BED_SOURCE_RATE,
+            );
+            let spectrum = fingerprint
+                .iter()
+                .map(|band| format!("{band:.5}"))
+                .collect::<Vec<_>>()
+                .join(" ");
             write_wav(path, &samples, numinous_core::ROOM_BED_SOURCE_RATE, 2)?;
             Ok(format!(
-                "wrote {} (room bed, {:.2}s, {} events, stereo {} Hz, variation {})\nSignal: peak {:.5}, RMS {:.5}, crest {:.2} dB, balance {:+.2} dB, width {:.2} dB, max step {:.5}\nBoundary: stable pre-master bed only; no reverb, parameter voice, device resampling, crossfade, radio, or Studio mix.\n",
+                "wrote {} (room bed, {:.2}s, {} events, stereo {} Hz, variation {})\nSignal: peak {:.5}, RMS {:.5}, crest {:.2} dB, balance {:+.2} dB, width {:.2} dB, max step {:.5}, spectrum {spectrum}\nBoundary: stable pre-master bed only; no reverb, parameter voice, device resampling, crossfade, radio, or Studio mix.\n",
                 terminal_safe_path(path),
                 arrangement.seconds(),
                 arrangement.notes.len(),

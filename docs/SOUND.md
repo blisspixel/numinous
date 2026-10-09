@@ -106,7 +106,11 @@ artifacts. The shared analyzer measures
 finite integrity, clipping, peak, RMS, crest, channel balance, DC, correlation,
 stereo side-to-mid ratio, adjacent steps, and silence fraction in fixed order.
 Those metrics describe the pre-master source only and do not measure comfort,
-fatigue, beauty, or musical quality. The ambient-bed projection returns no PCM
+fatigue, beauty, or musical quality. The room-bed signal line also prints a
+fingerprint of the same bands, averaged across the whole bed and then
+normalized, so a timbre change outside the visualizer's last window is visible
+to the golden gate. The air band stays at zero when its center is above the
+bed's Nyquist frequency. The ambient-bed projection returns no PCM
 or local paths.
 The Show supplies the same moving phase to picture and voice on every frame and
 ignores retained hand input. Entering any modal game fades the parameter voice

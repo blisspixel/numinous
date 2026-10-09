@@ -301,8 +301,8 @@ pub use sound::{Note, ParametricSound, SoundSpec, wav_bytes};
 pub use spectrum::{
     BAND_COUNT, BAND_NAMES, ONSET_HIT, SpectrumBarLayout, SpectrumLevers, arrangement_spectrum,
     band_energies, bass_mid_treble, draw_spectrum_bars, levers_from_bands, low_band_onset,
-    normalize_bands, spectrum_hand_point, spectrum_phase_nudge, spectrum_should_poke,
-    spectrum_time_scale,
+    normalize_bands, spectral_fingerprint, spectrum_hand_point, spectrum_phase_nudge,
+    spectrum_should_poke, spectrum_time_scale,
 };
 pub use spring::Spring;
 pub use studio::{

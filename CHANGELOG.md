@@ -5,6 +5,20 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Fixed
+- The Windows install, play, and uninstall roundtrip protects its workspace
+  with the installer's own private-directory policy before the ancestor check
+  runs. A directory created under the profile can inherit replacement rights
+  that the profile itself exposes only as inherit-only rules. The check is
+  unchanged and still refuses a path another account can replace.
+
+### Added
+- Flagship PNG reports now include a fixed-grid luminance signature, and
+  room-bed reports now include a normalized spectral fingerprint from the
+  existing analyzer. The golden gate compares both with written tolerances and
+  still requires an exact PNG hash. The designed diff classifier is not part
+  of this gate.
+
 ## [0.5.0-alpha.5] - 2026-10-08
 
 ### Added

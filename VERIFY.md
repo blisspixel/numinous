@@ -125,7 +125,7 @@ python scripts/agent-tactile.py                     # Windows (live MCP five-fla
 python3 scripts/agent-tactile.py                    # macOS / Linux
 python scripts/agent-first-contact.py               # Windows (cold multi-wing MCP)
 python3 scripts/agent-first-contact.py              # macOS / Linux
-python scripts/flagship-goldens.py                  # Windows (visual + room-bed hashes)
+python scripts/flagship-goldens.py                  # Windows (exact PNG hash, block signature, room-bed peak, RMS, and spectrum)
 python3 scripts/flagship-goldens.py                 # macOS / Linux
 python scripts/test-understanding-study.py          # Windows
 python3 scripts/test-understanding-study.py         # macOS / Linux
@@ -529,8 +529,11 @@ phase, poke, and gesture inputs as room rendering. `--layer room-bed` exports
 the deterministic PCM16 projection of the stable 16 kHz stereo floating-point
 source that the App later resamples and mixes. It accepts `--variation`, but rejects phase and hand controls because
 they cannot affect that layer. The report includes objective pre-master signal
-features and names the excluded device resampling, crossfade, parameter voice,
-radio, and Studio stages. Exact quantization parity is enforced by an
+features, including a normalized spectral fingerprint of the whole bed, and
+names the excluded device resampling, crossfade, parameter voice,
+radio, and Studio stages. A PNG render report also includes a fixed-grid
+luminance signature. Both are engineering gates. They are not a judgment of
+the picture or the music. Exact quantization parity is enforced by an
 independent RIFF parser in the CLI tests. These measurements detect engineering regressions;
 they do not establish comfort or musical quality.
 

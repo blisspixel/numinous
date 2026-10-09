@@ -9,11 +9,15 @@ roundtrip itself is exercised by `uninstall-roundtrip.py` in the release gate.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import platform
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from typing import cast
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -209,6 +213,161 @@ class LauncherArtifactTests(unittest.TestCase):
             link = Path(raw) / "Numinous"
             link.symlink_to(Path(raw) / "missing")
             self.assertTrue(MODULE.path_or_link_exists(link))
+
+
+class PrivateWorkspaceTests(unittest.TestCase):
+    def test_other_platforms_do_not_invoke_the_installer(self) -> None:
+        with (
+            mock.patch.object(MODULE.platform, "system", return_value="Linux"),
+            mock.patch.object(MODULE, "run") as runner,
+        ):
+            MODULE.protect_private_workspace(Path("workspace"))
+        runner.assert_not_called()
+
+    @unittest.skipUnless(platform.system() == "Windows", "the ACL walk is Windows-only")
+    def test_protect_removes_a_replacement_grant(self) -> None:
+        # The same place the roundtrip uses: a new directory under the profile,
+        # not a shared temp folder. The grant is the right the ancestor check
+        # refuses. Afterwards the directory must be one the check can accept.
+        workspace = Path(tempfile.mkdtemp(
+            prefix=".numinous-protect-test-", dir=Path.home()
+        ))
+        try:
+            self._grant_everyone_delete(workspace)
+            before = self._replacement_report(workspace)
+            self.assertTrue(before["bad"], f"the planted grant did not stick: {before}")
+            MODULE.protect_private_workspace(workspace)
+            after = self._replacement_report(workspace)
+        finally:
+            shutil.rmtree(workspace, ignore_errors=True)
+        self.assertTrue(after["protected"], after)
+        self.assertEqual(after["owner"], after["current"], after)
+        self.assertEqual(after["bad"], [], after)
+
+    @unittest.skipUnless(platform.system() == "Windows", "the ACL walk is Windows-only")
+    def test_protect_refuses_to_become_an_install(self) -> None:
+        completed = subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(ROOT / "scripts" / "install.ps1"),
+                "-ProtectDirectory",
+                str(Path.home()),
+                "-Uninstall",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=MODULE.native_tool_env(dict(os.environ)),
+        )
+        self.assertNotEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+        self.assertIn("takes no other", completed.stdout + completed.stderr)
+
+    def _powershell(self, script: str, path: Path) -> dict[str, object]:
+        completed = subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                script,
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=MODULE.native_tool_env({**os.environ, "NUMINOUS_PROTECT_PATH": str(path)}),
+        )
+        if completed.returncode != 0:
+            self.fail(completed.stdout + completed.stderr)
+        parsed = json.loads(completed.stdout)
+        if not isinstance(parsed, dict):
+            self.fail(f"expected an access report object, got {parsed!r}")
+        return cast(dict[str, object], parsed)
+
+    def _grant_everyone_delete(self, path: Path) -> None:
+        completed = subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                r"""
+                $ErrorActionPreference = 'Stop'
+                $path = $env:NUMINOUS_PROTECT_PATH
+                $everyone = New-Object Security.Principal.SecurityIdentifier('S-1-1-0')
+                $acl = Get-Acl -LiteralPath $path
+                $rule = New-Object Security.AccessControl.FileSystemAccessRule(
+                    $everyone,
+                    [Security.AccessControl.FileSystemRights]::Delete,
+                    [Security.AccessControl.AccessControlType]::Allow)
+                $acl.AddAccessRule($rule)
+                if ($PSVersionTable.PSEdition -eq 'Core') {
+                    [IO.FileSystemAclExtensions]::SetAccessControl((Get-Item -LiteralPath $path), $acl)
+                } else {
+                    [IO.Directory]::SetAccessControl($path, $acl)
+                }
+                """,
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=MODULE.native_tool_env({**os.environ, "NUMINOUS_PROTECT_PATH": str(path)}),
+        )
+        if completed.returncode != 0:
+            self.fail(completed.stdout + completed.stderr)
+
+    def _replacement_report(self, path: Path) -> dict[str, object]:
+        # The same trusted identities and replacement rights as
+        # Assert-PrivateInstallAncestors. This probe does not decide the
+        # install; it shows the grant the installer itself refuses.
+        return self._powershell(
+            r"""
+            $ErrorActionPreference = 'Stop'
+            $path = $env:NUMINOUS_PROTECT_PATH
+            $acl = Get-Acl -LiteralPath $path
+            $trusted = @(
+                [Security.Principal.WindowsIdentity]::GetCurrent().User.Value,
+                'S-1-5-18',
+                'S-1-5-32-544',
+                'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
+            )
+            $replacement = [int](
+                [Security.AccessControl.FileSystemRights]::Delete -bor
+                [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles -bor
+                [Security.AccessControl.FileSystemRights]::ChangePermissions -bor
+                [Security.AccessControl.FileSystemRights]::TakeOwnership -bor
+                0x10000000
+            )
+            $inheritOnly = [int][Security.AccessControl.PropagationFlags]::InheritOnly
+            $bad = New-Object System.Collections.Generic.List[string]
+            foreach ($rule in $acl.GetAccessRules(
+                $true, $true, [Security.Principal.SecurityIdentifier])) {
+                $rights = [int]$rule.FileSystemRights
+                $propagation = [int]$rule.PropagationFlags
+                if ($rule.AccessControlType -eq 'Allow' -and
+                    (($propagation -band $inheritOnly) -eq 0) -and
+                    ($rule.IdentityReference.Value -notin $trusted) -and
+                    (($rights -band $replacement) -ne 0)) {
+                    $bad.Add($rule.IdentityReference.Value)
+                }
+            }
+            @{
+                protected = [bool]$acl.AreAccessRulesProtected
+                owner = $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
+                current = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+                bad = @($bad)
+            } | ConvertTo-Json -Compress
+            """,
+            path,
+        )
 
 
 if __name__ == "__main__":

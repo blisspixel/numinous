@@ -580,7 +580,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "listen_room",
-                "description": "Hear a room: its input-aware mathematical sound at phase t as readable notes, plus a bounded summary of the stable stereo App room bed. Set ambient_detail to events to inspect every arranged bed event and objective signal metric. Pass audio true to also receive the room's sonification as a mono 16-bit WAV when it fits the encoded attachment budget; an oversized WAV retains notes and reports audioOmission. The stereo room bed stays a projection: no local path is ever returned. Pass receipt true for a replay proof in structuredContent.encounter; asking does not keep the listen.",
+                "description": "Hear a room: its input-aware mathematical sound at phase t as readable notes, plus a bounded summary of the stable stereo App room bed. Set ambient_detail to events to inspect every arranged bed event, objective signal metrics, and a normalized spectral fingerprint. Pass audio true to also receive the room's sonification as a mono 16-bit WAV when it fits the encoded attachment budget; an oversized WAV retains notes and reports audioOmission. The stereo room bed stays a projection: no local path is ever returned. Pass receipt true for a replay proof in structuredContent.encounter; asking does not keep the listen.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {

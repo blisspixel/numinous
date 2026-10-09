@@ -362,7 +362,8 @@ today, and these identities will follow the wing ruling (`ROOMS.md`):
 ## Export & capture
 
 - **Shipped:** deterministic CPU PNG renders, full catalog galleries and contact
-  sheets, and app postcards of the live room state.
+  sheets, and app postcards of the live room state. Flagship PNG plates keep an
+  exact hash and also a fixed-grid luminance signature in the golden gate.
 - **Separate shipped artifacts:** Studio `.num` files and matching links round
   trip through all three faces. The App opens files and links through launch
   arguments and file drops, preserving the saved numerical state in a paused
