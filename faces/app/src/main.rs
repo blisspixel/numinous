@@ -3308,14 +3308,7 @@ fn crash_log_path() -> std::path::PathBuf {
 }
 
 fn append_crash_log_at(path: &std::path::Path, entry: &str) -> std::io::Result<()> {
-    use std::io::Write as _;
-
-    let _lock = numinous_core::lock_local_state(path)?;
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)?;
-    file.write_all(entry.as_bytes())
+    numinous_core::append_crash_log_file(path, entry)
 }
 
 /// The journey file: the same one the CLI and MCP level (env-overridable).

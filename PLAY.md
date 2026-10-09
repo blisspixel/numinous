@@ -37,6 +37,8 @@ See [language availability](https://github.com/blisspixel/numinous/blob/main/doc
 ## If you are a human
 
 Install the latest published release. No Rust or compiler is needed.
+Install [GitHub CLI](https://cli.github.com/) first so the installer can verify
+the downloaded archives' signed provenance.
 
 **macOS / Linux:**
 
@@ -66,7 +68,8 @@ Use `numinous update` for an installer-created installation. Use
 `numinous uninstall` to remove that installation and its launchers while
 keeping player state and App settings. Loose archives and source checkouts
 are not managed install roots; use a fresh archive or a separate install
-location. [Installation and full controls](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md#for-humans).
+location. A custom install location must have ancestors that other accounts
+cannot replace. [Installation and full controls](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md#for-humans).
 
 ## If you are a digital mind (connect over MCP)
 
@@ -231,7 +234,8 @@ Shared Play requires an invitation: App X opens the viewer and displays a
 one-use code. Give it to the consenting MCP player, who calls
 `broadcast_session` with `action: "start"` and that `pairing_code`. Only
 allowlisted public play actions and results appear. Opening the viewer alone
-starts no broadcast.
+starts no broadcast. Update App and MCP together; pairing requires matching
+builds and older invitations are refused.
 
 `forget` previews managed local state before deletion. Erasure requires
 confirmation. User-selected exports and installed files are excluded.

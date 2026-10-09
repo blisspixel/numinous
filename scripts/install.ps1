@@ -3,7 +3,7 @@
 #   irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 #
 # What it does, in order: downloads the latest published release for this
-# machine, verifies both archive checksums and closed payload manifests, puts
+# machine, verifies signed provenance, checksums and closed payload manifests, puts
 # numinous, numinous-app, and numinous-mcp in ~\.numinous\bin, installs the
 # built-in radio once, and adds that directory to the user PATH.
 #
@@ -82,6 +82,47 @@ function Assert-NoReparseAncestor([string]$Path) {
     }
 }
 
+function Assert-PrivateInstallAncestors([string]$Path) {
+    # DELETE on a directory and DELETE_CHILD on its parent can each replace it.
+    # Ancestor ownership and permission-changing rights matter for the same reason.
+    $trusted = @(
+        [Security.Principal.WindowsIdentity]::GetCurrent().User.Value,
+        'S-1-5-18',
+        'S-1-5-32-544',
+        'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
+    )
+    $replacementRights = [Security.AccessControl.FileSystemRights]::Delete -bor `
+        [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles -bor `
+        [Security.AccessControl.FileSystemRights]::ChangePermissions -bor `
+        [Security.AccessControl.FileSystemRights]::TakeOwnership -bor 0x10000000
+    $current = $Path
+    while (-not [string]::IsNullOrEmpty($current)) {
+        if (Test-Path -LiteralPath $current) {
+            $acl = Get-Acl -LiteralPath $current
+            if ($acl.GetOwner([Security.Principal.SecurityIdentifier]).Value -notin $trusted) {
+                Fail "install path ancestors must have a trusted owner: $current"
+            }
+            $descriptor = New-Object Security.AccessControl.RawSecurityDescriptor(
+                $acl.GetSecurityDescriptorBinaryForm(), 0)
+            if ($null -eq $descriptor.DiscretionaryAcl) {
+                Fail "install path ancestors must have an access control list: $current"
+            }
+            foreach ($rule in $acl.GetAccessRules(
+                $true, $true, [Security.Principal.SecurityIdentifier])) {
+                if ($rule.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and
+                    -not ($rule.PropagationFlags -band [Security.AccessControl.PropagationFlags]::InheritOnly) -and
+                    $rule.IdentityReference.Value -notin $trusted -and
+                    ($rule.FileSystemRights -band $replacementRights)) {
+                    Fail "install path permits replacement by another account: $current"
+                }
+            }
+        }
+        $parent = Split-Path -Parent $current
+        if ([string]::IsNullOrEmpty($parent) -or $parent -eq $current) { break }
+        $current = $parent
+    }
+}
+
 function Resolve-InstallRoot([string]$Path, [string]$HomePath) {
     if ([string]::IsNullOrWhiteSpace($Path) -or $Path -match '[\x00-\x1f\x7f]') {
         Fail 'NUMINOUS_HOME must name a dedicated absolute directory.'
@@ -110,6 +151,7 @@ function Resolve-InstallRoot([string]$Path, [string]$HomePath) {
         Fail 'the parent directory of NUMINOUS_HOME must already exist.'
     }
     Assert-NoReparseAncestor $full
+    Assert-PrivateInstallAncestors $full
     if (Test-Path -LiteralPath $full) {
         $item = Get-Item -LiteralPath $full -Force
         if (-not $item.PSIsContainer) {
@@ -363,7 +405,8 @@ function Install-ReleasePayload(
     [string]$ExpectedTag,
     [string]$ExpectedKind,
     [string]$ExpectedTarget,
-    [string]$ExpectedContentHash = ''
+    [string]$ExpectedContentHash = '',
+    [string]$ExpectedRevision = ''
 ) {
     if (-not (Test-InstallMarker $NuminousHome)) {
         Fail 'release installation requires a marked install root.'
@@ -390,6 +433,9 @@ function Install-ReleasePayload(
             $metadata.tag -cne $ExpectedTag -or $metadata.kind -cne $ExpectedKind -or
             $metadata.target -cne $ExpectedTarget) {
             Fail 'the release metadata does not match the requested payload.'
+        }
+        if ($ExpectedRevision -and $metadata.commit -cne $ExpectedRevision) {
+            Fail 'the release metadata does not match the authenticated revision.'
         }
         if ($ExpectedContentHash -and
             (Get-SoundtrackContentHash $newTree) -cne $ExpectedContentHash) {
@@ -432,6 +478,19 @@ function Test-DirectoryEmpty([string]$Path) {
     return @(Get-ChildItem -LiteralPath $Path -Force).Count -eq 0
 }
 
+function Set-DirectoryAccessControl(
+    [string]$Path,
+    [Security.AccessControl.DirectorySecurity]$Acl
+) {
+    # Persist only the sections changed on this descriptor. Set-Acl can also
+    # request audit-policy access, which an ordinary account does not possess.
+    if ($PSVersionTable.PSEdition -eq 'Core') {
+        [IO.FileSystemAclExtensions]::SetAccessControl((Get-Item -LiteralPath $Path), $Acl)
+    } else {
+        [IO.Directory]::SetAccessControl($Path, $Acl)
+    }
+}
+
 function Protect-InstallDirectory([string]$Path) {
     $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent().User
     $system = New-Object Security.Principal.SecurityIdentifier('S-1-5-18')
@@ -471,7 +530,7 @@ function Protect-InstallDirectory([string]$Path) {
         [void]$acl.AddAccessRule($rule)
     }
     $acl.SetOwner($currentUser)
-    Set-Acl -LiteralPath $Path -AclObject $acl
+    Set-DirectoryAccessControl $Path $acl
 }
 
 function New-RustupStage([string]$Parent) {
@@ -1140,7 +1199,88 @@ function Test-PathPromotion {
     Say 'Windows installer PATH promotion: pass.'
 }
 
+function Test-ReleaseProvenance {
+    function Have([string]$Name) { return $Name -ceq 'gh' }
+    function gh {
+        $expected = @('attestation', 'verify', 'fixture.zip', '--bundle', 'provenance.jsonl',
+            '--hostname', 'github.com', '--repo', 'blisspixel/numinous',
+            '--predicate-type', 'https://slsa.dev/provenance/v1',
+            '--source-ref', 'refs/tags/v1.2.3', '--source-digest',
+            '0123456789012345678901234567890123456789', '--signer-workflow',
+            'blisspixel/numinous/.github/workflows/release-attest.yml', '--signer-digest',
+            '0123456789012345678901234567890123456789', '--deny-self-hosted-runners')
+        $global:LASTEXITCODE = 1
+        if ($args.Count -ne $expected.Count) { return }
+        for ($i = 0; $i -lt $expected.Count; $i++) {
+            if ($args[$i] -cne $expected[$i]) { return }
+        }
+        $global:LASTEXITCODE = 0
+    }
+    $revision = '0123456789012345678901234567890123456789'
+    Assert-ReleaseProvenance 'fixture.zip' 'provenance.jsonl' 'v1.2.3' $revision
+    foreach ($case in @(
+        @('fixture.zip', 'missing.jsonl', 'v1.2.3', $revision),
+        @('fixture.zip', 'provenance.jsonl', 'v9.9.9', $revision),
+        @('fixture.zip', 'provenance.jsonl', 'v1.2.3', ('9' * 40)))) {
+        $rejected = $false
+        try { Assert-ReleaseProvenance @case } catch { $rejected = $true }
+        if (-not $rejected) { Fail 'provenance self-test: invalid evidence was accepted.' }
+    }
+    $global:LASTEXITCODE = 0
+    # Drive the download branch through a checksum-accepted payload and a
+    # rejected soundtrack. Publication must wait for both authentication checks.
+    $NuminousHome = Join-Path $HOME ('.numinous-provenance-test-' + [Guid]::NewGuid().ToString('N'))
+    $BinDir = Join-Path $NuminousHome 'bin'
+    $SrcDir = Join-Path $NuminousHome 'src'
+    $SoundtrackDir = Join-Path $NuminousHome 'soundtrack'
+    $ReleaseTag = 'v1.2.3'
+    $ReleaseArchive = $ReleaseChecksum = ''
+    $SoundtrackArchive = $SoundtrackChecksum = $SoundtrackContentChecksum = ''
+    function Get-ReleaseTarget { return 'x86_64-pc-windows-msvc' }
+    function Get-ReleaseRevision { return '0123456789012345678901234567890123456789' }
+    function Copy-ReleaseFile([string]$ProvidedPath, [string]$Url, [string]$Destination) {
+        $content = if ($Destination.EndsWith('.content.sha256')) {
+            ('0' * 64) + "  soundtrack-content-v1`n"
+        } elseif ($Destination.EndsWith('.sha256')) {
+            $archiveName = [IO.Path]::GetFileName($Destination).Replace('.sha256', '')
+            "$fixtureHash  $archiveName`n"
+        } else { 'payload' }
+        [IO.File]::WriteAllText($Destination, $content, (New-Object Text.UTF8Encoding($false)))
+    }
+    function Test-InstalledSoundtrack { return $false }
+    function Assert-ReleaseProvenance([string]$Archive) {
+        if ($Archive.EndsWith('-soundtrack.tar.gz')) { throw 'fixture provenance rejection' }
+    }
+    function Install-ReleasePayload { throw 'publication preceded authentication' }
+    New-Item -ItemType Directory -Path $NuminousHome | Out-Null
+    try {
+        $radio = Join-Path $BinDir 'radio'
+        New-Item -ItemType Directory -Path $radio, $SrcDir | Out-Null
+        $radioSentinel = Join-Path $radio 'keep'
+        $sourceSentinel = Join-Path $SrcDir 'keep'
+        [IO.File]::WriteAllText($radioSentinel, 'existing-radio')
+        [IO.File]::WriteAllText($sourceSentinel, 'existing-payload')
+        $fixture = Join-Path $NuminousHome 'payload'
+        [IO.File]::WriteAllText($fixture, 'payload', (New-Object Text.UTF8Encoding($false)))
+        $fixtureHash = (Get-FileHash -LiteralPath $fixture -Algorithm SHA256).Hash.ToLowerInvariant()
+        $rejected = $false
+        try { Install-LatestRelease } catch {
+            if ($_.Exception.Message -cne 'fixture provenance rejection') { throw }
+            $rejected = $true
+        }
+        if (-not $rejected) { Fail 'provenance self-test: unauthenticated soundtrack was accepted.' }
+        if ([IO.File]::ReadAllText($radioSentinel) -cne 'existing-radio' -or
+            [IO.File]::ReadAllText($sourceSentinel) -cne 'existing-payload') {
+            Fail 'provenance self-test: rejection changed the existing installation.'
+        }
+    } finally {
+        Remove-DirectoryOrJunction $NuminousHome
+    }
+    Say 'Windows installer provenance policy: pass.'
+}
+
 function Test-InstallerSafety {
+    Test-ReleaseProvenance
     if (-not (Have 'tar')) { Fail 'installer safety self-test requires tar.exe.' }
     $releaseFixture = @(
         [pscustomobject]@{ draft = $true; tag_name = 'v9.9.9' },
@@ -1151,7 +1291,7 @@ function Test-InstallerSafety {
         Fail 'release discovery self-test: the first published release was not selected.'
     }
 
-    $testBase = Join-Path $env:TEMP ('numinous-installer-test-' + [Guid]::NewGuid().ToString('N'))
+    $testBase = Join-Path $HOME ('.numinous-installer-test-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $testBase | Out-Null
     Protect-InstallDirectory $testBase
     Protect-InstallDirectory $testBase
@@ -1344,6 +1484,74 @@ function Test-InstallerSafety {
             -not (Test-Path -LiteralPath $adjacent) -or
             -not (Test-Path -LiteralPath (Join-Path $outside 'radio\keep.txt'))) {
             Fail 'uninstall self-test: marked-root removal crossed its boundary.'
+        }
+
+        $authorityBase = Join-Path $testBase 'authority'
+        $authorityParent = Join-Path $authorityBase 'parent'
+        $authorityRoot = Join-Path $authorityParent 'root'
+        New-Item -ItemType Directory -Path $authorityRoot -Force | Out-Null
+        Protect-InstallDirectory $authorityRoot
+        Write-InstallMarker $authorityRoot
+        $authorityKeep = Join-Path $authorityRoot 'keep.txt'
+        [IO.File]::WriteAllText($authorityKeep, 'keep')
+        $everyone = New-Object Security.Principal.SecurityIdentifier('S-1-1-0')
+        foreach ($mutable in @($authorityRoot, $authorityParent, $authorityBase)) {
+            foreach ($right in @(
+                [Security.AccessControl.FileSystemRights]::Delete,
+                [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles,
+                [Security.AccessControl.FileSystemRights]::ChangePermissions,
+                [Security.AccessControl.FileSystemRights]::TakeOwnership
+            )) {
+                Protect-InstallDirectory $mutable
+                $originalAcl = Get-Acl -LiteralPath $mutable
+                $changedAcl = New-Object Security.AccessControl.DirectorySecurity
+                $changedAcl.SetAccessRuleProtection($true, $false)
+                $changedAcl.SetOwner([Security.Principal.WindowsIdentity]::GetCurrent().User)
+                foreach ($existingRule in $originalAcl.GetAccessRules(
+                    $true, $false, [Security.Principal.SecurityIdentifier])) {
+                    [void]$changedAcl.AddAccessRule($existingRule)
+                }
+                $rule = New-Object Security.AccessControl.FileSystemAccessRule(
+                    $everyone, $right, [Security.AccessControl.AccessControlType]::Allow)
+                [void]$changedAcl.AddAccessRule($rule)
+                try {
+                    Set-DirectoryAccessControl $mutable $changedAcl
+                } catch {
+                    Fail "uninstall self-test: could not set $right on ${mutable}: $($_.Exception.Message)"
+                }
+                try {
+                    $rejectedAuthority = $false
+                    try { Remove-ValidatedInstallRoot $authorityRoot } catch {
+                        $rejectedAuthority = $_.Exception.Message -like '*replacement by another account*'
+                    }
+                    if (-not $rejectedAuthority -or
+                        -not (Test-Path -LiteralPath $authorityKeep) -or
+                        -not (Test-Path -LiteralPath $adjacent)) {
+                        Fail 'uninstall self-test: a replaceable ancestor was accepted or data was removed.'
+                    }
+                } finally {
+                    Protect-InstallDirectory $mutable
+                }
+            }
+        }
+        # Creating a new child does not itself authorize replacing an existing
+        # private child. This is a normal permission on Windows volume roots.
+        $parentAcl = New-Object Security.AccessControl.DirectorySecurity
+        $parentAcl.SetAccessRuleProtection($true, $false)
+        $parentAcl.SetOwner([Security.Principal.WindowsIdentity]::GetCurrent().User)
+        foreach ($existingRule in (Get-Acl -LiteralPath $authorityParent).GetAccessRules(
+            $true, $false, [Security.Principal.SecurityIdentifier])) {
+            [void]$parentAcl.AddAccessRule($existingRule)
+        }
+        $createRule = New-Object Security.AccessControl.FileSystemAccessRule(
+            $everyone,
+            [Security.AccessControl.FileSystemRights]::CreateDirectories,
+            [Security.AccessControl.AccessControlType]::Allow)
+        [void]$parentAcl.AddAccessRule($createRule)
+        Set-DirectoryAccessControl $authorityParent $parentAcl
+        Remove-ValidatedInstallRoot $authorityRoot
+        if (Test-Path -LiteralPath $authorityRoot) {
+            Fail 'uninstall self-test: create-only parent rights prevented normal removal.'
         }
 
         $sourceRoot = Join-Path $testBase 'source-root'
@@ -1578,6 +1786,40 @@ function Copy-ReleaseFile(
     }
 }
 
+function Get-ReleaseRevision([string]$Tag) {
+    $url = "$RepoApiUrl/git/ref/tags/$Tag"
+    for ($depth = 0; $depth -lt 8; $depth++) {
+        $response = Invoke-RestMethod -Headers @{ 'User-Agent' = 'numinous-installer' } -Uri $url
+        $revision = $response.object.sha
+        if ($revision -cnotmatch '^[0-9a-f]{40}$') {
+            Fail 'the release tag has an invalid Git object.'
+        }
+        if ($response.object.type -ceq 'commit') { return $revision }
+        if ($response.object.type -cne 'tag') {
+            Fail 'the release tag does not resolve to a commit.'
+        }
+        $url = "$RepoApiUrl/git/tags/$revision"
+    }
+    Fail 'the release tag has too many annotated tag layers.'
+}
+
+function Assert-ReleaseProvenance(
+    [string]$Archive, [string]$Bundle, [string]$Tag, [string]$Revision
+) {
+    if (-not (Have 'gh')) {
+        Fail 'install GitHub CLI (gh) to verify release provenance, then retry.'
+    }
+    & gh attestation verify $Archive --bundle $Bundle `
+        --hostname github.com --repo $Repo `
+        --predicate-type https://slsa.dev/provenance/v1 `
+        --source-ref "refs/tags/$Tag" --source-digest $Revision `
+        --signer-workflow "$Repo/.github/workflows/release-attest.yml" `
+        --signer-digest $Revision --deny-self-hosted-runners
+    if ($LASTEXITCODE -ne 0) {
+        Fail 'release provenance verification failed; nothing from this archive was installed.'
+    }
+}
+
 function Test-InstalledSoundtrack([string]$ExpectedContentHash) {
     if (-not (Test-Path -LiteralPath $SoundtrackDir -PathType Container)) { return $false }
     $receipt = Join-Path $SoundtrackDir '.archive.sha256'
@@ -1619,12 +1861,29 @@ function Install-LatestRelease {
         $payloadPath = Join-Path $downloadStage $payloadName
         $payloadChecksumPath = Join-Path $downloadStage "$payloadName.sha256"
         $releaseBase = "$RepoUrl/releases/download/$tag"
+        $revision = ''
+        $bundle = Join-Path $downloadStage 'provenance.jsonl'
+        if (-not $ReleaseArchive -or -not $SoundtrackArchive) {
+            if (-not (Have 'gh')) {
+                Fail 'install GitHub CLI (gh) to verify release provenance, then retry.'
+            }
+            $revision = Get-ReleaseRevision $tag
+            Copy-ReleaseFile '' "$releaseBase/numinous-$tag-provenance.jsonl" `
+                $bundle 'the release provenance'
+        }
         Copy-ReleaseFile $ReleaseArchive "$releaseBase/$payloadName" `
             $payloadPath 'the Windows release payload'
         Copy-ReleaseFile $ReleaseChecksum "$releaseBase/$payloadName.sha256" `
             $payloadChecksumPath 'the Windows payload checksum'
         $payloadHash = Assert-ArchiveChecksum `
             $payloadPath $payloadChecksumPath $payloadName
+        $payloadRevision = ''
+        if (-not $ReleaseArchive) {
+            Assert-ReleaseProvenance $payloadPath $bundle $tag $revision
+            $payloadRevision = $revision
+        } else {
+            Say "Using an explicitly supplied local payload; its provenance is the caller's responsibility."
+        }
 
         $soundtrackChecksumPath = Join-Path $downloadStage "$soundtrackName.sha256"
         Copy-ReleaseFile $SoundtrackChecksum "$releaseBase/$soundtrackName.sha256" `
@@ -1636,11 +1895,8 @@ function Install-LatestRelease {
             'the soundtrack content checksum'
         $soundtrackContentHash = Read-SoundtrackContentChecksum $soundtrackContentPath
 
-        Remove-DirectoryOrJunction (Join-Path $BinDir 'radio')
-        Install-ReleasePayload $payloadPath $SrcDir $payloadRoot $payloadHash `
-            $tag 'binaries' $target
-
-        if (Test-InstalledSoundtrack $soundtrackContentHash) {
+        $soundtrackCurrent = Test-InstalledSoundtrack $soundtrackContentHash
+        if ($soundtrackCurrent) {
             Say 'The verified built-in soundtrack is already current.'
         } else {
             $soundtrackPath = Join-Path $downloadStage $soundtrackName
@@ -1648,8 +1904,20 @@ function Install-LatestRelease {
                 $soundtrackPath 'the built-in soundtrack'
             [void](Assert-ArchiveChecksum `
                 $soundtrackPath $soundtrackChecksumPath $soundtrackName)
+            $soundtrackRevision = ''
+            if (-not $SoundtrackArchive) {
+                Assert-ReleaseProvenance $soundtrackPath $bundle $tag $revision
+                $soundtrackRevision = $revision
+            } else {
+                Say "Using an explicitly supplied local soundtrack; its provenance is the caller's responsibility."
+            }
+        }
+        Remove-DirectoryOrJunction (Join-Path $BinDir 'radio')
+        Install-ReleasePayload $payloadPath $SrcDir $payloadRoot $payloadHash `
+            $tag 'binaries' $target '' $payloadRevision
+        if (-not $soundtrackCurrent) {
             Install-ReleasePayload $soundtrackPath $SoundtrackDir $soundtrackRoot `
-                $soundtrackHash $tag 'soundtrack' 'all' $soundtrackContentHash
+                $soundtrackHash $tag 'soundtrack' 'all' $soundtrackContentHash $soundtrackRevision
         }
     } finally {
         Remove-DirectoryOrJunction $downloadStage

@@ -77,12 +77,18 @@ impl SessionBroadcast {
             TcpStream::connect_timeout(&endpoint.into(), numinous_broadcast::HANDSHAKE_TIMEOUT)
                 .map_err(|_| SessionError::PairingRejected)?;
         configure_handshake_stream(&stream).map_err(|_| SessionError::PairingRejected)?;
+        let hello = numinous_broadcast::HandshakeHello::generate()
+            .map_err(|_| SessionError::Unavailable)?;
+        numinous_broadcast::write_handshake_hello_stream(&stream, &hello)
+            .map_err(|_| SessionError::PairingRejected)?;
         let proof =
             read_handshake_proof_stream(&stream).map_err(|_| SessionError::PairingRejected)?;
-        if !code.verifies_host_proof(&proof) {
+        if !code.verifies_host_proof(&hello, &proof) {
             return Err(SessionError::PairingRejected);
         }
-        let request = code.handshake_request(compatibility.clone());
+        let request = code
+            .handshake_request(&hello, &proof, compatibility.clone())
+            .map_err(|_| SessionError::PairingRejected)?;
         write_handshake_request_stream(&stream, &request)
             .map_err(|_| SessionError::PairingRejected)?;
         let response =
@@ -92,7 +98,12 @@ impl SessionBroadcast {
                 session_id,
                 consent_epoch,
                 compatibility: host,
-            } if host.is_compatible_with(&compatibility) => (session_id, consent_epoch),
+            } if host.is_compatible_with(&compatibility)
+                && session_id == proof.session_id
+                && consent_epoch == proof.consent_epoch =>
+            {
+                (session_id, consent_epoch)
+            }
             HandshakeResponse::Accepted { .. } | HandshakeResponse::Rejected => {
                 return Err(SessionError::PairingRejected);
             }
@@ -431,7 +442,9 @@ mod tests {
     ) -> TcpStream {
         let (mut stream, _) = listener.accept().expect("accept");
         configure_handshake_stream(&stream).expect("handshake bounds");
-        write_handshake_proof(&mut stream, &gate.host_proof()).expect("host proof");
+        let hello = numinous_broadcast::read_handshake_hello_stream(&stream).expect("hello");
+        let proof = gate.host_proof(&hello).expect("host proof");
+        write_handshake_proof(&mut stream, &proof).expect("host proof");
         let mut reader = BufReader::new(stream.try_clone().expect("reader clone"));
         let request = read_handshake_request(&mut reader).expect("handshake request");
         let PairingVerdict::Accepted { session_id } = gate.verify(&request, SystemTime::now())
@@ -561,7 +574,7 @@ mod tests {
     }
 
     #[test]
-    fn an_unproven_loopback_listener_receives_no_guest_bytes() {
+    fn an_unproven_loopback_listener_receives_only_a_nonsecret_challenge() {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).expect("listener");
         let port = NonZeroU16::new(listener.local_addr().expect("address").port()).expect("port");
         let code = PairingOffer::generate(port, SystemTime::now())
@@ -570,6 +583,8 @@ mod tests {
         let guest = thread::spawn(move || SessionBroadcast::new().start(&code));
 
         let (mut stream, _) = listener.accept().expect("accept");
+        let hello = numinous_broadcast::read_handshake_hello_stream(&stream).expect("hello");
+        assert_eq!(hello.nonce.len(), 64);
         stream
             .set_read_timeout(Some(Duration::from_millis(100)))
             .expect("bounded observation");
@@ -586,6 +601,36 @@ mod tests {
         assert_eq!(
             guest.join().expect("guest thread"),
             Err(SessionError::PairingRejected)
+        );
+    }
+
+    #[test]
+    fn a_recorded_host_proof_cannot_authenticate_a_new_connection() {
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).expect("listener");
+        let port = NonZeroU16::new(listener.local_addr().expect("address").port()).expect("port");
+        let offer = PairingOffer::generate(port, SystemTime::now()).expect("offer");
+        let code = offer.display_code();
+        let compatibility = numinous_compatibility().expect("compatibility");
+        let mut gate = offer.into_gate(compatibility);
+        let recorded_hello = numinous_broadcast::HandshakeHello::generate().expect("old hello");
+        let recorded_proof = gate.host_proof(&recorded_hello).expect("recorded proof");
+        let guest = thread::spawn(move || SessionBroadcast::new().start(&code));
+        let (mut stream, _) = listener.accept().expect("accept");
+        configure_handshake_stream(&stream).expect("bounds");
+        let fresh = numinous_broadcast::read_handshake_hello_stream(&stream).expect("fresh hello");
+        assert_ne!(fresh.nonce, recorded_hello.nonce);
+        write_handshake_proof(&mut stream, &recorded_proof).expect("replay");
+        assert_eq!(
+            guest.join().expect("guest"),
+            Err(SessionError::PairingRejected)
+        );
+        let mut remaining = Vec::new();
+        stream
+            .read_to_end(&mut remaining)
+            .expect("closed connection");
+        assert!(
+            remaining.is_empty(),
+            "no guest authentication or content follows a replay"
         );
     }
 
@@ -675,7 +720,9 @@ mod tests {
         let first_host = thread::spawn(move || {
             let (mut stream, _) = first_listener.accept().expect("first accept");
             configure_handshake_stream(&stream).expect("handshake bounds");
-            write_handshake_proof(&mut stream, &first_gate.host_proof()).expect("host proof");
+            let hello = numinous_broadcast::read_handshake_hello_stream(&stream).expect("hello");
+            let proof = first_gate.host_proof(&hello).expect("host proof");
+            write_handshake_proof(&mut stream, &proof).expect("host proof");
             let mut reader = BufReader::new(stream.try_clone().expect("clone"));
             let request = read_handshake_request(&mut reader).expect("request");
             let PairingVerdict::Accepted { session_id } =
@@ -791,7 +838,9 @@ mod tests {
         let host = thread::spawn(move || {
             let (mut stream, _) = listener.accept().expect("accept");
             configure_handshake_stream(&stream).expect("handshake bounds");
-            write_handshake_proof(&mut stream, &gate.host_proof()).expect("host proof");
+            let hello = numinous_broadcast::read_handshake_hello_stream(&stream).expect("hello");
+            let proof = gate.host_proof(&hello).expect("host proof");
+            write_handshake_proof(&mut stream, &proof).expect("host proof");
             let mut reader = BufReader::new(stream.try_clone().expect("clone"));
             let request = read_handshake_request(&mut reader).expect("request");
             let PairingVerdict::Accepted { session_id } = gate.verify(&request, SystemTime::now())

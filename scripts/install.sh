@@ -4,7 +4,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh
 #
 # What it does, in order: downloads the latest published release for this
-# machine, verifies both archive checksums and closed payload manifests, puts
+# machine, verifies signed provenance, checksums and closed payload manifests, puts
 # numinous, numinous-app, and numinous-mcp in ~/.numinous/bin, installs the
 # built-in radio once, and adds that directory to PATH.
 #
@@ -222,6 +222,55 @@ legacy_install_is_valid() (
     done
 )
 
+mac_acl_has_no_replacement_allow() {
+    # Darwin ACLs can grant replacement rights independently of mode bits.
+    # Conservatively refuse such allow entries, including inherited entries.
+    awk '
+        /^[[:space:]]*[0-9]+:/ && / allow / {
+            sub(/^.* allow /, "")
+            count = split($0, rights, ",")
+            for (i = 1; i <= count; i++) {
+                if (rights[i] ~ /^(delete|delete_child|writesecurity|chown)$/) exit 1
+            }
+        }
+    '
+}
+
+assert_private_install_ancestors() (
+    # A private root can still be renamed through a writable parent. Check the
+    # whole physical chain; sticky shared ancestors protect trusted-owned children.
+    self_test_without_posix_modes && exit 0
+    current="$1"
+    install_root="$1"
+    current_uid="$(id -u)"
+    [ -e "$current" ] || current="$(dirname "$current")"
+    while :; do
+        [ -d "$current" ] && [ ! -L "$current" ] \
+            || fail "the install path changed while inspecting its ancestors"
+        identity="$(stat_owner_mode_identity "$current")" \
+            || fail "cannot inspect install path permissions: $current"
+        set -- $identity
+        [ "$#" = 3 ] && { [ "$1" = "$current_uid" ] || [ "$1" = 0 ]; } \
+            || fail "install path ancestors must be owned by the current user or root: $current"
+        case "$2" in
+            '' | *[!0-7]*) fail "cannot inspect install path permissions: $current" ;;
+        esac
+        permissions=$((0$2))
+        if [ "$(uname -s)" = Darwin ]; then
+            acl="$(LC_ALL=C ls -lde "$current")" \
+                || fail "cannot inspect install path access controls: $current"
+            printf '%s\n' "$acl" | mac_acl_has_no_replacement_allow \
+                || fail "install path ACL permits replacement: $current"
+        fi
+        if [ $((permissions & 0022)) -ne 0 ]; then
+            [ "$current" != "$install_root" ] && [ $((permissions & 01000)) -ne 0 ] \
+                || fail "install path permits replacement by another account: $current"
+        fi
+        [ "$current" != / ] || break
+        current="$(dirname "$current")"
+    done
+)
+
 validate_install_root() {
     case "$NUMINOUS_HOME" in
         "" | / | "$HOME") fail "NUMINOUS_HOME must name a dedicated absolute directory" ;;
@@ -266,6 +315,7 @@ validate_install_root() {
     if [ -e "$NUMINOUS_HOME" ] && [ ! -d "$NUMINOUS_HOME" ]; then
         fail "NUMINOUS_HOME exists but is not a directory"
     fi
+    assert_private_install_ancestors "$NUMINOUS_HOME"
     if [ -d "$NUMINOUS_HOME" ] \
         && ! install_marker_is_valid "$NUMINOUS_HOME" \
         && ! directory_is_empty "$NUMINOUS_HOME"; then
@@ -294,6 +344,7 @@ remove_install_root() (
         fail "refusing to remove an unmarked install root: $NUMINOUS_HOME"
     fi
     cd "$install_parent"
+    assert_private_install_ancestors "$NUMINOUS_HOME"
     [ ! -L "$install_name" ] \
         || fail "refusing to remove a symbolic-link install root: $NUMINOUS_HOME"
     if [ "$root_kind" = marked ]; then
@@ -514,6 +565,7 @@ install_release_payload() (
     expected_kind="$6"
     expected_target="$7"
     expected_content_hash="${8:-}"
+    expected_revision="${9:-}"
     install_marker_is_valid "$NUMINOUS_HOME" \
         || fail "release installation requires a marked install root"
     stage="$(mktemp -d "$NUMINOUS_HOME/.release-stage.XXXXXX")" \
@@ -531,6 +583,10 @@ install_release_payload() (
         && grep -Fqx "  \"kind\": \"$expected_kind\"," "$metadata" \
         && grep -Fqx "  \"target\": \"$expected_target\"," "$metadata" \
         || fail "the release metadata does not match the requested payload"
+    if [ -n "$expected_revision" ]; then
+        grep -Fqx "  \"commit\": \"$expected_revision\"," "$metadata" \
+            || fail "the release metadata does not match the authenticated revision"
+    fi
     if [ -n "$expected_content_hash" ]; then
         [ "$(soundtrack_content_hash "$new_tree")" = "$expected_content_hash" ] \
             || fail "the soundtrack content checksum does not match the verified payload"
@@ -549,6 +605,45 @@ latest_release_tag() (
     printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
         || fail "no safe published Numinous release is available; use --source to build main"
     printf '%s' "$tag"
+)
+
+# Resolve the tag through repository Git objects, independently of release assets.
+release_revision() (
+    tag="$1"
+    object="$(mktemp "${TMPDIR:-/tmp}/numinous-tag.XXXXXX")" \
+        || fail "could not stage the release tag"
+    trap 'rm -f -- "$object"' EXIT HUP INT TERM
+    url="$REPO_API_URL/git/ref/tags/$tag"
+    depth=0
+    while [ "$depth" -lt 8 ]; do
+        fetch "$url" "$object"
+        revision="$(sed -n '/"object": {/,/^[[:space:]]*}/s/^[[:space:]]*"sha": "\([0-9a-f]*\)",*$/\1/p' "$object")"
+        kind="$(sed -n '/"object": {/,/^[[:space:]]*}/s/^[[:space:]]*"type": "\([a-z]*\)",*$/\1/p' "$object")"
+        [ "${#revision}" -eq 40 ] && printf '%s' "$revision" | grep -Eq '^[0-9a-f]{40}$' \
+            || fail "the release tag has an invalid Git object"
+        case "$kind" in
+            commit) printf '%s' "$revision"; exit 0 ;;
+            tag) url="$REPO_API_URL/git/tags/$revision" ;;
+            *) fail "the release tag does not resolve to a commit" ;;
+        esac
+        depth=$((depth + 1))
+    done
+    fail "the release tag has too many annotated tag layers"
+)
+
+assert_release_provenance() (
+    archive="$1"
+    bundle="$2"
+    tag="$3"
+    revision="$4"
+    have gh || fail "install GitHub CLI (gh) to verify release provenance, then retry"
+    gh attestation verify "$archive" --bundle "$bundle" \
+        --hostname github.com --repo "$REPO" \
+        --predicate-type https://slsa.dev/provenance/v1 \
+        --source-ref "refs/tags/$tag" --source-digest "$revision" \
+        --signer-workflow "$REPO/.github/workflows/release-attest.yml" \
+        --signer-digest "$revision" --deny-self-hosted-runners \
+        || fail "release provenance verification failed; nothing from this archive was installed"
 )
 
 release_target() {
@@ -616,6 +711,13 @@ install_latest_release() (
         || fail "could not create a release download directory"
     trap 'rm -rf -- "$stage"' EXIT HUP INT TERM
     release_base="$REPO_URL/releases/download/$tag"
+    revision=''
+    bundle="$stage/provenance.jsonl"
+    if [ -z "$RELEASE_ARCHIVE" ] || [ -z "$SOUNDTRACK_ARCHIVE" ]; then
+        have gh || fail "install GitHub CLI (gh) to verify release provenance, then retry"
+        revision="$(release_revision "$tag")"
+        fetch "$release_base/numinous-$tag-provenance.jsonl" "$bundle"
+    fi
     payload_path="$stage/$payload_name"
     payload_checksum_path="$stage/$payload_name.sha256"
     copy_release_file "$RELEASE_ARCHIVE" "$release_base/$payload_name" \
@@ -623,6 +725,13 @@ install_latest_release() (
     copy_release_file "$RELEASE_CHECKSUM" "$release_base/$payload_name.sha256" \
         "$payload_checksum_path" "the $os payload checksum"
     payload_hash="$(assert_archive_checksum "$payload_path" "$payload_checksum_path" "$payload_name")"
+    payload_revision=''
+    if [ -z "$RELEASE_ARCHIVE" ]; then
+        assert_release_provenance "$payload_path" "$bundle" "$tag" "$revision"
+        payload_revision="$revision"
+    else
+        say "Using an explicitly supplied local payload; its provenance is the caller's responsibility."
+    fi
 
     soundtrack_checksum_path="$stage/$soundtrack_name.sha256"
     copy_release_file "$SOUNDTRACK_CHECKSUM" "$release_base/$soundtrack_name.sha256" \
@@ -634,10 +743,9 @@ install_latest_release() (
         "the soundtrack content checksum"
     soundtrack_content_hash="$(read_soundtrack_content_checksum "$soundtrack_content_path")"
 
-    rm -rf -- "$BINARY_PATH/radio"
-    install_release_payload "$payload_path" "$SOURCE_PATH" "$payload_root" \
-        "$payload_hash" "$tag" binaries "$target"
+    soundtrack_current=0
     if installed_soundtrack_is_current "$soundtrack_content_hash"; then
+        soundtrack_current=1
         say "The verified built-in soundtrack is already current."
     else
         soundtrack_path="$stage/$soundtrack_name"
@@ -645,9 +753,21 @@ install_latest_release() (
             "$soundtrack_path" "the built-in soundtrack"
         assert_archive_checksum "$soundtrack_path" "$soundtrack_checksum_path" \
             "$soundtrack_name" >/dev/null
+        soundtrack_revision=''
+        if [ -z "$SOUNDTRACK_ARCHIVE" ]; then
+            assert_release_provenance "$soundtrack_path" "$bundle" "$tag" "$revision"
+            soundtrack_revision="$revision"
+        else
+            say "Using an explicitly supplied local soundtrack; its provenance is the caller's responsibility."
+        fi
+    fi
+    rm -rf -- "$BINARY_PATH/radio"
+    install_release_payload "$payload_path" "$SOURCE_PATH" "$payload_root" \
+        "$payload_hash" "$tag" binaries "$target" '' "$payload_revision"
+    if [ "$soundtrack_current" -eq 0 ]; then
         install_release_payload "$soundtrack_path" "$SOUNDTRACK_PATH" \
             "$soundtrack_root" "$soundtrack_hash" "$tag" soundtrack all \
-            "$soundtrack_content_hash"
+            "$soundtrack_content_hash" "$soundtrack_revision"
     fi
     printf '%s\n' "$tag" >"$NUMINOUS_HOME/.installed-release"
 )
@@ -1104,7 +1224,86 @@ test_update_helper_signal_cleanup() (
     rm -f -- "$output"
 )
 
+test_release_provenance() (
+    have() { [ "$1" = gh ]; }
+    gh() {
+        [ "$#" -eq 20 ] || return 1
+        [ "$1" = attestation ] && [ "$2" = verify ] \
+            && [ "$3" = fixture.tar.gz ] && [ "$4" = --bundle ] \
+            && [ "$5" = provenance.jsonl ] && [ "$6" = --hostname ] \
+            && [ "$7" = github.com ] && [ "$8" = --repo ] \
+            && [ "$9" = blisspixel/numinous ] || return 1
+        shift 9
+        [ "$1" = --predicate-type ] && [ "$2" = https://slsa.dev/provenance/v1 ] \
+            && [ "$3" = --source-ref ] && [ "$4" = refs/tags/v1.2.3 ] \
+            && [ "$5" = --source-digest ] && [ "$6" = 0123456789012345678901234567890123456789 ] \
+            && [ "$7" = --signer-workflow ] \
+            && [ "$8" = blisspixel/numinous/.github/workflows/release-attest.yml ] \
+            && [ "$9" = --signer-digest ] || return 1
+        shift 9
+        [ "$1" = 0123456789012345678901234567890123456789 ] \
+            && [ "$2" = --deny-self-hosted-runners ]
+    }
+    assert_release_provenance fixture.tar.gz provenance.jsonl v1.2.3 \
+        0123456789012345678901234567890123456789
+    if (assert_release_provenance fixture.tar.gz missing.jsonl v1.2.3 \
+        0123456789012345678901234567890123456789) >/dev/null 2>&1; then
+        fail "provenance self-test: missing evidence was accepted"
+    fi
+    if (assert_release_provenance fixture.tar.gz provenance.jsonl v9.9.9 \
+        0123456789012345678901234567890123456789) >/dev/null 2>&1; then
+        fail "provenance self-test: mismatched tag was accepted"
+    fi
+    if (assert_release_provenance fixture.tar.gz provenance.jsonl v1.2.3 \
+        9999999999999999999999999999999999999999) >/dev/null 2>&1; then
+        fail "provenance self-test: mismatched revision was accepted"
+    fi
+    # Exercise the download path with matching checksums but rejected soundtrack
+    # evidence. No payload may be published before every download is authenticated.
+    test_root="$(mktemp -d "${TMPDIR:-/tmp}/numinous-provenance-test.XXXXXX")"
+    trap 'rm -rf -- "$test_root"' EXIT HUP INT TERM
+    NUMINOUS_HOME="$test_root"
+    BINARY_PATH="$test_root/bin"
+    SOURCE_PATH="$test_root/src"
+    SOUNDTRACK_PATH="$test_root/soundtrack"
+    mkdir -p "$BINARY_PATH/radio" "$SOURCE_PATH"
+    printf '%s' existing-radio >"$BINARY_PATH/radio/keep"
+    printf '%s' existing-payload >"$SOURCE_PATH/keep"
+    RELEASE_TAG=v1.2.3
+    RELEASE_ARCHIVE='' RELEASE_CHECKSUM=''
+    SOUNDTRACK_ARCHIVE='' SOUNDTRACK_CHECKSUM='' SOUNDTRACK_CONTENT_CHECKSUM=''
+    os=linux
+    release_target() { printf '%s' x86_64-unknown-linux-gnu; }
+    release_revision() { printf '%s' 0123456789012345678901234567890123456789; }
+    fetch() { printf '%s' evidence >"$2"; }
+    printf '%s' payload >"$test_root/payload"
+    copy_release_file() {
+        case "$3" in
+            *.content.sha256) printf '%064d  soundtrack-content-v1\n' 0 >"$3" ;;
+            *.sha256)
+                printf '%s  %s\n' "$(sha256_file "$test_root/payload")" "$(basename "${3%.sha256}")" >"$3"
+                ;;
+            *) printf '%s' payload >"$3" ;;
+        esac
+    }
+    installed_soundtrack_is_current() { return 1; }
+    assert_release_provenance() {
+        case "$1" in *-soundtrack.tar.gz) fail "fixture provenance rejection" ;; esac
+    }
+    install_release_payload() { printf '%s' published >"$test_root/published"; }
+    if (install_latest_release) >"$test_root/result" 2>&1; then
+        fail "provenance self-test: unauthenticated soundtrack was accepted"
+    fi
+    grep -Fq 'fixture provenance rejection' "$test_root/result" \
+        && [ ! -e "$test_root/published" ] \
+        && [ "$(cat "$BINARY_PATH/radio/keep")" = existing-radio ] \
+        && [ "$(cat "$SOURCE_PATH/keep")" = existing-payload ] \
+        || fail "provenance self-test: publication preceded authentication"
+    say "POSIX installer provenance policy: pass."
+)
+
 run_self_test() {
+    test_release_provenance
     have tar || fail "installer self-test requires tar"
     test_base="$(mktemp -d "${TMPDIR:-/tmp}/numinous-installer-test.XXXXXX")" \
         || fail "could not create the installer self-test directory"
@@ -1239,6 +1438,53 @@ run_self_test() {
     [ ! -e "$marked" ] && [ -f "$test_base/adjacent.txt" ] \
         || fail "uninstall self-test: marked-root removal crossed its boundary"
 
+    if ! self_test_without_posix_modes; then
+        authority_base="$test_base/authority"
+        authority_parent="$authority_base/parent"
+        authority_root="$authority_parent/root"
+        mkdir -p "$authority_root"
+        chmod 700 "$authority_base" "$authority_parent"
+        claim_install_root "$authority_root"
+        printf '%s\n' keep >"$authority_root/keep.txt"
+        for mutable in "$authority_parent" "$authority_base"; do
+            chmod 777 "$mutable"
+            if remove_install_root "$authority_root" >/dev/null 2>&1; then
+                fail "uninstall self-test: a replaceable ancestor was accepted"
+            fi
+            [ -f "$authority_root/keep.txt" ] && [ -f "$test_base/adjacent.txt" ] \
+                || fail "uninstall self-test: rejecting a replaceable ancestor removed data"
+            chmod 700 "$mutable"
+        done
+        if [ "$(uname -s)" = Darwin ]; then
+            for acl_right in delete delete_child writesecurity chown; do
+                chmod +a "everyone allow $acl_right" "$authority_parent"
+                if remove_install_root "$authority_root" >/dev/null 2>&1; then
+                    fail "uninstall self-test: a replacement-granting ACL was accepted"
+                fi
+                [ -f "$authority_root/keep.txt" ] \
+                    || fail "uninstall self-test: rejecting an ACL removed data"
+                chmod -a "everyone allow $acl_right" "$authority_parent"
+            done
+        fi
+        # A sticky parent owned by this user preserves the root's name against
+        # other accounts, like a normal per-user directory beneath /tmp.
+        chmod 1777 "$authority_parent"
+        remove_install_root "$authority_root"
+        [ ! -e "$authority_root" ] \
+            || fail "uninstall self-test: a trusted sticky parent was rejected"
+    fi
+
+    for acl_right in delete delete_child writesecurity chown; do
+        if printf ' 0: user:other allow list,%s,readsecurity\n' "$acl_right" \
+            | mac_acl_has_no_replacement_allow; then
+            fail "uninstall self-test: the macOS ACL policy accepted replacement rights"
+        fi
+    done
+    printf '%s\n' ' 0: group:everyone deny delete' \
+        ' 1: user:other allow list,search,readsecurity' \
+        | mac_acl_has_no_replacement_allow \
+        || fail "uninstall self-test: harmless macOS ACL entries were refused"
+
     source_root="$test_base/source-root"
     source_dir="$source_root/src"
     binary_dir="$source_root/bin"
@@ -1322,6 +1568,8 @@ usage() {
     say "  install.sh --source         build the current main branch from source"
     say ""
     say "NUMINOUS_HOME overrides the install root (default ~/.numinous)."
+    say "Downloaded archives require GitHub CLI (gh) and valid signed provenance."
+    say "Explicit local archive/checksum options are caller-trusted packaging inputs."
     say "Play history in ~/.numinous-journey and friends is never touched."
 }
 

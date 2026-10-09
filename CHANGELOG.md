@@ -7,6 +7,26 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [0.5.0-alpha.4] - 2026-10-08
 
+### Fixed
+- Bound exact radical simplification in Studio readings while preserving
+  numerical play for valid creations whose exact analysis is unsupported.
+- Bound Gallery directory discovery before metadata inspection and capsule
+  parsing, with a clear smaller-folder recovery for oversized folders.
+- Create private state files with owner-only Unix permissions, tighten existing
+  append files before writing, and route App crash logs through core persistence.
+  Windows files continue to inherit their containing directory's ACL.
+- Authenticate local broadcast pairing with fresh mutual challenges and
+  role-separated HMAC-SHA256 proofs bound to the invitation and session.
+  The raw capability stays off the socket. Pairing wire version 2 requires
+  matching updated App and MCP binaries. Abandoned connections no longer
+  consume the invitation's complete authentication failure budget.
+- Verify downloaded release archives against signed provenance bound to the
+  repository, release tag, revision, and release workflow before replacing
+  installed payloads. GitHub CLI is now required for downloaded installations.
+- Reject managed install paths whose ownership or ancestor permissions allow
+  replacement by other local accounts, including macOS and Windows ACLs.
+  Normal private-root uninstall continues to preserve player-owned state.
+
 ### Documentation
 - Define research-derived games around patterns, relationships and real
   mathematical moves, with visual, auditory and inspectable consequences.

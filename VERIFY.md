@@ -227,6 +227,12 @@ commit digest. Verify build provenance for any binary or soundtrack archive
 against the repository, tag, source commit, exact signer workflow, and signer
 commit:
 
+The ordinary installers enforce this policy for downloaded binary and soundtrack
+archives before extraction. They resolve the tag commit through repository Git
+objects and verify the published provenance bundle with GitHub CLI. Explicitly
+supplied local packaging fixtures remain caller-trusted; see the
+[installation manual](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md#for-humans).
+
 ```
 gh attestation verify PATH_TO_ARCHIVE --predicate-type https://slsa.dev/provenance/v1 --repo blisspixel/numinous --source-ref refs/tags/TAG --source-digest TAG_COMMIT_SHA --signer-workflow blisspixel/numinous/.github/workflows/release-attest.yml --signer-digest TAG_COMMIT_SHA --deny-self-hosted-runners
 ```

@@ -24,6 +24,9 @@ the experience this project is trying to earn.*
 Start with [PLAY.md](PLAY.md) for your first session, including the MCP entry
 for digital minds.
 
+Install [GitHub CLI](https://cli.github.com/) first. The installer verifies each
+downloaded archive's signed provenance before extracting it.
+
 macOS or Linux:
 
 ```text

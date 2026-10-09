@@ -44,7 +44,8 @@ pub enum PathClosure {
     /// A field is a value over the plane, not a path that can come home.
     Field,
     /// The pair is not two harmonic oscillators of the form
-    /// `A*sin(w*t+p)` or `A*cos(w*t+p)` with a constant scale and phase.
+    /// `A*sin(w*t+p)` or `A*cos(w*t+p)` with a constant scale and phase,
+    /// or its exact arithmetic exceeds the bounded analysis budget.
     Unsupported,
     /// A common period exists in the ideal model.
     Periodic(PeriodicClosure),
@@ -1228,7 +1229,6 @@ impl Exact {
             pi: 0,
             rad: 1,
         }
-        .normalized()
     }
 
     fn from_f64(value: f64) -> Option<Self> {
@@ -1249,15 +1249,13 @@ impl Exact {
         // Saved knob steps are quarters.
         let quarters = value * 4.0;
         if quarters.fract() == 0.0 && (-1e12..=1e12).contains(&quarters) {
-            return Some(
-                Self {
-                    num: quarters as i64,
-                    den: 4,
-                    pi: 0,
-                    rad: 1,
-                }
-                .normalized(),
-            );
+            return Self {
+                num: quarters as i64,
+                den: 4,
+                pi: 0,
+                rad: 1,
+            }
+            .normalized();
         }
         None
     }
@@ -1276,35 +1274,28 @@ impl Exact {
         value
     }
 
-    fn normalized(self) -> Self {
+    fn normalized(self) -> Option<Self> {
         if self.num == 0 {
-            return Self::zero();
+            return Some(Self::zero());
         }
-        let (square, rest) = split_square(self.rad);
-        let mut num = self.num;
+        let (square, rest) = split_square(self.rad)?;
+        let num = self.num.checked_mul(i64::try_from(square).ok()?)?;
         let den = self.den;
-        if square > 1
-            && let Ok(factor) = i64::try_from(square)
-        {
-            num = num.saturating_mul(factor);
-        }
         let (num, den) = reduce(num, den);
-        Self {
+        Some(Self {
             num,
             den,
             pi: self.pi,
             rad: rest.max(1),
-        }
+        })
     }
 
     fn checked_neg(self) -> Option<Self> {
-        Some(
-            Self {
-                num: self.num.checked_neg()?,
-                ..self
-            }
-            .normalized(),
-        )
+        Self {
+            num: self.num.checked_neg()?,
+            ..self
+        }
+        .normalized()
     }
 
     fn checked_add(self, other: Self) -> Option<Self> {
@@ -1324,15 +1315,13 @@ impl Exact {
             .num
             .checked_mul(left)?
             .checked_add(other.num.checked_mul(right)?)?;
-        Some(
-            Self {
-                num,
-                den,
-                pi: self.pi,
-                rad: self.rad,
-            }
-            .normalized(),
-        )
+        Self {
+            num,
+            den,
+            pi: self.pi,
+            rad: self.rad,
+        }
+        .normalized()
     }
 
     fn checked_sub(self, other: Self) -> Option<Self> {
@@ -1347,7 +1336,7 @@ impl Exact {
         let den = self.den.checked_mul(other.den)?;
         let rad = self.rad.checked_mul(other.rad)?;
         let pi = self.pi.checked_add(other.pi)?;
-        Some(Self { num, den, pi, rad }.normalized())
+        Self { num, den, pi, rad }.normalized()
     }
 
     fn checked_div(self, other: Self) -> Option<Self> {
@@ -1372,7 +1361,7 @@ impl Exact {
         let num = num.checked_mul(i64::try_from(other.rad).ok()?)?;
         let den = den.checked_mul(other.rad)?;
         let pi = self.pi.checked_sub(other.pi)?;
-        Some(Self { num, den, pi, rad }.normalized())
+        Self { num, den, pi, rad }.normalized()
     }
 
     fn checked_sqrt(self) -> Option<Self> {
@@ -1383,31 +1372,27 @@ impl Exact {
             return Some(Self::zero());
         }
         let n = (self.num as u64).checked_mul(self.rad)?;
-        let (num_square, num_rest) = split_square(n);
-        let (den_square, den_rest) = split_square(self.den);
+        let (num_square, num_rest) = split_square(n)?;
+        let (den_square, den_rest) = split_square(self.den)?;
         if den_rest != 1 {
             // sqrt(1/d) with d not square: write as sqrt(d)/d.
             let den = self.den.checked_mul(den_rest)?;
             let rad = num_rest.checked_mul(den_rest)?;
-            return Some(
-                Self {
-                    num: i64::try_from(num_square).ok()?,
-                    den,
-                    pi: 0,
-                    rad,
-                }
-                .normalized(),
-            );
-        }
-        Some(
-            Self {
+            return Self {
                 num: i64::try_from(num_square).ok()?,
-                den: den_square,
+                den,
                 pi: 0,
-                rad: num_rest,
+                rad,
             }
-            .normalized(),
-        )
+            .normalized();
+        }
+        Self {
+            num: i64::try_from(num_square).ok()?,
+            den: den_square,
+            pi: 0,
+            rad: num_rest,
+        }
+        .normalized()
     }
 }
 
@@ -1439,14 +1424,27 @@ fn lcm_u64(left: u64, right: u64) -> Option<u64> {
     left.checked_div(g)?.checked_mul(right)
 }
 
-fn split_square(mut value: u64) -> (u64, u64) {
+// Exact readings are optional. Bound trial work even for compact expressions
+// whose intermediate integers are much larger than their individual literals.
+const MAX_SQUARE_FACTOR_TRIALS: usize = 4096;
+
+fn split_square(mut value: u64) -> Option<(u64, u64)> {
     if value == 0 {
-        return (0, 1);
+        return Some((0, 1));
+    }
+    let root = value.isqrt();
+    if root * root == value {
+        return Some((root, 1));
     }
     let mut square = 1u64;
     let mut rest = 1u64;
     let mut p = 2u64;
-    while p.saturating_mul(p) <= value {
+    let mut trials = 0;
+    while p <= value / p {
+        if trials == MAX_SQUARE_FACTOR_TRIALS {
+            return None;
+        }
+        trials += 1;
         let mut exp = 0u32;
         while value.is_multiple_of(p) {
             value /= p;
@@ -1463,7 +1461,7 @@ fn split_square(mut value: u64) -> (u64, u64) {
     if value > 1 {
         rest = rest.saturating_mul(value);
     }
-    (square, rest)
+    Some((square, rest))
 }
 
 #[cfg(test)]
@@ -1492,6 +1490,43 @@ mod tests {
         assert_eq!(PathClosure::of(&graph), PathClosure::Graph);
         assert!(PathClosure::of(&graph).report_lines().is_empty());
         assert_eq!(PathClosure::of(&graph).status_caption(), None);
+    }
+
+    #[test]
+    fn exact_radical_work_is_bounded_for_products_divisors_and_nested_arithmetic() {
+        let left = super::Exact::from_int(1_000_003).checked_sqrt().unwrap();
+        let right = super::Exact::from_int(1_000_033).checked_sqrt().unwrap();
+        assert!(left.checked_mul(right).is_none());
+        assert!(left.checked_div(right).is_none());
+        assert!(super::split_square(1_000_000_007 * 1_000_000_009).is_none());
+        for frequency in [
+            "sqrt(1000003)*sqrt(1000033)",
+            "sqrt(1000003)/sqrt(1000033)",
+            "sqrt(1000003*1000033)",
+        ] {
+            let creation = StudioCreation::new_parametric(
+                format!("cos(({frequency})*t)"),
+                "sin(t)",
+                0.0,
+                1.0,
+                1.0,
+            )
+            .expect("valid bounded expression");
+            assert_eq!(PathClosure::of(&creation), PathClosure::Unsupported);
+            assert!(
+                creation.program().is_ok(),
+                "numerical play remains available"
+            );
+        }
+        assert_eq!(super::split_square(72), Some((6, 2)));
+        assert_eq!(
+            super::split_square(1_000_000_007u64.pow(2)),
+            Some((1_000_000_007, 1))
+        );
+        assert_eq!(
+            left.checked_mul(left).unwrap(),
+            super::Exact::from_int(1_000_003)
+        );
     }
 
     #[test]

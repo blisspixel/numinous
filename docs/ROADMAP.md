@@ -399,7 +399,10 @@ and the owner doc carries the standing description.
 
 - **`v0.5.0-alpha.4` (2026-10-08):** a shorter packaged play guide with the
   multilingual welcome and App/MCP quick starts first; source-anchored research
-  notes, an offline atlas, and scoped game/tool proposals in the repository.
+  notes, an offline atlas, and scoped game/tool proposals in the repository;
+  bounded exact readings and Gallery discovery, private Unix state files,
+  fresh authenticated local broadcast pairing, verified release downloads,
+  and trusted installation ancestry.
   Research tooling is built; proposed instruments and the digital-play study
   remain Designed. See [release notes](releases/v0.5.0-alpha.4.md).
 

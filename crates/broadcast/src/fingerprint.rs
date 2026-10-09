@@ -11,7 +11,7 @@ include!(concat!(env!("OUT_DIR"), "/build_semantic_id.rs"));
 mod build_support;
 
 /// Broadcast wire protocol version.
-pub const WIRE_VERSION: u16 = 1;
+pub const WIRE_VERSION: u16 = 2;
 /// Deterministic core replay ABI version.
 pub const REPLAY_ABI_VERSION: u16 = 1;
 const MAX_CATALOG_IDENTITIES: usize = 1_024;

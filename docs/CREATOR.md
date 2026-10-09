@@ -90,10 +90,14 @@ newest first, and Enter opens one paused. F forks the chosen creation:
 editable and singing at once, in the creation's own era, with the parent's
 link remembered so the next share records the descent.
 
-Discovery keeps the wall's retained creations bounded throughout the scan,
-not just after sorting the folder. Newest files come first, with the path
-breaking equal timestamps deterministically. The folder remains the archive;
-only the retained wall resolves its local remix lineage.
+Discovery bounds both directory entries and retained creations. It counts
+entries before inspecting metadata or parsing capsules, including unsupported
+files and entry errors. A folder over the scan budget shows an explicit refusal
+and asks the player to use a smaller folder or open a creation directly.
+Within an admitted folder, newest files come first, with the path breaking
+equal timestamps deterministically. The folder remains the archive; only the
+retained wall resolves its local remix lineage. The entry budget bounds work;
+it does not make a slow filesystem asynchronous.
 
 **4. Lineage that credits generously.** Every fork records "descends from,"
 building a visible remix tree, but avoid the failure Scratch's own researchers

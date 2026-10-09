@@ -237,12 +237,32 @@ pub enum WireMessage<T> {
     },
 }
 
-/// Server-first proof that the loopback peer knows the displayed capability.
+/// Fresh guest challenge. It contains no capability or reusable authenticator.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct HandshakeHello {
+    /// Handshake wire schema version.
+    pub wire_version: u16,
+    /// Fresh random guest nonce, encoded as lowercase hexadecimal.
+    pub nonce: String,
+}
+
+/// Host proof bound to the guest challenge and the complete session transcript.
 #[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct HandshakeProof {
     /// Wire schema version offered by the host.
     pub wire_version: u16,
+    /// Echo of the fresh guest challenge.
+    pub client_nonce: String,
+    /// Fresh host challenge for this connection.
+    pub server_nonce: String,
+    /// Authenticated nonsecret session identity.
+    pub session_id: SessionId,
+    /// Authenticated initial consent epoch.
+    pub consent_epoch: u64,
+    /// Authenticated host compatibility declaration.
+    pub compatibility: Compatibility,
     /// Lowercase hexadecimal proof derived from the one-use capability.
     pub proof: String,
 }
@@ -263,8 +283,8 @@ impl fmt::Debug for HandshakeProof {
 pub struct HandshakeRequest {
     /// Wire schema version offered by the guest.
     pub wire_version: u16,
-    /// Lowercase hexadecimal one-use capability.
-    pub capability: String,
+    /// Transcript-bound guest proof, never the pairing capability itself.
+    pub proof: String,
     /// Guest replay compatibility declaration.
     pub compatibility: Compatibility,
 }
@@ -274,7 +294,7 @@ impl fmt::Debug for HandshakeRequest {
         formatter
             .debug_struct("HandshakeRequest")
             .field("wire_version", &self.wire_version)
-            .field("capability", &"[REDACTED]")
+            .field("proof", &"[REDACTED]")
             .field("compatibility", &self.compatibility)
             .finish()
     }
@@ -403,13 +423,18 @@ mod tests {
         let accepted = HandshakeResponse::Accepted {
             session_id,
             consent_epoch: 4,
-            compatibility,
+            compatibility: compatibility.clone(),
         };
         let accepted_json = serde_json::to_string(&accepted).expect("accepted JSON");
         assert!(accepted_json.contains("\"sessionId\""));
         assert!(accepted_json.contains("\"consentEpoch\""));
         let proof = HandshakeProof {
             wire_version: 1,
+            client_nonce: "11".repeat(32),
+            server_nonce: "22".repeat(32),
+            session_id: SessionId::from_bytes([3; 16]),
+            consent_epoch: 1,
+            compatibility,
             proof: "11".repeat(32),
         };
         let proof_json = serde_json::to_string(&proof).expect("proof JSON");
