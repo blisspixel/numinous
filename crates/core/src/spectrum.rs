@@ -20,7 +20,8 @@ const BAND_CENTERS_HZ: [f32; BAND_COUNT] =
 ///
 /// `channels` must be 1 or 2. Empty input, zero rate, or unsupported channel
 /// counts return zeros. Energies are relative mean-square magnitudes at the
-/// nearest DFT bin to each band center, not calibrated dB SPL.
+/// nearest DFT bin to each band center, not calibrated dB SPL. A non-finite
+/// sample contributes nothing, and a non-finite energy is stored as zero.
 #[must_use]
 pub fn band_energies(samples: &[f32], channels: usize, sample_rate: u32) -> [f32; BAND_COUNT] {
     let mut out = [0.0f32; BAND_COUNT];
@@ -49,12 +50,14 @@ pub fn band_energies(samples: &[f32], channels: usize, sample_rate: u32) -> [f32
         let (dc, ds) = (omega.cos(), omega.sin());
         for i in 0..window {
             let frame = start + i;
-            let mono = if channels == 1 {
+            let mixed = if channels == 1 {
                 samples[frame]
             } else {
                 let o = frame * 2;
                 0.5 * (samples[o] + samples[o + 1])
             };
+            // A non-finite sample is silence. It must not poison the accumulator.
+            let mono = if mixed.is_finite() { mixed } else { 0.0 };
             // Hann window softens spectral leakage without a full FFT table.
             let w = 0.5 - 0.5 * (std::f32::consts::TAU * i as f32 / denom).cos();
             let x = mono * w;
@@ -65,7 +68,12 @@ pub fn band_energies(samples: &[f32], channels: usize, sample_rate: u32) -> [f32
             c = nc;
             s = ns;
         }
-        out[band] = (re * re + im * im) / (window as f32 * window as f32);
+        let energy = (re * re + im * im) / (window as f32 * window as f32);
+        out[band] = if energy.is_finite() {
+            energy.max(0.0)
+        } else {
+            0.0
+        };
     }
     out
 }
@@ -79,16 +87,25 @@ pub fn bass_mid_treble(bands: &[f32; BAND_COUNT]) -> (f32, f32, f32) {
     (bass, mid, treble)
 }
 
-/// Normalize band energies so the loudest band is 1.0 (or all zeros stay zero).
+/// Normalize band energies so the loudest finite positive band is 1.0.
+///
+/// A non-finite or negative energy contributes nothing. All zeros, and a
+/// vector with no finite positive energy, stay zero.
 #[must_use]
 pub fn normalize_bands(bands: &[f32; BAND_COUNT]) -> [f32; BAND_COUNT] {
-    let peak = bands.iter().copied().fold(0.0f32, f32::max);
+    let mut finite = [0.0f32; BAND_COUNT];
+    for (slot, &energy) in finite.iter_mut().zip(bands) {
+        if energy.is_finite() && energy > 0.0 {
+            *slot = energy;
+        }
+    }
+    let peak = finite.iter().copied().fold(0.0f32, f32::max);
     if peak <= f32::EPSILON {
         return [0.0; BAND_COUNT];
     }
     let mut out = [0.0f32; BAND_COUNT];
-    for (i, &e) in bands.iter().enumerate() {
-        out[i] = (e / peak).clamp(0.0, 1.0);
+    for (index, &energy) in finite.iter().enumerate() {
+        out[index] = (energy / peak).clamp(0.0, 1.0);
     }
     out
 }
@@ -96,11 +113,14 @@ pub fn normalize_bands(bands: &[f32; BAND_COUNT]) -> [f32; BAND_COUNT] {
 /// Coarse onset proxy: low-band energy of this frame over the previous frame.
 ///
 /// Values near 1.0 mean little change; above ~1.5 suggests a low-band attack.
-/// Either side empty or silent returns 1.0 (no onset).
+/// Either side empty, silent, or non-finite returns 1.0 (no onset).
 #[must_use]
 pub fn low_band_onset(previous: &[f32; BAND_COUNT], current: &[f32; BAND_COUNT]) -> f32 {
     let prev = previous[0] + previous[1];
     let curr = current[0] + current[1];
+    if !prev.is_finite() || !curr.is_finite() {
+        return 1.0;
+    }
     if prev <= f32::EPSILON {
         return if curr > f32::EPSILON { 2.0 } else { 1.0 };
     }
@@ -130,7 +150,8 @@ pub fn arrangement_spectrum(samples: &[f32], sample_rate: u32) -> [f32; BAND_COU
 /// The air band stays zero when its center is at or above 0.48 of the sample
 /// rate. At the 16 kHz room-bed rate that center is above Nyquist, so the air
 /// band of a room bed is zero. The result is gain-invariant: scaling a finite
-/// non-silent buffer does not change the normalized bands.
+/// non-silent buffer does not change the normalized bands. A non-finite sample
+/// contributes nothing, and a non-finite window energy does not survive.
 #[must_use]
 pub fn spectral_fingerprint(
     samples: &[f32],
@@ -172,6 +193,9 @@ pub fn spectral_fingerprint(
     let scale = windows as f32;
     for sum in &mut sums {
         *sum /= scale;
+        if !sum.is_finite() {
+            *sum = 0.0;
+        }
     }
     normalize_bands(&sums)
 }
@@ -534,5 +558,61 @@ mod tests {
             "the earlier bass tone must survive in the fingerprint: {whole:?}"
         );
         assert_eq!(whole[BAND_COUNT - 1], 0.0);
+    }
+
+    #[test]
+    fn a_non_finite_energy_does_not_survive_normalization() {
+        let mut bands = [0.0; BAND_COUNT];
+        bands[0] = f32::NAN;
+        bands[1] = 4.0;
+        bands[2] = f32::INFINITY;
+        bands[3] = -2.0;
+        let normalized = normalize_bands(&bands);
+        assert!(
+            normalized.iter().all(|band| band.is_finite()),
+            "{normalized:?}"
+        );
+        assert_eq!(normalized[1], 1.0);
+        assert_eq!(normalized[0], 0.0);
+        assert_eq!(normalized[2], 0.0);
+        assert_eq!(normalized[3], 0.0);
+        assert_eq!(normalize_bands(&[f32::NAN; BAND_COUNT]), [0.0; BAND_COUNT]);
+        assert_eq!(
+            normalize_bands(&[f32::NEG_INFINITY; BAND_COUNT]),
+            [0.0; BAND_COUNT]
+        );
+    }
+
+    #[test]
+    fn a_non_finite_sample_stays_out_of_the_fingerprint() {
+        let mut samples = sine_stereo(440.0, 16_000, 512);
+        samples[10] = f32::NAN;
+        samples[11] = f32::INFINITY;
+        let fingerprint = spectral_fingerprint(&samples, 2, 16_000);
+        assert!(
+            fingerprint
+                .iter()
+                .all(|band| band.is_finite() && (0.0..=1.0).contains(band)),
+            "{fingerprint:?}"
+        );
+        let energies = band_energies(&samples, 2, 16_000);
+        assert!(
+            energies.iter().all(|band| band.is_finite() && *band >= 0.0),
+            "{energies:?}"
+        );
+        let levers = levers_from_bands(&energies, &energies);
+        assert!(
+            levers.bass.is_finite()
+                && levers.mid.is_finite()
+                && levers.treble.is_finite()
+                && levers.onset.is_finite()
+        );
+        assert_eq!(
+            spectral_fingerprint(&[f32::NAN; 64], 2, 16_000),
+            [0.0; BAND_COUNT]
+        );
+        let mut quiet = [0.0; BAND_COUNT];
+        quiet[0] = f32::NAN;
+        assert_eq!(low_band_onset(&quiet, &quiet), 1.0);
     }
 }

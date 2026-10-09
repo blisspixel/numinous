@@ -5,6 +5,15 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Fixed
+- Appending private state or a diagnostic log refuses a symlink, so the
+  append does not change the link's target or its permissions. Replacing a
+  state file through a symlink leaves the target intact and writes a regular
+  file at the state path.
+- Spectrum bands treat a non-finite sample as silence, and normalization
+  drops a non-finite energy. The flagship golden gate rejects a non-finite
+  fingerprint and a luminance signature that is not the fixed grid.
+
 ## [0.5.0-alpha.6] - 2026-10-09
 
 ### Fixed

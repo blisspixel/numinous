@@ -1530,6 +1530,37 @@ mod tests {
     }
 
     #[test]
+    fn an_exact_square_split_reconstructs_its_input() {
+        for value in [
+            0u64,
+            1,
+            2,
+            3,
+            4,
+            12,
+            18,
+            72,
+            360,
+            1024,
+            u64::from(u32::MAX),
+            1u64 << 32,
+            u64::MAX,
+        ] {
+            let Some((square, rest)) = super::split_square(value) else {
+                continue;
+            };
+            let reconstructed = square
+                .checked_mul(square)
+                .and_then(|product| product.checked_mul(rest));
+            assert_eq!(
+                reconstructed,
+                Some(value),
+                "{value} split as ({square}, {rest})"
+            );
+        }
+    }
+
+    #[test]
     fn full_return_has_period_twelve_with_seventeen_y_cycles() {
         let closure = periodic("full-return");
         assert_eq!(closure.period_text, "12");

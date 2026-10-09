@@ -1394,17 +1394,18 @@ fn remove_orphan_temp_files(path: &Path) -> io::Result<()> {
 
 /// Append one record while holding the file's persistence lock, rejecting a
 /// write that would make the file exceed `max_bytes`.
+///
+/// The path must be absent or a regular file. A symlink is refused before any
+/// byte is written and before Unix permissions are tightened, so the link's
+/// target is left unchanged.
 pub(crate) fn append_local_file_bounded(
     path: &Path,
     bytes: &[u8],
     max_bytes: u64,
 ) -> io::Result<()> {
     let _lock = PersistLock::acquire(path)?;
-    let mut file = private_file_options()
-        .create(true)
-        .read(true)
-        .append(true)
-        .open(path)?;
+    reject_private_append_path(path)?;
+    let mut file = open_private_append(path)?;
     restrict_private_file(&file)?;
     let appended_bytes = u64::try_from(bytes.len()).map_err(|_| {
         io::Error::new(
@@ -1433,9 +1434,107 @@ pub(crate) fn append_local_file_bounded(
 
 /// Append a diagnostic entry using the same lock and private-file policy as
 /// player state. On Unix, new and existing files are restricted to their owner
-/// before writing. Other platforms retain the containing directory's ACL policy.
+/// before writing. A symlink is refused, so that restriction and the appended
+/// bytes never apply to the link's target. Other platforms retain the
+/// containing directory's ACL policy.
 pub fn append_crash_log_file(path: &Path, entry: &str) -> io::Result<()> {
     append_local_file_bounded(path, entry.as_bytes(), u64::MAX)
+}
+
+fn symlink_state_error(path: &Path) -> io::Error {
+    io::Error::new(
+        io::ErrorKind::InvalidData,
+        format!("{} is a symlink, not a private state file", path.display()),
+    )
+}
+
+/// Refuse anything that is already present and is not a regular file.
+///
+/// Absence is allowed: the append creates the file. This check is the clear
+/// error. The no-follow open keeps a symlink that appears in between from
+/// being followed.
+fn reject_private_append_path(path: &Path) -> io::Result<()> {
+    match fs::symlink_metadata(path) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+        Ok(metadata) if metadata.file_type().is_symlink() => Err(symlink_state_error(path)),
+        Ok(metadata) if metadata.file_type().is_file() => Ok(()),
+        Ok(_) => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("{} is not a private state file", path.display()),
+        )),
+    }
+}
+
+fn open_private_append(path: &Path) -> io::Result<File> {
+    let mut options = private_file_options();
+    options.create(true).read(true).append(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        // Do not follow a final symlink. Linux and Android use 0x20000.
+        // macOS and iOS use 0x0100. Other Unix targets keep the metadata refusal.
+        let no_follow = if cfg!(any(target_os = "linux", target_os = "android")) {
+            0x20000
+        } else if cfg!(any(target_os = "macos", target_os = "ios")) {
+            0x0100
+        } else {
+            0
+        };
+        if no_follow != 0 {
+            options.custom_flags(no_follow);
+        }
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        // FILE_FLAG_OPEN_REPARSE_POINT: the handle is the link, not its target.
+        options.custom_flags(0x0020_0000);
+    }
+    let file = match options.open(path) {
+        Ok(file) => file,
+        // O_NOFOLLOW fails with ELOOP when the final component is a symlink.
+        // Linux and Android use 40. macOS and iOS use 62.
+        Err(error) if is_eloop(&error) => return Err(symlink_state_error(path)),
+        Err(error) => return Err(error),
+    };
+    reject_reparse_point(path, file)
+}
+
+fn is_eloop(error: &io::Error) -> bool {
+    #[cfg(any(target_os = "linux", target_os = "android"))]
+    {
+        error.raw_os_error() == Some(40)
+    }
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    {
+        error.raw_os_error() == Some(62)
+    }
+    #[cfg(not(any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "macos",
+        target_os = "ios"
+    )))]
+    {
+        let _ = error;
+        false
+    }
+}
+
+fn reject_reparse_point(path: &Path, file: File) -> io::Result<File> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        // FILE_ATTRIBUTE_REPARSE_POINT on the handle opened above.
+        const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
+        if file.metadata()?.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+            return Err(symlink_state_error(path));
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = path;
+    Ok(file)
 }
 
 fn private_file_options() -> OpenOptions {
@@ -2199,13 +2298,157 @@ mod tests {
             if let Ok(entries) = std::fs::read_dir(&self.root) {
                 for entry in entries.flatten() {
                     let path = entry.path();
-                    if path.is_file() {
+                    // `is_file` follows a symlink. A link whose target is already
+                    // gone would then be left behind and the directory would not
+                    // be removed. Remove the link itself.
+                    let removable = std::fs::symlink_metadata(&path)
+                        .map(|metadata| {
+                            metadata.file_type().is_file() || metadata.file_type().is_symlink()
+                        })
+                        .unwrap_or(false);
+                    if removable {
                         let _ = std::fs::remove_file(path);
                     }
                 }
             }
             let _ = std::fs::remove_dir(&self.root);
         }
+    }
+
+    /// Plant a file symlink. A local account without the privilege skips the
+    /// test. A GitHub-hosted runner is expected to be able to create the link,
+    /// so a failure there is a real failure.
+    fn try_plant_file_symlink(target: &std::path::Path, link: &std::path::Path) -> bool {
+        let planted = {
+            #[cfg(unix)]
+            {
+                std::os::unix::fs::symlink(target, link)
+            }
+            #[cfg(windows)]
+            {
+                std::os::windows::fs::symlink_file(target, link)
+            }
+            #[cfg(not(any(unix, windows)))]
+            {
+                let _ = (target, link);
+                Err(io::Error::new(
+                    io::ErrorKind::Unsupported,
+                    "file symlinks are not available",
+                ))
+            }
+        };
+        match planted {
+            Ok(()) => true,
+            Err(error) if local_account_cannot_plant_symlink(&error) => false,
+            Err(error) => panic!("could not plant a file symlink: {error}"),
+        }
+    }
+
+    /// Windows reports a missing symlink privilege as os error 1314, which is
+    /// not permission denied. A hosted runner must not skip.
+    fn local_account_cannot_plant_symlink(error: &io::Error) -> bool {
+        if std::env::var_os("GITHUB_ACTIONS").is_some() {
+            return false;
+        }
+        if matches!(
+            error.kind(),
+            io::ErrorKind::PermissionDenied | io::ErrorKind::Unsupported
+        ) {
+            return true;
+        }
+        cfg!(windows) && error.raw_os_error() == Some(1314)
+    }
+
+    #[test]
+    fn appending_creates_a_regular_file_and_refuses_a_directory() {
+        let root = IsolatedStore::new("append_ordinary");
+        let path = root.path("state");
+        super::append_local_file_bounded(&path, b"hello", 100).expect("create");
+        super::append_local_file_bounded(&path, b"!", 100).expect("append");
+        assert_eq!(std::fs::read(&path).expect("read"), b"hello!");
+        let dir = root.path("nested");
+        std::fs::create_dir(&dir).expect("directory");
+        let error = super::append_local_file_bounded(&dir, b"no", 100)
+            .expect_err("a directory is not a state file");
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert!(
+            std::fs::read_dir(&dir)
+                .expect("directory remains")
+                .next()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn appending_private_state_through_a_symlink_does_not_touch_the_target() {
+        let root = IsolatedStore::new("symlink_append");
+        for (name, diagnostic) in [("state", false), ("diagnostic", true)] {
+            let target = root.path(&format!("{name}-target"));
+            let link = root.path(name);
+            std::fs::write(&target, b"secret").expect("target");
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o666))
+                    .expect("loosen target mode");
+            }
+            if !try_plant_file_symlink(&target, &link) {
+                return;
+            }
+            let error = if diagnostic {
+                super::append_crash_log_file(&link, "after")
+                    .expect_err("diagnostic append must refuse the symlink")
+            } else {
+                super::append_local_file_bounded(&link, b"after", 100)
+                    .expect_err("state append must refuse the symlink")
+            };
+            assert_eq!(error.kind(), io::ErrorKind::InvalidData, "{error}");
+            assert!(
+                error.to_string().contains("symlink"),
+                "the refusal should name the symlink: {error}"
+            );
+            assert_eq!(std::fs::read(&target).expect("target bytes"), b"secret");
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                assert_eq!(
+                    std::fs::metadata(&target)
+                        .expect("target metadata")
+                        .permissions()
+                        .mode()
+                        & 0o777,
+                    0o666,
+                    "tightening permissions must not follow the symlink"
+                );
+            }
+            assert!(
+                std::fs::symlink_metadata(&link)
+                    .expect("link metadata")
+                    .file_type()
+                    .is_symlink()
+            );
+        }
+    }
+
+    #[test]
+    fn replacing_private_state_through_a_symlink_leaves_the_target_intact() {
+        let root = IsolatedStore::new("symlink_replace");
+        let target = root.path("target");
+        let link = root.path("state");
+        std::fs::write(&target, b"secret").expect("target");
+        if !try_plant_file_symlink(&target, &link) {
+            return;
+        }
+        super::atomic_write(&link, b"replaced").expect("replace the state path");
+        assert_eq!(
+            std::fs::read(&target).expect("target bytes"),
+            b"secret",
+            "replacement must not follow the symlink"
+        );
+        let metadata = std::fs::symlink_metadata(&link).expect("state path");
+        assert!(metadata.file_type().is_file());
+        assert!(!metadata.file_type().is_symlink());
+        assert_eq!(std::fs::read(&link).expect("new state"), b"replaced");
     }
 
     fn local_state_paths(root: &std::path::Path) -> LocalStatePaths {
