@@ -15,7 +15,7 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 Reviewed 2026-10-08.
 
-**Current release state: 0.5.0-alpha.4, Sensory Alpha active with its exit
+**Current release state: 0.5.0-alpha.5, Sensory Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are met and stay CI-locked. The package minor names
 the active milestone, not the oldest open gate. Understanding Alpha's external
@@ -399,6 +399,14 @@ above without adding release gates or reordering **Next, in order**.
 
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
+
+- **`v0.5.0-alpha.5` (2026-10-08):** persisted Interface Text at 100, 125, and
+  150 percent for Cabinet menus, room HUD lettering, and the pause, banner,
+  and journey overlays. One hundred percent keeps each window's previous
+  scale. Reading Text stays separate, and Gallery, games, Studio, and in-room
+  pictures keep their own layout scales. Sensory Alpha's physical receipts,
+  perceptual regression, and flash and color-vision decisions remain open.
+  See [release notes](releases/v0.5.0-alpha.5.md).
 
 - **`v0.5.0-alpha.4` (2026-10-08):** a shorter packaged play guide with the
   multilingual welcome and App/MCP quick starts first; source-anchored research
