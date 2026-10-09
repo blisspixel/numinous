@@ -73,9 +73,14 @@ impl AudioState {
     }
 }
 
-pub(crate) fn draw_audio_state(raster: &mut Raster, state: &AudioState, width: usize) {
+pub(crate) fn draw_audio_state(
+    raster: &mut Raster,
+    state: &AudioState,
+    width: usize,
+    text_size: numinous_core::StudyTextSize,
+) {
     // Status occupies the first row; titles and journey progress start below it.
-    let scale = if width >= 720 { 2 } else { 1 };
+    let scale = audio_badge_scale(width, text_size);
     let label = fit_footer_text(&state.label(), width.saturating_sub(20) as i32, scale);
     let x = width
         .saturating_sub(label.chars().count() * 6 * scale as usize)
@@ -89,6 +94,7 @@ pub(crate) fn draw_spectrum_meter(
     bands: &[f32; numinous_core::BAND_COUNT],
     width: usize,
     height: usize,
+    text_size: numinous_core::StudyTextSize,
 ) {
     if width < 80 || height < 40 {
         return;
@@ -97,13 +103,15 @@ pub(crate) fn draw_spectrum_meter(
     let max_h = 16i32
         .min(height as i32 / 8)
         .max(4)
-        .min(7 * footer_scale(width) + 1);
+        .min(7 * chrome_scale(width, text_size) + 1);
     let left = (width as i32)
         .saturating_sub(8 + numinous_core::BAND_COUNT as i32 * (bar_w + 1))
         .max(0);
     // The title reserves this right-hand strip. Place bars below progress,
     // inside the header, so they cannot paint over explanation or room art.
-    let bottom = (header_bottom(width) - 2).min(height as i32 - 1).max(0);
+    let bottom = (header_bottom_for(width, text_size, chrome_scale(width, text_size)) - 2)
+        .min(height as i32 - 1)
+        .max(0);
     for (i, &level) in bands.iter().enumerate() {
         let h = ((level.clamp(0.0, 1.0) * max_h as f32).round() as i32).max(1);
         let x0 = left + i as i32 * (bar_w + 1);
@@ -131,6 +139,8 @@ pub(crate) struct RoomChrome {
     /// The player's motion setting. Under reduced motion The Show is held on
     /// each room until the player moves on, so its chrome says how.
     pub(crate) motion: numinous_core::Motion,
+    /// Cabinet and room lettering. One hundred percent keeps the width scale.
+    pub(crate) text_size: numinous_core::StudyTextSize,
 }
 
 pub(crate) fn room_action(room: &dyn Room) -> &'static str {
@@ -202,15 +212,31 @@ struct FooterBudget {
     controls_x: i32,
 }
 
-fn footer_budget(width: usize, height: usize, controls: &str, status: &str) -> FooterBudget {
+fn footer_budget(
+    width: usize,
+    height: usize,
+    controls: &str,
+    status: &str,
+    text_size: numinous_core::StudyTextSize,
+) -> FooterBudget {
     // The two-row band uses at most a tenth of an ordinary viewport. A wide,
     // short window must not grow its footer over the room's own controls.
-    let mut scale = footer_scale(width).min((height / 240).clamp(1, 4) as i32);
+    let natural = footer_scale(width).min((height / 240).clamp(1, 4) as i32);
+    let mut scale = if text_size == numinous_core::StudyTextSize::Standard {
+        natural
+    } else {
+        text_size.pixel_scale(footer_scale(width))
+    };
     // Grow the text only when both fields still fit. Otherwise a wider
     // window can hide information that was visible at the previous scale.
     let cells = controls.chars().count() + status.chars().count();
     while scale > 1 && cells * 6 * scale as usize + 30 > width {
         scale -= 1;
+    }
+    if text_size != numinous_core::StudyTextSize::Standard {
+        while scale > 1 && !chrome_bands_fit(width, height, scale, text_size) {
+            scale -= 1;
+        }
     }
     let controls_width = controls.chars().count() as i32 * 6 * scale;
     let controls_x = width as i32 - controls_width - 10;
@@ -227,12 +253,52 @@ fn footer_scale(width: usize) -> i32 {
     (width as i32 / 400).clamp(1, 4)
 }
 
-fn header_title_y(width: usize) -> i32 {
-    if width >= 720 { 18 } else { 10 }
+fn audio_badge_scale(width: usize, text_size: numinous_core::StudyTextSize) -> i32 {
+    let base = if width >= 720 { 2 } else { 1 };
+    text_size.pixel_scale(base)
 }
 
-fn header_bottom(width: usize) -> i32 {
-    header_title_y(width) + 7 * (footer_scale(width) + 1) + 4
+/// The pixel scale room chrome starts from. One hundred percent is the
+/// width's own footer scale, which existing fit rules may still reduce.
+fn chrome_scale(width: usize, text_size: numinous_core::StudyTextSize) -> i32 {
+    text_size.pixel_scale(footer_scale(width))
+}
+
+fn header_title_y_for(width: usize, text_size: numinous_core::StudyTextSize) -> i32 {
+    let historic = if width >= 720 { 18 } else { 10 };
+    if text_size == numinous_core::StudyTextSize::Standard {
+        return historic;
+    }
+    let below_audio = 2 + 7 * audio_badge_scale(width, text_size) + 2;
+    below_audio.max(historic)
+}
+
+fn header_bottom_for(width: usize, text_size: numinous_core::StudyTextSize, chrome: i32) -> i32 {
+    let title_base = if text_size == numinous_core::StudyTextSize::Standard {
+        footer_scale(width)
+    } else {
+        chrome
+    };
+    header_title_y_for(width, text_size) + 7 * (title_base + 1) + 4
+}
+
+fn fitted_show_scale(width: usize, height: usize, text_size: numinous_core::StudyTextSize) -> i32 {
+    let mut scale = chrome_scale(width, text_size);
+    while scale > 1 && !chrome_bands_fit(width, height, scale, text_size) {
+        scale -= 1;
+    }
+    scale
+}
+
+fn chrome_bands_fit(
+    width: usize,
+    height: usize,
+    footer: i32,
+    text_size: numinous_core::StudyTextSize,
+) -> bool {
+    let header = header_bottom_for(width, text_size, footer);
+    let footer_top = height as i32 - 24 * footer;
+    footer_top > header + 8
 }
 
 fn fit_footer_text(text: &str, pixel_budget: i32, scale: i32) -> String {
@@ -312,7 +378,7 @@ pub(crate) fn draw_room_chrome(
     width: usize,
     height: usize,
 ) {
-    let scale = footer_scale(width);
+    let text_size = state.text_size;
     let footer = (!state.the_show && !state.studio && !state.show_help).then(|| {
         let footer = footer_copy(
             room,
@@ -323,9 +389,20 @@ pub(crate) fn draw_room_chrome(
             state.controller_face,
             status_override,
         );
-        let budget = footer_budget(width, height, &footer.controls, &footer.status);
+        let budget = footer_budget(width, height, &footer.controls, &footer.status, text_size);
         (footer, budget)
     });
+    // One hundred percent keeps the width scale for titles even when the
+    // footer itself has stepped down. A larger size uses one fitted scale
+    // for the header and the footer so they grow and shrink together.
+    let scale = if text_size == numinous_core::StudyTextSize::Standard {
+        footer_scale(width)
+    } else {
+        footer.as_ref().map_or_else(
+            || fitted_show_scale(width, height, text_size),
+            |(_, budget)| budget.scale,
+        )
+    };
     let footer_scale = footer.as_ref().map_or(scale, |(_, budget)| budget.scale);
     let reveal_lines = if state.show_info && !state.the_show && !state.studio {
         let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
@@ -350,12 +427,13 @@ pub(crate) fn draw_room_chrome(
     };
     if !state.the_show && !state.studio && !state.show_help && !state.show_journey {
         if reveal_lines.is_empty() {
-            let title_bottom = header_bottom(width);
+            let title_bottom = header_bottom_for(width, text_size, scale);
             raster.clear_rows(0, title_bottom);
             raster.line(0, title_bottom - 1, width as i32 - 1, title_bottom - 1, '-');
         } else {
-            let reveal_bottom =
-                header_title_y(width) + 8 + (2 + reveal_lines.len() as i32) * 9 * scale;
+            let reveal_bottom = header_title_y_for(width, text_size)
+                + 8
+                + (2 + reveal_lines.len() as i32) * 9 * scale;
             raster.clear_rows(0, reveal_bottom);
             raster.line(
                 0,
@@ -424,10 +502,17 @@ pub(crate) fn draw_room_chrome(
 
     if !state.the_show && !state.studio {
         let level = journey_level_label(state.level);
-        let level_scale = 1;
+        let level_scale = text_size.pixel_scale(1);
         let lx = width as i32 - (level.len() as i32 * 6 * level_scale) - 10;
         let (title, title_scale) = fit_title(&room.meta().title.to_uppercase(), lx - 20, scale + 1);
-        numinous_core::draw_text(raster, &title, 10, header_title_y(width), title_scale, '#');
+        numinous_core::draw_text(
+            raster,
+            &title,
+            10,
+            header_title_y_for(width, text_size),
+            title_scale,
+            '#',
+        );
         if !arrival.is_empty() {
             let footer_band_top = height as i32 - 24 * footer_scale;
             let line_count = arrival.len() as i32;
@@ -442,7 +527,7 @@ pub(crate) fn draw_room_chrome(
                 );
             }
         }
-        let ly = header_title_y(width);
+        let ly = header_title_y_for(width, text_size);
         numinous_core::draw_text(raster, &level, lx, ly, level_scale, '#');
     }
 
@@ -453,7 +538,7 @@ pub(crate) fn draw_room_chrome(
                 raster,
                 line,
                 10,
-                header_title_y(width) + (2 + i as i32) * line_height,
+                header_title_y_for(width, text_size) + (2 + i as i32) * line_height,
                 scale,
                 '#',
             );
@@ -497,7 +582,13 @@ mod tests {
         let controls = "MOVE WASD   INSPECT E   BACK Q";
         let status = "DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4";
         let shown = |width: usize| {
-            let budget = footer_budget(width, 700, controls, status);
+            let budget = footer_budget(
+                width,
+                700,
+                controls,
+                status,
+                numinous_core::StudyTextSize::Standard,
+            );
             fit_footer_text(status, budget.status, budget.scale)
         };
 
@@ -535,6 +626,55 @@ mod tests {
     }
 
     #[test]
+    fn a_larger_interface_size_grows_the_footer_without_hiding_the_status() {
+        let controls = "WASD MOVE   E INSPECT   Q BACK";
+        let status = "K 2.00";
+        for text_size in [
+            numinous_core::StudyTextSize::Large,
+            numinous_core::StudyTextSize::ExtraLarge,
+        ] {
+            for width in [900usize, 1280, 1600, 1920] {
+                let standard = footer_budget(
+                    width,
+                    1080,
+                    controls,
+                    status,
+                    numinous_core::StudyTextSize::Standard,
+                );
+                let grown = footer_budget(width, 1080, controls, status, text_size);
+                assert!(
+                    grown.scale > standard.scale,
+                    "{width} at {text_size:?} stayed at {}",
+                    grown.scale
+                );
+                assert_eq!(fit_footer_text(status, grown.status, grown.scale), status);
+                assert!(grown.controls_x >= 10 + status.len() as i32 * 6 * grown.scale + 10);
+                assert!(chrome_bands_fit(width, 1080, grown.scale, text_size));
+            }
+        }
+        let controls = "MOVE WASD   INSPECT E   BACK Q";
+        let status = "DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4";
+        for text_size in [
+            numinous_core::StudyTextSize::Large,
+            numinous_core::StudyTextSize::ExtraLarge,
+        ] {
+            for width in [280usize, 480, 900, 1600, 1920] {
+                let grown = footer_budget(width, 700, controls, status, text_size);
+                let fitted = fit_footer_text(status, grown.status, grown.scale);
+                assert!(
+                    fitted.chars().any(|ch| ch != '.'),
+                    "{width} erased the status"
+                );
+                if fitted != status {
+                    assert!(fitted.ends_with("..."));
+                    assert!(status.starts_with(fitted.trim_end_matches('.')));
+                }
+                assert!(chrome_bands_fit(width, 700, grown.scale, text_size));
+            }
+        }
+    }
+
+    #[test]
     fn composed_footer_keeps_the_complete_status_and_controls_at_the_default_size() {
         let room = room("times-tables");
         let status = "DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4";
@@ -543,7 +683,13 @@ mod tests {
             for mode in [InputMode::KeyboardMouse, InputMode::Controller] {
                 let copy = ControllerFace::Generic.into();
                 let footer = footer_copy(room.as_ref(), 0.0, &[], false, mode, copy, Some(status));
-                let budget = footer_budget(width, height, &footer.controls, status);
+                let budget = footer_budget(
+                    width,
+                    height,
+                    &footer.controls,
+                    status,
+                    numinous_core::StudyTextSize::Standard,
+                );
                 assert_eq!(fit_footer_text(status, budget.status, budget.scale), status);
                 assert!(budget.controls_x >= 10 + status.len() as i32 * 6 * budget.scale + 10);
                 let mut raster = Raster::new(width, height);
@@ -564,6 +710,7 @@ mod tests {
                         input_mode: mode,
                         controller_face: copy,
                         motion: numinous_core::Motion::Full,
+                        text_size: numinous_core::StudyTextSize::Standard,
                     },
                     &[],
                     Some(status),
@@ -675,6 +822,7 @@ mod tests {
                         input_mode: mode,
                         controller_face: ControllerFace::Generic.into(),
                         motion: numinous_core::Motion::Full,
+                        text_size: numinous_core::StudyTextSize::Standard,
                     },
                     &[],
                     None,
@@ -701,7 +849,13 @@ mod tests {
                     ControllerFace::Generic,
                     None,
                 );
-                let budget = footer_budget(width, height, &footer.controls, &footer.status);
+                let budget = footer_budget(
+                    width,
+                    height,
+                    &footer.controls,
+                    &footer.status,
+                    numinous_core::StudyTextSize::Standard,
+                );
                 assert_eq!(
                     fit_footer_text(&footer.status, budget.status, budget.scale),
                     footer.status
@@ -889,7 +1043,13 @@ mod tests {
         let mut raster = Raster::new(width, height);
         let before = raster.to_rgba();
         let bands = [0.1, 0.3, 0.8, 0.5, 0.2, 0.1, 0.05];
-        draw_spectrum_meter(&mut raster, &bands, width, height);
+        draw_spectrum_meter(
+            &mut raster,
+            &bands,
+            width,
+            height,
+            numinous_core::StudyTextSize::Standard,
+        );
         let after = raster.to_rgba();
         assert_ne!(before, after, "spectrum bars should paint");
         assert_eq!(after.len(), width * height * 4);
@@ -901,7 +1061,12 @@ mod tests {
             let mut raster = Raster::with_accent(width, height, [120, 220, 190]);
             let state = AudioState::new(AudioSource::RoomScore, 45, false, true);
             let label = state.label();
-            draw_audio_state(&mut raster, &state, width);
+            draw_audio_state(
+                &mut raster,
+                &state,
+                width,
+                numinous_core::StudyTextSize::Standard,
+            );
 
             let rgba = raster.to_rgba();
             let mut changed = Vec::new();
@@ -956,19 +1121,28 @@ mod tests {
                     input_mode: InputMode::KeyboardMouse,
                     controller_face: ControllerFace::Generic.into(),
                     motion: numinous_core::Motion::Full,
+                    text_size: numinous_core::StudyTextSize::Standard,
                 };
                 draw_room_chrome(&mut raster, room.as_ref(), &state, &[], None, width, height);
                 let before = raster.to_rgba();
-                draw_audio_state(&mut raster, &AudioState::no_device(), width);
+                draw_audio_state(
+                    &mut raster,
+                    &AudioState::no_device(),
+                    width,
+                    numinous_core::StudyTextSize::Standard,
+                );
                 draw_spectrum_meter(
                     &mut raster,
                     &[1.0; numinous_core::BAND_COUNT],
                     width,
                     height,
+                    numinous_core::StudyTextSize::Standard,
                 );
                 let after = raster.to_rgba();
-                let title_y = header_title_y(width) as usize;
-                let header_bottom = header_bottom(width) as usize;
+                let lettering = numinous_core::StudyTextSize::Standard;
+                let title_y = header_title_y_for(width, lettering) as usize;
+                let header_bottom =
+                    header_bottom_for(width, lettering, footer_scale(width)) as usize;
                 // Composing the audio badge and full meter must preserve every
                 // title and progress pixel, including large journey numbers.
                 for y in title_y..header_bottom - 1 {
@@ -1336,6 +1510,7 @@ mod tests {
                 input_mode: InputMode::KeyboardMouse,
                 controller_face: ControllerFace::Generic.into(),
                 motion: numinous_core::Motion::Full,
+                text_size: numinous_core::StudyTextSize::Standard,
             },
             &[],
             None,
@@ -1369,6 +1544,7 @@ mod tests {
                 input_mode: InputMode::KeyboardMouse,
                 controller_face: ControllerFace::Generic.into(),
                 motion: numinous_core::Motion::Full,
+                text_size: numinous_core::StudyTextSize::Standard,
             },
             &[],
             None,
@@ -1406,6 +1582,7 @@ mod tests {
                 input_mode: InputMode::KeyboardMouse,
                 controller_face: ControllerFace::Generic.into(),
                 motion,
+                text_size: numinous_core::StudyTextSize::Standard,
             },
             &[],
             None,
@@ -1499,6 +1676,7 @@ mod tests {
                     input_mode,
                     controller_face: ControllerFace::Generic.into(),
                     motion: numinous_core::Motion::Full,
+                    text_size: numinous_core::StudyTextSize::Standard,
                 },
                 &[],
                 None,
@@ -1551,6 +1729,7 @@ mod tests {
                 input_mode: InputMode::KeyboardMouse,
                 controller_face: ControllerFace::Generic.into(),
                 motion: numinous_core::Motion::Full,
+                text_size: numinous_core::StudyTextSize::Standard,
             },
             &[],
             None,
@@ -1591,18 +1770,25 @@ mod tests {
                     input_mode: InputMode::KeyboardMouse,
                     controller_face: ControllerFace::Generic.into(),
                     motion: numinous_core::Motion::Full,
+                    text_size: numinous_core::StudyTextSize::Standard,
                 },
                 &[],
                 None,
                 width,
                 height,
             );
-            draw_audio_state(&mut raster, &AudioState::no_device(), width);
+            draw_audio_state(
+                &mut raster,
+                &AudioState::no_device(),
+                width,
+                numinous_core::StudyTextSize::Standard,
+            );
             draw_spectrum_meter(
                 &mut raster,
                 &[1.0; numinous_core::BAND_COUNT],
                 width,
                 height,
+                numinous_core::StudyTextSize::Standard,
             );
 
             let mut expected = Raster::new(width, height);

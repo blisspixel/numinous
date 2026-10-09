@@ -5,6 +5,16 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Added
+- Settings > Interface Text saves Cabinet and room lettering at 100, 125, or
+  150 percent of the window's own pixel scale. The same choice sizes the room
+  header and footer, audio status, Show chrome, and the pause, banner, and
+  journey overlays. Each surface still reduces the size until titles, status,
+  and controls stay inside the window. One hundred percent keeps the previous
+  scale. Reading Text remains the separate study-body setting. Gallery, games,
+  Studio, and in-room pictures keep their own layout scales. Older preference
+  files keep their saved values and start Interface Text at 100 percent.
+
 ## [0.5.0-alpha.4] - 2026-10-08
 
 ### Fixed

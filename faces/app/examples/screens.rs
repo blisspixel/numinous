@@ -57,7 +57,12 @@ fn draw_cabinet_menu_state_with_display(
         true,
         true,
     );
-    hud::draw_audio_state(raster, &audio, raster.width());
+    hud::draw_audio_state(
+        raster,
+        &audio,
+        raster.width(),
+        numinous_core::StudyTextSize::Standard,
+    );
     let _ = numinous_app::menu::draw_menu(
         raster,
         state,
@@ -65,6 +70,7 @@ fn draw_cabinet_menu_state_with_display(
         numinous_app::input_legend::ControllerFace::Generic.into(),
         numinous_app::menu::MenuReadout {
             study_text_size,
+            interface_text_size: numinous_core::StudyTextSize::default(),
             volume_percent: 45,
             music_percent: 100,
             room_percent: 100,
@@ -270,7 +276,12 @@ fn save_with_audio(
     assert!(raster.lit_count() > 20, "{relative} is not a blank screen");
     let mut presented = raster.clone();
     if !relative.starts_with("menu/") && !relative.starts_with("overlays/launch-help") {
-        hud::draw_audio_state(&mut presented, &state, raster.width());
+        hud::draw_audio_state(
+            &mut presented,
+            &state,
+            raster.width(),
+            numinous_core::StudyTextSize::Standard,
+        );
     }
     let path = Path::new(OUTPUT).join(relative);
     if let Some(parent) = path.parent() {
@@ -1253,6 +1264,7 @@ fn room_screen_with_mode(
             input_mode,
             controller_face: input_legend::ControllerFace::Generic.into(),
             motion: numinous_core::Motion::Full,
+            text_size: numinous_core::StudyTextSize::Standard,
         },
         inputs,
         None,
@@ -1261,7 +1273,13 @@ fn room_screen_with_mode(
     );
     // Offline visualizer meter keeps the screens matrix honest about spectrum chrome.
     let bands = [0.15, 0.35, 0.7, 0.45, 0.25, 0.1, 0.05];
-    hud::draw_spectrum_meter(&mut raster, &bands, width, height);
+    hud::draw_spectrum_meter(
+        &mut raster,
+        &bands,
+        width,
+        height,
+        numinous_core::StudyTextSize::Standard,
+    );
     raster
 }
 
@@ -1290,13 +1308,20 @@ fn room_screen_with_banner(
             input_mode: input_legend::InputMode::KeyboardMouse,
             controller_face: input_legend::ControllerFace::Generic.into(),
             motion: numinous_core::Motion::Full,
+            text_size: numinous_core::StudyTextSize::Standard,
         },
         &[],
         None,
         width,
         height,
     );
-    overlays::draw_banner(&mut raster, lines, width, height);
+    overlays::draw_banner(
+        &mut raster,
+        lines,
+        width,
+        height,
+        numinous_core::StudyTextSize::Standard,
+    );
     raster
 }
 
@@ -1362,6 +1387,7 @@ fn life_session_screen(
             input_mode,
             controller_face: input_legend::ControllerFace::Generic.into(),
             motion: numinous_core::Motion::Full,
+            text_size: numinous_core::StudyTextSize::Standard,
         },
         &[],
         Some(&status),
@@ -1411,6 +1437,7 @@ fn show_screen_with_mode(
             input_mode,
             controller_face: input_legend::ControllerFace::Generic.into(),
             motion: numinous_core::Motion::Full,
+            text_size: numinous_core::StudyTextSize::Standard,
         },
         &[],
         None,
@@ -1509,6 +1536,7 @@ fn readme_room_screen(room: &dyn Room, t: f64, inputs: &[RoomInput]) -> Raster {
             input_mode: input_legend::InputMode::KeyboardMouse,
             controller_face: input_legend::ControllerFace::Generic.into(),
             motion: numinous_core::Motion::Full,
+            text_size: numinous_core::StudyTextSize::Standard,
         },
         inputs,
         None,
@@ -1541,7 +1569,12 @@ fn present_readme_plate(raster: &Raster, name: &str) -> Raster {
             true,
             true,
         );
-        hud::draw_audio_state(&mut presented, &state, raster.width());
+        hud::draw_audio_state(
+            &mut presented,
+            &state,
+            raster.width(),
+            numinous_core::StudyTextSize::Standard,
+        );
     }
     presented
 }
@@ -2123,7 +2156,12 @@ fn write_route_authoring_previews(output: &Path) {
             true,
         );
         let width = raster.width();
-        hud::draw_audio_state(&mut raster, &audio, width);
+        hud::draw_audio_state(
+            &mut raster,
+            &audio,
+            width,
+            numinous_core::StudyTextSize::Standard,
+        );
         write_png(&raster, &output.join(&name));
         manifest.push(name);
     }
@@ -2196,7 +2234,12 @@ fn write_room_previews(output: &Path, room: &dyn Room) {
                 true,
                 true,
             );
-            hud::draw_audio_state(&mut raster, &audio, size.0);
+            hud::draw_audio_state(
+                &mut raster,
+                &audio,
+                size.0,
+                numinous_core::StudyTextSize::Standard,
+            );
             assert!(raster.lit_count() > 20, "{id}/{label} is not blank");
             let relative = format!("{label}-{size_label}-{}x{}.png", size.0, size.1);
             write_png(&raster, &output.join(&relative));
@@ -2594,7 +2637,13 @@ fn main() {
             if landmark == "k5" {
                 let mut earned = raster;
                 let banner = feedback::room_goal("LAND ON EXACTLY 4 LOBES");
-                overlays::draw_banner(&mut earned, banner.lines(), size.0, size.1);
+                overlays::draw_banner(
+                    &mut earned,
+                    banner.lines(),
+                    size.0,
+                    size.1,
+                    numinous_core::StudyTextSize::Standard,
+                );
                 save(
                     &earned,
                     &format!("flows/times-tables-goal-{label}-{}x{}.png", size.0, size.1),
@@ -2731,7 +2780,7 @@ fn main() {
         );
 
         let mut journey_screen = room_screen(golden, 0.0, &[], size, 0, false, 42);
-        overlays::draw_journey_overlay_with_controller(
+        overlays::draw_journey_overlay_scaled(
             &mut journey_screen,
             &journey,
             &Scoreboard::default(),
@@ -2739,6 +2788,7 @@ fn main() {
             (width, height),
             input_legend::InputMode::KeyboardMouse,
             input_legend::ControllerFace::Generic.into(),
+            numinous_core::StudyTextSize::Standard,
         );
         save(
             &journey_screen,
@@ -2748,7 +2798,13 @@ fn main() {
 
         let mut banner = room_screen(golden, 0.0, &[], size, 0, false, 12);
         let level = feedback::level_up(12, 3);
-        overlays::draw_banner(&mut banner, level.lines(), width, height);
+        overlays::draw_banner(
+            &mut banner,
+            level.lines(),
+            width,
+            height,
+            numinous_core::StudyTextSize::Standard,
+        );
         save(
             &banner,
             &format!("overlays/level-up-banner-{label}-{width}x{height}.png"),
@@ -2894,7 +2950,13 @@ fn main() {
             };
             if name == "radio-off" {
                 let banner = feedback::radio_off();
-                overlays::draw_banner(&mut raster, banner.lines(), size.0, size.1);
+                overlays::draw_banner(
+                    &mut raster,
+                    banner.lines(),
+                    size.0,
+                    size.1,
+                    numinous_core::StudyTextSize::Standard,
+                );
             }
             save_with_audio(
                 &raster,
@@ -3167,12 +3229,13 @@ fn main() {
     );
 
     let mut keyboard_paused = room_screen(golden, 0.42, &[], SMALL_SIZE, 0, false, 7);
-    overlays::draw_pause_overlay_with_controller(
+    overlays::draw_pause_overlay_scaled(
         &mut keyboard_paused,
         SMALL_SIZE.0,
         SMALL_SIZE.1,
         input_legend::InputMode::KeyboardMouse,
         input_legend::ControllerFace::Generic.into(),
+        numinous_core::StudyTextSize::Standard,
     );
     save(
         &keyboard_paused,
@@ -3181,12 +3244,13 @@ fn main() {
     );
     let mut controller_paused =
         room_screen_with_mode(golden, 0.42, &[], SMALL_SIZE, 0, false, 7, controller);
-    overlays::draw_pause_overlay_with_controller(
+    overlays::draw_pause_overlay_scaled(
         &mut controller_paused,
         SMALL_SIZE.0,
         SMALL_SIZE.1,
         controller,
         input_legend::ControllerFace::Generic.into(),
+        numinous_core::StudyTextSize::Standard,
     );
     save(
         &controller_paused,
@@ -3201,7 +3265,7 @@ fn main() {
 
     let mut controller_journey =
         room_screen_with_mode(golden, 0.0, &[], SMALL_SIZE, 0, false, 42, controller);
-    overlays::draw_journey_overlay_with_controller(
+    overlays::draw_journey_overlay_scaled(
         &mut controller_journey,
         &journey,
         &Scoreboard::default(),
@@ -3209,6 +3273,7 @@ fn main() {
         SMALL_SIZE,
         controller,
         input_legend::ControllerFace::Generic.into(),
+        numinous_core::StudyTextSize::Standard,
     );
     save(
         &controller_journey,
@@ -3644,7 +3709,12 @@ mod tests {
                     true,
                     true,
                 );
-                super::hud::draw_audio_state(&mut composed, &audio, size.0);
+                super::hud::draw_audio_state(
+                    &mut composed,
+                    &audio,
+                    size.0,
+                    numinous_core::StudyTextSize::Standard,
+                );
                 let source = source.to_rgba();
                 let composed = composed.to_rgba();
                 assert_ne!(source, composed, "the App chrome must actually be drawn");

@@ -212,7 +212,9 @@ South to touch with a controller; bumpers change rooms and Start opens the
 menu. Custom button mappings go in `.numinous-bindings.json` in your home
 directory; see [controller remapping](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md#remap-a-controller).
 Settings > Reading Text or the reader's A-/A+ controls change saved study
-text size. Settings also holds Master, Radio, Room Sound, and Effects levels.
+text size. Settings > Interface Text changes saved Cabinet and room lettering
+among 100, 125, and 150 percent; titles and controls still fit the window.
+Settings also holds Master, Radio, Room Sound, and Effects levels.
 `numinous settings --json` reads saved audio preferences or first-run defaults
 without opening a window or sound device; it does not report live playback.
 

@@ -487,7 +487,12 @@ Reading Text offers 100, 125, or 150 percent body text; the reader's A-/A+
 buttons or minus/plus keys (equals also enlarges) change it in place. Reading
 position follows the reflow, and the size persists across rooms and launches.
 Brackets retain their volume shortcuts while reading. This setting applies
-to the study body, with general Cabinet and HUD text scaling still open.
+to the study body. Settings > Interface Text separately saves Cabinet and
+room lettering at 100, 125, or 150 percent. It also sizes the pause, banner,
+and journey overlays. The window still fits every title and control, so a
+small window may stay at the size it already used. Gallery, games, Studio,
+and in-room pictures keep their own scales. `numinous settings` continues to
+report audio levels only.
 
 ---
 

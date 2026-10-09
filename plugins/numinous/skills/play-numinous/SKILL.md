@@ -91,7 +91,8 @@ one play for ordinary rooms and consolidation for engineered wager rooms.
 In the native App, Settings > Reading Text and the reader's A-/A+ buttons
 select saved 100, 125, or 150 percent body text. Minus/plus (or equals) also
 changes reading size while the reader is open; brackets retain volume control.
-MCP study content is unchanged by this App preference.
+Settings > Interface Text uses those same sizes for Cabinet and room lettering.
+MCP study content is unchanged by either App preference.
 
 With shell access, `numinous settings --json` reads the App's Master, Radio,
 Room Sound, Effects, and mute without opening a window or sound device. Its

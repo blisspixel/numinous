@@ -97,6 +97,9 @@ the saved-creation Gallery stays bounded while discovering the newest files.
 
 The App's study reader offers saved 100, 125, and 150 percent body text through
 Settings > Reading Text and A-/A+ controls, retaining your place as words reflow.
+Settings > Interface Text uses the same three sizes for Cabinet and room
+lettering, and for the pause, banner, and journey overlays, while keeping
+titles and controls inside the window.
 `numinous settings` reports the App's saved audio levels or first-run defaults
 without a window or sound card; add `--json` for a machine-readable snapshot.
 

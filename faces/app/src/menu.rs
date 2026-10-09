@@ -83,6 +83,7 @@ pub enum MenuItemId {
     Mute,
     VisualEra,
     WindowMode,
+    InterfaceTextSize,
     StudyTextSize,
     SkipTrack,
     Controls,
@@ -150,6 +151,8 @@ pub enum NumericSetting {
     EffectVolume,
     /// The optional study reader's body text size.
     StudyTextSize,
+    /// Cabinet menus and room HUD lettering.
+    InterfaceTextSize,
 }
 
 impl NumericSetting {
@@ -341,7 +344,7 @@ const GAME_ITEMS: [MenuItem; 6] = [
     },
 ];
 
-const SETTINGS_ITEMS: [MenuItem; 10] = [
+const SETTINGS_ITEMS: [MenuItem; 11] = [
     MenuItem {
         id: MenuItemId::MasterVolume,
         title: "MASTER",
@@ -397,6 +400,13 @@ const SETTINGS_ITEMS: [MenuItem; 10] = [
         description: "PLAY THE NEXT CACHED TRACK ON THE CURRENT RADIO STATION.",
         shortcut: Some('n'),
         action: MenuAction::Intent(MenuIntent::SkipRadioTrack),
+    },
+    MenuItem {
+        id: MenuItemId::InterfaceTextSize,
+        title: "INTERFACE TEXT",
+        description: "SET CABINET AND ROOM LETTERING. CONTROLS STILL FIT THE WINDOW.",
+        shortcut: None,
+        action: MenuAction::Adjust(NumericSetting::InterfaceTextSize),
     },
     MenuItem {
         id: MenuItemId::StudyTextSize,
@@ -934,11 +944,151 @@ fn menu_footer_reserve(text_scale: i32, compact: bool) -> i32 {
     4 * menu_line_step(menu_auxiliary_scale(text_scale, compact)) + 30
 }
 
+/// The window scale, enlarged by the player's Cabinet size only while titles,
+/// row labels, footer copy, and the controls reference still fit.
+fn fitted_menu_text_scale(
+    state: &MenuState,
+    width: usize,
+    height: usize,
+    compact: bool,
+    text_size: numinous_core::StudyTextSize,
+) -> i32 {
+    let base = menu_text_scale(width, height, compact);
+    let mut scale = text_size.pixel_scale(base);
+    while scale > base && !menu_scale_fits(state, width, height, compact, scale) {
+        scale -= 1;
+    }
+    scale
+}
+
+fn menu_scale_fits(
+    state: &MenuState,
+    width: usize,
+    height: usize,
+    compact: bool,
+    scale: i32,
+) -> bool {
+    let title_scale = if compact { scale } else { scale + 1 };
+    if menu_font::text_width(&route_title(state.route()), title_scale) > width as i32 - 20 {
+        return false;
+    }
+    let items = state_items(state);
+    let auxiliary = menu_auxiliary_scale(scale, compact);
+    // Compact footer type stays at scale 1, so growing row type does not
+    // change how the hint and descriptions wrap.
+    if !compact && !footer_copy_fits(state, width, auxiliary, &items) {
+        return false;
+    }
+    if compact {
+        let row_width = (width as i32 - 48).max(1);
+        return items
+            .iter()
+            .all(|item| row_label_fits(item, row_width, scale, auxiliary, true));
+    }
+    let title_y = (height as i32 * 4 / 100).max(28);
+    let content_top = title_y + 7 * (scale + 1) + 24;
+    let content_bottom = height as i32 - menu_footer_reserve(scale, false);
+    let available = content_bottom - content_top;
+    if available < menu_row_height(MIN_DESKTOP_ROW_SCALE) {
+        return false;
+    }
+    let row_scale = fitting_row_scale(scale, items.len().max(1), available);
+    if 7 * auxiliary > menu_row_height(row_scale) {
+        return false;
+    }
+    let panel_width = (width as i32 * 80 / 100)
+        .min(120 * scale)
+        .max(420)
+        .min((width as i32 - 48).max(1));
+    if !items
+        .iter()
+        .all(|item| row_label_fits(item, panel_width, row_scale, auxiliary, false))
+    {
+        return false;
+    }
+    if state.route() == MenuRoute::Controls {
+        let lines = control_lines(
+            InputMode::KeyboardMouse,
+            ControllerCopy::empty(crate::input_legend::ControllerFace::Generic),
+        );
+        let step = menu_line_step(auxiliary) + 8;
+        let block_height = (lines.len().saturating_sub(1)) as i32 * step + 7 * auxiliary;
+        let back_top = content_bottom - menu_row_height(scale);
+        if content_top + block_height > back_top {
+            return false;
+        }
+        if lines
+            .iter()
+            .any(|line| menu_font::text_width(line, auxiliary) > width as i32 - 16)
+        {
+            return false;
+        }
+    }
+    true
+}
+
+fn footer_copy_fits(state: &MenuState, width: usize, auxiliary: i32, items: &[MenuItem]) -> bool {
+    let advance = usize::try_from(menu_font::advance(auxiliary)).unwrap_or(1);
+    let columns = width.saturating_sub(48) / advance.max(1);
+    let hint = if matches!(state.origin(), MenuOrigin::Activity(_)) {
+        "ARROWS MOVE   ENTER SELECT   ESC BACK   F FULLSCREEN   Q QUIT"
+    } else {
+        "ARROWS MOVE   ENTER SELECT   ESC BACK   F FULLSCREEN   Q QUIT   BACKTICK TEXT ENTRY"
+    };
+    if numinous_core::wrap_text(hint, columns.max(1)).len() > 2 {
+        return false;
+    }
+    items
+        .iter()
+        .all(|item| numinous_core::wrap_text(item.description, columns.max(1)).len() <= 2)
+}
+
+fn value_reserve(id: MenuItemId) -> &'static str {
+    match id {
+        MenuItemId::WindowMode => "BORDERLESS",
+        MenuItemId::VisualEra => "PHOSPHOR",
+        MenuItemId::Mute => "OFF",
+        MenuItemId::MasterVolume
+        | MenuItemId::MusicVolume
+        | MenuItemId::RoomVolume
+        | MenuItemId::EffectVolume
+        | MenuItemId::InterfaceTextSize
+        | MenuItemId::StudyTextSize => "100%",
+        _ => "",
+    }
+}
+
+fn row_label_fits(
+    item: &MenuItem,
+    row_width: i32,
+    label_scale: i32,
+    value_scale: i32,
+    compact: bool,
+) -> bool {
+    let label_offset = if compact {
+        if item.shortcut.is_some() { 80 } else { 44 }
+    } else if item.shortcut.is_some() {
+        21 * label_scale
+    } else {
+        12 * label_scale
+    };
+    let reserved = value_reserve(item.id);
+    let value_width = if reserved.is_empty() {
+        0
+    } else {
+        menu_font::text_width(reserved, value_scale) + 2 * value_scale + 8
+    };
+    label_offset + menu_font::text_width(item.title, label_scale) + value_width + 8 <= row_width
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MenuLayout {
     size: (usize, usize),
     compact: bool,
     items: Vec<MenuItemLayout>,
+    /// Page scale after the player's Cabinet size and the fit that keeps
+    /// titles, rows, and footer copy inside the window.
+    text_scale: i32,
     /// The text scale of the rows, shared by drawing and hit testing.
     row_scale: i32,
 }
@@ -946,8 +1096,17 @@ pub struct MenuLayout {
 impl MenuLayout {
     #[must_use]
     pub fn new(state: &MenuState, width: usize, height: usize) -> Self {
+        Self::with_text_size(state, width, height, numinous_core::StudyTextSize::Standard)
+    }
+
+    fn with_text_size(
+        state: &MenuState,
+        width: usize,
+        height: usize,
+        text_size: numinous_core::StudyTextSize,
+    ) -> Self {
         let compact = width < COMPACT_WIDTH || height < COMPACT_HEIGHT;
-        let text_scale = menu_text_scale(width, height, compact);
+        let text_scale = fitted_menu_text_scale(state, width, height, compact, text_size);
         let route_items = state_items(state);
         let mut placed = Vec::with_capacity(route_items.len());
         let mut row_scale = text_scale;
@@ -1049,6 +1208,7 @@ impl MenuLayout {
             size: (width, height),
             compact,
             items: placed,
+            text_scale,
             row_scale,
         }
     }
@@ -1105,6 +1265,7 @@ impl MenuLayout {
 #[derive(Debug, Clone, Copy)]
 pub struct MenuReadout<'a> {
     pub study_text_size: numinous_core::StudyTextSize,
+    pub interface_text_size: numinous_core::StudyTextSize,
     pub volume_percent: u8,
     pub music_percent: u8,
     pub room_percent: u8,
@@ -1129,6 +1290,9 @@ fn item_value(id: MenuItemId, readout: MenuReadout<'_>) -> Option<String> {
         MenuItemId::VisualEra => Some(readout.era.to_uppercase()),
         MenuItemId::WindowMode => Some(readout.window_mode.to_uppercase()),
         MenuItemId::StudyTextSize => Some(format!("{}%", readout.study_text_size.percent())),
+        MenuItemId::InterfaceTextSize => {
+            Some(format!("{}%", readout.interface_text_size.percent()))
+        }
         _ => None,
     }
 }
@@ -1161,8 +1325,8 @@ pub fn draw_menu(
 ) -> MenuLayout {
     let width = raster.width();
     let height = raster.height();
-    let layout = MenuLayout::new(state, width, height);
-    let text_scale = menu_text_scale(width, height, layout.compact);
+    let layout = MenuLayout::with_text_size(state, width, height, readout.interface_text_size);
+    let text_scale = layout.text_scale;
     let auxiliary_scale = menu_auxiliary_scale(text_scale, layout.compact);
     raster.clear_rows(0, height as i32);
     raster.line(0, 0, width.saturating_sub(1) as i32, 0, '-');
@@ -1175,7 +1339,11 @@ pub fn draw_menu(
     );
 
     let title = route_title(state.route());
-    let title_scale = if layout.compact { 2 } else { text_scale + 1 };
+    let title_scale = if layout.compact {
+        text_scale
+    } else {
+        text_scale + 1
+    };
     let title_rect = Rect {
         x: 0,
         y: if layout.compact {
@@ -1454,6 +1622,7 @@ mod tests {
     fn readout() -> MenuReadout<'static> {
         MenuReadout {
             study_text_size: numinous_core::StudyTextSize::default(),
+            interface_text_size: numinous_core::StudyTextSize::default(),
             volume_percent: 45,
             music_percent: 100,
             room_percent: 80,
@@ -1748,14 +1917,15 @@ mod tests {
             }
         }
         assert_eq!(
-            numeric_rows, 5,
-            "the Settings route lists audio levels and reading size"
+            numeric_rows, 6,
+            "the Settings route lists audio levels, interface text, and reading size"
         );
         for setting in [
             NumericSetting::MasterVolume,
             NumericSetting::MusicVolume,
             NumericSetting::RoomVolume,
             NumericSetting::EffectVolume,
+            NumericSetting::InterfaceTextSize,
             NumericSetting::StudyTextSize,
         ] {
             assert!(!setting.title().is_empty(), "{setting:?} is a listed row");
@@ -1781,6 +1951,7 @@ mod tests {
                 ("RADIO", NumericSetting::MusicVolume),
                 ("ROOM SOUND", NumericSetting::RoomVolume),
                 ("EFFECTS", NumericSetting::EffectVolume),
+                ("INTERFACE TEXT", NumericSetting::InterfaceTextSize),
                 ("READING TEXT", NumericSetting::StudyTextSize),
             ]
         );
@@ -1834,6 +2005,66 @@ mod tests {
         assert_eq!(fitting_row_scale(6, 9, 461), 5);
         assert_eq!(fitting_row_scale(6, 6, 461), 6);
         assert_eq!(fitting_row_scale(6, 40, 461), MIN_DESKTOP_ROW_SCALE);
+    }
+
+    #[test]
+    fn a_larger_interface_size_grows_cabinet_type_and_keeps_controls_inside() {
+        for text_size in [
+            numinous_core::StudyTextSize::Large,
+            numinous_core::StudyTextSize::ExtraLarge,
+        ] {
+            for (width, height) in [
+                (480, 320),
+                (600, 600),
+                (900, 700),
+                (1280, 720),
+                (1920, 1080),
+                (2560, 1440),
+            ] {
+                let mut settings = MenuState::launch();
+                let _ = settings.activate_shortcut('s');
+                let standard = MenuLayout::new(&settings, width, height);
+                let grown = MenuLayout::with_text_size(&settings, width, height, text_size);
+                assert!(grown.text_scale >= standard.text_scale);
+                // A 900 by 700 window is already using the widest hint that
+                // fits. Growth has to wait for a window that can keep that
+                // hint, the descriptions, and the rows inside together.
+                if width >= 1920 && height >= 1080 {
+                    assert!(
+                        grown.text_scale > standard.text_scale,
+                        "{width}x{height} at {text_size:?} stayed at {}",
+                        grown.text_scale
+                    );
+                }
+                let footer_top =
+                    height as i32 - menu_footer_reserve(grown.text_scale, grown.compact);
+                assert!(!grown.items.is_empty());
+                for item in &grown.items {
+                    assert!(item.rect.y >= 0, "{width}x{height}");
+                    assert!(
+                        item.rect.y + item.rect.height <= footer_top,
+                        "{width}x{height} row crosses the footer"
+                    );
+                    assert!(item.rect.x >= 0);
+                    assert!(item.rect.x + item.rect.width <= width as i32);
+                    assert!(item.rect.height >= 42 || grown.compact);
+                }
+                let ids: Vec<_> = state_items(&settings).iter().map(|item| item.id).collect();
+                for id in ids {
+                    settings.focus(id);
+                    let layout = MenuLayout::with_text_size(&settings, width, height, text_size);
+                    let placed = layout.items.iter().find(|item| item.id == id).unwrap();
+                    let footer_top =
+                        height as i32 - menu_footer_reserve(layout.text_scale, layout.compact);
+                    assert!(placed.rect.y + placed.rect.height <= footer_top);
+                    let point = (
+                        (placed.rect.x + placed.rect.width / 2) as f64 / width as f64,
+                        (placed.rect.y + placed.rect.height / 2) as f64 / height as f64,
+                    );
+                    assert_eq!(layout.item_at(point), Some(id));
+                }
+            }
+        }
     }
 
     #[test]

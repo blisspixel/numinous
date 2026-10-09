@@ -422,6 +422,8 @@ struct App {
     /// Player-selected study language, independent of room state and shell copy.
     study_locale: numinous_core::study::StudyLocale,
     study_text_size: numinous_core::StudyTextSize,
+    /// Cabinet menus, room HUD, and shared overlays. Independent of study body.
+    interface_text_size: numinous_core::StudyTextSize,
     study: Option<study_runtime::ActiveStudy>,
     /// Command-key identities currently down, including presses before study.
     pressed_keys: std::collections::HashSet<Key>,
@@ -695,6 +697,7 @@ impl App {
             preferred_window_mode: preferences.window_mode,
             study_locale: preferences.study_locale,
             study_text_size: preferences.study_text_size,
+            interface_text_size: preferences.interface_text_size,
             study: None,
             pressed_keys: std::collections::HashSet::new(),
             study_keys: std::collections::HashSet::new(),
@@ -1470,6 +1473,7 @@ impl App {
             window_mode: self.preferred_window_mode,
             study_locale: self.study_locale.clone(),
             study_text_size: self.study_text_size,
+            interface_text_size: self.interface_text_size,
         }
     }
 
@@ -2180,6 +2184,7 @@ impl App {
                 input_mode: self.input_mode,
                 controller_face: self.gamepad.controller_copy(),
                 motion: self.motion,
+                text_size: self.interface_text_size,
             },
             inputs,
             status_override.as_deref(),
@@ -2189,7 +2194,7 @@ impl App {
 
         if self.show_journey && !self.the_show {
             let board = numinous_core::load_scoreboard_file(&self.scores_file);
-            overlays::draw_journey_overlay_with_controller(
+            overlays::draw_journey_overlay_scaled(
                 raster,
                 &self.journey,
                 &board,
@@ -2197,6 +2202,7 @@ impl App {
                 (width, height),
                 self.input_mode,
                 self.gamepad.controller_copy(),
+                self.interface_text_size,
             );
         }
 
@@ -2232,6 +2238,7 @@ impl App {
             self.gamepad.controller_copy(),
             menu::MenuReadout {
                 study_text_size: self.study_text_size,
+                interface_text_size: self.interface_text_size,
                 volume_percent: (self.volume * 100.0).round().clamp(0.0, 100.0) as u8,
                 music_percent: self.music_volume_percent,
                 room_percent: self.room_volume_percent,
@@ -2263,23 +2270,29 @@ impl App {
         height: usize,
     ) -> (Vec<u8>, usize, usize) {
         if self.paused {
-            overlays::draw_pause_overlay_with_controller(
+            overlays::draw_pause_overlay_scaled(
                 &mut raster,
                 width,
                 height,
                 self.input_mode,
                 self.gamepad.controller_copy(),
+                self.interface_text_size,
             );
         }
         self.draw_banner_on_raster(&mut raster, width, height);
-        hud::draw_audio_state(&mut raster, &self.audio_state(), width);
+        hud::draw_audio_state(
+            &mut raster,
+            &self.audio_state(),
+            width,
+            self.interface_text_size,
+        );
         // Visualizer path: room bed, mixed output tap, or OS loopback capture.
         // Output mix and loopback drive a scale multiplier and soft beat pokes.
         self.visualizer_scale = 1.0;
         if !self.muted
             && let Some((bands, source)) = self.visualizer_bands()
         {
-            hud::draw_spectrum_meter(&mut raster, &bands, width, height);
+            hud::draw_spectrum_meter(&mut raster, &bands, width, height, self.interface_text_size);
             let levers = numinous_core::levers_from_bands(&self.spectrum_prev, &bands);
             let drive = matches!(
                 source,
@@ -2349,7 +2362,13 @@ impl App {
 
     fn draw_banner_on_raster(&self, raster: &mut Raster, width: usize, height: usize) {
         if let Some(banner) = &self.banner {
-            overlays::draw_banner(raster, banner.lines(), width, height);
+            overlays::draw_banner(
+                raster,
+                banner.lines(),
+                width,
+                height,
+                self.interface_text_size,
+            );
         }
     }
 
