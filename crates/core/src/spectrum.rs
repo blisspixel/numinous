@@ -79,12 +79,23 @@ pub fn band_energies(samples: &[f32], channels: usize, sample_rate: u32) -> [f32
 }
 
 /// Collapse seven bands into a coarse bass / mid / treble triple for lever maps.
+///
+/// A non-finite band contributes nothing, so the triple stays finite.
 #[must_use]
 pub fn bass_mid_treble(bands: &[f32; BAND_COUNT]) -> (f32, f32, f32) {
-    let bass = bands[0] + bands[1];
-    let mid = bands[2] + bands[3] + bands[4];
-    let treble = bands[5] + bands[6];
+    let bass = add_finite(bands[0], bands[1]);
+    let mid = add_finite(add_finite(bands[2], bands[3]), bands[4]);
+    let treble = add_finite(bands[5], bands[6]);
     (bass, mid, treble)
+}
+
+fn add_finite(left: f32, right: f32) -> f32 {
+    let sum = finite_band(left) + finite_band(right);
+    finite_band(sum)
+}
+
+fn finite_band(value: f32) -> f32 {
+    if value.is_finite() { value } else { 0.0 }
 }
 
 /// Normalize band energies so the loudest finite positive band is 1.0.
@@ -614,5 +625,28 @@ mod tests {
         let mut quiet = [0.0; BAND_COUNT];
         quiet[0] = f32::NAN;
         assert_eq!(low_band_onset(&quiet, &quiet), 1.0);
+    }
+
+    #[test]
+    fn a_non_finite_band_does_not_move_the_levers() {
+        let mut bands = [0.0; BAND_COUNT];
+        bands[0] = f32::NAN;
+        bands[1] = 1.0;
+        bands[3] = f32::INFINITY;
+        let levers = levers_from_bands(&bands, &bands);
+        assert!(
+            (0.0..=1.0).contains(&levers.bass)
+                && (0.0..=1.0).contains(&levers.mid)
+                && (0.0..=1.0).contains(&levers.treble),
+            "{levers:?}"
+        );
+        assert_eq!(levers.onset, 1.0);
+        assert!(spectrum_time_scale(1.0, &levers).is_finite());
+        assert!(spectrum_phase_nudge(&levers).is_finite());
+        let (x, y) = spectrum_hand_point(&levers);
+        assert!(x.is_finite() && y.is_finite());
+        let (bass, mid, treble) = bass_mid_treble(&bands);
+        assert!(bass.is_finite() && mid.is_finite() && treble.is_finite());
+        assert_eq!(mid, 0.0);
     }
 }

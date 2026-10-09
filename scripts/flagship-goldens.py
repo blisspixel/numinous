@@ -85,6 +85,8 @@ def png_metrics(path: Path) -> dict[str, float]:
         raise RuntimeError(f"PNG too small: {path}")
     # Coarse whole-file stats keep the gate dependency-free (no image codec).
     mean = sum(data) / len(data)
+    if not math.isfinite(mean):
+        raise RuntimeError(f"non-finite PNG mean: {path}")
     return {
         "bytes": float(len(data)),
         "mean_byte": round(mean, 6),
@@ -165,8 +167,12 @@ def capture_room(
             raise RuntimeError(f"missing signal line for {room_id}: {sonify_out[-400:]}")
         entry["wav_sha256"] = sha256_file(wav)
         entry["wav_bytes"] = wav.stat().st_size
-        entry["audio_peak"] = float(match.group("peak"))
-        entry["audio_rms"] = float(match.group("rms"))
+        peak = float(match.group("peak"))
+        rms = float(match.group("rms"))
+        if not math.isfinite(peak) or not math.isfinite(rms):
+            raise RuntimeError(f"non-finite signal metrics for {room_id}")
+        entry["audio_peak"] = peak
+        entry["audio_rms"] = rms
         spectrum = SPECTRUM_RE.search(sonify_out)
         if spectrum is None:
             raise RuntimeError(f"missing spectral fingerprint for {room_id}: {sonify_out[-400:]}")
@@ -181,6 +187,19 @@ def load_manifest() -> dict[str, Any]:
     if not MANIFEST.is_file():
         raise RuntimeError(f"missing golden manifest: {MANIFEST}")
     return json.loads(MANIFEST.read_text(encoding="utf-8"))
+
+
+def finite_metric(value: object) -> float | None:
+    """A finite number, or None when the comparison must fail closed."""
+    if isinstance(value, bool) or not isinstance(value, int | float | str):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number):
+        return None
+    return number
 
 
 def compare_entry(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]:
@@ -201,8 +220,11 @@ def compare_entry(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]
         # arrangement or gain regressions. Peak/RMS are the portable contract.
         float_keys.extend([("audio_peak", 1e-4), ("audio_rms", 1e-4)])
     for key, tol in float_keys:
-        exp = float(expected[key])
-        got = float(actual[key])
+        exp = finite_metric(expected.get(key))
+        got = finite_metric(actual.get(key))
+        if exp is None or got is None:
+            defects.append(f"{key}: was not a finite number")
+            continue
         if abs(exp - got) > tol * max(1.0, abs(exp)):
             defects.append(f"{key}: expected {exp} got {got}")
     if "wav_bytes" in expected:
@@ -308,11 +330,16 @@ def keep_recorded_plate(entry: dict[str, Any], previous: dict[str, Any]) -> None
             )
     if "audio_peak" in previous:
         for key, tolerance in (("audio_peak", 1e-4), ("audio_rms", 1e-4)):
-            expected = float(previous[key])
-            actual = float(entry[key])
-            if abs(expected - actual) > tolerance * max(1.0, abs(expected)):
+            expected = finite_metric(previous.get(key))
+            actual = finite_metric(entry.get(key))
+            if (
+                expected is None
+                or actual is None
+                or abs(expected - actual) > tolerance * max(1.0, abs(expected))
+            ):
                 raise RuntimeError(
-                    f"refusing to rebaseline {name} {key}: expected {expected} got {actual}"
+                    f"refusing to rebaseline {name} {key}: "
+                    f"expected {previous.get(key)!r} got {entry.get(key)!r}"
                 )
         expected_bytes = int(previous["wav_bytes"])
         actual_bytes = int(entry["wav_bytes"])

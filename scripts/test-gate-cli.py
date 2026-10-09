@@ -19,6 +19,7 @@ import re
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
@@ -197,6 +198,32 @@ class ResolverTests(unittest.TestCase):
         self.assertTrue(
             goldens.compare_appearance({"appearance": short}, {"appearance": short})
         )
+        plate: dict[str, Any] = {
+            "png_sha256": "ab",
+            "width": 1,
+            "height": 1,
+            "png_bytes": 1,
+            "png_mean_byte": 1.0,
+            "appearance": signature,
+            "audio_peak": 0.2,
+            "audio_rms": 0.1,
+            "wav_bytes": 1000,
+            "spectrum": finite["spectrum"],
+        }
+        self.assertEqual(goldens.compare_entry(plate, plate), [])
+        for key, broken in (
+            ("audio_peak", float("nan")),
+            ("audio_rms", float("nan")),
+            ("png_mean_byte", float("inf")),
+        ):
+            other = dict(plate)
+            other[key] = broken
+            defects = goldens.compare_entry(plate, other)
+            self.assertTrue(defects, key)
+            self.assertIn("finite", defects[0])
+        nan_peak = dict(plate)
+        nan_peak["audio_peak"] = float("nan")
+        self.assertTrue(goldens.compare_entry(nan_peak, dict(nan_peak)))
 
 
 if __name__ == "__main__":

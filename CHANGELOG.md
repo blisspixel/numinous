@@ -13,6 +13,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 - Spectrum bands treat a non-finite sample as silence, and normalization
   drops a non-finite energy. The flagship golden gate rejects a non-finite
   fingerprint and a luminance signature that is not the fixed grid.
+- Flagship peak, RMS, and PNG-mean comparisons reject a non-finite value
+  instead of treating it as inside tolerance. Visualizer levers treat a
+  non-finite band as silence, so it cannot move room time.
 
 ## [0.5.0-alpha.6] - 2026-10-09
 
