@@ -2641,12 +2641,18 @@ fn phase_portrait_curves_survive_composed_room_chrome_at_both_window_sizes() {
             let mut composed = source.clone();
             crate::input_feedback::draw(&mut composed, &app.inputs);
             app.draw_room_interface(&mut composed, room.as_ref(), &app.inputs, width, height);
-            crate::hud::draw_audio_state(&mut composed, &app.audio_state(), width);
+            crate::hud::draw_audio_state(
+                &mut composed,
+                &app.audio_state(),
+                width,
+                app.interface_text_size,
+            );
             crate::hud::draw_spectrum_meter(
                 &mut composed,
                 &[0.15, 0.35, 0.7, 0.45, 0.25, 0.1, 0.05],
                 width,
                 height,
+                app.interface_text_size,
             );
             let source = source.to_rgba();
             let composed = composed.to_rgba();
@@ -3432,8 +3438,32 @@ fn app_options_persist_one_versioned_preference_snapshot() {
             window_mode: numinous_core::WindowModePreference::Windowed,
             study_locale: numinous_core::study::StudyLocale::default(),
             study_text_size: numinous_core::StudyTextSize::default(),
+            interface_text_size: numinous_core::StudyTextSize::default(),
         }
     );
+    let _ = std::fs::remove_file(path);
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
+fn interface_text_persists_without_changing_reading_size() {
+    let mut app = headless("numinous_app_test_interface_text.txt");
+    let path = app.preferences_file.clone();
+    let _ = std::fs::remove_file(&path);
+    app.adjust_setting(menu::NumericSetting::InterfaceTextSize, menu::Step::Up);
+    assert_eq!(app.interface_text_size, numinous_core::StudyTextSize::Large);
+    assert_eq!(app.study_text_size, numinous_core::StudyTextSize::Standard);
+    let saved = numinous_core::read_app_preferences_file(&path).expect("saved preferences");
+    assert_eq!(saved.interface_text_size, app.interface_text_size);
+    assert_eq!(saved.study_text_size, app.study_text_size);
+    app.adjust_setting(menu::NumericSetting::InterfaceTextSize, menu::Step::Down);
+    assert_eq!(
+        app.interface_text_size,
+        numinous_core::StudyTextSize::Standard
+    );
+    let held = std::fs::read(&path).expect("preference bytes");
+    app.adjust_setting(menu::NumericSetting::InterfaceTextSize, menu::Step::Down);
+    assert_eq!(std::fs::read(&path).expect("a size at its limit"), held);
     let _ = std::fs::remove_file(path);
     let _ = std::fs::remove_file(&app.journey_file);
 }

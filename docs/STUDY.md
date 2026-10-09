@@ -71,7 +71,9 @@ position while the reader is open; resizing and changing text size anchor the
 view to the text. Reading Text offers 100, 125, or 150 percent of the reader's
 responsive body size; Left/Right steps the selected Settings row. Navigation
 keeps its existing size, leaving space for
-the body even in a small window. Brackets still adjust volume while reading.
+the body even in a small window. Interface Text is a separate saved size for
+Cabinet and room lettering, described in [Visuals](VISUALS.md). Brackets still
+adjust volume while reading.
 Changing language keeps the selected depth and starts that text at the top.
 Closing returns to the room or Cabinet page that opened it, with room tuning,
 phase, and accepted input history retained. The language choice is saved as a

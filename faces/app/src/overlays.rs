@@ -79,7 +79,11 @@ pub(crate) fn journey_lines_with_controller(
     lines
 }
 
-pub(crate) fn draw_journey_overlay_with_controller(
+#[expect(
+    clippy::too_many_arguments,
+    reason = "journey, scoreboard, catalog size, viewport, controls, and lettering are independent overlay inputs"
+)]
+pub(crate) fn draw_journey_overlay_scaled(
     raster: &mut Raster,
     journey: &Journey,
     board: &Scoreboard,
@@ -87,6 +91,7 @@ pub(crate) fn draw_journey_overlay_with_controller(
     size: (usize, usize),
     input_mode: InputMode,
     copy: ControllerCopy,
+    text_size: numinous_core::StudyTextSize,
 ) {
     let (width, height) = size;
     raster.clear_rows(0, height as i32);
@@ -99,7 +104,7 @@ pub(crate) fn draw_journey_overlay_with_controller(
         '-',
     );
     let semantic = journey_lines_with_controller(journey, board, room_count, input_mode, copy);
-    let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
+    let (lines, scale, line_step) = overlay_layout_for(&semantic, width, height, text_size);
     draw_centered_lines(raster, &lines, width, height, scale, line_step);
 }
 
@@ -131,24 +136,26 @@ pub(crate) fn draw_pause_overlay(
     height: usize,
     input_mode: InputMode,
 ) {
-    draw_pause_overlay_with_controller(
+    draw_pause_overlay_scaled(
         raster,
         width,
         height,
         input_mode,
         ControllerFace::Generic.into(),
+        numinous_core::StudyTextSize::Standard,
     );
 }
 
-pub(crate) fn draw_pause_overlay_with_controller(
+pub(crate) fn draw_pause_overlay_scaled(
     raster: &mut Raster,
     width: usize,
     height: usize,
     input_mode: InputMode,
     copy: ControllerCopy,
+    text_size: numinous_core::StudyTextSize,
 ) {
     let semantic = pause_lines_with_controller(input_mode, copy);
-    let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
+    let (lines, scale, line_step) = overlay_layout_for(&semantic, width, height, text_size);
     let (band_top, band_bottom) = pause_band_bounds(lines.len(), scale, line_step, height);
     raster.clear_rows(band_top, band_bottom);
     raster.line(0, band_top, width.saturating_sub(1) as i32, band_top, '-');
@@ -162,8 +169,14 @@ pub(crate) fn draw_pause_overlay_with_controller(
     draw_centered_lines(raster, &lines, width, height, scale, line_step);
 }
 
-pub(crate) fn draw_banner(raster: &mut Raster, lines: &[String], width: usize, height: usize) {
-    let (lines, scale, line_step) = overlay_layout(lines, width, height);
+pub(crate) fn draw_banner(
+    raster: &mut Raster,
+    lines: &[String],
+    width: usize,
+    height: usize,
+    text_size: numinous_core::StudyTextSize,
+) {
+    let (lines, scale, line_step) = overlay_layout_for(lines, width, height, text_size);
     let line_height = line_step * scale;
     let content_height = lines.len() as i32 * line_height;
     let top = (height as i32 / 6).max(8);
@@ -185,13 +198,28 @@ pub(crate) fn draw_banner(raster: &mut Raster, lines: &[String], width: usize, h
     }
 }
 
+#[cfg(test)]
 fn overlay_layout<T: AsRef<str>>(
     semantic: &[T],
     width: usize,
     height: usize,
 ) -> (Vec<String>, i32, i32) {
-    let largest = (width as i32 / 300).clamp(1, 4);
-    overlay_layout_up_to(semantic, width, height, largest)
+    overlay_layout_for(
+        semantic,
+        width,
+        height,
+        numinous_core::StudyTextSize::Standard,
+    )
+}
+
+fn overlay_layout_for<T: AsRef<str>>(
+    semantic: &[T],
+    width: usize,
+    height: usize,
+    text_size: numinous_core::StudyTextSize,
+) -> (Vec<String>, i32, i32) {
+    let natural = (width as i32 / 300).clamp(1, 4);
+    overlay_layout_up_to(semantic, width, height, text_size.pixel_scale(natural))
 }
 
 fn overlay_layout_up_to<T: AsRef<str>>(
@@ -381,6 +409,7 @@ mod tests {
             ],
             420,
             300,
+            numinous_core::StudyTextSize::Standard,
         );
         assert!(raster.lit_count() > 40);
         let rgba = raster.to_rgba();
@@ -400,5 +429,25 @@ mod tests {
             assert!(lines.len() as i32 * line_step * scale <= height as i32);
             assert!(lines.iter().all(|line| line_fits(line, width, scale)));
         }
+    }
+
+    #[test]
+    fn a_larger_interface_size_grows_overlay_type_only_while_the_lines_fit() {
+        let semantic = ["PAUSED", "SPACE RESUMES"];
+        let (width, height) = (1600, 900);
+        let (_, standard, _) = overlay_layout(&semantic, width, height);
+        let (lines, grown, line_step) = overlay_layout_for(
+            &semantic,
+            width,
+            height,
+            numinous_core::StudyTextSize::ExtraLarge,
+        );
+        assert!(grown > standard);
+        assert!(lines.iter().all(|line| line_fits(line, width, grown)));
+        assert!(lines.len() as i32 * line_step * grown <= height as i32);
+        let (lines, scale, step) =
+            overlay_layout_for(&semantic, 80, 48, numinous_core::StudyTextSize::ExtraLarge);
+        assert!(scale >= 1);
+        assert!(lines.len() as i32 * step * scale <= 48);
     }
 }

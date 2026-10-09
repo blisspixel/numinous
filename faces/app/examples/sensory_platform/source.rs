@@ -84,6 +84,7 @@ fn draw_source(width: u32, height: u32) -> Result<(Vec<u8>, usize), String> {
             input_mode: input_legend::InputMode::KeyboardMouse,
             controller_face: input_legend::ControllerFace::Generic.into(),
             motion: numinous_core::Motion::Full,
+            text_size: numinous_core::StudyTextSize::Standard,
         },
         &inputs,
         None,
@@ -94,12 +95,14 @@ fn draw_source(width: u32, height: u32) -> Result<(Vec<u8>, usize), String> {
         &mut raster,
         &hud::AudioState::new(hud::AudioSource::RoomScore, 45, false, true),
         width_usize,
+        numinous_core::StudyTextSize::Standard,
     );
     hud::draw_spectrum_meter(
         &mut raster,
         &[0.15, 0.35, 0.70, 0.45, 0.25, 0.10, 0.05],
         width_usize,
         height_usize,
+        numinous_core::StudyTextSize::Standard,
     );
     let lit_pixels = raster.lit_count();
     let mut rgba = raster.to_rgba();

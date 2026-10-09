@@ -170,8 +170,13 @@ inside a clipped, scrollable body; depth, language, and return controls stay
 fixed. Body text offers persisted 100, 125, and 150 percent sizes through
 Settings and reader controls. Source positions anchor resizing and size
 changes, and the room's clock and accepted
-input history are held while reading. Cabinet and room HUD lettering keep
-their existing pixel faces. General Cabinet and HUD text scaling remains open.
+input history are held while reading. Cabinet menus, room HUD lettering,
+and the pause, banner, and journey overlays share a saved Interface Text size
+of 100, 125, or 150 percent of the window's own pixel scale. One hundred
+percent is that existing scale. A larger choice rounds half up, by at least
+one pixel step, and each surface then reduces it until titles, status, and
+controls stay inside the window. Gallery, games, Studio, and in-room pictures
+keep their own layout scales.
 The room header reserves separate space for titles, Journey progress, and
 audio status. Titles reduce their pixel scale to fit beside progress before
 truncating; Show title cards use the same fit rule. Spectrum bars sit below

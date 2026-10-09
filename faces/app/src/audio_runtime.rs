@@ -197,6 +197,19 @@ impl App {
             menu::NumericSetting::StudyTextSize => {
                 self.set_study_text_size(self.study_text_size.stepped(step == menu::Step::Up));
             }
+            menu::NumericSetting::InterfaceTextSize => {
+                self.set_interface_text_size(
+                    self.interface_text_size.stepped(step == menu::Step::Up),
+                );
+            }
+        }
+    }
+
+    pub(super) fn set_interface_text_size(&mut self, size: numinous_core::StudyTextSize) {
+        if self.interface_text_size != size {
+            self.interface_text_size = size;
+            self.menu.clear_pointer();
+            self.persist_preferences();
         }
     }
 
