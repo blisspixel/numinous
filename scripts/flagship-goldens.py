@@ -9,7 +9,8 @@ APPEARANCE_MAX_DELTA. Exact CPU plates are distance 0. That tolerance is for
 a future plate that is not byte-identical, and it does not relax the hash.
 Room-bed audio gates on peak, RMS, size band, and a normalized spectral
 fingerprint. SPECTRUM_ABSOLUTE_TOLERANCE is absolute per band because the
-bands are already scaled so the loudest is 1. WAV SHA-256 is recorded as a
+bands are already scaled so the loudest is 1. A non-finite band is a defect.
+WAV SHA-256 is recorded as a
 host reference only, because float paths can differ across OS targets.
 Use --update after intentional product changes. An update refuses to replace
 a PNG hash. This is machine regression evidence, not human sensory judgment,
@@ -21,6 +22,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 import subprocess
 import sys
@@ -41,6 +43,9 @@ SCHEMA = "numinous-flagship-goldens-v3"
 # Written gate. Do not widen it from the manifest: verify rejects a mismatch.
 APPEARANCE_MAX_DELTA = 2
 SPECTRUM_ABSOLUTE_TOLERANCE = 1e-3
+# Two hex digits for each block of the fixed grid. Equal truncated signatures
+# must not compare as the same plate.
+APPEARANCE_HEX_LENGTH = 80
 WIDTH = 64
 HEIGHT = 40
 FLAGSHIPS = (
@@ -137,7 +142,7 @@ def capture_room(
         ),
     }
     appearance = APPEARANCE_RE.search(render_out)
-    if appearance is None or len(appearance.group("hex")) % 2 != 0:
+    if appearance is None or len(appearance.group("hex")) != APPEARANCE_HEX_LENGTH:
         raise RuntimeError(f"missing appearance signature for {room_id} era {era}")
     entry["appearance"] = appearance.group("hex")
     if audio:
@@ -165,7 +170,10 @@ def capture_room(
         spectrum = SPECTRUM_RE.search(sonify_out)
         if spectrum is None:
             raise RuntimeError(f"missing spectral fingerprint for {room_id}: {sonify_out[-400:]}")
-        entry["spectrum"] = [float(part) for part in spectrum.group("bands").split()]
+        bands = [float(part) for part in spectrum.group("bands").split()]
+        if not bands or any(not math.isfinite(band) for band in bands):
+            raise RuntimeError(f"non-finite spectral fingerprint for {room_id}")
+        entry["spectrum"] = bands
     return entry
 
 
@@ -215,6 +223,11 @@ def compare_appearance(expected: dict[str, Any], actual: dict[str, Any]) -> list
     right = actual.get("appearance")
     if not isinstance(left, str) or not isinstance(right, str):
         return ["appearance: missing fixed-grid signature"]
+    if len(left) != APPEARANCE_HEX_LENGTH or len(right) != APPEARANCE_HEX_LENGTH:
+        return [
+            "appearance: signature is not the fixed-grid length "
+            f"({len(left)} and {len(right)})"
+        ]
     distance = block_distance(left, right)
     if distance is None:
         return [f"appearance: malformed signature {left!r} vs {right!r}"]
@@ -253,9 +266,13 @@ def compare_spectrum(expected: dict[str, Any], actual: dict[str, Any]) -> list[s
     defects: list[str] = []
     for index, (exp, got) in enumerate(zip(left, right, strict=True)):
         try:
-            delta = abs(float(exp) - float(got))
+            expected_band = float(exp)
+            actual_band = float(got)
         except (TypeError, ValueError):
-            return [f"spectrum: band {index} was not a number"]
+            return [f"spectrum: band {index} was not a finite number"]
+        if not math.isfinite(expected_band) or not math.isfinite(actual_band):
+            return [f"spectrum: band {index} was not a finite number"]
+        delta = abs(expected_band - actual_band)
         if delta > SPECTRUM_ABSOLUTE_TOLERANCE:
             defects.append(
                 f"spectrum band {index}: expected {exp} got {got} "

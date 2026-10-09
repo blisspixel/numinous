@@ -172,6 +172,32 @@ class ResolverTests(unittest.TestCase):
             else:
                 os.environ["CARGO_TARGET_DIR"] = original
 
+    def test_the_flagship_gate_rejects_non_finite_and_short_signatures(self) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "flagship_goldens", SCRIPTS / "flagship-goldens.py"
+        )
+        assert spec is not None and spec.loader is not None
+        goldens = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(goldens)
+        finite = {"spectrum": [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]}
+        self.assertEqual(goldens.compare_spectrum(finite, finite), [])
+        for broken in (float("nan"), float("inf"), float("-inf")):
+            bands = [0.0, broken, 0.0, 0.0, 0.0, 0.0, 0.0]
+            defects = goldens.compare_spectrum(finite, {"spectrum": bands})
+            self.assertTrue(defects, broken)
+            self.assertIn("finite", defects[0])
+        paired = {"spectrum": [float("inf")] * 7}
+        self.assertTrue(goldens.compare_spectrum(paired, paired))
+        signature = "ab" * (goldens.APPEARANCE_HEX_LENGTH // 2)
+        self.assertEqual(
+            goldens.compare_appearance({"appearance": signature}, {"appearance": signature}),
+            [],
+        )
+        short = signature[:8]
+        self.assertTrue(
+            goldens.compare_appearance({"appearance": short}, {"appearance": short})
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
