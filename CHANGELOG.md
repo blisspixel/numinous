@@ -16,6 +16,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 - Flagship peak, RMS, and PNG-mean comparisons reject a non-finite value
   instead of treating it as inside tolerance. Visualizer levers treat a
   non-finite band as silence, so it cannot move room time.
+- An interval whose cent count overflows is not named an octave. The
+  tolerance check treated a non-finite size as close enough, and the
+  semitone index then became zero.
 
 ## [0.5.0-alpha.6] - 2026-10-09
 

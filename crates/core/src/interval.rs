@@ -160,12 +160,22 @@ impl Interval {
 }
 
 /// The equal-tempered interval name within one octave, if one is near enough.
+///
+/// A non-finite size has no name. The tolerance comparison would accept it,
+/// because a non-finite difference is not greater than the limit, and the
+/// semitone cast would then read the unison slot.
 fn equal_tempered_name(cents: f64) -> Option<&'static str> {
+    if !cents.is_finite() || cents < 0.0 {
+        return None;
+    }
     let octaves = (cents / CENTS_PER_OCTAVE).floor();
     let within = cents - octaves * CENTS_PER_OCTAVE;
     let semitones = (within / 100.0).round();
+    if !within.is_finite() || !semitones.is_finite() || semitones < 0.0 {
+        return None;
+    }
     let index = semitones as usize;
-    if (within - semitones * 100.0).abs() > NAME_TOLERANCE_CENTS || index >= STEP_NAMES.len() {
+    if index >= STEP_NAMES.len() || (within - semitones * 100.0).abs() > NAME_TOLERANCE_CENTS {
         return None;
     }
     // Only the step inside the octave is named, so a compound interval reports
@@ -360,6 +370,25 @@ mod tests {
         ] {
             assert!(Interval::between(from, to).is_none(), "{from} to {to}");
         }
+    }
+
+    #[test]
+    fn an_overflowed_span_is_measured_and_not_named() {
+        // Two finite frequencies whose ratio does not fit in f64. The cent
+        // count overflows, and that size is not an octave.
+        let step = Interval::between(1.0e-200, 1.0e200).expect("finite frequencies");
+        assert!(step.cents.is_infinite(), "{}", step.cents);
+        assert_eq!(step.direction, Direction::Up);
+        assert_eq!(step.name, None);
+        assert!(step.ratio.is_none());
+        let line = step.describe();
+        assert!(!line.contains("octave"), "{line}");
+        assert!(!line.contains("unison"), "{line}");
+
+        let downward = Interval::between(1.0e200, 1.0e-200).expect("finite frequencies");
+        assert!(downward.cents.is_infinite(), "{}", downward.cents);
+        assert_eq!(downward.direction, Direction::Down);
+        assert_eq!(downward.name, None);
     }
 
     #[test]
