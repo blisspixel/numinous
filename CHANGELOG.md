@@ -5,6 +5,8 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+## [0.5.0-alpha.7] - 2026-10-13
+
 ### Fixed
 - The window uses the app id `com.blisspixel.numinous` on Wayland and X11, and
   the Linux desktop entry sets the same StartupWMClass.
