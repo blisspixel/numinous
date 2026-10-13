@@ -1128,6 +1128,40 @@ fn life_gesture_replays_a_causal_launch_then_evolution() {
 }
 
 #[test]
+fn render_dimension_defaults_depend_on_png_output() {
+    assert_eq!(super::render_dimensions(None, None, false), (80, 40));
+    assert_eq!(super::render_dimensions(None, None, true), (1024, 1024));
+    assert_eq!(super::render_dimensions(Some(30), None, true), (30, 1024));
+    assert_eq!(super::render_dimensions(None, Some(20), false), (80, 20));
+    assert_eq!(super::render_dimensions(Some(30), Some(20), true), (30, 20));
+
+    let path = std::env::temp_dir().join("numinous_cli_render_default_png.png");
+    let _ = std::fs::remove_file(&path);
+    let code = run(
+        Command::Render {
+            id: "times-tables".to_string(),
+            width: None,
+            height: None,
+            t: 0.0,
+            out: Some(path.clone()),
+            color: false,
+            era: "modern".to_string(),
+            vary: false,
+            variation: None,
+            pokes: Vec::new(),
+            gestures: Vec::new(),
+        },
+        &mut numinous_core::Journey::default(),
+    );
+    assert_eq!(code, std::process::ExitCode::SUCCESS);
+    let bytes = std::fs::read(&path).expect("default png");
+    let width = u32::from_be_bytes(bytes[16..20].try_into().expect("png width"));
+    let height = u32::from_be_bytes(bytes[20..24].try_into().expect("png height"));
+    assert_eq!((width, height), (1024, 1024));
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
 fn render_exposes_one_explicit_replayable_variation_seed() {
     let cli = Cli::try_parse_from(["numinous", "render", "game-of-life", "--variation", "7"])
         .expect("explicit variation parses");
@@ -1160,8 +1194,8 @@ fn invalid_render_pokes_do_not_record_progress() {
     let code = run(
         Command::Render {
             id: "double-pendulum".to_string(),
-            width: 30,
-            height: 20,
+            width: Some(30),
+            height: Some(20),
             t: 0.0,
             out: None,
             color: false,

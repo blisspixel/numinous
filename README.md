@@ -25,7 +25,11 @@ Start with [PLAY.md](PLAY.md) for your first session, including the MCP entry
 for digital minds.
 
 Install [GitHub CLI](https://cli.github.com/) first. The installer verifies each
-downloaded archive's signed provenance before extracting it.
+downloaded archive's signed provenance before extracting it. `gh attestation verify`
+must list `--source-digest`, `--signer-digest`, and `--deny-self-hosted-runners`.
+GitHub CLI 2.46 and other releases from before the attestation command cannot
+verify provenance. If `gh attestation verify --help` does not list those flags,
+upgrade GitHub CLI and retry.
 
 macOS or Linux:
 
@@ -54,7 +58,9 @@ For a digital mind, point an MCP client at the installed server:
 Then call `list_rooms` with `response_mode: "compact"` and choose a door.
 
 From a source checkout: `cargo run --release --bin numinous-app`.
-The [player's manual](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md) covers controls, settings, and installation.
+On Linux, install the packages in
+[Building from source on Linux](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md#building-from-source-on-linux)
+first. The [player's manual](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md) covers controls, settings, and installation.
 
 ## Explore, play, create
 

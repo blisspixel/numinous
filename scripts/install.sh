@@ -32,6 +32,7 @@ INSTALL_MARKER_TEXT='Numinous install root v2'
 LEGACY_INSTALL_MARKER_TEXT='Numinous install root'
 INSTALLER_NOTE='added by the Numinous installer'
 DESKTOP_ENTRY_MARKER='X-Numinous-Managed=true'
+DESKTOP_APP_ID='com.blisspixel.numinous'
 MAC_APP_MARKER='Numinous app bundle v1'
 
 say() { printf '%s\n' "$1"; }
@@ -635,12 +636,21 @@ release_revision() (
     fail "the release tag has too many annotated tag layers"
 )
 
+gh_attestation_can_verify() {
+    help="$(gh attestation verify --help 2>&1)" || return 1
+    printf '%s\n' "$help" | grep -Fq -- '--source-digest' || return 1
+    printf '%s\n' "$help" | grep -Fq -- '--signer-digest' || return 1
+    printf '%s\n' "$help" | grep -Fq -- '--deny-self-hosted-runners'
+}
+
 assert_release_provenance() (
     archive="$1"
     bundle="$2"
     tag="$3"
     revision="$4"
     have gh || fail "install GitHub CLI (gh) to verify release provenance, then retry"
+    gh_attestation_can_verify \
+        || fail "your GitHub CLI is too old to verify release provenance; update gh (needs gh attestation verify with --source-digest, --signer-digest, and --deny-self-hosted-runners) and retry. Nothing was installed."
     gh attestation verify "$archive" --bundle "$bundle" \
         --hostname github.com --repo "$REPO" \
         --predicate-type https://slsa.dev/provenance/v1 \
@@ -820,6 +830,18 @@ add_path_line() {
     printf '\n%s\n' "$line" >>"$profile"
 }
 
+# Login bash reads .bash_profile instead of .profile, and that file usually
+# sources .bashrc. Writing the line into all three duplicates PATH. Record it
+# in .bashrc, and in .profile only when .bash_profile is absent. Never write
+# .bash_profile.
+install_bash_path_lines() {
+    line="$1"
+    add_path_line "$HOME/.bashrc" "$line"
+    if [ ! -e "$HOME/.bash_profile" ]; then
+        add_path_line "$HOME/.profile" "$line"
+    fi
+}
+
 zsh_profile_is_relevant() {
     [ -f "$HOME/.zshrc" ] \
         || { [ -n "${SHELL:-}" ] && [ "${SHELL##*/}" = "zsh" ]; }
@@ -876,6 +898,7 @@ write_desktop_entry() (
         printf '%s\n' 'Categories=Game;Education;'
         printf '%s\n' 'Keywords=math;science;puzzle;simulation;'
         printf '%s\n' 'StartupNotify=true'
+        printf 'StartupWMClass=%s\n' "$DESKTOP_APP_ID"
         printf '%s\n' "$DESKTOP_ENTRY_MARKER"
         printf 'X-Numinous-Target=%s\n' "$target_value"
     } >"$stage"
@@ -1104,6 +1127,9 @@ test_platform_launchers() {
         install_linux_launchers "$target" "$icon"
         desktop_entry_is_managed "$home/data/applications/numinous.desktop" "$target" \
             || fail "launcher self-test: the Linux application launcher is incomplete"
+        grep -Fqx "StartupWMClass=$DESKTOP_APP_ID" \
+            "$home/data/applications/numinous.desktop" \
+            || fail "launcher self-test: the Linux launcher has no StartupWMClass"
         desktop_entry_is_managed "$home/Desktop/Numinous.desktop" "$target" \
             || fail "launcher self-test: the Linux desktop shortcut is incomplete"
         install_linux_launchers "$second_target" "$icon"
@@ -1231,6 +1257,10 @@ test_update_helper_signal_cleanup() (
 test_release_provenance() (
     have() { [ "$1" = gh ]; }
     gh() {
+        if [ "$1" = attestation ] && [ "$2" = verify ] && [ "$3" = --help ]; then
+            printf '%s\n' '--source-digest' '--signer-digest' '--deny-self-hosted-runners'
+            return 0
+        fi
         [ "$#" -eq 20 ] || return 1
         [ "$1" = attestation ] && [ "$2" = verify ] \
             && [ "$3" = fixture.tar.gz ] && [ "$4" = --bundle ] \
@@ -1262,6 +1292,26 @@ test_release_provenance() (
         9999999999999999999999999999999999999999) >/dev/null 2>&1; then
         fail "provenance self-test: mismatched revision was accepted"
     fi
+    (
+        gh() {
+            printf '%s\n' 'USAGE' 'gh <command> <subcommand> [flags]'
+            return 1
+        }
+        output="${TMPDIR:-/tmp}/numinous-outdated-gh.$$"
+        if assert_release_provenance fixture.tar.gz provenance.jsonl v1.2.3 \
+            0123456789012345678901234567890123456789 >"$output" 2>&1; then
+            fail "provenance self-test: an outdated gh was accepted"
+        fi
+        grep -Fq 'too old' "$output" \
+            || fail "provenance self-test: outdated gh was not named"
+        if grep -Fq 'USAGE' "$output"; then
+            fail "provenance self-test: outdated gh dumped its help"
+        fi
+        if grep -Fq 'release provenance verification failed' "$output"; then
+            fail "provenance self-test: outdated gh was reported as bad provenance"
+        fi
+        rm -f -- "$output"
+    )
     # Exercise the download path with matching checksums but rejected soundtrack
     # evidence. No payload may be published before every download is authenticated.
     test_root="$(mktemp -d "${TMPDIR:-/tmp}/numinous-provenance-test.XXXXXX")"
@@ -1547,6 +1597,31 @@ run_self_test() {
     fi
     verify_installed_cli "$test_base/installed-bin" "$test_base/stale-bin:$PATH" \
         || fail "PATH self-test: a stale earlier command defeated verified precedence"
+
+    bash_home="$test_base/bash-path-home"
+    mkdir "$bash_home"
+    (
+        HOME="$bash_home"
+        export HOME
+        : >"$HOME/.bash_profile"
+        install_bash_path_lines "$test_path_line"
+        grep -Fq "$INSTALLER_NOTE" "$HOME/.bashrc" \
+            || fail "PATH self-test: bashrc did not receive the installer line"
+        if [ -e "$HOME/.profile" ] && grep -Fq "$INSTALLER_NOTE" "$HOME/.profile"; then
+            fail "PATH self-test: profile duplicated a login bash that has bash_profile"
+        fi
+        if grep -Fq "$INSTALLER_NOTE" "$HOME/.bash_profile"; then
+            fail "PATH self-test: bash_profile received a duplicate installer line"
+        fi
+        rm -f -- "$HOME/.bash_profile" "$HOME/.bashrc"
+        install_bash_path_lines "$test_path_line"
+        grep -Fq "$INSTALLER_NOTE" "$HOME/.bashrc" \
+            && grep -Fq "$INSTALLER_NOTE" "$HOME/.profile" \
+            || fail "PATH self-test: a bash without bash_profile missed profile or bashrc"
+        [ "$(grep -Fc "$INSTALLER_NOTE" "$HOME/.bashrc")" = 1 ] \
+            && [ "$(grep -Fc "$INSTALLER_NOTE" "$HOME/.profile")" = 1 ] \
+            || fail "PATH self-test: bash path lines were duplicated inside one file"
+    )
 
     test_platform_launchers "$test_base"
     if (UNINSTALL=1; SOURCE_MODE=1; uninstall_options_are_clear); then
@@ -1840,13 +1915,7 @@ ln -sfn "$RADIO_SOURCE" "$BIN_DIR/radio"
 install_platform_launchers "$os"
 
 if [ "$MODIFY_PATH" -eq 1 ]; then
-    add_path_line "$HOME/.profile" "$path_line"
-    # A login bash reads .bash_profile instead of .profile when it exists.
-    for profile in "$HOME/.bash_profile" "$HOME/.bashrc"; do
-        if [ -f "$profile" ]; then
-            add_path_line "$profile" "$path_line"
-        fi
-    done
+    install_bash_path_lines "$path_line"
     if zsh_profile_is_relevant; then
         add_path_line "$HOME/.zshrc" "$path_line"
     fi
