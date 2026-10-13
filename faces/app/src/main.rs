@@ -82,21 +82,6 @@ const SHAKE_TRAVEL: i32 = 3;
 /// value as StartupWMClass.
 const DESKTOP_APP_ID: &str = "com.blisspixel.numinous";
 
-#[cfg(test)]
-mod desktop_app_id {
-    use super::DESKTOP_APP_ID;
-
-    #[test]
-    fn installer_startup_class_matches_the_window_app_id() {
-        let installer = include_str!("../../../scripts/install.sh");
-        let declaration = format!("DESKTOP_APP_ID='{DESKTOP_APP_ID}'");
-        assert!(
-            installer.contains(&declaration),
-            "scripts/install.sh must publish {DESKTOP_APP_ID} as the desktop app id"
-        );
-    }
-}
-
 fn apply_desktop_app_id(
     attributes: winit::window::WindowAttributes,
 ) -> winit::window::WindowAttributes {
@@ -3491,3 +3476,20 @@ mod motion_tests;
 
 #[cfg(test)]
 mod study_runtime_tests;
+
+// Kept after `enter_room`: the first `#[cfg(test)] mod` ends the production
+// slice counted by `the_room_index_is_written_in_one_place`.
+#[cfg(test)]
+mod desktop_app_id {
+    use super::DESKTOP_APP_ID;
+
+    #[test]
+    fn installer_startup_class_matches_the_window_app_id() {
+        let installer = include_str!("../../../scripts/install.sh");
+        let declaration = format!("DESKTOP_APP_ID='{DESKTOP_APP_ID}'");
+        assert!(
+            installer.contains(&declaration),
+            "scripts/install.sh must publish {DESKTOP_APP_ID} as the desktop app id"
+        );
+    }
+}
