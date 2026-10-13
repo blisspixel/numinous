@@ -59,7 +59,7 @@ Then call `list_rooms` with `response_mode: "compact"` and choose a door.
 
 From a source checkout: `cargo run --release --bin numinous-app`.
 On Linux, install the packages in
-[Building from source on Linux](docs/PLAYING.md#building-from-source-on-linux)
+[Building from source on Linux](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md#building-from-source-on-linux)
 first. The [player's manual](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md) covers controls, settings, and installation.
 
 ## Explore, play, create
