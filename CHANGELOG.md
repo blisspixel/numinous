@@ -6,6 +6,19 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 ## [Unreleased]
 
 ### Fixed
+- The window uses the app id `com.blisspixel.numinous` on Wayland and X11, and
+  the Linux desktop entry sets the same StartupWMClass.
+- The menu help footer keeps its group spacing and no longer leaves a single
+  word on its own line.
+- `numinous render --out` defaults to 1024x1024 when width and height are
+  omitted. ASCII rendering stays 80x40. The installer writes the bash PATH
+  line to `.bashrc`, and to `.profile` only when `.bash_profile` is absent.
+- An old GitHub CLI that cannot run `gh attestation verify` with
+  `--source-digest`, `--signer-digest`, and `--deny-self-hosted-runners` is
+  named as outdated. It no longer dumps gh help or reports a provenance
+  failure.
+- Linux source builds document the pkg-config, compiler, ALSA, xkbcommon, and
+  libudev packages. The installer already checks for those libraries.
 - Appending private state or a diagnostic log refuses a symlink, so the
   append does not change the link's target or its permissions. Replacing a
   state file through a symlink leaves the target intact and writes a regular

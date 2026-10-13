@@ -156,12 +156,14 @@ enum Command {
     Render {
         /// Room id, e.g. "times-tables".
         id: String,
-        /// Width in columns (ASCII) or pixels (PNG).
-        #[arg(long, default_value_t = 80)]
-        width: usize,
-        /// Height in rows (ASCII) or pixels (PNG).
-        #[arg(long, default_value_t = 40)]
-        height: usize,
+        /// Width in columns (ASCII) or pixels (PNG). Omitted ASCII is 80 columns.
+        /// Omitted PNG output is 1024 pixels.
+        #[arg(long)]
+        width: Option<usize>,
+        /// Height in rows (ASCII) or pixels (PNG). Omitted ASCII is 40 rows.
+        /// Omitted PNG output is 1024 pixels.
+        #[arg(long)]
+        height: Option<usize>,
         /// Phase in [0, 1): for Times Tables this sweeps the multiplier.
         #[arg(long, default_value_t = 0.0)]
         t: f64,
@@ -1601,6 +1603,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             pokes,
             gestures,
         } => {
+            let (width, height) = render_dimensions(width, height, out.is_some());
             if let Err(message) = validate_render_request(width, height, t) {
                 report_diagnostic(&message);
                 return ExitCode::FAILURE;
@@ -3709,6 +3712,16 @@ fn tour(
             }
         }
     }
+}
+
+/// ASCII defaults stay the terminal cell size. A PNG gets a viewable frame
+/// when the caller omits either dimension.
+fn render_dimensions(width: Option<usize>, height: Option<usize>, png: bool) -> (usize, usize) {
+    let (default_width, default_height) = if png { (1024, 1024) } else { (80, 40) };
+    (
+        width.unwrap_or(default_width),
+        height.unwrap_or(default_height),
+    )
 }
 
 /// A room rendered to ASCII, or a guiding error if the id is unknown.

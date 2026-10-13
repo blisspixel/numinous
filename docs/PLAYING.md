@@ -51,7 +51,11 @@ process, while portable creations reopen with fresh undo/search.
 **Install once.** One command downloads and verifies the latest published
 release, then puts `numinous`, `numinous-app`, and `numinous-mcp` on your PATH.
 No Rust toolchain is needed. Install [GitHub CLI](https://cli.github.com/) first
-for signed archive verification. macOS or Linux:
+for signed archive verification. `gh attestation verify` must list
+`--source-digest`, `--signer-digest`, and `--deny-self-hosted-runners`.
+GitHub CLI 2.46 and other releases from before the attestation command cannot
+verify provenance. If `gh attestation verify --help` does not list those flags,
+upgrade GitHub CLI and retry. macOS or Linux:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh
@@ -102,6 +106,40 @@ caller-trusted and do not carry an installer provenance guarantee. Checksums,
 safe extraction, and closed payload manifests are still required. A local input
 never disables provenance verification for a different archive downloaded during
 the same installation.
+
+## Building from source on Linux
+
+A source checkout and `scripts/install.sh --source` link against ALSA,
+libxkbcommon, and libudev. Install pkg-config, a C toolchain, and those
+development packages before `cargo build` or `cargo run`. The installer checks
+for the libraries and prints this list when they are missing. `cargo test -p numinous-core`
+does not need them.
+
+Debian or Ubuntu:
+
+```
+sudo apt-get install -y build-essential pkg-config libasound2-dev libxkbcommon-dev libudev-dev
+```
+
+Fedora:
+
+```
+sudo dnf install -y gcc pkgconf-pkg-config alsa-lib-devel libxkbcommon-devel systemd-devel
+```
+
+Arch:
+
+```
+sudo pacman -S --needed base-devel pkgconf alsa-lib libxkbcommon systemd-libs
+```
+
+openSUSE:
+
+```
+sudo zypper install gcc pkg-config alsa-devel libxkbcommon-devel libudev-devel
+```
+
+CI installs the Debian package names through `scripts/ci-linux-libs.sh`.
 
 **Start the app:** open the installed `Numinous` launcher, type `numinous-app`
 in a new terminal, or run this from a clone:

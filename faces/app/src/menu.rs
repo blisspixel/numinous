@@ -925,6 +925,76 @@ const MIN_DESKTOP_ROW_SCALE: i32 = 4;
 const COMPACT_ROW_TOP: i32 = 50;
 const COMPACT_ROW_STEP: i32 = 44;
 const COMPACT_ROW_HEIGHT: i32 = 42;
+const MENU_FOOTER_HINT_COMPACT: &str =
+    "ARROWS MOVE   ENTER SELECT   ESC BACK   F FULLSCREEN   Q QUIT";
+
+fn menu_footer_hint(compact: bool, fullscreen_label: &str) -> String {
+    if compact {
+        format!("ARROWS MOVE   ENTER SELECT   ESC BACK   {fullscreen_label}   Q QUIT")
+    } else {
+        format!(
+            "ARROWS MOVE   ENTER SELECT   ESC BACK   {fullscreen_label}   Q QUIT   BACKTICK TYPE"
+        )
+    }
+}
+
+/// Split a footer on its triple-space groups. A fitting split stays on one
+/// line, or on two lines that each hold more than one word. Group gaps stay
+/// intact. When no such split fits, the result is longer than two lines so
+/// the menu can scale the footer down instead of orphaning a word.
+fn footer_hint_lines(hint: &str, columns: usize) -> Vec<String> {
+    let columns = columns.max(1);
+    if !hint.contains("   ") {
+        return numinous_core::wrap_text(hint, columns);
+    }
+    let groups: Vec<&str> = hint
+        .split("   ")
+        .filter(|group| !group.is_empty())
+        .collect();
+    let join = |groups: &[&str]| groups.join("   ");
+    let fits = |line: &str| line.chars().count() <= columns;
+    let one_word = |line: &str| line.split_whitespace().count() <= 1;
+    let whole = join(&groups);
+    if fits(&whole) {
+        return vec![whole];
+    }
+    let mut best: Option<(usize, usize, String, String)> = None;
+    for split in 1..groups.len() {
+        let left = join(&groups[..split]);
+        let right = join(&groups[split..]);
+        if !fits(&left) || !fits(&right) || one_word(&left) || one_word(&right) {
+            continue;
+        }
+        let imbalance = left.chars().count().abs_diff(right.chars().count());
+        let rank = (
+            imbalance,
+            left.chars().count().max(right.chars().count()),
+            split,
+        );
+        let replace = match &best {
+            None => true,
+            Some((prev_imbalance, prev_split, prev_left, prev_right)) => {
+                let prev_rank = (
+                    *prev_imbalance,
+                    prev_left.chars().count().max(prev_right.chars().count()),
+                    *prev_split,
+                );
+                rank < prev_rank
+            }
+        };
+        if replace {
+            best = Some((imbalance, split, left, right));
+        }
+    }
+    if let Some((_, _, left, right)) = best {
+        return vec![left, right];
+    }
+    let mut lines: Vec<String> = groups.into_iter().map(str::to_string).collect();
+    while lines.len() < 3 {
+        lines.push(String::new());
+    }
+    lines
+}
 
 /// The largest row scale, up to the page's own, at which `rows` rows fit in
 /// `available` pixels. A long list steps its rows down in whole pixels
@@ -1031,11 +1101,16 @@ fn footer_copy_fits(state: &MenuState, width: usize, auxiliary: i32, items: &[Me
     let advance = usize::try_from(menu_font::advance(auxiliary)).unwrap_or(1);
     let columns = width.saturating_sub(48) / advance.max(1);
     let hint = if matches!(state.origin(), MenuOrigin::Activity(_)) {
-        "ARROWS MOVE   ENTER SELECT   ESC BACK   F FULLSCREEN   Q QUIT"
+        MENU_FOOTER_HINT_COMPACT.to_string()
     } else {
-        "ARROWS MOVE   ENTER SELECT   ESC BACK   F FULLSCREEN   Q QUIT   BACKTICK TEXT ENTRY"
+        menu_footer_hint(false, "F EXIT FULLSCREEN")
     };
-    if numinous_core::wrap_text(hint, columns.max(1)).len() > 2 {
+    let lines = footer_hint_lines(&hint, columns.max(1));
+    if lines.len() > 2
+        || lines
+            .iter()
+            .any(|line| menu_font::text_width(line, auxiliary) > width as i32 - 16)
+    {
         return false;
     }
     items
@@ -1460,13 +1535,10 @@ pub fn draw_menu(
             } else {
                 "F FULLSCREEN"
             };
-            if layout.compact || matches!(state.origin(), MenuOrigin::Activity(_)) {
-                format!("ARROWS MOVE   ENTER SELECT   ESC BACK   {display}   Q QUIT")
-            } else {
-                format!(
-                    "ARROWS MOVE   ENTER SELECT   ESC BACK   {display}   Q QUIT   BACKTICK TEXT ENTRY"
-                )
-            }
+            menu_footer_hint(
+                layout.compact || matches!(state.origin(), MenuOrigin::Activity(_)),
+                display,
+            )
         }
         InputMode::Controller => format!(
             "{} MOVE   {} SELECT   {} BACK",
@@ -1477,7 +1549,7 @@ pub fn draw_menu(
     };
     let hint_columns = width.saturating_sub(48)
         / usize::try_from(menu_font::advance(auxiliary_scale)).unwrap_or(1);
-    let hint_lines = numinous_core::wrap_text(&hint, hint_columns.max(1));
+    let hint_lines = footer_hint_lines(&hint, hint_columns.max(1));
     let hint_count = hint_lines.len().min(2);
     let hint_step = menu_line_step(auxiliary_scale);
     let hint_top = height as i32 - 12 - hint_count as i32 * hint_step;
@@ -1618,6 +1690,29 @@ fn control_lines(input_mode: InputMode, copy: ControllerCopy) -> Vec<String> {
 mod tests {
     use super::*;
     use crate::input_legend::ControllerFace;
+
+    #[test]
+    fn footer_hint_keeps_group_gaps_and_does_not_orphan_a_word() {
+        let legacy =
+            "ARROWS MOVE   ENTER SELECT   ESC BACK   F FULLSCREEN   Q QUIT   BACKTICK TEXT ENTRY";
+        let collapsed = legacy.split_whitespace().collect::<Vec<_>>().join(" ");
+        let orphan_columns = collapsed.len() - " ENTRY".len();
+        let wrapped = numinous_core::wrap_text(&collapsed, orphan_columns);
+        assert_eq!(wrapped.last().map(String::as_str), Some("ENTRY"));
+
+        let hint = menu_footer_hint(false, "F FULLSCREEN");
+        let lines = footer_hint_lines(&hint, orphan_columns);
+        assert!(lines.len() <= 2, "{lines:?}");
+        for line in &lines {
+            assert!(line.split_whitespace().count() > 1, "orphaned word: {line}");
+        }
+        assert!(
+            lines.iter().any(|line| line.contains("   ")),
+            "group gaps must survive: {lines:?}"
+        );
+        assert!(hint.contains("BACKTICK TYPE"));
+        assert!(footer_hint_lines(&hint, 4).len() > 2);
+    }
 
     fn readout() -> MenuReadout<'static> {
         MenuReadout {

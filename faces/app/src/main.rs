@@ -78,6 +78,64 @@ const NONTRANSITIVE_MORPH_SECONDS: f64 = 1.6;
 
 /// How far a screen shake throws the frame, in pixels.
 const SHAKE_TRAVEL: i32 = 3;
+/// Wayland app_id and X11 WM_CLASS. `scripts/install.sh` writes this same
+/// value as StartupWMClass.
+const DESKTOP_APP_ID: &str = "com.blisspixel.numinous";
+
+#[cfg(test)]
+mod desktop_app_id {
+    use super::DESKTOP_APP_ID;
+
+    #[test]
+    fn installer_startup_class_matches_the_window_app_id() {
+        let installer = include_str!("../../../scripts/install.sh");
+        let declaration = format!("DESKTOP_APP_ID='{DESKTOP_APP_ID}'");
+        assert!(
+            installer.contains(&declaration),
+            "scripts/install.sh must publish {DESKTOP_APP_ID} as the desktop app id"
+        );
+    }
+}
+
+fn apply_desktop_app_id(
+    attributes: winit::window::WindowAttributes,
+) -> winit::window::WindowAttributes {
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "android",
+            target_os = "redox"
+        ))
+    ))]
+    {
+        // Both traits write the same name field. UFCS keeps the calls
+        // unambiguous while the wayland and x11 features are both enabled.
+        let attributes = winit::platform::wayland::WindowAttributesExtWayland::with_name(
+            attributes,
+            DESKTOP_APP_ID,
+            DESKTOP_APP_ID,
+        );
+        winit::platform::x11::WindowAttributesExtX11::with_name(
+            attributes,
+            DESKTOP_APP_ID,
+            DESKTOP_APP_ID,
+        )
+    }
+    #[cfg(not(all(
+        unix,
+        not(any(
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "android",
+            target_os = "redox"
+        ))
+    )))]
+    {
+        attributes
+    }
+}
 
 /// Shift an RGBA buffer a few pixels left or right for a short bad-grade shake.
 fn apply_screen_shake(rgba: &mut [u8], width: usize, height: usize, frames_left: u8) {
@@ -2443,11 +2501,13 @@ impl ApplicationHandler for App {
             }
             return;
         }
-        let attributes = Window::default_attributes()
-            .with_title(self.title())
-            .with_inner_size(winit::dpi::LogicalSize::new(900.0, 900.0))
-            .with_window_icon(app_icon())
-            .with_maximized(true);
+        let attributes = apply_desktop_app_id(
+            Window::default_attributes()
+                .with_title(self.title())
+                .with_inner_size(winit::dpi::LogicalSize::new(900.0, 900.0))
+                .with_window_icon(app_icon())
+                .with_maximized(true),
+        );
         let Ok(window) = event_loop.create_window(attributes) else {
             return;
         };

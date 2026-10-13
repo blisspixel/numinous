@@ -38,7 +38,11 @@ See [language availability](https://github.com/blisspixel/numinous/blob/main/doc
 
 Install the latest published release. No Rust or compiler is needed.
 Install [GitHub CLI](https://cli.github.com/) first so the installer can verify
-the downloaded archives' signed provenance.
+the downloaded archives' signed provenance. `gh attestation verify` must list
+`--source-digest`, `--signer-digest`, and `--deny-self-hosted-runners`.
+GitHub CLI 2.46 and other releases from before the attestation command cannot
+verify provenance. If `gh attestation verify --help` does not list those flags,
+upgrade GitHub CLI and retry.
 
 **macOS / Linux:**
 

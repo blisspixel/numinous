@@ -1242,6 +1242,12 @@ function Test-PathPromotion {
 function Test-ReleaseProvenance {
     function Have([string]$Name) { return $Name -ceq 'gh' }
     function gh {
+        if ($args.Count -ge 3 -and $args[0] -ceq 'attestation' -and $args[1] -ceq 'verify' -and
+            $args[2] -ceq '--help') {
+            $global:LASTEXITCODE = 0
+            Write-Output '--source-digest --signer-digest --deny-self-hosted-runners'
+            return
+        }
         $expected = @('attestation', 'verify', 'fixture.zip', '--bundle', 'provenance.jsonl',
             '--hostname', 'github.com', '--repo', 'blisspixel/numinous',
             '--predicate-type', 'https://slsa.dev/provenance/v1',
@@ -1265,6 +1271,28 @@ function Test-ReleaseProvenance {
         $rejected = $false
         try { Assert-ReleaseProvenance @case } catch { $rejected = $true }
         if (-not $rejected) { Fail 'provenance self-test: invalid evidence was accepted.' }
+    }
+    function gh {
+        $global:LASTEXITCODE = 1
+        Write-Output 'USAGE'
+        Write-Output 'gh <command> <subcommand> [flags]'
+    }
+    $outdated = $false
+    $outdatedMessage = ''
+    try { Assert-ReleaseProvenance 'fixture.zip' 'provenance.jsonl' 'v1.2.3' $revision }
+    catch {
+        $outdated = $true
+        $outdatedMessage = "$_"
+    }
+    if (-not $outdated) { Fail 'provenance self-test: an outdated gh was accepted.' }
+    if ($outdatedMessage -notmatch 'too old') {
+        Fail "provenance self-test: outdated gh was not named: $outdatedMessage"
+    }
+    if ($outdatedMessage -match 'USAGE') {
+        Fail 'provenance self-test: outdated gh dumped its help.'
+    }
+    if ($outdatedMessage -match 'release provenance verification failed') {
+        Fail 'provenance self-test: outdated gh was reported as bad provenance.'
     }
     $global:LASTEXITCODE = 0
     # Drive the download branch through a checksum-accepted payload and a
@@ -1875,11 +1903,21 @@ function Get-ReleaseRevision([string]$Tag) {
     Fail 'the release tag has too many annotated tag layers.'
 }
 
+function Test-GhAttestationCanVerify {
+    $help = & gh attestation verify --help 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) { return $false }
+    return ($help.Contains('--source-digest') -and $help.Contains('--signer-digest') -and
+        $help.Contains('--deny-self-hosted-runners'))
+}
+
 function Assert-ReleaseProvenance(
     [string]$Archive, [string]$Bundle, [string]$Tag, [string]$Revision
 ) {
     if (-not (Have 'gh')) {
         Fail 'install GitHub CLI (gh) to verify release provenance, then retry.'
+    }
+    if (-not (Test-GhAttestationCanVerify)) {
+        Fail 'your GitHub CLI is too old to verify release provenance; update gh (needs gh attestation verify with --source-digest, --signer-digest, and --deny-self-hosted-runners) and retry. Nothing was installed.'
     }
     & gh attestation verify $Archive --bundle $Bundle `
         --hostname github.com --repo $Repo `
