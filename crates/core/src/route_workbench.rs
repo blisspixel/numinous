@@ -8,8 +8,9 @@
 use std::fmt;
 
 use crate::route::{
-    ExactRoute, Road, RouteError, RouteEvent, RouteExchange, RouteProblem, RouteTour, StreetPath,
-    StreetTrace, shortest_street_trace, validate_route_roads, validate_route_stops,
+    ExactRoute, NearestChoice, NearestTrace, Road, RouteError, RouteEvent, RouteExchange,
+    RouteProblem, RouteTour, StreetPath, StreetTrace, shortest_street_trace, validate_route_roads,
+    validate_route_stops,
 };
 
 /// Maximum retained previous towns, oldest first.
@@ -78,6 +79,17 @@ pub struct RouteTraceSnapshot {
     pub cursor: usize,
 }
 
+/// A cursor into a freshly regenerated nearest-next trace.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RouteChoiceSnapshot {
+    /// Current workbench revision; an earlier revision is refused.
+    pub revision: u64,
+    /// SHA-256 of canonical current town state.
+    pub town_identity: [u8; 32],
+    /// Number of recorded choices already revealed, including a return step.
+    pub cursor: usize,
+}
+
 /// Caller-carried bounded editing state, including explicit undo and playback.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RouteWorkbenchSnapshot {
@@ -89,6 +101,8 @@ pub struct RouteWorkbenchSnapshot {
     pub undo: Vec<RouteTownSnapshot>,
     /// Optional playback cursor; events and path claims are never imported.
     pub trace: Option<RouteTraceSnapshot>,
+    /// Optional nearest-next cursor. Choices are regenerated, never imported.
+    pub choices: Option<RouteChoiceSnapshot>,
 }
 
 /// An edit or a deliberate route construction.
@@ -155,6 +169,14 @@ pub enum RouteWorkbenchError {
     TraceIdentity,
     /// A cursor exceeds the actual regenerated event count.
     TraceCursor,
+    /// Nearest-next playback has not been started, or was invalidated.
+    ChoiceAbsent,
+    /// A nearest-next cursor names a different revision.
+    ChoiceRevision,
+    /// A nearest-next cursor's town identity differs from the current town.
+    ChoiceIdentity,
+    /// A nearest-next cursor exceeds the regenerated choice count.
+    ChoiceCursor,
     /// Random-map options exceed the declared junction, connection, or cost bounds.
     RandomOptions,
 }
@@ -175,6 +197,19 @@ impl fmt::Display for RouteWorkbenchError {
                 write!(f, "search playback belongs to a different street network")
             }
             Self::TraceCursor => write!(f, "route cursor exceeds the recorded calculation"),
+            Self::ChoiceAbsent => write!(f, "no nearest-next playback; start a new calculation"),
+            Self::ChoiceRevision => {
+                write!(f, "nearest-next playback belongs to a different revision")
+            }
+            Self::ChoiceIdentity => {
+                write!(
+                    f,
+                    "nearest-next playback belongs to a different street network"
+                )
+            }
+            Self::ChoiceCursor => {
+                write!(f, "nearest-next cursor exceeds the recorded calculation")
+            }
             Self::RandomOptions => write!(
                 f,
                 "random map needs 3..12 junctions, 1..999 maximum cost, and no more extra roads than unused connections"
@@ -188,6 +223,21 @@ impl std::error::Error for RouteWorkbenchError {}
 impl From<RouteError> for RouteWorkbenchError {
     fn from(error: RouteError) -> Self {
         Self::Invalid(error)
+    }
+}
+
+/// What nearest-next costs against the exact minimum on this one network.
+///
+/// The words name a worse tour or a tie. They do not say the heuristic lost,
+/// and they do not claim anything about other networks or real travel time.
+#[must_use]
+pub fn nearest_statement(greedy: u32, exact: u32) -> &'static str {
+    if greedy > exact {
+        "Nearest-next costs more than the exact minimum on this network."
+    } else if greedy == exact {
+        "Nearest-next matches the exact minimum on this network."
+    } else {
+        "The recorded exact cost is above nearest-next, so this comparison is refused."
     }
 }
 
@@ -350,6 +400,58 @@ pub struct RouteWorkbench {
     current: RouteTownSnapshot,
     undo: Vec<RouteTownSnapshot>,
     trace: Option<RouteTracePlayback>,
+    choices: Option<RouteChoicePlayback>,
+}
+
+/// Caller-paced nearest-next playback regenerated from the current streets.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RouteChoicePlayback {
+    snapshot: RouteChoiceSnapshot,
+    trace: NearestTrace,
+}
+
+impl RouteChoicePlayback {
+    /// Current revision and caller-controlled cursor.
+    #[must_use]
+    pub const fn snapshot(&self) -> RouteChoiceSnapshot {
+        self.snapshot
+    }
+
+    /// Every recorded choice, independent of the cursor.
+    #[must_use]
+    pub fn choices(&self) -> &[NearestChoice] {
+        &self.trace.choices
+    }
+
+    /// The prefix the caller has revealed. Later choices are absent.
+    #[must_use]
+    pub fn visible(&self) -> &[NearestChoice] {
+        &self.choices()[..self.snapshot.cursor]
+    }
+
+    /// Number of revealed choices.
+    #[must_use]
+    pub const fn cursor(&self) -> usize {
+        self.snapshot.cursor
+    }
+
+    /// Whether every recorded choice, including the return, has been revealed.
+    #[must_use]
+    pub fn completed(&self) -> bool {
+        self.cursor() == self.choices().len()
+    }
+
+    /// Accumulated cost of the revealed prefix. Zero before the first choice.
+    #[must_use]
+    pub fn prefix_cost(&self) -> u32 {
+        self.visible().last().map_or(0, |choice| choice.accumulated)
+    }
+
+    /// The finished heuristic tour. Comparisons stay available while seeking.
+    #[must_use]
+    pub const fn tour(&self) -> &RouteTour {
+        &self.trace.tour
+    }
 }
 
 fn validate_town(mut town: RouteTownSnapshot) -> Result<RouteTownSnapshot, RouteError> {
@@ -450,6 +552,7 @@ impl RouteWorkbench {
             },
             undo: Vec::new(),
             trace: None,
+            choices: None,
         })
     }
 
@@ -473,6 +576,7 @@ impl RouteWorkbench {
             },
             undo: Vec::new(),
             trace: None,
+            choices: None,
         }
     }
 
@@ -493,6 +597,7 @@ impl RouteWorkbench {
             },
             undo: Vec::new(),
             trace: None,
+            choices: None,
         }
     }
 
@@ -515,6 +620,7 @@ impl RouteWorkbench {
             current,
             undo,
             trace: None,
+            choices: None,
         };
         if let Some(trace) = snapshot.trace {
             if trace.revision != workbench.revision {
@@ -530,6 +636,19 @@ impl RouteWorkbench {
             workbench.start_trace(trace.from, trace.to)?;
             workbench.seek_trace(trace.cursor)?;
         }
+        if let Some(choices) = snapshot.choices {
+            if choices.revision != workbench.revision {
+                return Err(RouteWorkbenchError::ChoiceRevision);
+            }
+            if choices.town_identity != workbench.town_identity() {
+                return Err(RouteWorkbenchError::ChoiceIdentity);
+            }
+            if choices.cursor > crate::route::MAX_ROUTE_STOPS {
+                return Err(RouteWorkbenchError::ChoiceCursor);
+            }
+            workbench.start_choices()?;
+            workbench.seek_choices(choices.cursor)?;
+        }
         Ok(workbench)
     }
 
@@ -542,6 +661,7 @@ impl RouteWorkbench {
             current: self.current.clone(),
             undo: self.undo.clone(),
             trace: self.trace.as_ref().map(RouteTracePlayback::snapshot),
+            choices: self.choices.as_ref().map(RouteChoicePlayback::snapshot),
         }
     }
 
@@ -679,6 +799,7 @@ impl RouteWorkbench {
         self.undo.push(std::mem::replace(&mut self.current, next));
         self.revision = revision;
         self.trace = None;
+        self.choices = None;
         Ok(true)
     }
 
@@ -698,6 +819,7 @@ impl RouteWorkbench {
         }
         self.revision = revision;
         self.trace = None;
+        self.choices = None;
         Ok(true)
     }
 
@@ -742,6 +864,46 @@ impl RouteWorkbench {
     #[must_use]
     pub const fn trace(&self) -> Option<&RouteTracePlayback> {
         self.trace.as_ref()
+    }
+
+    /// Record nearest-next at cursor zero. Failure leaves any playback unchanged.
+    /// Inspecting does not replace the player's order.
+    pub fn start_choices(&mut self) -> Result<(), RouteWorkbenchError> {
+        let roads = self.open_roads();
+        let metric = RouteProblem::new(self.current.junctions, roads, self.current.stops.clone())?
+            .metric()?;
+        let trace = metric.nearest_neighbor_trace()?;
+        self.choices = Some(RouteChoicePlayback {
+            snapshot: RouteChoiceSnapshot {
+                revision: self.revision,
+                town_identity: self.town_identity(),
+                cursor: 0,
+            },
+            trace,
+        });
+        Ok(())
+    }
+
+    /// Seek to an exact recorded choice boundary without changing the town.
+    pub fn seek_choices(&mut self, cursor: usize) -> Result<(), RouteWorkbenchError> {
+        let choices = self
+            .choices
+            .as_mut()
+            .ok_or(RouteWorkbenchError::ChoiceAbsent)?;
+        if choices.snapshot.revision != self.revision {
+            return Err(RouteWorkbenchError::ChoiceRevision);
+        }
+        if cursor > choices.choices().len() {
+            return Err(RouteWorkbenchError::ChoiceCursor);
+        }
+        choices.snapshot.cursor = cursor;
+        Ok(())
+    }
+
+    /// Current nearest-next playback, if one has been started.
+    #[must_use]
+    pub const fn choices(&self) -> Option<&RouteChoicePlayback> {
+        self.choices.as_ref()
     }
 }
 
@@ -1512,6 +1674,7 @@ mod tests {
             },
             undo: Vec::new(),
             trace: None,
+            choices: None,
         })
         .unwrap()
     }
@@ -1853,5 +2016,75 @@ mod tests {
         workbench.start_trace(0, 3).unwrap();
         workbench.seek_trace(5).unwrap();
         assert_eq!(workbench.trace().unwrap().view(), view);
+    }
+
+    #[test]
+    fn nearest_next_playback_seeks_without_changing_the_player_order() {
+        let mut workbench = RouteWorkbench::first_town();
+        let order = workbench.town().order.clone();
+        workbench.start_choices().unwrap();
+        let playback = workbench.choices().unwrap();
+        assert_eq!(playback.cursor(), 0);
+        assert_eq!(playback.prefix_cost(), 0);
+        assert!(playback.visible().is_empty());
+        assert_eq!(playback.tour().cost, 9);
+        let count = playback.choices().len();
+        workbench.seek_choices(2).unwrap();
+        let at_b = &workbench.choices().unwrap().visible()[1];
+        assert_eq!(at_b.current, 1);
+        assert_eq!(at_b.chosen, 2);
+        assert!(
+            at_b.candidates
+                .iter()
+                .any(|candidate| candidate.stop == 2 && candidate.cost == 2)
+        );
+        assert_eq!(workbench.choices().unwrap().prefix_cost(), at_b.accumulated);
+        assert!(workbench.choices().unwrap().visible().len() < count);
+        workbench.seek_choices(1).unwrap();
+        assert_eq!(workbench.choices().unwrap().visible().len(), 1);
+        assert!(
+            workbench
+                .choices()
+                .unwrap()
+                .visible()
+                .iter()
+                .all(|choice| choice.current != 1)
+        );
+        assert_eq!(workbench.town().order, order);
+        assert_eq!(
+            nearest_statement(9, 8),
+            "Nearest-next costs more than the exact minimum on this network."
+        );
+        let saved = workbench.snapshot();
+        let reopened = RouteWorkbench::from_snapshot(saved).unwrap();
+        assert_eq!(reopened.choices().unwrap().visible().len(), 1);
+        assert_eq!(reopened.town().order, order);
+        let mut stale = workbench.snapshot();
+        stale.choices.as_mut().unwrap().town_identity[0] ^= 1;
+        assert_eq!(
+            RouteWorkbench::from_snapshot(stale).unwrap_err(),
+            RouteWorkbenchError::ChoiceIdentity
+        );
+        workbench
+            .apply(RouteEdit::RoadCost {
+                from: 1,
+                to: 3,
+                cost: 5,
+            })
+            .unwrap();
+        assert!(workbench.choices().is_none());
+        assert_eq!(workbench.town().order, order);
+        workbench.start_choices().unwrap();
+        let tied = workbench.choices().unwrap().tour().cost;
+        let exact = workbench.compare().unwrap().exact.tour.cost;
+        assert_eq!(tied, exact);
+        assert_eq!(
+            nearest_statement(tied, exact),
+            "Nearest-next matches the exact minimum on this network."
+        );
+        assert!(!nearest_statement(tied, exact).contains("lost"));
+        workbench.undo().unwrap();
+        assert!(workbench.choices().is_none());
+        assert_eq!(workbench.town().roads[3].road.cost, 3);
     }
 }

@@ -463,6 +463,15 @@ impl App {
     }
 
     pub(super) fn desired_room_parameter_sound(&self) -> Option<numinous_core::ParametricSound> {
+        if let Some(play) = &self.overture {
+            if play.lead_in
+                || self.audio_program != AudioProgram::RoomScore
+                || self.modal_mode_active()
+            {
+                return None;
+            }
+            return self.rooms[self.current].parameter_sound(self.t, &[]);
+        }
         selected_parameter_sound(
             self.audio_program,
             self.modal_mode_active(),

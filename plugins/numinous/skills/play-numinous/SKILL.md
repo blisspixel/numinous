@@ -137,7 +137,8 @@ write. Action types are `evaluate`, `road_cost` (`from`, `to`, `cost`),
 (`depot`), `order` (`order`), `greedy`, `improve`, and `undo`. `network`
 replaces the complete network atomically through `current`, with the same
 fields as `snapshot.current`. `greedy` chooses the nearest next stop; `improve`
-accepts the offered cheaper order. A custom street network is supplied in
+accepts the offered cheaper order. `choices` starts read-only nearest-next
+playback, and `choice_step` reveals or seeks its records. A custom street network is supplied in
 `snapshot.current` with `junctions`, `roads` (each `from`, `to`, `cost`,
 `open`), `stops`, and `order`; start with `revision: 0`, `undo: []`, and
 `trace: null`. `junctions` is the count; junction IDs run from zero through
@@ -163,6 +164,21 @@ until revealed. The source's predecessor stays `null`, and `activeEvent` is
 `null` before the first step. Unreachable is established only after
 completion, and `trace.result` remains `null` until then. Rewinding removes
 later knowledge. CLI text presents the same projection.
+
+`action: {"type":"choices"}` starts nearest-next playback at cursor zero and
+does not change the delivery order. Follow the returned `next`. While the
+choices are incomplete, that call is `choice_step` and reveals one record.
+Send `cursor` alone to seek. Do not send both `steps` and `cursor`. Each
+visible record names `current`, `candidates` (`stop` and `cost`), `chosen`,
+`leg`, `cost`, and `accumulated`. The last record returns to the depot. A
+backward seek hides later records. `choices.nearestStatement`, and
+`comparison.nearestStatement` when the network is feasible, say whether
+nearest-next costs more than the exact minimum or matches it. Neither says
+the greedy tour lost. An edit or undo clears the playback. An opening call
+whose comparison still offers an improvement keeps `next` on `improve` until
+you ask for `choices`. The snapshot may carry `choices` as a cursor. Old
+snapshots that omit it still open, and the records are regenerated from the
+network.
 
 For a portable route creation, send `action: "save"` and the current snapshot.
 `creation.capsule` is canonical `NUMINOUS_ROUTE 1` text. `action: "open"` with

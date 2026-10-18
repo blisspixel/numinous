@@ -5,8 +5,9 @@ use numinous_core::route::{
 };
 use numinous_core::route_creation::RouteCreation;
 use numinous_core::route_workbench::{
-    EditableRoad, MAX_ROUTE_UNDO, RouteEdit, RouteSearchState, RouteSearchView, RouteTownSnapshot,
-    RouteTraceSnapshot, RouteWorkbench, RouteWorkbenchSnapshot,
+    EditableRoad, MAX_ROUTE_UNDO, RouteChoiceSnapshot, RouteEdit, RouteSearchState,
+    RouteSearchView, RouteTownSnapshot, RouteTraceSnapshot, RouteWorkbench, RouteWorkbenchSnapshot,
+    nearest_statement,
 };
 use serde_json::{Map, Value, json};
 
@@ -96,7 +97,7 @@ fn town(value: &Value) -> Result<RouteTownSnapshot, String> {
 fn snapshot(value: &Value) -> Result<RouteWorkbenchSnapshot, String> {
     let value = object(
         value,
-        &["revision", "current", "undo", "trace"],
+        &["revision", "current", "undo", "trace", "choices"],
         &["revision", "current", "undo", "trace"],
     )?;
     let trace = if value["trace"].is_null() {
@@ -125,6 +126,30 @@ fn snapshot(value: &Value) -> Result<RouteWorkbenchSnapshot, String> {
             cursor: index(&trace["cursor"])?,
         })
     };
+    let choices = if value.get("choices").is_none_or(Value::is_null) {
+        None
+    } else {
+        let choices = object(
+            &value["choices"],
+            &["revision", "townIdentity", "cursor"],
+            &["revision", "townIdentity", "cursor"],
+        )?;
+        let identity = array(&choices["townIdentity"], 32)?
+            .iter()
+            .map(|byte| {
+                u8::try_from(uint(byte)?)
+                    .map_err(|_| "Choice identity must contain bytes.".to_string())
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let town_identity: [u8; 32] = identity
+            .try_into()
+            .map_err(|_| "Choice identity must contain exactly 32 bytes.")?;
+        Some(RouteChoiceSnapshot {
+            revision: uint(&choices["revision"])?,
+            town_identity,
+            cursor: index(&choices["cursor"])?,
+        })
+    };
     Ok(RouteWorkbenchSnapshot {
         revision: uint(&value["revision"])?,
         current: town(&value["current"])?,
@@ -133,6 +158,7 @@ fn snapshot(value: &Value) -> Result<RouteWorkbenchSnapshot, String> {
             .map(town)
             .collect::<Result<Vec<_>, _>>()?,
         trace,
+        choices,
     })
 }
 
@@ -141,7 +167,18 @@ fn town_json(town: &RouteTownSnapshot) -> Value {
 }
 
 fn snapshot_json(snapshot: &RouteWorkbenchSnapshot) -> Value {
-    json!({"revision":snapshot.revision,"current":town_json(&snapshot.current),"undo":snapshot.undo.iter().map(town_json).collect::<Vec<_>>(),"trace":snapshot.trace.as_ref().map(|trace|json!({"revision":trace.revision,"townIdentity":trace.town_identity,"from":trace.from,"to":trace.to,"cursor":trace.cursor}))})
+    json!({"revision":snapshot.revision,"current":town_json(&snapshot.current),"undo":snapshot.undo.iter().map(town_json).collect::<Vec<_>>(),"trace":snapshot.trace.as_ref().map(|trace|json!({"revision":trace.revision,"townIdentity":trace.town_identity,"from":trace.from,"to":trace.to,"cursor":trace.cursor})),"choices":snapshot.choices.as_ref().map(|choices|json!({"revision":choices.revision,"townIdentity":choices.town_identity,"cursor":choices.cursor}))})
+}
+
+fn choice_json(choice: &numinous_core::route::NearestChoice) -> Value {
+    json!({
+        "current": choice.current,
+        "candidates": choice.candidates.iter().map(|candidate| json!({"stop": candidate.stop, "cost": candidate.cost})).collect::<Vec<_>>(),
+        "chosen": choice.chosen,
+        "leg": choice.leg,
+        "cost": choice.cost,
+        "accumulated": choice.accumulated
+    })
 }
 
 fn tour_json(tour: &RouteTour) -> Value {
@@ -267,14 +304,14 @@ pub fn response(request: &Value) -> Result<Value, String> {
         .and_then(Value::as_str)
         .ok_or("Route action requires a string type.")?;
     let fields: &[&str] = match kind {
-        "evaluate" | "greedy" | "improve" | "undo" => &["type"],
+        "evaluate" | "greedy" | "improve" | "undo" | "choices" => &["type"],
         "road_cost" => &["type", "from", "to", "cost"],
         "road_open" => &["type", "from", "to", "open"],
         "stops" => &["type", "stops"],
         "depot" => &["type", "depot"],
         "order" => &["type", "order"],
         "trace" => &["type", "from", "to"],
-        "step" => &["type", "steps", "cursor"],
+        "step" | "choice_step" => &["type", "steps", "cursor"],
         "network" => &["type", "current"],
         _ => {
             return Err(format!(
@@ -283,7 +320,7 @@ pub fn response(request: &Value) -> Result<Value, String> {
             ));
         }
     };
-    let required = if kind == "step" {
+    let required = if kind == "step" || kind == "choice_step" {
         &["type"][..]
     } else {
         fields
@@ -298,24 +335,47 @@ pub fn response(request: &Value) -> Result<Value, String> {
                 .map_err(|error| error.to_string())?;
             false
         }
-        "step" => {
+        "choices" => {
+            workbench
+                .start_choices()
+                .map_err(|error| error.to_string())?;
+            false
+        }
+        "step" | "choice_step" => {
             if action.contains_key("steps") && action.contains_key("cursor") {
                 return Err("Choose steps or cursor, not both.".into());
             }
-            let trace = workbench
-                .trace()
-                .ok_or("Start a trace before stepping it.")?;
-            let cursor = if let Some(cursor) = action.get("cursor") {
-                index(cursor)?
+            if kind == "choice_step" {
+                let choices = workbench
+                    .choices()
+                    .ok_or("Start nearest-next playback before stepping it.")?;
+                let cursor = if let Some(cursor) = action.get("cursor") {
+                    index(cursor)?
+                } else {
+                    choices
+                        .cursor()
+                        .checked_add(action.get("steps").map(index).transpose()?.unwrap_or(1))
+                        .ok_or("Nearest-next cursor exceeds its integer bound.")?
+                };
+                workbench
+                    .seek_choices(cursor)
+                    .map_err(|error| error.to_string())?;
             } else {
-                trace
-                    .cursor()
-                    .checked_add(action.get("steps").map(index).transpose()?.unwrap_or(1))
-                    .ok_or("Trace cursor exceeds its integer bound.")?
-            };
-            workbench
-                .seek_trace(cursor)
-                .map_err(|error| error.to_string())?;
+                let trace = workbench
+                    .trace()
+                    .ok_or("Start a trace before stepping it.")?;
+                let cursor = if let Some(cursor) = action.get("cursor") {
+                    index(cursor)?
+                } else {
+                    trace
+                        .cursor()
+                        .checked_add(action.get("steps").map(index).transpose()?.unwrap_or(1))
+                        .ok_or("Trace cursor exceeds its integer bound.")?
+                };
+                workbench
+                    .seek_trace(cursor)
+                    .map_err(|error| error.to_string())?;
+            }
             false
         }
         _ => {
@@ -350,9 +410,13 @@ pub fn response(request: &Value) -> Result<Value, String> {
         .ok()
         .and_then(|result| result.proposal.as_ref())
         .is_some();
+    let nearest_verdict = comparison
+        .as_ref()
+        .ok()
+        .map(|result| nearest_statement(result.greedy.cost, result.exact.tour.cost));
     let comparison_json = match comparison {
         Ok(result) => {
-            json!({"status":"feasible","current":tour_json(&result.current),"greedy":tour_json(&result.greedy),"exact":{"tour":tour_json(&result.exact.tour),"statesCompleted":result.exact.states_completed},"proposal":result.proposal.map(|proposal|json!({"first":proposal.first,"second":proposal.second,"delta":proposal.delta,"tour":tour_json(&proposal.tour)}))})
+            json!({"status":"feasible","current":tour_json(&result.current),"greedy":tour_json(&result.greedy),"exact":{"tour":tour_json(&result.exact.tour),"statesCompleted":result.exact.states_completed},"proposal":result.proposal.map(|proposal|json!({"first":proposal.first,"second":proposal.second,"delta":proposal.delta,"tour":tour_json(&proposal.tour)})),"nearestStatement":nearest_statement(result.greedy.cost, result.exact.tour.cost)})
         }
         Err(error) => {
             json!({"status":"infeasible","diagnostic":diagnostic_json(&error),"diagnosis":error.to_string()})
@@ -360,14 +424,29 @@ pub fn response(request: &Value) -> Result<Value, String> {
     };
     let snapshot = snapshot_json(&workbench.snapshot());
     let trace = workbench.trace().map(|trace| json!({"from":trace.snapshot().from,"to":trace.snapshot().to,"cursor":trace.cursor(),"eventCount":trace.events().len(),"completed":trace.completed(),"events":trace.visible_events().iter().map(event_json).collect::<Vec<_>>(),"view":search_view_json(&trace.view()),"result":trace.result().map(|result|match result { Ok(path)=>json!({"status":"reachable","junctions":path.junctions,"cost":path.cost}), Err(error)=>json!({"status":"unreachable","diagnostic":diagnostic_json(error),"diagnosis":error.to_string()}) })}));
+    let choices = workbench.choices().map(|choices| {
+        json!({
+            "cursor": choices.cursor(),
+            "choiceCount": choices.choices().len(),
+            "completed": choices.completed(),
+            "prefixCost": choices.prefix_cost(),
+            "records": choices.visible().iter().map(choice_json).collect::<Vec<_>>(),
+            "nearestStatement": nearest_verdict
+        })
+    });
     let next_action = if workbench.trace().is_some_and(|trace| !trace.completed()) {
         json!({"type":"step","steps":1})
+    } else if workbench
+        .choices()
+        .is_some_and(|choices| !choices.completed())
+    {
+        json!({"type":"choice_step","steps":1})
     } else if offered {
         json!({"type":"improve"})
     } else {
         json!({"type":"trace","from":workbench.town().stops[0],"to":workbench.town().stops.get(1).copied().unwrap_or(workbench.town().stops[0])})
     };
-    let mut result = json!({"schema":"numinous.route-workbench","schemaVersion":1,"changed":changed,"snapshot":snapshot,"comparison":comparison_json,"trace":trace,"next":{"tool":"route_lab","arguments":{"snapshot":snapshot,"action":next_action}}});
+    let mut result = json!({"schema":"numinous.route-workbench","schemaVersion":1,"changed":changed,"snapshot":snapshot,"comparison":comparison_json,"trace":trace,"choices":choices,"next":{"tool":"route_lab","arguments":{"snapshot":snapshot,"action":next_action}}});
     if let Some(creation) = creation {
         let capsule = creation.to_capsule();
         let parent = creation.parent_identity().map(|digest| {

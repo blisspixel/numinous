@@ -260,11 +260,55 @@ fn readable(result: &Value) -> Result<String, String> {
             ));
         }
     }
+    let choices = &result["choices"];
+    if !choices.is_null() {
+        lines.push(format!(
+            "Nearest choices {} of {} revealed ({}). Prefix cost: {}.",
+            choices["cursor"],
+            quantity(&choices["choiceCount"], "choice")?,
+            if choices["completed"] == true {
+                "complete"
+            } else {
+                "paused"
+            },
+            quantity(&choices["prefixCost"], "travel unit")?
+        ));
+        for record in choices["records"]
+            .as_array()
+            .ok_or("Route report lacks its choice records.")?
+        {
+            let listed = record["candidates"]
+                .as_array()
+                .ok_or("Route report lacks its choice candidates.")?
+                .iter()
+                .map(|candidate| format!("{} ({})", candidate["stop"], candidate["cost"]))
+                .collect::<Vec<_>>()
+                .join(", ");
+            lines.push(format!(
+                "At stop {}, candidates {}; chosen {}; leg {}; cost {}; accumulated {}.",
+                record["current"],
+                if listed.is_empty() {
+                    "none".to_string()
+                } else {
+                    listed
+                },
+                record["chosen"],
+                path_text(&record["leg"])?,
+                quantity(&record["cost"], "travel unit")?,
+                quantity(&record["accumulated"], "travel unit")?
+            ));
+        }
+        if let Some(statement) = choices["nearestStatement"].as_str() {
+            lines.push(statement.to_string());
+        }
+    }
     let action = &result["next"]["arguments"]["action"];
     lines.push(match action.as_str().or_else(|| action["type"].as_str()) {
         Some("open") => "Next: reopen the authored route in a fresh editing session.".into(),
         Some("remix") => "Next: create a child route with this creation as its parent.".into(),
         Some("improve") => "Next: accept the offered improvement.".into(),
+        Some("choices") => "Next: start nearest-next playback.".into(),
+        Some("choice_step") => "Next: reveal one nearest-next choice.".into(),
         Some("step") => "Next: reveal one recorded solver event.".into(),
         Some("trace") => format!(
             "Next: start the shortest-path trace from {} to {}.",
@@ -415,5 +459,40 @@ mod tests {
                 .unwrap()
                 .contains("Junction 3: unreachable from 0; no street path.")
         );
+    }
+
+    #[test]
+    fn choice_report_follows_visible_records_and_the_nearest_statement() {
+        let start = route_json::response(&json!({"action":{"type":"choices"}})).unwrap();
+        let text = readable(&start).unwrap();
+        assert!(text.contains("Nearest choices 0 of 4 choices revealed (paused)."));
+        assert!(text.contains("Prefix cost: 0 travel units."));
+        assert!(text.contains("Next: reveal one nearest-next choice."));
+        assert!(text.contains("costs more than the exact minimum"));
+        let mut cursor = start;
+        while cursor["choices"]["completed"] != true {
+            cursor = route_json::response(&cursor["next"]["arguments"]).unwrap();
+        }
+        let text = readable(&cursor).unwrap();
+        assert!(text.contains("At stop 1, candidates 2 (2), 3 (3); chosen 2;"));
+        assert!(text.contains("leg 1 -> 2;"));
+        assert!(text.contains("At stop 3, candidates 0 (4); chosen 0; leg 3 -> 2 -> 0;"));
+        assert!(text.contains("accumulated 9 travel units."));
+        assert!(text.contains("Nearest choices 4 of 4 choices revealed (complete)."));
+        assert!(!text.to_ascii_lowercase().contains("lost"));
+        assert!(text.contains("Next: accept the offered improvement."));
+        let tied =
+            route_json::response(&json!({"action":{"type":"road_cost","from":1,"to":3,"cost":5}}))
+                .unwrap();
+        let mut tied =
+            route_json::response(&json!({"snapshot":tied["snapshot"],"action":{"type":"choices"}}))
+                .unwrap();
+        while tied["choices"]["completed"] != true {
+            tied = route_json::response(&tied["next"]["arguments"]).unwrap();
+        }
+        let text = readable(&tied).unwrap();
+        assert!(text.contains("matches the exact minimum"));
+        assert!(!text.to_ascii_lowercase().contains("lost"));
+        assert!(!text.to_ascii_lowercase().contains("defeated"));
     }
 }

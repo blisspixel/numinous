@@ -9,6 +9,15 @@ same journey to level 42, because that is the point.
 
 ## For humans
 
+**The Overture:** Cabinet > Modes > The Overture plays four rooms as one
+piece: Chaos Game, Mandelbrot, Golden Angle, then Times Tables. The clock
+follows the score. Pause, an open Cabinet, and study hold it. The first
+room action keeps the picture and the dial and ends the score lock. Reduced
+motion shows each beat's still and moves only when you step. A forward step
+on the last beat leaves the piece. After the handoff, Modes lists Route Lab
+under The Overture. The ordinary Show stays on Watch, and nothing plays the
+piece at launch.
+
 **Route Lab:** deliver to B, C, and D, then return to A. Drag the map to choose
 the delivery order and the BD strip to change that road's cost. **NEAREST NEXT**
 constructs an order; **USE SHORTER** accepts the cheaper order on offer. The
@@ -21,7 +30,11 @@ the offer, and J/L lower or raise BD. Comma and period select a road, C closes o
 reopens it, Z undoes an edit, and T opens A-to-D **SEARCH** playback. Comma and
 period then move through its recorded decisions. Costs are cumulative from A;
 tentative costs can improve, and finalized costs are the cheapest to their
-junctions. Pointer and controller users have the same labeled controls. Edits
+junctions. V opens nearest-next choice playback on the same keys. While that
+view is open, comma and period move through the recorded choices, and the
+delivery order stays unchanged. Select on a controller toggles that view in
+this room and does not open study; study stays on E. Pointer and controller
+users have the same labeled controls. Edits
 clear the old search, while unreachable deliveries remain visible with reopen
 and undo guidance. Journey is available through the Cabinet.
 Search now draws the revealed predecessor connections and cumulative costs on

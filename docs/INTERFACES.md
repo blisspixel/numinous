@@ -556,7 +556,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   `numinous.show-segment` is now schema version 3, adding the explicit WAV
   omission. The tool count is unchanged and
   the no-argument default is still the Strange Loop.
-- **Show direction in core (built, App playback designed):** `numinous-core`
+- **Show direction in core (built; App director playback designed):** `numinous-core`
   holds a director profile for every catalog room. Most are derived from the
   room's postcard; a short authored table replaces the default where it would
   show a sweep's ugly end or where a staged room's phase would perform its
@@ -567,8 +567,12 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   side by side or parking on a near-static room, and weights toward the
   curated Front Hall collection. Its draw is seeded, so a face replays any cue
   from the seed. The `OVERTURE` score also holds the full-motion timing,
-  dissolve lengths, eased key moves, and the hand-off. Native App playback of
-  the director and the Overture is later Arc work.
+  dissolve lengths, eased key moves, and the hand-off. The App plays that
+  score from Modes > The Overture: one bed, the score's clock, reduced-motion
+  stills, and a handoff that leaves the Times Tables dial in the player's
+  hand. After the handoff, Modes offers Route Lab. The piece does not
+  autoplay. Native App playback of the director's catalog tour remains later
+  Arc work.
 - **Earned room goal, first slice (built):** Times Tables exposes `LAND ON
   EXACTLY 4 LOBES`. `play_room` returns `goalMet: true` whenever the live dial
   is exactly K=5, including the deterministic `t: 0.375` doorway and equivalent

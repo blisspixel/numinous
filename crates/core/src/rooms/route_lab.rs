@@ -2,8 +2,10 @@
 //!
 //! Drag the map to choose one of six delivery orders. The separate BD strip
 //! changes a road's integer cost. Bottom controls build a nearest-neighbor tour
-//! or accept one strictly improving two-edge exchange. Street closures, bounded
-//! undo, and caller-paced recorded shortest-path decisions share the canonical
+//! or accept one strictly improving two-edge exchange. Key v watches the
+//! recorded nearest-next choices without changing the delivery order. Street
+//! closures, bounded undo, and caller-paced recorded shortest-path decisions
+//! share the canonical
 //! workbench. Old costs and certificates cannot survive an edit.
 
 use crate::font;
@@ -13,8 +15,8 @@ use crate::room::{MAX_ROOM_INPUTS, Room, RoomInput, inputs_from_pokes};
 use crate::route::{RouteError, RouteExchange, RouteTour};
 use crate::route::{RouteEvent, shortest_street_trace};
 use crate::route_workbench::{
-    MAX_ROUTE_UNDO, RouteEdit, RouteSearchState, RouteTownSnapshot, RouteWorkbench,
-    RouteWorkbenchSnapshot,
+    nearest_statement, MAX_ROUTE_UNDO, RouteEdit, RouteSearchState, RouteTownSnapshot,
+    RouteWorkbench, RouteWorkbenchSnapshot,
 };
 use crate::sound::{ParametricSound, SoundSpec};
 use crate::surface::Surface;
@@ -82,6 +84,7 @@ struct Session {
     touched: bool,
     selected: usize,
     trace_visible: bool,
+    choice_visible: bool,
 }
 
 impl Session {
@@ -93,6 +96,7 @@ impl Session {
             touched: false,
             selected: 0,
             trace_visible: false,
+            choice_visible: false,
         }
     }
 
@@ -124,6 +128,18 @@ impl Session {
         }
         let x = x.clamp(0.0, 1.0);
         let y = y.clamp(0.0, 1.0);
+        // A narrow header band watches choices. Order, cost, and the bottom
+        // buttons keep the hits they already own.
+        if (0.12..0.16).contains(&y) {
+            if click {
+                if self.choice_visible {
+                    self.command(if x < 0.5 { ',' } else { '.' });
+                } else {
+                    self.command('v');
+                }
+            }
+            return;
+        }
         if (WORKBENCH_STRIP..ROAD_STRIP).contains(&y) {
             if click {
                 self.command(match ((x * 5.0) as usize).min(4) {
@@ -168,14 +184,37 @@ impl Session {
                 return;
             }
             't' => {
+                self.choice_visible = false;
                 self.trace_visible = !self.trace_visible;
                 if self.trace_visible && self.workbench.trace().is_none() {
                     let _ = self.workbench.start_trace(0, 3);
                 }
                 return;
             }
+            'v' => {
+                self.choice_visible = !self.choice_visible;
+                if self.choice_visible {
+                    self.trace_visible = false;
+                    if self.workbench.choices().is_none() {
+                        let _ = self.workbench.start_choices();
+                    }
+                }
+                return;
+            }
             ',' | '.' => {
-                if self.trace_visible {
+                if self.choice_visible {
+                    if self.workbench.choices().is_none() {
+                        let _ = self.workbench.start_choices();
+                    }
+                    if let Some(choices) = self.workbench.choices() {
+                        let cursor = if ch == ',' {
+                            choices.cursor().saturating_sub(1)
+                        } else {
+                            (choices.cursor() + 1).min(choices.choices().len())
+                        };
+                        let _ = self.workbench.seek_choices(cursor);
+                    }
+                } else if self.trace_visible {
                     if self.workbench.trace().is_none() {
                         let _ = self.workbench.start_trace(0, 3);
                     }
@@ -269,7 +308,7 @@ fn unpack_town(value: u16) -> Option<RouteTownSnapshot> {
 fn checkpoint(session: &Session) -> Option<Vec<RoomInput>> {
     let snapshot = session.workbench.snapshot();
     let mut values = vec![
-        1,
+        2,
         0,
         snapshot.undo.len() as u16,
         pack_town(&snapshot.current)?,
@@ -292,6 +331,20 @@ fn checkpoint(session: &Session) -> Option<Vec<RoomInput>> {
     for town in &snapshot.undo {
         values.push(pack_town(town)?);
     }
+    let cursor = u16::try_from(
+        snapshot
+            .choices
+            .as_ref()
+            .map(|choices| choices.cursor)
+            .unwrap_or(0),
+    )
+    .ok()
+    .filter(|cursor| *cursor <= 0x1FFF)?;
+    values.push(
+        cursor
+            | (u16::from(session.choice_visible) << 13)
+            | (u16::from(snapshot.choices.is_some()) << 14),
+    );
     values[1] = values.len() as u16;
     if values.iter().any(|&value| value > 0x7FFF) {
         return None;
@@ -312,7 +365,7 @@ fn checkpoint(session: &Session) -> Option<Vec<RoomInput>> {
 }
 
 fn restore_checkpoint(inputs: &[RoomInput]) -> Option<Session> {
-    if !(11..=11 + MAX_ROUTE_UNDO).contains(&inputs.len()) {
+    if !(11..=12 + MAX_ROUTE_UNDO).contains(&inputs.len()) {
         return None;
     }
     let values: Vec<u16> = inputs
@@ -325,11 +378,14 @@ fn restore_checkpoint(inputs: &[RoomInput]) -> Option<Session> {
             _ => None,
         })
         .collect::<Option<_>>()?;
+    let version = values[0];
+    let undo_len = usize::from(values[2]);
+    let extra = usize::from(version == 2);
     if values.len() < 11
-        || values[0] != 1
+        || (version != 1 && version != 2)
         || usize::from(values[1]) != values.len()
-        || usize::from(values[2]) > MAX_ROUTE_UNDO
-        || values.len() != 11 + usize::from(values[2])
+        || undo_len > MAX_ROUTE_UNDO
+        || values.len() != 11 + extra + undo_len
         || values[4] >= 64
         || values[4] & 7 >= 5
         || values[9] > 15
@@ -346,22 +402,38 @@ fn restore_checkpoint(inputs: &[RoomInput]) -> Option<Session> {
     let snapshot = RouteWorkbenchSnapshot {
         revision,
         current: unpack_town(values[3])?,
-        undo: values[11..]
+        undo: values[11..11 + undo_len]
             .iter()
             .map(|&value| unpack_town(value))
             .collect::<Option<_>>()?,
         trace: None,
+        choices: None,
     };
     let mut workbench = RouteWorkbench::from_snapshot(snapshot).ok()?;
     if values[4] & 32 != 0 {
         workbench.start_trace(0, 3).ok()?;
         workbench.seek_trace(usize::from(values[10])).ok()?;
     }
+    let (choice_visible, choice_cursor, choice_present) = if version == 2 {
+        let word = values[11 + undo_len];
+        let cursor = usize::from(word & 0x1FFF);
+        if cursor > crate::route::MAX_ROUTE_STOPS {
+            return None;
+        }
+        (word & 0x2000 != 0, cursor, word & 0x4000 != 0)
+    } else {
+        (false, 0, false)
+    };
+    if choice_present {
+        workbench.start_choices().ok()?;
+        workbench.seek_choices(choice_cursor).ok()?;
+    }
     Some(Session {
         workbench,
         selected: usize::from(values[4] & 7),
         trace_visible: values[4] & 8 != 0,
         touched: values[4] & 16 != 0,
+        choice_visible,
     })
 }
 
@@ -484,6 +556,96 @@ fn disconnected_line(session: &Session) -> String {
     format!("NO ROUND TRIP: {} CUT OFF FROM A", order_text(&missing))
 }
 
+fn choice_line(session: &Session) -> String {
+    let Some(choices) = session.workbench.choices() else {
+        return "NEAREST CHOICES: STEP TO START".into();
+    };
+    let mut line = format!(
+        "NEAREST CHOICES {}/{} PREFIX {}",
+        choices.cursor(),
+        choices.choices().len(),
+        choices.prefix_cost()
+    );
+    if let Some(record) = choices.visible().last() {
+        let candidates = record
+            .candidates
+            .iter()
+            .map(|candidate| {
+                format!(
+                    "{}:{}",
+                    char::from(b'A' + candidate.stop as u8),
+                    candidate.cost
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+        line.push_str(&format!(
+            " AT {} CANDIDATES {} CHOSEN {}",
+            char::from(b'A' + record.current as u8),
+            if candidates.is_empty() {
+                "NONE"
+            } else {
+                candidates.as_str()
+            },
+            char::from(b'A' + record.chosen as u8)
+        ));
+    }
+    if let Ok(comparison) = session.workbench.compare() {
+        line.push(' ');
+        line.push_str(nearest_statement(
+            comparison.greedy.cost,
+            comparison.exact.tour.cost,
+        ));
+    }
+    line
+}
+
+fn visible_prefix_walk(session: &Session) -> Vec<usize> {
+    let Some(choices) = session.workbench.choices() else {
+        return Vec::new();
+    };
+    let mut walk = Vec::new();
+    for record in choices.visible() {
+        if record.leg.is_empty() {
+            continue;
+        }
+        if walk.last() == record.leg.first() {
+            walk.extend_from_slice(&record.leg[1..]);
+        } else {
+            walk.extend_from_slice(&record.leg);
+        }
+    }
+    walk
+}
+
+fn stroke_walk(
+    surface: &mut dyn Surface,
+    walk: &[usize],
+    mark: char,
+    dashed: bool,
+    y_offset: i32,
+    node: &impl Fn(usize) -> (i32, i32),
+) {
+    for pair in walk.windows(2) {
+        let (ax, ay) = node(pair[0]);
+        let (bx, by) = node(pair[1]);
+        let (ay, by) = (ay + y_offset, by + y_offset);
+        if dashed {
+            for segment in (0..8).step_by(2) {
+                surface.line(
+                    ax + (bx - ax) * segment / 8,
+                    ay + (by - ay) * segment / 8,
+                    ax + (bx - ax) * (segment + 1) / 8,
+                    ay + (by - ay) * (segment + 1) / 8,
+                    mark,
+                );
+            }
+        } else {
+            surface.line(ax, ay, bx, by, mark);
+        }
+    }
+}
+
 fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experiment>) {
     let (width, height) = surface.draw_bounds();
     if width == 0 || height == 0 {
@@ -508,7 +670,9 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
         .then(|| session.workbench.trace().and_then(|trace| trace.result()))
         .flatten()
         .and_then(|result| result.as_ref().ok());
-    let route = if session.trace_visible {
+    let route = if session.choice_visible {
+        choice_line(session)
+    } else if session.trace_visible {
         "A>D SEARCH. JUNCTION COSTS ARE FROM A.".to_string()
     } else {
         experiment.map_or_else(
@@ -525,7 +689,9 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
     };
     label(
         surface,
-        if session.trace_visible {
+        if session.choice_visible {
+            "YOURS #  NEAREST +  EXACT ="
+        } else if session.trace_visible {
             "? UNSEEN  ~ TENTATIVE  = FINAL  X UNREACHED"
         } else {
             "DELIVER B C D. RETURN TO A."
@@ -558,6 +724,8 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
                         .windows(2)
                         .any(|pair| on_road(pair[0], pair[1]))
                 })
+            } else if session.choice_visible {
+                false
             } else {
                 experiment.is_some_and(|experiment| {
                     experiment
@@ -720,9 +888,33 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
         }
         surface.plot(x, y, if session.trace_visible { '.' } else { '*' });
     }
+    if session.choice_visible
+        && let Some(experiment) = experiment
+    {
+        let offset = scale + 1;
+        stroke_walk(
+            surface,
+            &experiment.current.walk,
+            '#',
+            false,
+            offset,
+            &node,
+        );
+        stroke_walk(
+            surface,
+            &visible_prefix_walk(session),
+            '+',
+            true,
+            -offset,
+            &node,
+        );
+        stroke_walk(surface, &experiment.optimum.walk, '=', false, 0, &node);
+    }
     // A path may traverse a delivery before its scheduled service. The visible
     // stop order, not an invented straight-line AD street, identifies the tour.
-    let proposal = if session.trace_visible {
+    let proposal = if session.choice_visible {
+        "WATCH RECORDED CHOICES. THE DELIVERY ORDER STAYS YOURS.".to_string()
+    } else if session.trace_visible {
         trace_line(session)
     } else {
         experiment.map_or_else(
@@ -750,7 +942,7 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
         '+',
     );
     for (index, text) in [
-        if session.trace_visible {
+        if session.trace_visible || session.choice_visible {
             "BACK"
         } else {
             "ROAD <"
@@ -766,7 +958,7 @@ fn draw(surface: &mut dyn Surface, session: &Session, experiment: Option<&Experi
         } else {
             "SEARCH"
         },
-        if session.trace_visible {
+        if session.trace_visible || session.choice_visible {
             "STEP"
         } else {
             "ROAD >"
@@ -972,6 +1164,7 @@ impl Room for RouteLab {
             && !state.touched
             && state.selected == 0
             && !state.trace_visible
+            && !state.choice_visible
         {
             Vec::new()
         } else {
@@ -1006,7 +1199,9 @@ impl Room for RouteLab {
             |_| "NO ROUND TRIP: road network disconnected".to_string(),
             |experiment| experiment.status(),
         );
-        if session.trace_visible {
+        if session.choice_visible {
+            status = choice_line(&session);
+        } else if session.trace_visible {
             status = trace_line(&session);
         } else if session.selected != 0 || session.selection().closed != 0 {
             let road = session.workbench.town().roads[session.selected];
@@ -1050,7 +1245,7 @@ impl Room for RouteLab {
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("DRAG: DELIVERY ORDER; BD COST; OPEN/CLOSE ROAD")
+        Some("DRAG: DELIVERY ORDER; BD COST; OPEN/CLOSE ROAD. WATCH CHOICES WITH V")
     }
 
     fn reveal(&self) -> &'static str {
@@ -1142,6 +1337,7 @@ mod tests {
         assert_eq!(actual.touched, expected.touched);
         assert_eq!(actual.selected, expected.selected);
         assert_eq!(actual.trace_visible, expected.trace_visible);
+        assert_eq!(actual.choice_visible, expected.choice_visible);
     }
 
     #[test]
@@ -1305,7 +1501,7 @@ mod tests {
         }
         let state = room.session_from(&complete);
         let encoded = checkpoint(&state).unwrap();
-        assert!(encoded.len() <= 29);
+        assert!(encoded.len() <= 30);
         assert!(encoded.iter().all(|input| matches!(input, RoomInput::Key { ch } if (0xE000..=0xF8FF).contains(&u32::from(*ch)) || (0xF0000..=0xFFFFD).contains(&u32::from(*ch)))));
         assert_session_eq(&room.session_from(&encoded), &state);
     }
@@ -1318,7 +1514,7 @@ mod tests {
             assert_session_eq(&room.session_from(&original[..length]), &Session::new(0));
         }
         for (index, value) in [
-            (1, 2),
+            (1, 3),
             (2, 1),
             (3, 17),
             (4, 4096),
@@ -2009,7 +2205,7 @@ mod tests {
                         &retained[retained.len() - MAX_ROOM_INPUTS / 2..],
                         &before[before.len() - MAX_ROOM_INPUTS / 2..]
                     );
-                    assert!(retained.len() <= MAX_ROOM_INPUTS / 2 + 29);
+                    assert!(retained.len() <= MAX_ROOM_INPUTS / 2 + 30);
                 } else {
                     assert_eq!(retained, before);
                 }
@@ -2107,5 +2303,107 @@ mod tests {
                 assert!(!room.goal_met(0.0, &retained));
             }
         }
+    }
+
+    #[test]
+    fn choice_view_names_recorded_decisions_without_changing_the_player_order() {
+        let room = RouteLab::new();
+        let before = room.selection(&[]);
+        let watched = keys("v..");
+        assert_eq!(room.selection(&watched).order, before.order);
+        assert!(!room.selection(&watched).touched);
+        let status = room.status_input(0.0, &watched).unwrap();
+        assert!(status.starts_with("NEAREST CHOICES 2/"));
+        assert!(status.contains("AT B CANDIDATES C:2 D:3 CHOSEN C"));
+        assert!(status.contains("costs more"));
+        assert!(!status.to_ascii_lowercase().contains("lost"));
+        let hidden = room.status_input(0.0, &keys("v..,")).unwrap();
+        assert!(hidden.starts_with("NEAREST CHOICES 1/"), "{hidden}");
+        assert!(!hidden.contains("AT B"), "{hidden}");
+        let mut canvas = Canvas::new(180, 60);
+        room.render_input(&mut canvas, 0.0, &watched);
+        let text = canvas.to_text();
+        assert!(text.contains("YOURS"), "{text}");
+        assert!(text.contains("NEAREST"), "{text}");
+        assert!(text.contains("EXACT"), "{text}");
+        assert!(text.contains('+'));
+        assert!(text.contains('='));
+        assert!(text.contains('#'));
+        let header = [down(0.2, 0.13)];
+        assert!(
+            room.status_input(0.0, &header)
+                .unwrap()
+                .starts_with("NEAREST CHOICES")
+        );
+        assert_eq!(room.selection(&header).order, ORDERS[0]);
+        assert_eq!(room.selection(&[down(0.25, 0.92)]).order, ORDERS[0]);
+        assert_eq!(room.selection(&[down(1.0, BUTTON_STRIP)]).order, ORDERS[1]);
+        let stepped = [down(0.2, 0.13), down(0.8, 0.13), down(0.8, 0.13)];
+        assert!(
+            room.status_input(0.0, &stepped)
+                .unwrap()
+                .starts_with("NEAREST CHOICES 2/")
+        );
+        let edited = keys("v..l");
+        assert!(
+            room.status_input(0.0, &edited)
+                .unwrap()
+                .contains("STEP TO START")
+        );
+        assert!(room.selection(&edited).touched);
+        let state = room.session_from(&watched);
+        let encoded = checkpoint(&state).unwrap();
+        assert_session_eq(&room.session_from(&encoded), &state);
+        let tied = keys("llv....");
+        assert_eq!(room.selection(&tied).bd, 5);
+        let tied_status = room.status_input(0.0, &tied).unwrap();
+        assert!(
+            tied_status.contains("matches the exact minimum"),
+            "{tied_status}"
+        );
+        assert!(!tied_status.to_ascii_lowercase().contains("lost"));
+    }
+
+    #[test]
+    fn version_one_checkpoint_still_restores_trace_without_choice_playback() {
+        let room = RouteLab::new();
+        let session = room.session_from(&keys("2lc.t..."));
+        let snapshot = session.workbench.snapshot();
+        let mut values = vec![
+            1u16,
+            0,
+            snapshot.undo.len() as u16,
+            pack_town(&snapshot.current).unwrap(),
+        ];
+        values.push(
+            session.selected as u16
+                | (u16::from(session.trace_visible) << 3)
+                | (u16::from(session.touched) << 4)
+                | (u16::from(snapshot.trace.is_some()) << 5),
+        );
+        for shift in [0, 15, 30, 45, 60] {
+            values.push(((snapshot.revision >> shift) & 0x7FFF) as u16);
+        }
+        values.push(
+            snapshot
+                .trace
+                .as_ref()
+                .map(|trace| u16::try_from(trace.cursor).unwrap())
+                .unwrap_or(0),
+        );
+        for town in &snapshot.undo {
+            values.push(pack_town(town).unwrap());
+        }
+        values[1] = values.len() as u16;
+        let mut inputs = vec![RoomInput::Key {
+            ch: char::from_u32(CHECKPOINT_START).unwrap(),
+        }];
+        inputs.extend(values.into_iter().map(|value| RoomInput::Key {
+            ch: char::from_u32(CHECKPOINT_DATA + u32::from(value)).unwrap(),
+        }));
+        inputs.push(RoomInput::Key {
+            ch: char::from_u32(CHECKPOINT_END).unwrap(),
+        });
+        assert_session_eq(&room.session_from(&inputs), &session);
     }
 }
