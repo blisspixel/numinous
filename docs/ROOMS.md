@@ -1513,7 +1513,7 @@ A candidate survives only if:
 | **Soap Film** | The surface finds the least area. | PIN: HOLD A WIRE | designed |
 | **Sphere Eversion** | A sphere turns inside out without creases. | HOLD: PUSH THROUGH | designed |
 | **The Gradient Valley** | Descent finds a basin; a ridge blocks another. | DROP: A SEEKER | **built** (`gradient-valley`) |
-| **Attention as Soft Light** | One query lights a few keys; the rest go dim. | DRAG: MOVE THE QUERY | **built** (`attention`) |
+| **Attention as Soft Light** | Warm the light, then set a key aside and watch which weight takes it. | DRAG: TEMPERATURE, OR PLACE A DECOY | **built** (`attention`) |
 
 ### Tier A: counterintuitive classics that still empty the floor
 

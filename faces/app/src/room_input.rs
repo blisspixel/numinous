@@ -173,9 +173,12 @@ pub(crate) fn release_mode(room_id: &str, verb: &str) -> ReleaseMode {
 /// lifts (the HOLD verb contract), a CLICK plants a discrete choice, and a
 /// fling or persistent edit reads its raw samples as physics or as the edit
 /// itself, so each of those always presents exactly what the hand did.
+/// Attention is the exception: the placed key has to stay, and the temperature
+/// dial still eases.
 #[must_use]
 pub(crate) fn eases_hand(room_id: &str, verb: &str) -> bool {
-    verb.starts_with("DRAG") && release_mode(room_id, verb) == ReleaseMode::Dial
+    verb.starts_with("DRAG")
+        && (release_mode(room_id, verb) == ReleaseMode::Dial || room_id == "attention")
 }
 
 /// Record the lift that completes a gesture, stamped with the room phase.
@@ -272,6 +275,7 @@ pub(crate) fn room_keeps_drag_after_release(room_id: &str) -> bool {
             | "sphere-eversion"
             | "starbow"
             | "route-lab"
+            | "attention"
     )
 }
 
@@ -540,11 +544,15 @@ mod tests {
             if verb.starts_with("HOLD") || verb.starts_with("CLICK") || verb.is_empty() {
                 assert!(!eases, "{id} ({verb}) must present the raw hand");
             }
-            if room_keeps_drag_after_release(id) {
+            if room_keeps_drag_after_release(id) && id != "attention" {
                 assert!(!eases, "{id} reads raw samples and must not ease");
             }
             if eases {
-                assert_eq!(release_mode(id, verb), ReleaseMode::Dial, "{id}");
+                if id == "attention" {
+                    assert_eq!(release_mode(id, verb), ReleaseMode::Fling, "{id}");
+                } else {
+                    assert_eq!(release_mode(id, verb), ReleaseMode::Dial, "{id}");
+                }
                 eased += 1;
             }
         }

@@ -2345,3 +2345,53 @@ held The Show and waited for the next room. The piece itself stays on
 
 The round found no product defect, so no call was added as a replay. No new
 MCP next pointer appeared.
+
+## October 18 packaged agentic playtest, Attention
+
+A source-blind Windows CLI and MCP round played a local package of the
+Attention working tree, still version `0.5.0-alpha.8`. The archive was
+`numinous-v0.5.0-alpha.8-x86_64-pc-windows-msvc.zip`, SHA-256
+`a0c9a1a9fa7a4c7e2ba366d0ba1f2986b8e055ab45135b079983753157f733fc`.
+`numinous --version` printed `numinous 0.5.0-alpha.8`. The journey and scores
+files were isolated temp paths. The windowed App stayed closed. The tester
+read no Rust. This is formative agent evidence. Physical sensory qualification
+and heard audio stay outside what the round measured.
+
+The opening picture was a short rising spray of `.` and `#` ending at `Q`,
+with a few stacks of `=`. Status read `T=0.08 was=0.97 H=0.14 near=K0 DIAL`.
+The action named a temperature or a decoy, and it gave the poke form.
+
+Phase moved the temperature. At `t=0.25` the line was
+`T=1.06 was=0.34 H=1.36 near=K0 DIAL`. At `t=0.99` it was
+`T=3.96 was=0.27 H=1.38 near=K0 DIAL`. A poke on the right margin, `x=0.95`,
+turned `T` with height and planted no decoy. A poke in the field planted one.
+At `t=0.5` and poke `0.50,0.50` the line was
+`T=2.04 decoy=0.20 was=0.24 H=1.60 near=K0 DIAL`. The bottom edge, `y=0.92`
+and left of the dial, named a call. Poke `0.35,0.92` read
+`T=2.04 was=0.30 H=1.38 near=K0 call=1 yes`. The other three bottom slots read
+`no`. The journey file kept
+`wagers attention:0:wrong attention:1:right attention:2:wrong attention:3:wrong`.
+
+`numinous describe attention` said to turn temperature, then place a key off
+to the side and see which weight wins. Study named one unprojected head, no
+values matrix, the query dotted with the key over `sqrt(2)`, and that a
+farther key can outscore a nearer one.
+
+MCP `play_room` at `t=0.25` with poke `0.95,0.20` returned
+`T=0.86 was=0.37 H=1.34 near=K0 DIAL`, the same line as the CLI. At `t=0.75`
+with poke `0.20,0.35` it returned
+`T=3.02 decoy=0.16 was=0.24 H=1.60 near=K0 DIAL`, again the same line. A
+`play_room` at `t=0.5` with poke `0.35,0.92`, with `NUMINOUS_JOURNEY` set on
+the server, wrote `visited attention` and `wagers attention:1:right`, and the
+status ended `call=1 yes`. `listen_room` does not grade that call.
+
+The separate `numinous call` asked what `T` reads, graded a numeric guess, and
+asked the same seed again. That command stays stateless. The journey line
+"answered well" counts wins, and it stayed 0. The room's own call is the
+`wagers` line.
+
+The round called the room dull. Both hands work. The picture stays a sparse
+trail into `Q` and a short row of `=`, and `H` is still what the eye follows.
+The older "soft blob" is no longer the picture. The room stays in the catalog.
+The two measurements are on the status line and in the journey. A further
+rebuild was declined.

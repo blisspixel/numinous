@@ -247,7 +247,12 @@ pub fn for_room(id: &str) -> &'static str {
         "uncertainty" => {
             "See also: time-frequency uncertainty; Gabor; quantum uncertainty as analogy only."
         }
-        "attention" | "learning-clock" | "gradient-valley" => {
+        "attention" => {
+            "See also: Vaswani et al., Attention Is All You Need, arXiv:1706.03762 (2017). \
+             The score here is one unprojected head, query dot key over sqrt(d_k), with no \
+             values matrix."
+        }
+        "learning-clock" | "gradient-valley" => {
             "See also: optimization landscapes; high-level ML intuition primers (not research claims)."
         }
         "concentration" | "curse-dimension" => {

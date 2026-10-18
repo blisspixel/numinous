@@ -1923,6 +1923,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             };
             if report.is_ok() && find_room(&id, allow_hidden).is_some() {
                 journey.visit(&id);
+                note_attention_wager(journey, &id, t, input);
             }
             emit(report)
         }
@@ -1962,6 +1963,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             let report = render_loop_apng(&id, size, t, &out, allow_hidden, era, input, false);
             if report.is_ok() && find_room(&id, allow_hidden).is_some() {
                 journey.visit(&id);
+                note_attention_wager(journey, &id, t, input);
             }
             emit(report)
         }
@@ -4288,6 +4290,16 @@ fn render_report(
     let mut report = canvas.to_text();
     report.push_str(&render_guidance(room.as_ref(), t, input));
     Ok(report)
+}
+
+fn note_attention_wager(journey: &mut Journey, id: &str, t: f64, input: RoomRenderInput<'_>) {
+    if numinous_core::canonical_room_id(id) != "attention" {
+        return;
+    }
+    let events = accepted_inputs(t, input);
+    if let Some(token) = numinous_core::rooms::attention::wager_token(t, &events) {
+        journey.note_wager_token(&token);
+    }
 }
 
 fn accepted_inputs(t: f64, input: RoomRenderInput<'_>) -> Vec<numinous_core::RoomInput> {

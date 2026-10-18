@@ -2574,6 +2574,10 @@ fn varied_progress_records_only_listed_rooms_once() {
     );
 
     let journey = super::load_journey(&path);
+    assert!(
+        journey.wagers.is_empty(),
+        "other rooms do not grade attention"
+    );
     assert_eq!(journey.visited.len(), 2);
     assert!(journey.visited.contains("times-tables"));
     assert!(journey.visited.contains("kepler-laws"));
@@ -2581,6 +2585,40 @@ fn varied_progress_records_only_listed_rooms_once() {
     assert!(journey.has_consolidated("kepler-laws"));
     assert!(!journey.visited.contains("tetractys"));
     assert!(!journey.visited.contains("missing"));
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
+fn play_room_records_an_attention_wager_and_listen_room_does_not() {
+    let path = std::env::temp_dir().join("numinous_mcp_attention_wager.txt");
+    let _ = std::fs::remove_file(&path);
+    let y = (0.15 - 0.08) / (4.0 - 0.08);
+    let x = (1.6 + 1.8) / 3.6 * 0.88;
+    let decoy_y = (1.8 - 1.2) / 3.6;
+    let pokes = [[0.95, y], [x, decoy_y], [0.75, 0.95]];
+    super::record_progress(
+        &json!({
+            "jsonrpc":"2.0","id":70,"method":"tools/call",
+            "params":{"name":"listen_room","arguments":{"id":"attention","t":0.2,"pokes":pokes}}
+        }),
+        &path,
+    );
+    let listened = super::load_journey(&path);
+    assert!(listened.visited.contains("attention"));
+    assert!(listened.wagers.is_empty());
+    super::record_progress(
+        &json!({
+            "jsonrpc":"2.0","id":71,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"attention","t":0.2,"pokes":pokes}}
+        }),
+        &path,
+    );
+    let played = super::load_journey(&path);
+    assert!(
+        played.wagers.contains("attention:4:right"),
+        "{:?}",
+        played.wagers
+    );
     let _ = std::fs::remove_file(&path);
 }
 
