@@ -125,9 +125,9 @@ fn output_schema() -> Value {
 pub(super) fn tool(arguments: &Value) -> Value {
     match route_json::response(arguments) {
         Ok(result) => {
-            let text = if result["comparison"]["status"] == "feasible" {
+            let mut text = if result["comparison"]["status"] == "feasible" {
                 format!(
-                    "Route Lab round-trip cost: yours {}, nearest next {}, minimum {}. Each delivery leg follows the cheapest open road path. Carry snapshot into the next call to continue.",
+                    "Route Lab round-trip cost: yours {}, nearest next {}, minimum {}. Each delivery leg follows the cheapest open road path.",
                     result["comparison"]["current"]["cost"],
                     result["comparison"]["greedy"]["cost"],
                     result["comparison"]["exact"]["tour"]["cost"]
@@ -140,9 +140,83 @@ pub(super) fn tool(arguments: &Value) -> Value {
                         .unwrap_or("infeasible")
                 )
             };
+            append_choice_prose(&mut text, &result["choices"]);
+            text.push_str(" Carry snapshot into the next call to continue.");
             tool_structured(&text, result)
         }
         Err(error) => tool_error(&format!("Invalid Route Lab request: {error}")),
+    }
+}
+
+/// The same visible choice records the CLI prints, so a text reader and a
+/// compact reader see the street leg rather than only the two stop ids.
+fn append_choice_prose(text: &mut String, choices: &Value) {
+    if choices.is_null() {
+        return;
+    }
+    let Some(cursor) = choices["cursor"].as_u64() else {
+        return;
+    };
+    let Some(count) = choices["choiceCount"].as_u64() else {
+        return;
+    };
+    let Some(prefix) = choices["prefixCost"].as_u64() else {
+        return;
+    };
+    let state = if choices["completed"] == true {
+        "complete"
+    } else {
+        "paused"
+    };
+    text.push_str(&format!(
+        " Nearest choices {cursor} of {} revealed ({state}). Prefix cost: {}.",
+        numinous_core::counted(count as usize, "choice"),
+        numinous_core::counted(prefix as usize, "travel unit")
+    ));
+    let Some(records) = choices["records"].as_array() else {
+        return;
+    };
+    for record in records {
+        let Some(candidates) = record["candidates"].as_array() else {
+            continue;
+        };
+        let Some(leg) = record["leg"].as_array() else {
+            continue;
+        };
+        let listed = candidates
+            .iter()
+            .filter_map(|candidate| {
+                Some(format!(
+                    "{} ({})",
+                    candidate["stop"].as_u64()?,
+                    candidate["cost"].as_u64()?
+                ))
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        let walk = leg
+            .iter()
+            .filter_map(Value::as_u64)
+            .map(|stop| stop.to_string())
+            .collect::<Vec<_>>()
+            .join(" -> ");
+        let (Some(current), Some(chosen), Some(cost), Some(accumulated)) = (
+            record["current"].as_u64(),
+            record["chosen"].as_u64(),
+            record["cost"].as_u64(),
+            record["accumulated"].as_u64(),
+        ) else {
+            continue;
+        };
+        text.push_str(&format!(
+            " At stop {current}, candidates {listed}; chosen {chosen}; leg {walk}; cost {}; accumulated {}.",
+            numinous_core::counted(cost as usize, "travel unit"),
+            numinous_core::counted(accumulated as usize, "travel unit")
+        ));
+    }
+    if let Some(statement) = choices["nearestStatement"].as_str() {
+        text.push(' ');
+        text.push_str(statement);
     }
 }
 
@@ -317,6 +391,20 @@ mod tests {
         let statement = response["choices"]["nearestStatement"].as_str().unwrap();
         assert!(statement.contains("costs more"));
         assert!(!statement.to_ascii_lowercase().contains("lost"));
+        let shown = tool(&json!({"snapshot": response["snapshot"].clone()}));
+        let prose = shown["content"][0]["text"].as_str().unwrap();
+        assert!(
+            prose.contains("At stop 3, candidates 0 (4); chosen 0; leg 3 -> 2 -> 0;"),
+            "{prose}"
+        );
+        assert!(prose.contains("costs more"), "{prose}");
+        let compact = crate::apply_response_mode("route_lab", Some("compact"), shown.clone());
+        let compact_prose = compact["content"][0]["text"].as_str().unwrap();
+        assert!(compact_prose.contains("leg 3 -> 2 -> 0"), "{compact_prose}");
+        assert_eq!(
+            compact["structuredContent"]["choices"]["records"],
+            shown["structuredContent"]["choices"]["records"]
+        );
         let hidden = route_json::response(&json!({"snapshot":response["snapshot"].clone(),"action":{"type":"choice_step","cursor":2}})).unwrap();
         crate::validate_schema_value(&hidden, &schema, "", 0).unwrap();
         assert_eq!(hidden["choices"]["records"].as_array().unwrap().len(), 2);

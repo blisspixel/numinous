@@ -4946,6 +4946,198 @@ fn open_studio_reports_returning_home_closure() {
 }
 
 #[test]
+fn open_studio_reports_nested_radicals_without_collapsing_them() {
+    let report = |x: &str, y: &str| {
+        let creation = numinous_core::StudioCreation::new_parametric(x, y, 0.0, 1.0, 1.0).expect(x);
+        open_studio_report(&creation.to_link(), 24, 8).expect(x)
+    };
+    for (x, y) in [
+        ("cos(2*pi*sqrt(sqrt(2))*t)", "sin(2*pi*2*sqrt(sqrt(2))*t)"),
+        ("cos(2*pi*sqrt(sqrt(3))*t)", "sin(2*pi*2*sqrt(sqrt(3))*t)"),
+        (
+            "cos(2*pi*sqrt(sqrt(sqrt(2)))*t)",
+            "sin(2*pi*2*sqrt(sqrt(sqrt(2)))*t)",
+        ),
+    ] {
+        let text = report(x, y);
+        assert!(text.contains("closure=unsupported"), "{x}: {text}");
+        assert!(!text.contains("period=sqrt(2)/2"), "{x}: {text}");
+        assert!(!text.contains("x_freq=sqrt(2)"), "{x}: {text}");
+        assert!(!text.contains("hz="), "{x}: {text}");
+    }
+    let perfect = report("cos(2*pi*sqrt(sqrt(16))*t)", "sin(2*pi*2*sqrt(sqrt(16))*t)");
+    assert!(perfect.contains("closure=periodic period=1/2"), "{perfect}");
+    assert!(perfect.contains("x_freq=2"), "{perfect}");
+    assert!(perfect.contains("y_freq=4"), "{perfect}");
+
+    let half = report("cos(2*pi*sqrt(1/2)*t)", "sin(2*pi*2*sqrt(1/2)*t)");
+    assert!(half.contains("xexpr=cos(2*pi*sqrt(1/2)*t)"), "{half}");
+    assert!(half.contains("yexpr=sin(2*pi*2*sqrt(1/2)*t)"), "{half}");
+    assert!(half.contains("closure=periodic period=sqrt(2)"), "{half}");
+    assert!(half.contains("x_freq=sqrt(2)/2"), "{half}");
+    assert!(half.contains("y_freq=sqrt(2)"), "{half}");
+    assert!(half.contains("hz="), "{half}");
+}
+
+#[test]
+fn refused_sing_leaves_profile_xp_unchanged() {
+    let state = super::TestStateRoot::new();
+    let mut journey = numinous_core::Journey::default();
+    let sparks = journey.sparks();
+    let unknown = state.path.join("unknown.wav");
+    let zero = state.path.join("zero.wav");
+    let cases = [
+        (
+            "unknown",
+            vec![
+                "numinous".to_string(),
+                "sing".to_string(),
+                "zzzzz".to_string(),
+                "--out".to_string(),
+                unknown.display().to_string(),
+            ],
+        ),
+        (
+            "zero",
+            vec![
+                "numinous".to_string(),
+                "sing".to_string(),
+                "y".to_string(),
+                "--reading".to_string(),
+                "zero".to_string(),
+                "--out".to_string(),
+                zero.display().to_string(),
+            ],
+        ),
+    ];
+    for (name, args) in cases {
+        let cli = Cli::try_parse_from(&args).expect(name);
+        let code = run(cli.command.expect(name), &mut journey);
+        assert_eq!(code, std::process::ExitCode::FAILURE, "{name}");
+    }
+    assert_eq!(journey.plays, 0);
+    assert!(journey.visited.is_empty());
+    assert_eq!(journey.sparks(), sparks);
+
+    let sung = state.path.join("sung.wav");
+    let cli = Cli::try_parse_from([
+        "numinous",
+        "sing",
+        "sin(x)",
+        "--out",
+        sung.to_str().expect("path"),
+    ])
+    .expect("parse successful sing");
+    let code = run(cli.command.expect("sing"), &mut journey);
+    assert_eq!(code, std::process::ExitCode::SUCCESS);
+    assert_eq!(journey.plays, 1);
+    assert!(journey.visited.is_empty());
+    assert!(sung.is_file());
+}
+
+#[test]
+fn plot_and_sing_keep_progression_off_stdout() {
+    let plot = Cli::try_parse_from(["numinous", "plot", "sin(x)"]).expect("plot");
+    let sing =
+        Cli::try_parse_from(["numinous", "sing", "sin(x)", "--out", "song.wav"]).expect("sing");
+    let tour = Cli::try_parse_from(["numinous", "tour"]).expect("tour");
+    assert!(super::command_announces_on_stderr(plot.command.as_ref()));
+    assert!(super::command_announces_on_stderr(sing.command.as_ref()));
+    assert!(!super::command_announces_on_stderr(tour.command.as_ref()));
+    assert!(!super::command_announces_on_stderr(None));
+
+    let mut after = numinous_core::Journey::default();
+    after.play();
+    let earned = std::collections::BTreeSet::new();
+    let mut buffer = Vec::new();
+    super::finish_journey(
+        &numinous_core::Journey::default(),
+        &after,
+        &earned,
+        true,
+        &mut buffer,
+    );
+    let text = String::from_utf8(buffer).expect("announcement");
+    assert!(text.contains("LEVEL UP"), "{text}");
+    assert!(text.contains("BOON BANKED"), "{text}");
+}
+
+#[test]
+fn outdated_gh_on_a_managed_root_refuses_the_update() {
+    let state = super::TestStateRoot::new();
+    let root = state.path.join("managed");
+    std::fs::create_dir_all(root.join("src")).expect("src");
+    std::fs::write(
+        root.join(".numinous-install-root"),
+        "Numinous install root v2\nroot.abcdef\n",
+    )
+    .expect("marker");
+    std::fs::write(
+        root.join("src").join("RELEASE.json"),
+        r#"{
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "kind": "binaries",
+  "schema": "numinous.release",
+  "schemaVersion": 1,
+  "signed": false,
+  "tag": "v0.5.0-alpha.7",
+  "target": "x86_64-pc-windows-msvc",
+  "version": "0.5.0-alpha.7"
+}
+"#,
+    )
+    .expect("release metadata");
+    let installed = super::installed_release_tag(&root).expect("installed tag");
+    assert_eq!(installed, "v0.5.0-alpha.7");
+    let refused = super::classify_managed_update(
+        Some("Usage: gh attestation verify\n"),
+        Some(&installed),
+        Some("v0.5.0-alpha.8"),
+    );
+    match refused {
+        super::UpdateOutcome::Refused { reason } => {
+            assert!(reason.contains("too old"), "{reason}");
+            assert!(reason.contains("--source-digest"), "{reason}");
+            assert!(reason.contains("--signer-digest"), "{reason}");
+            assert!(reason.contains("--deny-self-hosted-runners"), "{reason}");
+        }
+        other => panic!("outdated gh must refuse, got {other:?}"),
+    }
+    let capable = "--source-digest --signer-digest --deny-self-hosted-runners";
+    assert_eq!(
+        super::classify_managed_update(Some(capable), Some(&installed), Some(&installed)),
+        super::UpdateOutcome::Current {
+            tag: installed.clone(),
+        }
+    );
+    assert_eq!(
+        super::classify_managed_update(Some(capable), Some(&installed), Some("v0.5.0-alpha.8")),
+        super::UpdateOutcome::Installed {
+            tag: "v0.5.0-alpha.8".to_string(),
+        }
+    );
+    let missing = super::classify_managed_update(None, Some(&installed), Some("v0.5.0-alpha.8"));
+    match missing {
+        super::UpdateOutcome::Refused { reason } => {
+            assert!(reason.contains("install GitHub CLI"), "{reason}");
+        }
+        other => panic!("a missing gh must refuse, got {other:?}"),
+    }
+    let failed = super::attestation_help_from_output(b"", b"unknown command \"attestation\"\n");
+    assert!(failed.contains("unknown command"));
+    match super::classify_managed_update(Some(&failed), Some(&installed), Some("v0.5.0-alpha.8")) {
+        super::UpdateOutcome::Refused { reason } => {
+            assert!(reason.contains("too old"), "{reason}");
+            assert!(
+                !reason.contains("install GitHub CLI"),
+                "a gh that ran is outdated, not missing: {reason}"
+            );
+        }
+        other => panic!("a failed help page must be outdated gh, got {other:?}"),
+    }
+}
+
+#[test]
 fn open_studio_reports_the_slope_of_sin_a_x() {
     let report = |source: &str| {
         let creation = numinous_core::StudioCreation::new(source, -2.0, 2.0, 1.0).expect(source);

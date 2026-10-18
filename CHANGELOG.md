@@ -29,6 +29,12 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   compiler job is gone.
 
 ### Fixed
+- Studio no longer reads `sqrt(sqrt(2))` as `sqrt(2)`. A nested square-free radical is `closure=unsupported`, and `sqrt(1/2)` is `sqrt(2)/2`. Tones follow the curve that is drawn.
+- Attention status uses the same temperature as the picture. Strange Loop names the requested depth and no longer says each level has the same shape.
+- Player guides name `numinous tour` for the terminal Show.
+- A refused `sing` records no XP. `plot` and `sing` send level-up lines to stderr.
+- `numinous update` prints `update=installed`, `update=current`, or `update=refused`. A GitHub CLI that is missing or too old to check provenance is a refusal and exits nonzero. A failed uninstall does not call itself an update refusal.
+- MCP `route_lab` text names each revealed nearest-next leg. A street that passes through another stop stays in that text when the reply is compact.
 - The CLI HTTP client uses rustls 0.23.46. cargo-audit and cargo-deny rejected
   0.23.45 for RUSTSEC-2026-0346, RUSTSEC-2026-0347, RUSTSEC-2026-0348, and
   RUSTSEC-2026-0349.

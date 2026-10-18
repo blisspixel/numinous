@@ -357,6 +357,52 @@ mod tests {
     }
 
     #[test]
+    fn remix_across_a_capsule_recomputes_the_same_choices() {
+        let parent = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
+        let original = parent.to_capsule();
+        let mut town = parent.town().clone();
+        town.roads.reverse();
+        for road in &mut town.roads {
+            std::mem::swap(&mut road.road.from, &mut road.road.to);
+        }
+        let child = parent.remix(town).unwrap();
+        assert_eq!(parent.to_capsule(), original);
+        let parent_again = RouteCreation::from_capsule(&original).unwrap();
+        let child_again = RouteCreation::from_capsule(&child.to_capsule()).unwrap();
+        let mut parent_session = parent_again.open();
+        let mut child_session = child_again.open();
+        parent_session.start_choices().unwrap();
+        child_session.start_choices().unwrap();
+        let count = parent_session.choices().unwrap().choices().len();
+        parent_session.seek_choices(count).unwrap();
+        child_session.seek_choices(count).unwrap();
+        assert_eq!(
+            parent_session.choices().unwrap().choices(),
+            child_session.choices().unwrap().choices()
+        );
+        let back = parent_session.choices().unwrap().choices().last().unwrap();
+        assert_eq!(back.leg, vec![3, 2, 0]);
+        assert_eq!(parent_session.town().order, child_session.town().order);
+        child_session
+            .apply(RouteEdit::RoadCost {
+                from: 1,
+                to: 3,
+                cost: 5,
+            })
+            .unwrap();
+        assert!(child_session.choices().is_none());
+        child_session.undo().unwrap();
+        assert!(child_session.choices().is_none());
+        assert_eq!(child_session.town().roads[3].road.cost, 3);
+        child_session.start_choices().unwrap();
+        child_session.seek_choices(count).unwrap();
+        assert_eq!(
+            child_session.choices().unwrap().choices(),
+            parent_session.choices().unwrap().choices()
+        );
+    }
+
+    #[test]
     fn ordinary_edits_preserve_parent_and_only_explicit_remix_adds_generation() {
         let original = RouteCreation::new(RouteWorkbench::first_town().town().clone()).unwrap();
         let child = original.remix(original.town().clone()).unwrap();

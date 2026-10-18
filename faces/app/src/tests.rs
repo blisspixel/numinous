@@ -2435,6 +2435,55 @@ fn a_capped_room_keeps_the_wish_and_runs_at_the_certified_scale() {
 }
 
 #[test]
+fn show_fractional_speed_and_reduced_motion_stay_inside_the_three_ceilings() {
+    let mut app = headless("numinous_app_test_show_ceiling.txt");
+    app.motion = numinous_core::Motion::Full;
+    app.banner = None;
+    app.room_card = 0;
+    let elapsed = 1.0 / 60.0;
+    for room_id in ["cellular-automata", "julia", "lambda-map"] {
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == room_id)
+            .unwrap_or_else(|| panic!("{room_id}"));
+        app.time_scale = 6.5;
+        app.visualizer_scale = numinous_core::max_visualizer_time_scale();
+        app.t = 0.2;
+        if !app.the_show {
+            app.toggle_show();
+        }
+        assert!(app.the_show, "{room_id}");
+        app.t = 0.2;
+        let start = app.t;
+        app.advance_room_tick(elapsed, elapsed, false);
+        app.apply_visualizer_nudge(numinous_core::max_visualizer_phase_nudge());
+        let cap = numinous_core::ROOM_CYCLES_PER_SECOND * 4.0 * elapsed;
+        let advanced = if app.t >= start {
+            app.t - start
+        } else {
+            app.t + 1.0 - start
+        };
+        assert!(
+            advanced <= cap + 1e-9,
+            "{room_id} show advanced {advanced} past the certified step {cap}"
+        );
+        assert!(advanced > 0.0, "{room_id} show did not move");
+        assert_eq!(app.time_scale, 6.5, "{room_id} wish");
+        let status = app.current_status_override(900).expect(room_id);
+        assert!(status.contains("no faster than 4x"), "{room_id}: {status}");
+    }
+    let held = app.t;
+    app.motion = numinous_core::Motion::Reduced;
+    app.visualizer_scale = numinous_core::max_visualizer_time_scale();
+    app.advance_room_tick(1.0, 1.0, false);
+    app.apply_visualizer_nudge(numinous_core::max_visualizer_phase_nudge());
+    assert_eq!(app.t, held, "reduced motion holds the show where it is");
+    assert_eq!(app.time_scale, 6.5);
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
 fn life_advancement_obeys_pause_focus_and_speed_controls() {
     let mut app = headless("numinous_app_test_life_pause.txt");
     select_life(&mut app);

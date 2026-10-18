@@ -1,9 +1,8 @@
 //! Strange Loop: the visual of self-reference.
 //!
-//! Draw a "U" shape; inside the bottom, draw a smaller transformed copy of the U.
-//! The copy contains a smaller copy, creating a loop that refers to itself.
-//! This is Hofstadter's strange loop made drawable: levels cross and return.
-//! t increases recursion depth; poke moves the inner loop. For digital minds,
+//! Draw a "U" shape; inside the bottom, draw a smaller copy of the U.
+//! The copy contains a smaller copy. t sets how many levels are requested.
+//! A poke shifts only the first inner copy. For digital minds,
 //! this is the shape of consciousness emerging from recursion. See
 //! docs/DIGITAL_MINDS.md and INSIGHTS.md.
 
@@ -159,8 +158,11 @@ impl Room for StrangeLoop {
         }
     }
 
-    fn status(&self, _t: f64) -> Option<String> {
-        Some("INNER LOOP NESTED   CLICK: SHIFT THE INNER LOOP".into())
+    fn status(&self, t: f64) -> Option<String> {
+        Some(format!(
+            "LEVELS {}  CLICK: SHIFT THE INNER LOOP",
+            Self::depth_for(t)
+        ))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -180,18 +182,16 @@ impl Room for StrangeLoop {
         let Some(&(x, y)) = points.last() else {
             return self.status(t);
         };
-        // Hand x/y shift the nested U; y maps to how deep the self-similar
-        // copy sits in the outer figure (a stranger loop reads as more nest).
-        let nest = ((1.0 - y) * 4.0).floor() as u32 + 1;
         Some(format!(
-            "INNER @ {:.0}% {:.0}%  NEST {nest}/4  SAME SHAPE EACH LEVEL",
+            "INNER @ {:.0}% {:.0}%  LEVELS {}",
             x * 100.0,
-            y * 100.0
+            y * 100.0,
+            Self::depth_for(t)
         ))
     }
 
     fn reveal(&self) -> &'static str {
-        "This shape draws a smaller version of itself inside a 'U'. The smaller one does the same. Moving up or down levels returns you to the same pattern. This crossing of levels is a strange loop, the proposed root of self and mind."
+        "This shape draws a smaller version of itself inside a U. The smaller one does the same. The copies shrink and stay smaller. The hand moves only the first inner copy."
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -523,19 +523,69 @@ mod tests {
 
         let status = room.status_input(0.5, &inputs).expect("anchor status");
         assert!(status.contains("INNER @ 75% 25%"));
-        assert!(status.contains("NEST 4/4"));
-        assert!(status.contains("SAME SHAPE EACH LEVEL"));
+        assert!(status.contains("LEVELS 4"), "{status}");
+        assert!(!status.contains("SAME SHAPE"));
+        assert!(!status.contains("NEST "));
         let shallow = [RoomInput::PointerDown {
             x: 0.5,
             y: 0.9,
             t: 0.0,
         }];
         let shallow_status = room.status_input(0.5, &shallow).expect("shallow");
-        assert!(shallow_status.contains("NEST 1/4"));
+        assert!(shallow_status.contains("LEVELS 4"), "{shallow_status}");
         assert_eq!(
             room.status_input(0.5, &[]).as_deref(),
             room.status(0.5).as_deref()
         );
+    }
+
+    #[test]
+    fn requested_depth_matches_the_levels_a_large_plate_draws() {
+        struct StrokeSurface {
+            width: usize,
+            height: usize,
+            lines: usize,
+        }
+
+        impl Surface for StrokeSurface {
+            fn width(&self) -> usize {
+                self.width
+            }
+
+            fn height(&self) -> usize {
+                self.height
+            }
+
+            fn char_aspect(&self) -> f64 {
+                1.0
+            }
+
+            fn plot(&mut self, _x: i32, _y: i32, _mark: char) {}
+
+            fn line(&mut self, _x0: i32, _y0: i32, _x1: i32, _y1: i32, _mark: char) {
+                self.lines += 1;
+            }
+        }
+
+        let room = StrangeLoop::new();
+        let t = 0.9;
+        let status = room.status(t).expect("status");
+        assert!(status.contains("LEVELS 6"), "{status}");
+        let inputs = [RoomInput::PointerDown {
+            x: 0.2,
+            y: 0.8,
+            t: 0.0,
+        }];
+        let poked_status = room.status_input(t, &inputs).expect("poked status");
+        assert!(poked_status.contains("LEVELS 6"), "{poked_status}");
+        let mut surface = StrokeSurface {
+            width: 400,
+            height: 400,
+            lines: 0,
+        };
+        room.render(&mut surface, t);
+        // Triple stroke on this plate: 72 segments, three line calls each.
+        assert_eq!(surface.lines, 6 * 72 * 3);
     }
 
     #[test]

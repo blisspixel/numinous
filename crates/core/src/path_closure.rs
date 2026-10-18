@@ -216,7 +216,8 @@ impl PathClosure {
     #[must_use]
     pub fn report_lines(&self) -> Vec<String> {
         match self {
-            Self::Graph | Self::Field | Self::Unsupported => Vec::new(),
+            Self::Graph | Self::Field => Vec::new(),
+            Self::Unsupported => vec!["closure=unsupported".to_string()],
             Self::Periodic(periodic) => {
                 let mut lines = vec![format!(
                     "closure=periodic period={} x_freq={} y_freq={}",
@@ -603,10 +604,10 @@ fn analyze_parametric(creation: &StudioCreation) -> PathClosure {
     };
     let sliders = creation.sliders();
     let Some(x_osc) = oscillator(&x_expression, parameter, sliders) else {
-        return PathClosure::Unsupported;
+        return closure_when_the_pair_is_not_one_oscillator(creation);
     };
     let Some(y_osc) = oscillator(&y_expression, parameter, sliders) else {
-        return PathClosure::Unsupported;
+        return closure_when_the_pair_is_not_one_oscillator(creation);
     };
     let Some(x_freq) = frequency_cycles(&x_osc.omega) else {
         return PathClosure::Unsupported;
@@ -646,6 +647,16 @@ fn analyze_parametric(creation: &StudioCreation) -> PathClosure {
                 window_end,
             })
         }
+    }
+}
+
+/// A recognized sum already has a partial reading, so closure stays as quiet
+/// as a graph. A product or any other unnamed pair is unsupported.
+fn closure_when_the_pair_is_not_one_oscillator(creation: &StudioCreation) -> PathClosure {
+    if HarmonicPartial::of(creation).is_some() {
+        PathClosure::Graph
+    } else {
+        PathClosure::Unsupported
     }
 }
 
@@ -1053,14 +1064,7 @@ struct Frequency {
 
 impl Frequency {
     fn text(self) -> String {
-        let body = format_ratio(self.num, self.den);
-        if self.rad == 1 {
-            body
-        } else if self.num == 1 && self.den == 1 {
-            format!("sqrt({})", self.rad)
-        } else {
-            format!("{body}*sqrt({})", self.rad)
-        }
+        radical_text(self.num, self.den, self.rad)
     }
 }
 
@@ -1365,32 +1369,29 @@ impl Exact {
     }
 
     fn checked_sqrt(self) -> Option<Self> {
-        if self.pi != 0 || self.num < 0 {
+        let value = self.normalized()?;
+        if value.pi != 0 || value.num < 0 {
             return None;
         }
-        if self.is_zero() {
+        if value.is_zero() {
             return Some(Self::zero());
         }
-        let n = (self.num as u64).checked_mul(self.rad)?;
-        let (num_square, num_rest) = split_square(n)?;
-        let (den_square, den_rest) = split_square(self.den)?;
-        if den_rest != 1 {
-            // sqrt(1/d) with d not square: write as sqrt(d)/d.
-            let den = self.den.checked_mul(den_rest)?;
-            let rad = num_rest.checked_mul(den_rest)?;
-            return Self {
-                num: i64::try_from(num_square).ok()?,
-                den,
-                pi: 0,
-                rad,
-            }
-            .normalized();
+        // A square-free radicand is already under one radical. Another root
+        // is nested, and this form cannot name it without collapsing it.
+        if value.rad != 1 {
+            return None;
         }
+        let (num_square, num_rest) = split_square(value.num as u64)?;
+        let (den_square, den_rest) = split_square(value.den)?;
+        // sqrt(n/d) = sqrt(n * den_rest) / (den_square * den_rest),
+        // because 1/sqrt(den_rest) = sqrt(den_rest)/den_rest.
+        let den = den_square.checked_mul(den_rest)?;
+        let rad = num_rest.checked_mul(den_rest)?;
         Self {
             num: i64::try_from(num_square).ok()?,
-            den: den_square,
+            den,
             pi: 0,
-            rad: num_rest,
+            rad,
         }
         .normalized()
     }
@@ -1471,7 +1472,7 @@ mod tests {
         PathClosure, PeriodicClosure,
     };
     use crate::GraphSlope;
-    use crate::studio::{Expr, StudioCreation};
+    use crate::studio::{Expr, StudioCreation, StudioProgram, eval};
 
     fn bundled(id: &str) -> StudioCreation {
         StudioCreation::from_capsule(id).expect("bundled experiment")
@@ -1702,6 +1703,164 @@ mod tests {
             }
             other => panic!("shared sqrt(2) should be periodic, got {other:?}"),
         }
+    }
+
+    fn parametric(x: &str, y: &str) -> StudioCreation {
+        StudioCreation::new_parametric(x, y, 0.0, 1.0, 1.0).expect("parametric")
+    }
+
+    fn expect_periodic(creation: &StudioCreation) -> PeriodicClosure {
+        match PathClosure::of(creation) {
+            PathClosure::Periodic(periodic) => periodic,
+            other => panic!("expected a period, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn nested_square_free_radicals_stay_unsupported() {
+        for (x, y) in [
+            ("cos(2*pi*sqrt(sqrt(2))*t)", "sin(2*pi*2*sqrt(sqrt(2))*t)"),
+            ("cos(2*pi*sqrt(sqrt(3))*t)", "sin(2*pi*2*sqrt(sqrt(3))*t)"),
+            (
+                "cos(2*pi*sqrt(sqrt(sqrt(2)))*t)",
+                "sin(2*pi*2*sqrt(sqrt(sqrt(2)))*t)",
+            ),
+        ] {
+            let creation = parametric(x, y);
+            let closure = PathClosure::of(&creation);
+            assert_eq!(closure, PathClosure::Unsupported, "{x}");
+            assert_eq!(
+                closure.report_lines(),
+                vec!["closure=unsupported".to_string()],
+                "{x}"
+            );
+            assert!(closure.oscillator_tones().is_none(), "{x}");
+            let StudioProgram::Parametric { x_expression, .. } = creation.program().expect("play")
+            else {
+                panic!("{x} should still parse");
+            };
+            let drawn = eval(&x_expression, 0.25, 1.0);
+            assert!(drawn.is_finite(), "{x} still draws, got {drawn}");
+            let collapsed = (2.0 * std::f64::consts::PI * 2f64.sqrt() * 0.25).cos();
+            assert!(
+                (drawn - collapsed).abs() > 1e-3,
+                "{x} must not draw the collapsed sqrt(2) curve"
+            );
+        }
+        let fourth = 2f64.powf(0.25);
+        let creation = parametric("cos(2*pi*sqrt(sqrt(2))*t)", "sin(2*pi*2*sqrt(sqrt(2))*t)");
+        let StudioProgram::Parametric { x_expression, .. } = creation.program().expect("play")
+        else {
+            panic!("nested radical still parses");
+        };
+        let drawn = eval(&x_expression, 0.25, 1.0);
+        let expected = (2.0 * std::f64::consts::PI * fourth * 0.25).cos();
+        assert!(
+            (drawn - expected).abs() < 1e-9,
+            "numeric play keeps 2^(1/4), drawn {drawn} expected {expected}"
+        );
+    }
+
+    #[test]
+    fn a_perfect_square_inside_a_radical_stays_periodic() {
+        let creation = parametric("cos(2*pi*sqrt(sqrt(16))*t)", "sin(2*pi*2*sqrt(sqrt(16))*t)");
+        let periodic = expect_periodic(&creation);
+        assert_eq!(periodic.period_text, "1/2");
+        assert_eq!(periodic.x_frequency_text, "2");
+        assert_eq!(periodic.y_frequency_text, "4");
+        let tones = PathClosure::of(&creation)
+            .oscillator_tones()
+            .expect("tones");
+        assert!((f64::from(tones.voices[0].hz.expect("x hz")) - 220.0).abs() < 1e-3);
+        assert!((f64::from(tones.voices[1].hz.expect("y hz")) - 440.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn half_under_a_radical_is_sqrt_two_over_two() {
+        let half = super::Exact::from_int(1)
+            .checked_div(super::Exact::from_int(2))
+            .expect("1/2");
+        assert_eq!(
+            half.checked_sqrt().expect("sqrt(1/2)"),
+            super::Exact {
+                num: 1,
+                den: 2,
+                pi: 0,
+                rad: 2,
+            }
+        );
+        let eighth = super::Exact::from_int(1)
+            .checked_div(super::Exact::from_int(8))
+            .expect("1/8");
+        assert_eq!(
+            eighth.checked_sqrt().expect("sqrt(1/8)"),
+            super::Exact {
+                num: 1,
+                den: 4,
+                pi: 0,
+                rad: 2,
+            }
+        );
+        let two_thirds = super::Exact::from_int(2)
+            .checked_div(super::Exact::from_int(3))
+            .expect("2/3");
+        assert_eq!(
+            two_thirds.checked_sqrt().expect("sqrt(2/3)"),
+            super::Exact {
+                num: 1,
+                den: 3,
+                pi: 0,
+                rad: 6,
+            }
+        );
+        let quarter = super::Exact::from_int(1)
+            .checked_div(super::Exact::from_int(4))
+            .expect("1/4");
+        assert_eq!(
+            quarter.checked_sqrt().expect("sqrt(1/4)"),
+            super::Exact::from_int(1)
+                .checked_div(super::Exact::from_int(2))
+                .expect("1/2")
+        );
+        assert_eq!(
+            super::Exact::zero().checked_sqrt().expect("sqrt(0)"),
+            super::Exact::zero()
+        );
+        assert!(super::Exact::from_int(-2).checked_sqrt().is_none());
+        assert!(
+            super::Exact::from_int(2)
+                .checked_sqrt()
+                .expect("sqrt(2)")
+                .checked_sqrt()
+                .is_none()
+        );
+
+        let creation = parametric("cos(2*pi*sqrt(1/2)*t)", "sin(2*pi*2*sqrt(1/2)*t)");
+        let periodic = expect_periodic(&creation);
+        assert_eq!(periodic.period_text, "sqrt(2)");
+        assert_eq!(periodic.x_frequency_text, "sqrt(2)/2");
+        assert_eq!(periodic.y_frequency_text, "sqrt(2)");
+        let tones = PathClosure::of(&creation)
+            .oscillator_tones()
+            .expect("tones");
+        let root = 2f64.sqrt();
+        assert!((f64::from(tones.voices[0].hz.expect("x hz")) - 110.0 * root / 2.0).abs() < 1e-3);
+        assert!((f64::from(tones.voices[1].hz.expect("y hz")) - 110.0 * root).abs() < 1e-3);
+        let StudioProgram::Parametric {
+            x_expression,
+            y_expression,
+            ..
+        } = creation.program().expect("play")
+        else {
+            panic!("sqrt(1/2) still parses");
+        };
+        let t = 0.2;
+        let x_drawn = eval(&x_expression, t, 1.0);
+        let y_drawn = eval(&y_expression, t, 1.0);
+        let x_expected = (2.0 * std::f64::consts::PI * (root / 2.0) * t).cos();
+        let y_expected = (2.0 * std::f64::consts::PI * root * t).sin();
+        assert!((x_drawn - x_expected).abs() < 1e-9);
+        assert!((y_drawn - y_expected).abs() < 1e-9);
     }
 
     fn voices(id: &str) -> super::VoiceClosure {
@@ -2010,10 +2169,8 @@ mod tests {
         let file = creation.to_num_file();
         let partial = HarmonicPartial::of(&creation).expect("partial");
         assert_eq!(creation.to_num_file(), file);
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert_eq!(partial.status_caption(), "PARTIAL  1  3");
         assert_eq!(
@@ -2120,10 +2277,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert_eq!(partial.x_terms.len(), 2);
         assert_eq!(partial.y_terms.len(), 1);
@@ -2229,10 +2384,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert_eq!(partial.x_terms.len(), 3);
         assert_eq!(partial.y_terms.len(), 1);
@@ -2346,10 +2499,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert_eq!(partial.x_terms.len(), 4);
         assert_eq!(partial.y_terms.len(), 1);
@@ -2498,10 +2649,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 5);
@@ -2653,10 +2802,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 6);
@@ -2843,10 +2990,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 7);
@@ -3035,10 +3180,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 8);
@@ -3235,10 +3378,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 9);
@@ -3437,10 +3578,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 10);
@@ -3641,10 +3780,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 11);
@@ -3847,10 +3984,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 12);

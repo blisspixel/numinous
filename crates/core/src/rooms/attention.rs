@@ -1,6 +1,7 @@
 //! Attention as Soft Light: one query lights a few keys; the rest go dim.
 //!
-//! Softmax over dot products of a query with key vectors.
+//! Softmax of negative distance from one query to each key. The nearest key
+//! wins. This is not scaled dot-product attention.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
@@ -41,11 +42,20 @@ fn keys(seed: u64) -> [(f64, f64); N_KEYS] {
     out
 }
 
+fn temperature(t: f64) -> f64 {
+    0.12 + phase_unit(t) * 0.15
+}
+
+fn query_at(t: f64) -> (f64, f64) {
+    let angle = phase_unit(t) * std::f64::consts::TAU;
+    (0.5 + 0.2 * angle.cos(), 0.5 + 0.15 * angle.sin())
+}
+
 fn softmax_weights(query: (f64, f64), keys: &[(f64, f64); N_KEYS], temp: f64) -> [f64; N_KEYS] {
     let mut dots = [0.0; N_KEYS];
     let mut max = f64::NEG_INFINITY;
     for (i, k) in keys.iter().enumerate() {
-        // Similarity: negative distance (local attention).
+        // Similarity is negative distance. The nearest key wins.
         let d = (query.0 - k.0).hypot(query.1 - k.1);
         dots[i] = -d / temp.max(0.05);
         max = max.max(dots[i]);
@@ -137,10 +147,8 @@ impl Room for Attention {
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let ks = keys(self.seed);
-        let a = phase_unit(t) * std::f64::consts::TAU;
-        let query = (0.5 + 0.2 * a.cos(), 0.5 + 0.15 * a.sin());
-        let temp = 0.12 + phase_unit(t) * 0.15;
-        let w = softmax_weights(query, &ks, temp);
+        let query = query_at(t);
+        let w = softmax_weights(query, &ks, temperature(t));
         draw(canvas, query, &ks, &w);
     }
 
@@ -164,9 +172,8 @@ impl Room for Attention {
 
     fn status(&self, t: f64) -> Option<String> {
         let ks = keys(self.seed);
-        let a = phase_unit(t) * std::f64::consts::TAU;
-        let query = (0.5 + 0.2 * a.cos(), 0.5 + 0.15 * a.sin());
-        let w = softmax_weights(query, &ks, 0.15);
+        let query = query_at(t);
+        let w = softmax_weights(query, &ks, temperature(t));
         let h = entropy(&w);
         Some(format!("H={h:.2}  keys={N_KEYS}  DRAG:QUERY"))
     }
@@ -175,8 +182,7 @@ impl Room for Attention {
         let hands = finite_pokes(pokes);
         let ks = keys(self.seed);
         let query = hands.last().copied().unwrap_or((0.5, 0.5));
-        let temp = 0.1 + phase_unit(t) * 0.2;
-        let w = softmax_weights(query, &ks, temp);
+        let w = softmax_weights(query, &ks, temperature(t));
         draw(canvas, query, &ks, &w);
     }
 
@@ -188,7 +194,7 @@ impl Room for Attention {
         }
         let ks = keys(self.seed);
         let query = *hands.last().unwrap();
-        let w = softmax_weights(query, &ks, 0.12 + phase_unit(t) * 0.15);
+        let w = softmax_weights(query, &ks, temperature(t));
         let h = entropy(&w);
         let top = w
             .iter()
@@ -200,15 +206,15 @@ impl Room for Attention {
     }
 
     fn reveal(&self) -> &'static str {
-        "Attention is a soft spotlight: a query scores keys, softmax turns \
-         scores into weights, and values mix under that light. Geometry first; \
-         transformers are the same picture with more axes."
+        "Attention is a soft spotlight: a query scores each key by how near it \
+         is, softmax turns those scores into weights, and the nearest key gets \
+         the most light."
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Attention, keys, softmax_weights};
+    use super::{Attention, entropy, keys, query_at, softmax_weights, temperature};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
@@ -217,6 +223,42 @@ mod tests {
         let s = Attention::new().status(0.3).unwrap();
         assert!(s.contains("DRAG") || s.contains("QUERY"));
         assert!(s.chars().count() <= 56);
+    }
+
+    #[test]
+    fn status_entropy_and_top_key_match_the_drawn_weights() {
+        let room = Attention::new();
+        let ks = keys(0);
+        for t in [0.0, 0.3, 0.7, 1.0] {
+            let drawn = softmax_weights(query_at(t), &ks, temperature(t));
+            let status = room.status(t).expect("status");
+            assert!(
+                status.contains(&format!("H={:.2}", entropy(&drawn))),
+                "{status} at {t}"
+            );
+            let inputs = [RoomInput::PointerDown {
+                x: 0.2,
+                y: 0.8,
+                t: 0.0,
+            }];
+            let poked = softmax_weights((0.2, 0.8), &ks, temperature(t));
+            let top = poked
+                .iter()
+                .enumerate()
+                .max_by(|left, right| {
+                    left.1
+                        .partial_cmp(right.1)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .map(|(index, _)| index)
+                .unwrap();
+            let line = room.status_input(t, &inputs).expect("poked status");
+            assert!(
+                line.contains(&format!("H={:.2}", entropy(&poked))),
+                "{line} at {t}"
+            );
+            assert!(line.contains(&format!("top=K{top}")), "{line} at {t}");
+        }
     }
 
     #[test]

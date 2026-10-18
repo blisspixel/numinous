@@ -518,7 +518,7 @@ NO_COLOR                  No color in the terminal faces: rooms, chrome and
 ```
 
 ```
-NUMINOUS_REDUCED_MOTION=1 NO_COLOR=1 numinous show
+NUMINOUS_REDUCED_MOTION=1 NO_COLOR=1 numinous tour
 ```
 
 Every room's answer to a touch shows under `NO_COLOR`. Three rooms,
