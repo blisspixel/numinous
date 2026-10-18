@@ -134,7 +134,7 @@ fn uninstall_is_a_first_class_cli_command() {
 
 #[test]
 fn redirected_home_report_is_plain_and_useful() {
-    let report = super::home_report(&numinous_core::Journey::default(), false, true);
+    let report = super::home_report(&numinous_core::Journey::default(), false, true, false, 80);
     assert!(
         !report.contains('\x1b'),
         "redirected output must not contain ANSI"
@@ -157,7 +157,7 @@ fn interactive_home_report_keeps_the_full_color_cabinet() {
         last_daily: super::pick_day(),
         ..Default::default()
     };
-    let report = super::home_report(&journey, true, true);
+    let report = super::home_report(&journey, true, true, false, 80);
     assert!(
         report.starts_with("\x1b[38;2;"),
         "cabinet starts in truecolor"
@@ -174,6 +174,58 @@ fn interactive_home_report_keeps_the_full_color_cabinet() {
     assert!(report.contains("NUMINOUS   LV"));
     assert!(report.contains("streak 3"));
     assert!(report.contains("\n  numinous watch"));
+}
+
+#[test]
+fn pipe_and_terminal_home_menus_share_one_description_column() {
+    let rooms = numinous_core::all_rooms();
+    let id = rooms[(super::pick_day() as usize) % rooms.len()].meta().id;
+    let menu = super::front_door::home_menu_text(id);
+    let pipe = super::home_report(&numinous_core::Journey::default(), false, false, false, 80);
+    let terminal = super::home_report(&numinous_core::Journey::default(), true, false, false, 80);
+    assert!(pipe.contains(&menu), "pipe menu drifted:\n{pipe}");
+    assert!(
+        terminal.contains(&menu),
+        "terminal menu drifted:\n{terminal}"
+    );
+    let columns: Vec<usize> = menu
+        .lines()
+        .map(|line| line.rfind("  ").expect("description gap") + 2)
+        .collect();
+    assert!(
+        columns.windows(2).all(|pair| pair[0] == pair[1]),
+        "descriptions do not share a column: {columns:?}\n{menu}"
+    );
+    let long = super::front_door::home_menu_text("spherical-harmonic");
+    let long_column = long.lines().next().unwrap().rfind("  ").unwrap() + 2;
+    assert!(
+        long_column > columns[0],
+        "a long id should move the description column"
+    );
+    assert!(
+        long.lines()
+            .all(|line| { line.rfind("  ").unwrap() + 2 == long_column })
+    );
+}
+
+#[test]
+fn the_home_fact_wraps_inside_the_column_budget() {
+    let insight = numinous_core::insight(super::pick_day());
+    assert!(
+        insight.chars().count() > 40,
+        "the wrap test needs a long fact"
+    );
+    let report = super::home_report(&numinous_core::Journey::default(), true, false, false, 40);
+    assert!(
+        !report.contains(&format!(". . . {insight}")),
+        "the fact stayed on one line"
+    );
+    assert!(
+        report
+            .lines()
+            .any(|line| line.starts_with(". . .") && line.chars().count() <= 40),
+        "the fact's first line broke the column budget:\n{report}"
+    );
 }
 
 #[test]
@@ -632,6 +684,51 @@ fn rooms_report_lists_times_tables() {
     let report = rooms_report(false);
     assert!(report.contains("times-tables"));
     assert!(!report.contains("tetractys"));
+}
+
+#[test]
+fn rooms_report_aligns_every_id_and_wing() {
+    let report = rooms_report(false);
+    let lines: Vec<&str> = report.lines().filter(|line| !line.is_empty()).collect();
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.starts_with("cellular-automata"))
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.starts_with("spherical-harmonic"))
+    );
+    let id_width = numinous_core::ROOM_CATALOG
+        .iter()
+        .map(|metadata| metadata.id.chars().count())
+        .max()
+        .unwrap();
+    let wing_width = numinous_core::ROOM_CATALOG
+        .iter()
+        .map(|metadata| metadata.wing.chars().count())
+        .max()
+        .unwrap();
+    let title_at = id_width + 1 + wing_width + 1;
+    for line in lines {
+        let chars: Vec<char> = line.chars().collect();
+        assert_eq!(chars[id_width], ' ', "id column drifted: {line}");
+        assert_ne!(
+            chars[id_width + 1],
+            ' ',
+            "wing does not start together: {line}"
+        );
+        assert_eq!(
+            chars[id_width + 1 + wing_width],
+            ' ',
+            "wing column drifted: {line}"
+        );
+        assert_ne!(
+            chars[title_at], ' ',
+            "title does not start together: {line}"
+        );
+    }
 }
 
 #[test]
@@ -1243,7 +1340,7 @@ fn every_composed_screen_is_escape_free_without_color() {
         RoomRenderInput::plain(),
     )
     .expect("known room");
-    let mono_home = super::home_report(&numinous_core::Journey::default(), true, false);
+    let mono_home = super::home_report(&numinous_core::Journey::default(), true, false, false, 80);
     let mono_era = super::ansi_in_era(&raster, numinous_core::Era::Phosphor, false);
 
     for (name, screen) in [
@@ -1323,6 +1420,166 @@ fn no_color_is_honored_when_present_and_not_empty() {
             observed, expected_color,
             "NO_COLOR={value:?} should give color={expected_color}"
         );
+    }
+}
+
+#[test]
+fn explicit_color_wins_and_a_dumb_picture_is_ascii() {
+    use std::ffi::OsStr;
+    let room = numinous_core::room_by_id("times-tables").expect("room");
+    let mut raster = numinous_core::Raster::with_accent(16, 8, room.meta().accent);
+    room.render(&mut raster, 0.4);
+    let color = super::front_door::present_picture(&raster, true, Some(OsStr::new("dumb")));
+    assert!(
+        color.contains("\u{1b}[38;2;"),
+        "an explicit color request must stay truecolor on a dumb terminal"
+    );
+    let dumb = super::front_door::present_picture(&raster, false, Some(OsStr::new("dumb")));
+    assert!(!dumb.contains('\u{1b}'), "dumb picture emitted an escape");
+    assert!(
+        dumb.chars()
+            .all(|glyph| !('\u{2580}'..='\u{259F}').contains(&glyph)),
+        "dumb picture drew block art"
+    );
+    let mono =
+        super::front_door::present_picture(&raster, false, Some(OsStr::new("xterm-256color")));
+    assert!(
+        !mono.contains('\u{1b}'),
+        "NO_COLOR picture emitted an escape"
+    );
+    assert!(
+        mono.chars()
+            .any(|glyph| ('\u{2580}'..='\u{259F}').contains(&glyph)),
+        "NO_COLOR on a normal terminal lost its block-glyph picture"
+    );
+}
+
+#[test]
+fn a_dumb_terminal_gets_the_mono_cabinet() {
+    use std::ffi::OsStr;
+    assert!(!super::picture_color_allowed(
+        None,
+        Some(OsStr::new("dumb"))
+    ));
+    assert!(!super::picture_color_allowed(
+        None,
+        Some(OsStr::new("DUMB"))
+    ));
+    assert!(super::picture_color_allowed(
+        None,
+        Some(OsStr::new("xterm-256color"))
+    ));
+    assert!(!super::picture_color_allowed(
+        Some(OsStr::new("1")),
+        Some(OsStr::new("xterm-256color"))
+    ));
+    let color = super::picture_color_allowed(None, Some(OsStr::new("dumb")));
+    let report = super::home_report(&numinous_core::Journey::default(), true, color, true, 80);
+    assert!(
+        !report.contains('\u{1b}'),
+        "dumb terminal still emitted an escape"
+    );
+    assert!(
+        report
+            .chars()
+            .all(|glyph| !('\u{2580}'..='\u{259F}').contains(&glyph)),
+        "dumb terminal still drew block art"
+    );
+    assert!(report.contains("NUMINOUS   LV"));
+}
+
+#[test]
+fn root_help_groups_every_command_once_and_wraps_at_sixty() {
+    use clap::CommandFactory;
+    let cmd = super::Cli::command();
+    let help = super::front_door::grouped_help(&cmd, 60);
+    for heading in [
+        "Start here:",
+        "Play:",
+        "Games:",
+        "Create:",
+        "Study:",
+        "Your journey:",
+        "Maintain:",
+    ] {
+        assert!(
+            help.lines().any(|line| line == heading),
+            "missing {heading}\n{help}"
+        );
+    }
+    let order: Vec<usize> = [
+        "Start here:",
+        "Play:",
+        "Games:",
+        "Create:",
+        "Study:",
+        "Your journey:",
+        "Maintain:",
+    ]
+    .into_iter()
+    .map(|heading| help.lines().position(|line| line == heading).unwrap())
+    .collect();
+    assert!(order.windows(2).all(|pair| pair[0] < pair[1]));
+    let found: Vec<&str> = help
+        .lines()
+        .filter_map(|line| {
+            let rest = line.strip_prefix("  ")?;
+            if rest.starts_with(' ') || rest.starts_with('-') {
+                return None;
+            }
+            rest.split_whitespace().next()
+        })
+        .collect();
+    let mut expected: Vec<&str> = cmd
+        .get_subcommands()
+        .map(|subcommand| subcommand.get_name())
+        .filter(|name| *name != "help")
+        .collect();
+    let mut found_sorted = found.clone();
+    found_sorted.sort_unstable();
+    expected.sort_unstable();
+    assert_eq!(found_sorted, expected, "help groups drifted\n{help}");
+    assert_eq!(found.len(), expected.len(), "a command was listed twice");
+    assert!(
+        help.lines().all(|line| line.chars().count() <= 60),
+        "a help line is wider than 60:\n{}",
+        help.lines()
+            .filter(|line| line.chars().count() > 60)
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+    assert!(!help.contains('\u{1b}'));
+
+    let mut plot = cmd
+        .find_subcommand("plot")
+        .expect("plot")
+        .clone()
+        .term_width(60)
+        .color(clap::ColorChoice::Never);
+    let mut buf = Vec::new();
+    plot.write_long_help(&mut buf).expect("plot help");
+    let plot_help = String::from_utf8(buf).expect("utf-8");
+    assert!(
+        plot_help.lines().all(|line| line.chars().count() <= 60),
+        "plot help is wider than 60:\n{}",
+        plot_help
+            .lines()
+            .filter(|line| line.chars().count() > 60)
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
+
+#[test]
+fn completion_scripts_name_the_command() {
+    use clap::CommandFactory;
+    for shell in [
+        clap_complete::Shell::Bash,
+        clap_complete::Shell::Zsh,
+        clap_complete::Shell::Fish,
+    ] {
+        let script = super::front_door::completion_script(&mut super::Cli::command(), shell);
+        assert!(script.contains("numinous"), "{shell:?}\n{script}");
     }
 }
 
