@@ -1333,6 +1333,7 @@ fn room_screen_with_banner(
         width,
         height,
         numinous_core::StudyTextSize::Standard,
+        numinous_core::chrome::Role::Info,
     );
     raster
 }
@@ -2656,6 +2657,7 @@ fn main() {
                     size.0,
                     size.1,
                     numinous_core::StudyTextSize::Standard,
+                    banner.role(),
                 );
                 save(
                     &earned,
@@ -2817,6 +2819,7 @@ fn main() {
             width,
             height,
             numinous_core::StudyTextSize::Standard,
+            level.role(),
         );
         save(
             &banner,
@@ -2969,6 +2972,7 @@ fn main() {
                     size.0,
                     size.1,
                     numinous_core::StudyTextSize::Standard,
+                    banner.role(),
                 );
             }
             save_with_audio(

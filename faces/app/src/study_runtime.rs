@@ -60,7 +60,7 @@ impl App {
                 reader
             }
             Err(_) => {
-                self.banner = Some(super::feedback::Banner::status(
+                self.banner = Some(super::feedback::Banner::refusal(
                     "THE READER COULD NOT OPEN",
                     super::feedback::REFUSAL_FRAMES,
                 ));
@@ -341,16 +341,29 @@ impl App {
             ) {
                 Ok(rgba) => rgba,
                 Err(_) => {
-                    let mut raster = Raster::with_accent(width, height, [78, 255, 255]);
-                    numinous_core::draw_text(
+                    let mut raster = Raster::new(width, height);
+                    numinous_app::menu::draw_solid_text(
                         &mut raster,
                         "THE READER COULD NOT DRAW THIS PAGE",
                         12,
                         20,
                         1,
-                        '#',
+                        numinous_core::chrome::rgb(
+                            numinous_core::chrome::Appearance::Dark,
+                            numinous_core::chrome::Role::Text,
+                        ),
                     );
-                    numinous_core::draw_text(&mut raster, "E OR ESC: RETURN", 12, 44, 1, '*');
+                    numinous_app::menu::draw_solid_text(
+                        &mut raster,
+                        "E OR ESC: RETURN",
+                        12,
+                        44,
+                        1,
+                        numinous_core::chrome::rgb(
+                            numinous_core::chrome::Appearance::Dark,
+                            numinous_core::chrome::Role::TextMuted,
+                        ),
+                    );
                     raster.to_rgba()
                 }
             },
