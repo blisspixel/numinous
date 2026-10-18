@@ -31,7 +31,9 @@ near it, added rooms to the list. Orange and vermillion sat too close to the
 amber ink. Green, amber, and violet stay. The arcade Drifter stays the letter
 `d` and is drawn in bright blue, SGR 94. SGR 35 and 95 are not used.
 
-The fixed mark inks sit outside the band, and the guard is the same function a chrome token has to pass.
+The fixed mark inks sit outside the band. Every chrome token does too:
+`every_chrome_token_sits_outside_the_magenta_band` asks `in_magenta_band` of
+each `chrome::rgb` value, both appearances, without copying the table.
 
 ## Consequences
 
