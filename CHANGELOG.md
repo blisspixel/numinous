@@ -3,7 +3,7 @@
 All notable changes to Numinous. The format follows Keep a Changelog, and the
 project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
-## [0.5.0-alpha.8] - 2026-10-17
+## [0.5.0-alpha.8] - 2026-10-18
 
 ### Added
 - The App plays The Overture from Cabinet > Modes, beside Watch. One bed and

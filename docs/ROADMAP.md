@@ -13,7 +13,7 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 ## Now
 
-Reviewed 2026-10-17.
+Reviewed 2026-10-18.
 
 **Current release state: 0.5.0-alpha.8, Sensory Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
@@ -404,7 +404,7 @@ above without adding release gates or reordering **Next, in order**.
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
 
-- **`v0.5.0-alpha.8` (2026-10-17):** The App and MCP `watch_show` play The
+- **`v0.5.0-alpha.8` (2026-10-18):** The App and MCP `watch_show` play The
   Overture, and Route Lab can step through nearest-next choices without
   changing the delivery order. `cellular-automata`, `julia`, and `lambda-map`
   run no faster than 4x. Linux packages pin Ubuntu 24.04, macOS packages
