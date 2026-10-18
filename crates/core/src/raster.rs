@@ -198,7 +198,9 @@ impl Raster {
             return None;
         }
         let pixels = rgba
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|pixel| [pixel[0], pixel[1], pixel[2]])
             .collect();
         Some(Self {
@@ -357,7 +359,11 @@ impl Raster {
     /// extra or missing bytes are tolerated). Brings a post-processed frame,
     /// for example a visual era, back onto a raster.
     pub fn set_rgba(&mut self, rgba: &[u8]) {
-        for (pixel, bytes) in self.pixels.iter_mut().zip(rgba.chunks_exact(4)) {
+        for (pixel, bytes) in self
+            .pixels
+            .iter_mut()
+            .zip(rgba.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()))
+        {
             *pixel = [bytes[0], bytes[1], bytes[2]];
         }
     }
@@ -1629,7 +1635,12 @@ mod tests {
 
         assert_eq!(&after[0..12], &before[0..12]);
         assert_eq!(&after[36..48], &before[36..48]);
-        for pixel in after[12..36].chunks_exact(4) {
+        for pixel in after[12..36]
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
+        {
             assert_eq!(pixel, [10, 11, 15, 255]);
         }
     }

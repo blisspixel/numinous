@@ -15,14 +15,15 @@ concurrency:
 jobs:
   quality:
     name: fmt + clippy + test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
+          toolchain: 1.99.1
           components: rustfmt, clippy
       - name: Install Linux App libraries
         run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev
@@ -100,23 +101,9 @@ jobs:
           python3 scripts/test-dependency-migration-performance.py
           python3 scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
 
-  msrv:
-    name: MSRV 1.89
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@b4f984c1e7daae8e175614de3e73a8411a20333c # 1.89.0
-      - name: Install Linux audio and input development libraries
-        run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev
-      - name: Minimum supported Rust check
-        run: cargo +1.89.0 check --workspace --all-targets --locked
-
   python-quality:
     name: python gates (lint and strict typing)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -134,7 +121,7 @@ jobs:
 
   house-style:
     name: house style
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -156,7 +143,7 @@ jobs:
 
   supply-chain:
     name: dependency review + cargo-deny
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -184,13 +171,15 @@ jobs:
   # RustSec advisory database with project-local ignores in .cargo/audit.toml.
   audit:
     name: cargo-audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: 1.99.1
       - uses: taiki-e/install-action@fa23953489c080190314742a9b907f8e97c6767c # v2.87.10
         with:
           tool: cargo-audit
@@ -199,7 +188,7 @@ jobs:
 
   codeql:
     name: CodeQL (${{ matrix.language }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       actions: read
@@ -214,7 +203,9 @@ jobs:
         with:
           persist-credentials: false
       - if: matrix.language == 'rust'
-        uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: 1.99.1
       - name: Initialize CodeQL
         uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:
@@ -228,14 +219,15 @@ jobs:
 
   coverage:
     name: coverage (>= 80% lines)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
+          toolchain: 1.99.1
           components: llvm-tools-preview
       - name: Install Linux audio and input development libraries
         run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev
@@ -253,14 +245,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: 1.99.1
       - name: Install Linux audio and input development libraries
         if: runner.os == 'Linux'
         run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev libxkbcommon-x11-0 mesa-vulkan-drivers xvfb
@@ -341,13 +335,15 @@ jobs:
 
   gpu-field:
     name: CPU and GPU color field
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: 1.99.1
       - name: Install software Vulkan
         run: bash scripts/ci-linux-libs.sh mesa-vulkan-drivers
       - name: Compare independently rendered CPU and GPU fields
@@ -355,12 +351,27 @@ jobs:
           python3 scripts/run-exact-test.py --package numinous-gpu --lib --ignored \
             tests::mandelbrot_gpu_and_cpu_share_the_smooth_color_field
 
+  ubuntu-26:
+    name: ubuntu 26.04 library probe
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: 1.99.1
+      - name: Install Linux audio and input development libraries
+        run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev libxkbcommon-x11-0 mesa-vulkan-drivers xvfb
+      - name: Workspace check on the upcoming Ubuntu runner
+        run: cargo check --workspace --all-targets --locked
+
   main-ci:
     name: main CI
     if: always()
     needs:
       - quality
-      - msrv
       - house-style
       - python-quality
       - supply-chain
@@ -370,11 +381,11 @@ jobs:
       - build
       - release-artifacts
       - gpu-field
-    runs-on: ubuntu-latest
+      - ubuntu-26
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
       QUALITY_RESULT: ${{ needs.quality.result }}
-      MSRV_RESULT: ${{ needs.msrv.result }}
       HOUSE_STYLE_RESULT: ${{ needs.house-style.result }}
       PYTHON_QUALITY_RESULT: ${{ needs.python-quality.result }}
       SUPPLY_CHAIN_RESULT: ${{ needs.supply-chain.result }}
@@ -384,12 +395,12 @@ jobs:
       BUILD_RESULT: ${{ needs.build.result }}
       RELEASE_ARTIFACTS_RESULT: ${{ needs.release-artifacts.result }}
       GPU_FIELD_RESULT: ${{ needs.gpu-field.result }}
+      UBUNTU_26_RESULT: ${{ needs.ubuntu-26.result }}
     steps:
       - name: Require every CI job
         run: |
           for result in \
             "$QUALITY_RESULT" \
-            "$MSRV_RESULT" \
             "$HOUSE_STYLE_RESULT" \
             "$PYTHON_QUALITY_RESULT" \
             "$SUPPLY_CHAIN_RESULT" \
@@ -398,7 +409,8 @@ jobs:
             "$COVERAGE_RESULT" \
             "$BUILD_RESULT" \
             "$RELEASE_ARTIFACTS_RESULT" \
-            "$GPU_FIELD_RESULT"
+            "$GPU_FIELD_RESULT" \
+            "$UBUNTU_26_RESULT"
           do
             test "$result" = success
           done

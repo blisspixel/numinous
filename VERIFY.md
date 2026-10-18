@@ -32,10 +32,16 @@ Private state writes request owner-only Unix file permissions. Existing append
 files are tightened before writing; read-only inspection leaves permissions
 unchanged. Windows files continue to inherit their containing directory's ACL.
 
-- **Rust** (edition 2024; pinned to 1.97.1 in `rust-toolchain.toml`, with a
-  1.89 MSRV checked separately in CI). Install from
-  <https://rustup.rs>. On Windows, cargo lands in `%USERPROFILE%\.cargo\bin`; if a
-  fresh shell does not see `cargo`, add that to `PATH`.
+- **Rust** (edition 2024; pinned to 1.99.1 in `rust-toolchain.toml`). That pin
+  is the compiler floor. CI does not keep a second, older compiler. Install
+  from <https://rustup.rs>. On Windows, cargo lands in
+  `%USERPROFILE%\.cargo\bin`; if a fresh shell does not see `cargo`, add that
+  to `PATH`.
+- **Published packages** run on Ubuntu 24.04 or newer (glibc 2.39), macOS 15
+  Sequoia or newer, and 64-bit Windows. Apple silicon and Intel packages are
+  both built and smoked on macOS 15, with `MACOSX_DEPLOYMENT_TARGET` set to
+  15.0. The Intel package stays through the `macos-15-intel` runner, which
+  GitHub retires in August 2027.
 - Optional, for the local coverage gate: `cargo install cargo-llvm-cov`.
 - Optional, for the local supply-chain gate: `cargo install cargo-deny`.
 - **Python 3.11 or newer**, for the 0.4 study runner and collector regressions.
@@ -73,8 +79,7 @@ It runs format, clippy and rustdoc with warnings denied, Rust, a CPU/GPU color
 comparison with exact-test execution checked, ignored-test wiring, 0.4 study runner
 and collector, portable Agent Plugins, canonical schema and skill conformance,
 production knowledge-export YAML validation, both Sensory Lift platform contracts, and
-deterministic release-packaging tests, the 1.89 MSRV check (if that toolchain is
-installed), locked build, coverage (if `cargo-llvm-cov` is present),
+deterministic release-packaging tests, the locked build, coverage (if `cargo-llvm-cov` is present),
 supply-chain policy (if `cargo-deny` is present), the house-style guard, and the
 native installer safety self-test, then compares the compiled CLI and MCP study
 contracts and writes images and audio into `renders/`, including English and
@@ -82,16 +87,18 @@ Japanese reader plates.
 If it prints "All checks passed" and exits 0, everything is green.
 
 The optional steps are the only place this gate is weaker than `main CI`, and
-each one says so when it skips. Everything else CI requires, this runs: the two
-Sensory Lift contracts and the MSRV check used to be missing here while CI
-required them, so the release gate could print that every check passed while
-naming none of the three jobs about to fail.
+each one says so when it skips. Everything else CI requires, this runs. The two
+Sensory Lift contracts used to be missing here while CI required them, so the
+release gate could print that every check passed while naming jobs about to
+fail. The separate 1.89 compiler check is gone from both gates. The pinned
+toolchain is the floor.
 
 GitHub exposes one protected result named `main CI`. It is an aggregate, not a
-shortcut: it waits for format, Clippy, tests, docs, MSRV, house style,
+shortcut: it waits for format, Clippy, tests, docs, house style,
 dependency review, supply-chain checks, RustSec audit, Rust and workflow CodeQL,
-coverage, Windows, macOS, and Linux builds, a CPU/GPU Mandelbrot color-field
-comparison on software Vulkan, and the four-package release-set audit. The
+coverage, Windows, macOS, and Linux builds, an Ubuntu 26.04 library probe, a
+CPU/GPU Mandelbrot color-field comparison on software Vulkan, and the
+four-package release-set audit. The
 release packages are artifacts of the same CI run. A cancelled,
 skipped, timed-out, or failed dependency makes `main CI` fail. CodeQL findings
 are published for review; alert presence does not itself fail the analysis
@@ -150,7 +157,6 @@ python3 scripts/test-release-workflow.py            # macOS / Linux
 python scripts/test-workflow-pins.py                 # Windows
 python3 scripts/test-workflow-pins.py                # macOS / Linux
 cargo build --workspace --locked
-cargo +1.89.0 check --workspace --all-targets --locked
 cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
 cargo deny check                         # if cargo-deny is installed; CI always runs it
 cargo audit                              # if cargo-audit is installed; CI always runs it

@@ -670,8 +670,11 @@ mod tests {
         numinous_core::rooms::mandelbrot::Mandelbrot::new().render(&mut cpu, 0.0);
         let cpu = cpu.to_rgba();
         let mut differences: Vec<u8> = gpu
-            .chunks_exact(4)
-            .zip(cpu.chunks_exact(4))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
+            .zip(cpu.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()))
             .map(|(a, b)| {
                 a[..3]
                     .iter()
@@ -685,7 +688,12 @@ mod tests {
         // f32 and f64 orbits diverge at the intricate boundary. Away from it,
         // the independently computed field must retain the same presentation.
         assert!(differences[differences.len() * 99 / 100] <= 3);
-        let colors: std::collections::HashSet<_> = gpu.chunks_exact(4).collect();
+        let colors: std::collections::HashSet<_> = gpu
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
+            .collect();
         assert!(colors.len() > 300);
         let center = (height as usize / 2 * width as usize + width as usize / 2) * 4;
         assert_eq!(&gpu[center..center + 4], &[10, 11, 15, 255]);

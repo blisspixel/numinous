@@ -980,8 +980,17 @@ mod tests {
         let blank = Raster::new(raster.width(), raster.height()).to_rgba();
         raster
             .to_rgba()
-            .chunks_exact(4)
-            .zip(blank.chunks_exact(4))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
+            .zip(
+                blank
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice()),
+            )
             .enumerate()
             .filter_map(|(index, (actual, empty))| {
                 (actual != empty).then_some((index % raster.width(), index / raster.width()))

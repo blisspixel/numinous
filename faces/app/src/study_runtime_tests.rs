@@ -378,7 +378,10 @@ fn reader_controls_frames_and_real_ticks_preserve_the_retained_room() {
             assert_eq!(frame.len(), width * height * 4);
             assert!(
                 frame
-                    .chunks_exact(4)
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice())
                     .any(|pixel| pixel[..3] != [10, 11, 15])
             );
             before.assert_unchanged(&app);

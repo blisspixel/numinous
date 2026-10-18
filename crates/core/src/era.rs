@@ -83,7 +83,7 @@ impl Era {
         match self {
             Era::Modern => {}
             Era::Phosphor => {
-                for pixel in rgba.chunks_exact_mut(4) {
+                for pixel in rgba.as_chunks_mut::<4>().0 {
                     let lum = luminance(pixel);
                     pixel[0] = (lum / 6).min(255) as u8;
                     pixel[1] = lum.min(255) as u8;
@@ -106,7 +106,7 @@ impl Era {
             Era::EightBit => {
                 pixelate(rgba, width, height, 2);
                 ordered_dither(rgba, width, height);
-                for pixel in rgba.chunks_exact_mut(4) {
+                for pixel in rgba.as_chunks_mut::<4>().0 {
                     let snapped = nearest_palette(pixel[0], pixel[1], pixel[2]);
                     pixel[0] = snapped[0];
                     pixel[1] = snapped[1];
@@ -114,7 +114,7 @@ impl Era {
                 }
             }
             Era::Vector => {
-                for pixel in rgba.chunks_exact_mut(4) {
+                for pixel in rgba.as_chunks_mut::<4>().0 {
                     let lum = luminance(pixel);
                     if lum < 40 {
                         // The scope shows nothing but the beam.
@@ -255,7 +255,7 @@ mod tests {
     fn phosphor_is_green_dominant() {
         let mut rgba = frame(8, 8);
         Era::Phosphor.apply(&mut rgba, 8, 8);
-        for pixel in rgba.chunks_exact(4) {
+        for pixel in rgba.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()) {
             assert!(pixel[1] >= pixel[0] && pixel[1] >= pixel[2]);
         }
     }
@@ -264,7 +264,7 @@ mod tests {
     fn eight_bit_snaps_every_pixel_to_the_palette() {
         let mut rgba = frame(8, 8);
         Era::EightBit.apply(&mut rgba, 8, 8);
-        for pixel in rgba.chunks_exact(4) {
+        for pixel in rgba.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()) {
             assert!(PALETTE.contains(&[pixel[0], pixel[1], pixel[2]]));
         }
         assert_eq!(nearest_palette(250, 250, 250), [255, 255, 255]);
@@ -311,7 +311,12 @@ mod tests {
         assert_ne!(vector, before, "vector bloom should change bright frames");
         let mut phosphor = frame(12, 12);
         Era::Phosphor.apply(&mut phosphor, 12, 12);
-        for pixel in phosphor.chunks_exact(4) {
+        for pixel in phosphor
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
+        {
             assert!(pixel[1] >= pixel[0]);
         }
     }

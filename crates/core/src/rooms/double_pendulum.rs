@@ -999,7 +999,7 @@ mod tests {
         assert!(metrics.side_to_mid_db > -60.0);
         assert!(
             sound
-                .chunks_exact(2)
+                .as_chunks::<2>().0.iter().map(|chunk| chunk.as_slice())
                 .any(|stereo| (stereo[0] - stereo[1]).abs() > 1e-5),
             "the diverging twins must separate in stereo"
         );

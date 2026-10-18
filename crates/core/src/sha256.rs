@@ -128,7 +128,13 @@ pub(crate) fn hex(bytes: &[u8]) -> String {
 
 fn compress(state: &mut [u32; 8], block: &[u8; 64]) {
     let mut words = [0_u32; 64];
-    for (word, chunk) in words.iter_mut().zip(block.chunks_exact(4)) {
+    for (word, chunk) in words.iter_mut().zip(
+        block
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice()),
+    ) {
         let mut bytes = [0_u8; 4];
         bytes.copy_from_slice(chunk);
         *word = u32::from_be_bytes(bytes);

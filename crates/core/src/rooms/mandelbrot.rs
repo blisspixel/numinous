@@ -541,7 +541,7 @@ mod tests {
         assert_eq!(escape_iters(-0.75, 0.1, 160), 33);
         assert_ne!(pixel(240, 140), background);
         assert_ne!(pixel(125, 110), pixel(240, 140));
-        let colors: std::collections::HashSet<_> = pixels.chunks_exact(4).collect();
+        let colors: std::collections::HashSet<_> = pixels.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()).collect();
         assert!(colors.len() > 300, "the exterior collapsed to an outline");
         assert!(colors.iter().any(|p| p[0] > p[1] && p[2] > p[1]));
         assert!(colors.iter().any(|p| p[1] > p[0] && p[2] > p[0]));

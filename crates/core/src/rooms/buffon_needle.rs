@@ -548,8 +548,8 @@ mod tests {
         let mut changed = 0;
         for (index, (a, b)) in base
             .to_rgba()
-            .chunks_exact(4)
-            .zip(poked.to_rgba().chunks_exact(4))
+            .as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice())
+            .zip(poked.to_rgba().as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()))
             .enumerate()
         {
             if a != b {

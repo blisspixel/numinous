@@ -1780,7 +1780,10 @@ fn app_viewer_reconstructs_a_real_studio_agent_creation() {
         "the retained expression reconstructs the exact native Studio body outside viewer chrome"
     );
     let body_lit = expected_rgba[body_start..body_end]
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|chunk| chunk.as_slice())
         .filter(|pixel| *pixel != [10, 11, 15, 255])
         .count();
     assert!(body_lit > 100, "the native Studio body contains a curve");
@@ -1899,7 +1902,10 @@ fn app_viewer_reconstructs_a_real_normalized_nim_agent_opening() {
         "the retained Nim action reconstructs the exact native game body outside viewer chrome"
     );
     let body_lit = expected_rgba[body_start..body_end]
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|chunk| chunk.as_slice())
         .filter(|pixel| *pixel != [10, 11, 15, 255])
         .count();
     assert!(body_lit > 100, "the native Nim body contains heap geometry");
@@ -2018,7 +2024,10 @@ fn app_viewer_reconstructs_a_real_munch_agent_opening() {
         "the retained Munch action reconstructs the exact native game body outside viewer chrome"
     );
     let body_lit = expected_rgba[body_start..body_end]
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|chunk| chunk.as_slice())
         .filter(|pixel| *pixel != [10, 11, 15, 255])
         .count();
     assert!(

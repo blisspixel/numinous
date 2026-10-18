@@ -502,7 +502,10 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
 fn assert_times_tables_spectral_palette(raster: &Raster) {
     let rgba = raster.to_rgba();
     let colors: BTreeSet<[u8; 3]> = rgba
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|chunk| chunk.as_slice())
         .map(|pixel| [pixel[0], pixel[1], pixel[2]])
         .collect();
     for expected in [
@@ -549,8 +552,17 @@ fn difference(before: &Raster, after: &Raster) -> Difference {
     let mut min_y = before.height();
     let mut max_y = 0;
     for (index, (left, right)) in before_rgba
-        .chunks_exact(4)
-        .zip(after_rgba.chunks_exact(4))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|chunk| chunk.as_slice())
+        .zip(
+            after_rgba
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice()),
+        )
         .enumerate()
     {
         if left == right {
@@ -3719,9 +3731,24 @@ mod tests {
                 let composed = composed.to_rgba();
                 assert_ne!(source, composed, "the App chrome must actually be drawn");
                 for (index, ((source_pixel, composed_pixel), background_pixel)) in source
-                    .chunks_exact(4)
-                    .zip(composed.chunks_exact(4))
-                    .zip(background.chunks_exact(4))
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice())
+                    .zip(
+                        composed
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .map(|chunk| chunk.as_slice()),
+                    )
+                    .zip(
+                        background
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .map(|chunk| chunk.as_slice()),
+                    )
                     .enumerate()
                 {
                     if source_pixel != background_pixel {

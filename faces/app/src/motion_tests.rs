@@ -212,9 +212,24 @@ fn a_change_of_room_passes_through_the_stage_and_never_outshines_either_room() {
         // No pixel of a change is brighter than the same pixel in the room
         // leaving or the room arriving, so the two never add up.
         for ((shown, old), new) in shown
-            .chunks_exact(4)
-            .zip(leaving.chunks_exact(4))
-            .zip(arriving.chunks_exact(4))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
+            .zip(
+                leaving
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice()),
+            )
+            .zip(
+                arriving
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice()),
+            )
         {
             for channel in 0..3 {
                 assert!(
@@ -231,7 +246,10 @@ fn a_change_of_room_passes_through_the_stage_and_never_outshines_either_room() {
         );
         previous = light;
         if shown
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
             .all(|pixel| (0..3).all(|channel| pixel[channel] <= STAGE[channel]))
         {
             reached_the_stage = true;

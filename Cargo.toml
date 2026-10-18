@@ -9,8 +9,8 @@ version = "0.5.0-alpha.7"
 edition = "2024"
 # Public repository license, matched by LICENSE and the README.
 license = "Apache-2.0"
-# The App's Unicode study renderer establishes the workspace floor.
-rust-version = "1.89"
+# The pinned toolchain in rust-toolchain.toml is the compiler floor.
+rust-version = "1.99"
 repository = "https://github.com/blisspixel/numinous"
 
 [workspace.dependencies]
@@ -40,7 +40,7 @@ missing_docs = "warn"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
-# Hardening target for 0.2: promote clippy::pedantic to warn once the codebase is clean under it.
+# Hardening target: promote clippy::pedantic to warn once the codebase is clean under it. See docs/ENGINEERING.md.
 
 # Release profile: documented, tuned for the shipped binary.
 [profile.release]

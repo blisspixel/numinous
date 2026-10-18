@@ -613,8 +613,8 @@ mod tests {
             let raster_extent = extent(
                 raster
                     .to_rgba()
-                    .chunks_exact(4)
-                    .zip(blank.chunks_exact(4))
+                    .as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice())
+                    .zip(blank.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()))
                     .enumerate()
                     .filter(|(_, (a, b))| a != b)
                     .map(|(i, _)| (i % width, i / width))
@@ -654,7 +654,7 @@ mod tests {
             draw(&mut raster, &v);
             let pixels = raster.to_rgba();
             let mut painted = 0;
-            for (pixel, background) in pixels.chunks_exact(4).zip(blank.chunks_exact(4)) {
+            for (pixel, background) in pixels.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()).zip(blank.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice())) {
                 if pixel != background {
                     assert_eq!(pixel, expected.as_slice(), "{width}x{height}");
                     painted += 1;

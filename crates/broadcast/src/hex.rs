@@ -14,7 +14,13 @@ pub(crate) fn decode<const N: usize>(input: &str) -> Option<[u8; N]> {
     }
     let bytes = input.as_bytes();
     let mut output = [0_u8; N];
-    for (index, pair) in bytes.chunks_exact(2).enumerate() {
+    for (index, pair) in bytes
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|chunk| chunk.as_slice())
+        .enumerate()
+    {
         output[index] = (nibble(pair[0])? << 4) | nibble(pair[1])?;
     }
     Some(output)

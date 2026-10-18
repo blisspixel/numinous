@@ -27,9 +27,16 @@ It never discovers system fonts. The source, release versions, byte counts,
 checksums, and original licenses are recorded in
 [the font inventory](../../assets/fonts/README.md).
 
-This adds about 6.08 MiB of font data and raises the workspace compiler floor
-to Rust 1.89. The pinned development toolchain remains separate from that
-minimum. The font database behind `cosmic-text` 0.19 still depends on the
+This adds about 6.08 MiB of font data. Adopting `cosmic-text` 0.19 on
+2026-09-05 raised the workspace compiler floor to Rust 1.89, and the pinned
+development toolchain stayed separate from that minimum.
+
+Amendment, 2026-10-17: the compiler floor is the pinned toolchain in
+`rust-toolchain.toml` (Rust 1.99.1). Numinous ships binaries rather than a
+library crate, so CI tracks that one compiler and no longer runs a separate
+1.89 job.
+
+The font database behind `cosmic-text` 0.19 still depends on the
 unmaintained `ttf-parser`, so the advisory gates carry one documented
 exception until a `cosmic-text` release takes `fontdb` 0.24 or later. Native packages carry the font notices and original licenses inside
 their verified file manifest. The Cargo SPDX inventory does not yet enumerate

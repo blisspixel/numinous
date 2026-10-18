@@ -799,7 +799,10 @@ mod tests {
         assert_eq!(pixels.len(), (POSTCARD_SIZE * POSTCARD_SIZE * 4) as usize);
         assert!(
             pixels
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
                 .any(|pixel| pixel != [10, 11, 15, 255]),
             "postcard should contain room ink, not only the background"
         );
@@ -893,7 +896,10 @@ mod tests {
         assert_eq!(first.width, LOOP_SIZE);
         assert!(
             frame[..first.buffer_size()]
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
                 .any(|pixel| pixel != [10, 11, 15, 255]),
             "loop frame should contain room ink"
         );

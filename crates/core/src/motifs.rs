@@ -436,7 +436,14 @@ mod tests {
             f64::from(seam) <= metrics.max_step,
             "the seam steps by {seam}, more than anywhere inside the loop"
         );
-        assert!(samples.chunks_exact(2).any(|frame| frame[0] != frame[1]));
+        assert!(
+            samples
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
+                .any(|frame| frame[0] != frame[1])
+        );
 
         for channel in 0..2 {
             let mean = samples
@@ -543,7 +550,12 @@ mod tests {
                 meta.id
             );
             assert!(
-                samples.chunks_exact(2).any(|frame| frame[0] != frame[1]),
+                samples
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice())
+                    .any(|frame| frame[0] != frame[1]),
                 "{} must retain a stereo field",
                 meta.id
             );

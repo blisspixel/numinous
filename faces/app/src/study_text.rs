@@ -836,7 +836,14 @@ mod tests {
         let face = text.fonts.db().face(glyph.font_id).unwrap();
         assert!(face.families.iter().any(|(name, _)| name == "Noto Sans"));
         let pixels = render(&mut text, &layout, [235, 240, 245, 255], [0, 0, 0, 255]);
-        assert!(pixels.chunks_exact(4).any(|pixel| pixel[0] > 0));
+        assert!(
+            pixels
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
+                .any(|pixel| pixel[0] > 0)
+        );
     }
 
     #[test]
@@ -1101,8 +1108,17 @@ mod tests {
                 let mut visible_ink = 0;
                 let mut excluded_ink = 0;
                 for (index, (actual, expected)) in clipped
-                    .chunks_exact(4)
-                    .zip(reference.chunks_exact(4))
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice())
+                    .zip(
+                        reference
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .map(|chunk| chunk.as_slice()),
+                    )
                     .enumerate()
                 {
                     let px = (index % width) as i32;
@@ -1134,9 +1150,18 @@ mod tests {
         let mut solid = 0;
         let mut antialiased = 0;
         for ((full, half), opaque) in full
-            .chunks_exact(4)
-            .zip(half.chunks_exact(4))
-            .zip(opaque.chunks_exact(4))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
+            .zip(half.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()))
+            .zip(
+                opaque
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice()),
+            )
         {
             assert_eq!(half[3], ((u32::from(full[3]) * 128 + 127) / 255) as u8);
             assert_eq!(opaque[3], 255);

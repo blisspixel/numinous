@@ -807,8 +807,8 @@ mod tests {
         let background = [10, 11, 15, 255];
         for (expected, observed) in header
             .to_rgba()
-            .chunks_exact(4)
-            .zip(actual.to_rgba().chunks_exact(4))
+            .as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice())
+            .zip(actual.to_rgba().as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()))
         {
             if expected != background {
                 assert_ne!(observed, background);

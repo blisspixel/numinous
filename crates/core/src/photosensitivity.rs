@@ -91,7 +91,9 @@ pub fn frame_luminance(rgba: &[u8]) -> f64 {
         return 0.0;
     }
     let total: f64 = rgba
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .map(|pixel| relative_luminance(pixel[0], pixel[1], pixel[2]))
         .sum();
     total / pixels as f64
@@ -273,7 +275,7 @@ pub fn frame_red_state(rgba: &[u8]) -> RedState {
     let table = linear_channel_table();
     let mut encoded = [0.0f64; 3];
     let mut light = [0.0f64; 3];
-    for pixel in rgba.chunks_exact(4) {
+    for pixel in rgba.as_chunks::<4>().0 {
         for (index, channel) in pixel[..3].iter().enumerate() {
             encoded[index] += f64::from(*channel);
             light[index] += table[*channel as usize];

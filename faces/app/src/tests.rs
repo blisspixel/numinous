@@ -148,7 +148,13 @@ fn room_score_prerender_is_device_independent_and_memory_bounded() {
 #[test]
 fn screen_shake_shifts_rgba_and_decays_on_present() {
     let mut rgba = vec![0_u8; 8 * 4 * 4];
-    for (i, chunk) in rgba.chunks_exact_mut(4).enumerate() {
+    for (i, chunk) in rgba
+        .as_chunks_mut::<4>()
+        .0
+        .iter_mut()
+        .map(|chunk| chunk.as_mut_slice())
+        .enumerate()
+    {
         chunk[0] = i as u8;
         chunk[3] = 255;
     }
@@ -2594,7 +2600,10 @@ fn accelerated_mandelbrot_uses_the_core_camera_and_shared_chrome() {
     );
     assert!(
         after[(220 - 8) * 320 * 4..]
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
             .any(|pixel| pixel[0..3] != [64, 64, 64]),
         "the reset footer reaches the accelerated frame"
     );
@@ -2662,9 +2671,24 @@ fn phase_portrait_curves_survive_composed_room_chrome_at_both_window_sizes() {
                 "the real App chrome must actually be drawn"
             );
             for (index, ((source_pixel, composed_pixel), background_pixel)) in source
-                .chunks_exact(4)
-                .zip(composed.chunks_exact(4))
-                .zip(background.chunks_exact(4))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
+                .zip(
+                    composed
+                        .as_chunks::<4>()
+                        .0
+                        .iter()
+                        .map(|chunk| chunk.as_slice()),
+                )
+                .zip(
+                    background
+                        .as_chunks::<4>()
+                        .0
+                        .iter()
+                        .map(|chunk| chunk.as_slice()),
+                )
                 .enumerate()
             {
                 if source_pixel != background_pixel {

@@ -56,6 +56,11 @@ curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/in
 irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 ```
 
+Published packages run on Ubuntu 24.04 or newer (glibc 2.39), macOS 15
+Sequoia or newer, and 64-bit Windows. Apple silicon and Intel packages are
+both built on macOS 15. The Intel package stays through the `macos-15-intel`
+runner, which GitHub retires in August 2027.
+
 Open the installed **Numinous** launcher, or run `numinous-app` in a new
 terminal. Run `numinous` for terminal play. Prefer a download? Use a platform
 archive from [Releases](https://github.com/blisspixel/numinous/releases).

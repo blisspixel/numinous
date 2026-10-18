@@ -346,7 +346,7 @@ mod tests {
         room.render(&mut raster, 0.0);
         let readable = raster
             .to_rgba()
-            .chunks_exact(4)
+            .as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice())
             .filter(|pixel| pixel[0] > 80)
             .count();
 

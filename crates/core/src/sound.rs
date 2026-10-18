@@ -340,7 +340,10 @@ mod tests {
         // And it has to carry the sound, not silence.
         assert!(
             bytes[44..]
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
                 .any(|pair| { i16::from_le_bytes([pair[0], pair[1]]).unsigned_abs() > 1_000 }),
             "the file is silent"
         );
@@ -350,7 +353,10 @@ mod tests {
     fn a_hostile_sample_cannot_poison_the_file() {
         let bytes = wav_bytes(&[f32::NAN, f32::INFINITY, -12.0, 1.0, -1.0], 8_000);
         let words: Vec<i16> = bytes[44..]
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
             .map(|pair| i16::from_le_bytes([pair[0], pair[1]]))
             .collect();
         // A value that is not a number is silenced rather than clamped, the
