@@ -190,6 +190,12 @@ fn arrival_lines(
         last.push_str("...");
     }
     lines.extend(blurb);
+    if let Some(line) = numinous_core::flash_limit_line(room.meta().id) {
+        lines.extend(numinous_core::wrap_text(
+            &line.to_uppercase(),
+            columns.max(1),
+        ));
+    }
     lines
 }
 
@@ -987,6 +993,27 @@ mod tests {
 
         assert_eq!(lines[0], "DRAG: TURN THE DIAL");
         assert_eq!(lines[1], "GOAL: LAND ON EXACTLY 4 LOBES");
+    }
+
+    #[test]
+    fn a_capped_room_names_its_flash_limit_on_arrival() {
+        let julia = room("julia");
+        let julia_lines = arrival_lines(
+            julia.as_ref(),
+            40,
+            InputMode::KeyboardMouse,
+            ControllerFace::Generic,
+        );
+        let card = julia_lines.join(" ");
+        assert!(
+            card.contains("FLASHES FASTER THAN THE WCAG BUDGET ALLOWS"),
+            "{julia_lines:?}"
+        );
+        assert!(card.contains("NO FASTER THAN 4X"), "{julia_lines:?}");
+        assert!(
+            julia_lines.iter().all(|line| line.chars().count() <= 40),
+            "{julia_lines:?}"
+        );
     }
 
     #[test]

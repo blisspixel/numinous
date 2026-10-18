@@ -3089,14 +3089,20 @@ fn describe_report(
         if let Some(goal) = goal {
             value["goal"] = serde_json::Value::String(goal.to_string());
         }
+        if let Some(line) = numinous_core::flash_limit_line(m.id) {
+            value["flashLimit"] = serde_json::Value::String(line);
+        }
         value["next"] = serde_json::json!({
             "command": format!("numinous render {}", m.id),
         });
         format!("{}\n", to_pretty(&value))
     } else {
         let goal = goal.map_or_else(String::new, |goal| format!("\nGoal: {goal}"));
+        let flash = numinous_core::flash_limit_line(m.id)
+            .map(|line| format!("{line}\n\n"))
+            .unwrap_or_default();
         format!(
-            "{} ({})\nWing: {}\nAction: {}{goal}\n\n{}\n\nPlay: numinous render {}\n",
+            "{} ({})\nWing: {}\nAction: {}{goal}\n\n{}\n\n{flash}Play: numinous render {}\n",
             m.title,
             m.id,
             m.wing,

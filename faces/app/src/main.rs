@@ -386,6 +386,10 @@ struct App {
     spectrum_prev: [f32; numinous_core::BAND_COUNT],
     /// Multiplier from live spectrum bass (1.0 when drive is off).
     visualizer_scale: f64,
+    /// Ambient seconds the last tick was allowed to move the phase.
+    phase_tick_elapsed: f64,
+    /// Phase that tick already consumed, before the visualizer nudge.
+    phase_spent: f64,
     mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera,
     life_session: numinous_core::rooms::game_of_life::LifeSession,
     life_accumulator: f64,
@@ -704,6 +708,8 @@ impl App {
             loopback: None,
             spectrum_prev: [0.0; numinous_core::BAND_COUNT],
             visualizer_scale: 1.0,
+            phase_tick_elapsed: 0.0,
+            phase_spent: 0.0,
             mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
             life_session: numinous_core::rooms::game_of_life::LifeSession::new(0),
             life_accumulator: 0.0,
@@ -1844,7 +1850,11 @@ impl App {
             Command::Speed(s) => {
                 self.time_scale =
                     s.clamp(numinous_core::MIN_TIME_SCALE, numinous_core::MAX_TIME_SCALE);
-                vec![format!("speed {:.2}", self.time_scale)]
+                let mut lines = vec![format!("speed {:.2}", self.time_scale)];
+                if let Some(line) = self.held_speed_status() {
+                    lines.push(line);
+                }
+                lines
             }
             Command::Phase(t) => {
                 self.t = t.clamp(0.0, 1.0);
@@ -2045,9 +2055,13 @@ impl App {
     fn advance_room_tick(&mut self, elapsed: f64, presentation_elapsed: f64, study_captured: bool) {
         self.advance_presentation_time(presentation_elapsed);
         if study_captured || self.study.is_some() {
+            self.phase_tick_elapsed = 0.0;
+            self.phase_spent = 0.0;
             return;
         }
         self.refresh_pointer_state();
+        self.phase_tick_elapsed = 0.0;
+        self.phase_spent = 0.0;
         let first_contact_obscured = self.banner.is_some() && self.room_card > 0;
         let ambient = ambient_tick_seconds(elapsed, self.motion);
         let menu_open = self.show_help && self.menu.is_open();
@@ -2062,21 +2076,46 @@ impl App {
             self.advance_nontransitive_morph(elapsed);
         }
         if !(self.paused || self.dragging || menu_open) {
-            let motion = self.time_scale * self.visualizer_scale;
-            if !first_contact_obscured && self.rooms[self.current].meta().id == "mandelbrot" {
+            let room_id = self.rooms[self.current].meta().id;
+            let motion = numinous_core::presented_time_scale(
+                self.time_scale,
+                self.visualizer_scale,
+                room_id,
+            );
+            if !first_contact_obscured && room_id == "mandelbrot" {
                 self.mandelbrot_camera.advance(ambient * motion);
             }
             let show_active = self.show_mode_active();
             // When the visualizer is driving, mid energy quickens The Show's
             // phase rate so denser mixes move the gallery a little faster.
+            // The certified scale still bounds the phase step that follows.
+            let pump = if self.visualizer_scale.is_finite() {
+                self.visualizer_scale
+            } else {
+                1.0
+            };
             let rate = if show_active {
-                SHOW_T_RATE * (0.72 + self.visualizer_scale.clamp(0.55, 1.55) * 0.28)
+                SHOW_T_RATE * (0.72 + pump.clamp(0.55, 1.55) * 0.28)
             } else {
                 T_RATE
             };
+            let requested = rate * ambient * motion;
+            let step = numinous_core::allowed_phase_step(room_id, ambient, requested);
+            let applied = if rate * ambient > 0.0 {
+                step / (rate * ambient)
+            } else {
+                0.0
+            };
             let (next_phase, wrapped) =
-                advance_gallery_phase(self.t, ambient, motion, rate, first_contact_obscured);
+                advance_gallery_phase(self.t, ambient, applied, rate, first_contact_obscured);
             self.t = next_phase;
+            if first_contact_obscured {
+                self.phase_tick_elapsed = 0.0;
+                self.phase_spent = 0.0;
+            } else {
+                self.phase_tick_elapsed = ambient;
+                self.phase_spent = step;
+            }
             if wrapped {
                 // In The Show, a finished sweep drifts into the next room.
                 if show_active {
@@ -2361,7 +2400,7 @@ impl App {
                 // Reduced motion holds the phase, and the music is not the
                 // player's hand, so it may not move it either.
                 let nudge = numinous_core::spectrum_phase_nudge(&levers);
-                self.t = self.motion.next_phase(self.t, nudge);
+                self.apply_visualizer_nudge(nudge);
                 if numinous_core::spectrum_should_poke(&levers)
                     && !self.studio
                     && !self.the_show

@@ -511,8 +511,9 @@ NUMINOUS_REDUCED_MOTION=1 NO_COLOR=1 numinous show
 Every room's answer to a touch shows under `NO_COLOR`. Three rooms,
 cellular-automata, julia, and lambda-map, flash faster than the measured WCAG
 2.3.1 budget at the App's fastest speed, 8x. They stay within it at 1x, 2x,
-and 4x. The music visualizer's additional acceleration is not measured.
-`numinous access` prints the same speed limits from the enforcing code.
+and 4x, and the App runs them no faster than 4x. Every other room is certified
+through 8x. The music visualizer's pump and phase nudge stay inside that
+certified speed. `numinous access` prints the same speed limits from the enforcing code.
 
 The App's optional study surface preserves Unicode case and mathematical
 notation with bundled fonts, wrapping, and scrolling. Lissajous has English

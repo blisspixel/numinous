@@ -85,8 +85,11 @@ pub(super) fn describe_room_tool_for_journey(
                 .goal()
                 .map(|goal| format!("\nGoal: {goal}"))
                 .unwrap_or_default();
+            let flash = numinous_core::flash_limit_line(m.id)
+                .map(|line| format!("{line}\n\n"))
+                .unwrap_or_default();
             let text = format!(
-                "{} ({})\nWing: {}\nAction: {}{goal_line}\n\n{}\n\nPlay this room before asking reveal_room for its explanation.",
+                "{} ({})\nWing: {}\nAction: {}{goal_line}\n\n{}\n\n{flash}Play this room before asking reveal_room for its explanation.",
                 m.title,
                 m.id,
                 m.wing,
@@ -105,6 +108,9 @@ pub(super) fn describe_room_tool_for_journey(
                     "arguments": { "id": m.id },
                 },
             });
+            if let Some(line) = numinous_core::flash_limit_line(m.id) {
+                structured["flashLimit"] = Value::String(line);
+            }
             if m.id == "lissajous" {
                 structured["construction"] = returning_home_construction();
             }

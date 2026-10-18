@@ -891,15 +891,20 @@ substitute spiral or reset geometry. `cellular-automata` (5), `julia` (5), and
 None of them redraws a fresh chaotic picture each frame, but within one cycle
 each one's whole-frame brightness swings by more than a tenth more than once,
 and 8x runs 2.4 cycles a second.
-They stay on the shrink-only list with that slowest failing speed recorded, and
-ROADMAP decision 2 holds the choice between capping their speed and slowing
-their tours.
+They stay on the shrink-only list with that slowest failing speed recorded.
+The ruling in ROADMAP decision 2 is to cap each of them at the last certified
+speed, 4x, on every advance path, until the picture itself is inside the
+budget at 8x with the visualizer included. Every other room stays certified
+through 8x.
 
 The measurement remains whole-frame mean relative luminance at 240 by 140, so
 the flashing-area rule is not implemented, as before. Speeds between the
-doublings, which the App's typed console and the Life room's wheel can set, and
-the music visualizer, which multiplies speed by up to 1.5 and adds beat kicks, are not
-measured. Source: [WCAG 2.2, Understanding Three Flashes or Below
+doublings, which the App's typed console and the Life room's wheel can set,
+are held to the last certified doubling rather than measured as their own
+series. The music visualizer's largest pump and phase nudge are folded into
+the sweep at that certified speed: the App clamps both into the same phase
+step, so neither path can outrun the series the sweep already measured.
+Source: [WCAG 2.2, Understanding Three Flashes or Below
 Threshold](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold).
 Implementation: the sweep in `crates/core/src/registry.rs`.
 

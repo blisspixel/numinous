@@ -122,11 +122,96 @@ pub fn room_by_id_with(id: &str, variation: u64) -> Option<Box<dyn Room>> {
 ///   mean luminance runs between 0.36 and 0.70, down and up twice a cycle.
 ///
 /// Fixing them changes each room's tour or speed, which is ROADMAP decision 2.
+/// Until a redraw measures a listed room clean at 8x with the visualizer
+/// included, [`certified_time_scale`] is the doubling below the recorded speed.
 pub const KNOWN_OVER_FLASH_BUDGET: [(&str, f64); 3] = [
     ("cellular-automata", 8.0),
     ("julia", 8.0),
     ("lambda-map", 8.0),
 ];
+
+/// The fastest App time scale the photosensitivity sweep has certified.
+///
+/// An entry in [`KNOWN_OVER_FLASH_BUDGET`] is the slowest speed that goes
+/// over the budget. The certified scale is the doubling below it. A room that
+/// is not on the list is certified through [`crate::MAX_TIME_SCALE`].
+#[must_use]
+pub fn certified_time_scale(room_id: &str) -> f64 {
+    KNOWN_OVER_FLASH_BUDGET
+        .iter()
+        .find(|&&(id, _)| id == room_id)
+        .map(|&(_, failing)| (failing / 2.0).max(crate::MIN_TIME_SCALE))
+        .unwrap_or(crate::MAX_TIME_SCALE)
+}
+
+/// The scale the room actually runs, holding the player's wish and the
+/// visualizer's pump inside [`certified_time_scale`].
+///
+/// The saved wish is not rewritten. A non-finite wish or pump is treated as
+/// ordinary speed, then the product is capped.
+#[must_use]
+pub fn presented_time_scale(wished: f64, visualizer: f64, room_id: &str) -> f64 {
+    let ceiling = certified_time_scale(room_id);
+    let wished = if wished.is_finite() && wished > 0.0 {
+        wished
+    } else {
+        1.0
+    };
+    let visualizer = if visualizer.is_finite() && visualizer > 0.0 {
+        visualizer
+    } else {
+        1.0
+    };
+    (wished * visualizer).min(ceiling)
+}
+
+/// Phase, in cycles, that a frame may advance without passing the certified scale.
+///
+/// `elapsed` is the ambient seconds this frame is allowed to move. Reduced
+/// motion passes zero and gets no step.
+#[must_use]
+pub fn allowed_phase_step(room_id: &str, elapsed: f64, requested: f64) -> f64 {
+    if !elapsed.is_finite() || elapsed <= 0.0 || !requested.is_finite() || requested <= 0.0 {
+        return 0.0;
+    }
+    let cap = crate::ROOM_CYCLES_PER_SECOND * certified_time_scale(room_id) * elapsed;
+    requested.min(cap)
+}
+
+/// The visualizer phase nudge that still fits inside the certified scale.
+///
+/// `spent` is the phase this frame already took. The nudge uses only what
+/// remains, so a pump that is already at the ceiling cannot add another kick.
+#[must_use]
+pub fn allowed_phase_nudge(room_id: &str, elapsed: f64, spent: f64, requested: f64) -> f64 {
+    if !elapsed.is_finite() || elapsed <= 0.0 || !requested.is_finite() || requested <= 0.0 {
+        return 0.0;
+    }
+    let cap = crate::ROOM_CYCLES_PER_SECOND * certified_time_scale(room_id) * elapsed;
+    let spent = if spent.is_finite() && spent > 0.0 {
+        spent
+    } else {
+        0.0
+    };
+    let remaining = (cap - spent).max(0.0);
+    requested.min(remaining)
+}
+
+/// One sentence for a room that still exceeds the budget at some App speed.
+///
+/// The wording matches the access report: the room flashes faster than the
+/// WCAG budget allows at the recorded speed or faster, and it runs no faster
+/// than the certified scale. `None` when the room is not on the list.
+#[must_use]
+pub fn flash_limit_line(room_id: &str) -> Option<String> {
+    let (_, failing) = KNOWN_OVER_FLASH_BUDGET
+        .iter()
+        .find(|&&(id, _)| id == room_id)?;
+    let ceiling = certified_time_scale(room_id);
+    Some(format!(
+        "{room_id} flashes faster than the WCAG budget allows when the App runs it at {failing}x speed or faster. It runs no faster than {ceiling}x."
+    ))
+}
 
 /// The longest rejected id a not-found message will echo back. Beyond this the
 /// tail is dropped, so a hostile or accidental megabyte cannot become the
@@ -337,8 +422,10 @@ pub fn hidden_room_by_id(id: &str) -> Option<Box<dyn Room>> {
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, all_rooms, counted, display_safe, echoable_id,
-        must_escape_for_display, nearest_names, nearest_room_ids, room_by_id, room_by_id_with,
+        MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, all_rooms, allowed_phase_nudge, allowed_phase_step,
+        certified_time_scale, counted, display_safe, echoable_id, flash_limit_line,
+        must_escape_for_display, nearest_names, nearest_room_ids, presented_time_scale, room_by_id,
+        room_by_id_with,
     };
     use crate::canvas::Canvas;
     use crate::room::Room;
@@ -744,6 +831,93 @@ mod tests {
         assert_eq!(unique, ids.len(), "room ids must be unique");
     }
 
+    /// How many rendered frames the clamped visualizer advances per presented
+    /// frame. Shared with the sweep so the measurement and the cap cannot
+    /// describe different speeds.
+    fn envelope_index_step(room_id: &str, cycle: usize) -> usize {
+        if cycle == 0 {
+            return 0;
+        }
+        let elapsed = 1.0 / crate::APP_FRAMES_PER_SECOND;
+        let ceiling = certified_time_scale(room_id);
+        let pump = crate::max_visualizer_time_scale();
+        let requested = crate::ROOM_CYCLES_PER_SECOND * ceiling * pump * elapsed;
+        let advance = allowed_phase_step(room_id, elapsed, requested);
+        let nudge = allowed_phase_nudge(
+            room_id,
+            elapsed,
+            advance,
+            crate::max_visualizer_phase_nudge(),
+        );
+        ((advance + nudge) * cycle as f64).round() as usize
+    }
+
+    #[test]
+    fn the_certified_scale_is_the_doubling_below_a_recorded_failure() {
+        for room in ["cellular-automata", "julia", "lambda-map"] {
+            assert_eq!(certified_time_scale(room), 4.0, "{room}");
+            let line = flash_limit_line(room).expect("listed room");
+            assert!(
+                line.contains("flashes faster than the WCAG budget allows"),
+                "{line}"
+            );
+            assert!(line.contains("at 8x speed or faster"), "{line}");
+            assert!(line.contains("no faster than 4x"), "{line}");
+        }
+        assert_eq!(certified_time_scale("mandelbrot"), crate::MAX_TIME_SCALE);
+        assert!(flash_limit_line("mandelbrot").is_none());
+        assert_eq!(certified_time_scale("not-a-room"), crate::MAX_TIME_SCALE);
+    }
+
+    #[test]
+    fn the_visualizer_envelope_is_the_certified_speed() {
+        let cycle = (crate::APP_FRAMES_PER_SECOND / crate::ROOM_CYCLES_PER_SECOND).round() as usize;
+        let elapsed = 1.0 / crate::APP_FRAMES_PER_SECOND;
+        for (room, ceiling) in [
+            ("julia", 4.0),
+            ("cellular-automata", 4.0),
+            ("lambda-map", 4.0),
+            ("mandelbrot", crate::MAX_TIME_SCALE),
+        ] {
+            assert_eq!(envelope_index_step(room, cycle), ceiling as usize, "{room}");
+            let cap = crate::ROOM_CYCLES_PER_SECOND * ceiling * elapsed;
+            // A wish at the ceiling, pumped as hard as the visualizer can,
+            // plus its largest nudge, still lands on that same step.
+            let pumped = presented_time_scale(ceiling, crate::max_visualizer_time_scale(), room);
+            let requested = crate::ROOM_CYCLES_PER_SECOND * pumped * elapsed;
+            let advance = allowed_phase_step(room, elapsed, requested);
+            let nudge =
+                allowed_phase_nudge(room, elapsed, advance, crate::max_visualizer_phase_nudge());
+            let total = advance + nudge;
+            assert!(
+                (total - cap).abs() < 1e-9,
+                "{room} envelope {total} left the certified step {cap}"
+            );
+            // Below the ceiling the nudge may fill the remaining room, and
+            // still may not pass it. A non-finite wish does not open the cap.
+            let quiet = presented_time_scale(1.0, 1.0, room);
+            let quiet_step = allowed_phase_step(
+                room,
+                elapsed,
+                crate::ROOM_CYCLES_PER_SECOND * quiet * elapsed,
+            );
+            let filled = quiet_step
+                + allowed_phase_nudge(
+                    room,
+                    elapsed,
+                    quiet_step,
+                    crate::max_visualizer_phase_nudge(),
+                );
+            assert!(filled <= cap + 1e-9, "{room} filled {filled} past {cap}");
+            assert_eq!(
+                presented_time_scale(f64::NAN, f64::INFINITY, room),
+                1.0_f64.min(ceiling)
+            );
+            assert_eq!(allowed_phase_step(room, 0.0, 1.0), 0.0);
+            assert_eq!(allowed_phase_nudge(room, elapsed, 0.0, f64::NAN), 0.0);
+        }
+    }
+
     /// The public flash list the access report prints. Its history: three
     /// chaotic rooms, `coupled-tent`, `gauss-map` and `ricker`, redrew a
     /// re-seeded orbit every frame and were fixed by drawing the mathematics
@@ -841,6 +1015,29 @@ mod tests {
                 red_over = Some((speed as f64, red_peak));
             }
         }
+        // The visualizer's largest legal pump and phase nudge, held inside
+        // the certified scale. When that product rounds to a ladder speed the
+        // loop already measured, this series is the same one. If the clamp
+        // stops containing the pump, the step grows and a new failure is
+        // recorded at the certified speed.
+        let ceiling = certified_time_scale(room.meta().id);
+        let step = envelope_index_step(room.meta().id, cycle);
+        if let Some(span) = cycle.checked_div(step) {
+            let frames = span + window;
+            let at = |k: usize| (k * step) % cycle;
+            let series: Vec<f64> = (0..frames).map(|k| luminance[at(k)]).collect();
+            let red_series: Vec<RedState> = (0..frames).map(|k| red[at(k)]).collect();
+            let peak = peak_flashes_per_second(&series, fps);
+            if peak > MAX_FLASHES_PER_SECOND && over.is_none_or(|(speed, _)| ceiling < speed) {
+                over = Some((ceiling, peak));
+            }
+            let red_peak = peak_red_flashes_per_second(&red_series, fps);
+            if red_peak > MAX_FLASHES_PER_SECOND
+                && red_over.is_none_or(|(speed, _)| ceiling < speed)
+            {
+                red_over = Some((ceiling, red_peak));
+            }
+        }
         FlashSweep {
             id: room.meta().id,
             over,
@@ -906,10 +1103,14 @@ mod tests {
         // and a player can run it eight times faster. The CLI's default
         // cadences advance the phase no faster than the App's normal speed.
         //
-        // Not measured: speeds between the doublings (the App's typed console
-        // and the Life room's wheel can set them), and the music visualizer,
-        // which can multiply the speed by up to 1.5 and add beat-driven phase
-        // kicks on top.
+        // Speeds between the doublings (the App's typed console and the Life
+        // room's wheel can set them) are not a separate series. The certified
+        // ceiling is the last measured safe doubling, and the App holds every
+        // advance, including those intermediate wishes, to that ceiling.
+        //
+        // The music visualizer's largest pump and phase nudge are folded into
+        // the series at that certified ceiling. The App clamps both into the
+        // same phase step, so the envelope is that speed and not a faster one.
         //
         // Measured at a declared reference size. Mean whole-frame luminance is
         // a proxy: this does not implement the flashing-area rule, and at very

@@ -3084,6 +3084,8 @@ fn the_flash_disclosure_says_which_rooms_and_from_what_speed() {
     assert!(none.starts_with("No room is known to flash"), "{none}");
     assert!(none.contains("up to 8x"), "{none}");
     assert!(none.contains("visualizer"), "{none}");
+    assert!(none.contains("largest pump is 1.5"), "{none}");
+    assert!(!none.contains("not measured"), "{none}");
     // Rooms are grouped by the slowest speed at which they go over, so the
     // player learns when as well as which.
     let some =
@@ -3115,6 +3117,45 @@ fn the_flash_disclosure_says_which_rooms_and_from_what_speed() {
     assert!(report.contains(&crate::access::flash_disclosure(
         &numinous_core::KNOWN_OVER_FLASH_BUDGET
     )));
+    assert!(report.contains("no faster than half the speed"), "{report}");
+    assert!(report.contains("phase nudge is 0.03"), "{report}");
+}
+
+#[test]
+fn describe_and_study_name_a_room_that_is_still_over_the_budget() {
+    let described =
+        describe_report("julia", false, false, &numinous_core::Journey::default()).expect("julia");
+    assert!(
+        described.contains("flashes faster than the WCAG budget allows"),
+        "{described}"
+    );
+    assert!(described.contains("no faster than 4x"), "{described}");
+    let quiet = describe_report(
+        "mandelbrot",
+        false,
+        false,
+        &numinous_core::Journey::default(),
+    )
+    .expect("mandelbrot");
+    assert!(
+        !quiet.contains("flashes faster than the WCAG budget"),
+        "{quiet}"
+    );
+    let json = describe_report("julia", true, false, &numinous_core::Journey::default())
+        .expect("julia json");
+    let value: Value = serde_json::from_str(&json).expect("json");
+    assert!(
+        value["flashLimit"]
+            .as_str()
+            .unwrap_or("")
+            .contains("no faster than 4x"),
+        "{value}"
+    );
+    let studied = super::study::report("julia", None, None, None, false).expect("study");
+    assert!(studied.contains("no faster than 4x"), "{studied}");
+    let studied_json = super::study::report("julia", None, None, None, true).expect("study json");
+    let studied_value: Value = serde_json::from_str(&studied_json).expect("study json value");
+    assert!(studied_value["flashLimit"].is_string(), "{studied_value}");
 }
 
 #[test]

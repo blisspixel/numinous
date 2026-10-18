@@ -268,6 +268,32 @@ pub fn spectrum_phase_nudge(levers: &SpectrumLevers) -> f64 {
     (treble + beat).clamp(0.0, 0.04)
 }
 
+/// Levers at the corner the visualizer functions actually respond to.
+///
+/// Bass, mid, and treble stay in 0..=1, which is what [`levers_from_bands`]
+/// emits. Onset sits at the beat clamp, past which the nudge no longer grows.
+fn loudest_levers() -> SpectrumLevers {
+    SpectrumLevers {
+        bass: 1.0,
+        mid: 1.0,
+        treble: 1.0,
+        onset: ONSET_HIT + 3.0,
+    }
+}
+
+/// Largest time-scale multiplier [`spectrum_time_scale`] returns for a base of
+/// 1. The safety clamp above this is not reached by levers in range.
+#[must_use]
+pub fn max_visualizer_time_scale() -> f64 {
+    spectrum_time_scale(1.0, &loudest_levers())
+}
+
+/// Largest phase nudge [`spectrum_phase_nudge`] returns for levers in range.
+#[must_use]
+pub fn max_visualizer_phase_nudge() -> f64 {
+    spectrum_phase_nudge(&loudest_levers())
+}
+
 /// Normalized hand point driven by spectrum (mid -> x, bass -> y).
 ///
 /// Used as an optional soft poke target when a beat hits, so chaos rooms and

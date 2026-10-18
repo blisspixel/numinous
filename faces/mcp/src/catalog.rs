@@ -233,7 +233,7 @@ fn build_tools_catalog() -> Value {
             super::route_tools::catalog_entry(),
             {
                 "name": "describe_room",
-                "description": "Safely describe one room: its title, wing, action, goal, and nonspoiling doorway. This never returns the revelation. When exact current-room evidence exists in the local player journal, structuredContent.journalCue says only that it is available and names the explicit workspace retrieval call; no journal text is opened. Use list_rooms first to find valid ids.",
+                "description": "Safely describe one room: its title, wing, action, goal, and nonspoiling doorway. This never returns the revelation. A room that is still over the photosensitivity budget also names that limit, in the text and in structuredContent.flashLimit. When exact current-room evidence exists in the local player journal, structuredContent.journalCue says only that it is available and names the explicit workspace retrieval call; no journal text is opened. Use list_rooms first to find valid ids.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
