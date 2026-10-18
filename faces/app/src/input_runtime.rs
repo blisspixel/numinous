@@ -618,6 +618,18 @@ impl App {
         self.sync_nontransitive_aha();
         self.sync_room_parameter_voice();
         self.play_room_interaction_audio(accepted);
+        if accepted && room_id == "attention" {
+            self.note_attention_wager();
+        }
+    }
+
+    fn note_attention_wager(&mut self) {
+        let Some(token) = numinous_core::rooms::attention::wager_token(self.t, &self.inputs) else {
+            return;
+        };
+        if self.journey.note_wager_token(&token) {
+            self.journey_changed();
+        }
     }
 
     pub(super) fn apply_wheel_delta(&mut self, lines: f64) -> bool {

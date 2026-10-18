@@ -53,6 +53,9 @@ pub struct Journey {
     pub last_daily: u64,
     /// Stars already shown lit. A visit since this set ignites once.
     pub seen: BTreeSet<String>,
+    /// Graded Attention calls. Each token is `attention:<index>:right` or
+    /// `attention:<index>:wrong`. The set only grows.
+    pub wagers: BTreeSet<String>,
 }
 
 /// The level cap. The answer to how far you can go.
@@ -264,6 +267,20 @@ impl Journey {
         Some(self.streak)
     }
 
+    /// Record one graded Attention call. Returns whether the token is new.
+    ///
+    /// Anything that is not `attention:<digit>:right` or
+    /// `attention:<digit>:wrong` is refused. A repeat is not a new call.
+    pub fn note_wager_token(&mut self, token: &str) -> bool {
+        if !is_wager_token(token) {
+            return false;
+        }
+        if self.wagers.contains(token) || self.wagers.len() >= MAX_STORED_TOKEN_COUNT {
+            return false;
+        }
+        self.wagers.insert(token.to_string())
+    }
+
     /// The streak as it stands on `today`: `Some(chain)` while the chain is
     /// alive (the last daily was today or yesterday), `None` once it is
     /// dead. The stored count stays untouched as the record; this is the
@@ -287,8 +304,10 @@ impl Journey {
         let visited: Vec<&str> = self.visited.iter().map(String::as_str).collect();
         let consolidated: Vec<&str> = self.consolidated.iter().map(String::as_str).collect();
         let chosen: Vec<&str> = self.chosen.iter().map(String::as_str).collect();
+        let seen: Vec<&str> = self.seen.iter().map(String::as_str).collect();
+        let wagers: Vec<&str> = self.wagers.iter().map(String::as_str).collect();
         format!(
-            "visited {}\nconsolidated {}\nwins {}\nsecrets {}\nplays {}\nchosen {}\nstreak {} {}\nseen {}\n",
+            "visited {}\nconsolidated {}\nwins {}\nsecrets {}\nplays {}\nchosen {}\nstreak {} {}\nseen {}\nwagers {}\n",
             visited.join(" "),
             consolidated.join(" "),
             self.wins,
@@ -297,11 +316,8 @@ impl Journey {
             chosen.join(" "),
             self.streak,
             self.last_daily,
-            self.seen
-                .iter()
-                .map(String::as_str)
-                .collect::<Vec<_>>()
-                .join(" ")
+            seen.join(" "),
+            wagers.join(" ")
         )
     }
 
@@ -348,6 +364,12 @@ impl Journey {
                         .map(|room_id| canonical_room_id(&room_id).to_string())
                         .collect();
                 }
+                Some("wagers") => {
+                    journey.wagers = bounded_token_set(parts)
+                        .into_iter()
+                        .filter(|token| is_wager_token(token))
+                        .collect();
+                }
                 _ => {}
             }
         }
@@ -364,6 +386,18 @@ fn bounded_token_set<'a>(parts: impl Iterator<Item = &'a str>) -> BTreeSet<Strin
         }
     }
     tokens
+}
+
+fn is_wager_token(token: &str) -> bool {
+    let mut parts = token.split(':');
+    match (parts.next(), parts.next(), parts.next(), parts.next()) {
+        (Some("attention"), Some(index), Some(grade), None) => {
+            index.len() == 1
+                && index.bytes().all(|byte| byte.is_ascii_digit())
+                && matches!(grade, "right" | "wrong")
+        }
+        _ => false,
+    }
 }
 
 fn persisted_token_is_sane(token: &str) -> bool {
@@ -588,6 +622,21 @@ mod tests {
     fn a_fresh_journey_parses_from_anything() {
         assert_eq!(Journey::from_text(""), Journey::default());
         assert_eq!(Journey::from_text("garbage\nnoise 9"), Journey::default());
+    }
+
+    #[test]
+    fn an_old_journey_file_loads_no_wagers_and_a_call_round_trips() {
+        let old = Journey::from_text("visited attention\nstreak 2 9\n");
+        assert!(old.wagers.is_empty());
+        assert!(old.visited.contains("attention"));
+        let mut journey = Journey::default();
+        assert!(journey.note_wager_token("attention:4:right"));
+        assert!(journey.note_wager_token("attention:4:wrong"));
+        assert!(!journey.note_wager_token("attention:4:right"));
+        assert!(!journey.note_wager_token("attention:10:right"));
+        assert!(!journey.note_wager_token("nope"));
+        assert_eq!(journey.wagers.len(), 2);
+        assert_eq!(Journey::from_text(&journey.to_text()), journey);
     }
 
     #[test]

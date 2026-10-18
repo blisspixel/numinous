@@ -1596,6 +1596,9 @@ fn merge_journey_delta(before: &Journey, after: &Journey, latest: &mut Journey) 
     if after.last_daily > latest.last_daily {
         let _ = latest.record_daily(after.last_daily);
     }
+    for token in after.wagers.difference(&before.wagers) {
+        latest.note_wager_token(token);
+    }
 }
 
 fn read_local_text_bounded(path: &Path, max_bytes: u64) -> io::Result<String> {
@@ -3626,6 +3629,21 @@ mod tests {
         super::merge_journey_delta(&before, &after, &mut latest);
         assert!(latest.seen.contains("lorenz"));
         assert!(latest.seen.contains("julia"));
+    }
+
+    #[test]
+    fn a_wager_merges_forward_and_does_not_erase_one_already_recorded() {
+        let mut latest = Journey::default();
+        assert!(latest.note_wager_token("attention:0:right"));
+        let before = Journey::default();
+        let mut after = Journey::default();
+        assert!(after.note_wager_token("attention:1:wrong"));
+
+        super::merge_journey_delta(&before, &after, &mut latest);
+
+        assert!(latest.wagers.contains("attention:0:right"));
+        assert!(latest.wagers.contains("attention:1:wrong"));
+        assert_eq!(latest.wagers.len(), 2);
     }
 
     #[test]

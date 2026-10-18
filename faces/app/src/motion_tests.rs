@@ -396,6 +396,37 @@ fn holds_clicks_and_flings_present_exactly_what_the_hand_did() {
 }
 
 #[test]
+fn attention_eases_the_dial_and_keeps_the_placed_key() {
+    let mut app = quiet_app("numinous_app_test_attention_dial", Motion::Full);
+    select(&mut app, "attention");
+    press_and_drag(&mut app, (0.95, 0.1), (0.95, 0.4));
+    let accepted = app.inputs.clone();
+    app.advance_presentation_time(FRAME);
+    assert_ne!(
+        app.presented_room_inputs(),
+        accepted,
+        "the dial eases in the frame"
+    );
+    assert_eq!(app.inputs, accepted, "easing does not rewrite the hand");
+    app.end_pointer_at((0.95, 0.4));
+    assert!(
+        app.inputs.len() > accepted.len(),
+        "lifting keeps the placed dial"
+    );
+    app.begin_pointer_at((0.75, 0.95));
+    app.end_pointer_at((0.75, 0.95));
+    assert!(
+        app.journey
+            .wagers
+            .iter()
+            .any(|token| token.starts_with("attention:")),
+        "{:?}",
+        app.journey.wagers
+    );
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
 fn reduced_motion_applies_a_dial_at_once() {
     let mut app = quiet_app("numinous_app_test_dial_direct", Motion::Reduced);
     select(&mut app, "times-tables");

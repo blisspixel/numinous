@@ -766,8 +766,7 @@ macro_rules! catalog_rooms {
                 id: "attention",
                 title: "Attention as Soft Light",
                 wing: "Number & Pattern",
-                blurb: "One query lights a few keys; the rest go dim. Softmax weights are the story. t \
-                        warms temperature.",
+                blurb: "Turn temperature, then place a key off to the side and see which weight wins.",
                 accent: [193, 164, 43],
             }
         ),
@@ -4270,9 +4269,9 @@ mod tests {
     use super::*;
 
     // The reviewed catalog with Route Lab appended and its opening invitation
-    // focused on delivery order and round-trip cost. Existing doorways retain
-    // their order and metadata.
-    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0xe5f2_a275_1cc5_1097;
+    // focused on delivery order and round-trip cost. Attention's doorway now
+    // invites the temperature hand and a placed key. Order is unchanged.
+    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x24d3_cd1d_717d_aa53;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {

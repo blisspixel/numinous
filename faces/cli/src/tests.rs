@@ -1309,6 +1309,36 @@ fn invalid_render_pokes_do_not_record_progress() {
 }
 
 #[test]
+fn an_attention_wager_is_recorded_from_render_pokes() {
+    let y = (0.15 - 0.08) / (4.0 - 0.08);
+    let x = (1.6 + 1.8) / 3.6 * 0.88;
+    let decoy_y = (1.8 - 1.2) / 3.6;
+    let pokes = [(0.95, y), (x, decoy_y), (0.75, 0.95)];
+    let events = numinous_core::inputs_from_pokes(&pokes, 0.2);
+    let token = numinous_core::rooms::attention::wager_token(0.2, &events).expect("graded call");
+    let mut journey = numinous_core::Journey::default();
+    let code = run(
+        Command::Render {
+            id: "attention".to_string(),
+            width: Some(40),
+            height: Some(24),
+            t: 0.2,
+            out: None,
+            color: false,
+            era: "modern".to_string(),
+            vary: false,
+            variation: None,
+            pokes: pokes.iter().map(|(px, py)| format!("{px},{py}")).collect(),
+            gestures: Vec::new(),
+        },
+        &mut journey,
+    );
+    assert_eq!(code, std::process::ExitCode::SUCCESS);
+    assert!(journey.visited.contains("attention"));
+    assert!(journey.wagers.contains(&token), "{:?}", journey.wagers);
+}
+
+#[test]
 fn meta_json_has_expected_fields() {
     let room = room_by_id("times-tables").expect("known room");
     let value = meta_json(&room.meta());
