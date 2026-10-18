@@ -5,6 +5,19 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Changed
+- Linux CI and published packages pin Ubuntu 24.04 (glibc 2.39). A locked
+  workspace check runs on Ubuntu 26.04 before `ubuntu-latest` moves. macOS
+  packages set the deployment target to 15.0. The Intel package stays through
+  the `macos-15-intel` runner, which GitHub retires in August 2027.
+- The compiler floor is the pinned toolchain, Rust 1.99.1. The separate 1.89
+  compiler job is gone.
+
+### Fixed
+- The CLI HTTP client uses rustls 0.23.46. cargo-audit and cargo-deny rejected
+  0.23.45 for RUSTSEC-2026-0346, RUSTSEC-2026-0347, RUSTSEC-2026-0348, and
+  RUSTSEC-2026-0349.
+
 ## [0.5.0-alpha.7] - 2026-10-13
 
 ### Fixed
