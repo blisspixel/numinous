@@ -221,28 +221,34 @@ class McpPlayLifecycleTests(unittest.TestCase):
             ancestor_config.write_text("[build]\nrustflags = []\n", encoding="utf-8")
             cargo_home = root / "cargo-home"
             cargo_home.mkdir()
-            with mock.patch.object(driver, "ROOT", repository):
-                self.assertTrue(
-                    driver._has_unbound_cargo_configuration(
-                        {"CARGO_HOME": str(cargo_home)}
-                    )
-                )
+            # Windows temp lives under the user profile, and Cargo walks every
+            # ancestor. Bound this case to the fixture so a developer config
+            # above the temp directory is not one of the planted files.
+            bounded_parents = tuple(
+                parent
+                for parent in repository.parents
+                if parent == root or parent.is_relative_to(root)
+            )
+
+            def configured(env: dict[str, str]) -> bool:
+                with (
+                    mock.patch.object(driver, "ROOT", repository),
+                    mock.patch.object(
+                        type(repository),
+                        "parents",
+                        new_callable=mock.PropertyMock,
+                        return_value=bounded_parents,
+                    ),
+                ):
+                    return driver._has_unbound_cargo_configuration(env)
+
+            self.assertTrue(configured({"CARGO_HOME": str(cargo_home)}))
             ancestor_config.unlink()
             cargo_home_config = cargo_home / "config"
             cargo_home_config.write_text("[net]\noffline = true\n", encoding="utf-8")
-            with mock.patch.object(driver, "ROOT", repository):
-                self.assertTrue(
-                    driver._has_unbound_cargo_configuration(
-                        {"CARGO_HOME": str(cargo_home)}
-                    )
-                )
+            self.assertTrue(configured({"CARGO_HOME": str(cargo_home)}))
             cargo_home_config.unlink()
-            with mock.patch.object(driver, "ROOT", repository):
-                self.assertFalse(
-                    driver._has_unbound_cargo_configuration(
-                        {"CARGO_HOME": str(cargo_home)}
-                    )
-                )
+            self.assertFalse(configured({"CARGO_HOME": str(cargo_home)}))
 
     def test_build_freezes_exact_cargo_artifact_away_from_stale_default(self) -> None:
         driver = load_driver()
