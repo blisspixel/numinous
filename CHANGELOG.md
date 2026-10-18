@@ -3,7 +3,7 @@
 All notable changes to Numinous. The format follows Keep a Changelog, and the
 project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
-## [Unreleased]
+## [0.5.0-alpha.8] - 2026-10-17
 
 ### Added
 - The App plays The Overture from Cabinet > Modes, beside Watch. One bed and
@@ -14,6 +14,7 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   recorded choices. CLI `route-lab` and MCP `route_lab` use `choices`, then
   `choice_step`. Seeking does not change the delivery order. A tie does not
   say the greedy tour lost.
+- A packaged Windows agent round of commit `2ac0b5ecdd287f4b1d1a5f4ef4c52e349992a462` is recorded in `docs/PLAYTESTS.md`. It is formative evidence. Sensory Alpha and the Understanding study stay open.
 
 ### Changed
 - `cellular-automata`, `julia`, and `lambda-map` run no faster than 4x. The

@@ -13,9 +13,9 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 ## Now
 
-Reviewed 2026-10-13.
+Reviewed 2026-10-17.
 
-**Current release state: 0.5.0-alpha.7, Sensory Alpha active with its exit
+**Current release state: 0.5.0-alpha.8, Sensory Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are met and stay CI-locked. The package minor names
 the active milestone, not the oldest open gate. Understanding Alpha's external
@@ -54,7 +54,7 @@ with the labels from `RESEARCH.md`.
 | # | Next move | Evidence today | Done when | Owner doc |
 |---|---|---|---|---|
 | 1 | **The Sensory Lift** | Measured: the GPU post stack and direct surface pass their integrated-GPU budgets, and a Windows physical pair passed on the Framework 13 reference at an earlier revision. In progress: the closed set needs all six physical receipts at one frozen revision; the first native macOS attempt was refused because the console session was locked, and the Linux probe is built and awaits a desktop session. Built: room changes through the dark stage, critically damped drag dials and Studio knobs, a transition flash guard, and one shared master chain with reverb, shaped envelopes, independent music, effect, and room levels, a read-only CLI view of saved/default audio settings, and room-change audio washes; audio goldens follow the new articulation. Built: one smooth Mandelbrot color field across CPU and GPU, with the main cardioid and period-two bulb answered in closed form. Built: a shared mark brightness ramp, a validated accent lightness band, and color-free touch responses across the catalog. Built: persisted study body text sizes with source-anchored reflow, and composed headers with bounded titles and separate status. Built: persisted Interface Text at 100, 125, and 150 percent for Cabinet menus, room HUD lettering, and pause, banner, and journey overlays, reduced until titles and controls stay inside the window. Gallery, games, Studio, and in-room pictures keep their own layout scales. Built: the five flagship plates gate a fixed-grid luminance signature beside the exact PNG hash, and their room beds gate a normalized spectral fingerprint from the existing analyzer. Open: further software glow refinement, catalog-wide perceptual comparison, and the designed diff classifier | The six physical receipts close the set, the lift is promoted, and the visual goldens re-baseline once, deliberately, with it | `PERFORMANCE.md`, `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md` |
-| 2 | **Mathematical honesty and photosensitivity** | Built: an exact or dithered iterator for the expanding maps, so no slope-2 map collapses to zero in binary floating point; Coupled Tents, Gauss Map, Ricker, and Pickover redrawn honestly and inside the measured flash budget; the flash sweep measured at the App's 60 frames a second up to its fastest 8x speed. Ruled: `cellular-automata`, `julia`, and `lambda-map` are capped at 4x on every advance path until a redraw measures them inside the budget at 8x with the visualizer included | Cap at the last certified speed, on every advance path, until the picture itself is inside the budget at 8x with the visualizer included. No room presents a floating-point artifact as dynamics | `MATHEMATICS.md`, decisions entry 2 |
+| 2 | **Mathematical honesty and photosensitivity** | Built: an exact or dithered iterator for the expanding maps, so no slope-2 map collapses to zero in binary floating point; Coupled Tents, Gauss Map, Ricker, and Pickover redrawn honestly and inside the measured flash budget; the flash sweep measured at the App's 60 frames a second up to its fastest 8x speed. Built: `cellular-automata`, `julia`, and `lambda-map` run no faster than 4x on every advance path, including a fractional speed, reduced motion, and the music visualizer. The player's saved speed is kept. Open: a redraw that measures those three inside the budget at 8x with the visualizer included | Cap at the last certified speed, on every advance path, until the picture itself is inside the budget at 8x with the visualizer included. No room presents a floating-point artifact as dynamics | `MATHEMATICS.md`, decisions entry 2 |
 | 3 | **The arc** | Built: the three-door threshold in the App and over MCP; the caller-paced Show for minds; an App Show that names each room without printing its reveal unasked; core Show director profiles with seeded, contrast-aware ordering that keeps staged answers unperformed; the Front Hall collection; and The Overture as a core score that minds can play over MCP `watch_show` and in the App from Modes. The App performance uses the score's clock, keeps one bed, steps stills under reduced motion, and hands the Times Tables dial to the player. After that handoff, Modes offers Route Lab as an optional door. The piece does not autoplay. Route Lab nearest-next choices can be watched on the App, CLI, and MCP without changing the player's order | A first visit meets an authored opening rather than catalog order, and the App plays it in the lifted light | `DESIGN.md`, `INSIGHTS.md` |
 | 4 | **Vibe: radio and chill** | Built: the radio's three stations of original tracks on a live broadcast clock, a music visualizer that already quickens The Show with the mix's energy, and per-room tempo and key in the core Show director. Designed: one lean-back mode where a station plays through and the music chooses and paces the rooms, with screensaver manners (`DESIGN.md`, "Vibe: radio and chill") | Numinous can be left on for hours like a radio: the music leads, rooms change on its seams inside the certified flash envelope, no text or prompts appear, and any touch hands the current room back | `DESIGN.md`, `MUSIC.md` |
 | 5 | **Room depth** | Observed in packaged agent sessions (`PLAYTESTS.md`): `attention` and `strange-loop` carry a standing dull or mute verdict. Built: the catalog counts its 245 short doorways | Those two rooms are rebuilt, thin rooms are deepened or cut through the keep-or-cut scorecard, and the commissioned rooms (the Braid, the Calm Axes, the Seventeen Stamps, the Seven Bridges, and Noether's Mirror) lead the next cohort | `ROOMS.md`, `QUALITY.md` |
@@ -176,9 +176,10 @@ or speed. Its renderer never substitutes unrelated geometry for an orbit.
 The three
 named above stay within the budget at 1x, 2x and 4x; at 8x the App runs 2.4
 cycles a second, and their brightness swings more than once per cycle. The
-ruling is to cap at the last certified speed, on every advance path, until
-the picture itself is inside the budget at 8x with the visualizer included.
-Those three rooms therefore run no faster than 4x. Every other room stays
+ceiling is built: those three rooms run no faster than 4x on every advance
+path, including a fractional speed and reduced motion. The player's saved
+speed is kept. A redraw that puts the pictures inside the budget at 8x, with
+the visualizer included, remains open. Every other room stays
 certified through 8x. Speeds between the doublings (set by the console or
 Life's wheel) are held to that certified speed. The music visualizer's pump
 and phase nudge are folded into the sweep at the same ceiling, and the App
@@ -402,6 +403,15 @@ above without adding release gates or reordering **Next, in order**.
 
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
+
+- **`v0.5.0-alpha.8` (2026-10-17):** The App and MCP `watch_show` play The
+  Overture, and Route Lab can step through nearest-next choices without
+  changing the delivery order. `cellular-automata`, `julia`, and `lambda-map`
+  run no faster than 4x. Linux packages pin Ubuntu 24.04, macOS packages
+  target 15.0, and the Intel package stays through August 2027. The compiler
+  floor is Rust 1.99.1. A packaged agent round is recorded in `PLAYTESTS.md`.
+  Sensory Alpha's exit stays open. Understanding's qualifying study stays open.
+  See [release notes](releases/v0.5.0-alpha.8.md).
 
 - **`v0.5.0-alpha.7` (2026-10-13):** Linux first-run names the window and the
   desktop entry, writes the installer PATH line, and documents the source

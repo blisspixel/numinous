@@ -2289,3 +2289,59 @@ recovery in the refusal itself. The native window, GPU, settings controls,
 level persistence through that UI, room-transition wash, and sound were not
 exercised by the tester. The new inspection command exposes saved facts; it
 does not turn those remaining native checks into completed measurements.
+
+## October 17 packaged agentic playtest, v0.5.0-alpha.7
+
+A source-blind Windows CLI and MCP round played the packaged build of commit
+`2ac0b5ecdd287f4b1d1a5f4ef4c52e349992a462`. The archive was
+`numinous-v0.5.0-alpha.7-x86_64-pc-windows-msvc.zip`, SHA-256
+`c785385cbf6ef011e5bb610e4e4c7365e318f0b779f1ed5057ee183bd65f4334`.
+`numinous --version` printed `numinous 0.5.0-alpha.7`. Profiles were isolated.
+The windowed App stayed closed. This round has no separate sealed stranger
+document. Raw notes remain with the tester. This is formative agent evidence.
+Physical sensory qualification and heard audio stay outside what the round
+measured.
+
+The Overture was played over MCP `watch_show` with `{"show":"overture"}`,
+following each next pointer. Four caller-paced cues arrived in order: Chaos
+Game, Mandelbrot, Golden Angle, and Times Tables. The last cue's next call was
+`play_room` for `times-tables` at `t=0`, and that call was followed. The dial
+stood at K 2.00 with one lobe closed and a target of four. The goal, land on
+exactly four lobes, was still ahead. The action was to turn the dial. The cue's
+octave lock settled on 2:1. Its last step was an octave at zero cents, and the
+two voice frequencies were an exact double. The lock's own description calls
+that interval exactly an octave. The earlier cues carried no lock.
+
+Route Lab opened on the default town over MCP `route_lab` and over
+`numinous route-lab --json --request`. The opening next action was `improve`.
+The player's order stayed `0 -> 1 -> 2 -> 3`. The player's cost and the
+nearest-next cost were both 9 travel units. The exact minimum was 8. The
+statement compared those costs: nearest-next costs more than the exact minimum
+on this network. `choices`, then `choice_step`, walked four legs. From stop 0
+the chosen leg was `0 -> 1`, cost 1, accumulated 1. From stop 1 the chosen leg
+was `1 -> 2`, cost 2, accumulated 3. From stop 2 the chosen leg was `2 -> 3`,
+cost 2, accumulated 5. The return was `3 -> 2 -> 0`, cost 4, accumulated 9,
+chosen stop 0. The cursor finished at 4 of 4 and the trace was complete. The
+delivery order was unchanged. After the trace completed, next returned to
+`improve`. The same completed request in plain CLI text named those legs,
+including `leg 3 -> 2 -> 0`, and ended with "Next: accept the offered
+improvement." A compact MCP reply of the completed trace still named
+`leg 3 -> 2 -> 0`. The word lost was absent from the statement and from that
+compact reply.
+
+`cellular-automata`, `julia`, and `lambda-map` rendered as stills through
+`numinous render` and through MCP `play_room` with an id, a phase, and a size.
+`play_room` accepts no speed argument. `numinous access` named the three rooms,
+said they flash faster than the WCAG budget allows when the App runs them at
+8x speed or faster, and said each runs no faster than half that speed while
+every other room stays inside 8x. `numinous describe` and MCP `describe_room`
+each said the room runs no faster than 4x. The played stills had ink. Cellular
+Automata read `RULE 30  ROW REWRITES  CLICK:FLIP SEED`. Julia read
+`C = +0.244 +0.750I   CLICK: MORPH C`. Lambda Map read
+`L=(0.60,0.48)  DRAG:TUNE`. `numinous tour`, `watch`, `play`, and `render`
+offer no speed flag and no overture flag. `numinous tour` with reduced motion
+held The Show and waited for the next room. The piece itself stays on
+`watch_show` and in the App.
+
+The round found no product defect, so no call was added as a replay. No new
+MCP next pointer appeared.
