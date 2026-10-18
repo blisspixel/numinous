@@ -220,3 +220,50 @@ mod color_access {
         );
     }
 }
+
+#[cfg(test)]
+mod chrome_literals {
+    use std::path::Path;
+
+    /// Chrome RGB lives in `numinous_core::chrome`. The App names roles.
+    #[test]
+    fn the_app_does_not_restate_chrome_rgb() {
+        // Split so this list does not itself contain a forbidden literal.
+        let forbidden: Vec<String> = [
+            ("[78, ", "255, 255"),
+            ("[233, ", "237, 240"),
+            ("[169, ", "181, 191"),
+            ("[140, ", "196, 196"),
+            ("[58, ", "69, 78"),
+        ]
+        .into_iter()
+        .map(|(left, right)| format!("{left}{right}"))
+        .collect();
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut hits = Vec::new();
+        for entry in std::fs::read_dir(&dir).expect("app source") {
+            let path = entry.expect("entry").path();
+            if path.extension().is_none_or(|extension| extension != "rs") {
+                continue;
+            }
+            let source = std::fs::read_to_string(&path).expect("source");
+            for (number, line) in source.lines().enumerate() {
+                if let Some(literal) = forbidden
+                    .iter()
+                    .find(|literal| line.contains(literal.as_str()))
+                {
+                    hits.push(format!(
+                        "{}:{}: {literal}",
+                        path.file_name().unwrap().to_string_lossy(),
+                        number + 1
+                    ));
+                }
+            }
+        }
+        assert!(
+            hits.is_empty(),
+            "chrome RGB belongs in the chrome module:\n{}",
+            hits.join("\n")
+        );
+    }
+}

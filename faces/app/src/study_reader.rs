@@ -13,11 +13,12 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::input_legend::{ControllerAction, ControllerCopy, InputMode};
 use crate::study_text::{StudyText, TextError, TextLayout, TextRole, TextSpan, TextViewport};
+use numinous_core::chrome::{Appearance, Role, rgba as chrome_rgba};
 
-const BACKGROUND: [u8; 4] = [10, 11, 15, 255];
-const FOREGROUND: [u8; 4] = [233, 237, 240, 255];
-const SECONDARY: [u8; 4] = [169, 181, 191, 255];
-const ACCENT: [u8; 4] = [78, 255, 255, 255];
+const BACKGROUND: [u8; 4] = chrome_rgba(Appearance::Dark, Role::Stage);
+const FOREGROUND: [u8; 4] = chrome_rgba(Appearance::Dark, Role::Text);
+const SECONDARY: [u8; 4] = chrome_rgba(Appearance::Dark, Role::TextMuted);
+const ACCENT: [u8; 4] = chrome_rgba(Appearance::Dark, Role::Selection);
 
 /// Semantic navigation, shared by keyboard, pointer, and controller routing.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -757,7 +758,12 @@ impl StudyReader {
                 width: 2,
                 ..geometry.body
             };
-            fill(&mut rgba, dims, track, [58, 69, 78, 255]);
+            fill(
+                &mut rgba,
+                dims,
+                track,
+                chrome_rgba(Appearance::Dark, Role::SurfaceRaised),
+            );
             let thumb = ((geometry.body.height as f32 / view.body.height())
                 * geometry.body.height as f32)
                 .clamp(

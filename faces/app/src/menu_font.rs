@@ -4,7 +4,7 @@
 //! Cabinet needs the squarer proportions of a cartridge-era command screen,
 //! with one blank column between monospaced glyphs and only whole-pixel scale.
 
-use numinous_core::Surface;
+use numinous_core::{Raster, Surface};
 
 const GLYPH_WIDTH: i32 = 7;
 const GLYPH_HEIGHT: usize = 7;
@@ -116,6 +116,33 @@ pub(crate) fn draw_text(
         }
         cursor_x += ADVANCE * horizontal_scale;
     }
+}
+
+/// Draw Cabinet lettering in one exact color, not the raster's room accent.
+pub(crate) fn draw_text_rgb(
+    raster: &mut Raster,
+    text: &str,
+    x: i32,
+    y: i32,
+    scale: i32,
+    color: [u8; 3],
+) {
+    struct Solid<'a> {
+        raster: &'a mut Raster,
+        color: [u8; 3],
+    }
+    impl Surface for Solid<'_> {
+        fn width(&self) -> usize {
+            self.raster.width()
+        }
+        fn height(&self) -> usize {
+            self.raster.height()
+        }
+        fn plot(&mut self, x: i32, y: i32, mark: char) {
+            self.raster.paint(x, y, mark, self.color);
+        }
+    }
+    draw_text(&mut Solid { raster, color }, text, x, y, scale, '#');
 }
 
 #[cfg(test)]

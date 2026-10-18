@@ -82,7 +82,7 @@ impl App {
                     &self.crash_log,
                     &format!("{success_label} failed: {error}\n"),
                 );
-                self.banner = Some(feedback::Banner::status(
+                self.banner = Some(feedback::Banner::refusal(
                     failure_line,
                     feedback::REFUSAL_FRAMES,
                 ));
@@ -303,7 +303,7 @@ impl App {
             Ok(Err(studio_panel::ShareRefusal::UnparsedFormula)) => {
                 // An unparsed edit has no curve to promise; the refusal names
                 // the way forward instead of silently sharing the last-good.
-                self.banner = Some(feedback::Banner::status(
+                self.banner = Some(feedback::Banner::refusal(
                     "FIX THE FORMULA TO SHARE",
                     feedback::REFUSAL_FRAMES,
                 ));
@@ -312,7 +312,7 @@ impl App {
                 // A different refusal deserves a different sentence: telling
                 // the player to fix a formula that parses fine points them
                 // at the wrong cause.
-                self.banner = Some(feedback::Banner::status(
+                self.banner = Some(feedback::Banner::refusal(
                     "FORK LINEAGE TOO LARGE TO SHARE",
                     feedback::REFUSAL_FRAMES,
                 ));
@@ -513,13 +513,13 @@ impl App {
                 }
             }
             crate::gallery::ParentStatus::NoLineage => {
-                self.banner = Some(feedback::Banner::status(
+                self.banner = Some(feedback::Banner::refusal(
                     NO_LINEAGE,
                     feedback::REFUSAL_FRAMES,
                 ));
             }
             crate::gallery::ParentStatus::Absent => {
-                self.banner = Some(feedback::Banner::status(
+                self.banner = Some(feedback::Banner::refusal(
                     PARENT_ABSENT,
                     feedback::REFUSAL_FRAMES,
                 ));
@@ -563,7 +563,7 @@ impl App {
             .cloned()
         {
             if let Err(error) = self.open_route_project_document(document) {
-                self.banner = Some(feedback::Banner::status(
+                self.banner = Some(feedback::Banner::refusal(
                     format!("PROJECT REFUSED: {}", numinous_core::display_safe(&error)),
                     feedback::REFUSAL_FRAMES,
                 ));
@@ -729,7 +729,7 @@ impl App {
                     numinous_core::NumFileError::TooLarge => "THE .NUM FILE IS TOO LARGE",
                     numinous_core::NumFileError::Invalid(_) => "NOT A VALID .NUM CREATION",
                 };
-                self.banner = Some(feedback::Banner::status(line, feedback::REFUSAL_FRAMES));
+                self.banner = Some(feedback::Banner::refusal(line, feedback::REFUSAL_FRAMES));
             }
         }
     }
@@ -744,7 +744,7 @@ impl App {
             || self.arcade.is_some()
             || self.session_viewer.is_open()
         {
-            self.banner = Some(feedback::Banner::status(
+            self.banner = Some(feedback::Banner::refusal(
                 "FINISH THE GAME FIRST",
                 feedback::REFUSAL_FRAMES,
             ));
@@ -755,7 +755,7 @@ impl App {
             .is_some_and(|extension| extension.eq_ignore_ascii_case("project"))
         {
             if self.study.is_some() || self.console.is_open() || self.show_help {
-                self.banner = Some(feedback::Banner::status(
+                self.banner = Some(feedback::Banner::refusal(
                     "CLOSE THE CURRENT PANEL BEFORE OPENING A ROUTE QUESTION",
                     feedback::REFUSAL_FRAMES,
                 ));
@@ -768,7 +768,7 @@ impl App {
             .extension()
             .is_some_and(|extension| extension.eq_ignore_ascii_case("num"));
         if !is_num {
-            self.banner = Some(feedback::Banner::status(
+            self.banner = Some(feedback::Banner::refusal(
                 "OPEN A .NUM CREATION OR .PROJECT ROUTE QUESTION",
                 feedback::REFUSAL_FRAMES,
             ));
@@ -800,7 +800,7 @@ impl App {
                     self.banner = Some(feedback::Banner::status("REOPENED  ENTER: PLAY", 90));
                 }
                 Err(_) => {
-                    self.banner = Some(feedback::Banner::status(
+                    self.banner = Some(feedback::Banner::refusal(
                         "NOT A VALID NUMINOUS LINK",
                         feedback::REFUSAL_FRAMES,
                     ));
@@ -816,7 +816,7 @@ impl App {
             .map_err(|error| error.to_string())
             .and_then(|document| self.open_route_project_document(document));
         if let Err(error) = result {
-            self.banner = Some(feedback::Banner::status(
+            self.banner = Some(feedback::Banner::refusal(
                 format!("PROJECT REFUSED: {}", numinous_core::display_safe(&error)),
                 feedback::REFUSAL_FRAMES,
             ));
@@ -849,7 +849,7 @@ impl App {
             && std::fs::read(journal_path).ok() == journal_before;
         self.close_menu();
         if !unchanged {
-            self.banner = Some(feedback::Banner::status(
+            self.banner = Some(feedback::Banner::refusal(
                 "The project file changed during resume.",
                 feedback::REFUSAL_FRAMES,
             ));
@@ -877,7 +877,7 @@ impl App {
                 self.project_resume = Some(loaded.plate);
             }
             Err(message) => {
-                self.banner = Some(feedback::Banner::status(message, feedback::REFUSAL_FRAMES));
+                self.banner = Some(feedback::Banner::refusal(message, feedback::REFUSAL_FRAMES));
             }
         }
     }
@@ -908,14 +908,14 @@ impl App {
                 self.project_resume = None;
             }
             project_resume::CreationState::Missing => {
-                self.banner = Some(feedback::Banner::status(
+                self.banner = Some(feedback::Banner::refusal(
                     "No creation is stored.",
                     feedback::REFUSAL_FRAMES,
                 ));
             }
             project_resume::CreationState::Incompatible
             | project_resume::CreationState::Present => {
-                self.banner = Some(feedback::Banner::status(
+                self.banner = Some(feedback::Banner::refusal(
                     "This creation cannot start.",
                     feedback::REFUSAL_FRAMES,
                 ));

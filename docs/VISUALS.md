@@ -211,10 +211,12 @@ cartridge wordmark remains the name. Keep the mark simple, without decorative
 glyphs, hidden letters, or extra orbiting elements.
 
 `assets/logo.svg` is the vector source. Its cyan `#4effff` is the identity hue,
-on the shared `#0a0b0f` stage. The Cabinet draws its highlight in the waiting
-room's accent today, so it matches the mark only when that room is Times
-Tables; one fixed chrome palette with the cyan as its only identity hue is
-Designed. Windows, macOS, and Linux use the PNG,
+on the shared `#0a0b0f` stage. The Cabinet, the reader, and banners take their
+colors from the core `chrome` palette, not from the room that is waiting. The
+mark and the focus ring keep `#4effff`. Text and selection use a calmer cyan
+of the same hue. The window stays dark. A light set of the same roles is
+checked for contrast and is not a theme the App offers. Windows, macOS, and
+Linux use the PNG,
 ICO, and ICNS assets derived from that source. The transparent corners and
 dark backing preserve the silhouette on either light or dark desktops.
 

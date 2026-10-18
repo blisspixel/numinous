@@ -791,7 +791,7 @@ impl App {
             journey_saved: journey,
             level_seen: 1,
             banner: preferences_load_error
-                .map(|_| feedback::Banner::status(PREFERENCES_LOAD_WARNING, 240)),
+                .map(|_| feedback::Banner::caution(PREFERENCES_LOAD_WARNING, 240)),
             screen_shake: 0,
             goal_announced: false,
             quiz: None,
@@ -857,7 +857,7 @@ impl App {
             return false;
         }
         *warned = true;
-        self.banner = Some(feedback::Banner::status(line, 180));
+        self.banner = Some(feedback::Banner::caution(line, 180));
         true
     }
 
@@ -2494,6 +2494,7 @@ impl App {
                 width,
                 height,
                 self.interface_text_size,
+                banner.role(),
             );
         }
     }
