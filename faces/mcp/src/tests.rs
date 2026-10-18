@@ -8641,6 +8641,110 @@ fn opening_returning_home_reports_independent_closure() {
 }
 
 #[test]
+fn nested_radicals_are_unsupported_on_the_mcp_face() {
+    let open = |x: &str, y: &str| {
+        call(
+            "save_creation",
+            json!({
+                "x_expr": x,
+                "y_expr": y,
+                "tmin": 0.0,
+                "tmax": 1.0
+            }),
+        )
+    };
+    for (x, y) in [
+        ("cos(2*pi*sqrt(sqrt(2))*t)", "sin(2*pi*2*sqrt(sqrt(2))*t)"),
+        ("cos(2*pi*sqrt(sqrt(3))*t)", "sin(2*pi*2*sqrt(sqrt(3))*t)"),
+        (
+            "cos(2*pi*sqrt(sqrt(sqrt(2)))*t)",
+            "sin(2*pi*2*sqrt(sqrt(sqrt(2)))*t)",
+        ),
+    ] {
+        let saved = open(x, y);
+        assert_eq!(saved["result"]["isError"], false, "{x}: {saved}");
+        let structured = &saved["result"]["structuredContent"];
+        assert_eq!(structured["closure"]["kind"], "unsupported", "{x}");
+        assert!(structured.get("tones").is_none(), "{x}: {structured}");
+        let preview = structured["preview"]["render"]
+            .as_str()
+            .expect("the curve still draws");
+        assert!(
+            preview.chars().any(|mark| !mark.is_whitespace()),
+            "{x} preview was blank"
+        );
+        let text = saved["result"]["content"][0]["text"]
+            .as_str()
+            .expect("text");
+        assert!(text.contains("closure=unsupported"), "{x}: {text}");
+        assert!(!text.contains("hz="), "{x}: {text}");
+        assert!(!text.contains("period=sqrt(2)/2"), "{x}: {text}");
+    }
+
+    let perfect = open("cos(2*pi*sqrt(sqrt(16))*t)", "sin(2*pi*2*sqrt(sqrt(16))*t)");
+    let closure = &perfect["result"]["structuredContent"]["closure"];
+    assert_eq!(closure["kind"], "periodic");
+    assert_eq!(closure["period"], "1/2");
+    assert_eq!(closure["xFrequency"], "2");
+    assert_eq!(closure["yFrequency"], "4");
+
+    let half = open("cos(2*pi*sqrt(1/2)*t)", "sin(2*pi*2*sqrt(1/2)*t)");
+    assert_eq!(half["result"]["isError"], false, "{half}");
+    let closure = &half["result"]["structuredContent"]["closure"];
+    assert_eq!(closure["kind"], "periodic");
+    assert_eq!(closure["period"], "sqrt(2)");
+    assert_eq!(closure["xFrequency"], "sqrt(2)/2");
+    assert_eq!(closure["yFrequency"], "sqrt(2)");
+    let text = half["result"]["content"][0]["text"].as_str().expect("text");
+    assert!(text.contains("sqrt(1/2)"), "{text}");
+    assert!(text.contains("2*sqrt(1/2)"), "{text}");
+    let root = 2f64.sqrt();
+    let tones = &half["result"]["structuredContent"]["tones"];
+    let x_hz = tones["voices"][0]["hz"].as_f64().expect("x hz");
+    let y_hz = tones["voices"][1]["hz"].as_f64().expect("y hz");
+    assert!((x_hz - 110.0 * root / 2.0).abs() < 1e-3, "{x_hz}");
+    assert!((y_hz - 110.0 * root).abs() < 1e-3, "{y_hz}");
+}
+
+#[test]
+fn refused_sing_expression_does_not_award_xp() {
+    let file = super::test_state_path("refused-sing-xp");
+    let _ = std::fs::remove_file(&file);
+    for (id, arguments) in [
+        (1, json!({"expr": "zzzzz"})),
+        (2, json!({"expr": "y", "reading": "zero"})),
+    ] {
+        let response = handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":id,"method":"tools/call",
+                "params":{"name":"sing_expression","arguments":arguments}
+            }),
+            &file,
+        )
+        .expect("refused sing responds");
+        assert_eq!(response["result"]["isError"], true, "{response}");
+    }
+    let plays = std::fs::read_to_string(&file)
+        .map(|text| numinous_core::Journey::from_text(&text).plays)
+        .unwrap_or(0);
+    assert_eq!(plays, 0);
+    let sung = handle_request_with(
+        &json!({
+            "jsonrpc":"2.0","id":3,"method":"tools/call",
+            "params":{"name":"sing_expression","arguments":{"expr":"sin(x)"}}
+        }),
+        &file,
+    )
+    .expect("successful sing responds");
+    assert_eq!(sung["result"]["isError"], false, "{sung}");
+    assert_eq!(
+        numinous_core::Journey::from_text(&std::fs::read_to_string(&file).expect("journey")).plays,
+        1
+    );
+    let _ = std::fs::remove_file(&file);
+}
+
+#[test]
 fn opening_sin_a_x_reports_its_slope() {
     let saved = call(
         "save_creation",

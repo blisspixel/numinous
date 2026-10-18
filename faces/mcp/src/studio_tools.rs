@@ -989,9 +989,8 @@ fn studio_creation_result(
 
 fn closure_json(closure: &numinous_core::PathClosure) -> Option<Value> {
     match closure {
-        numinous_core::PathClosure::Graph
-        | numinous_core::PathClosure::Field
-        | numinous_core::PathClosure::Unsupported => None,
+        numinous_core::PathClosure::Graph | numinous_core::PathClosure::Field => None,
+        numinous_core::PathClosure::Unsupported => Some(json!({"kind": "unsupported"})),
         numinous_core::PathClosure::Voices(voices) => {
             let graphs: Vec<Value> = voices
                 .voices

@@ -73,7 +73,9 @@ Modes > Create to make something. Controls lists the keys for your activity.
 Check [motion, sound, and flashing](#motion-sound-and-flashing) before play
 if those affect you.
 
-Use `numinous update` for an installer-created installation. Use
+Use `numinous update` for an installer-created installation. It prints
+`update=installed`, `update=current`, or `update=refused`. A refusal exits
+nonzero and leaves the installation unchanged. Use
 `numinous uninstall` to remove that installation and its launchers while
 keeping player state and App settings. Loose archives and source checkouts
 are not managed install roots; use a fresh archive or a separate install
@@ -119,7 +121,7 @@ workflows. It is readable offline in a release archive.
 
 | You want to... | Try this |
 |---|---|
-| Watch and listen | App Cabinet > Modes > Watch, or The Overture for the four-room piece. CLI `numinous show`, or MCP `watch_show` with `{"show":"overture"}` for the piece. |
+| Watch and listen | App Cabinet > Modes > Watch, or The Overture for the four-room piece. CLI `numinous tour`, or MCP `watch_show` with `{"show":"overture"}` for the piece. |
 | Read the mathematics | App E or ?, CLI `numinous study lissajous`, or MCP `study_room`. |
 | Draw and hear a formula | App Tab, CLI `numinous plot "sin(a*x)"`, or MCP `plot_expression` with `{"expr":"sin(a*x)"}`. |
 | Solve a route puzzle | Open Route Lab, run `numinous route-lab`, or call MCP `route_lab` with `{}`. V in the App, or `choices` then `choice_step` over CLI and MCP, watches nearest-next choose. |

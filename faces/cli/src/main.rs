@@ -885,6 +885,7 @@ fn cli_main() -> ExitCode {
         }
         command => command,
     };
+    let announce_on_stderr = command_announces_on_stderr(command.as_ref());
     let (mut journey, readable) = load_journey();
     let before = journey.clone();
     let earned_before = earned_names(&before, &load_scores());
@@ -892,8 +893,30 @@ fn cli_main() -> ExitCode {
         Some(command) => run(command, &mut journey),
         None => home(&journey),
     };
-    finish_journey(&before, &journey, &earned_before, readable);
+    if announce_on_stderr {
+        finish_journey(
+            &before,
+            &journey,
+            &earned_before,
+            readable,
+            std::io::stderr(),
+        );
+    } else {
+        finish_journey(
+            &before,
+            &journey,
+            &earned_before,
+            readable,
+            std::io::stdout(),
+        );
+    }
     code
+}
+
+/// `plot` and `sing` put the artifact on stdout. Their level-up lines use
+/// stderr so a script can read the picture or the file path alone.
+fn command_announces_on_stderr(command: Option<&Command>) -> bool {
+    matches!(command, Some(Command::Plot { .. } | Command::Sing { .. }))
 }
 
 /// A stranger's most natural move is typing the thing they want to see.
@@ -1068,11 +1091,188 @@ fn maintenance_process(installer: &Path, pid: &str, action: MaintenanceAction) -
     command
 }
 
+/// What `numinous update` can tell the caller before it closes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum UpdateOutcome {
+    /// A newer published tag will be installed by the helper.
+    Installed { tag: String },
+    /// The managed root already has the published tag.
+    Current { tag: String },
+    /// Provenance cannot be checked, so nothing is replaced.
+    Refused { reason: String },
+}
+
+fn attestation_help_can_verify(help: &str) -> bool {
+    help.contains("--source-digest")
+        && help.contains("--signer-digest")
+        && help.contains("--deny-self-hosted-runners")
+}
+
+fn release_tag_is_safe(tag: &str) -> bool {
+    let Some(rest) = tag.strip_prefix('v') else {
+        return false;
+    };
+    let (numbers, pre) = match rest.split_once('-') {
+        Some((numbers, pre)) => (numbers, Some(pre)),
+        None => (rest, None),
+    };
+    let mut parts = numbers.split('.');
+    let numeric = |part: Option<&str>| {
+        part.is_some_and(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
+    };
+    numeric(parts.next())
+        && numeric(parts.next())
+        && numeric(parts.next())
+        && parts.next().is_none()
+        && pre.is_none_or(|pre| {
+            !pre.is_empty()
+                && pre
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'.' || byte == b'-')
+        })
+}
+
+fn classify_managed_update(
+    attestation_help: Option<&str>,
+    installed_tag: Option<&str>,
+    latest_tag: Option<&str>,
+) -> UpdateOutcome {
+    let Some(help) = attestation_help else {
+        return UpdateOutcome::Refused {
+            reason: "install GitHub CLI (gh) to verify release provenance, then retry. Nothing was installed.".to_string(),
+        };
+    };
+    if !attestation_help_can_verify(help) {
+        return UpdateOutcome::Refused {
+            reason: "your GitHub CLI is too old to verify release provenance; update gh (needs gh attestation verify with --source-digest, --signer-digest, and --deny-self-hosted-runners) and retry. Nothing was installed.".to_string(),
+        };
+    }
+    let Some(latest) = latest_tag.filter(|tag| release_tag_is_safe(tag)) else {
+        return UpdateOutcome::Refused {
+            reason: "could not read the published release tag, so provenance was not verified. Nothing was installed.".to_string(),
+        };
+    };
+    if installed_tag == Some(latest) {
+        UpdateOutcome::Current {
+            tag: latest.to_string(),
+        }
+    } else {
+        UpdateOutcome::Installed {
+            tag: latest.to_string(),
+        }
+    }
+}
+
+/// Text from a `gh` process that actually started.
+///
+/// A missing binary never reaches this function. A help command that exits
+/// nonzero is still evidence: an old `gh` prints its failure instead of the
+/// provenance flags, and that must be classified as outdated rather than as
+/// an absent install.
+fn attestation_help_from_output(stdout: &[u8], stderr: &[u8]) -> String {
+    let mut text = String::from_utf8_lossy(stdout).into_owned();
+    text.push_str(&String::from_utf8_lossy(stderr));
+    text
+}
+
+fn gh_attestation_help() -> Option<String> {
+    let output = ProcessCommand::new("gh")
+        .args(["attestation", "verify", "--help"])
+        .output()
+        .ok()?;
+    Some(attestation_help_from_output(&output.stdout, &output.stderr))
+}
+
+fn installed_release_tag(root: &Path) -> Option<String> {
+    let path = root.join("src").join("RELEASE.json");
+    let metadata = std::fs::symlink_metadata(&path).ok()?;
+    if !metadata.file_type().is_file() || metadata.file_type().is_symlink() || metadata.len() > 8192
+    {
+        return None;
+    }
+    let bytes = std::fs::read(&path).ok()?;
+    let value: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+    if value.get("schema").and_then(serde_json::Value::as_str) != Some("numinous.release") {
+        return None;
+    }
+    if value
+        .get("schemaVersion")
+        .and_then(serde_json::Value::as_u64)
+        != Some(1)
+    {
+        return None;
+    }
+    let tag = value.get("tag").and_then(serde_json::Value::as_str)?;
+    release_tag_is_safe(tag).then(|| tag.to_string())
+}
+
+fn latest_published_release_tag() -> Option<String> {
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .max_redirects(0)
+        .timeout_global(Some(Duration::from_secs(20)))
+        .build()
+        .into();
+    let response = agent
+        .get("https://api.github.com/repos/blisspixel/numinous/releases?per_page=20")
+        .header("User-Agent", "numinous-installer")
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2022-11-28")
+        .call()
+        .ok()?;
+    if !response.status().is_success() {
+        return None;
+    }
+    let bytes = read_bounded(response.into_body().into_reader(), 1_048_576).ok()??;
+    let releases: Vec<serde_json::Value> = serde_json::from_slice(&bytes).ok()?;
+    for release in releases {
+        if release.get("draft").and_then(serde_json::Value::as_bool) == Some(true) {
+            continue;
+        }
+        let tag = release
+            .get("tag_name")
+            .and_then(serde_json::Value::as_str)?;
+        return release_tag_is_safe(tag).then(|| tag.to_string());
+    }
+    None
+}
+
 fn maintain_installation(action: MaintenanceAction) -> ExitCode {
+    let root = match std::env::current_exe()
+        .map_err(|error| format!("Could not locate the running command: {error}"))
+        .and_then(|executable| managed_install_root(&executable))
+    {
+        Ok(root) => root,
+        Err(error) => {
+            eprintln!("{error}");
+            eprintln!(
+                "Install a managed release first with the one-line installer in https://github.com/blisspixel/numinous/blob/main/PLAY.md"
+            );
+            return ExitCode::FAILURE;
+        }
+    };
+    let replacing = if action == MaintenanceAction::Update {
+        let outcome = classify_managed_update(
+            gh_attestation_help().as_deref(),
+            installed_release_tag(&root).as_deref(),
+            latest_published_release_tag().as_deref(),
+        );
+        match outcome {
+            UpdateOutcome::Refused { reason } => {
+                eprintln!("update=refused");
+                eprintln!("reason={reason}");
+                return ExitCode::FAILURE;
+            }
+            UpdateOutcome::Current { tag } => {
+                println!("update=current");
+                println!("tag={tag}");
+                return ExitCode::SUCCESS;
+            }
+            UpdateOutcome::Installed { tag } => Some(tag),
+        }
+    } else {
+        None
+    };
     let result = (|| {
-        let executable = std::env::current_exe()
-            .map_err(|error| format!("Could not locate the running command: {error}"))?;
-        let root = managed_install_root(&executable)?;
         let installer = write_update_installer()?;
         let pid = std::process::id().to_string();
         let mut process = maintenance_process(&installer, &pid, action);
@@ -1094,10 +1294,14 @@ fn maintain_installation(action: MaintenanceAction) -> ExitCode {
             let _ = std::fs::remove_file(&installer);
             return Err(format!("Could not start the maintenance helper: {error}"));
         }
-        Ok(root)
+        Ok(())
     })();
     match result {
-        Ok(root) => {
+        Ok(()) => {
+            if let Some(tag) = replacing {
+                println!("update=installed");
+                println!("tag={tag}");
+            }
             let verb = match action {
                 MaintenanceAction::Update => "Updating",
                 MaintenanceAction::Uninstall => "Uninstalling",
@@ -1109,10 +1313,12 @@ fn maintain_installation(action: MaintenanceAction) -> ExitCode {
             ExitCode::SUCCESS
         }
         Err(error) => {
-            eprintln!("{error}");
-            eprintln!(
-                "Install a managed release first with the one-line installer in https://github.com/blisspixel/numinous/blob/main/PLAY.md"
-            );
+            if action == MaintenanceAction::Update {
+                eprintln!("update=refused");
+                eprintln!("reason={error}");
+            } else {
+                eprintln!("{error}");
+            }
             ExitCode::FAILURE
         }
     }
@@ -1482,6 +1688,7 @@ fn finish_journey(
     after: &Journey,
     earned_before: &std::collections::BTreeSet<&'static str>,
     readable: bool,
+    mut out: impl Write,
 ) {
     if before == after {
         return;
@@ -1508,16 +1715,13 @@ fn finish_journey(
     };
 
     for ping in trophy_pings(earned_before, &saved, &load_scores()) {
-        println!(
-            "
-{ping}"
-        );
+        let _ = writeln!(out, "\n{ping}");
     }
     if let Some(banner) = level_up_report(before, &saved) {
-        println!("\n{banner}");
+        let _ = writeln!(out, "\n{banner}");
     }
     if saved.rank() > before.rank() {
-        println!("\n{}", saved.rank().whisper());
+        let _ = writeln!(out, "\n{}", saved.rank().whisper());
     }
 }
 
@@ -2451,8 +2655,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             reading,
             out,
         } => {
-            journey.play();
-            emit(resolve_sing_input(&expr, xmin, xmax, a).and_then(
+            let sung = resolve_sing_input(&expr, xmin, xmax, a).and_then(
                 |(source, xmin, xmax, a, stored_scale, mut sliders, stored_reading)| {
                     if !slider.is_empty() {
                         sliders = parse_slider_specs(&slider)?;
@@ -2477,7 +2680,11 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                         &out,
                     )
                 },
-            ))
+            );
+            if sung.is_ok() {
+                journey.play();
+            }
+            emit(sung)
         }
         Command::Fork {
             parent,

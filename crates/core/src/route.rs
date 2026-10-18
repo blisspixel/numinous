@@ -1090,6 +1090,71 @@ mod tests {
     }
 
     #[test]
+    fn a_leg_through_another_stop_keeps_its_ids_when_roads_are_reordered() {
+        let roads = vec![
+            Road {
+                from: 0,
+                to: 1,
+                cost: 1,
+            },
+            Road {
+                from: 0,
+                to: 2,
+                cost: 4,
+            },
+        ];
+        let mut reversed = roads.clone();
+        reversed.reverse();
+        for road in &mut reversed {
+            std::mem::swap(&mut road.from, &mut road.to);
+        }
+        let first = RouteProblem::new(3, roads, vec![0, 2, 1])
+            .unwrap()
+            .metric()
+            .unwrap()
+            .nearest_neighbor_trace()
+            .unwrap();
+        let second = RouteProblem::new(3, reversed, vec![0, 1, 2])
+            .unwrap()
+            .metric()
+            .unwrap()
+            .nearest_neighbor_trace()
+            .unwrap();
+        assert_eq!(first, second);
+        assert_eq!(first.tour.order, vec![0, 1, 2]);
+        let through = &first.choices[1];
+        assert_eq!(through.current, 1);
+        assert_eq!(through.chosen, 2);
+        assert_eq!(through.leg, vec![1, 0, 2]);
+        assert!(through.leg.contains(&0));
+        assert_ne!(through.leg[0], 0);
+        assert_ne!(*through.leg.last().unwrap(), 0);
+        let returning = first.choices.last().unwrap();
+        assert_eq!(returning.current, 2);
+        assert_eq!(returning.chosen, 0);
+        assert_eq!(returning.leg, vec![2, 0]);
+
+        let fixture = fixture();
+        let mut shuffled = fixture.roads().to_vec();
+        shuffled.reverse();
+        for road in &mut shuffled {
+            std::mem::swap(&mut road.from, &mut road.to);
+        }
+        let stable = RouteProblem::new(4, shuffled, vec![0, 3, 1, 2])
+            .unwrap()
+            .metric()
+            .unwrap()
+            .nearest_neighbor_trace()
+            .unwrap();
+        let original = fixture.metric().unwrap().nearest_neighbor_trace().unwrap();
+        assert_eq!(stable.choices, original.choices);
+        let back = stable.choices.last().unwrap();
+        assert_eq!(back.leg, vec![3, 2, 0]);
+        assert!(back.leg.contains(&2));
+        assert_eq!(stable.tour.order, vec![0, 1, 2, 3]);
+    }
+
+    #[test]
     fn raising_bd_makes_nearest_next_tie_the_exact_tour() {
         let problem = fixture();
         let mut roads = problem.roads().to_vec();
