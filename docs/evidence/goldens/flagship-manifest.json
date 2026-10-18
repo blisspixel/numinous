@@ -18,11 +18,11 @@
       "era": "modern",
       "width": 64,
       "height": 40,
-      "png_sha256": "1c06b46e95920dbf76d93a638017bb127c050a3506f68e9d167995a8f780657e",
-      "png_bytes": 1376,
-      "png_mean_byte": 118.180959,
+      "png_sha256": "9c4cb3d8f36fd5cf5c54bc6041ec7a01feaabed33dae677b3f1448119b241ae7",
+      "png_bytes": 1427,
+      "png_mean_byte": 122.071479,
       "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4",
-      "appearance": "4018212d3c281816110b3e3838440f0b0b12574f5751220b0b0b6e919e660e0b0b0b1b4f571e0b0b",
+      "appearance": "4018212d3c281816110b3e3838440f0b0b12574f574f230b0b0b7195a4730f0b0b0b1c4e571f0b0b",
       "wav_sha256": "8fb8a867214c4dcca8e0a6c2c677ba9ed37390fb7c724880bba1152688ec9856",
       "wav_bytes": 2560044,
       "audio_peak": 0.13019,
@@ -138,33 +138,33 @@
       "era": "phosphor",
       "width": 64,
       "height": 40,
-      "png_sha256": "f7dc4251a0dcd22460bbc8c408e7518ed8ba70fa34514906f77d1d8cc684a1e6",
-      "png_bytes": 2896,
-      "png_mean_byte": 124.681285,
+      "png_sha256": "1a9224772c62539e2ab830d373c696b59b1aa6056f0a9b42c6ea9227bed12a7c",
+      "png_bytes": 2875,
+      "png_mean_byte": 127.839304,
       "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4",
-      "appearance": "29101620291b100f0b072c25252d0907070b44363e3e1b0707074d6a714e0a07070713393f160707"
+      "appearance": "29101620291b100f0b072c25252d0907070b43363e3b190707074d69724f0a07070713363d150707"
     },
     {
       "id": "times-tables",
       "era": "8bit",
       "width": 64,
       "height": 40,
-      "png_sha256": "ed569a24cab66496d58d1e7b3e8c60151c6c127875fce4db8d45f0a8ca004e08",
-      "png_bytes": 742,
-      "png_mean_byte": 120.161725,
+      "png_sha256": "f6bdecb8d352b9238f2b5ae4848919120ef5c6bbeacc20c7a20a4338bc4e00dd",
+      "png_bytes": 735,
+      "png_mean_byte": 119.197279,
       "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4",
-      "appearance": "3b0d182938200d0d08003a2b2b3b0500000b54444f501c00000071989a6405000000134c50170000"
+      "appearance": "3b0d182938200d0d08003a2b2b3b0500000b54444f4c1e000000718fa2760500000013474e180000"
     },
     {
       "id": "times-tables",
       "era": "vector",
       "width": 64,
       "height": 40,
-      "png_sha256": "63641d3453850a766385ff9105a5dd9d13519c608c71b7bfa619b6b99cc674e3",
-      "png_bytes": 2386,
-      "png_mean_byte": 124.895641,
+      "png_sha256": "f33ed0fb226c4f1716dc18dc1ff6f89cf84abc902a0124cffd9ae680b22403ec",
+      "png_bytes": 2459,
+      "png_mean_byte": 123.07198,
       "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4",
-      "appearance": "3e131f374b2b131308004d3d3e50050000096b5c69622200000088abbf8a04000000175a681c0000"
+      "appearance": "3e131f374b2b131308004d3d3e50050000096e5c6962220000008bb3bf9104000000175a6b1e0000"
     }
   ]
 }

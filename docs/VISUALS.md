@@ -99,7 +99,7 @@ shape or lightness even with the hue taken away, as the Phosphor Era takes it.
 | `'#'` | the room accent times 1.7 |
 | `'!'` | warning ink `[230, 72, 72]` |
 | `'-'` | structure ink `[16, 20, 34]` |
-| `'@'`, `'%'`, `'&'`, `'~'` | the four spectral inks `[216, 40, 190]`, `[56, 224, 132]`, `[242, 148, 36]`, `[116, 72, 232]` |
+| `'@'`, `'%'`, `'&'`, `'~'` | the four spectral inks `[7, 118, 140]`, `[56, 224, 132]`, `[242, 148, 36]`, `[116, 72, 232]` |
 | every other mark, including `' '` | the room accent |
 
 The terminal reads `' ' . : + * #` as an ordered weight ramp, but the pixel
@@ -120,7 +120,7 @@ speak the terminal's weight ramp:
 | `'*'`, `'o'`, and other marks | the idea | accent x 1.0 |
 | `'#'` | hot core, emphasis | accent x 1.7 now; tone-mapped toward white after the Sensory Lift |
 | `'!'` | wrong, always with a shape cue | `[230, 72, 72]` |
-| `'@'`, `'%'`, `'&'`, `'~'` | spectral state | unchanged until the spectral ruling (decisions entry 12) |
+| `'@'`, `'%'`, `'&'`, `'~'` | spectral state | `'@'` is teal `[7, 118, 140]`; green, amber, and violet stay |
 
 With it comes one guard: for every room that draws two marks with different
 roles, the raster must render them distinguishably. The terminal shade steps

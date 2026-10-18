@@ -510,7 +510,7 @@ fn assert_times_tables_spectral_palette(raster: &Raster) {
         .collect();
     for expected in [
         [50, 161, 205],
-        [226, 51, 205],
+        [17, 129, 155],
         [66, 235, 147],
         [252, 159, 51],
         [126, 83, 247],

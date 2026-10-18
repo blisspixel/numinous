@@ -236,7 +236,7 @@ mod tests {
             [0, 255, 0],
             [0, 0, 255],
             [230, 72, 72],
-            [216, 40, 190],
+            [7, 118, 140],
             [56, 224, 132],
             [242, 148, 36],
             [116, 72, 232],
@@ -307,18 +307,19 @@ mod tests {
         // against saturated green is the example everybody reaches for and it
         // is the wrong one: a deuteranope sees both as yellow but at clearly
         // different lightnesses, and they stay 30 apart, so the rule correctly
-        // lets them through. The pair that actually fails is from the catalog,
-        // `times-tables` drawing its spectral `'@'` over its own accent, which
-        // ordinary vision separates by 95 and a deuteranope by under 1.
-        let magenta = [216, 40, 190];
+        // lets them through. The pair that names the rule is the retired
+        // spectral `'@'` against the Times Tables accent: ordinary vision
+        // separates it by 95 and a deuteranope by under 1. The ink is teal now.
+        // This pair stays so the rule still has a failing example.
+        let retired = [216, 40, 190];
         let accent = [40, 150, 190];
         assert!(
-            color_alone(magenta, accent),
-            "the spectral magenta against a blue accent is {:.1} normally and {:.1} for a \
-             {}, which is the defect this rule exists to name",
-            distance(magenta, accent),
-            worst_case(magenta, accent).1,
-            worst_case(magenta, accent).0.name()
+            color_alone(retired, accent),
+            "the retired spectral magenta against a blue accent is {:.1} normally and {:.1} \
+             for a {}, which is the defect this rule exists to name",
+            distance(retired, accent),
+            worst_case(retired, accent).1,
+            worst_case(retired, accent).0.name()
         );
         assert!(
             !color_alone([0, 0, 0], [255, 255, 255]),
