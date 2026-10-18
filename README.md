@@ -85,7 +85,7 @@ hosts can also load the [portable plugin](plugins/numinous).
 
 ## Current state
 
-**0.5.0-alpha.8** is a playable alpha with 356 catalog rooms, games, Journey,
+**0.5.0-alpha.9** is a playable alpha with 356 catalog rooms, games, Journey,
 Studio, controllers, and built-in music. It is still under development:
 Sensory Alpha is active, refining the shared visual and sonic identity.
 Understanding Alpha's qualifying study remains open; human playtests are optional
@@ -95,7 +95,9 @@ The App plays The Overture from Modes, and MCP `watch_show` plays the same
 score through to the Times Tables dial. Route Lab can step through nearest-next
 choices on the App, the CLI, and MCP without changing the delivery order.
 `cellular-automata`, `julia`, and `lambda-map` run no faster than 4x while the
-saved speed setting is kept.
+saved speed setting is kept. On a terminal, `tour`, `watch`, and `play` are
+live. A pipe gets one still postcard. Attention is a temperature hand and a
+placed key. Strange Loop is a descent that returns.
 
 Room marks now preserve faint guides, secondary detail, main shapes, and hot
 highlights through one shared brightness ramp. Touch responses remain visible

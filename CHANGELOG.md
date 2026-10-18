@@ -3,15 +3,28 @@
 All notable changes to Numinous. The format follows Keep a Changelog, and the
 project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
-## [Unreleased]
+## [0.5.0-alpha.9] - 2026-10-18
 
 ### Added
+- `tour`, `watch`, and `play` take a live terminal when stdout is a terminal.
+  A pipe or a file gets one still postcard and the title, and it does not
+  light a star.
+- Grouped CLI help wraps to the terminal, or to `COLUMNS` when stdout is not
+  a terminal. `TERM=dumb` draws an ASCII picture. `NO_COLOR` on a normal
+  terminal keeps the block picture and drops the color.
+- The Cabinet, the reader, and banners share one chrome palette. The window
+  stays dark. A light table is checked for contrast and is not a theme.
+- A Visual Era change rides the room dip. A new journey star lights once.
+- Attention is a temperature hand and a placed key. Strange Loop is a descent
+  that returns to the frame it left, turned.
 - Designed: Listen, a Watch form whose presets draw the frame from the mix.
-  The specification is in `docs/DESIGN.md`, and the roadmap files it after
-  the work already in order. The mode itself is still designed.
-- The interface rules now live in `docs/DESIGN.md`, with the chrome palette
-  named from `chrome::Role`. The App stays dark. A light table remains a
-  contrast check. γ is not drawn as a companion.
+  The specification is in `docs/DESIGN.md`. The mode itself is still designed.
+- The interface rules live in `docs/DESIGN.md`. γ stays a Constant and is not
+  drawn as a companion.
+
+### Changed
+- The spectral ink for `@` is teal. The Drifter is bright blue. New room
+  accents cannot enter the magenta band. Grandfathered accents stay.
 
 ## [0.5.0-alpha.8] - 2026-10-18
 

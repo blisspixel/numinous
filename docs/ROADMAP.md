@@ -15,7 +15,7 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 Reviewed 2026-10-18.
 
-**Current release state: 0.5.0-alpha.8, Sensory Alpha active with its exit
+**Current release state: 0.5.0-alpha.9, Sensory Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are met and stay CI-locked. The package minor names
 the active milestone, not the oldest open gate. Understanding Alpha's external
@@ -57,7 +57,7 @@ with the labels from `RESEARCH.md`.
 | 2 | **Mathematical honesty and photosensitivity** | Built: an exact or dithered iterator for the expanding maps, so no slope-2 map collapses to zero in binary floating point; Coupled Tents, Gauss Map, Ricker, and Pickover redrawn honestly and inside the measured flash budget; the flash sweep measured at the App's 60 frames a second up to its fastest 8x speed. Built: `cellular-automata`, `julia`, and `lambda-map` run no faster than 4x on every advance path, including a fractional speed, reduced motion, and the music visualizer. The player's saved speed is kept. Open: a redraw that measures those three inside the budget at 8x with the visualizer included | Cap at the last certified speed, on every advance path, until the picture itself is inside the budget at 8x with the visualizer included. No room presents a floating-point artifact as dynamics | `MATHEMATICS.md`, decisions entry 2 |
 | 3 | **The arc** | Built: the three-door threshold in the App and over MCP; the caller-paced Show for minds; an App Show that names each room without printing its reveal unasked; core Show director profiles with seeded, contrast-aware ordering that keeps staged answers unperformed; the Front Hall collection; and The Overture as a core score that minds can play over MCP `watch_show` and in the App from Modes. The App performance uses the score's clock, keeps one bed, steps stills under reduced motion, and hands the Times Tables dial to the player. After that handoff, Modes offers Route Lab as an optional door. The piece does not autoplay. Route Lab nearest-next choices can be watched on the App, CLI, and MCP without changing the player's order | A first visit meets an authored opening rather than catalog order, and the App plays it in the lifted light | `DESIGN.md`, `INSIGHTS.md` |
 | 4 | **Vibe: radio and chill** | Built: the radio's three stations of original tracks on a live broadcast clock, a music visualizer that already quickens The Show with the mix's energy, and per-room tempo and key in the core Show director. Designed: one lean-back mode where a station plays through and the music chooses and paces the rooms, with screensaver manners (`DESIGN.md`, "Vibe: radio and chill") | Numinous can be left on for hours like a radio: the music leads, rooms change on its seams inside the certified flash envelope, no text or prompts appear, and any touch hands the current room back | `DESIGN.md`, `MUSIC.md` |
-| 5 | **Room depth** | Observed in packaged agent sessions (`PLAYTESTS.md`): `attention` and `strange-loop` carry a standing dull or mute verdict. Built: the catalog counts its 245 short doorways | Those two rooms are rebuilt, thin rooms are deepened or cut through the keep-or-cut scorecard, and the commissioned rooms (the Braid, the Calm Axes, the Seventeen Stamps, the Seven Bridges, and Noether's Mirror) lead the next cohort | `ROOMS.md`, `QUALITY.md` |
+| 5 | **Room depth** | Built: Attention and Strange Loop are rebuilt. A packaged round called Attention dull and kept it. A packaged round called Strange Loop worth staying in. Open: the thin-room scorecard and the commissioned cohort. Built: the catalog counts its 245 short doorways | Those two rooms are rebuilt, thin rooms are deepened or cut through the keep-or-cut scorecard, and the commissioned rooms (the Braid, the Calm Axes, the Seventeen Stamps, the Seven Bridges, and Noether's Mirror) lead the next cohort | `ROOMS.md`, `QUALITY.md` |
 | 6 | **Wing taxonomy and voice pass** | Built: `CATALOG_WINGS` closes the set at 13 wings, and the doorway rules are locked by tests. Designed: the house voice in `DESIGN.md` | The wing shape has a ruling, and every doorway and reveal on the authored paths reads in the house voice | `ROOMS.md`, `DESIGN.md` |
 | 7 | **Structural debts** | Built: Polish Wave workstreams 1 to 6 and the face-module extractions so far. Open: the remaining god-file seams, catalog copy spread across room files, and the full-price gate on every commit | Workstream 7's seams close without reopening the player-facing workstreams | `ARCHITECTURE.md`, `QUALITY.md` |
 | 8 | **Listen: the music display** | Built: a spectrum meter, and on the mixed output or a loopback capture a time scale and soft beat pokes, while the room stays the picture. The visualizer already reads the room bed, the mixed output, or an OS loopback. Designed: a Watch form whose frame is the display, with switchable presets drawn from that same analysis (`DESIGN.md`, "Listen: the music display"). Vibe remains the form where rooms change on the music | In the App, Listen can be left on. The radio or a loopback source plays, a preset draws the frame from the bands, another preset can replace it without stopping the music, and reduced motion and the flash envelope hold | `DESIGN.md`, `MUSIC.md` |
@@ -399,6 +399,15 @@ above without adding release gates or reordering **Next, in order**.
 
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
+
+- **`v0.5.0-alpha.9` (2026-10-18):** Tour, watch, and play are live on a
+  terminal and still on a pipe. The Cabinet, the reader, and banners share
+  one chrome palette, and the window stays dark. A Visual Era change rides
+  the room dip, and a new journey star lights once. Magenta is retired except
+  for grandfathered accents. Attention and Strange Loop are rebuilt. There
+  is no companion glyph. Listen is designed. Interface rules live in
+  `DESIGN.md`. Sensory Alpha's exit stays open. Understanding's qualifying
+  study stays open. See [release notes](releases/v0.5.0-alpha.9.md).
 
 - **`v0.5.0-alpha.8` (2026-10-18):** The App and MCP `watch_show` play The
   Overture, and Route Lab can step through nearest-next choices without
