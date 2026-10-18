@@ -3638,12 +3638,14 @@ mod tests {
         let before = Journey::default();
         let mut after = Journey::default();
         assert!(after.note_wager_token("attention:1:wrong"));
+        assert!(after.note_wager_token("strange-loop:2:right"));
 
         super::merge_journey_delta(&before, &after, &mut latest);
 
         assert!(latest.wagers.contains("attention:0:right"));
         assert!(latest.wagers.contains("attention:1:wrong"));
-        assert_eq!(latest.wagers.len(), 2);
+        assert!(latest.wagers.contains("strange-loop:2:right"));
+        assert_eq!(latest.wagers.len(), 3);
     }
 
     #[test]

@@ -1924,6 +1924,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             if report.is_ok() && find_room(&id, allow_hidden).is_some() {
                 journey.visit(&id);
                 note_attention_wager(journey, &id, t, input);
+                note_strange_loop_wager(journey, &id, t, input);
             }
             emit(report)
         }
@@ -1964,6 +1965,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             if report.is_ok() && find_room(&id, allow_hidden).is_some() {
                 journey.visit(&id);
                 note_attention_wager(journey, &id, t, input);
+                note_strange_loop_wager(journey, &id, t, input);
             }
             emit(report)
         }
@@ -4298,6 +4300,16 @@ fn note_attention_wager(journey: &mut Journey, id: &str, t: f64, input: RoomRend
     }
     let events = accepted_inputs(t, input);
     if let Some(token) = numinous_core::rooms::attention::wager_token(t, &events) {
+        journey.note_wager_token(&token);
+    }
+}
+
+fn note_strange_loop_wager(journey: &mut Journey, id: &str, t: f64, input: RoomRenderInput<'_>) {
+    if numinous_core::canonical_room_id(id) != "strange-loop" {
+        return;
+    }
+    let events = accepted_inputs(t, input);
+    if let Some(token) = numinous_core::rooms::strange_loop::wager_token(t, &events) {
         journey.note_wager_token(&token);
     }
 }

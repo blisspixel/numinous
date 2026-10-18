@@ -80,7 +80,11 @@ pub fn for_room(id: &str) -> &'static str {
              Cook on Rule 110 universality."
         }
         "quine" => "See also: Hofstadter, Godel, Escher, Bach; quines and self-reference.",
-        "strange-loop" => "See also: Hofstadter, I Am a Strange Loop; tangled hierarchies.",
+        "strange-loop" => {
+            "See also: B. de Smit and H. W. Lenstra Jr., The Mathematical \
+             Structure of Escher's Print Gallery, Notices of the AMS 50(4), \
+             2003, pp. 446-451."
+        }
         "arecibo" => "See also: the Arecibo message (1974); SETI Institute historical notes.",
         "random-walk" | "brownian" => {
             "See also: Feller on random walks; Einstein on Brownian motion (1905)."

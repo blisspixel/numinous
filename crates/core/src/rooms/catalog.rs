@@ -1316,7 +1316,7 @@ macro_rules! catalog_rooms {
                 id: "strange-loop",
                 title: "Strange Loop",
                 wing: "Mind & Computation",
-                blurb: "A U that contains a smaller U that contains a smaller U... A finite rule that loops back to itself across levels. This is how 'I' might emerge from symbols referring to symbols.",
+                blurb: "Turn the zoom and watch the frame inside the frame. One full turn of the hand is the room's own question.",
                 accent: [180, 100, 255],
             }
         ),
@@ -4268,10 +4268,10 @@ pub(crate) fn construct_hidden_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::*;
 
-    // The reviewed catalog with Route Lab appended and its opening invitation
-    // focused on delivery order and round-trip cost. Attention's doorway now
-    // invites the temperature hand and a placed key. Order is unchanged.
-    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x24d3_cd1d_717d_aa53;
+    // Route Lab's doorway still invites the delivery order. Attention's
+    // doorway invites the temperature hand and a placed key. Strange Loop's
+    // doorway invites the zoom into the frame. Order is unchanged.
+    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x8dcc_f407_b6d0_408e;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {

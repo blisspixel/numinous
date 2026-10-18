@@ -6655,6 +6655,63 @@ fn play_room_reports_interaction_aware_status() {
 }
 
 #[test]
+fn play_room_records_a_strange_loop_wager_and_one_period_returns() {
+    let path = std::env::temp_dir().join("numinous_mcp_strange_loop_wager.txt");
+    let _ = std::fs::remove_file(&path);
+    let pokes = [[0.75, 0.95]];
+    super::record_progress(
+        &json!({
+            "jsonrpc":"2.0","id":80,"method":"tools/call",
+            "params":{"name":"listen_room","arguments":{"id":"strange-loop","t":0.4,"pokes":pokes}}
+        }),
+        &path,
+    );
+    let listened = super::load_journey(&path);
+    assert!(listened.visited.contains("strange-loop"));
+    assert!(listened.wagers.is_empty());
+    super::record_progress(
+        &json!({
+            "jsonrpc":"2.0","id":81,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"strange-loop","t":0.4,"pokes":pokes}}
+        }),
+        &path,
+    );
+    let played = super::load_journey(&path);
+    assert!(
+        played.wagers.contains("strange-loop:2:right"),
+        "{:?}",
+        played.wagers
+    );
+    let _ = std::fs::remove_file(&path);
+
+    let opening = call(
+        "play_room",
+        json!({"id":"strange-loop","width":48,"height":32,"t":0.0}),
+    );
+    let journey = numinous_core::Journey::default();
+    let period = super::room_tools::play_room_tool_for_journey(
+        &json!({"id":"strange-loop","width":48,"height":32,"t":1.0}),
+        &journey,
+    );
+    assert_eq!(period["isError"], false, "{period}");
+    assert_eq!(
+        opening["result"]["structuredContent"]["render"], period["structuredContent"]["render"],
+        "one bent period returns the same frame"
+    );
+    let status = period["structuredContent"]["status"]
+        .as_str()
+        .unwrap_or_default();
+    let room = numinous_core::room_by_id("strange-loop").expect("room");
+    assert_eq!(status, room.status(1.0).expect("status"));
+    assert!(status.contains("turn=157.6"), "{status}");
+    assert!(status.contains("zoom=22.58"), "{status}");
+    let opening_status = opening["result"]["structuredContent"]["status"]
+        .as_str()
+        .unwrap_or_default();
+    assert_eq!(opening_status, room.status(0.0).expect("opening status"));
+}
+
+#[test]
 fn compact_life_poke_matches_a_phase_stamped_click() {
     let common = json!({
         "id":"game-of-life","width":64,"height":48,"t":0.47

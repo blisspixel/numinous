@@ -427,6 +427,31 @@ fn attention_eases_the_dial_and_keeps_the_placed_key() {
 }
 
 #[test]
+fn strange_loop_eases_the_zoom_and_keeps_the_graded_call() {
+    let mut app = quiet_app("numinous_app_test_strange_loop_zoom", Motion::Full);
+    select(&mut app, "strange-loop");
+    press_and_drag(&mut app, (0.30, 0.20), (0.30, 0.70));
+    let accepted = app.inputs.clone();
+    app.advance_presentation_time(FRAME);
+    assert_ne!(
+        app.presented_room_inputs(),
+        accepted,
+        "the zoom eases in the frame"
+    );
+    assert_eq!(app.inputs, accepted, "easing does not rewrite the hand");
+    app.end_pointer_at((0.30, 0.70));
+    assert!(app.inputs.len() > accepted.len(), "lifting keeps the zoom");
+    app.begin_pointer_at((0.75, 0.95));
+    app.end_pointer_at((0.75, 0.95));
+    assert!(
+        app.journey.wagers.contains("strange-loop:2:right"),
+        "{:?}",
+        app.journey.wagers
+    );
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
 fn reduced_motion_applies_a_dial_at_once() {
     let mut app = quiet_app("numinous_app_test_dial_direct", Motion::Reduced);
     select(&mut app, "times-tables");
