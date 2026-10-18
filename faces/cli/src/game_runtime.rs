@@ -159,7 +159,7 @@ fn word_in_lights(word: &str, accent: [u8; 3], frames: usize) {
         let _ = write!(
             stdout,
             "{}{reset}\x1b[J",
-            numinous_core::to_terminal(&raster, color)
+            crate::front_door::present_picture(&raster, color, std::env::var_os("TERM").as_deref())
         );
         let _ = stdout.flush();
         std::thread::sleep(Duration::from_millis(if frame + 1 == frames {

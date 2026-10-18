@@ -14,13 +14,14 @@ use std::path::{Path, PathBuf};
 use std::process::{Command as ProcessCommand, ExitCode, Stdio};
 use std::time::Duration;
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use numinous_core::{
     CUT_LEVELS, Canvas, Journey, PlotRequest, Raster, Room, RoomMeta, Surface, all_rooms,
     draw_text, hidden_room_by_id, room_by_id,
 };
 
 mod access;
+mod front_door;
 mod game_input;
 mod game_runtime;
 mod live;
@@ -38,9 +39,9 @@ mod study;
 #[path = "../../shared/study_json.rs"]
 mod study_json;
 
-#[cfg(test)]
-use access::color_allowed_for;
 use access::{access_report, access_settings, color_allowed};
+#[cfg(test)]
+use access::{color_allowed_for, picture_color_allowed};
 #[cfg(test)]
 use game_input::MAX_CLI_INPUT_BYTES;
 use game_input::{BoundedInputLine, read_bounded_input_line};
@@ -722,6 +723,12 @@ enum Command {
         #[arg(long)]
         out: PathBuf,
     },
+    /// Print a shell completion script.
+    Completion {
+        /// Which shell will source the script: bash, zsh, or fish.
+        #[arg(value_enum)]
+        shell: CompletionShell,
+    },
     /// Remix a Studio creation: copy it, record its lineage, save the child.
     Fork {
         /// The parent: a Studio .num file path or a numinous:// link.
@@ -827,6 +834,23 @@ impl From<StudioScaleArg> for numinous_core::StudioScale {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum CompletionShell {
+    Bash,
+    Zsh,
+    Fish,
+}
+
+impl From<CompletionShell> for clap_complete::Shell {
+    fn from(shell: CompletionShell) -> Self {
+        match shell {
+            CompletionShell::Bash => Self::Bash,
+            CompletionShell::Zsh => Self::Zsh,
+            CompletionShell::Fish => Self::Fish,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum SonifyLayer {
     /// Phase and hand controlled mathematical snapshot, mono at 44.1 kHz.
     Mathematical,
@@ -864,6 +888,14 @@ fn run_on_command_stack(task: impl FnOnce() -> ExitCode + Send + 'static) -> Exi
 /// Windows' small process-entry stack is not a stable budget for that parser,
 /// so the public entry point gives it one explicit fixed allocation.
 fn cli_main() -> ExitCode {
+    let args: Vec<_> = std::env::args_os().skip(1).collect();
+    if front_door::args_request_root_help(&args) {
+        print!(
+            "{}",
+            front_door::grouped_help(&Cli::command(), front_door::help_columns())
+        );
+        return ExitCode::SUCCESS;
+    }
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(error) => return report_cli_parse_error(error),
@@ -871,7 +903,7 @@ fn cli_main() -> ExitCode {
     // These commands have no progression dependency, including reading the
     // profile. Keep their routes ahead of Journey and score loading.
     let command = match cli.command {
-        Some(command @ Command::Settings { .. }) => {
+        Some(command @ (Command::Settings { .. } | Command::Completion { .. })) => {
             return run(command, &mut Journey::default());
         }
         Some(Command::RouteLab { request, json, out }) => {
@@ -1342,72 +1374,78 @@ fn maintain_installation(action: MaintenanceAction) -> ExitCode {
 fn home(journey: &Journey) -> ExitCode {
     print!(
         "{}",
-        home_report(journey, std::io::stdout().is_terminal(), color_allowed())
+        home_report(
+            journey,
+            std::io::stdout().is_terminal(),
+            color_allowed(),
+            access::term_is_dumb(std::env::var_os("TERM").as_deref()),
+            front_door::help_columns(),
+        )
     );
     ExitCode::SUCCESS
 }
 
-fn home_report(journey: &Journey, stdout_is_terminal: bool, color: bool) -> String {
+fn home_report(
+    journey: &Journey,
+    stdout_is_terminal: bool,
+    color: bool,
+    ascii: bool,
+    columns: usize,
+) -> String {
     let rooms = all_rooms();
     let day = pick_day();
     let room = &rooms[(day as usize) % rooms.len()];
+    let menu = front_door::home_menu_text(room.meta().id);
     if !stdout_is_terminal {
         return format!(
-            concat!(
-                "NUMINOUS: math you can feel\n",
-                "Today's room: {} ({})\n",
-                "\n",
-                "Try:\n",
-                "  numinous watch {:<12} watch today's room live\n",
-                "  numinous rooms             browse the complete catalog\n",
-                "  numinous play              choose a game\n",
-                "  numinous tour --mute       sit back for the full visual Show\n",
-                "  numinous journey           see your constellation\n",
-                "  numinous --help            list every command\n",
-                "\n",
-                "Window version: numinous-app\n",
-            ),
-            room.meta().title,
-            room.meta().wing,
-            room.meta().id
+            "NUMINOUS: math you can feel\n\
+             Today's room: {title} ({wing})\n\
+             \n\
+             Try:\n\
+             {menu}\n\
+             \n\
+             Window version: numinous-app\n",
+            title = room.meta().title,
+            wing = room.meta().wing,
         );
     }
 
     let mut raster = Raster::with_accent(72, 44, room.meta().accent);
     room.render(&mut raster, room.postcard_t());
-    format!(
-        concat!(
-            // No reset after the frame: a colored one already ends every line
-            // with one, and a mono one must stay free of escapes.
-            "{}{}  ({})\n",
-            "\n",
-            ". . . {}\n",
-            "\n",
-            "NUMINOUS   LV {:>2}  [{}]{}\n",
-            "\n",
-            "  numinous play              pick a game (munch, quiz, nim, the gauntlet...)\n",
-            "  numinous play munch        or name one and go (fresh deal; --daily on its own command)\n",
-            "  numinous tour              sit back: every room, full color, narrated\n",
-            "  numinous watch {:<12} any one room, live, with its sound\n",
-            "  numinous radio             the music stations (Y in the app tunes them)\n",
-            "  numinous journey           your constellation, level, locks, resonances\n",
-            "  numinous rooms             the whole catalog; describe <room> for the story\n",
-            "\n",
-            "Everything answers --help. The window version is numinous-app.\n",
+    let fact = front_door::wrap_words(
+        &format!(
+            ". . . {}",
+            numinous_core::insight(day + u64::from(journey.plays))
         ),
-        numinous_core::to_terminal(&raster, color),
-        room.meta().title,
-        room.meta().wing,
-        numinous_core::insight(day + u64::from(journey.plays)),
-        journey.level(),
-        journey.level_bar(16),
-        match journey.live_streak(day) {
-            // A dead chain is not shown as alive; the ambient home stays
-            // quiet about records and lets the journey report hold them.
-            Some(chain) if chain > 1 => format!("   streak {chain}"),
-            _ => String::new(),
+        columns,
+    );
+    let streak = match journey.live_streak(day) {
+        // A dead chain is not shown as alive; the ambient home stays
+        // quiet about records and lets the journey report hold them.
+        Some(chain) if chain > 1 => format!("   streak {chain}"),
+        _ => String::new(),
+    };
+    // No reset after the frame: a colored one already ends every line
+    // with one, and a mono one must stay free of escapes.
+    format!(
+        "{picture}{title}  ({wing})\n\
+         \n\
+         {fact}\n\
+         \n\
+         NUMINOUS   LV {level:>2}  [{bar}]{streak}\n\
+         \n\
+         {menu}\n\
+         \n\
+         Everything answers --help. The window version is numinous-app.\n",
+        picture = if ascii {
+            front_door::ascii_picture(&raster)
+        } else {
+            numinous_core::to_terminal(&raster, color)
         },
-        room.meta().id
+        title = room.meta().title,
+        wing = room.meta().wing,
+        level = journey.level(),
+        bar = journey.level_bar(16),
     )
 }
 
@@ -1771,6 +1809,13 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             json,
             out.as_deref(),
         )),
+        Command::Completion { shell } => {
+            print!(
+                "{}",
+                front_door::completion_script(&mut Cli::command(), shell.into())
+            );
+            ExitCode::SUCCESS
+        }
         Command::Access => {
             print!(
                 "{}",
@@ -3343,6 +3388,14 @@ fn emit(report: Result<String, String>) -> ExitCode {
     }
 }
 
+/// Pad `text` with spaces out to `width` characters.
+fn pad_column(text: &str, width: usize) -> String {
+    let mut out = text.to_string();
+    let extra = width.saturating_sub(text.chars().count());
+    out.extend(std::iter::repeat_n(' ', extra));
+    out
+}
+
 /// The catalog listing, as human text or JSON.
 fn rooms_report(json: bool) -> String {
     if json {
@@ -3350,12 +3403,24 @@ fn rooms_report(json: bool) -> String {
             numinous_core::ROOM_CATALOG.iter().map(meta_json).collect();
         format!("{}\n", to_pretty(&serde_json::Value::Array(arr)))
     } else {
+        let id_width = numinous_core::ROOM_CATALOG
+            .iter()
+            .map(|metadata| metadata.id.chars().count())
+            .max()
+            .unwrap_or(0);
+        let wing_width = numinous_core::ROOM_CATALOG
+            .iter()
+            .map(|metadata| metadata.wing.chars().count())
+            .max()
+            .unwrap_or(0);
         let lines: Vec<String> = numinous_core::ROOM_CATALOG
             .iter()
             .map(|metadata| {
                 format!(
-                    "{:<16} {:<20} {}",
-                    metadata.id, metadata.wing, metadata.title
+                    "{} {} {}",
+                    pad_column(metadata.id, id_width),
+                    pad_column(metadata.wing, wing_width),
+                    metadata.title
                 )
             })
             .collect();
@@ -3528,7 +3593,7 @@ fn ansi_in_era(raster: &Raster, era: numinous_core::Era, color: bool) -> String 
     era.apply(&mut rgba, w, h);
     let mut styled = Raster::new(w, h);
     styled.set_rgba(&rgba);
-    numinous_core::to_terminal(&styled, color)
+    front_door::present_picture(&styled, color, std::env::var_os("TERM").as_deref())
 }
 
 /// The touch verbs this face cannot hear. A terminal has no mouse route, so

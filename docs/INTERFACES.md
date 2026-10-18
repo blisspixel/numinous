@@ -165,8 +165,16 @@ For automation, pipelines, CI, power users, and agents through a shell:
 ### Tier B: live terminal modes
 
 Running `numinous` without arguments draws a one-frame, full-color home screen
-with the current Journey level and command doorways. `tour` presents the whole
-catalog in sequence. `watch <room>` animates a full-color room with sound;
+with the current Journey level and command doorways. The doorway list is the
+same on a terminal and in a pipe, and the description column follows the
+longest command, including today's room id. `numinous --help` groups every
+command under Start here, Play, Games, Create, Study, Your journey, and
+Maintain, and wraps to the terminal width, or to `COLUMNS` when stdout is not
+a terminal. `TERM=dumb` draws pictures in ASCII, with no color and no
+block art. `NO_COLOR` on a normal terminal keeps the block-glyph picture
+and strips the color. `numinous completion bash`, `zsh`, or `fish` prints
+a completion script. `numinous rooms` sizes its id and wing columns from the
+longest entry. `tour` presents the whole catalog in sequence. `watch <room>` animates a full-color room with sound;
 `play <room>` provides the simpler live ASCII path without audio. Those three
 own the terminal only when stdout is a terminal: alternate screen, hidden
 cursor, and one synchronized update per frame. A pipe or a file gets one still
