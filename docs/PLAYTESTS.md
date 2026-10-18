@@ -2395,3 +2395,65 @@ trail into `Q` and a short row of `=`, and `H` is still what the eye follows.
 The older "soft blob" is no longer the picture. The room stays in the catalog.
 The two measurements are on the status line and in the journey. A further
 rebuild was declined.
+
+## October 18 packaged agentic playtest, Strange Loop
+
+A source-blind Windows CLI and MCP round played a local package of the
+Strange Loop working tree, still version `0.5.0-alpha.8`. The archive was
+`numinous-v0.5.0-alpha.8-x86_64-pc-windows-msvc.zip`, SHA-256
+`688bcaed7af2ec0e31827ecb5355ce2a0bd0a1a67071d7d0a1a4bf5e21c4c8f3`.
+`numinous --version` printed `numinous 0.5.0-alpha.8`. The journey and scores
+files were isolated temp paths. The home journey file was left untouched.
+The windowed App stayed closed. The tester read no Rust. This is formative
+agent evidence. Physical sensory qualification and heard audio stay outside
+what the round measured.
+
+The doorway said: "Turn the zoom and watch the frame inside the frame. One
+full turn of the hand is the room's own question." The action was
+`ZOOM (the hand here: numinous render strange-loop --poke x,y)`.
+
+Unpoked renders at 48 by 24 moved the nested frame. At `t=0` the line was
+`zoom=1.00 turn=0.0 bend=1 ZOOM`. At `t=0.35` it was
+`zoom=2.98 turn=55.2 bend=1 ZOOM`. At `t=0.7` it was
+`zoom=8.86 turn=110.3 bend=1 ZOOM`.
+
+A center poke `0.5,0.5` at `t=0.35` read
+`zoom=4.75 turn=78.8 bend=1 ZOOM`. The left edge at the same height read the
+same line. The upper right margin `0.95,0.25` swapped in the straight
+picture: `zoom=2.98 turn=0.0 bend=0 ZOOM` at `t=0.35`, and
+`zoom=1.00 turn=0.0 bend=0 ZOOM` at `t=0`. The lower right margin `0.95,0.75`
+stayed on the bent picture, which is the room's opening. The bottom edge
+graded three calls. `0.1,0.96` read `call=deeper no`. `0.45,0.96` read
+`call=back no`. `0.8,0.96` read `call=turned yes`. Help and describe named
+the verb and the poke form. Reveal and study named a turned frame and a
+straight repetition. The regions were found by trying the picture.
+
+The journey file after those three calls:
+
+```
+visited strange-loop
+consolidated 
+wins 0
+secrets 0
+plays 0
+chosen 
+streak 0 0
+seen 
+wagers strange-loop:0:wrong strange-loop:1:wrong strange-loop:2:right
+```
+
+A plain render wrote the visit and no wager.
+
+MCP `play_room` matched the CLI on every checked line: `zoom=4.75 turn=78.8 bend=1 ZOOM`
+at `t=0.35` with poke `0.5,0.5`; `zoom=2.98 turn=0.0 bend=0 ZOOM` at `t=0.35`
+with poke `0.95,0.25`; `zoom=1.00 turn=0.0 bend=1 call=turned yes` at `t=0`
+with poke `0.8,0.96`. With `NUMINOUS_JOURNEY` set on the server, `play_room`
+wrote the visit, and it wrote `strange-loop:2:right` only for the graded
+call. `listen_room` wrote the visit and no wager, and it returned no status
+line.
+
+The round called the room worth staying in. The frame inside the frame moves
+when the phase moves and when the hand zooms. The upper right margin is a
+second picture with no turn. The bottom edge is a real three-way question,
+and only turned is right for the bent picture. The room stays in the catalog.
+A further rebuild was declined.

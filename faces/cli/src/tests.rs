@@ -1339,6 +1339,43 @@ fn an_attention_wager_is_recorded_from_render_pokes() {
 }
 
 #[test]
+fn a_strange_loop_wager_is_recorded_from_render_pokes() {
+    let pokes = [(0.75, 0.95)];
+    let events = numinous_core::inputs_from_pokes(&pokes, 0.4);
+    let token = numinous_core::rooms::strange_loop::wager_token(0.4, &events).expect("graded call");
+    assert_eq!(token, "strange-loop:2:right");
+    let mut journey = numinous_core::Journey::default();
+    let code = run(
+        Command::Render {
+            id: "strange-loop".to_string(),
+            width: Some(40),
+            height: Some(24),
+            t: 0.4,
+            out: None,
+            color: false,
+            era: "modern".to_string(),
+            vary: false,
+            variation: None,
+            pokes: vec!["0.75,0.95".to_string()],
+            gestures: Vec::new(),
+        },
+        &mut journey,
+    );
+    assert_eq!(code, std::process::ExitCode::SUCCESS);
+    assert!(journey.visited.contains("strange-loop"));
+    assert!(journey.wagers.contains(&token), "{:?}", journey.wagers);
+    let room = numinous_core::room_by_id("strange-loop").expect("room");
+    let report = render_report("strange-loop", 40, 24, 1.0, false, RoomRenderInput::plain())
+        .expect("render");
+    let status = room.status(1.0).expect("status");
+    assert!(
+        report.contains(&format!("Status: {status}")),
+        "cli status {status} missing from {report}"
+    );
+    assert!(status.contains("turn=157.6"), "{status}");
+}
+
+#[test]
 fn meta_json_has_expected_fields() {
     let room = room_by_id("times-tables").expect("known room");
     let value = meta_json(&room.meta());

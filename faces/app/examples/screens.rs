@@ -1022,7 +1022,13 @@ fn room_scenario(room: &dyn Room) -> RoomScenario {
             repeated(&[(0.30, 0.32), (0.52, 0.50), (0.72, 0.68)]),
             StatusChanges,
         ),
-        "strange-loop" => scenario(Click, (0.78, 0.70), 0.45, click(0.78, 0.70), StatusChanges),
+        "strange-loop" => scenario(
+            DragRelease,
+            (0.20, 0.30),
+            0.45,
+            drag((0.20, 0.30), (0.40, 0.50), (0.70, 0.70)),
+            StatusChanges,
+        ),
         _ => scenario_for_verb(room),
     }
 }

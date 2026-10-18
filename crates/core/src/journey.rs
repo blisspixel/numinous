@@ -53,8 +53,10 @@ pub struct Journey {
     pub last_daily: u64,
     /// Stars already shown lit. A visit since this set ignites once.
     pub seen: BTreeSet<String>,
-    /// Graded Attention calls. Each token is `attention:<index>:right` or
-    /// `attention:<index>:wrong`. The set only grows.
+    /// Graded calls from Attention and Strange Loop. Each token is
+    /// `attention:<digit>:right`, `attention:<digit>:wrong`,
+    /// `strange-loop:0|1|2:right`, or `strange-loop:0|1|2:wrong`.
+    /// The set only grows.
     pub wagers: BTreeSet<String>,
 }
 
@@ -267,10 +269,10 @@ impl Journey {
         Some(self.streak)
     }
 
-    /// Record one graded Attention call. Returns whether the token is new.
+    /// Record one graded call. Returns whether the token is new.
     ///
-    /// Anything that is not `attention:<digit>:right` or
-    /// `attention:<digit>:wrong` is refused. A repeat is not a new call.
+    /// Anything outside the Attention or Strange Loop token forms is refused.
+    /// A repeat is not a new call.
     pub fn note_wager_token(&mut self, token: &str) -> bool {
         if !is_wager_token(token) {
             return false;
@@ -395,6 +397,9 @@ fn is_wager_token(token: &str) -> bool {
             index.len() == 1
                 && index.bytes().all(|byte| byte.is_ascii_digit())
                 && matches!(grade, "right" | "wrong")
+        }
+        (Some("strange-loop"), Some(index), Some(grade), None) => {
+            matches!(index, "0" | "1" | "2") && matches!(grade, "right" | "wrong")
         }
         _ => false,
     }
@@ -634,8 +639,11 @@ mod tests {
         assert!(journey.note_wager_token("attention:4:wrong"));
         assert!(!journey.note_wager_token("attention:4:right"));
         assert!(!journey.note_wager_token("attention:10:right"));
+        assert!(journey.note_wager_token("strange-loop:2:right"));
+        assert!(!journey.note_wager_token("strange-loop:3:right"));
+        assert!(!journey.note_wager_token("strange-loop:2:maybe"));
         assert!(!journey.note_wager_token("nope"));
-        assert_eq!(journey.wagers.len(), 2);
+        assert_eq!(journey.wagers.len(), 3);
         assert_eq!(Journey::from_text(&journey.to_text()), journey);
     }
 

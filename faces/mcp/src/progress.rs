@@ -265,6 +265,21 @@ fn note_attention_wager(journey: &mut numinous_core::Journey, args: &Value) {
     }
 }
 
+fn note_strange_loop_wager(journey: &mut numinous_core::Journey, args: &Value) {
+    let Ok(parsed) = crate::room_input::parse_room_inputs(args) else {
+        return;
+    };
+    let t = args.get("t").and_then(Value::as_f64).unwrap_or(0.0);
+    let events = if parsed.gesture.is_empty() {
+        numinous_core::inputs_from_pokes(&parsed.pokes, t)
+    } else {
+        parsed.gesture
+    };
+    if let Some(token) = numinous_core::rooms::strange_loop::wager_token(t, &events) {
+        journey.note_wager_token(&token);
+    }
+}
+
 pub(super) fn record_progress(request: &Value, path: &std::path::Path) {
     if request.get("method").and_then(Value::as_str) != Some("tools/call") {
         return;
@@ -302,6 +317,9 @@ pub(super) fn record_progress(request: &Value, path: &std::path::Path) {
                 }
                 if name == "play_room" && numinous_core::canonical_room_id(id) == "attention" {
                     note_attention_wager(&mut journey, &args);
+                }
+                if name == "play_room" && numinous_core::canonical_room_id(id) == "strange-loop" {
+                    note_strange_loop_wager(&mut journey, &args);
                 }
             }
         }

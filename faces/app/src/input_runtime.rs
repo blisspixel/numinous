@@ -621,10 +621,23 @@ impl App {
         if accepted && room_id == "attention" {
             self.note_attention_wager();
         }
+        if accepted && room_id == "strange-loop" {
+            self.note_strange_loop_wager();
+        }
     }
 
     fn note_attention_wager(&mut self) {
         let Some(token) = numinous_core::rooms::attention::wager_token(self.t, &self.inputs) else {
+            return;
+        };
+        if self.journey.note_wager_token(&token) {
+            self.journey_changed();
+        }
+    }
+
+    fn note_strange_loop_wager(&mut self) {
+        let Some(token) = numinous_core::rooms::strange_loop::wager_token(self.t, &self.inputs)
+        else {
             return;
         };
         if self.journey.note_wager_token(&token) {
