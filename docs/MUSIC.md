@@ -256,6 +256,7 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
   - *Watch* mode: radio forward, room sonification as gentle texture. Lean back.
   - *Play* mode: room sonification forward (you are the instrument), radio as a bed you can turn down.
   - *Create* / Studio mode: the pattern engine (Engine A3) is the whole show; radio off by default.
+  - *Listen* (Designed, a Watch form): the frame is a visualization preset driven by the same band analysis the meter already uses. The radio is the ordinary source, and loopback can answer music from outside Numinous. See `DESIGN.md`, "Listen: the music display".
 - **Always mutable, beautiful in silence.** A prominent, respectful mute. The visuals must still be gorgeous with the sound off (the library, the office, the 2am room where someone is asleep).
 
 ## Open questions
