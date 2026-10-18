@@ -189,7 +189,7 @@ pub use journal_okf::{
 };
 pub use journey::{
     Boon, CUT_LEVELS, ENGINEERED_AHA_ROOM_IDS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options,
-    constellation, is_engineered_aha_room, level_lore,
+    constellation, is_engineered_aha_room, level_lore, sky, star_glyph,
 };
 pub use midi::{
     MIDI_PITCH_BEND_RANGE_SEMITONES, MIDI_TEMPO_MICROSECONDS, MIDI_TICKS_PER_QUARTER, midi_file,

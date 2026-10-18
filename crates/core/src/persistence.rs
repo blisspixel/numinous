@@ -1576,6 +1576,9 @@ fn merge_journey_delta(before: &Journey, after: &Journey, latest: &mut Journey) 
     for id in after.chosen.difference(&before.chosen) {
         latest.chosen.insert(id.clone());
     }
+    for id in after.seen.difference(&before.seen) {
+        latest.seen.insert(id.clone());
+    }
     latest.wins = latest
         .wins
         .saturating_add(after.wins.saturating_sub(before.wins));
@@ -3611,6 +3614,18 @@ mod tests {
 
         assert_eq!(latest.last_daily, 101);
         assert_eq!(latest.streak, 2);
+    }
+
+    #[test]
+    fn a_seen_star_merges_forward_and_does_not_erase_one_already_recorded() {
+        let mut latest = Journey::default();
+        latest.seen.insert("lorenz".to_string());
+        let before = Journey::default();
+        let mut after = Journey::default();
+        after.seen.insert("julia".to_string());
+        super::merge_journey_delta(&before, &after, &mut latest);
+        assert!(latest.seen.contains("lorenz"));
+        assert!(latest.seen.contains("julia"));
     }
 
     #[test]

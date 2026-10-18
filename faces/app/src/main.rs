@@ -1195,6 +1195,7 @@ impl App {
 
     fn cycle_visual_era(&mut self) {
         self.era = self.era.next();
+        self.dissolve.retune(self.motion, self.era);
         if let Some(window) = &self.window {
             window.set_title(&self.title());
         }
@@ -1834,7 +1835,10 @@ impl App {
             }
             Command::Era(name) => match console::parse_era(&name) {
                 Some(era) => {
-                    self.era = era;
+                    if era != self.era {
+                        self.era = era;
+                        self.dissolve.retune(self.motion, self.era);
+                    }
                     if let Some(window) = &self.window {
                         window.set_title(&self.title());
                     }
