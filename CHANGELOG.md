@@ -6,6 +6,11 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 ## [Unreleased]
 
 ### Changed
+- `cellular-automata`, `julia`, and `lambda-map` run no faster than 4x. The
+  player's speed setting is kept, and the room says so while that wish is
+  above the certified speed. The music visualizer's pump and phase nudge stay
+  inside the same ceiling. `numinous describe`, `numinous study`, and the App
+  arrival card name the limit for as long as a room remains on it.
 - Linux CI and published packages pin Ubuntu 24.04 (glibc 2.39). A locked
   workspace check runs on Ubuntu 26.04 before `ubuntu-latest` moves. macOS
   packages set the deployment target to 15.0. The Intel package stays through

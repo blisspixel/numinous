@@ -102,8 +102,8 @@ pub(crate) fn access_report(settings: &[AccessSetting]) -> String {
 /// `known` is the sweep's shrink-only list: each room with the slowest App
 /// speed at which it goes over the WCAG 2.3.1 budget. Rooms are grouped by
 /// that speed, so a player learns both which rooms and when. The music
-/// visualizer is named as unmeasured whatever the list holds, because the
-/// sweep does not model it.
+/// visualizer's largest pump and phase nudge are named, and both are held
+/// inside the certified speed the same list produces.
 pub(crate) fn flash_disclosure(known: &[(&str, f64)]) -> String {
     /// Room names wrap before this width, leaving room for the comma.
     const NAME_COLUMNS: usize = 72;
@@ -144,10 +144,20 @@ pub(crate) fn flash_disclosure(known: &[(&str, f64)]) -> String {
             ));
         }
     }
-    out.push_str(
-        "The music visualizer, which can push a room faster still,\n\
-         is not measured.\n",
-    );
+    let pump = numinous_core::max_visualizer_time_scale();
+    let nudge = numinous_core::max_visualizer_phase_nudge();
+    out.push_str(&format!(
+        "The music visualizer's largest pump is {pump} and its largest\n\
+         phase nudge is {nudge}. Both stay inside the certified speed.\n"
+    ));
+    if known.is_empty() {
+        out.push_str("That speed is 8x, the fastest this sweep certifies.\n");
+    } else {
+        out.push_str(
+            "Each room named above runs no faster than half the speed named\n\
+             with it. Every other room stays inside 8x.\n",
+        );
+    }
     out
 }
 

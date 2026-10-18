@@ -252,8 +252,9 @@ pub use raster::{MarkRole, Raster};
 pub use readout::{DisplayNumber, NumericReadout, ReadoutId};
 pub use registry::{
     KNOWN_OVER_FLASH_BUDGET, MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, THRESHOLD_ROOM_ID, all_rooms,
-    all_rooms_with, display_safe, echoable_id, hidden_room_by_id, must_escape_for_display,
-    nearest_names, nearest_room_ids, room_by_id, room_by_id_with, wings,
+    all_rooms_with, allowed_phase_nudge, allowed_phase_step, certified_time_scale, display_safe,
+    echoable_id, flash_limit_line, hidden_room_by_id, must_escape_for_display, nearest_names,
+    nearest_room_ids, presented_time_scale, room_by_id, room_by_id_with, wings,
 };
 pub use registry::{Wing, counted};
 pub use resonance::{Resonance, resonances};
@@ -301,8 +302,8 @@ pub use sound::{Note, ParametricSound, SoundSpec, wav_bytes};
 pub use spectrum::{
     BAND_COUNT, BAND_NAMES, ONSET_HIT, SpectrumBarLayout, SpectrumLevers, arrangement_spectrum,
     band_energies, bass_mid_treble, draw_spectrum_bars, levers_from_bands, low_band_onset,
-    normalize_bands, spectral_fingerprint, spectrum_hand_point, spectrum_phase_nudge,
-    spectrum_should_poke, spectrum_time_scale,
+    max_visualizer_phase_nudge, max_visualizer_time_scale, normalize_bands, spectral_fingerprint,
+    spectrum_hand_point, spectrum_phase_nudge, spectrum_should_poke, spectrum_time_scale,
 };
 pub use spring::Spring;
 pub use studio::{

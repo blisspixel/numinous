@@ -19,12 +19,20 @@ pub(super) fn report(
     let response = request
         .read(room.as_ref())
         .map_err(|error| error.to_string())?;
+    let flash = numinous_core::flash_limit_line(room.meta().id);
     if json {
-        let value = crate::study_json::response_json(&response)?;
+        let mut value = crate::study_json::response_json(&response)?;
+        if let Some(line) = flash {
+            value["flashLimit"] = serde_json::Value::String(line);
+        }
         serde_json::to_string_pretty(&value)
             .map(|text| format!("{text}\n"))
             .map_err(|error| format!("Could not encode study content: {error}"))
     } else {
-        Ok(response.plain_text())
+        let mut text = response.plain_text();
+        if let Some(line) = flash {
+            text.push_str(&format!("{line}\n"));
+        }
+        Ok(text)
     }
 }

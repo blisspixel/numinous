@@ -198,7 +198,37 @@ impl App {
             .replace("PI HIDES E ", &format!("PI HIDES {primary} "))
     }
 
+    /// Add the visualizer's phase nudge without passing the certified scale.
+    pub(super) fn apply_visualizer_nudge(&mut self, requested: f64) {
+        let id = self.rooms[self.current].meta().id;
+        let nudge = numinous_core::allowed_phase_nudge(
+            id,
+            self.phase_tick_elapsed,
+            self.phase_spent,
+            requested,
+        );
+        self.t = self.motion.next_phase(self.t, nudge);
+        self.phase_spent += nudge;
+    }
+
+    /// The access-report sentence, when the saved speed is above the certified scale.
+    ///
+    /// The saved wish stays what the player set. This only says that the room
+    /// is running slower than that wish.
+    pub(super) fn held_speed_status(&self) -> Option<String> {
+        let id = self.rooms[self.current].meta().id;
+        let ceiling = numinous_core::certified_time_scale(id);
+        if self.time_scale.is_finite() && self.time_scale > ceiling {
+            numinous_core::flash_limit_line(id)
+        } else {
+            None
+        }
+    }
+
     pub(super) fn current_status_override(&self, width: usize) -> Option<String> {
+        if let Some(line) = self.held_speed_status() {
+            return Some(line);
+        }
         if self.current_room_is_life() {
             return Some(if width <= 400 {
                 self.life_session.compact_status()
@@ -1010,6 +1040,9 @@ impl App {
         {
             return 0;
         }
-        self.advance_life(elapsed * self.time_scale * self.visualizer_scale)
+        let room_id = self.rooms[self.current].meta().id;
+        let scale =
+            numinous_core::presented_time_scale(self.time_scale, self.visualizer_scale, room_id);
+        self.advance_life(elapsed * scale)
     }
 }

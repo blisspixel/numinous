@@ -15,7 +15,7 @@ pub(super) fn catalog_entry() -> Value {
     json!({
         "name": "study_room",
         "title": "Study a room",
-        "description": "Read optional room study directly. No visit, level, wager, consolidation, or reading progress is required or awarded. Choose explanation (default), notes, or mathematics, or open one returned stable block id. Explanation and notes exist for every room. An authored mathematics treatment is written for only a few rooms so far, so structuredContent.authoredDepthRooms names them on every response and a refusal names them too; do not probe the catalog room by room. Unavailable depths and blocks return an error; notes never substitute for mathematics. Studying Lissajous also names structuredContent.construction as Returning home, with next already bound as a plot_expression list of the bundled capsules; other rooms omit it. Text and structured content preserve scientific notation and references. Language and translation availability are explicit for the document and each block; Japanese is a reviewed draft for the Lissajous pilot, with English fallback elsewhere.",
+        "description": "Read optional room study directly. No visit, level, wager, consolidation, or reading progress is required or awarded. Choose explanation (default), notes, or mathematics, or open one returned stable block id. Explanation and notes exist for every room. An authored mathematics treatment is written for only a few rooms so far, so structuredContent.authoredDepthRooms names them on every response and a refusal names them too; do not probe the catalog room by room. Unavailable depths and blocks return an error; notes never substitute for mathematics. Studying Lissajous also names structuredContent.construction as Returning home, with next already bound as a plot_expression list of the bundled capsules; other rooms omit it. A room that is still over the photosensitivity budget names that limit in the text and in structuredContent.flashLimit, and other rooms omit the field. Text and structured content preserve scientific notation and references. Language and translation availability are explicit for the document and each block; Japanese is a reviewed draft for the Lissajous pilot, with English fallback elsewhere.",
         "annotations": {
             "readOnlyHint": true,
             "destructiveHint": false,
@@ -193,6 +193,10 @@ fn output_schema() -> Value {
             "availableBlocks": { "type": "array", "items": block_schema(false) },
             "authoredDepthRooms": authored_depth_rooms_schema(),
             "blocks": { "type": "array", "minItems": 1, "items": block_schema(true) },
+            "flashLimit": {
+                "description": "Present only while this room remains on the photosensitivity list. Names the speed that goes over the WCAG budget and the certified speed the App will not pass.",
+                "type": "string"
+            },
             "construction": {
                 "description": "Present only for Lissajous: the optional Returning home Studio door, with next already bound as a followable plot_expression list of the bundled capsules. Other rooms omit the field.",
                 "type": "object",
@@ -273,7 +277,13 @@ fn response(args: &Value) -> Result<(String, Value), String> {
     let selected = request
         .read(room.as_ref())
         .map_err(|error| error.to_string())?;
-    Ok((selected.plain_text(), study_json::response_json(&selected)?))
+    let mut text = selected.plain_text();
+    let mut structured = study_json::response_json(&selected)?;
+    if let Some(line) = numinous_core::flash_limit_line(room.meta().id) {
+        text.push_str(&format!("{line}\n"));
+        structured["flashLimit"] = serde_json::Value::String(line);
+    }
+    Ok((text, structured))
 }
 
 pub(super) fn tool(args: &Value) -> Value {

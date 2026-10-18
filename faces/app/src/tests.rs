@@ -2383,6 +2383,58 @@ fn life_status_uses_the_persistent_session_after_history_limits() {
 }
 
 #[test]
+fn a_capped_room_keeps_the_wish_and_runs_at_the_certified_scale() {
+    let mut app = headless("numinous_app_test_flash_ceiling.txt");
+    app.current = app
+        .rooms
+        .iter()
+        .position(|room| room.meta().id == "julia")
+        .expect("julia");
+    app.time_scale = 8.0;
+    app.visualizer_scale = numinous_core::max_visualizer_time_scale();
+    app.t = 0.0;
+    app.advance_room_tick(1.0 / 60.0, 1.0 / 60.0, false);
+    app.apply_visualizer_nudge(numinous_core::max_visualizer_phase_nudge());
+    let cap = numinous_core::ROOM_CYCLES_PER_SECOND * 4.0 / 60.0;
+    assert!(
+        app.t <= cap + 1e-9,
+        "julia advanced {} past the certified step {cap}",
+        app.t
+    );
+    assert_eq!(app.time_scale, 8.0, "the saved wish stays");
+    let status = app.current_status_override(900).expect("held status");
+    assert!(
+        status.contains("flashes faster than the WCAG budget allows"),
+        "{status}"
+    );
+    assert!(status.contains("at 8x speed or faster"), "{status}");
+    assert!(status.contains("no faster than 4x"), "{status}");
+
+    app.current = app
+        .rooms
+        .iter()
+        .position(|room| room.meta().id == "mandelbrot")
+        .expect("mandelbrot");
+    app.time_scale = 8.0;
+    app.visualizer_scale = numinous_core::max_visualizer_time_scale();
+    app.t = 0.0;
+    app.advance_room_tick(1.0 / 60.0, 1.0 / 60.0, false);
+    app.apply_visualizer_nudge(numinous_core::max_visualizer_phase_nudge());
+    let open = numinous_core::ROOM_CYCLES_PER_SECOND * numinous_core::MAX_TIME_SCALE / 60.0;
+    assert!(
+        app.t <= open + 1e-9,
+        "mandelbrot advanced {} past 8x ({open})",
+        app.t
+    );
+    let status = app.current_status_override(900).unwrap_or_default();
+    assert!(
+        !status.contains("flashes faster"),
+        "an uncapped room must not claim the flash hold: {status}"
+    );
+    let _ = std::fs::remove_file(&app.journey_file);
+}
+
+#[test]
 fn life_advancement_obeys_pause_focus_and_speed_controls() {
     let mut app = headless("numinous_app_test_life_pause.txt");
     select_life(&mut app);

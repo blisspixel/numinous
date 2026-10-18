@@ -8445,6 +8445,38 @@ fn list_rooms_offers_a_typed_starter_doorway() {
 }
 
 #[test]
+fn describe_and_study_name_the_flash_ceiling() {
+    let described = call("describe_room", json!({"id": "julia"}));
+    let text = described["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_default();
+    assert!(text.contains("no faster than 4x"), "{text}");
+    assert!(
+        described["result"]["structuredContent"]["flashLimit"]
+            .as_str()
+            .unwrap_or("")
+            .contains("at 8x speed or faster"),
+        "{described}"
+    );
+    let quiet = call("describe_room", json!({"id": "mandelbrot"}));
+    assert!(
+        quiet["result"]["structuredContent"]
+            .get("flashLimit")
+            .is_none(),
+        "{quiet}"
+    );
+    let studied = call("study_room", json!({"room": "julia"}));
+    let study_text = studied["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap_or_default();
+    assert!(study_text.contains("no faster than 4x"), "{study_text}");
+    assert!(
+        studied["result"]["structuredContent"]["flashLimit"].is_string(),
+        "{studied}"
+    );
+}
+
+#[test]
 fn describe_room_tool_returns_details() {
     let resp = handle_request(&json!({
         "jsonrpc":"2.0","id":11,"method":"tools/call",
