@@ -66,7 +66,7 @@ controls, locale grammar, block selection, and current translation limits.
 
 **The user:** a human with eyes, ears, and hands. **The UX we are going for, in one line:** *an instrument you fall into, not an app you operate.*
 
-The full interactive audiovisual experience. The UX is specified in depth across `DESIGN.md` (the Cabinet, the Watch/Play/Create modes, Benchmark), `VISUALS.md`, `SOUND.md`, and `STUDIO.md`. The essentials, so this doc stands on its own:
+The full interactive audiovisual experience. The UX is specified in depth across `DESIGN.md` (the Cabinet, the interface rules, the Watch/Play/Create modes, Benchmark), `VISUALS.md`, `SOUND.md`, and `STUDIO.md`. The essentials, so this doc stands on its own:
 
 - **The math is the interface.** UI chrome is near-invisible: controls fade in on approach and recede while you watch. You manipulate the mathematical object *directly* (drag the point, bend the curve), not an abstract slider parked elsewhere.
 - **Zero friction, discovery over instruction.** Under three seconds to first play. No account, no tutorial wall. You learn what a control does by using it (The Witness school), never by reading a tooltip.
