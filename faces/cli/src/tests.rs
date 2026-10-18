@@ -2411,9 +2411,9 @@ fn leaving_a_staged_room_teases_nothing_its_wager_has_not_earned() {
 
 #[test]
 fn an_absent_latch_never_reads_as_interrupted() {
-    // A host where the Ctrl+C handler cannot install keeps the old
-    // die-on-signal behavior; it must never fake an interrupt.
-    assert!(!super::interrupted(&None));
+    // Nothing has armed the stop flag. A missing handler must not look like
+    // Ctrl+C, or a live view would restore and exit before the first frame.
+    assert!(!super::live::interrupted());
 }
 
 #[test]
@@ -6002,4 +6002,132 @@ fn sim_run_rejects_bad_input() {
     assert!(super::sim_run("wing", &["nope=1".to_string()], 10, 10).is_err());
     assert!(super::sim_run("wing", &["angle-of-attack=abc".to_string()], 10, 10).is_err());
     assert!(super::sim_run("wing", &["missing-equals".to_string()], 10, 10).is_err());
+}
+
+#[test]
+fn a_piped_postcard_is_one_still_with_no_cursor_control() {
+    let style = TerminalStyle {
+        era: numinous_core::Era::Modern,
+        color: false,
+    };
+    let room = numinous_core::room_by_id("julia").expect("room");
+    let still = super::watch_samples(room.as_ref(), 1, 24, 12, style, true);
+    assert!(still.contains(room.meta().title), "{still}");
+    assert!(
+        !still.contains('\u{1b}'),
+        "a mono postcard moved the cursor"
+    );
+    assert!(!still.contains(super::live::FRAME_SEPARATOR));
+    let expected = super::still_caption(
+        &super::watch_picture(room.as_ref(), room.postcard_t(), 24, 12, style),
+        room.meta().title,
+    );
+    assert_eq!(still, expected);
+
+    let ascii = super::play_samples(room.as_ref(), 1, 24, 12, true);
+    assert!(ascii.contains(room.meta().title));
+    assert!(!ascii.contains('\u{1b}'));
+
+    let show = super::tour_postcard(
+        &numinous_core::all_rooms(),
+        super::TourFrame {
+            width: 24,
+            height: 12,
+            style,
+        },
+    );
+    let first = numinous_core::all_rooms();
+    assert!(show.contains(first[0].meta().title));
+    assert!(!show.contains('\u{1b}'));
+    assert!(!show.contains(super::live::FRAME_SEPARATOR));
+    assert_eq!(show.matches(first[0].meta().title).count(), 1);
+}
+
+#[test]
+fn a_recording_splits_frames_without_cursor_control() {
+    let style = TerminalStyle {
+        era: numinous_core::Era::Modern,
+        color: false,
+    };
+    let room = numinous_core::room_by_id("julia").expect("room");
+    let recorded = super::watch_samples(room.as_ref(), 4, 24, 12, style, false);
+    let frames: Vec<&str> = recorded.split(super::live::FRAME_SEPARATOR).collect();
+    assert_eq!(frames.len(), 4, "four samples, three separators");
+    assert!(frames.iter().all(|frame| !frame.contains('\u{1b}')));
+    assert!(frames.iter().all(|frame| frame.contains(room.meta().title)));
+    let motion = numinous_core::Motion::from_env();
+    if motion.animates() {
+        assert_ne!(
+            frames[0], frames[3],
+            "full motion should leave the postcard phase"
+        );
+    } else {
+        assert!(frames.windows(2).all(|pair| pair[0] == pair[1]));
+    }
+
+    // Full motion holds a room for at least two seconds of frames, so one
+    // second at 5 fps is ten frames of the first room. One frame past that
+    // hold is what reaches the next title.
+    let seconds = 1.0;
+    let fps = 5.0;
+    let per_room = super::timer_frames(seconds, fps);
+    let count = per_room + 1;
+    let show = super::tour_recording(
+        &numinous_core::all_rooms(),
+        super::TourFrame {
+            width: 16,
+            height: 8,
+            style,
+        },
+        count,
+        seconds,
+        fps,
+    );
+    assert!(!show.contains('\u{1b}'));
+    if motion.animates() {
+        let rooms = numinous_core::all_rooms();
+        let frames: Vec<&str> = show.split(super::live::FRAME_SEPARATOR).collect();
+        assert_eq!(frames.len(), count as usize);
+        let title_of = |frame: &str| -> String {
+            frame
+                .lines()
+                .rev()
+                .find(|line| !line.is_empty())
+                .unwrap_or("")
+                .to_string()
+        };
+        assert_eq!(title_of(frames[0]), rooms[0].meta().title);
+        assert_eq!(
+            title_of(frames[per_room as usize]),
+            rooms[1].meta().title,
+            "one frame past a room's hold reaches the next title"
+        );
+    }
+}
+
+#[test]
+fn live_frames_are_synchronized_and_play_no_longer_clears_every_frame() {
+    let room = numinous_core::room_by_id("julia").expect("room");
+    let body = super::play_frame(room.as_ref(), 0.0, 24, 12);
+    assert!(!body.contains("\x1b[2J"), "play frames repaint in place");
+    let wrapped = super::live::live_frame(&body);
+    assert!(wrapped.contains("\x1b[?2026h"));
+    assert!(wrapped.contains("\x1b[?2026l"));
+    assert!(!wrapped.contains("\x1b[2J"));
+
+    let watch = super::watch_frame(
+        room.as_ref(),
+        0.25,
+        24,
+        12,
+        TerminalStyle {
+            era: numinous_core::Era::Modern,
+            color: true,
+        },
+    );
+    let live = super::live::live_frame(&watch);
+    assert!(live.starts_with("\x1b[?2026h"));
+    assert!(live.contains("\x1b[?2026l"));
+    assert!(!live.contains("\x1b[2J"));
+    assert_eq!(live.matches("\x1b[H").count(), 1);
 }

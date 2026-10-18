@@ -7,17 +7,17 @@ input is what moves it. This gate proves both halves, because either one alone
 would be a defect. A view that never moves is not reduced motion, it is a
 broken view; a view that still drifts is not reduced motion either.
 
-Each live loop is run twice against the real binary, once ordinary and once
-with NUMINOUS_REDUCED_MOTION set, and the emitted frames are compared. A frame
-is whatever sits between two cursor-home markers, so the leading screen-clear
-and the truncated tail are excluded by construction rather than by guesswork.
+Each room loop is run twice against the real binary, once ordinary and once
+with NUMINOUS_REDUCED_MOTION set, and the emitted frames are compared. A pipe
+is not a terminal, so the probe asks for `--frames` and the command exits.
+Frames are split on the recording separator. A recording that moves the cursor
+is a failure: cursor control belongs on a terminal.
 
 The Show is checked differently, because reduced motion changes what it does
-rather than only how fast it does it. Ordinarily it changes rooms on a timer.
-Held, it rests on one room and waits for the player, so there is no pair of
-frame streams to compare: there is a gallery that advances by itself and a
-gallery that advances only when asked. That is counted directly, from the
-prompt the held gallery prints once per room.
+rather than only how fast it does it. On a pipe, ordinary motion prints one
+postcard and exits. `--frames` is what proves the gallery still advances.
+Held, it rests on one room and waits for the player. That is counted directly,
+from the prompt the held gallery prints once per room.
 
 This is machine evidence for the CLI only. The App and MCP faces, mono audio,
 photosensitivity budgets, and any human accessibility session remain separate
@@ -42,23 +42,46 @@ OUT = ROOT / ".agent" / "tester-cohort" / "reduced-motion"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gate_cli import resolve_cli  # noqa: E402
 
-# Enough bytes to hold many frames of the widest supported view.
-READ_LIMIT = 400_000
-# These loops never exit on their own, so the probe ends on a deadline. Long
-# enough for a slow machine to emit dozens of frames, short enough that a
-# stalled child cannot hold CI open.
-DEADLINE_SECONDS = 6.0
+# Enough bytes to hold the recordings below. They exit, so this is a ceiling
+# rather than a slice of an infinite stream.
+READ_LIMIT = 2_000_000
+# A recording that does not exit by here is the old streaming bug.
+DEADLINE_SECONDS = 20.0
 # Every probe needs at least this many complete frames before its result means
 # anything. Below it the run is inconclusive, which is a different failure from
 # the feature being broken, and the report must not confuse the two.
 MIN_FRAMES = 4
+# Samples of the live phase step, enough that ordinary motion leaves the first
+# picture and reduced motion can be seen holding it.
+FRAME_COUNT = "120"
+# Splits a `--frames` recording. The same bytes the CLI writes between frames,
+# including the newlines, so the first and last frame are not a different
+# string merely because the separator touched them. Not a cursor sequence.
+FRAME_SEPARATOR = "\n\x1c\n"
 
-# Each probe: a label, the argv after the binary, and the marker that starts a
-# frame in that loop's output.
+# Small, muted, and finite. The picture has to be large enough that a phase
+# step changes a cell; the count has to be long enough to take that step.
+FRAME_ARGS = [
+    "--width",
+    "48",
+    "--height",
+    "24",
+    "--fps",
+    "10",
+    "--frames",
+    FRAME_COUNT,
+]
+
+# Each probe: a label, the argv after the binary, and the separator between
+# recorded frames.
 PROBES: tuple[tuple[str, list[str], str], ...] = (
-    ("watch", ["watch", "lorenz"], "\x1b[H"),
-    ("watch-times-tables", ["watch", "times-tables"], "\x1b[H"),
-    ("play", ["play", "lorenz"], "\x1b[2J\x1b[H"),
+    ("watch", ["watch", "lorenz", "--mute", *FRAME_ARGS], FRAME_SEPARATOR),
+    (
+        "watch-times-tables",
+        ["watch", "times-tables", "--mute", *FRAME_ARGS],
+        FRAME_SEPARATOR,
+    ),
+    ("play", ["play", "lorenz", *FRAME_ARGS], FRAME_SEPARATOR),
 )
 
 # The line the held gallery prints beneath each room. It appears exactly once
@@ -89,12 +112,42 @@ SHOW_ARGS = [
 ]
 
 
-def whole_frames(cli: list[str], args: list[str], reduced: bool, marker: str) -> list[str]:
-    """Complete frames emitted by one live loop, bounded in time and in bytes.
+def room_hold_frames(seconds: float, fps: float) -> int:
+    """Frames one room holds under full motion.
 
-    The loops under test never exit, so the probe always ends by deadline. A
-    plain read loop would block forever on a child that stalls without closing
-    its pipe, which would hang the gate rather than fail it.
+    This matches `show_advance`: the hold is at least two seconds, then times
+    the frame rate. `--seconds 1` is therefore two seconds of frames, not one.
+    """
+    return int(max(seconds, 2.0) * max(fps, 1.0))
+
+
+# One frame past a room's hold, at the two-second floor. fps 1 keeps the
+# recording to three frames and still reaches a second title.
+RECORD_SECONDS = "1"
+RECORD_FPS = "1"
+RECORD_COUNT = room_hold_frames(float(RECORD_SECONDS), float(RECORD_FPS)) + 1
+RECORD_ARGS = [
+    "tour",
+    "--mute",
+    "--width",
+    "24",
+    "--height",
+    "12",
+    "--seconds",
+    RECORD_SECONDS,
+    "--fps",
+    RECORD_FPS,
+    "--frames",
+    str(RECORD_COUNT),
+]
+
+
+def whole_frames(
+    cli: list[str], args: list[str], reduced: bool, marker: str
+) -> tuple[list[str], str | None]:
+    """Frames from one `--frames` recording, or why the recording is unusable.
+
+    The command must exit. A timeout is the streaming bug, not a sample.
     """
     env = dict(os.environ)
     env.pop("NUMINOUS_REDUCED_MOTION", None)
@@ -111,35 +164,41 @@ def whole_frames(cli: list[str], args: list[str], reduced: bool, marker: str) ->
     try:
         data, _ = proc.communicate(timeout=DEADLINE_SECONDS)
     except subprocess.TimeoutExpired:
-        # Expected: these loops run until stopped. Kill, then collect what the
-        # pipe already holds.
         proc.kill()
-        data, _ = proc.communicate()
-    parts = data[:READ_LIMIT].decode("utf-8", "replace").split(marker)
-    if len(parts) <= 2:
-        return []
-    # Adjacent markers can yield empty splits; those are not frames.
-    return [frame for frame in parts[1:-1] if frame]
+        proc.communicate()
+        return [], "the recording did not exit"
+    text = data[:READ_LIMIT].decode("utf-8", "replace")
+    if "\x1b" in text:
+        return [], "the recording moved the cursor"
+    if proc.returncode not in (0, None):
+        return [], f"the recording exited {proc.returncode}"
+    return [frame for frame in text.split(marker) if frame.strip()], None
 
 
 def check(cli: list[str], label: str, args: list[str], marker: str) -> dict[str, Any]:
-    moving = whole_frames(cli, args, reduced=False, marker=marker)
-    held = whole_frames(cli, args, reduced=True, marker=marker)
-    moving_distinct = len(set(moving))
-    held_distinct = len(set(held))
+    moving, moving_error = whole_frames(cli, args, reduced=False, marker=marker)
+    held, held_error = whole_frames(cli, args, reduced=True, marker=marker)
+    moving_distinct = len({frame.strip("\n") for frame in moving})
+    held_distinct = len({frame.strip("\n") for frame in held})
 
     # Capture failures and behaviour failures are different problems, and a
     # report that blurs them sends the reader to the wrong place. Only judge
     # behaviour once there is enough evidence to judge it on.
     reasons = []
     captured = True
-    if len(moving) < MIN_FRAMES:
+    if moving_error:
+        reasons.append(f"ordinary: {moving_error}")
+        captured = False
+    elif len(moving) < MIN_FRAMES:
         reasons.append(
             f"captured only {len(moving)} ordinary frames, need {MIN_FRAMES}; "
             "the run is inconclusive rather than failing"
         )
         captured = False
-    if len(held) < MIN_FRAMES:
+    if held_error:
+        reasons.append(f"reduced: {held_error}")
+        captured = False
+    elif len(held) < MIN_FRAMES:
         reasons.append(
             f"captured only {len(held)} reduced frames, need {MIN_FRAMES}; "
             "the run is inconclusive rather than failing"
@@ -200,12 +259,20 @@ def judge_show(ordinary: ShowRun, eof: ShowRun, asked: ShowRun) -> list[str]:
     the same way `creator-parity.py` splits what counts as agreement from the
     machinery that produces it. A gate whose judgment is never exercised can
     be wrong in exactly the direction that makes it pass.
+
+    Ordinary motion on a pipe exits. A pipe that stays open is the streaming
+    bug. The gallery itself is proved by `judge_recording`, not by asking the
+    pipe to run forever.
     """
     reasons = []
+    if not ordinary.ended:
+        reasons.append("a pipe did not exit; tour would stream forever")
     if ordinary.rooms:
         reasons.append(f"ordinary motion asked the player to advance {ordinary.rooms} times")
-    if ordinary.ended:
-        reasons.append("ordinary motion ended on its own, so it was not running the gallery")
+    if ordinary.ended and not visible(ordinary.output).strip():
+        reasons.append("ordinary motion drew nothing")
+    if "\x1b" in ordinary.output:
+        reasons.append("ordinary motion moved the cursor")
     if not eof.ended:
         reasons.append("held, a closed stdin did not end The Show; it would redraw forever")
     if eof.rooms != 1:
@@ -255,16 +322,78 @@ def run_show(cli: list[str], reduced: bool, keys: bytes) -> ShowRun:
     return ShowRun(ended=finished, rooms=output.count(SHOW_PROMPT), output=output)
 
 
-def check_show(cli: list[str]) -> dict[str, Any]:
-    """The Show advances by itself ordinarily, and only when asked when held.
+class Recording(NamedTuple):
+    """One `--frames` run of The Show: whether it ended, and the frames it wrote."""
 
-    Both halves are required. A gallery that never advances under either
-    setting is broken rather than considerate, and a gallery that advances
-    under both has simply ignored the player.
+    ended: bool
+    code: int
+    frames: list[str]
+    output: str
+
+
+def judge_recording(run: Recording, expected: int) -> list[str]:
+    """Why a finite gallery recording failed, or nothing if it shows a second room.
+
+    The last nonempty line of a recorded frame is the room title. Two distinct
+    titles means the gallery moved. Cursor bytes and the held prompt do not
+    belong in a recording.
     """
-    # Ordinarily nothing is asked of anyone and the loop does not end. Held with
-    # nobody there, one room and a clean stop. Held with a player, exactly as
-    # many rooms as were asked for, which is the whole point and the evidence.
+    reasons = []
+    if not run.ended:
+        reasons.append("the recording did not exit")
+        return reasons
+    if run.code != 0:
+        reasons.append(f"the recording exited {run.code}")
+    if "\x1b" in run.output:
+        reasons.append("the recording moved the cursor")
+    if SHOW_PROMPT in run.output:
+        reasons.append("the recording waited for the player")
+    nonempty = [frame for frame in run.frames if frame.strip()]
+    if len(nonempty) != expected:
+        reasons.append(f"captured {len(nonempty)} frames, need {expected}")
+    titles = []
+    for frame in nonempty:
+        lines = [line.strip() for line in frame.splitlines() if line.strip()]
+        if lines:
+            titles.append(lines[-1])
+    if len(set(titles)) < 2:
+        reasons.append("the gallery did not reach a second room")
+    return reasons
+
+
+def run_recording(cli: list[str]) -> Recording:
+    """Record The Show for `RECORD_COUNT` frames and return what it wrote."""
+    env = dict(os.environ)
+    env.pop("NUMINOUS_REDUCED_MOTION", None)
+    env["NO_COLOR"] = "1"
+    proc = subprocess.Popen(
+        cli + RECORD_ARGS,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        env=env,
+    )
+    ended = True
+    try:
+        data, _ = proc.communicate(timeout=DEADLINE_SECONDS)
+    except subprocess.TimeoutExpired:
+        ended = False
+        proc.kill()
+        data, _ = proc.communicate()
+    output = data[:READ_LIMIT].decode("utf-8", "replace")
+    frames = output.split(FRAME_SEPARATOR)
+    return Recording(ended=ended, code=proc.returncode or 0, frames=frames, output=output)
+
+
+def check_show(cli: list[str]) -> dict[str, Any]:
+    """A pipe exits with one postcard. Held, The Show moves only when asked.
+
+    Both halves are required. A pipe that streams is the bug this gate now
+    names, and a held gallery that advances on a closed stdin has ignored the
+    player.
+    """
+    # Ordinary: one postcard, no prompt, a clean exit. Held with nobody there,
+    # one room and a clean stop. Held with a player, exactly as many rooms as
+    # were asked for.
     ordinary = run_show(cli, reduced=False, keys=b"")
     eof = run_show(cli, reduced=True, keys=b"")
     asked = run_show(cli, reduced=True, keys=ASKED_TWICE)
@@ -282,15 +411,38 @@ def check_show(cli: list[str]) -> dict[str, Any]:
         "rooms_on_closed_stdin": eof.rooms,
         "rooms_when_asked_twice": asked.rooms,
         "measured": (
-            f"ordinary asked {ordinary.rooms} times and kept running, "
+            f"ordinary exited={ordinary.ended} with {ordinary.rooms} prompts, "
             f"held showed {rooms_said(eof.rooms)} on a closed stdin "
             f"and {rooms_said(asked.rooms)} when asked twice"
         ),
         "detail": (
             "; ".join(reasons)
             if reasons
-            else "ordinary advances on its own, held advances only when asked"
+            else "a pipe exits with one postcard, held advances only when asked"
         ),
+    }
+
+
+def check_recording(cli: list[str]) -> dict[str, Any]:
+    """`--frames` crosses into a second room and does not touch the cursor."""
+    recorded = run_recording(cli)
+    reasons = judge_recording(recorded, RECORD_COUNT)
+    titles = []
+    for frame in recorded.frames:
+        lines = [line.strip() for line in frame.splitlines() if line.strip()]
+        if lines:
+            titles.append(lines[-1])
+    return {
+        "name": "tour-frames",
+        "args": RECORD_ARGS,
+        "passed": not reasons,
+        "frames": len([frame for frame in recorded.frames if frame.strip()]),
+        "distinct_titles": len(set(titles)),
+        "measured": (
+            f"{len(set(titles))} titles across "
+            f"{len([frame for frame in recorded.frames if frame.strip()])} frames"
+        ),
+        "detail": "; ".join(reasons) if reasons else "the gallery reached a second room",
     }
 
 
@@ -299,6 +451,7 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     results = [check(cli, label, args, marker) for label, args, marker in PROBES]
     results.append(check_show(cli))
+    results.append(check_recording(cli))
     failed = [item for item in results if not item["passed"]]
     summary = {
         "suite": "reduced-motion",

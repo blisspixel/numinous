@@ -167,8 +167,14 @@ For automation, pipelines, CI, power users, and agents through a shell:
 Running `numinous` without arguments draws a one-frame, full-color home screen
 with the current Journey level and command doorways. `tour` presents the whole
 catalog in sequence. `watch <room>` animates a full-color room with sound;
-`play <room>` provides the simpler live ASCII path without audio. Studio work is
-command-oriented through `plot`,
+`play <room>` provides the simpler live ASCII path without audio. Those three
+own the terminal only when stdout is a terminal: alternate screen, hidden
+cursor, and one synchronized update per frame. A pipe or a file gets one still
+postcard and the room title, then the command exits, and it does not light a
+star. `--frames N` writes that many frames and stops. `NO_COLOR` still strips
+color and leaves shape. `NUMINOUS_REDUCED_MOTION` still holds the phase, and
+The Show still waits for Enter, including when its output is redirected.
+Studio work is command-oriented through `plot`,
 `open-studio`, and `sing`; there is no Ratatui cabinet, `play --tui`, or Studio
 REPL today. A richer persistent TUI remains a possible later interface, not a
 current dependency or command.

@@ -22,5 +22,11 @@ png = "0.18"
 hound = "3"
 ureq = "3"
 
+[target.'cfg(unix)'.dependencies]
+signal-hook = { version = "0.3", default-features = false }
+
+[target.'cfg(unix)'.dev-dependencies]
+portable-pty = "0.9"
+
 [lints]
 workspace = true
