@@ -452,7 +452,7 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [ ] **Graph theory** - the Bridges of Konigsberg as a walking puzzle; fail, then learn you were always going to fail, and why (degree parity, never named).
 - [ ] **Pigeonhole** - a party trick generator: guaranteed handshake-twins in any crowd of a certain size.
 - [ ] **Ramsey** - the party of six: find strangers or friends; order is unavoidable, chaos is impossible.
-- [x] **Traveling salesman** (built: `route-lab`) - choose a delivery order on a costed street network, compare nearest-next with the minimum round-trip cost, and accept an offered cheaper reorder. [Route Lab](ROUTE_LAB.md) supports search playback, native network authoring, and portable route projects with a chosen question.
+- [x] **Traveling salesman** (built: `route-lab`) - choose a delivery order on a costed street network, compare nearest-next with the minimum round-trip cost, watch those choices without changing the order, and accept an offered cheaper reorder. [Route Lab](ROUTE_LAB.md) supports search playback, nearest-next choice playback, native network authoring, and portable route projects with a chosen question.
 
 ## Computation and logic
 - [x] **Universality** - Rule 110 and Life (the reveals and deep cuts carry it).

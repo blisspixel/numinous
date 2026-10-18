@@ -1751,6 +1751,7 @@ fn authored_route_workbench() -> numinous_core::route_workbench::RouteWorkbench 
         },
         undo: Vec::new(),
         trace: None,
+        choices: None,
     })
     .expect("bounded authored route fixture")
 }

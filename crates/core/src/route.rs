@@ -400,6 +400,42 @@ pub struct ExactRoute {
     pub states_completed: usize,
 }
 
+/// One remaining stop and its shortest-path cost from the current stop.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NearestCandidate {
+    /// Required stop, or the depot on the return record.
+    pub stop: usize,
+    /// Shortest-path cost from the stop being left.
+    pub cost: u32,
+}
+
+/// One recorded nearest-next decision, including the return to the depot.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NearestChoice {
+    /// Stop the heuristic is leaving.
+    pub current: usize,
+    /// Remaining candidates and their immediate shortest-path costs.
+    /// Sorted by junction identifier. The return record names the depot.
+    pub candidates: Vec<NearestCandidate>,
+    /// The stop chosen. The depot, on the return record.
+    pub chosen: usize,
+    /// Expanded open-street junctions, including both ends.
+    pub leg: Vec<usize>,
+    /// Metric cost of this leg. Equal to the sum of its open roads.
+    pub cost: u32,
+    /// Closed cost accumulated through this leg.
+    pub accumulated: u32,
+}
+
+/// The nearest-next tour and the choices that built it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NearestTrace {
+    /// Delivery choices in order, then the return to the depot.
+    pub choices: Vec<NearestChoice>,
+    /// The same tour [`RouteMetric::nearest_neighbor`] returns.
+    pub tour: RouteTour,
+}
+
 /// Shortest-path distances and street reconstructions bound to one town.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RouteMetric {
@@ -464,21 +500,73 @@ impl RouteMetric {
     /// Form the nearest-neighbor heuristic, resolving equal leg costs by
     /// junction identifier. Its result is feasible, not certified optimal.
     pub fn nearest_neighbor(&self) -> Result<RouteTour, RouteError> {
+        Ok(self.nearest_neighbor_trace()?.tour)
+    }
+
+    /// The same heuristic, keeping every choice it actually made.
+    ///
+    /// Each record names the stop being left, the remaining stops with their
+    /// shortest-path costs, the stop chosen, and the expanded open-street leg.
+    /// The last record is the return to the depot. Equal costs break by
+    /// junction identifier. The trace is a pure function of the metric.
+    pub fn nearest_neighbor_trace(&self) -> Result<NearestTrace, RouteError> {
+        let stops = self.problem.stops();
         let mut indices = vec![0];
-        let mut current = 0;
-        while indices.len() < self.problem.stops.len() {
-            let next = (1..self.problem.stops.len())
+        let mut choices = Vec::with_capacity(stops.len());
+        let mut accumulated = 0u32;
+        let mut current = 0usize;
+        while indices.len() < stops.len() {
+            let mut candidates = Vec::new();
+            for (node, &stop) in stops.iter().enumerate().skip(1) {
+                if indices.contains(&node) {
+                    continue;
+                }
+                candidates.push(NearestCandidate {
+                    stop,
+                    cost: self.distances[current][node],
+                });
+            }
+            candidates.sort_by_key(|candidate| candidate.stop);
+            let chosen_index = (1..stops.len())
                 .filter(|node| !indices.contains(node))
-                .min_by_key(|&node| (self.distances[current][node], self.problem.stops[node]))
+                .min_by_key(|&node| (self.distances[current][node], stops[node]))
                 .ok_or(RouteError::Tour)?;
-            indices.push(next);
-            current = next;
+            let cost = self.distances[current][chosen_index];
+            accumulated = accumulated
+                .checked_add(cost)
+                .ok_or(RouteError::Arithmetic)?;
+            choices.push(NearestChoice {
+                current: stops[current],
+                candidates,
+                chosen: stops[chosen_index],
+                leg: self.paths[current][chosen_index].clone(),
+                cost,
+                accumulated,
+            });
+            indices.push(chosen_index);
+            current = chosen_index;
         }
-        let order: Vec<_> = indices
-            .into_iter()
-            .map(|index| self.problem.stops[index])
-            .collect();
-        self.evaluate(&order)
+        let return_cost = self.distances[current][0];
+        accumulated = accumulated
+            .checked_add(return_cost)
+            .ok_or(RouteError::Arithmetic)?;
+        choices.push(NearestChoice {
+            current: stops[current],
+            candidates: vec![NearestCandidate {
+                stop: stops[0],
+                cost: return_cost,
+            }],
+            chosen: stops[0],
+            leg: self.paths[current][0].clone(),
+            cost: return_cost,
+            accumulated,
+        });
+        let order: Vec<_> = indices.into_iter().map(|index| stops[index]).collect();
+        let tour = self.evaluate(&order)?;
+        if tour.cost != accumulated {
+            return Err(RouteError::Arithmetic);
+        }
+        Ok(NearestTrace { choices, tour })
     }
 
     /// Examine every nonadjacent two-edge exchange in deterministic order.
@@ -743,7 +831,38 @@ mod tests {
             assert_eq!(tour.walk.last(), Some(&0));
             assert_street_cost(&problem, &tour.walk, expected);
         }
-        assert_eq!(metric.nearest_neighbor().unwrap().order, vec![0, 1, 2, 3]);
+        let trace = metric.nearest_neighbor_trace().unwrap();
+        assert_eq!(trace.tour, metric.nearest_neighbor().unwrap());
+        assert_eq!(trace.tour.order, vec![0, 1, 2, 3]);
+        assert_eq!(trace.tour.cost, 9);
+        assert_eq!(trace.choices.len(), 4);
+        let at_b = &trace.choices[1];
+        assert_eq!(at_b.current, 1);
+        assert_eq!(
+            at_b.candidates,
+            vec![
+                NearestCandidate { stop: 2, cost: 2 },
+                NearestCandidate { stop: 3, cost: 3 },
+            ]
+        );
+        assert_eq!(at_b.chosen, 2);
+        assert!(at_b.candidates[0].cost < at_b.candidates[1].cost);
+        let back = trace.choices.last().unwrap();
+        assert_eq!(back.chosen, 0);
+        assert_eq!(back.cost, 4);
+        assert_eq!(back.accumulated, 9);
+        assert_eq!(back.leg, vec![3, 2, 0]);
+        let mut street = 0u32;
+        for choice in &trace.choices {
+            assert_street_cost(&problem, &choice.leg, choice.cost);
+            street += choice.cost;
+            assert!(
+                choice.leg.windows(2).all(|pair| pair[0] != pair[1]),
+                "a leg is a street walk, not a repeated service"
+            );
+        }
+        assert_eq!(street, trace.tour.cost);
+        assert_eq!(trace.tour.order, vec![0, 1, 2, 3]);
         let exchange = metric.best_exchange(&[0, 1, 2, 3]).unwrap().unwrap();
         assert_eq!(
             (exchange.first, exchange.second, exchange.delta),
@@ -952,9 +1071,61 @@ mod tests {
         let path = first.shortest_path(0, 3).unwrap();
         assert_eq!(path.junctions, vec![0, 1, 3]);
         assert_eq!(path, second.shortest_path(0, 3).unwrap());
+        let metric = first.metric().unwrap();
+        assert_eq!(metric.nearest_neighbor().unwrap().order, vec![0, 1, 3, 2]);
+        let trace = metric.nearest_neighbor_trace().unwrap();
+        let opening = &trace.choices[0];
+        let tied: Vec<_> = opening
+            .candidates
+            .iter()
+            .filter(|candidate| candidate.cost == 1)
+            .map(|candidate| candidate.stop)
+            .collect();
+        assert_eq!(tied, vec![1, 2]);
+        assert_eq!(opening.chosen, 1, "equal costs break by junction id");
         assert_eq!(
-            first.metric().unwrap().nearest_neighbor().unwrap().order,
-            vec![0, 1, 3, 2]
+            trace,
+            second.metric().unwrap().nearest_neighbor_trace().unwrap()
+        );
+    }
+
+    #[test]
+    fn raising_bd_makes_nearest_next_tie_the_exact_tour() {
+        let problem = fixture();
+        let mut roads = problem.roads().to_vec();
+        roads
+            .iter_mut()
+            .find(|road| (road.from, road.to) == (1, 3))
+            .unwrap()
+            .cost = 5;
+        let metric = RouteProblem::new(4, roads, problem.stops().to_vec())
+            .unwrap()
+            .metric()
+            .unwrap();
+        let trace = metric.nearest_neighbor_trace().unwrap();
+        let exact = metric.exact().unwrap();
+        assert_eq!(trace.tour.cost, 9);
+        assert_eq!(exact.tour.cost, 9);
+        assert_eq!(trace.tour.cost, exact.tour.cost);
+    }
+
+    #[test]
+    fn an_unused_isolated_junction_does_not_change_the_choice_record() {
+        let problem = fixture();
+        let with_spare = RouteProblem::new(5, problem.roads().to_vec(), problem.stops().to_vec())
+            .unwrap()
+            .metric()
+            .unwrap()
+            .nearest_neighbor_trace()
+            .unwrap();
+        assert_eq!(
+            with_spare.choices,
+            problem
+                .metric()
+                .unwrap()
+                .nearest_neighbor_trace()
+                .unwrap()
+                .choices
         );
     }
 

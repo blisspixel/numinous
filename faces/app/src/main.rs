@@ -38,6 +38,7 @@ mod input_runtime;
 mod live_render;
 mod mouse_input;
 mod overlays;
+mod overture;
 mod playtest;
 mod postcard;
 mod presentation;
@@ -427,6 +428,10 @@ struct App {
     show_info: bool,
     /// The Show: lean back and let the whole collection play itself.
     the_show: bool,
+    /// The Overture, while its score owns the picture and the phase.
+    overture: Option<overture::OverturePlay>,
+    /// Set when a performance holds the last dial, and kept for the session.
+    route_lab_after_overture: bool,
     /// The one room transition: every change of room dims the leaving room to
     /// the stage and raises the arriving one (see `enter_room`).
     dissolve: dissolve::Dissolve,
@@ -731,6 +736,8 @@ impl App {
             dragging: false,
             show_info: false,
             the_show: false,
+            overture: None,
+            route_lab_after_overture: false,
             dissolve: dissolve::Dissolve::default(),
             hand: hand_spring::HandSpring::default(),
             studio: false,
@@ -1079,6 +1086,9 @@ impl App {
     }
 
     fn toggle_show(&mut self) {
+        if self.overture.is_some() {
+            self.release_overture();
+        }
         self.the_show = !self.the_show;
         if self.the_show {
             self.close_menu();
@@ -1679,6 +1689,8 @@ impl App {
                 .and_then(|index| numinous_core::STATIONS.get(index))
         {
             format!("Numinous  |  radio: {}", station.name)
+        } else if self.overture.is_some() {
+            "Numinous  |  The Overture".to_string()
         } else if self.the_show {
             format!(
                 "Numinous  |  The Show  |  {}",
@@ -1719,6 +1731,7 @@ impl App {
         if index >= self.rooms.len() {
             return;
         }
+        self.release_overture();
         self.current = index;
         if deal == Deal::Fresh {
             self.rooms = room_input::redeal_rooms(&mut self.variation, &mut self.current);
@@ -2062,6 +2075,12 @@ impl App {
         self.refresh_pointer_state();
         self.phase_tick_elapsed = 0.0;
         self.phase_spent = 0.0;
+        if self.overture.is_some() {
+            self.advance_overture(presentation_elapsed);
+            self.phase_tick_elapsed = 0.0;
+            self.phase_spent = 0.0;
+            return;
+        }
         let first_contact_obscured = self.banner.is_some() && self.room_card > 0;
         let ambient = ambient_tick_seconds(elapsed, self.motion);
         let menu_open = self.show_help && self.menu.is_open();
@@ -2197,7 +2216,13 @@ impl App {
             return;
         }
         let room_inputs = self.presented_room_inputs();
-        if !self.studio
+        if self.overture.as_ref().is_some_and(|play| play.lead_in) {
+            let raster = Raster::with_accent(width, height, self.rooms[self.current].meta().accent);
+            self.present_raster(raster, width, height);
+            return;
+        }
+        if self.overture.is_none()
+            && !self.studio
             && let Some(rgba) = self.gpu_frame(width, height)
             && let Some(mut raster) =
                 Raster::from_rgba(width, height, self.rooms[self.current].meta().accent, &rgba)
@@ -2221,7 +2246,9 @@ impl App {
             let (rw, rh) = self.live_scale.render_size(width, height);
             let started = std::time::Instant::now();
             let mut raster = Raster::with_accent(rw, rh, room.meta().accent);
-            if room.meta().id == "mandelbrot" {
+            if self.overture.is_some() {
+                room.render_input(&mut raster, self.t, &room_inputs);
+            } else if room.meta().id == "mandelbrot" {
                 self.mandelbrot_camera.render(&mut raster);
             } else if room.meta().id == "game-of-life" {
                 self.life_session.render(&mut raster);
@@ -2260,7 +2287,11 @@ impl App {
         height: usize,
     ) {
         let status_override = self.current_status_override(width);
-        let phase = effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
+        let phase = if self.overture.as_ref().is_some_and(|play| !play.lead_in) {
+            self.t
+        } else {
+            effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show)
+        };
         let show_info = self.show_info;
         hud::draw_room_chrome(
             raster,
@@ -2886,6 +2917,9 @@ impl ApplicationHandler for App {
                     }
                 } else {
                     if self.handle_route_lab_key(&logical_key, repeat) {
+                        return;
+                    }
+                    if self.overture_key(&logical_key) {
                         return;
                     }
                     let logical_key = controls::normalized_command_key(&logical_key);

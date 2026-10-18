@@ -67,6 +67,7 @@ impl RouteCreation {
             current: town,
             undo: Vec::new(),
             trace: None,
+            choices: None,
         })
         .map_err(RouteCreationError::InvalidNetwork)?;
         let creation = Self {
@@ -206,6 +207,7 @@ impl RouteCreation {
             current: self.town.clone(),
             undo: Vec::new(),
             trace: None,
+            choices: None,
         })
         .expect("route creation was structurally validated")
     }

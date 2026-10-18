@@ -398,6 +398,122 @@ impl Overture {
     pub const fn handoff(&self) -> ShowHandoff {
         self.handoff
     }
+
+    /// The score position at `at_ms`, clamped to the piece.
+    ///
+    /// Lead-in has no room yet. A dissolve names the arriving room at its
+    /// opening phase. Past the last key the hand-off phase is held. The
+    /// function is pure, so a delayed tick and a frame-by-frame clock agree.
+    #[must_use]
+    pub fn moment_at(&self, at_ms: u32) -> OvertureMoment {
+        let at_ms = at_ms.min(self.length_ms());
+        if at_ms < self.lead_in_ms {
+            return OvertureMoment {
+                at_ms,
+                beat_index: None,
+                room_id: None,
+                phase: self.beats[0].keys()[0].phase(),
+                dissolve: None,
+                handoff: false,
+                lead_in: true,
+            };
+        }
+        for index in 0..self.beats.len() {
+            let start = self.beat_start_ms(index).unwrap_or(0);
+            let beat = &self.beats[index];
+            let into = at_ms.saturating_sub(start);
+            if into < beat.length_ms {
+                let last = beat.keys()[beat.keys().len() - 1];
+                return OvertureMoment {
+                    at_ms,
+                    beat_index: Some(index),
+                    room_id: Some(beat.room_id()),
+                    phase: beat.phase_at(into),
+                    dissolve: None,
+                    handoff: index + 1 == self.beats.len() && into >= last.at_ms(),
+                    lead_in: false,
+                };
+            }
+            let dissolve_end = beat.length_ms.saturating_add(beat.dissolve_ms);
+            if beat.dissolve_ms > 0 && into < dissolve_end {
+                let next = index + 1;
+                let arriving = &self.beats[next];
+                return OvertureMoment {
+                    at_ms,
+                    beat_index: Some(next),
+                    room_id: Some(arriving.room_id()),
+                    phase: arriving.keys()[0].phase(),
+                    dissolve: Some(OvertureDissolve {
+                        from_beat: index,
+                        to_beat: next,
+                        into_ms: into - beat.length_ms,
+                        length_ms: beat.dissolve_ms,
+                    }),
+                    handoff: false,
+                    lead_in: false,
+                };
+            }
+        }
+        let last = self.beats.len() - 1;
+        OvertureMoment {
+            at_ms: self.length_ms(),
+            beat_index: Some(last),
+            room_id: Some(self.handoff.room_id),
+            phase: self.handoff.phase,
+            dissolve: None,
+            handoff: true,
+            lead_in: false,
+        }
+    }
+
+    /// One reduced-motion still. The index clamps to the last beat.
+    #[must_use]
+    pub fn reduced_moment(&self, beat_index: usize) -> OvertureMoment {
+        let index = beat_index.min(self.beats.len() - 1);
+        let beat = &self.beats[index];
+        let still = beat.still();
+        OvertureMoment {
+            at_ms: self.beat_start_ms(index).unwrap_or(0) + still.at_ms(),
+            beat_index: Some(index),
+            room_id: Some(beat.room_id()),
+            phase: still.phase(),
+            dissolve: None,
+            handoff: index + 1 == self.beats.len(),
+            lead_in: false,
+        }
+    }
+}
+
+/// A through-black passage between two beats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OvertureDissolve {
+    /// Beat being left.
+    pub from_beat: usize,
+    /// Beat being entered.
+    pub to_beat: usize,
+    /// Milliseconds into the dissolve.
+    pub into_ms: u32,
+    /// Authored dissolve length.
+    pub length_ms: u32,
+}
+
+/// One pure reading of the Overture clock.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct OvertureMoment {
+    /// Clamped score time.
+    pub at_ms: u32,
+    /// Beat on screen. None during the opening lead-in.
+    pub beat_index: Option<usize>,
+    /// Canonical room, absent during the lead-in.
+    pub room_id: Option<&'static str>,
+    /// Exact room phase. Held, never advanced by a face clock.
+    pub phase: f64,
+    /// Present when the piece is inside a dissolve.
+    pub dissolve: Option<OvertureDissolve>,
+    /// The last key has arrived and the dial is held.
+    pub handoff: bool,
+    /// The near-black opening, before the first beat.
+    pub lead_in: bool,
 }
 
 const fn key(at_ms: u32, move_ms: u32, ease: Ease, phase: f64, beat: &'static str) -> OvertureKey {
@@ -682,6 +798,40 @@ mod tests {
             .status(chaos.still().phase())
             .expect("status");
         assert!(status.contains("JUMP 0.50"), "{status}");
+    }
+
+    #[test]
+    fn a_score_moment_names_the_room_phase_and_dissolve_the_clock_is_on() {
+        let opening = OVERTURE.moment_at(0);
+        assert!(opening.lead_in);
+        assert!(opening.room_id.is_none());
+        let chaos = OVERTURE.moment_at(5_000);
+        assert_eq!(chaos.room_id, Some("chaos-game"));
+        assert_eq!(chaos.phase, OVERTURE.beats()[0].phase_at(0));
+        assert!(chaos.dissolve.is_none());
+        let interior = OVERTURE.moment_at(5_000 + 8_000);
+        assert_eq!(interior.room_id, Some("chaos-game"));
+        assert_eq!(interior.phase, OVERTURE.beats()[0].phase_at(8_000));
+        let dissolve = OVERTURE.moment_at(5_000 + 17_400 + 800);
+        assert_eq!(dissolve.room_id, Some("mandelbrot"));
+        assert_eq!(dissolve.phase, OVERTURE.beats()[1].phase_at(0));
+        assert_eq!(dissolve.dissolve.map(|fade| fade.into_ms), Some(800));
+        let jumped = OVERTURE.moment_at(50_000);
+        assert_eq!(jumped.room_id, Some("golden-angle"));
+        assert_eq!(jumped.phase, OVERTURE.beats()[2].phase_at(50_000 - 44_000));
+        let held = OVERTURE.moment_at(72_000);
+        assert!(held.handoff);
+        assert_eq!(held.room_id, Some("times-tables"));
+        assert_eq!(held.phase, OVERTURE.handoff().phase());
+        assert_eq!(
+            OVERTURE.moment_at(u32::MAX).phase,
+            OVERTURE.handoff().phase()
+        );
+        let still = OVERTURE.reduced_moment(0);
+        assert_eq!(still.room_id, Some("chaos-game"));
+        assert_eq!(still.phase, OVERTURE.beats()[0].still().phase());
+        assert!(!still.handoff);
+        assert!(OVERTURE.reduced_moment(99).handoff);
     }
 
     #[test]

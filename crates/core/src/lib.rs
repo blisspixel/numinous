@@ -287,9 +287,9 @@ pub use share::{
 };
 pub use show::{
     DirectedShowCue, DirectedShowLook, DirectorCue, DirectorProfile, Ease, ExactRatio, LockStep,
-    MINDS_SHOW, OCTAVE_LOCK, OVERTURE, OVERTURE_SHOW, Overture, OvertureBeat, OvertureKey,
-    PhaseWindow, SHOW_SCORES, ShowDirector, ShowHandoff, ShowLookRole, ShowMotion, ShowScore,
-    director_profile,
+    MINDS_SHOW, OCTAVE_LOCK, OVERTURE, OVERTURE_SHOW, Overture, OvertureBeat, OvertureDissolve,
+    OvertureKey, OvertureMoment, PhaseWindow, SHOW_SCORES, ShowDirector, ShowHandoff, ShowLookRole,
+    ShowMotion, ShowScore, director_profile,
 };
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};

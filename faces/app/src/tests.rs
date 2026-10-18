@@ -2884,6 +2884,8 @@ fn controller_can_open_and_leave_every_menu_destination() {
         (MenuChoice::Gauntlet, MenuItemId::Gauntlet, true),
         (MenuChoice::Arcade, MenuItemId::Arcade, true),
         (MenuChoice::Show, MenuItemId::Watch, false),
+        (MenuChoice::Overture, MenuItemId::Overture, false),
+        (MenuChoice::RouteLab, MenuItemId::RouteLab, false),
         (MenuChoice::Studio, MenuItemId::Create, false),
         (MenuChoice::Journey, MenuItemId::Journey, false),
         (MenuChoice::WatchAgent, MenuItemId::SharedPlay, false),
@@ -2904,6 +2906,9 @@ fn controller_can_open_and_leave_every_menu_destination() {
             );
             assert_eq!(app.menu.route(), MenuRoute::Modes);
         }
+        if choice == MenuChoice::RouteLab {
+            app.menu.set_route_lab_door(true);
+        }
         let _ = app.menu.focus(item);
         assert_eq!(app.menu.focused(), item);
 
@@ -2917,6 +2922,10 @@ fn controller_can_open_and_leave_every_menu_destination() {
             MenuChoice::Gauntlet => assert!(app.gauntlet.is_some()),
             MenuChoice::Arcade => assert!(app.arcade.is_some()),
             MenuChoice::Show => assert!(app.the_show),
+            MenuChoice::Overture => assert!(app.overture.is_some()),
+            MenuChoice::RouteLab => {
+                assert_eq!(app.rooms[app.current].meta().id, "route-lab");
+            }
             MenuChoice::Studio => assert!(app.studio),
             MenuChoice::Journey => assert!(app.show_journey),
             MenuChoice::WatchAgent => assert!(app.session_viewer.is_open()),

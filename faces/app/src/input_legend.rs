@@ -399,6 +399,8 @@ pub enum MenuChoice {
     Gauntlet,
     Arcade,
     Show,
+    Overture,
+    RouteLab,
     Studio,
     Journey,
     WatchAgent,

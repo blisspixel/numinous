@@ -1,7 +1,8 @@
 # Route Lab
 
 **Status: the opening delivery experiment, native network authoring, portable
-route creations, kept questions, bounded undo, and search playback are built.**
+route creations, kept questions, bounded undo, search playback, and
+nearest-next choice playback are built.**
 Founder direction, 2026-09-05. This develops
 the Traveling Salesman idea in [ROOMS.md](ROOMS.md), with the pleasure of
 watching a route calculation become visible on a map. It is a candidate for
@@ -34,7 +35,10 @@ matters when interpreting the highlighted roads or a shortest-path search.
 
 In ordinary App play, keys 1 through 6 choose an order, G uses nearest-next,
 I accepts the offered shorter order, and J/L decrease or increase BD's cost within
-its bounds. These local keys take priority over their ordinary shortcuts while
+its bounds. V opens nearest-next choice playback. While that view is open,
+comma and period move through the recorded choices and leave the delivery
+order unchanged. Select on a controller toggles the same view and does not
+open study. These local keys take priority over their ordinary shortcuts while
 this room is active. Study, Cabinet, Studio, games, and The Show retain their
 own input. Reset restores the visit's opening network and order.
 Long App sessions preserve the selected order, road costs and closures, bounded
@@ -70,8 +74,12 @@ longer treatment and recurrence below remain available to clone readers.
 The native room keeps its depot and deliveries fixed. Comma and period select
 a road, C closes or reopens it, Z undoes an edit, and T opens A-to-D **SEARCH**
 playback. While that panel is open, comma and period move back or forward
-through the recorded decisions. The visible ROAD, CLOSE/OPEN, UNDO, SEARCH/HIDE,
-and BACK/STEP controls give pointer and controller users the same actions.
+through the recorded decisions. V opens nearest-next choice playback instead,
+and the same comma and period keys seek that cursor. The visible ROAD,
+CLOSE/OPEN, UNDO, SEARCH/HIDE, and BACK/STEP controls give pointer and
+controller users the same road and search actions. The choice view adds
+YOURS, NEAREST, and EXACT on the map: the player's walk, the visible
+nearest-next prefix, and the exact tour.
 Costs in the search are cumulative from A: tentative costs can improve;
 finalized costs are the cheapest costs to their junctions. A closed road keeps
 its cost and is visibly labeled. Unreachable deliveries remain visible with
@@ -96,7 +104,11 @@ edit, route comparison, and solver event. The
 also documents the request actions and followable next calls offline.
 
 A request optionally supplies `snapshot` and an explicit `action`. The snapshot
-contains `revision`, `current`, `undo`, and `trace`. `current` describes junctions,
+contains `revision`, `current`, `undo`, `trace`, and `choices`. `choices` is
+null until playback starts, and an older snapshot that omits the key still
+opens. Playback state is a cursor plus the network's revision and identity.
+The records themselves are regenerated. Claimed costs are not stored.
+`current` describes junctions,
 roads with explicit open flags, required stops with the depot first, and the
 player's delivery order. `junctions` is a count, with junction IDs from zero
 through `junctions - 1`. Evaluation leaves the order intact. Road cost and closure,
@@ -123,7 +135,23 @@ minimum cost; a strict relaxation can replace an earlier tentative predecessor.
 Only a completed source search establishes that an unseen junction is
 unreachable. Backward seeks reconstruct the earlier view without future costs.
 CLI text and additive MCP `trace.view` use that projection. The existing snapshot
-format and portable creation identity stay unchanged.
+format and portable creation identity stay unchanged. `choices` is additive:
+old documents that lack it still parse, and a saved creation does not carry
+the playback cursor.
+
+Nearest-next playback uses the same caller-paced shape.
+`action: {"type":"choices"}` starts at cursor zero and changes no delivery
+order. Follow `choice_step` to reveal one record, or send `cursor` alone to
+seek. Supply only one of `steps` and `cursor`. A record names the current
+stop, the remaining candidates and their shortest-path costs, the chosen
+stop, the expanded street leg, and the accumulated cost. The last record
+returns to the depot. Seeking backward hides later records. The full
+nearest-next tour and the exact minimum stay labeled either way.
+`nearestStatement` says whether nearest-next costs more than the exact
+minimum or matches it. A tie does not say the greedy tour lost. An edit or
+undo clears the playback. An opening call that still has an offered
+improvement keeps `next` on `improve`. Choice playback begins only when you
+ask for `choices`.
 
 Both the ordinary room and native authoring draw the search on the network.
 Ordinary play dashes tentative predecessor links and doubles finalized
@@ -157,7 +185,8 @@ from stdin with `--request -`.
 
 Other action types are `evaluate`, `road_cost` (`from`, `to`, `cost`),
 `road_open` (`from`, `to`, `open`), `stops` (`stops`, depot first), `depot`
-(`depot`), `order` (`order`), `greedy`, `improve`, and `undo`. `network`
+(`depot`), `order` (`order`), `greedy`, `improve`, `undo`, `choices`, and
+`choice_step` (`steps` or `cursor`, not both). `network`
 replaces the complete network atomically using `current` with the same fields
 as `snapshot.current`. Roads use positive integer costs and are undirected;
 declare each connection once. Junction IDs run from zero through
@@ -320,9 +349,10 @@ Offer three to ten distinct required stops, including the depot. A small
 curated network can start with fewer junctions than the cap.
 
 The bounded editor and portable project above establish the initial controls.
-Further presentation can add deliberate junction positioning, richer road tables,
-simultaneous current/proposed/best street walks, and arbitrary-source native
-search. Watching nearest-next form and inspecting the specific exchanged delivery
+The ordinary room now draws the player's walk, the visible nearest-next
+prefix, and the exact tour while choice playback is open. Further presentation
+can add deliberate junction positioning, richer road tables, and
+arbitrary-source native search. Inspecting the specific exchanged delivery
 legs should use actual recorded decisions, with a cost difference before
 acceptance. Authored challenge exchange and participant experience evidence
 remain separate work.

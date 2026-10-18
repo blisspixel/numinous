@@ -272,7 +272,12 @@ impl App {
 
     pub(super) fn handle_study_gamepad(&mut self, command: gamepad::Command) -> bool {
         if self.study.is_none() {
-            if command == gamepad::Command::Inspect && self.study_shortcut_available() {
+            // Select watches nearest-next choices while Route Lab owns its keys.
+            // The study shortcut on E is unchanged.
+            if command == gamepad::Command::Inspect
+                && self.study_shortcut_available()
+                && !self.route_lab_accepts_keys()
+            {
                 self.input_mode = input_legend::InputMode::Controller;
                 self.open_room_study();
                 return true;

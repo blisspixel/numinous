@@ -1003,6 +1003,9 @@ impl App {
     }
 
     pub(super) fn maybe_announce_room_goal(&mut self) {
+        if self.overture.is_some() {
+            return;
+        }
         if self.goal_announced || !self.rooms[self.current].goal_met(self.t, &self.inputs) {
             return;
         }

@@ -65,6 +65,10 @@ pub enum MenuItemId {
     Experiment,
     Construct,
     Watch,
+    /// The Overture: four rooms played as one piece.
+    Overture,
+    /// Route Lab, offered on Modes after the Overture holds the last dial.
+    RouteLab,
     Play,
     Create,
     Games,
@@ -247,13 +251,20 @@ const HOME_ITEMS: [MenuItem; 6] = [
     },
 ];
 
-const MODE_ITEMS: [MenuItem; 7] = [
+const MODE_ITEMS: [MenuItem; 8] = [
     MenuItem {
         id: MenuItemId::Watch,
         title: "WATCH",
         description: "LET THE CABINET WANDER. YOU CAN STEP IN AT ANY TIME.",
         shortcut: Some('w'),
         action: MenuAction::Intent(MenuIntent::Choose(MenuChoice::Show)),
+    },
+    MenuItem {
+        id: MenuItemId::Overture,
+        title: "THE OVERTURE",
+        description: "FOUR ROOMS, ONE PIECE. THE DIAL IS LEFT IN YOUR HAND.",
+        shortcut: None,
+        action: MenuAction::Intent(MenuIntent::Choose(MenuChoice::Overture)),
     },
     MenuItem {
         id: MenuItemId::Play,
@@ -526,6 +537,7 @@ fn state_items(state: &MenuState) -> Vec<MenuItem> {
         state.experiment_available,
         state.construct_available,
         state.project_available,
+        state.route_lab_door,
     )
 }
 
@@ -534,6 +546,7 @@ fn items(
     experiment_available: bool,
     construct_available: bool,
     project_available: bool,
+    route_lab_door: bool,
 ) -> Vec<MenuItem> {
     match route {
         MenuRoute::Home => {
@@ -579,7 +592,27 @@ fn items(
             }
             entries
         }
-        MenuRoute::Modes => MODE_ITEMS.to_vec(),
+        MenuRoute::Modes => {
+            let mut entries = MODE_ITEMS.to_vec();
+            if route_lab_door {
+                let at = entries
+                    .iter()
+                    .position(|item| item.id == MenuItemId::Overture)
+                    .map(|index| index + 1)
+                    .unwrap_or(1);
+                entries.insert(
+                    at,
+                    MenuItem {
+                        id: MenuItemId::RouteLab,
+                        title: "ROUTE LAB",
+                        description: "A PERFORMANCE YOU MAY WATCH, AND AN OBJECT YOU MAY KEEP.",
+                        shortcut: None,
+                        action: MenuAction::Intent(MenuIntent::Choose(MenuChoice::RouteLab)),
+                    },
+                );
+            }
+            entries
+        }
         MenuRoute::Games => GAME_ITEMS.to_vec(),
         MenuRoute::Settings => SETTINGS_ITEMS.to_vec(),
         MenuRoute::Controls => CONTROLS_ITEMS.to_vec(),
@@ -612,6 +645,7 @@ pub struct MenuState {
     experiment_available: bool,
     construct_available: bool,
     project_available: bool,
+    route_lab_door: bool,
 }
 
 impl Default for MenuState {
@@ -633,6 +667,7 @@ impl MenuState {
             experiment_available: false,
             construct_available: false,
             project_available: false,
+            route_lab_door: false,
         }
     }
 
@@ -666,6 +701,21 @@ impl MenuState {
             self.focused = MenuItemId::Explain;
             self.clear_pointer();
         }
+    }
+
+    /// Offer Route Lab beside the Overture after a performance holds the last dial.
+    pub fn set_route_lab_door(&mut self, available: bool) {
+        self.route_lab_door = available;
+        if !available && self.focused == MenuItemId::RouteLab {
+            self.focused = MenuItemId::Watch;
+            self.clear_pointer();
+        }
+    }
+
+    /// Whether Modes currently offers the Route Lab door.
+    #[must_use]
+    pub fn route_lab_door(&self) -> bool {
+        self.route_lab_door
     }
 
     #[must_use]
@@ -1997,7 +2047,7 @@ mod tests {
         ];
         let mut numeric_rows = 0;
         for route in routes {
-            for item in items(route, true, true, true) {
+            for item in items(route, true, true, true, false) {
                 let mut state = MenuState::launch();
                 state.stack = vec![route];
                 state.focused = item.id;
@@ -2031,7 +2081,7 @@ mod tests {
 
     #[test]
     fn settings_offer_master_radio_room_and_effect_levels_with_their_values() {
-        let rows = items(MenuRoute::Settings, false, false, false);
+        let rows = items(MenuRoute::Settings, false, false, false, false);
         let levels = rows
             .iter()
             .filter_map(|item| match item.action {
@@ -2231,7 +2281,7 @@ mod tests {
         // The App's front door onto the catalog. Stepping is one room per press
         // through hundreds, so a wing has to be choosable from the menu, and a
         // player who chose one has to be able to leave without knowing a key.
-        let entries = items(MenuRoute::Wings, false, false, false);
+        let entries = items(MenuRoute::Wings, false, false, false, false);
         let wings = numinous_core::wings();
         assert_eq!(
             entries.len(),
@@ -2289,6 +2339,26 @@ mod tests {
             .find(|item| item.action == MenuAction::Open(MenuRoute::Wings))
             .expect("modes must open the wings");
         assert!(door.description.contains("HUNDREDS"));
+        let overture = MODE_ITEMS
+            .iter()
+            .position(|item| item.id == MenuItemId::Overture)
+            .expect("modes offers the overture");
+        assert_eq!(MODE_ITEMS[overture.saturating_sub(1)].id, MenuItemId::Watch);
+        assert!(MODE_ITEMS[overture].shortcut.is_none());
+        let mut state = MenuState::launch();
+        state.stack = vec![MenuRoute::Modes];
+        assert!(
+            state_items(&state)
+                .iter()
+                .all(|item| item.id != MenuItemId::RouteLab)
+        );
+        state.set_route_lab_door(true);
+        let items = state_items(&state);
+        let route_at = items
+            .iter()
+            .position(|item| item.id == MenuItemId::RouteLab)
+            .expect("the door sits on modes");
+        assert_eq!(items[route_at - 1].id, MenuItemId::Overture);
     }
 
     #[test]

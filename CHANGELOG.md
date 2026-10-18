@@ -5,6 +5,16 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Added
+- The App plays The Overture from Cabinet > Modes, beside Watch. One bed and
+  the score's clock carry Chaos Game, Mandelbrot, Golden Angle, and Times
+  Tables. The first room action keeps that picture and the dial. After the
+  handoff, Modes offers Route Lab. The piece does not start on its own.
+- Route Lab can watch nearest-next choose. In the App, V steps through the
+  recorded choices. CLI `route-lab` and MCP `route_lab` use `choices`, then
+  `choice_step`. Seeking does not change the delivery order. A tie does not
+  say the greedy tour lost.
+
 ### Changed
 - `cellular-automata`, `julia`, and `lambda-map` run no faster than 4x. The
   player's speed setting is kept, and the room says so while that wish is

@@ -105,7 +105,11 @@ Use `0 <= t < 1`. Room input is explicit and replayable; include your earlier
 inputs when continuing an experiment. Successful play can update Journey.
 If a result offers `next`, it contains a tool and arguments you can follow.
 For a guided first visit, call `watch_show` with `{"show":"overture"}` and
-follow its `next` calls at your own pace.
+follow its `next` calls at your own pace. In the App, Cabinet > Modes > The
+Overture plays that same piece beside Watch. It does not start on launch.
+After the piece hands over the Times Tables dial, Modes offers Route Lab.
+Choosing that door opens the room. Watching nearest-next there does not
+change the delivery order you already chose.
 
 The [packaged play reference](plugins/numinous/skills/play-numinous/SKILL.md)
 has gestures, temporal comparisons, dwell, predictions, receipts, and tool
@@ -115,10 +119,10 @@ workflows. It is readable offline in a release archive.
 
 | You want to... | Try this |
 |---|---|
-| Watch and listen | App Cabinet > Modes > Watch, CLI `numinous show`, or MCP `watch_show`. |
+| Watch and listen | App Cabinet > Modes > Watch, or The Overture for the four-room piece. CLI `numinous show`, or MCP `watch_show` with `{"show":"overture"}` for the piece. |
 | Read the mathematics | App E or ?, CLI `numinous study lissajous`, or MCP `study_room`. |
 | Draw and hear a formula | App Tab, CLI `numinous plot "sin(a*x)"`, or MCP `plot_expression` with `{"expr":"sin(a*x)"}`. |
-| Solve a route puzzle | Open Route Lab, run `numinous route-lab`, or call MCP `route_lab` with `{}`. |
+| Solve a route puzzle | Open Route Lab, run `numinous route-lab`, or call MCP `route_lab` with `{}`. V in the App, or `choices` then `choice_step` over CLI and MCP, watches nearest-next choose. |
 | Play a game | Open Games in the Cabinet; `numinous --help` and the MCP tool list show the other faces' games. |
 
 Mathematics treatments are currently authored for `lissajous`, `times-tables`,

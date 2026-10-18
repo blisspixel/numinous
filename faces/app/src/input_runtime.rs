@@ -33,22 +33,53 @@ impl App {
         if characters.next().is_some()
             || !matches!(
                 ch,
-                '1'..='6' | 'g' | 'i' | 'j' | 'l' | 'c' | 'z' | 't' | ',' | '.'
+                '1'..='6' | 'g' | 'i' | 'j' | 'l' | 'c' | 'z' | 't' | 'v' | ',' | '.'
             )
         {
             return false;
         }
         if !repeat {
-            self.clear_pointer_state();
-            self.input_mode = input_legend::InputMode::KeyboardMouse;
-            self.compact_room_inputs();
-            room_input::record_key(&mut self.inputs, ch);
-            self.room_card = 0;
-            self.maybe_announce_room_goal();
-            self.sync_room_parameter_voice();
-            self.play_room_interaction_audio(true);
+            self.record_route_lab_key(ch, false);
         }
         true
+    }
+
+    pub(super) fn route_lab_accepts_keys(&self) -> bool {
+        self.rooms[self.current].meta().id == "route-lab"
+            && !self.modal_mode_active()
+            && !self.menu.is_open()
+            && !self.show_help
+            && !self.show_journey
+            && !self.console.is_open()
+            && !self.the_show
+            && !self.paused
+            && !self.chosen_experiment
+            && self.room_wager.is_none()
+            && self.project_resume.is_none()
+            && self.share_naming.is_none()
+            && self.gallery.is_none()
+    }
+
+    fn route_choices_visible(&self) -> bool {
+        self.route_lab_accepts_keys()
+            && self.rooms[self.current]
+                .status_input(self.t, &self.inputs)
+                .is_some_and(|status| status.starts_with("NEAREST CHOICES"))
+    }
+
+    fn record_route_lab_key(&mut self, ch: char, controller: bool) {
+        self.clear_pointer_state();
+        self.input_mode = if controller {
+            input_legend::InputMode::Controller
+        } else {
+            input_legend::InputMode::KeyboardMouse
+        };
+        self.compact_room_inputs();
+        room_input::record_key(&mut self.inputs, ch);
+        self.room_card = 0;
+        self.maybe_announce_room_goal();
+        self.sync_room_parameter_voice();
+        self.play_room_interaction_audio(true);
     }
 
     pub(super) fn handle_global_audio_key(&mut self, key: &Key, repeat: bool) -> bool {
@@ -247,6 +278,7 @@ impl App {
         if self.paused {
             return;
         }
+        self.release_overture();
         self.set_mouse_from_normalized(point);
         let action = mouse_input::left_press_action(self.left_press_context());
         self.set_pointer_state(mouse_input::pointer_state_after_left_press(action));
@@ -418,6 +450,9 @@ impl App {
         }
         if self.paused {
             return;
+        }
+        if held {
+            self.release_overture();
         }
         self.set_mouse_from_normalized(point);
         if self.current_room_is_times_tables()
@@ -777,6 +812,8 @@ impl App {
             input_legend::MenuChoice::Gauntlet => self.gauntlet_start(),
             input_legend::MenuChoice::Arcade => self.arcade_start(),
             input_legend::MenuChoice::Show => self.toggle_show(),
+            input_legend::MenuChoice::Overture => self.start_overture(),
+            input_legend::MenuChoice::RouteLab => self.enter_route_lab_door(),
             input_legend::MenuChoice::Studio => self.enter_studio(),
             input_legend::MenuChoice::Journey => self.toggle_journey(),
             input_legend::MenuChoice::WatchAgent => self.open_session_viewer(),
@@ -857,6 +894,9 @@ impl App {
                 return;
             }
             _ => {}
+        }
+        if self.overture_gamepad(command) {
+            return;
         }
         let experiment_release =
             command == gamepad::Command::PrimaryUp && self.experiment_primary_consumed;
@@ -969,8 +1009,21 @@ impl App {
             }
             gamepad::Command::Back => self.gamepad_back(),
             gamepad::Command::Menu => self.gamepad_menu(),
+            gamepad::Command::Inspect if self.route_lab_accepts_keys() => {
+                self.record_route_lab_key('v', true);
+            }
             gamepad::Command::Inspect => {}
             gamepad::Command::Reset => self.reset_current_room(),
+            gamepad::Command::Left | gamepad::Command::PreviousRoom
+                if self.route_choices_visible() =>
+            {
+                self.record_route_lab_key(',', true);
+            }
+            gamepad::Command::Right | gamepad::Command::NextRoom
+                if self.route_choices_visible() =>
+            {
+                self.record_route_lab_key('.', true);
+            }
             gamepad::Command::PreviousRoom if !self.modal_mode_active() => self.switch(-1),
             gamepad::Command::NextRoom if !self.modal_mode_active() => self.switch(1),
             gamepad::Command::Slower => {
@@ -1101,7 +1154,7 @@ mod route_lab_keyboard_tests {
         press(&mut app, "l");
         let inputs = app.inputs.clone();
         let before = status(&app);
-        for text in ["1", "6", "g", "i", "j", "l", "c", "z", "t", ",", "."] {
+        for text in ["1", "6", "g", "i", "j", "l", "c", "z", "t", "v", ",", "."] {
             assert!(app.handle_route_lab_key(&Key::Character(text.into()), true));
             assert_eq!(app.inputs, inputs);
             assert_eq!(status(&app), before);
@@ -1262,7 +1315,7 @@ mod route_lab_keyboard_tests {
             let mut app = route_app(&format!("route-native-modal-{index}"));
             owner(&mut app);
             let inputs = app.inputs.clone();
-            for text in ["1", "g", "i", "j", "l", "c", "z", "t", ",", "."] {
+            for text in ["1", "g", "i", "j", "l", "c", "z", "t", "v", ",", "."] {
                 assert!(!app.handle_route_lab_key(&Key::Character(text.into()), false));
                 assert_eq!(app.inputs, inputs, "modal owner {index}");
             }
@@ -1293,9 +1346,40 @@ mod route_lab_keyboard_tests {
         app.switch(-1);
         assert_ne!(app.current, current);
         let inputs = app.inputs.clone();
-        for text in ["1", "g", "i", "j", "l", "c", "z", "t", ",", "."] {
+        for text in ["1", "g", "i", "j", "l", "c", "z", "t", "v", ",", "."] {
             assert!(!app.handle_route_lab_key(&Key::Character(text.into()), false));
             assert_eq!(app.inputs, inputs);
         }
+    }
+
+    #[test]
+    fn controller_inspect_seeks_nearest_choices_without_leaving_the_room() {
+        let mut app = route_app("route-choice-controller");
+        let current = app.current;
+        app.handle_gamepad_command(crate::gamepad::Command::Inspect);
+        assert!(status(&app).starts_with("NEAREST CHOICES"));
+        assert_eq!(app.current, current);
+        assert_eq!(app.input_mode, InputMode::Controller);
+        app.handle_gamepad_command(crate::gamepad::Command::Right);
+        assert!(
+            status(&app).starts_with("NEAREST CHOICES 1/"),
+            "{}",
+            status(&app)
+        );
+        assert_eq!(app.current, current);
+        app.handle_gamepad_command(crate::gamepad::Command::NextRoom);
+        assert!(
+            status(&app).starts_with("NEAREST CHOICES 2/"),
+            "{}",
+            status(&app)
+        );
+        assert!(status(&app).contains("AT B"));
+        app.handle_gamepad_command(crate::gamepad::Command::Left);
+        assert!(status(&app).starts_with("NEAREST CHOICES 1/"));
+        app.handle_gamepad_command(crate::gamepad::Command::PreviousRoom);
+        assert!(status(&app).starts_with("NEAREST CHOICES 0/"));
+        app.handle_gamepad_command(crate::gamepad::Command::Inspect);
+        assert!(!status(&app).starts_with("NEAREST CHOICES"));
+        assert_eq!(app.current, current);
     }
 }

@@ -18,8 +18,8 @@ mod profiles;
 
 pub use director::{DirectorCue, ShowDirector};
 pub use overture::{
-    Ease, ExactRatio, LockStep, OCTAVE_LOCK, OVERTURE, Overture, OvertureBeat, OvertureKey,
-    ShowHandoff,
+    Ease, ExactRatio, LockStep, OCTAVE_LOCK, OVERTURE, Overture, OvertureBeat, OvertureDissolve,
+    OvertureKey, OvertureMoment, ShowHandoff,
 };
 pub use profiles::{DirectorProfile, PhaseWindow, director_profile};
 
