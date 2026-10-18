@@ -2939,6 +2939,11 @@ fn first_light_animates_only_on_a_living_terminal() {
         Some(std::ffi::OsStr::new("dumb")),
         false
     ));
+    assert!(!super::first_light_animates(
+        true,
+        Some(std::ffi::OsStr::new("DUMB")),
+        false
+    ));
     assert!(!super::first_light_animates(true, None, true));
     let mut journey = numinous_core::Journey::default();
     journey.visit("lorenz");

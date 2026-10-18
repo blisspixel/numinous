@@ -4384,7 +4384,7 @@ const FIRST_LIGHT_STEPS: usize = 6;
 /// terminal, and reduced motion get the settled sky. `NO_COLOR` still
 /// animates, because the ramp is shape.
 fn first_light_animates(terminal: bool, term: Option<&OsStr>, reduced: bool) -> bool {
-    terminal && !reduced && !matches!(term, Some(value) if value == "dumb")
+    terminal && !reduced && !access::term_is_dumb(term)
 }
 
 /// Print the journey. New stars ignite once, then the file remembers them.

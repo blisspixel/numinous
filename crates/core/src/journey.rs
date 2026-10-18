@@ -501,7 +501,7 @@ fn triangular(n: u32) -> u32 {
 const STAR_RAMP: &[char] = &[' ', '.', ':', '+', '*', '#'];
 
 /// One star's glyph. Unvisited rooms stay faint. A star already seen, or the
-/// last step, is settled. A new star climbs [`STAR_RAMP`].
+/// last step, is settled. A new star climbs the mark ramp from faint to lit.
 #[must_use]
 pub fn star_glyph(visited: bool, already_seen: bool, step: usize, steps: usize) -> char {
     if !visited {
