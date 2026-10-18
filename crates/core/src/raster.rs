@@ -42,7 +42,7 @@ fn scale(color: [u8; 3], factor: f32) -> [u8; 3] {
 /// | `'*'` `'o'` and any other | [`MarkRole::Idea`] | the accent |
 /// | `'#'` | [`MarkRole::Hot`] | the accent at 1.7 |
 /// | `'!'` | [`MarkRole::Warning`] | fixed red, always with a shape cue |
-/// | `'@'` `'%'` `'&'` `'~'` | the four spectral inks | fixed magenta, green, amber, violet |
+/// | `'@'` `'%'` `'&'` `'~'` | the four spectral inks | fixed teal, green, amber, violet |
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum MarkRole {
     /// `' '`: nothing is drawn. A room that fills its field with spaces
@@ -60,8 +60,8 @@ pub enum MarkRole {
     Hot,
     /// `'!'`: something is wrong here. Never alone; a shape says it too.
     Warning,
-    /// `'@'`: the magenta spectral ink.
-    Magenta,
+    /// `'@'`: the teal spectral ink, chosen by the dichromacy audit.
+    Teal,
     /// `'%'`: the green spectral ink.
     Green,
     /// `'&'`: the amber spectral ink.
@@ -80,7 +80,7 @@ impl MarkRole {
         MarkRole::Idea,
         MarkRole::Hot,
         MarkRole::Warning,
-        MarkRole::Magenta,
+        MarkRole::Teal,
         MarkRole::Green,
         MarkRole::Amber,
         MarkRole::Violet,
@@ -96,7 +96,7 @@ impl MarkRole {
             '+' | 'x' | '=' => MarkRole::Secondary,
             '#' => MarkRole::Hot,
             '!' => MarkRole::Warning,
-            '@' => MarkRole::Magenta,
+            '@' => MarkRole::Teal,
             '%' => MarkRole::Green,
             '&' => MarkRole::Amber,
             '~' => MarkRole::Violet,
@@ -116,7 +116,7 @@ impl MarkRole {
             MarkRole::Idea => '*',
             MarkRole::Hot => '#',
             MarkRole::Warning => '!',
-            MarkRole::Magenta => '@',
+            MarkRole::Teal => '@',
             MarkRole::Green => '%',
             MarkRole::Amber => '&',
             MarkRole::Violet => '~',
@@ -144,7 +144,7 @@ impl MarkRole {
             MarkRole::Idea => accent,
             MarkRole::Hot => scale(accent, 1.7),
             MarkRole::Warning => [230, 72, 72],
-            MarkRole::Magenta => [216, 40, 190],
+            MarkRole::Teal => [7, 118, 140],
             MarkRole::Green => [56, 224, 132],
             MarkRole::Amber => [242, 148, 36],
             MarkRole::Violet => [116, 72, 232],
@@ -892,38 +892,20 @@ mod tests {
     /// The third list of its kind and the one the other two do not reach.
     /// [`LEVELS_FOLD_FOR_A_DICHROMAT`] is about the accent's own levels;
     /// [`MEANING_LOST_TO_COLOR_BLINDNESS`] is about the warning ink. Neither
-    /// looks at the spectral inks, and those are where the largest collapse in
-    /// the catalog turns out to be: `times-tables` separates `'@'` from its
-    /// accent by 95 for ordinary vision and by under 1 for a deuteranope.
+    /// looks at the spectral inks. The retired magenta `'@'` was the catalog's
+    /// largest collapse: `times-tables` separated it from its accent by 95 for
+    /// ordinary vision and by under 1 for a deuteranope. Teal `[7, 118, 140]`
+    /// leaves the five pairs below, and it adds none.
     ///
-    /// **What this list does not say is which entries matter.** The measurement
-    /// is mechanical; whether a room is saying something with an ink is not. Two
-    /// were read to check the question is real, and they answer it opposite
-    /// ways. In `bayes-update` the inks separate the prior, the likelihood and
-    /// the posterior, so a reader who cannot tell two of them apart cannot read
-    /// the picture. In `times-tables` the ink is chosen by where a chord starts
-    /// around the circle, so it bands the drawing and carries nothing. The rest
-    /// have not been read, and guessing would be worse than saying so.
-    ///
-    /// Shrink-only, like its neighbours. Tracked in `docs/ROADMAP.md` under 0.5
-    /// Sensory.
-    const SPECTRAL_INKS_COLLAPSE_FOR_A_DICHROMAT: [(&str, char, char); 16] = [
-        ("bayes-update", '#', '@'),
-        ("buffon-needle", '#', '@'),
-        ("buffon-needle", '*', '@'),
-        ("circle-map", '#', '@'),
+    /// Whether an entry matters is [`SPECTRAL_INK_READINGS`], read from the
+    /// room's draw code. Shrink-only, like its neighbours. Tracked in
+    /// `docs/ROADMAP.md` under 0.5 Sensory, decisions entry 12.
+    const SPECTRAL_INKS_COLLAPSE_FOR_A_DICHROMAT: [(&str, char, char); 5] = [
         ("circle-map", '*', '@'),
         ("function-painter", '*', '@'),
-        ("josephus", '#', '@'),
-        ("josephus", '*', '@'),
         ("message-heals", '*', '~'),
-        ("murmuration", '#', '@'),
-        ("murmuration", '*', '@'),
-        ("newton", '*', '@'),
         ("riemann-sphere", '*', '@'),
         ("times-tables", '#', '%'),
-        ("times-tables", '&', '@'),
-        ("times-tables", '*', '@'),
     ];
 
     #[test]
@@ -1013,23 +995,7 @@ mod tests {
     /// a room collapses without a reading, if a reading outlives its
     /// collapse, and if the roadmap's decisions section files any room under
     /// the wrong verdict.
-    const SPECTRAL_INK_READINGS: [(&str, bool, &str); 10] = [
-        (
-            "bayes-update",
-            true,
-            "the inks separate the prior, the likelihood and the posterior; a \
-             reader who cannot tell two of them apart cannot read the picture",
-        ),
-        (
-            "buffon-needle",
-            false,
-            "the aha circle switches from the bright accent to the spectral ink \
-             past 55 percent growth; the radius and the CIRCLE percent status \
-             already carry the progress, and the unbroken curve over scattered \
-             sticks carries the circle, so the switch is ceremony. For a \
-             deuteranope the climax dims instead of blooming, which is a cost \
-             in feel rather than in information",
-        ),
+    const SPECTRAL_INK_READINGS: [(&str, bool, &str); 5] = [
         (
             "circle-map",
             true,
@@ -1046,34 +1012,12 @@ mod tests {
              reticle marks where the player's own hand already is",
         ),
         (
-            "josephus",
-            true,
-            "the spectral ink is the survivor's seat, the answer the room \
-             poses, and it sits among late-elimination seats it is told apart \
-             from by hue alone",
-        ),
-        (
             "message-heals",
             false,
             "the spectral ink is the noisy bus wire between the sent and \
              received rows; the wounds themselves are marked by their own \
              glyphs on the received row, so the wire label repeats what the \
              row layout says",
-        ),
-        (
-            "murmuration",
-            false,
-            "the spectral ink is the falcon, a solid three by three blot under \
-             the player's own held hand, and the flock parting around it is \
-             the answer; its position is self-owned rather than something the \
-             picture must disclose",
-        ),
-        (
-            "newton",
-            true,
-            "the spectral inks are two of the basin colors, so ink identity is \
-             the mathematics itself: which root each seed falls to. Folding \
-             one into the accent merges two basins",
         ),
         (
             "riemann-sphere",
@@ -1085,8 +1029,9 @@ mod tests {
         (
             "times-tables",
             false,
-            "the ink is chosen by where a chord starts around the circle, so \
-             it bands the drawing and carries nothing",
+            "the remaining fold is the green chord ink against the hot accent; \
+             both only band where a chord starts, and the lobe count is what \
+             the room says",
         ),
     ];
 

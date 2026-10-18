@@ -32,6 +32,38 @@ pub fn accent_in_band(accent: [u8; 3]) -> bool {
     (low..=high).contains(&lightness) && stage_contrast(accent) >= ACCENT_STAGE_CONTRAST
 }
 
+/// Whether `color` sits in the magenta and orchid band.
+///
+/// Hue is HSV, 285 to 340 degrees inclusive, and saturation is over 0.35.
+/// New room accents stay outside this band. Accents already in the catalog
+/// are listed beside the test and are not retuned.
+#[must_use]
+pub fn in_magenta_band(color: [u8; 3]) -> bool {
+    let [hue, saturation] = hue_and_saturation(color);
+    saturation > 0.35 && (285.0..=340.0).contains(&hue)
+}
+
+/// HSV hue in degrees and saturation, both zero for grey.
+fn hue_and_saturation(color: [u8; 3]) -> [f64; 2] {
+    let channel = |byte: u8| f64::from(byte) / 255.0;
+    let (red, green, blue) = (channel(color[0]), channel(color[1]), channel(color[2]));
+    let max = red.max(green).max(blue);
+    let min = red.min(green).min(blue);
+    let delta = max - min;
+    if max == 0.0 || delta == 0.0 {
+        return [0.0, 0.0];
+    }
+    let hue = if max == red {
+        60.0 * ((green - blue) / delta)
+    } else if max == green {
+        60.0 * (((blue - red) / delta) + 2.0)
+    } else {
+        60.0 * (((red - green) / delta) + 4.0)
+    };
+    let hue = if hue < 0.0 { hue + 360.0 } else { hue };
+    [hue, delta / max]
+}
+
 /// The WCAG contrast ratio of a color against [`STAGE`].
 #[must_use]
 pub fn stage_contrast(color: [u8; 3]) -> f64 {
@@ -43,7 +75,10 @@ pub fn stage_contrast(color: [u8; 3]) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{ACCENT_LIGHTNESS, ACCENT_STAGE_CONTRAST, STAGE, accent_in_band, stage_contrast};
+    use super::{
+        ACCENT_LIGHTNESS, ACCENT_STAGE_CONTRAST, STAGE, accent_in_band, in_magenta_band,
+        stage_contrast,
+    };
     use crate::dichromacy;
 
     /// CIELAB (D65) back to linear sRGB, the inverse of the conversion the
@@ -196,5 +231,96 @@ mod tests {
         }
         // An accent already inside is its own answer.
         assert_eq!(nearest_in_band([40, 150, 190]), [40, 150, 190]);
+    }
+
+    /// Catalog accents already inside the magenta band. A new room is not
+    /// added here. A room that leaves the band leaves this list.
+    const GRANDFATHERED_MAGENTA_ACCENTS: [&str; 40] = [
+        "audioactive",
+        "basel",
+        "berry",
+        "bogdanov",
+        "butterfly-curve",
+        "cantor-set",
+        "cassini",
+        "cauchy-lorentz",
+        "curse-dimension",
+        "function-painter",
+        "gerono",
+        "harmonograph",
+        "henon",
+        "hopf",
+        "lemniscate",
+        "liouville",
+        "lyapunov",
+        "menagerie",
+        "multibrot",
+        "nova",
+        "oregonator",
+        "parrondo",
+        "pascal-mod",
+        "pedal",
+        "polarization",
+        "prime-spirals",
+        "pseudosphere",
+        "rabinovich-fabrikant",
+        "roman-surface",
+        "rose",
+        "roulette",
+        "sierpinski-carpet",
+        "snell-prism",
+        "standard-map",
+        "the-stretch",
+        "tinkerbell",
+        "torus-knot",
+        "trisectrix",
+        "wallis",
+        "witch-of-agnesi",
+    ];
+
+    #[test]
+    fn the_magenta_band_rejects_new_hues_and_keeps_the_catalog_list() {
+        assert!(in_magenta_band([216, 40, 190]));
+        assert!(in_magenta_band([190, 70, 170]));
+        assert!(in_magenta_band([255, 120, 180]));
+        let teal = crate::raster::MarkRole::Teal.ink([0, 0, 0]);
+        assert_eq!(teal, [7, 118, 140]);
+        assert!(!in_magenta_band(teal));
+        assert!(
+            accent_in_band(teal),
+            "the teal ink is outside the accent band, L* {:.1}",
+            dichromacy::lightness(teal)
+        );
+        for role in crate::raster::MarkRole::ALL {
+            if role.is_accent_level() {
+                continue;
+            }
+            let ink = role.ink([0, 0, 0]);
+            assert!(
+                !in_magenta_band(ink),
+                "{role:?} ink {ink:?} is in the magenta band"
+            );
+        }
+        let mut found = Vec::new();
+        let rooms = crate::rooms::ROOM_CATALOG
+            .iter()
+            .chain(crate::rooms::HIDDEN_ROOM_METADATA);
+        for room in rooms {
+            if in_magenta_band(room.accent) {
+                found.push(room.id);
+            }
+        }
+        found.sort_unstable();
+        let known: Vec<&str> = GRANDFATHERED_MAGENTA_ACCENTS.to_vec();
+        let newly: Vec<&&str> = found.iter().filter(|id| !known.contains(*id)).collect();
+        assert!(
+            newly.is_empty(),
+            "new accents in the magenta band: {newly:?}"
+        );
+        let gone: Vec<&&str> = known.iter().filter(|id| !found.contains(id)).collect();
+        assert!(
+            gone.is_empty(),
+            "these left the magenta band and must leave the grandfather list: {gone:?}"
+        );
     }
 }

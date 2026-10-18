@@ -423,7 +423,7 @@ pub(super) fn arcade_text(run: &numinous_core::munch_arcade::Arcade, color: bool
                 out.push_str(&painted(color, "93", &standing));
             } else if let Some(v) = run.vexations.iter().find(|v| v.cell == cell) {
                 let (sgr, mark) = match v.mind {
-                    Mind::Drifter => ("95", "[ d]"),
+                    Mind::Drifter => ("94", "[ d]"),
                     Mind::Tracker => ("91", "[ T]"),
                     Mind::Editor => ("96", "[ e]"),
                 };
@@ -1259,4 +1259,29 @@ pub(super) fn quiz_with_input(
         quiz_remark(score, completed)
     );
     ExitCode::SUCCESS
+}
+
+#[cfg(test)]
+mod tests {
+    use numinous_core::munch_arcade::{Arcade, Mind, Vexation};
+
+    #[test]
+    fn the_drifter_is_bright_blue_and_keeps_its_letter() {
+        let mut run = Arcade::new(1);
+        run.muncher = 0;
+        run.vexations = vec![Vexation {
+            cell: 1,
+            mind: Mind::Drifter,
+        }];
+        let colored = super::arcade_text(&run, true);
+        assert!(
+            colored.contains("\u{1b}[94m[ d]\u{1b}[0m"),
+            "the Drifter is bright blue: {colored}"
+        );
+        assert!(!colored.contains("\u{1b}[95m"), "{colored}");
+        assert!(!colored.contains("\u{1b}[35m"), "{colored}");
+        let plain = super::arcade_text(&run, false);
+        assert!(plain.contains("[ d]"));
+        assert!(!plain.contains('\u{1b}'));
+    }
 }

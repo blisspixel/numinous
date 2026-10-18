@@ -199,6 +199,36 @@ mod tests {
     }
 
     #[test]
+    fn every_chrome_token_sits_outside_the_magenta_band() {
+        // The same guard a new room accent has to pass. The roles are named so
+        // the test does not copy the RGB table.
+        let roles = [
+            Role::Stage,
+            Role::Surface,
+            Role::SurfaceRaised,
+            Role::Text,
+            Role::TextMuted,
+            Role::Identity,
+            Role::Selection,
+            Role::Success,
+            Role::Warning,
+            Role::Danger,
+            Role::Info,
+            Role::Focus,
+        ];
+        assert_eq!(roles.len(), 12);
+        for appearance in [Appearance::Dark, Appearance::Light] {
+            for role in roles {
+                let color = rgb(appearance, role);
+                assert!(
+                    !crate::palette::in_magenta_band(color),
+                    "{appearance:?} {role:?} {color:?} is inside the magenta band"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn the_terminal_map_uses_the_sixteen_color_roles() {
         assert_eq!(terminal_sgr(Role::Identity), Some("36"));
         assert_eq!(terminal_sgr(Role::Selection), Some("36"));

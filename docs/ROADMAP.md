@@ -274,39 +274,34 @@ neighbouring case that is deliberately not on this list: `phantom-jam` separates
 the same pair by only 34 even for ordinary vision, which is a contrast problem
 rather than a color-blindness one.
 
-**12. Ten rooms lose a spectral distinction for a color-blind player, and
-whether that matters differs per room.** The catalog has four spectral inks that
-rooms combine for prismatic light. Sixteen pairs across ten rooms are clear for
-ordinary vision and folded for at least one dichromat: `bayes-update`,
-`buffon-needle`, `circle-map`, `function-painter`, `josephus`, `message-heals`,
-`murmuration`, `newton`, `riemann-sphere`, `times-tables`. The largest collapse
-in the whole catalog is here: `times-tables` separates `'@'` from its accent by
-95 for ordinary vision and by under 1 for a deuteranope, which is gone rather
-than dimmed.
+**12. Five spectral pairs still fold for a color-blind player, and whether
+that matters differs per room.** The catalog has four spectral inks that rooms
+combine for prismatic light. The `'@'` ink was magenta `[216, 40, 190]`. That
+was the catalog's largest collapse: `times-tables` separated it from its accent
+by 95 for ordinary vision and by under 1 for a deuteranope. It is now teal
+`[7, 118, 140]`, chosen because the same audit drops the list from sixteen
+pairs to five and adds no room, while the ink stays apart from the green, amber,
+and violet inks. The decision is `docs/decisions/0005-no-magenta.md`.
 
-The measurement is mechanical and locked, and all ten rooms have now been read
-from their own draw code, so which of them matter is no longer a guess. Four
-speak with the ink: `bayes-update` separates the prior, the likelihood and the
-posterior with it; `circle-map` uses it for where the orbit settles as against
-where it merely passed, which is the mode locking itself; `josephus` marks the
-survivor's seat with it, the answer the room poses; `newton` paints basins with
-it, so ink identity is which root a seed falls to. For those four a dichromat
-does not lose polish, they lose the picture's meaning. Six decorate:
-`times-tables` bands chords by where they start, `buffon-needle` recolors its
-aha circle past 55 percent growth while radius and status carry the progress,
+Five pairs across five rooms remain: `circle-map`, `function-painter`,
+`message-heals`, `riemann-sphere`, `times-tables`. The remaining room to
+speak with the ink: `circle-map` uses it for where the orbit settles as against
+where it merely passed, which is the mode locking itself. Four decorate:
 `function-painter` marks the hand's own reticle, `message-heals` squiggles the
-noisy wire the row layout already names, `murmuration` blots the falcon under
-the player's own held hand, and `riemann-sphere` brightens a pole the INF tag
-already announces. For those six the fold costs feel rather than information.
+noisy wire the row layout already names, `riemann-sphere` brightens a pole the
+INF tag already announces, and `times-tables` still folds the green chord ink
+into the hot accent, which only bands where a chord starts.
+
+`bayes-update`, `buffon-needle`, `josephus`, `murmuration`, and `newton` left
+the list when the ink changed. Their earlier readings stay in the history of
+this entry and are not repeated as current verdicts.
 
 The readings live in `SPECTRAL_INK_READINGS` beside the collapse list and are
 locked both ways: a room cannot join the collapse list without a reading, a
 fixed room's verdict must leave, and this section must file every room under
-the verdict its reading gives. What remains is one ruling instead of two:
-whether the spectral palette should be repicked for dichromat separation,
-which changes every room that draws with it, or whether the four speaking
-rooms should each grow a second channel for what their ink says, which
-changes what those four rooms draw.
+the verdict its reading gives. What remains for `circle-map` is a second
+channel for what its ink says, which would change what that room draws. The
+other four remaining folds are decorative.
 
 **13. Should Numinous call out to a computational answer engine?** The idea is
 natural: services of the Wolfram Alpha kind are very good at things this
