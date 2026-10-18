@@ -7,7 +7,9 @@
 //! the arriving room then rises from the stage, live. No frame mixes two rooms,
 //! so two additive pictures never double-expose, and the fade only ever lowers
 //! a channel toward the stage, so no frame of a change is brighter than the room
-//! it shows.
+//! it shows. A change of Visual Era rides this same dip. Full motion settles
+//! the arriving era while the picture rises; reduced motion leaves that settle
+//! off, so the fade stays the plain one, and the caller adds no sound.
 //!
 //! The fade runs on presentation time rather than on a frame count, so it lasts
 //! the same at any refresh rate. It scales sRGB values, which track lightness
@@ -117,6 +119,11 @@ pub(crate) struct Dissolve {
     held_size: (usize, usize),
     /// The dimmed frame presented while a change is in progress.
     shown: Vec<u8>,
+    /// The era arriving through this dip, when the change is a re-tune.
+    ///
+    /// A room change leaves this empty. Reduced motion leaves it empty too,
+    /// so that fade stays the plain one.
+    retune: Option<numinous_core::Era>,
 }
 
 impl Default for Dissolve {
@@ -128,6 +135,7 @@ impl Default for Dissolve {
             held: Vec::new(),
             held_size: (0, 0),
             shown: Vec::new(),
+            retune: None,
         }
     }
 }
@@ -141,6 +149,7 @@ impl Dissolve {
     /// still arriving turns back toward the stage from the light it has
     /// reached, so the level never jumps.
     pub(crate) fn begin(&mut self, motion: Motion) {
+        self.retune = None;
         let level = self.level();
         self.timing = Timing::for_motion(motion);
         self.phase = match self.phase {
@@ -153,6 +162,18 @@ impl Dissolve {
                 progress: self.timing.leaving_progress(level),
             },
         };
+    }
+
+    /// A change of Visual Era rides the same dip as a change of room.
+    ///
+    /// Full motion settles the arriving era while the picture rises. Reduced
+    /// motion is the plain fade and nothing else, so its frames match a room
+    /// change. There is no extra sound: the caller does not start a wash.
+    pub(crate) fn retune(&mut self, motion: Motion, era: numinous_core::Era) {
+        self.begin(motion);
+        if motion.animates() {
+            self.retune = Some(era);
+        }
     }
 
     /// The ordinary audio wash shares the visual fade's nominal duration.
@@ -223,6 +244,7 @@ impl Dissolve {
                     left -= to_full;
                     self.since_arrival += to_full;
                     self.phase = Phase::Steady;
+                    self.retune = None;
                 }
             }
         }
@@ -252,13 +274,16 @@ impl Dissolve {
                 self.shown = shown;
                 &self.shown
             }
-            Phase::Arriving { .. } => {
+            Phase::Arriving { progress } => {
                 let table = level_table(self.level());
                 self.held = composed;
                 self.held_size = (width, height);
                 self.shown.clear();
                 self.shown.extend_from_slice(&self.held);
                 dim(&mut self.shown, &table);
+                if let Some(era) = self.retune {
+                    settle_era(era, &mut self.shown, width, height, progress);
+                }
                 &self.shown
             }
         }
@@ -296,6 +321,71 @@ fn dim(rgba: &mut [u8], table: &[[u8; 256]; 3]) {
         pixel[0] = table[0][usize::from(pixel[0])];
         pixel[1] = table[1][usize::from(pixel[1])];
         pixel[2] = table[2][usize::from(pixel[2])];
+    }
+}
+
+/// Settle the arriving era inside the dip. Unrevealed pixels fall to the
+/// stage and never rise above the dimmed picture, so the rise stays one flash.
+///
+/// At progress 1 every pixel is the dimmed frame. Phosphor reveals by
+/// scanline from the top. 8-bit fills a coarse lattice in until the native
+/// grid is whole. Vector traces a diagonal beam. Modern is the rise itself.
+fn settle_era(
+    era: numinous_core::Era,
+    rgba: &mut [u8],
+    width: usize,
+    height: usize,
+    progress: f64,
+) {
+    let progress = progress.clamp(0.0, 1.0);
+    if progress >= 1.0 || width == 0 || height == 0 || rgba.len() < width * height * 4 {
+        return;
+    }
+    match era {
+        numinous_core::Era::Modern => {}
+        numinous_core::Era::Phosphor => {
+            let rows = ((progress * height as f64).ceil() as usize).min(height);
+            for y in rows..height {
+                for x in 0..width {
+                    toward_stage(rgba, width, x, y);
+                }
+            }
+        }
+        numinous_core::Era::EightBit => {
+            let tile = (1.0 + (1.0 - progress) * 7.0).round() as usize;
+            if tile <= 1 {
+                return;
+            }
+            for y in 0..height {
+                for x in 0..width {
+                    if x % tile != 0 || y % tile != 0 {
+                        toward_stage(rgba, width, x, y);
+                    }
+                }
+            }
+        }
+        numinous_core::Era::Vector => {
+            let limit = progress * (width + height).saturating_sub(1) as f64;
+            for y in 0..height {
+                for x in 0..width {
+                    if (x + y) as f64 > limit {
+                        toward_stage(rgba, width, x, y);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn toward_stage(rgba: &mut [u8], width: usize, x: usize, y: usize) {
+    let offset = (y * width + x) * 4;
+    let Some(pixel) = rgba.get_mut(offset..offset + 3) else {
+        return;
+    };
+    for (channel, floor) in pixel.iter_mut().zip(STAGE) {
+        if *channel > floor {
+            *channel = floor;
+        }
     }
 }
 
@@ -598,6 +688,90 @@ mod tests {
         assert_eq!(dissolve.level(), 0.0, "rose before the guard allowed");
         dissolve.advance(2e-6);
         assert!(matches!(dissolve.phase, Phase::Arriving { .. }));
+    }
+
+    fn era_plate(era: numinous_core::Era, rgb: [u8; 3], width: usize, height: usize) -> Vec<u8> {
+        let mut frame = uniform(rgb, width * height);
+        era.apply(&mut frame, width, height);
+        frame
+    }
+
+    #[test]
+    fn a_retune_uses_the_dip_and_reduced_motion_matches_the_plain_fade() {
+        let width = 16;
+        let height = 16;
+        let plain_limit = FULL.leave + FULL.arrive + 0.1;
+        for from in numinous_core::Era::ALL {
+            for to in numinous_core::Era::ALL {
+                let leaving = era_plate(from, [255, 255, 255], width, height);
+                let arriving = era_plate(to, [40, 180, 220], width, height);
+                let mut dissolve = Dissolve::default();
+                let _ = dissolve.frame(leaving, width, height);
+                dissolve.retune(Motion::Full, to);
+                let mut series = Vec::new();
+                let mut seconds = 0.0;
+                while !dissolve.is_steady() && seconds <= plain_limit {
+                    dissolve.advance(1.0 / FPS);
+                    seconds += 1.0 / FPS;
+                    let shown = dissolve.frame(arriving.clone(), width, height);
+                    series.push(numinous_core::photosensitivity::frame_luminance(shown));
+                }
+                assert!(
+                    dissolve.is_steady(),
+                    "{from:?} to {to:?} still moving after {seconds}s"
+                );
+                assert!(seconds <= plain_limit, "{from:?} to {to:?} took {seconds}s");
+                let peak = numinous_core::photosensitivity::peak_flashes_per_second(&series, FPS);
+                assert!(
+                    peak <= numinous_core::photosensitivity::MAX_FLASHES_PER_SECOND,
+                    "{from:?} to {to:?} flashes {peak} a second"
+                );
+            }
+        }
+
+        for era in numinous_core::Era::ALL {
+            let mut plain = presented(Motion::Reduced);
+            let mut retune = presented(Motion::Reduced);
+            let frame = era_plate(era, [220, 200, 80], 8, 8);
+            plain.begin(Motion::Reduced);
+            retune.retune(Motion::Reduced, era);
+            let mut seconds = 0.0;
+            while !plain.is_steady() {
+                plain.advance(1.0 / FPS);
+                retune.advance(1.0 / FPS);
+                seconds += 1.0 / FPS;
+                let left = plain.frame(frame.clone(), 8, 8).to_vec();
+                let right = retune.frame(frame.clone(), 8, 8).to_vec();
+                assert_eq!(left, right, "{era:?} reduced frame at {seconds}s");
+            }
+            assert!(retune.is_steady());
+        }
+    }
+
+    #[test]
+    fn settling_never_brightens_a_channel() {
+        let width = 12;
+        let height = 9;
+        let mut pattern = Vec::new();
+        for index in 0..(width * height) {
+            let value = (index * 17) as u8;
+            pattern.extend_from_slice(&[value, 255 - value, value / 2, 255]);
+        }
+        for era in numinous_core::Era::ALL {
+            for step in 0..11 {
+                let progress = step as f64 / 10.0;
+                let mut settled = pattern.clone();
+                super::settle_era(era, &mut settled, width, height, progress);
+                for (before, after) in pattern.chunks(4).zip(settled.chunks(4)) {
+                    for channel in 0..3 {
+                        assert!(
+                            after[channel] <= before[channel],
+                            "{era:?} at {progress} brightened channel {channel}"
+                        );
+                    }
+                }
+            }
+        }
     }
 
     #[test]

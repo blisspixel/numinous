@@ -317,9 +317,14 @@ remaining product bar, not claims that every room already satisfies it.
   the arriving room over 0.35 seconds. Reduced motion uses a plain 0.08-second
   fade out and 0.12-second fade in. Presentation time sets the duration at any
   refresh rate. Repeated changes keep dimming and wait at the stage when needed
-  to space arrivals at least 0.5 seconds apart. A deterministic full-white
-  sweep checks the transition against the photosensitivity budget; this does
-  not certify the moving content of the rooms themselves. Room-score washes
+  to space arrivals at least 0.5 seconds apart. A change of Visual Era rides
+  that same dip. While the picture rises, phosphor settles by scanline, 8-bit
+  fills its lattice in to the native grid, the vector beam traces once, and
+  modern is the rise itself. Reduced motion keeps the plain fade with no
+  extra settle, and an era change adds no sound of its own. A deterministic
+  full-white sweep checks the transition, including every era pair, against
+  the photosensitivity budget; this does not certify the moving content of
+  the rooms themselves. Room-score washes
   share the fade duration; rapid changes use a short, continuous audio
   interruption. Radio keeps playing. Audio and presentation clocks remain
   separate (`SOUND.md`).

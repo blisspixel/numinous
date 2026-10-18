@@ -8,6 +8,7 @@
 //! text to emit, so they can be unit-tested without capturing stdout; `main`
 //! stays a thin shell that prints and sets the exit code.
 
+use std::ffi::OsStr;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufWriter, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
@@ -2197,10 +2198,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             print!("{}", jokes_report(index));
             ExitCode::SUCCESS
         }
-        Command::Journey => {
-            print!("{}", journey_report(journey, &load_scores(), pick_day()));
-            ExitCode::SUCCESS
-        }
+        Command::Journey => show_journey(journey),
         Command::Choose => choose(journey),
         Command::Scores => {
             print!("{}", scores_report(&load_scores()));
@@ -4378,8 +4376,58 @@ fn choose_with_input(journey: &mut Journey, input: &mut impl BufRead) -> ExitCod
     ExitCode::SUCCESS
 }
 
+/// Six steps along the mark ramp, a sixth of a second apart: about a second,
+/// and under the 20 frame cap.
+const FIRST_LIGHT_STEPS: usize = 6;
+
+/// First light plays on a terminal that can show the ramp. A pipe, a dumb
+/// terminal, and reduced motion get the settled sky. `NO_COLOR` still
+/// animates, because the ramp is shape.
+fn first_light_animates(terminal: bool, term: Option<&OsStr>, reduced: bool) -> bool {
+    terminal && !reduced && !access::term_is_dumb(term)
+}
+
+/// Print the journey. New stars ignite once, then the file remembers them.
+fn show_journey(journey: &mut Journey) -> ExitCode {
+    let board = load_scores();
+    let today = pick_day();
+    let fresh = journey.visited.iter().any(|id| !journey.seen.contains(id));
+    let animate = fresh
+        && first_light_animates(
+            std::io::stdout().is_terminal(),
+            std::env::var_os("TERM").as_deref(),
+            !numinous_core::Motion::from_env().animates(),
+        );
+    if animate {
+        let mut stdout = std::io::stdout();
+        for step in 0..FIRST_LIGHT_STEPS {
+            let picture = numinous_core::sky(journey, 60, 18, step, FIRST_LIGHT_STEPS);
+            let report = journey_report_with(journey, &board, today, &picture);
+            let _ = write!(stdout, "{}", live::live_frame(&report));
+            let _ = stdout.flush();
+            if step + 1 < FIRST_LIGHT_STEPS {
+                std::thread::sleep(Duration::from_secs_f64(1.0 / FIRST_LIGHT_STEPS as f64));
+            }
+        }
+    } else {
+        print!("{}", journey_report(journey, &board, today));
+    }
+    journey.seen.clone_from(&journey.visited);
+    ExitCode::SUCCESS
+}
+
 /// Your constellation and standing, shown plainly and explained never.
 fn journey_report(journey: &Journey, board: &numinous_core::Scoreboard, today: u64) -> String {
+    let picture = numinous_core::constellation(journey, 60, 18);
+    journey_report_with(journey, board, today, &picture)
+}
+
+fn journey_report_with(
+    journey: &Journey,
+    board: &numinous_core::Scoreboard,
+    today: u64,
+    sky: &str,
+) -> String {
     let mut wall = String::new();
     for &(level, name, what) in numinous_core::UNLOCKS {
         if journey.level() >= level {
@@ -4393,7 +4441,7 @@ fn journey_report(journey: &Journey, board: &numinous_core::Scoreboard, today: u
         journey.level(),
         journey.level_bar(20),
         journey.sparks(),
-        numinous_core::constellation(journey, 60, 18),
+        sky,
         journey.visited.len(),
         numinous_core::ROOM_CATALOG.len(),
         journey.wins,

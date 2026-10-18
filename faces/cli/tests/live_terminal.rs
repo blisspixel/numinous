@@ -1,9 +1,10 @@
-//! Pipe and terminal contracts for `tour`, `watch`, and `play`.
+//! Pipe and terminal contracts for `tour`, `watch`, `play`, and `journey`.
 //!
 //! A pipe must exit with one still, or a `--frames` recording, and must not
-//! light a star. A Unix pty checks that Ctrl+C and SIGTERM leave the main
-//! screen and show the cursor. Windows CI runs the pipe half; the pty half
-//! runs where those signals exist.
+//! light a star. `journey` on a pipe prints the settled sky once. A Unix pty
+//! checks that Ctrl+C and SIGTERM leave the main screen and show the cursor,
+//! and that a new journey star ignites once and then stops. Windows CI runs
+//! the pipe half; the pty half runs where those signals exist.
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -258,4 +259,118 @@ fn ctrl_c_and_sigterm_restore_the_main_screen() {
             "{signal}: a terminal watch lit no star: {journey}"
         );
     }
+}
+
+#[test]
+fn journey_on_a_pipe_prints_the_settled_sky_and_records_the_star() {
+    let dir = scratch("journey-pipe");
+    std::fs::write(dir.join("journey"), b"visited lorenz\n").expect("journey");
+    let mut cmd = numinous(&dir);
+    cmd.args(["journey"]);
+    let (status, output, elapsed) = run_piped(cmd);
+    assert!(status.success(), "{status}");
+    assert!(
+        elapsed < Duration::from_secs(3),
+        "a pipe animated for {elapsed:?}"
+    );
+    assert!(
+        !output.contains('\u{1b}'),
+        "a pipe received cursor control:\n{output}"
+    );
+    assert!(
+        output.contains('#'),
+        "the settled sky is missing its star:\n{output}"
+    );
+    assert!(output.contains("1 of"), "{output}");
+    let stored = std::fs::read_to_string(dir.join("journey")).expect("stored journey");
+    assert!(
+        stored.lines().any(|line| {
+            let mut parts = line.split_whitespace();
+            parts.next() == Some("seen") && parts.any(|id| id == "lorenz")
+        }),
+        "a pipe did not record the star it showed: {stored}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn journey_on_a_pty_ignites_a_new_star_then_stops() {
+    let dir = scratch("journey-pty");
+    std::fs::write(dir.join("journey"), b"visited lorenz\n").expect("journey");
+    let mut cmd = portable_pty::CommandBuilder::new(env!("CARGO_BIN_EXE_numinous"));
+    cmd.arg("journey");
+    cmd.env("HOME", dir.as_os_str());
+    cmd.env("USERPROFILE", dir.as_os_str());
+    cmd.env("NUMINOUS_JOURNEY", dir.join("journey").as_os_str());
+    cmd.env("NUMINOUS_SCORES", dir.join("scores").as_os_str());
+    cmd.env("NO_COLOR", "1");
+    cmd.env("TERM", "xterm-256color");
+    cmd.env_remove("NUMINOUS_REDUCED_MOTION");
+    let system = portable_pty::native_pty_system();
+    let pair = system
+        .openpty(portable_pty::PtySize {
+            rows: 40,
+            cols: 100,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .expect("pty");
+    let mut child = pair.slave.spawn_command(cmd).expect("spawn on pty");
+    drop(pair.slave);
+    let mut reader = pair.master.try_clone_reader().expect("reader");
+    let collected = Arc::new(Mutex::new(Vec::new()));
+    let bucket = Arc::clone(&collected);
+    std::thread::spawn(move || {
+        let mut buf = [0u8; 4096];
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(n) => bucket
+                    .lock()
+                    .expect("pty bytes")
+                    .extend_from_slice(&buf[..n]),
+            }
+        }
+    });
+    let started = Instant::now();
+    loop {
+        if child.try_wait().expect("wait").is_some() {
+            break;
+        }
+        if started.elapsed() > Duration::from_secs(4) {
+            let _ = child.kill();
+            panic!("journey kept drawing after the ignite");
+        }
+        std::thread::sleep(Duration::from_millis(30));
+    }
+    std::thread::sleep(Duration::from_millis(150));
+    let text = String::from_utf8_lossy(&collected.lock().expect("pty").clone()).into_owned();
+    let frames: Vec<&str> = text.split("\x1b[?2026h").skip(1).collect();
+    assert_eq!(
+        frames.len(),
+        6,
+        "first light is six frames and then silence:\n{text}"
+    );
+    assert!(
+        frames.iter().all(|frame| !frame.contains("\x1b[2J")),
+        "a frame cleared the whole screen"
+    );
+    assert!(
+        !text.contains("\x1b[?1049h"),
+        "first light took the alternate screen"
+    );
+    assert!(!text.contains("\x1b[?25l"), "first light hid the cursor");
+    assert_ne!(frames[0], frames[5], "the star did not climb");
+    assert!(
+        frames[5].contains('#'),
+        "the last frame is not the lit star"
+    );
+    let stored = std::fs::read_to_string(dir.join("journey")).expect("stored journey");
+    assert!(
+        stored.lines().any(|line| {
+            let mut parts = line.split_whitespace();
+            parts.next() == Some("seen") && parts.any(|id| id == "lorenz")
+        }),
+        "the terminal did not record the star it showed: {stored}"
+    );
 }

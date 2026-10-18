@@ -51,6 +51,8 @@ pub struct Journey {
     pub streak: u32,
     /// The last daily day played (days since the epoch), 0 for never.
     pub last_daily: u64,
+    /// Stars already shown lit. A visit since this set ignites once.
+    pub seen: BTreeSet<String>,
 }
 
 /// The level cap. The answer to how far you can go.
@@ -286,7 +288,7 @@ impl Journey {
         let consolidated: Vec<&str> = self.consolidated.iter().map(String::as_str).collect();
         let chosen: Vec<&str> = self.chosen.iter().map(String::as_str).collect();
         format!(
-            "visited {}\nconsolidated {}\nwins {}\nsecrets {}\nplays {}\nchosen {}\nstreak {} {}\n",
+            "visited {}\nconsolidated {}\nwins {}\nsecrets {}\nplays {}\nchosen {}\nstreak {} {}\nseen {}\n",
             visited.join(" "),
             consolidated.join(" "),
             self.wins,
@@ -294,7 +296,12 @@ impl Journey {
             self.plays,
             chosen.join(" "),
             self.streak,
-            self.last_daily
+            self.last_daily,
+            self.seen
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>()
+                .join(" ")
         )
     }
 
@@ -334,6 +341,12 @@ impl Journey {
                 Some("streak") => {
                     journey.streak = parts.next().and_then(|v| v.parse().ok()).unwrap_or(0);
                     journey.last_daily = parts.next().and_then(|v| v.parse().ok()).unwrap_or(0);
+                }
+                Some("seen") => {
+                    journey.seen = bounded_token_set(parts)
+                        .into_iter()
+                        .map(|room_id| canonical_room_id(&room_id).to_string())
+                        .collect();
                 }
                 _ => {}
             }
@@ -484,11 +497,35 @@ fn triangular(n: u32) -> u32 {
     n * (n + 1) / 2
 }
 
+/// The mark ramp a new star climbs. The last mark is a star that has settled.
+const STAR_RAMP: &[char] = &[' ', '.', ':', '+', '*', '#'];
+
+/// One star's glyph. Unvisited rooms stay faint. A star already seen, or the
+/// last step, is settled. A new star climbs the mark ramp from faint to lit.
+#[must_use]
+pub fn star_glyph(visited: bool, already_seen: bool, step: usize, steps: usize) -> char {
+    if !visited {
+        return '.';
+    }
+    if already_seen || steps <= 1 || step >= steps.saturating_sub(1) {
+        return '#';
+    }
+    let last = STAR_RAMP.len() - 1;
+    let index = step.saturating_mul(last) / (steps - 1);
+    STAR_RAMP[index.min(last)]
+}
+
 /// Render the constellation: one star per room, lit if you have been there.
 /// Star positions are deterministic (hashed from the room id), so the sky is
 /// the same for everyone; only your light differs.
 #[must_use]
 pub fn constellation(journey: &Journey, width: usize, height: usize) -> String {
+    sky(journey, width, height, 0, 1)
+}
+
+/// The sky at one step of first light. `steps == 1` is the settled sky.
+#[must_use]
+pub fn sky(journey: &Journey, width: usize, height: usize, step: usize, steps: usize) -> String {
     let width = width.clamp(1, MAX_CONSTELLATION_WIDTH);
     let height = height.clamp(1, MAX_CONSTELLATION_HEIGHT);
     let mut grid = vec![vec![' '; width]; height];
@@ -501,11 +538,12 @@ pub fn constellation(journey: &Journey, width: usize, height: usize) -> String {
             seed = seed.wrapping_mul(31).wrapping_add(u64::from(byte));
         }
         let mut rng = SplitMix64::new(seed);
-        let mark = if journey.visited.contains(id) {
-            '#'
-        } else {
-            '.'
-        };
+        let mark = star_glyph(
+            journey.visited.contains(id),
+            journey.seen.contains(id),
+            step,
+            steps,
+        );
         let cells = width.saturating_mul(height).max(1);
         let mut placed = false;
         for _ in 0..cells {
@@ -532,7 +570,7 @@ pub fn constellation(journey: &Journey, width: usize, height: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Journey, Rank, constellation};
+    use super::{Journey, Rank, constellation, sky, star_glyph};
     use crate::registry::all_rooms;
 
     #[test]
@@ -924,6 +962,33 @@ mod tests {
         assert!(
             sky.lines()
                 .all(|line| line.len() == super::MAX_CONSTELLATION_WIDTH)
+        );
+    }
+
+    #[test]
+    fn a_new_star_climbs_the_ramp_and_a_seen_star_stays_lit() {
+        assert_eq!(star_glyph(false, false, 0, 6), '.');
+        assert_eq!(star_glyph(true, true, 0, 6), '#');
+        assert_eq!(star_glyph(true, false, 0, 6), ' ');
+        assert_eq!(star_glyph(true, false, 1, 6), '.');
+        assert_eq!(star_glyph(true, false, 2, 6), ':');
+        assert_eq!(star_glyph(true, false, 3, 6), '+');
+        assert_eq!(star_glyph(true, false, 4, 6), '*');
+        assert_eq!(star_glyph(true, false, 5, 6), '#');
+        let mut journey = Journey::default();
+        journey.visit("lorenz");
+        let settled = constellation(&journey, 40, 12);
+        let last = sky(&journey, 40, 12, 5, 6);
+        assert_eq!(last, settled);
+        journey.seen.insert("lorenz".to_string());
+        let held = sky(&journey, 40, 12, 0, 6);
+        assert_eq!(held, settled, "a star already seen does not dim");
+        let stored = Journey::from_text(&journey.to_text());
+        assert_eq!(stored.seen, journey.seen);
+        let older = Journey::from_text("visited lorenz\n");
+        assert!(
+            older.seen.is_empty(),
+            "a file from before first light has no seen stars"
         );
     }
 }

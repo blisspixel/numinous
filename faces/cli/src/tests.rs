@@ -2926,6 +2926,50 @@ fn deep_whispers_require_standing() {
 }
 
 #[test]
+fn first_light_animates_only_on_a_living_terminal() {
+    assert!(super::first_light_animates(true, None, false));
+    assert!(super::first_light_animates(
+        true,
+        Some(std::ffi::OsStr::new("xterm-256color")),
+        false
+    ));
+    assert!(!super::first_light_animates(false, None, false));
+    assert!(!super::first_light_animates(
+        true,
+        Some(std::ffi::OsStr::new("dumb")),
+        false
+    ));
+    assert!(!super::first_light_animates(
+        true,
+        Some(std::ffi::OsStr::new("DUMB")),
+        false
+    ));
+    assert!(!super::first_light_animates(true, None, true));
+    let mut journey = numinous_core::Journey::default();
+    journey.visit("lorenz");
+    let still = super::journey_report(&journey, &numinous_core::Scoreboard::default(), 0);
+    assert!(
+        !still.contains('\u{1b}'),
+        "the settled report has no cursor control"
+    );
+    let mut frames = Vec::new();
+    for step in 0..super::FIRST_LIGHT_STEPS {
+        let picture = numinous_core::sky(&journey, 60, 18, step, super::FIRST_LIGHT_STEPS);
+        let report = super::journey_report_with(
+            &journey,
+            &numinous_core::Scoreboard::default(),
+            0,
+            &picture,
+        );
+        frames.push(super::live::live_frame(&report));
+    }
+    assert!(frames.iter().all(|frame| frame.contains("\u{1b}[?2026h")));
+    assert!(frames.iter().all(|frame| !frame.contains("\u{1b}[2J")));
+    assert_ne!(frames[0], frames[frames.len() - 1]);
+    assert!(frames[frames.len() - 1].contains('#'));
+}
+
+#[test]
 fn journey_report_shows_the_sky_and_the_rank() {
     let mut journey = numinous_core::Journey::default();
     let fresh = super::journey_report(&journey, &numinous_core::Scoreboard::default(), 0);
