@@ -26,7 +26,7 @@ ureq = "3"
 signal-hook = { version = "0.3", default-features = false }
 
 [target.'cfg(unix)'.dev-dependencies]
-portable-pty = "0.8"
+portable-pty = "0.9"
 
 [lints]
 workspace = true
