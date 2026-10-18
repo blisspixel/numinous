@@ -74,23 +74,17 @@ class ProbeTableTests(unittest.TestCase):
                 f"{probe.label} leads with a flag rather than a subcommand",
             )
 
-    def test_the_live_loops_carry_a_deadline(self) -> None:
-        # watch, play and tour never exit. A probe without a deadline waits the
-        # full one-shot timeout and then reports a hang, which would turn a
-        # working feature into a slow failure.
+    def test_watch_play_and_tour_are_driven(self) -> None:
+        driven = {probe.subcommand for probe in MODULE.PROBES}
         for name in ("watch", "play", "tour"):
-            probes = [probe for probe in MODULE.PROBES if probe.subcommand == name]
-            self.assertTrue(probes, f"{name} is not driven at all")
-            for probe in probes:
-                self.assertIsNotNone(probe.deadline, f"{probe.label} would hang the sweep")
+            self.assertIn(name, driven, f"{name} is not driven at all")
 
-    def test_one_shot_probes_do_not_carry_a_deadline(self) -> None:
-        # A deadline on something that exits by itself would cut its output
-        # short and could hide an escape printed at the end.
-        loops = {"watch", "play", "tour"}
+    def test_every_probe_exits_on_its_own(self) -> None:
+        # A deadline would cut output short and could hide an escape printed
+        # at the end. tour, watch, and play exit on a pipe, so they are
+        # included.
         for probe in MODULE.PROBES:
-            if probe.subcommand not in loops:
-                self.assertIsNone(probe.deadline, f"{probe.label} is cut short for no reason")
+            self.assertIsNone(probe.deadline, f"{probe.label} is cut short for no reason")
 
     def test_the_games_that_carried_raw_escapes_are_all_driven(self) -> None:
         # These three wrote SGR inline and ignored the setting. They are the
@@ -133,9 +127,6 @@ class ThresholdTests(unittest.TestCase):
         # Without a floor here, a binary that had lost the ability to draw in
         # color at all would pass every check in the sweep.
         self.assertGreaterEqual(MODULE.MIN_COLORFUL_PROBES, 3)
-
-    def test_loop_probes_end_well_inside_the_one_shot_timeout(self) -> None:
-        self.assertLess(MODULE.LOOP_DEADLINE_SECONDS, MODULE.ONE_SHOT_TIMEOUT_SECONDS)
 
 
 if __name__ == "__main__":

@@ -36,13 +36,19 @@ def run(ended: bool, rooms: int, output: str = DREW) -> "MODULE.ShowRun":
 def healthy() -> tuple["MODULE.ShowRun", "MODULE.ShowRun", "MODULE.ShowRun"]:
     """The three runs a working Show produces."""
     return (
-        # Ordinary: never asks, never ends.
-        run(ended=False, rooms=0),
+        # Ordinary on a pipe: one postcard, no prompt, then it exits.
+        run(ended=True, rooms=0),
         # Held with nobody there: one room, then it stops.
         run(ended=True, rooms=1),
         # Held with a player: one room per answer.
         run(ended=True, rooms=MODULE.ASKED_TWICE_ROOMS),
     )
+
+
+def healthy_recording() -> "MODULE.Recording":
+    """Three frames, two titles, no cursor, and a clean exit."""
+    frames = ["picture\nFirst\n", "picture\nFirst\n", "picture\nSecond\n"]
+    return MODULE.Recording(ended=True, code=0, frames=frames, output="\x1c".join(frames))
 
 
 class ShowJudgementTests(unittest.TestCase):
@@ -91,12 +97,22 @@ class ShowJudgementTests(unittest.TestCase):
         reasons = MODULE.judge_show(prompting, eof, asked)
         self.assertTrue(any("ordinary motion asked" in reason for reason in reasons))
 
-    def test_ordinary_motion_that_ends_by_itself_fails(self) -> None:
-        # It runs until stopped. One that returns on its own was not running
-        # the gallery, so the comparison against the held run proves nothing.
+    def test_a_pipe_that_keeps_streaming_fails(self) -> None:
+        # A redirect used to write until the pipe filled. Exiting is the fix,
+        # so a run that is still going has the old bug.
         _, eof, asked = healthy()
-        reasons = MODULE.judge_show(run(ended=True, rooms=0), eof, asked)
-        self.assertTrue(any("ended on its own" in reason for reason in reasons))
+        reasons = MODULE.judge_show(run(ended=False, rooms=0), eof, asked)
+        self.assertTrue(any("did not exit" in reason for reason in reasons))
+
+    def test_ordinary_motion_that_draws_nothing_fails(self) -> None:
+        _, eof, asked = healthy()
+        reasons = MODULE.judge_show(run(ended=True, rooms=0, output="   \n"), eof, asked)
+        self.assertTrue(any("drew nothing" in reason for reason in reasons))
+
+    def test_ordinary_motion_that_moves_the_cursor_fails(self) -> None:
+        _, eof, asked = healthy()
+        reasons = MODULE.judge_show(run(ended=True, rooms=0, output="\x1b[2Jpicture"), eof, asked)
+        self.assertTrue(any("moved the cursor" in reason for reason in reasons))
 
     def test_drawing_nothing_is_not_holding_still(self) -> None:
         # The counterpart of the frame probes' blank-frame check: a Show that
@@ -130,6 +146,45 @@ class ShowJudgementTests(unittest.TestCase):
         self.assertEqual(MODULE.visible("plain").strip(), "plain")
 
 
+class RecordingJudgementTests(unittest.TestCase):
+    def test_a_working_recording_is_judged_to_pass(self) -> None:
+        self.assertEqual(MODULE.judge_recording(healthy_recording(), 3), [])
+
+    def test_a_recording_that_does_not_exit_fails(self) -> None:
+        reasons = MODULE.judge_recording(
+            MODULE.Recording(ended=False, code=0, frames=[], output=""), 3
+        )
+        self.assertTrue(any("did not exit" in reason for reason in reasons))
+
+    def test_a_recording_that_stays_on_one_room_fails(self) -> None:
+        frame = "picture\nOnly\n"
+        reasons = MODULE.judge_recording(
+            MODULE.Recording(ended=True, code=0, frames=[frame, frame, frame], output=frame * 3),
+            3,
+        )
+        self.assertTrue(any("second room" in reason for reason in reasons))
+
+    def test_a_recording_that_moves_the_cursor_or_waits_fails(self) -> None:
+        frames = ["a\nOne\n", "a\nOne\n", "b\nTwo\n"]
+        cursor = MODULE.judge_recording(
+            MODULE.Recording(
+                ended=True, code=0, frames=frames, output="\x1b[H" + "\x1c".join(frames)
+            ),
+            3,
+        )
+        self.assertTrue(any("cursor" in reason for reason in cursor))
+        waiting = MODULE.judge_recording(
+            MODULE.Recording(
+                ended=True,
+                code=0,
+                frames=frames,
+                output=MODULE.SHOW_PROMPT + "\x1c".join(frames),
+            ),
+            3,
+        )
+        self.assertTrue(any("waited" in reason for reason in waiting))
+
+
 class ProbeTableTests(unittest.TestCase):
     def test_the_keys_sent_match_the_rooms_expected(self) -> None:
         # Two Enters and a q is three rooms: the two answered plus the one the
@@ -138,18 +193,26 @@ class ProbeTableTests(unittest.TestCase):
         self.assertEqual(MODULE.ASKED_TWICE.count(b"\n"), MODULE.ASKED_TWICE_ROOMS)
         self.assertTrue(MODULE.ASKED_TWICE.endswith(b"q\n"))
 
-    def test_the_show_is_driven_fast_enough_to_finish_in_the_deadline(self) -> None:
-        # Ordinary motion has to actually run the gallery inside the probe's
-        # deadline, or the ordinary run proves nothing about advancing.
-        args = MODULE.SHOW_ARGS
+    def test_the_show_stays_muted_and_the_recording_reaches_another_room(self) -> None:
+        # Full motion holds each room for at least two seconds of frames. The
+        # recording asks for one frame past that hold, so a second title is
+        # evidence the gallery moved rather than a guess about the clock.
+        self.assertIn("--mute", MODULE.SHOW_ARGS, "the gate must not open an audio device")
+        self.assertIn("--mute", MODULE.RECORD_ARGS)
+        args = MODULE.RECORD_ARGS
         seconds = float(args[args.index("--seconds") + 1])
-        self.assertLess(seconds * 2, MODULE.DEADLINE_SECONDS)
-        self.assertIn("--mute", args, "the gate must not open an audio device")
+        fps = float(args[args.index("--fps") + 1])
+        count = int(args[args.index("--frames") + 1])
+        self.assertEqual(count, MODULE.room_hold_frames(seconds, fps) + 1)
+        self.assertLess(seconds, MODULE.DEADLINE_SECONDS)
 
-    def test_every_frame_probe_names_a_marker(self) -> None:
+    def test_every_frame_probe_records_a_finite_run(self) -> None:
         for label, args, marker in MODULE.PROBES:
             self.assertTrue(args, f"{label} runs the CLI with no arguments")
-            self.assertTrue(marker.startswith("\x1b["), f"{label} has no frame marker")
+            self.assertIn("--frames", args, f"{label} would stream on a pipe")
+            self.assertEqual(
+                marker, "\n\x1c\n", f"{label} does not split on the recording separator"
+            )
 
 
 if __name__ == "__main__":

@@ -20,9 +20,9 @@ surfaces are plain text either way. What is required is that the sweep as a whol
 sees real color somewhere, or it would pass just as happily against a binary that
 had lost the ability to draw in color at all.
 
-Cursor control is not color. `\x1b[H`, `\x1b[2J` and `\x1b[K` position and clear,
-and a `NO_COLOR` surface is still allowed to paint in place, so only SGR
-sequences (those ending in `m`) count.
+Cursor control is not color. A pipe does not use it: `tour`, `watch`, and
+`play` exit with one postcard. Only SGR sequences (those ending in `m`) count,
+so a terminal that does paint in place would still be judged on color alone.
 """
 
 from __future__ import annotations
@@ -48,12 +48,9 @@ from gate_cli import GateError, build_and_locate  # noqa: E402
 # sequence ending in any other letter moves or clears the cursor and is allowed.
 SGR = re.compile(r"\x1b\[[0-9;]*m")
 
-# Bytes to keep from a probe. The live loops emit megabytes a second and the
+# Bytes to keep from a probe. One postcard is far smaller than this. The
 # question is whether any color appears, not how much.
 READ_LIMIT = 400_000
-
-# Loops that never exit are killed at this point and judged on what they wrote.
-LOOP_DEADLINE_SECONDS = 3.0
 
 # Anything that has not answered by now is a hang, not a slow machine.
 ONE_SHOT_TIMEOUT_SECONDS = 60.0
@@ -68,8 +65,8 @@ class Probe(NamedTuple):
     """One way of driving the CLI, and how long to let it run."""
 
     argv: list[str]
-    # None for anything that exits on its own. A number for the live loops,
-    # which never do.
+    # None when the command exits on its own. A number would cut a slow
+    # command short; nothing in this table needs that.
     deadline: float | None = None
     # Optional exact Journey fixture for state-gated read-only commands.
     journey: str | None = None
@@ -127,13 +124,11 @@ PROBES: tuple[Probe, ...] = (
     Probe(["aliens"]),
     Probe(["quiz"]),
     Probe(["gauntlet"]),
-    # The live loops, which paint in truecolor and never exit.
-    Probe(["watch", "lorenz"], deadline=LOOP_DEADLINE_SECONDS),
-    Probe(["play", "lorenz"], deadline=LOOP_DEADLINE_SECONDS),
-    Probe(
-        ["tour", "--mute", "--width", "24", "--height", "12", "--seconds", "1", "--fps", "5"],
-        deadline=LOOP_DEADLINE_SECONDS,
-    ),
+    # One postcard each. A pipe exits, so these are ordinary probes, and the
+    # picture is small enough to draw quickly.
+    Probe(["watch", "lorenz", "--mute", "--width", "24", "--height", "12"]),
+    Probe(["play", "lorenz", "--width", "24", "--height", "12"]),
+    Probe(["tour", "--mute", "--width", "24", "--height", "12", "--seconds", "1", "--fps", "5"]),
 )
 
 # Not driven here, and why. A reason is required: an unexplained skip is how a
@@ -212,10 +207,9 @@ def advertised_subcommands(cli: str) -> set[str]:
 def sgr_count(cli: str, probe: Probe, no_color: bool) -> int:
     """How many SGR escapes this probe emits under the given setting."""
     # The profile lives exactly as long as the run that needs it. Cleanup
-    # errors are ignored because the live loops are killed rather than asked to
-    # stop, and a killed process on Windows can still be holding a file open;
-    # failing the sweep over a leftover temporary file would report a colour
-    # defect that does not exist.
+    # errors are ignored because a process killed after a hang on Windows can
+    # still be holding a file open; failing the sweep over a leftover temporary
+    # file would report a colour defect that does not exist.
     with tempfile.TemporaryDirectory(
         prefix="numinous-no-color-", ignore_cleanup_errors=True
     ) as home:

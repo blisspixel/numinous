@@ -521,6 +521,11 @@ NO_COLOR                  No color in the terminal faces: rooms, chrome and
 NUMINOUS_REDUCED_MOTION=1 NO_COLOR=1 numinous tour
 ```
 
+A pipe or a file is not a terminal. `numinous tour`, `numinous watch <room>`,
+and `numinous play <room>` then print one still postcard and the title, and
+they exit without lighting a star. `--frames N` writes that many frames and
+stops. With `NUMINOUS_REDUCED_MOTION` set, The Show still waits for Enter.
+
 Every room's answer to a touch shows under `NO_COLOR`. Three rooms,
 cellular-automata, julia, and lambda-map, flash faster than the measured WCAG
 2.3.1 budget at the App's fastest speed, 8x. They stay within it at 1x, 2x,

@@ -23,6 +23,7 @@ use numinous_core::{
 mod access;
 mod game_input;
 mod game_runtime;
+mod live;
 mod local_state;
 mod project;
 #[path = "../../shared/project_json.rs"]
@@ -263,6 +264,10 @@ enum Command {
         /// Seconds each room holds the stage.
         #[arg(long, default_value_t = 12.0)]
         seconds: f64,
+        /// Write this many frames and stop. Omit it on a terminal to run until
+        /// Ctrl+C. Omit it in a pipe for one still postcard.
+        #[arg(long)]
+        frames: Option<u64>,
     },
     /// The Bench: five fixed gauntlets, one composite number. Compare minds.
     Bench,
@@ -288,6 +293,10 @@ enum Command {
         /// Re-deal variation seed for replayable rooms (per-visit novelty, R in app).
         #[arg(long)]
         vary: bool,
+        /// Write this many frames and stop. Omit it on a terminal to run until
+        /// Ctrl+C. Omit it in a pipe for one still postcard.
+        #[arg(long)]
+        frames: Option<u64>,
     },
     /// Render a mathematical sonification or the stable App room bed to WAV.
     Sonify {
@@ -356,6 +365,10 @@ enum Command {
         /// Re-deal variation for room play (not games).
         #[arg(long)]
         vary: bool,
+        /// Room playback only: write this many frames and stop. Omit it on a
+        /// terminal to run until Ctrl+C. Omit it in a pipe for one still postcard.
+        #[arg(long)]
+        frames: Option<u64>,
     },
     /// Play "guess the shape": name the room behind a mystery render.
     Quiz {
@@ -1420,7 +1433,13 @@ fn fresh_variation_seed() -> u64 {
 }
 
 /// Clear the screen so a game owns a clean console.
+///
+/// A pipe is not a console. Writing the clear there would put cursor control
+/// into a file, which is the bug a redirected `play` must not have.
 fn clear_screen_soon() {
+    if !std::io::stdout().is_terminal() {
+        return;
+    }
     print!("[2J[H");
     let _ = std::io::stdout().flush();
 }
@@ -1928,7 +1947,12 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             mute,
             era,
             seconds,
+            frames,
         } => {
+            if let Err(message) = live::frame_count(frames) {
+                report_diagnostic(message);
+                return ExitCode::FAILURE;
+            }
             let Some(era) = numinous_core::Era::parse(&era) else {
                 eprintln!(
                     "Unknown era '{}'. Eras: phosphor, 8bit, vector, modern.",
@@ -1936,7 +1960,17 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 );
                 return ExitCode::FAILURE;
             };
-            tour(fps, width, height, mute, era, seconds, journey)
+            tour(
+                fps,
+                width,
+                height,
+                mute,
+                era,
+                seconds,
+                frames,
+                std::io::stdout().is_terminal(),
+                journey,
+            )
         }
         Command::Bench => bench(journey),
         Command::Watch {
@@ -1947,13 +1981,11 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             mute,
             era,
             vary,
+            frames,
         } => {
-            if find_room(&id, allow_hidden).is_some() {
-                let before = journey.clone();
-                journey.visit(&id);
-                // The loop never returns; persist the visit before it starts,
-                // and say so if the ledger refuses, since no exit will.
-                persist_progress_or_warn(&before, journey);
+            if let Err(message) = live::frame_count(frames) {
+                report_diagnostic(message);
+                return ExitCode::FAILURE;
             }
             let Some(era) = numinous_core::Era::parse(&era) else {
                 eprintln!(
@@ -1972,6 +2004,8 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 allow_hidden,
                 era,
                 variation,
+                frames,
+                std::io::stdout().is_terminal(),
                 journey,
             )
         }
@@ -2022,7 +2056,19 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             width,
             height,
             vary,
+            frames,
         } => {
+            if let Err(message) = live::frame_count(frames) {
+                report_diagnostic(message);
+                return ExitCode::FAILURE;
+            }
+            // `--frames` records a room. The game menu and the games themselves
+            // are not rooms, so the flag is a refusal there rather than a
+            // silent no-op.
+            if frames.is_some() && id.as_deref().is_none_or(|name| PLAY_GAMES.contains(&name)) {
+                report_diagnostic("--frames applies to playing a room.\n");
+                return ExitCode::FAILURE;
+            }
             let Some(id) = id else {
                 println!(
                     "Pick a game:\n
@@ -2043,29 +2089,42 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 );
                 return ExitCode::SUCCESS;
             };
-            let seed = fresh_seed();
-            match id.as_str() {
-                "munch" => munch(seed, 3, journey),
-                "quiz" => quiz(3, seed, 44, 18, 4, journey),
-                "nim" => nim(seed, journey),
-                "arcade" => arcade(seed, journey),
-                "hackenbush" => hackenbush(seed, journey),
-                "party" => party(journey),
-                "fifteen" => fifteen(seed, 5, journey),
-                "crack" => crack(seed, 4, 8, journey),
-                "seti" => seti(seed, 4, 3, journey),
-                "aliens" => aliens(seed, 3, journey),
-                "gauntlet" => gauntlet(seed, journey),
-                "bench" => bench(journey),
-                _ => {
-                    if find_room(&id, allow_hidden).is_some() {
-                        let before = journey.clone();
-                        journey.visit(&id);
-                        persist_progress_or_warn(&before, journey);
+            // The seed line and the screen clear belong to a game deal. A room
+            // is a picture, and announcing a game seed in front of it would
+            // flash on the main screen before the alternate screen opens.
+            if PLAY_GAMES.contains(&id.as_str()) {
+                let seed = fresh_seed();
+                match id.as_str() {
+                    "munch" => munch(seed, 3, journey),
+                    "quiz" => quiz(3, seed, 44, 18, 4, journey),
+                    "nim" => nim(seed, journey),
+                    "arcade" => arcade(seed, journey),
+                    "hackenbush" => hackenbush(seed, journey),
+                    "party" => party(journey),
+                    "fifteen" => fifteen(seed, 5, journey),
+                    "crack" => crack(seed, 4, 8, journey),
+                    "seti" => seti(seed, 4, 3, journey),
+                    "aliens" => aliens(seed, 3, journey),
+                    "gauntlet" => gauntlet(seed, journey),
+                    "bench" => bench(journey),
+                    _ => {
+                        report_diagnostic("that game is listed but has no table.\n");
+                        ExitCode::FAILURE
                     }
-                    let variation = if vary { fresh_variation_seed() } else { 0 };
-                    play(&id, fps, width, height, allow_hidden, variation, journey)
                 }
+            } else {
+                let variation = if vary { fresh_variation_seed() } else { 0 };
+                play(
+                    &id,
+                    fps,
+                    width,
+                    height,
+                    allow_hidden,
+                    variation,
+                    frames,
+                    std::io::stdout().is_terminal(),
+                    journey,
+                )
             }
         }
         Command::Quiz {
@@ -2549,8 +2608,8 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 }
                 let before = journey.clone();
                 journey.play();
-                // The loop never returns; persist the play before it starts,
-                // and say so if the ledger refuses, since no exit will.
+                // Persist before the loop. A forced kill would otherwise lose
+                // the play, and a clean exit keeps it too.
                 persist_progress_or_warn(&before, journey);
                 plot_animate(&expr, xmin, xmax, amin, amax, width, height)
             } else {
@@ -2724,6 +2783,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
 }
 
 /// Animate a plot in the terminal, sweeping the parameter `a`, until interrupted.
+/// A pipe prints the first frame and returns, so a redirect does not stream.
 fn plot_animate(
     source: &str,
     xmin: f64,
@@ -2733,30 +2793,50 @@ fn plot_animate(
     width: usize,
     height: usize,
 ) -> ExitCode {
+    if !std::io::stdout().is_terminal() {
+        return plot_still(source, xmin, xmax, amin, width, height);
+    }
     let frame_time = Duration::from_secs_f64(1.0 / 12.0);
+    let session = live::LiveSession::enter();
     let mut stdout = std::io::stdout();
     let mut phase = 0.0_f64;
     loop {
+        if live::interrupted() {
+            drop(session);
+            return ExitCode::SUCCESS;
+        }
         let a = amin + (amax - amin) * phase;
         match plot_report(source, xmin, xmax, a, width, height) {
             Ok(text) => {
-                let _ = write!(
-                    stdout,
-                    "\x1b[2J\x1b[H{text}\na = {a:.3}   (Ctrl+C to stop)\n"
-                );
+                let body = format!("{text}\na = {a:.3}   (Ctrl+C to stop)\n");
+                let _ = write!(stdout, "{}", live::live_frame(&body));
                 let _ = stdout.flush();
             }
             Err(message) => {
+                drop(session);
                 report_diagnostic(&message);
                 return ExitCode::FAILURE;
             }
         }
-        std::thread::sleep(frame_time);
+        live::sleep_unless_interrupted(frame_time);
         phase = if phase + 0.02 >= 1.0 {
             0.0
         } else {
             phase + 0.02
         };
+    }
+}
+
+fn plot_still(source: &str, xmin: f64, xmax: f64, a: f64, width: usize, height: usize) -> ExitCode {
+    match plot_report(source, xmin, xmax, a, width, height) {
+        Ok(text) => {
+            println!("{text}\na = {a:.3}");
+            ExitCode::SUCCESS
+        }
+        Err(message) => {
+            report_diagnostic(&message);
+            ExitCode::FAILURE
+        }
     }
 }
 
@@ -2767,10 +2847,27 @@ fn plot_parametric_animate(
     amax: f64,
     size: (usize, usize),
 ) -> ExitCode {
+    if !std::io::stdout().is_terminal() {
+        return match parametric_report(x_source, y_source, parameters, size) {
+            Ok(text) => {
+                println!("{text}\na = {:.3}", parameters.a);
+                ExitCode::SUCCESS
+            }
+            Err(message) => {
+                report_diagnostic(&message);
+                ExitCode::FAILURE
+            }
+        };
+    }
     let frame_time = Duration::from_secs_f64(1.0 / 12.0);
+    let session = live::LiveSession::enter();
     let mut stdout = std::io::stdout();
     let mut phase = 0.0_f64;
     loop {
+        if live::interrupted() {
+            drop(session);
+            return ExitCode::SUCCESS;
+        }
         let a = parameters.a + (amax - parameters.a) * phase;
         match parametric_report(
             x_source,
@@ -2779,18 +2876,17 @@ fn plot_parametric_animate(
             size,
         ) {
             Ok(text) => {
-                let _ = write!(
-                    stdout,
-                    "\x1b[2J\x1b[H{text}\na = {a:.3}   (Ctrl+C to stop)\n"
-                );
+                let body = format!("{text}\na = {a:.3}   (Ctrl+C to stop)\n");
+                let _ = write!(stdout, "{}", live::live_frame(&body));
                 let _ = stdout.flush();
             }
             Err(message) => {
+                drop(session);
                 report_diagnostic(&message);
                 return ExitCode::FAILURE;
             }
         }
-        std::thread::sleep(frame_time);
+        live::sleep_unless_interrupted(frame_time);
         phase = if phase + 0.02 >= 1.0 {
             0.0
         } else {
@@ -3493,23 +3589,6 @@ fn terminal_action_line(room: &dyn Room) -> String {
     }
 }
 
-/// Arm Ctrl+C to flip a latch instead of killing the process mid-frame.
-/// Installing can fail (a prior handler, an exotic host); the loops then
-/// keep the old die-on-signal behavior rather than refusing to run.
-fn interrupt_latch() -> Option<std::sync::Arc<std::sync::atomic::AtomicBool>> {
-    let latch = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let flag = std::sync::Arc::clone(&latch);
-    ctrlc::set_handler(move || flag.store(true, std::sync::atomic::Ordering::SeqCst))
-        .ok()
-        .map(|()| latch)
-}
-
-fn interrupted(latch: &Option<std::sync::Arc<std::sync::atomic::AtomicBool>>) -> bool {
-    latch
-        .as_ref()
-        .is_some_and(|flag| flag.load(std::sync::atomic::Ordering::SeqCst))
-}
-
 /// The first whole sentence of a passage.
 ///
 /// A period alone does not end a sentence: reveals carry decimals (pi is
@@ -3569,8 +3648,6 @@ fn watch_frame(
     height: usize,
     style: TerminalStyle,
 ) -> String {
-    let mut raster = Raster::with_accent(width, height, room.meta().accent);
-    room.render(&mut raster, t);
     let readout = room
         .status(t)
         .map(|line| format!("   {}", scrub_touch_fragments(&line)))
@@ -3579,13 +3656,66 @@ fn watch_frame(
         // Cursor home and erase-line are cursor control, not color, so they
         // stay in both modes. The reset does not: the frame already ended one.
         "\x1b[H{}{}  t = {t:.2}{readout}   (Ctrl+C to stop)\x1b[K\n",
-        ansi_in_era(&raster, style.era, style.color),
+        watch_picture(room, t, width, height, style),
         room.meta().title
     )
 }
 
+/// The room's picture at `t`, with no cursor control of its own.
+fn watch_picture(
+    room: &dyn Room,
+    t: f64,
+    width: usize,
+    height: usize,
+    style: TerminalStyle,
+) -> String {
+    let mut raster = Raster::with_accent(width, height, room.meta().accent);
+    room.render(&mut raster, t);
+    ansi_in_era(&raster, style.era, style.color)
+}
+
+/// A still a pipe can keep: the picture, then the title on its own line.
+fn still_caption(picture: &str, title: &str) -> String {
+    let mut text = String::with_capacity(picture.len() + title.len() + 2);
+    text.push_str(picture);
+    if !picture.ends_with('\n') {
+        text.push('\n');
+    }
+    text.push_str(title);
+    text.push('\n');
+    text
+}
+
+/// `count` watch samples. The first is the postcard when `postcard` is set,
+/// and otherwise phase 0. Later samples step the way the live loop does.
+fn watch_samples(
+    room: &dyn Room,
+    count: u64,
+    width: usize,
+    height: usize,
+    style: TerminalStyle,
+    postcard: bool,
+) -> String {
+    let motion = numinous_core::Motion::from_env();
+    let mut t = if postcard { room.postcard_t() } else { 0.0 };
+    let mut samples = Vec::with_capacity(count.min(4096) as usize);
+    for index in 0..count {
+        if index > 0 {
+            t = motion.next_phase(t, 0.005);
+        }
+        samples.push(still_caption(
+            &watch_picture(room, t, width, height, style),
+            room.meta().title,
+        ));
+    }
+    live::join_recorded(samples)
+}
+
 /// Watch a room in full color in the terminal, its sound playing, until
 /// interrupted. The whole audiovisual experience with no window at all.
+///
+/// A pipe prints one postcard, or `--frames` samples, and returns. It does
+/// not light a star: nobody was watching.
 #[allow(clippy::too_many_arguments)]
 fn watch(
     id: &str,
@@ -3596,54 +3726,44 @@ fn watch(
     allow_hidden: bool,
     era: numinous_core::Era,
     variation: u64,
-    journey: &Journey,
+    frames: Option<u64>,
+    terminal: bool,
+    journey: &mut Journey,
 ) -> ExitCode {
     let Some(room) = find_room_with_variation(id, allow_hidden, variation) else {
         report_diagnostic(&not_found_message(id));
         return ExitCode::FAILURE;
     };
-    let player = if mute {
-        None
-    } else {
-        // Silence must never be a mystery: a device that will not open is
-        // named once on stderr, then the room plays visual-only.
-        match numinous_audio::LoopPlayer::new() {
-            Ok(player) => Some(player),
-            Err(error) => {
-                eprintln!(
-                    "{}",
-                    terminal_safe(&format!("sound unavailable, playing silent: {error}"))
-                );
-                None
-            }
-        }
+    let style = TerminalStyle {
+        era,
+        color: color_allowed(),
     };
+    if !terminal {
+        let text = match frames {
+            None => watch_samples(room.as_ref(), 1, width, height, style, true),
+            Some(count) => watch_samples(room.as_ref(), count, width, height, style, false),
+        };
+        print!("{text}");
+        return ExitCode::SUCCESS;
+    }
+    let before = journey.clone();
+    journey.visit(room.meta().id);
+    persist_progress_or_warn(&before, journey);
+    let player = if mute { None } else { open_room_audio() };
     let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
     let motion = numinous_core::Motion::from_env();
+    let session = live::LiveSession::enter();
     let mut stdout = std::io::stdout();
-    // Clear once; frames then repaint in place (no flicker).
-    let _ = write!(stdout, "\x1b[2J");
-    let latch = interrupt_latch();
     let mut t = 0.0f64;
     let mut frame = 0u64;
     loop {
-        if interrupted(&latch) {
-            println!("{}", viewing_epilogue(room.as_ref(), journey));
-            return ExitCode::SUCCESS;
+        if live::interrupted() {
+            return live::end_live_view(session, &viewing_epilogue(room.as_ref(), journey));
         }
         let _ = write!(
             stdout,
-            "{}[J",
-            watch_frame(
-                room.as_ref(),
-                t,
-                width,
-                height,
-                TerminalStyle {
-                    era,
-                    color: color_allowed()
-                },
-            )
+            "{}",
+            live::live_frame(&watch_frame(room.as_ref(), t, width, height, style))
         );
         let _ = stdout.flush();
         if let Some(player) = &player {
@@ -3660,11 +3780,28 @@ fn watch(
                 numinous_audio::Transition::QUICK,
             );
         }
-        std::thread::sleep(frame_time);
+        frame += 1;
+        if frames.is_some_and(|limit| frame >= limit) {
+            return live::end_live_view(session, &viewing_epilogue(room.as_ref(), journey));
+        }
+        live::sleep_unless_interrupted(frame_time);
         // Reduced motion holds the phase, so the loop keeps drawing and
         // keeps responding; only the movement stops.
         t = motion.next_phase(t, 0.005);
-        frame += 1;
+    }
+}
+
+/// Open the room's voice, or say once why the picture will be silent.
+fn open_room_audio() -> Option<numinous_audio::LoopPlayer> {
+    match numinous_audio::LoopPlayer::new() {
+        Ok(player) => Some(player),
+        Err(error) => {
+            eprintln!(
+                "{}",
+                terminal_safe(&format!("sound unavailable, playing silent: {error}"))
+            );
+            None
+        }
     }
 }
 
@@ -3764,7 +3901,10 @@ struct TourFrame {
 /// the next one.
 ///
 /// Returns the rooms shown, in order, so a test can prove that nothing advanced
-/// on its own and that the gallery stopped when the input did.
+/// on its own and that the gallery stopped when the input did. Visits are
+/// recorded, the frames are not synchronized, and stdin is read on this thread.
+/// The live terminal passes different choices through [`tour_held_with`].
+#[cfg(test)]
 fn tour_held(
     rooms: &[Box<dyn Room>],
     journey: &mut Journey,
@@ -3773,25 +3913,48 @@ fn tour_held(
     input: &mut impl BufRead,
     out: &mut impl Write,
 ) -> Vec<&'static str> {
+    tour_held_with(
+        rooms, journey, frame, player, input, out, true, false, false,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn tour_held_with(
+    rooms: &[Box<dyn Room>],
+    journey: &mut Journey,
+    frame: TourFrame,
+    player: Option<&numinous_audio::LoopPlayer>,
+    input: &mut impl BufRead,
+    out: &mut impl Write,
+    record_visits: bool,
+    synchronize: bool,
+    live_stdin: bool,
+) -> Vec<&'static str> {
     let mut shown = Vec::new();
     if rooms.is_empty() {
         return shown;
     }
     for room in rooms.iter().cycle() {
         let meta = room.meta();
-        // Held tours can also end by Ctrl+C rather than q, so each visit
-        // persists as it happens, like the timer tour's.
-        let before = journey.clone();
-        journey.visit(meta.id);
-        persist_progress_or_warn(&before, journey);
+        // A pipe is not a visit. On a terminal each room persists as it is
+        // shown, because Ctrl+C can leave before the function returns.
+        if record_visits {
+            let before = journey.clone();
+            journey.visit(meta.id);
+            persist_progress_or_warn(&before, journey);
+        }
         shown.push(meta.id);
         // The postcard phase: the frame the room itself considers its best
         // face. A held room rests on a chosen picture rather than on whichever
         // frame the clock happened to stop at.
         let t = room.postcard_t();
-        let screen = tour_screen(room.as_ref(), t, frame, journey);
-        let _ = write!(out, "{screen}\x1b[J");
-        let _ = writeln!(out, "Enter for the next room, q to leave.\x1b[K");
+        let mut screen = tour_screen(room.as_ref(), t, frame, journey);
+        screen.push_str("Enter for the next room, q to leave.\x1b[K\n");
+        if synchronize {
+            let _ = write!(out, "{}", live::live_frame(&screen));
+        } else {
+            let _ = write!(out, "{screen}\x1b[J");
+        }
         let _ = out.flush();
         if let Some(player) = player {
             let _ = player.set_samples(
@@ -3801,9 +3964,14 @@ fn tour_held(
             );
             player.service();
         }
-        let mut line = String::new();
-        let read = input.read_line(&mut line).unwrap_or(0);
-        let answer = if read == 0 { None } else { Some(line.as_str()) };
+        let owned = if live_stdin {
+            live::read_stdin_line()
+        } else {
+            let mut line = String::new();
+            let read = input.read_line(&mut line).unwrap_or(0);
+            if read == 0 { None } else { Some(line) }
+        };
+        let answer = owned.as_deref();
         if let Some(player) = player {
             player.service();
         }
@@ -3811,12 +3979,11 @@ fn tour_held(
             break;
         }
     }
-    // The held tour's designed exits (q and end of input) earn the same
-    // epilogue as the timer tour's Ctrl+C, so a reduced-motion player is
-    // not the one audience whose staircase stops short of the reveal.
-    // Ctrl+C itself stays die-on-signal here: a latch cannot be polled
-    // in the middle of a blocking line read, and a Ctrl+C that silently
-    // waits for Enter would read as a broken key.
+    // The held tour's designed exits (q, end of input, Ctrl+C) earn the same
+    // epilogue as the timer tour, so a reduced-motion player is not the one
+    // audience whose staircase stops short of the reveal. Restore first, or
+    // the epilogue is painted on the alternate screen and vanishes with it.
+    live::restore_live_terminal();
     if let Some(last) = shown.last()
         && let Some(room) = rooms.iter().find(|room| room.meta().id == *last)
     {
@@ -3831,7 +3998,10 @@ fn tour_held(
 /// back around forever.
 ///
 /// Under reduced motion it does not come around by itself: each room is held at
-/// its postcard phase and the player says when to move on.
+/// its postcard phase and the player says when to move on. A pipe is neither
+/// of those. It prints one postcard, or `--frames` samples, and it lights no
+/// stars. Reduced motion on a pipe still waits for the player, which is the
+/// same hold as on a terminal, without the alternate screen.
 #[allow(clippy::too_many_arguments)]
 fn tour(
     fps: f64,
@@ -3840,25 +4010,10 @@ fn tour(
     mute: bool,
     era: numinous_core::Era,
     seconds: f64,
+    frames: Option<u64>,
+    terminal: bool,
     journey: &mut Journey,
 ) -> ExitCode {
-    let player = if mute {
-        None
-    } else {
-        // Silence must never be a mystery: a device that will not open is
-        // named once on stderr, then the room plays visual-only.
-        match numinous_audio::LoopPlayer::new() {
-            Ok(player) => Some(player),
-            Err(error) => {
-                eprintln!(
-                    "{}",
-                    terminal_safe(&format!("sound unavailable, playing silent: {error}"))
-                );
-                None
-            }
-        }
-    };
-    let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
     let motion = numinous_core::Motion::from_env();
     let view = TourFrame {
         width,
@@ -3868,45 +4023,77 @@ fn tour(
             color: color_allowed(),
         },
     };
-    let mut stdout = std::io::stdout();
-    let _ = write!(stdout, "\x1b[2J");
     let rooms = all_rooms();
-
-    let frames_per_room = match show_advance(motion, seconds, fps) {
-        Advance::Player => {
+    if !terminal {
+        if motion == numinous_core::Motion::Reduced && frames.is_none() {
+            let player = if mute { None } else { open_room_audio() };
             let stdin = std::io::stdin();
             let mut input = stdin.lock();
-            tour_held(
+            let mut stdout = std::io::stdout();
+            tour_held_with(
                 &rooms,
                 journey,
                 view,
                 player.as_ref(),
                 &mut input,
                 &mut stdout,
+                false,
+                false,
+                false,
             );
             return ExitCode::SUCCESS;
         }
-        Advance::Timer(frames) => frames,
-    };
+        let text = match frames {
+            None => tour_postcard(&rooms, view),
+            Some(count) => tour_recording(&rooms, view, count, seconds, fps),
+        };
+        print!("{text}");
+        return ExitCode::SUCCESS;
+    }
 
-    let latch = interrupt_latch();
+    let player = if mute { None } else { open_room_audio() };
+    let session = live::LiveSession::enter();
+    if motion == numinous_core::Motion::Reduced && frames.is_none() {
+        let stdin = std::io::stdin();
+        let mut input = stdin.lock();
+        let mut stdout = std::io::stdout();
+        tour_held_with(
+            &rooms,
+            journey,
+            view,
+            player.as_ref(),
+            &mut input,
+            &mut stdout,
+            true,
+            true,
+            true,
+        );
+        drop(session);
+        return ExitCode::SUCCESS;
+    }
+
+    let frames_per_room = timer_frames(seconds, fps);
+    let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
+    let mut stdout = std::io::stdout();
+    let mut emitted = 0u64;
     loop {
         for room in &rooms {
-            // Ctrl+C now lands on the epilogue below, but a latch that could
-            // not install still dies on the signal, so each visit persists as
-            // it happens or it never persists at all: a whole gallery watched
-            // and zero stars lit is a silent loss.
+            // Each visit persists as the room is shown. A stop before the
+            // function returns must not drop a room the player already saw.
             let before = journey.clone();
             journey.visit(room.meta().id);
             persist_progress_or_warn(&before, journey);
             for frame in 0..frames_per_room {
-                if interrupted(&latch) {
-                    println!("{}", viewing_epilogue(room.as_ref(), journey));
-                    return ExitCode::SUCCESS;
+                if live::interrupted() {
+                    return live::end_live_view(session, &viewing_epilogue(room.as_ref(), journey));
                 }
-                let t = frame as f64 / frames_per_room as f64;
+                let t = if motion.animates() {
+                    frame as f64 / frames_per_room as f64
+                } else {
+                    room.postcard_t()
+                };
                 let screen = tour_screen(room.as_ref(), t, view, journey);
-                let _ = write!(stdout, "{screen}\x1b[J");
+                let _ = write!(stdout, "{}", live::live_frame(&screen));
                 let _ = stdout.flush();
                 if let Some(player) = &player {
                     player.service();
@@ -3921,9 +4108,87 @@ fn tour(
                         numinous_audio::Transition::QUICK,
                     );
                 }
-                std::thread::sleep(frame_time);
+                emitted += 1;
+                if frames.is_some_and(|limit| emitted >= limit) {
+                    return live::end_live_view(session, &viewing_epilogue(room.as_ref(), journey));
+                }
+                live::sleep_unless_interrupted(frame_time);
             }
         }
+    }
+}
+
+/// One postcard of the first room, for a pipe that did not ask for a recording.
+fn tour_postcard(rooms: &[Box<dyn Room>], view: TourFrame) -> String {
+    let Some(room) = rooms.first() else {
+        return String::new();
+    };
+    still_caption(
+        &watch_picture(
+            room.as_ref(),
+            room.postcard_t(),
+            view.width,
+            view.height,
+            view.style,
+        ),
+        room.meta().title,
+    )
+}
+
+/// `--frames` samples of The Show, in catalog order, with no cursor control.
+fn tour_recording(
+    rooms: &[Box<dyn Room>],
+    view: TourFrame,
+    count: u64,
+    seconds: f64,
+    fps: f64,
+) -> String {
+    if rooms.is_empty() || count == 0 {
+        return String::new();
+    }
+    let motion = numinous_core::Motion::from_env();
+    let mut samples = Vec::with_capacity(count.min(4096) as usize);
+    if !motion.animates() {
+        let room = &rooms[0];
+        let picture = watch_picture(
+            room.as_ref(),
+            room.postcard_t(),
+            view.width,
+            view.height,
+            view.style,
+        );
+        for _ in 0..count {
+            samples.push(still_caption(&picture, room.meta().title));
+        }
+        return live::join_recorded(samples);
+    }
+    let frames_per_room = timer_frames(seconds, fps);
+    let mut emitted = 0u64;
+    'rooms: loop {
+        for room in rooms {
+            for frame in 0..frames_per_room {
+                if emitted >= count {
+                    break 'rooms;
+                }
+                let t = frame as f64 / frames_per_room as f64;
+                samples.push(still_caption(
+                    &watch_picture(room.as_ref(), t, view.width, view.height, view.style),
+                    room.meta().title,
+                ));
+                emitted += 1;
+            }
+        }
+    }
+    live::join_recorded(samples)
+}
+
+/// How many frames one room holds under full motion.
+fn timer_frames(seconds: f64, fps: f64) -> u64 {
+    match show_advance(numinous_core::Motion::Full, seconds, fps) {
+        Advance::Timer(frames) => frames,
+        // Full motion never asks the player. The 2 is the same floor
+        // `show_advance` already refuses to go under.
+        Advance::Player => 2,
     }
 }
 
@@ -4644,25 +4909,69 @@ fn jokes_report(index: Option<usize>) -> String {
     }
 }
 
-/// Build one terminal frame: clear the screen, render the room, and add a status
-/// line. Pure and testable; the animation loop just prints these in sequence.
+/// Names `numinous play` accepts as games. Anything else is a room id.
+const PLAY_GAMES: &[&str] = &[
+    "munch",
+    "quiz",
+    "nim",
+    "arcade",
+    "hackenbush",
+    "party",
+    "fifteen",
+    "crack",
+    "seti",
+    "aliens",
+    "gauntlet",
+    "bench",
+];
+
+/// One ASCII frame of a room and its status line, without clearing the screen.
+/// The live loop wraps this; a pipe uses [`play_samples`] instead.
 fn play_frame(room: &dyn Room, t: f64, width: usize, height: usize) -> String {
-    let mut canvas = Canvas::new(width, height);
-    room.render(&mut canvas, t);
     let status = room
         .status(t)
         .map(|readout| format!("   {}", scrub_touch_fragments(&readout)))
         .unwrap_or_default();
-    // \x1b[2J clears the screen, \x1b[H moves the cursor home.
     format!(
-        "\x1b[2J\x1b[H{}\n[{}]  {}   t = {t:.2}{status}   (Ctrl+C to stop)\n",
-        canvas.to_text(),
+        "{}\n[{}]  {}   t = {t:.2}{status}   (Ctrl+C to stop)\n",
+        play_picture(room, t, width, height),
         room.meta().title,
         terminal_action_line(room)
     )
 }
 
+fn play_picture(room: &dyn Room, t: f64, width: usize, height: usize) -> String {
+    let mut canvas = Canvas::new(width, height);
+    room.render(&mut canvas, t);
+    canvas.to_text()
+}
+
+/// `count` ASCII samples. The first is the postcard when `postcard` is set.
+fn play_samples(
+    room: &dyn Room,
+    count: u64,
+    width: usize,
+    height: usize,
+    postcard: bool,
+) -> String {
+    let motion = numinous_core::Motion::from_env();
+    let mut t = if postcard { room.postcard_t() } else { 0.0 };
+    let mut samples = Vec::with_capacity(count.min(4096) as usize);
+    for index in 0..count {
+        if index > 0 {
+            t = motion.next_phase(t, 0.01);
+        }
+        samples.push(still_caption(
+            &play_picture(room, t, width, height),
+            room.meta().title,
+        ));
+    }
+    live::join_recorded(samples)
+}
+
 /// Animate a room in the terminal, sweeping its phase, until interrupted.
+/// A pipe prints one postcard, or `--frames` samples, and does not light a star.
+#[allow(clippy::too_many_arguments)]
 fn play(
     id: &str,
     fps: f64,
@@ -4670,26 +4979,47 @@ fn play(
     height: usize,
     allow_hidden: bool,
     variation: u64,
-    journey: &Journey,
+    frames: Option<u64>,
+    terminal: bool,
+    journey: &mut Journey,
 ) -> ExitCode {
     let room = find_room_with_variation(id, allow_hidden, variation);
     let Some(room) = room else {
         report_diagnostic(&not_found_message(id));
         return ExitCode::FAILURE;
     };
+    if !terminal {
+        let text = match frames {
+            None => play_samples(room.as_ref(), 1, width, height, true),
+            Some(count) => play_samples(room.as_ref(), count, width, height, false),
+        };
+        print!("{text}");
+        return ExitCode::SUCCESS;
+    }
+    let before = journey.clone();
+    journey.visit(room.meta().id);
+    persist_progress_or_warn(&before, journey);
     let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
     let motion = numinous_core::Motion::from_env();
-    let latch = interrupt_latch();
+    let session = live::LiveSession::enter();
     let mut stdout = std::io::stdout();
     let mut t = 0.0f64;
+    let mut shown = 0u64;
     loop {
-        if interrupted(&latch) {
-            println!("{}", viewing_epilogue(room.as_ref(), journey));
-            return ExitCode::SUCCESS;
+        if live::interrupted() {
+            return live::end_live_view(session, &viewing_epilogue(room.as_ref(), journey));
         }
-        let _ = write!(stdout, "{}", play_frame(room.as_ref(), t, width, height));
+        let _ = write!(
+            stdout,
+            "{}",
+            live::live_frame(&play_frame(room.as_ref(), t, width, height))
+        );
         let _ = stdout.flush();
-        std::thread::sleep(frame_time);
+        shown += 1;
+        if frames.is_some_and(|limit| shown >= limit) {
+            return live::end_live_view(session, &viewing_epilogue(room.as_ref(), journey));
+        }
+        live::sleep_unless_interrupted(frame_time);
         t = motion.next_phase(t, 0.01);
     }
 }
