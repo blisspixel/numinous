@@ -9,6 +9,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 - Designed: Listen, a Watch form whose presets draw the frame from the mix.
   The specification is in `docs/DESIGN.md`, and the roadmap files it after
   the work already in order. The mode itself is still designed.
+- The interface rules now live in `docs/DESIGN.md`, with the chrome palette
+  named from `chrome::Role`. The App stays dark. A light table remains a
+  contrast check. γ is not drawn as a companion.
 
 ## [0.5.0-alpha.8] - 2026-10-18
 

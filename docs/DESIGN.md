@@ -6,13 +6,15 @@ How Numinous feels, moment to moment, and the rules that keep it feeling that wa
 claim that every element below ships in the current alpha. Built: the native
 app, CLI, MCP face, catalog, Show, deterministic room voices, four Visual Eras,
 Studio expression surface, PNG postcards, short APNG loops, exact file and link
-reopening through App arguments and drops, the local Gallery, and the doorway
-rules in **Voice** below. Room changes fade through the stage; drag dials and
-Studio knobs use critically damped springs. Sound shares articulation, reverb,
-limiting, persisted source levels, and room-change washes. Designed: the full
-theme system, longer video export,
-operating-system URL registration, the community creator platform, and the
-complete audio architecture, and Listen, the music display below.
+reopening through App arguments and drops, the local Gallery, the doorway
+rules in **Voice** below, and the chrome rules in **Interface rules** below.
+Room changes fade through the stage; drag dials and Studio knobs use
+critically damped springs. Sound shares articulation, reverb, limiting,
+persisted source levels, and room-change washes. Designed: longer video
+export, operating-system URL registration, the community creator platform,
+the complete audio architecture, and Listen, the music display below.
+The window stays dark. A light chrome table is checked for contrast and is
+not a theme the App offers.
 `ROADMAP.md` is the status authority.
 
 ## The design pillars (and how to obey them)
@@ -149,6 +151,62 @@ Sound is a first-class citizen with its own art direction, not an afterthought.
   State missing content plainly. Legacy notes are not a completed treatment,
   and reading creates no completion score. The surface stays clean for players
   who want only to explore.
+
+## Interface rules
+
+The frame around the math. Rooms and games stay playful. The chrome around
+them is one quiet instrument: polished, short, and the same on every face.
+Retro but modern is already literal. The Visual Eras tell the history of
+graphics, and the frame does not invent a second look. `VISUALS.md` owns the
+pixels. `INTERFACES.md` owns how each face behaves.
+
+**Two kinds of color.** Room art is truecolor. It belongs to the mark ramp
+and to that room's accent. Chrome does not borrow the accent. The Cabinet,
+the reader, HUD lettering, banners, game boards, and CLI text use
+`chrome::Role` in `crates/core/src/chrome.rs`. The window paints
+`Appearance::Dark` only. `Appearance::Light` is the contrast check for a
+theme the App does not offer: the App stays dark only. There is no
+appearance setting.
+
+| Job | Terminal | App, on the dark stage |
+| --- | --- | --- |
+| accent | cyan, SGR 36 | Identity `#4effff` for the mark. Selection is the same hue, calmer, for focused text |
+| success | green, SGR 32, beside a word | Success |
+| warning | yellow, SGR 33, beside a word | Warning |
+| error | red, SGR 31, beside a word | Danger |
+| info | blue, SGR 34, beside a word | Info |
+| muted | dim, SGR 2 | TextMuted |
+
+A 16-color terminal has one cyan, so identity, selection, and focus share
+it. Surfaces have no 16-color form. Every chrome color sits beside a shape,
+a letter, or a word. The magenta guard that rejects a new room accent also
+rejects every chrome token, in both appearances. Magenta itself is retired
+in `docs/decisions/0005-no-magenta.md`. Grandfathered room accents stay until
+a shrink-only move can repaint them with the Sensory Lift.
+
+**Voice.** The Voice section below holds for doorways and reveals. Chrome
+copy is shorter still: one name per thing, warm, and exact. A refusal names
+what was refused and leaves a nonzero status. Progression never counts a
+thing that did not happen.
+
+**Motion.** Causal and continuous. A room change dips through the stage, and
+a Visual Era change rides that same dip. A journey star that is new climbs
+once and then stays lit. On a terminal, `tour`, `watch`, and `play` take the
+alternate screen only when stdout is a terminal, and each frame is one
+synchronized update. A pipe or a file gets one still postcard and the title,
+then the command exits, and it does not light a star. Reduced motion,
+`NO_COLOR`, and `TERM=dumb` stay as `INTERFACES.md` records them.
+
+**Width.** 60 columns is a normal terminal width. Grouped help wraps to the
+terminal, or to `COLUMNS` when stdout is not a terminal.
+
+**No companion glyph.** γ stays a Constant in the lore. The Cabinet, the
+journey screen, rooms, Watch, the Show, and MCP do not draw a character
+beside the math. See `docs/decisions/0006-no-companion.md`.
+
+**Left for the maintainer.** Player state still lives in the `~/.numinous-*`
+files rather than the XDG directories. Moving those files is a migration of
+its own, and it is outside these rules.
 
 ## Modes: Watch, Play, Create
 

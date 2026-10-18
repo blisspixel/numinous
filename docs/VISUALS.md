@@ -263,6 +263,14 @@ Color is data, never decoration. Rules:
   and color-vision deficiencies, and pair hue with brightness or shape. That
   complete validation has not happened yet and remains in the 0.5 gate.
 
+## Chrome palette (Built)
+
+The Cabinet, the reader, banners, HUD lettering, and the mark do not borrow
+the room behind them. They use `chrome::Role`. The window is the dark table.
+The light table is checked for contrast, and the App does not offer it.
+Terminal chrome uses the 16-color names in `chrome::terminal_sgr`. The role
+table and the manners around it live in `DESIGN.md`, under "Interface rules".
+
 ## Mark lightness and the accent band (Built)
 
 The core owns both contracts in `palette` and `Raster::MarkRole`. Room accents
