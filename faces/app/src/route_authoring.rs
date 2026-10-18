@@ -1785,7 +1785,13 @@ mod tests {
             }
             let frame = panel.draw(360, 240, None);
             assert!(frame.lit_count() > 200);
-            for color in frame.to_rgba().chunks_exact(4) {
+            for color in frame
+                .to_rgba()
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
+            {
                 assert!(
                     color[0] <= color[1] && color[0] <= color[2],
                     "{page:?} uses the shared teal accent or neutral foreground: {color:?}"
@@ -1794,7 +1800,13 @@ mod tests {
         }
         let thumbnail = panel.thumbnail(180, 120);
         assert!(thumbnail.lit_count() > 20);
-        for color in thumbnail.to_rgba().chunks_exact(4) {
+        for color in thumbnail
+            .to_rgba()
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
+        {
             assert!(color[0] <= color[1] && color[0] <= color[2]);
         }
     }
@@ -2336,7 +2348,19 @@ mod tests {
         let actual = actual.to_rgba();
         let blank = Raster::with_accent(1, 1, route_accent()).to_rgba();
         let mut found = 0;
-        for (a, e) in actual.chunks_exact(4).zip(expected.chunks_exact(4)) {
+        for (a, e) in actual
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
+            .zip(
+                expected
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice()),
+            )
+        {
             if e[..3] != blank[..3] {
                 assert!(a[..3].iter().zip(&e[..3]).all(|(a, e)| a >= e));
                 found += 1;
@@ -2742,9 +2766,18 @@ mod tests {
             let mut road_pixels = 0;
             let mut quiet_pixels = 0;
             for ((actual, expected), blank) in rgba
-                .chunks_exact(4)
-                .zip(mask.chunks_exact(4))
-                .zip(blank.chunks_exact(4))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
+                .zip(mask.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()))
+                .zip(
+                    blank
+                        .as_chunks::<4>()
+                        .0
+                        .iter()
+                        .map(|chunk| chunk.as_slice()),
+                )
             {
                 if expected[..3] != blank[..3] {
                     road_pixels += 1;

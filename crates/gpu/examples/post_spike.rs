@@ -338,6 +338,13 @@ mod tests {
         let first = source_frame(8, 6);
         let second = source_frame(8, 6);
         assert_eq!(checksum(&first), checksum(&second));
-        assert!(first.chunks_exact(4).all(|pixel| pixel[3] == 255));
+        assert!(
+            first
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
+                .all(|pixel| pixel[3] == 255)
+        );
     }
 }

@@ -154,7 +154,7 @@ pub fn stereo_signal_metrics(samples: &[f32]) -> StereoSignalMetrics {
     let mut previous: Option<[f64; 2]> = None;
     let mut max_step = 0.0f64;
 
-    for frame in samples[..frame_count * 2].chunks_exact(2) {
+    for frame in samples[..frame_count * 2].as_chunks::<2>().0 {
         let mut channel = [0.0f64; 2];
         for (index, sample) in frame.iter().copied().enumerate() {
             if !sample.is_finite() {
@@ -430,7 +430,9 @@ impl Arrangement {
     #[must_use]
     pub fn render(&self, sample_rate: u32) -> Vec<f32> {
         self.render_stereo(sample_rate)
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|frame| ((frame[0] + frame[1]) * std::f32::consts::FRAC_1_SQRT_2).clamp(-1.0, 1.0))
             .collect()
     }
@@ -521,7 +523,10 @@ mod tests {
     /// and the step across its loop seam, from the last frame to the first.
     fn interior_and_seam_steps(stereo: &[f32]) -> (f32, f32) {
         let interior = stereo
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
             .collect::<Vec<_>>()
             .windows(2)
             .map(|pair| {
@@ -670,7 +675,12 @@ mod tests {
                 "the loop seam steps by {seam}, more than any interior step {interior}"
             );
             assert!(
-                stereo.chunks_exact(2).any(|frame| frame[0] != frame[1]),
+                stereo
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice())
+                    .any(|frame| frame[0] != frame[1]),
                 "panning must create a real stereo field"
             );
         }

@@ -732,8 +732,17 @@ mod tests {
                 let blank = Raster::new(width, height).to_rgba();
                 for (index, (wanted, empty)) in expected
                     .to_rgba()
-                    .chunks_exact(4)
-                    .zip(blank.chunks_exact(4))
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice())
+                    .zip(
+                        blank
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .map(|chunk| chunk.as_slice()),
+                    )
                     .enumerate()
                 {
                     if wanted != empty {
@@ -775,8 +784,17 @@ mod tests {
                 let blank = Raster::new(text.len() * 6 * scale, 7 * scale).to_rgba();
                 let pixels: Vec<_> = glyphs
                     .to_rgba()
-                    .chunks_exact(4)
-                    .zip(blank.chunks_exact(4))
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice())
+                    .zip(
+                        blank
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .map(|chunk| chunk.as_slice()),
+                    )
                     .enumerate()
                     .filter_map(|(index, (pixel, empty))| {
                         (pixel != empty).then_some((
@@ -872,8 +890,17 @@ mod tests {
                 let blank = Raster::new(width, height).to_rgba();
                 for (index, (wanted, empty)) in expected
                     .to_rgba()
-                    .chunks_exact(4)
-                    .zip(blank.chunks_exact(4))
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice())
+                    .zip(
+                        blank
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .map(|chunk| chunk.as_slice()),
+                    )
                     .enumerate()
                 {
                     if wanted != empty {
@@ -1070,7 +1097,13 @@ mod tests {
 
             let rgba = raster.to_rgba();
             let mut changed = Vec::new();
-            for (index, pixel) in rgba.chunks_exact(4).enumerate() {
+            for (index, pixel) in rgba
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
+                .enumerate()
+            {
                 if pixel[..3] != [10, 11, 15] {
                     changed.push((index % width, index / width));
                 }
@@ -1741,7 +1774,10 @@ mod tests {
         let quiet_pixel = (70 * width + width / 2) * 4;
         assert_eq!(&rgba[quiet_pixel..quiet_pixel + 4], [10, 11, 15, 255]);
         let lower_lit = rgba[120 * width * 4..]
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
             .filter(|pixel| *pixel != [10, 11, 15, 255])
             .count();
         assert!(lower_lit > 100, "room art remains visible below the panel");
@@ -1804,7 +1840,14 @@ mod tests {
             let lines = numinous_core::wrap_text(&panel.to_uppercase(), width / 6 - 4);
             numinous_core::draw_text(&mut expected, &lines[0], 10, 36, 1, '#');
             let actual = raster.to_rgba();
-            for (i, pixel) in expected.to_rgba().chunks_exact(4).enumerate() {
+            for (i, pixel) in expected
+                .to_rgba()
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
+                .enumerate()
+            {
                 if pixel[..3] != numinous_core::palette::STAGE {
                     assert_eq!(
                         &actual[i * 4..i * 4 + 4],

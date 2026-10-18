@@ -42,7 +42,13 @@ pub(crate) fn compose_source(width: u32, height: u32) -> Result<SourceFrame, Str
             height,
             byte_length: first.0.len(),
             lit_pixels: first.1,
-            all_alpha_opaque: first.0.chunks_exact(4).all(|pixel| pixel[3] == 255),
+            all_alpha_opaque: first
+                .0
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
+                .all(|pixel| pixel[3] == 255),
             first_render_sha256: sha256_bytes(&first.0),
             repeat_render_sha256: sha256_bytes(&repeat.0),
             deterministic: first.0 == repeat.0,

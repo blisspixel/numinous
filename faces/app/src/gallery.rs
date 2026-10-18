@@ -850,8 +850,17 @@ mod tests {
                 };
                 let left = 6 + index * (width / 4);
                 let pixels: Vec<_> = rgba
-                    .chunks_exact(4)
-                    .zip(blank.chunks_exact(4))
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice())
+                    .zip(
+                        blank
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .map(|chunk| chunk.as_slice()),
+                    )
                     .enumerate()
                     .filter_map(|(at, (pixel, empty))| {
                         let (x, y) = (at % width, at / width);

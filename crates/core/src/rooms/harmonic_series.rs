@@ -2,6 +2,8 @@
 //!
 //! DRAG: TUNE N. See `docs/ROOMS.md`.
 
+use std::f64::consts::EULER_GAMMA;
+
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
@@ -47,7 +49,7 @@ fn draw(canvas: &mut dyn Surface, n_f: f64, seed: u64) {
     }
     let n_mark = n_f.round().clamp(3.0, 120.0) as u32;
     let max_n = 80u32;
-    let gamma = 0.5772156649;
+    let gamma = EULER_GAMMA;
     let h_max = harmonic(max_n);
     let mut prev_h: Option<(i32, i32)> = None;
     let mut prev_l: Option<(i32, i32)> = None;

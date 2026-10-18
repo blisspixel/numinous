@@ -306,7 +306,10 @@ mod tests {
         let right = high.render_stereo(48_000);
         let energy = |samples: &[f32], channel: usize| {
             samples
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
                 .map(|frame| frame[channel].abs())
                 .sum::<f32>()
         };
@@ -374,7 +377,10 @@ mod tests {
         let right = right.render_stereo(48_000);
         let energy = |samples: &[f32], channel: usize| {
             samples
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
                 .map(|frame| frame[channel].abs())
                 .sum::<f32>()
         };

@@ -628,7 +628,7 @@ mod tests {
         );
         assert!(
             samples
-                .chunks_exact(2)
+                .as_chunks::<2>().0.iter().map(|chunk| chunk.as_slice())
                 .any(|frame| (frame[0] - frame[1]).abs() > 1e-5),
             "the visible horizontal path must move across stereo"
         );
@@ -637,7 +637,7 @@ mod tests {
         let (_, _, trace) = room.newest_ball_trace(&waves).expect("the rendered path");
         let rights = *trace.last().expect("landing");
         let landing = &samples[(0.4 * 48_000.0) as usize * 2..];
-        let (left, right) = landing.chunks_exact(2).fold((0.0, 0.0), |energy, frame| {
+        let (left, right) = landing.as_chunks::<2>().0.iter().map(|chunk| chunk.as_slice()).fold((0.0, 0.0), |energy, frame| {
             (
                 energy.0 + frame[0] * frame[0],
                 energy.1 + frame[1] * frame[1],
@@ -738,7 +738,7 @@ mod tests {
         let right = path_sound::render(261.63, &[], &right_profile, BOARD_ROWS, 48_000);
         let energy = |samples: &[f32], channel: usize| {
             samples
-                .chunks_exact(2)
+                .as_chunks::<2>().0.iter().map(|chunk| chunk.as_slice())
                 .map(|frame| frame[channel] * frame[channel])
                 .sum::<f32>()
         };

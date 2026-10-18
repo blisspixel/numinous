@@ -296,7 +296,10 @@ fn present_software_surface(
             rgba.len()
         ));
     }
-    for (pixel, channels) in buffer.iter_mut().zip(rgba.chunks_exact(4)) {
+    for (pixel, channels) in buffer
+        .iter_mut()
+        .zip(rgba.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()))
+    {
         *pixel = pack_rgb(channels);
     }
     buffer

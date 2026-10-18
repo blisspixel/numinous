@@ -287,7 +287,12 @@ fn level_table(level: f64) -> [[u8; 256]; 3] {
 
 /// Apply a level table to the color channels of an RGBA frame.
 fn dim(rgba: &mut [u8], table: &[[u8; 256]; 3]) {
-    for pixel in rgba.chunks_exact_mut(4) {
+    for pixel in rgba
+        .as_chunks_mut::<4>()
+        .0
+        .iter_mut()
+        .map(|chunk| chunk.as_mut_slice())
+    {
         pixel[0] = table[0][usize::from(pixel[0])];
         pixel[1] = table[1][usize::from(pixel[1])];
         pixel[2] = table[2][usize::from(pixel[2])];

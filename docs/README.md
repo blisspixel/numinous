@@ -196,6 +196,9 @@ Designed, and Hypothesis have the meanings defined in [RESEARCH.md](RESEARCH.md)
 - [Portable route creations and kept questions](decisions/0003-route-creations.md),
   the decision behind route capsules, explicit lineage, and project chains
   that keep a question with its network.
+- [Package platforms](decisions/0004-package-platforms.md), the decision behind
+  the Ubuntu 24.04 package floor, the macOS 15 deployment target, and keeping
+  the Intel Mac package through August 2027.
 - [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md) the roadmap's build
   ledger and dated syntheses through alpha 31. Frozen, not updated.
 - [releases/](releases/) the published release notes, one file per tag.

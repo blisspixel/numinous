@@ -17,7 +17,7 @@ automatic merges.
 | Component | Enforced baseline | Notes |
 | --- | --- | --- |
 | Rust edition | **2024** | The current edition; use it from the first commit. |
-| Rust toolchain | **1.97.1** | Exact developer and CI toolchain (`rust-toolchain.toml`). CI separately checks Rust 1.89, required by the App study renderer. |
+| Rust toolchain | **1.99.1** | Exact developer and CI toolchain (`rust-toolchain.toml`). `rust-version` is `1.99`. CI does not keep a second, older compiler. |
 | `wgpu` | **30.0.1** | Current GPU stack. The migration preserves unbucketed adapter limits and handles mapped-range failures as typed errors. This patch removes a per-frame Vulkan validation failure and resolves Metal color-space constants dynamically. |
 | `winit`, `softbuffer` | **0.30.x, 0.4.x** | Current native window and software presentation path. |
 | `cpal` | **0.18.2** | Current native audio I/O. Every PCM format is converted from the shared float mix; DSD remains explicitly unsupported. |
@@ -43,8 +43,8 @@ commit on `main` has one human author.
 `actions/attest` v4.2.2, `taiki-e/install-action` v2.87.10,
 `actions/dependency-review-action` v5.0.0, `github/codeql-action` v4.38.0,
 `cargo-deny` 0.20.2 through `taiki-e/install-action`, and
-`dtolnay/rust-toolchain` pinned to the 1.97.1 and 1.89.0 channel commits
-named in the workflows.
+`dtolnay/rust-toolchain` pinned to commit `683b588c487a69d01f6c6ddf40f036ff682cc2c8`
+(`v1`) with toolchain input `1.99.1`.
 Bump pins through review when a manual check shows a newer release.
 
 The release evidence for the major stack lines comes from the official
@@ -257,9 +257,16 @@ access`, and every room on the flash and color-free lists must appear in
 ## Continuous integration contract
 
 `.github/workflows/ci.yml` is the only pull request and `main` entry point. It
-fans out the quality, MSRV, house-style, dependency-review, supply-chain,
-RustSec audit, CodeQL, coverage, and three-platform build jobs, and calls the
-release workflow to build and audit all four native packages. CodeQL analyzes
+fans out the quality, house-style, dependency-review, supply-chain,
+RustSec audit, CodeQL, coverage, and three-platform build jobs, probes the
+upcoming Ubuntu 26.04 runner with a locked workspace check, and calls the
+release workflow to build and audit all four native packages. Linux jobs pin
+`ubuntu-24.04`. Published Linux packages link glibc 2.39. macOS packages set
+`MACOSX_DEPLOYMENT_TARGET` to 15.0, the oldest release Apple still updates
+that the `macos-15` and `macos-15-intel` runners build and smoke. The Intel
+package stays while GitHub offers `macos-15-intel`, through August 2027.
+[Decision 4](decisions/0004-package-platforms.md) records that choice.
+CodeQL analyzes
 Rust and workflow code with the extended security query suite. Its analysis and
 ordinary-run upload must complete, but the presence of an alert does not itself
 fail the action. Each build runner also drives a deterministic,
@@ -379,12 +386,11 @@ Nothing merges red. On every PR, blocking:
 10. CodeQL analysis for Rust and GitHub Actions completes and uploads its
     results. Alert presence is reviewed separately and is not an automatic
     action failure.
-11. `cargo +1.89.0 check --workspace --all-targets --locked`
-12. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
-13. `cargo test --workspace --all-targets --locked` and
+11. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
+12. `cargo test --workspace --all-targets --locked` and
    `cargo build --workspace --locked` on macOS, Linux, and Windows
-14. The native installer safety self-test on macOS, Linux, and Windows
-15. Deterministic release-package regressions, plus four-platform release
+13. The native installer safety self-test on macOS, Linux, and Windows
+14. Deterministic release-package regressions, plus four-platform release
     builds and disposable packaged-install smoke tests in the release workflow.
     Every installed package must render Times Tables through the CLI and complete
     modern MCP discovery, tool listing, and `play_room` from an isolated profile.
@@ -395,13 +401,13 @@ Nothing merges red. On every PR, blocking:
     multi-disk forms rejected. Tar verification accepts the deterministic ustar
     directory and regular-file subset and rejects hidden PAX or GNU extension
     records before their bodies are expanded.
-16. The physical input receipt contract is regression-tested on Windows,
+15. The physical input receipt contract is regression-tested on Windows,
     Linux, and macOS. It verifies archive and installed-binary identity,
     installed CLI and MCP engagement, complete ordered App observations, a
     positive XP value compared exactly across restart, content addressing, and
     a single-release four-target plus three-controller-profile matrix over at
     least three distinct models. CI tests the contract, not physical input.
-17. Sixteen deterministic SBOM regressions require exact lock and resolved-graph
+16. Sixteen deterministic SBOM regressions require exact lock and resolved-graph
     agreement, registry checksums, stable package identities and relationships,
     revision, lockfile, and native-inventory binding, bounded ordinary inputs,
     exclusive evidence creation, exact verification, and a complete
@@ -409,7 +415,7 @@ Nothing merges red. On every PR, blocking:
     parse bounded 64-bit PE, ELF, and Mach-O headers, require the exact three
     binaries on each of four targets, bind executable hashes and architectures,
     and retain unique direct native imports.
-18. Nineteen workflow contract regressions pin both invocations of the official
+17. Nineteen workflow contract regressions pin both invocations of the official
     attestation action, keep the reusable package and audit boundary read-only,
     grant OIDC, attestation, and artifact-metadata write authority only through
     the tag-only attestation caller, require its self-contained audited build,
@@ -421,17 +427,17 @@ Nothing merges red. On every PR, blocking:
     checkout credential isolation, the named release environment, and the
     one-result aggregate are locked too. Pull requests and manual previews test
     the package boundary without minting an attestation or publishing a release.
-19. Eighteen dependency-migration performance contract regressions plus exact
+18. Eighteen dependency-migration performance contract regressions plus exact
     receipt verification run on every PR and all three build operating systems.
     The retained Windows receipt binds adjacent commits, locked release builds,
     raw alternating CLI, GPU, audio discovery, and App visible-window samples,
     output and binary identities, machine details, guards, and the exact runner
     source. CI verifies the evidence structure and conclusions; it does not
     rerun the physical Windows measurement.
-20. The portable Agent Plugins package passes strict schema, identity, command,
+19. The portable Agent Plugins package passes strict schema, identity, command,
     skill-boundary, inventory, and release-version regressions. Release-package
     tests require the complete package in every binary archive.
-21. The disabled App direct-surface candidate compiles and runs through the
+20. The disabled App direct-surface candidate compiles and runs through the
     production presenter on Windows, macOS, and Linux. Each run binds a repeated
     deterministic App frame, executable, adapter, driver, sRGB surface, FIFO
     mode, outcomes, and raw timing in a retained receipt. The portable class

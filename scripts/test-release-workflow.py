@@ -26,7 +26,7 @@ PERFORMANCE_RECEIPT_COMMAND = (
 REQUIRED_CI_JOBS = (
     "quality",
     "gpu-field",
-    "msrv",
+    "ubuntu-26",
     "house-style",
     "python-quality",
     "supply-chain",
@@ -53,7 +53,7 @@ INSTALL_ACTION = (
     "taiki-e/install-action@fa23953489c080190314742a9b907f8e97c6767c # v2.87.10"
 )
 RUST_TOOLCHAIN_ACTION = (
-    "dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1"
+    "dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1"
 )
 HOOK_TRIGGER = (
     "'^(\\.github/workflows/(ci|nightly|release|release-attest|"
@@ -305,7 +305,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
             f"{job.replace('-', '_').upper()}_RESULT" for job in REQUIRED_CI_JOBS
         }
         self.assertEqual(
-            set(re.findall(r'"\$([A-Z_]+_RESULT)"', main_ci)), expected_results
+            set(re.findall(r'"\$([A-Z0-9_]+_RESULT)"', main_ci)), expected_results
         )
         self.assertEqual(main_ci.count('test "$result" = success'), 1)
 
@@ -327,7 +327,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
             CI_WORKFLOW_PATH: {
                 "quality": 30,
                 "gpu-field": 15,
-                "msrv": 15,
+                "ubuntu-26": 20,
                 "house-style": 10,
                 # Two checkers over fifty-odd small files; a minute in practice.
                 "python-quality": 10,

@@ -79,7 +79,20 @@ const NONTRANSITIVE_MORPH_SECONDS: f64 = 1.6;
 /// How far a screen shake throws the frame, in pixels.
 const SHAKE_TRAVEL: i32 = 3;
 /// Wayland app_id and X11 WM_CLASS. `scripts/install.sh` writes this same
-/// value as StartupWMClass.
+/// value as StartupWMClass. Windows and macOS binaries do not read it; the
+/// installer test still does.
+#[cfg(any(
+    test,
+    all(
+        unix,
+        not(any(
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "android",
+            target_os = "redox"
+        ))
+    )
+))]
 const DESKTOP_APP_ID: &str = "com.blisspixel.numinous";
 
 fn apply_desktop_app_id(
@@ -3392,7 +3405,10 @@ fn app_icon() -> Option<Icon> {
     let rgba = match info.color_type {
         png::ColorType::Rgba => bytes.to_vec(),
         png::ColorType::Rgb => bytes
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
             .flat_map(|rgb| [rgb[0], rgb[1], rgb[2], 255])
             .collect(),
         _ => return None,

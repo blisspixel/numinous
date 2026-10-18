@@ -123,7 +123,11 @@ impl CpuPostRenderer {
     }
 
     fn decode_source(&mut self, rgba: &[u8]) {
-        for (destination, source) in self.linear.iter_mut().zip(rgba.chunks_exact(4)) {
+        for (destination, source) in self
+            .linear
+            .iter_mut()
+            .zip(rgba.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()))
+        {
             *destination = [
                 self.decode[source[0] as usize] * LINEAR_GAIN,
                 self.decode[source[1] as usize] * LINEAR_GAIN,
@@ -297,7 +301,14 @@ mod tests {
             .to_vec();
         let second = renderer.process_rgba(3, 2, &source).expect("second frame");
         assert_eq!(first, second);
-        assert!(second.chunks_exact(4).all(|pixel| pixel[3] == 255));
+        assert!(
+            second
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|chunk| chunk.as_slice())
+                .all(|pixel| pixel[3] == 255)
+        );
         assert!(second.iter().any(|byte| *byte != 0));
     }
 

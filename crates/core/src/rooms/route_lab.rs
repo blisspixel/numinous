@@ -1128,7 +1128,7 @@ mod tests {
             let mut frame = Raster::with_accent(900, 700, room.meta().accent);
             room.render_input(&mut frame, 0.0, &keys(commands));
             assert!(frame.lit_count() > 200);
-            for color in frame.to_rgba().chunks_exact(4) {
+            for color in frame.to_rgba().as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()) {
                 assert!(
                     color[0] <= color[1] && color[0] <= color[2],
                     "{commands:?} uses accent brightness without an unrelated label hue: {color:?}"

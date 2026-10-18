@@ -1177,7 +1177,10 @@ mod tests {
             let lit_in_rows = |from: i32, to: i32| {
                 let from = from.max(0) as usize;
                 let to = to.max(0).min(height as i32) as usize;
-                rgba.chunks_exact(4)
+                rgba.as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice())
                     .enumerate()
                     .filter(|(index, pixel)| {
                         let y = index / width;
@@ -1641,7 +1644,10 @@ mod tests {
         .to_rgba();
         let background = [10, 11, 15, 255];
         let label_band_has_readable_ink = live
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
             .enumerate()
             .filter(|(index, _)| index % 360 < 35)
             .any(|(_, pixel)| {

@@ -448,7 +448,7 @@ mod tests {
         TimesTables::new().render(&mut raster, 0.375);
         let rgba = raster.to_rgba();
         let colors: HashSet<[u8; 3]> = rgba
-            .chunks_exact(4)
+            .as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice())
             .filter_map(|pixel| {
                 let rgb = [pixel[0], pixel[1], pixel[2]];
                 (rgb != [10, 11, 15]).then_some(rgb)
@@ -459,7 +459,7 @@ mod tests {
         let y = 168;
         let dial = &rgba[y * 320 * 4..(y + 1) * 320 * 4];
         assert!(
-            dial.chunks_exact(4).any(|pixel| pixel[0] > 50),
+            dial.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()).any(|pixel| pixel[0] > 50),
             "the dial marker must be visible"
         );
     }

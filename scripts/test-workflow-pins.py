@@ -28,12 +28,9 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 PINNED = re.compile(r"uses:\s*(?P<action>[^@\s]+)@(?P<sha>[0-9a-f]{40})\s*#\s*(?P<version>\S+)")
 ANY_USES = re.compile(r"^\s*-?\s*uses:\s*(?P<ref>\S+)")
 
-# Actions allowed to appear at more than one commit, and why. The toolchain is
-# pinned twice on purpose: the MSRV job exists to prove the crate still builds
-# on the oldest supported compiler, so it must not follow the current one.
-MULTI_VERSION_ALLOWED = {
-    "dtolnay/rust-toolchain": "the MSRV job pins the oldest supported compiler",
-}
+# Actions allowed to appear at more than one commit, and why. Empty while every
+# action, including the Rust toolchain, resolves to one commit.
+MULTI_VERSION_ALLOWED = {}
 
 
 def action_step(lines: list[str], start: int) -> list[str]:
@@ -147,7 +144,7 @@ class RoundtripJobTests(unittest.TestCase):
         self.nightly = (WORKFLOWS / "nightly.yml").read_text(encoding="utf-8")
 
     def test_the_roundtrip_runs_on_all_three_operating_systems(self):
-        for os_name in ("ubuntu-latest", "macos-latest", "windows-latest"):
+        for os_name in ("ubuntu-24.04", "macos-latest", "windows-latest"):
             self.assertIn(
                 f"os: {os_name}",
                 self.nightly,

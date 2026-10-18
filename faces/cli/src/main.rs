@@ -2779,7 +2779,7 @@ fn fetch_track(
         sample_format: hound::SampleFormat::Int,
     };
     let write = hound::WavWriter::create(&path, spec).and_then(|mut writer| {
-        for bytes in pcm.chunks_exact(2) {
+        for bytes in pcm.as_chunks::<2>().0.iter().map(|chunk| chunk.as_slice()) {
             writer.write_sample(i16::from_le_bytes([bytes[0], bytes[1]]))?;
         }
         writer.finalize()

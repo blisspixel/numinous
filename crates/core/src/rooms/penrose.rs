@@ -3,12 +3,12 @@
 //! Seed a kite; subdivide by Robinson triangle inflation. The pattern never
 //! repeats by translation. See `docs/ROOMS.md`.
 
-use std::f64::consts::TAU;
+use std::f64::consts::{GOLDEN_RATIO, TAU};
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
-const PHI: f64 = 1.618_033_988_749_895;
+const PHI: f64 = GOLDEN_RATIO;
 
 fn phase_unit(t: f64) -> f64 {
     if t.is_finite() {

@@ -37,7 +37,7 @@ class SensoryPlatformProofTests(unittest.TestCase):
         self.assertIn('required-features = ["gpu-post"]', self.manifest)
 
     def test_the_existing_build_matrix_owns_all_three_runtime_proofs(self):
-        self.assertIn("os: [ubuntu-latest, macos-latest, windows-latest]", self.workflow)
+        self.assertIn("os: [ubuntu-24.04, macos-latest, windows-latest]", self.workflow)
         self.assertIn("Linux direct App surface proof", self.workflow)
         self.assertIn("Native direct App surface proof", self.workflow)
         commands = [

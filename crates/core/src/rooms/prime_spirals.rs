@@ -668,7 +668,7 @@ mod tests {
         let rgba = base.to_rgba();
         let mut min_y = 700;
         let mut max_y = 0;
-        for (index, pixel) in rgba.chunks_exact(4).enumerate() {
+        for (index, pixel) in rgba.as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()).enumerate() {
             if pixel != background {
                 let y = index / 900;
                 min_y = min_y.min(y);
@@ -682,8 +682,8 @@ mod tests {
 
         let changed = base
             .to_rgba()
-            .chunks_exact(4)
-            .zip(traced.to_rgba().chunks_exact(4))
+            .as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice())
+            .zip(traced.to_rgba().as_chunks::<4>().0.iter().map(|chunk| chunk.as_slice()))
             .filter(|(a, b)| a != b)
             .count();
         assert!(changed > 300, "only {changed} pixels answered the click");

@@ -93,12 +93,6 @@ Step "release workflow contract" { python scripts/test-release-workflow.py }
 Step "workflow action policy" { python scripts/test-workflow-pins.py }
 Step "dependency migration performance contract" { python scripts/test-dependency-migration-performance.py }
 Step "dependency migration performance receipt" { python scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json }
-cargo +1.89.0 --version *> $null
-if ($LASTEXITCODE -eq 0) {
-    Step "MSRV 1.89" { cargo +1.89.0 check --workspace --all-targets --locked }
-} else {
-    Write-Host "`n== MSRV 1.89 == (skipped: run 'rustup toolchain install 1.89.0' to enable; CI enforces it)" -ForegroundColor Yellow
-}
 Step "build"  { cargo build --workspace --locked }
 Step "study parity" {
     $studyMetadata = cargo metadata --no-deps --format-version 1 --locked | ConvertFrom-Json
