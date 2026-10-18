@@ -32,7 +32,7 @@ The meta-progression already has the player collecting **Constants** (see `DESIG
 - **γ (Euler-Mascheroni)**: the one nobody talks about. We do not even know if it is irrational. Treated by the others as an open secret, a mystery even to the dimension itself.
 - **τ, 0, 1, Ω (Chaitin's constant), and others** fill out the pantheon.
 
-These characters surface through the radio hosts, the codex fragments, and the deeper revelation cards, never through exposition.
+These characters surface through the radio hosts, the codex fragments, and the deeper revelation cards, never through exposition. None of them is drawn as a companion in the Cabinet or on the journey screen. See `docs/decisions/0006-no-companion.md`.
 
 ## Delivery mechanisms (how the lore reaches those who look)
 
