@@ -22,20 +22,51 @@ const SESSION_VIEWER_FRAMES: u64 = 240;
 pub(crate) struct Banner {
     lines: Vec<String>,
     frames_left: u64,
+    role: numinous_core::chrome::Role,
 }
 
 impl Banner {
-    fn new(lines: Vec<String>, frames_left: u64) -> Self {
-        Self { lines, frames_left }
+    fn new(lines: Vec<String>, frames_left: u64, role: numinous_core::chrome::Role) -> Self {
+        Self {
+            lines,
+            frames_left,
+            role,
+        }
     }
 
     /// One-line status banner (visualizer source changes, etc.).
     pub(crate) fn status(line: impl Into<String>, frames_left: u64) -> Self {
-        Self::new(vec![line.into().to_uppercase()], frames_left.max(1))
+        Self::new(
+            vec![line.into().to_uppercase()],
+            frames_left.max(1),
+            numinous_core::chrome::Role::Info,
+        )
+    }
+
+    /// A refusal. The words use the danger chrome, not the waiting room.
+    pub(crate) fn refusal(line: impl Into<String>, frames_left: u64) -> Self {
+        Self::new(
+            vec![line.into().to_uppercase()],
+            frames_left.max(1),
+            numinous_core::chrome::Role::Danger,
+        )
+    }
+
+    /// A caution that is not a refusal, such as a save that did not land.
+    pub(crate) fn caution(line: impl Into<String>, frames_left: u64) -> Self {
+        Self::new(
+            vec![line.into().to_uppercase()],
+            frames_left.max(1),
+            numinous_core::chrome::Role::Warning,
+        )
     }
 
     pub(crate) fn lines(&self) -> &[String] {
         &self.lines
+    }
+
+    pub(crate) fn role(&self) -> numinous_core::chrome::Role {
+        self.role
     }
 
     #[cfg(test)]
@@ -60,10 +91,11 @@ pub(crate) fn level_up(level: u32, boons_available: u32) -> Banner {
     if boons_available > 0 {
         lines.push("BOON BANKED: NUMINOUS CHOOSE".to_string());
     }
-    Banner::new(lines, LEVEL_UP_FRAMES)
+    Banner::new(lines, LEVEL_UP_FRAMES, numinous_core::chrome::Role::Success)
 }
 
 pub(crate) fn playtest_note(result: io::Result<PathBuf>) -> Banner {
+    let saved = result.is_ok();
     let lines = match result {
         Ok(path) => {
             let label = path
@@ -78,11 +110,23 @@ pub(crate) fn playtest_note(result: io::Result<PathBuf>) -> Banner {
             format!("WRITE ERROR: {:?}", error.kind()).to_ascii_uppercase(),
         ],
     };
-    Banner::new(lines, PLAYTEST_NOTE_FRAMES)
+    Banner::new(
+        lines,
+        PLAYTEST_NOTE_FRAMES,
+        if saved {
+            numinous_core::chrome::Role::Success
+        } else {
+            numinous_core::chrome::Role::Danger
+        },
+    )
 }
 
 pub(crate) fn fullscreen(label: &str) -> Banner {
-    Banner::new(vec![format!("FULLSCREEN {label}")], FULLSCREEN_FRAMES)
+    Banner::new(
+        vec![format!("FULLSCREEN {label}")],
+        FULLSCREEN_FRAMES,
+        numinous_core::chrome::Role::Info,
+    )
 }
 
 /// Say which wing was entered and how far it reaches.
@@ -101,6 +145,7 @@ pub(crate) fn wing_entered(wing: &str, rooms: usize) -> Banner {
             "THE ARROWS STAY IN THIS WING".to_string(),
         ],
         FULLSCREEN_FRAMES,
+        numinous_core::chrome::Role::Info,
     )
 }
 
@@ -118,12 +163,16 @@ pub(crate) fn walk_entered(title: &str, steps: usize, question: Option<&str>) ->
     if let Some(question) = question {
         lines.push(question.to_uppercase());
     }
-    Banner::new(lines, FULLSCREEN_FRAMES)
+    Banner::new(lines, FULLSCREEN_FRAMES, numinous_core::chrome::Role::Info)
 }
 
 /// Say the whole catalog is reachable again.
 pub(crate) fn wing_left() -> Banner {
-    Banner::new(vec!["THE WHOLE CABINET".to_string()], FULLSCREEN_FRAMES)
+    Banner::new(
+        vec!["THE WHOLE CABINET".to_string()],
+        FULLSCREEN_FRAMES,
+        numinous_core::chrome::Role::Info,
+    )
 }
 
 pub(crate) fn volume(volume: f32, muted: bool) -> Banner {
@@ -143,7 +192,15 @@ fn level_banner(reading: String, muted: bool) -> Banner {
     if muted {
         lines.push("OUTPUT REMAINS MUTED".to_string());
     }
-    Banner::new(lines, VOLUME_FRAMES)
+    Banner::new(
+        lines,
+        VOLUME_FRAMES,
+        if muted {
+            numinous_core::chrome::Role::Warning
+        } else {
+            numinous_core::chrome::Role::Info
+        },
+    )
 }
 
 pub(crate) fn radio(station_name: &str, station_id: &str, track_count: usize) -> Banner {
@@ -161,13 +218,14 @@ pub(crate) fn radio(station_name: &str, station_id: &str, track_count: usize) ->
             "RADIO: {station_name}  ({track_count} ON ROTATION)"
         )]
     };
-    Banner::new(lines, RADIO_FRAMES)
+    Banner::new(lines, RADIO_FRAMES, numinous_core::chrome::Role::Info)
 }
 
 pub(crate) fn radio_off() -> Banner {
     Banner::new(
         vec!["RADIO OFF".to_string(), "ROOM MUSIC".to_string()],
         RADIO_FRAMES,
+        numinous_core::chrome::Role::Info,
     )
 }
 
@@ -175,6 +233,7 @@ pub(crate) fn radio_skip_needs_station() -> Banner {
     Banner::new(
         vec!["RADIO OFF".to_string(), "Y CHOOSES A STATION".to_string()],
         RADIO_FRAMES,
+        numinous_core::chrome::Role::Info,
     )
 }
 
@@ -185,6 +244,7 @@ pub(crate) fn radio_skip(station_name: &str, track: usize, track_count: usize) -
             format!("NEXT TRACK {track}/{track_count}"),
         ],
         RADIO_FRAMES,
+        numinous_core::chrome::Role::Info,
     )
 }
 
@@ -195,6 +255,7 @@ pub(crate) fn radio_skip_unavailable(station_name: &str) -> Banner {
             "NO PLAYABLE CACHED TRACKS".to_string(),
         ],
         RADIO_FRAMES,
+        numinous_core::chrome::Role::Warning,
     )
 }
 
@@ -206,6 +267,7 @@ pub(crate) fn room_goal(goal: &str) -> Banner {
     Banner::new(
         vec![heading, "EXPLAIN: WHY THE HEART MATTERS".to_string()],
         ROOM_GOAL_FRAMES,
+        numinous_core::chrome::Role::Success,
     )
 }
 
@@ -213,6 +275,7 @@ pub(crate) fn sound_device_unavailable(error: &str) -> Banner {
     Banner::new(
         vec!["SOUND DEVICE UNAVAILABLE".to_string(), error.to_uppercase()],
         SOUND_DEVICE_FRAMES,
+        numinous_core::chrome::Role::Danger,
     )
 }
 
@@ -225,6 +288,7 @@ pub(crate) fn gpu_post_unavailable(error: &str) -> Banner {
             error.to_uppercase(),
         ],
         PRESENTATION_FRAMES,
+        numinous_core::chrome::Role::Danger,
     )
 }
 
@@ -235,6 +299,7 @@ pub(crate) fn presentation_unavailable(error: &str) -> Banner {
             error.to_uppercase(),
         ],
         PRESENTATION_FRAMES,
+        numinous_core::chrome::Role::Danger,
     )
 }
 
@@ -245,6 +310,7 @@ pub(crate) fn session_viewer_unavailable() -> Banner {
             "THE LOCAL LISTENER COULD NOT OPEN".to_string(),
         ],
         SESSION_VIEWER_FRAMES,
+        numinous_core::chrome::Role::Danger,
     )
 }
 

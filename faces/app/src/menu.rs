@@ -1441,6 +1441,36 @@ fn selected_item(state: &MenuState) -> MenuItem {
         .unwrap_or(HOME_ITEMS[0])
 }
 
+/// Draw lettering in one chrome color. The raster's room accent is left alone.
+pub fn draw_solid_text(
+    raster: &mut Raster,
+    text: &str,
+    x: i32,
+    y: i32,
+    scale: i32,
+    color: [u8; 3],
+) {
+    menu_font::draw_text_rgb(raster, text, x, y, scale, color);
+}
+
+fn draw_label(
+    raster: &mut Raster,
+    text: &str,
+    x: i32,
+    y: i32,
+    scale: i32,
+    role: numinous_core::chrome::Role,
+) {
+    draw_solid_text(
+        raster,
+        text,
+        x,
+        y,
+        scale,
+        numinous_core::chrome::rgb(numinous_core::chrome::Appearance::Dark, role),
+    );
+}
+
 pub fn draw_menu(
     raster: &mut Raster,
     state: &MenuState,
@@ -1479,13 +1509,13 @@ pub fn draw_menu(
         width: width as i32,
         height: 32,
     };
-    menu_font::draw_text(
+    draw_label(
         raster,
         &title,
         centered_x(&title, title_scale, title_rect),
         title_rect.y,
         title_scale,
-        '#',
+        numinous_core::chrome::Role::Text,
     );
 
     let selected = selected_item(state);
@@ -1512,13 +1542,18 @@ pub fn draw_menu(
         } else {
             " "
         };
-        menu_font::draw_text(
+        let row_role = if focused || hovered || pressed {
+            numinous_core::chrome::Role::Selection
+        } else {
+            numinous_core::chrome::Role::Text
+        };
+        draw_label(
             raster,
             cursor,
             item_layout.rect.x + 8,
             label_y,
             scale,
-            if focused { '#' } else { '*' },
+            row_role,
         );
         let shortcut_x = if layout.compact {
             item_layout.rect.x + 44
@@ -1536,17 +1571,10 @@ pub fn draw_menu(
         } else {
             item_layout.rect.x + 12 * scale
         };
-        menu_font::draw_text(
-            raster,
-            item.title,
-            label_x,
-            label_y,
-            scale,
-            if focused { '#' } else { '*' },
-        );
+        draw_label(raster, item.title, label_x, label_y, scale, row_role);
         if let Some(value) = item_value(item.id, readout) {
             let value_scale = auxiliary_scale;
-            menu_font::draw_text(
+            draw_label(
                 raster,
                 &value,
                 item_layout.rect.x + item_layout.rect.width
@@ -1555,14 +1583,21 @@ pub fn draw_menu(
                     - 8,
                 item_layout.rect.y + (item_layout.rect.height - 7 * value_scale) / 2,
                 value_scale,
-                '#',
+                numinous_core::chrome::Role::Text,
             );
         }
         if input_mode == InputMode::KeyboardMouse
             && let Some(shortcut) = item.shortcut
         {
             let token = shortcut.to_ascii_uppercase().to_string();
-            menu_font::draw_text(raster, &token, shortcut_x, label_y, scale, '*');
+            draw_label(
+                raster,
+                &token,
+                shortcut_x,
+                label_y,
+                scale,
+                numinous_core::chrome::Role::TextMuted,
+            );
         }
     }
 
@@ -1604,13 +1639,13 @@ pub fn draw_menu(
     let hint_step = menu_line_step(auxiliary_scale);
     let hint_top = height as i32 - 12 - hint_count as i32 * hint_step;
     for (row, line) in hint_lines.iter().take(2).enumerate() {
-        menu_font::draw_text(
+        draw_label(
             raster,
             line,
             ((width as i32 - menu_font::text_width(line, auxiliary_scale)) / 2).max(8),
             hint_top + row as i32 * hint_step,
             auxiliary_scale,
-            '*',
+            numinous_core::chrome::Role::TextMuted,
         );
     }
 
@@ -1622,13 +1657,13 @@ pub fn draw_menu(
         let description_step = menu_line_step(auxiliary_scale);
         let description_y = hint_top - 18 - description_count as i32 * description_step;
         for (row, line) in description_lines.iter().take(2).enumerate() {
-            menu_font::draw_text(
+            draw_label(
                 raster,
                 line,
                 ((width as i32 - menu_font::text_width(line, auxiliary_scale)) / 2).max(8),
                 description_y + row as i32 * description_step,
                 auxiliary_scale,
-                '*',
+                numinous_core::chrome::Role::TextMuted,
             );
         }
     }
@@ -1642,7 +1677,14 @@ pub fn draw_menu(
             + 1;
         let counter = format!("{position} / {}", route_items.len());
         let scale = if layout.compact { 1 } else { auxiliary_scale };
-        menu_font::draw_text(raster, &counter, 12, 42, scale, '*');
+        draw_label(
+            raster,
+            &counter,
+            12,
+            42,
+            scale,
+            numinous_core::chrome::Role::TextMuted,
+        );
     }
     layout
 }
@@ -1675,13 +1717,17 @@ fn draw_controls(
         content_top + (back_top - content_top - block_height).max(0) / 2
     };
     for (index, line) in shown.iter().enumerate() {
-        menu_font::draw_text(
+        draw_label(
             raster,
             line,
             ((width as i32 - menu_font::text_width(line, scale)) / 2).max(8),
             top + index as i32 * step,
             scale,
-            if index.is_multiple_of(2) { '#' } else { '*' },
+            if index.is_multiple_of(2) {
+                numinous_core::chrome::Role::Text
+            } else {
+                numinous_core::chrome::Role::TextMuted
+            },
         );
     }
 }
@@ -2391,6 +2437,33 @@ mod tests {
         ] {
             assert!(joined.contains(expected), "missing {expected:?}: {joined}");
         }
+    }
+
+    #[test]
+    fn the_cabinet_highlight_ignores_the_waiting_room() {
+        let state = MenuState::launch();
+        let mut cool = Raster::with_accent(900, 700, [120, 220, 190]);
+        let mut warm = Raster::with_accent(900, 700, [255, 80, 40]);
+        for raster in [&mut cool, &mut warm] {
+            let _ = draw_menu(
+                raster,
+                &state,
+                InputMode::KeyboardMouse,
+                ControllerFace::Generic.into(),
+                readout(),
+            );
+        }
+        assert_eq!(cool.to_rgba(), warm.to_rgba());
+        let selection = numinous_core::chrome::rgb(
+            numinous_core::chrome::Appearance::Dark,
+            numinous_core::chrome::Role::Selection,
+        );
+        assert!(
+            cool.to_rgba()
+                .chunks(4)
+                .any(|pixel| pixel[..3] == selection),
+            "the focused row must use the selection chrome"
+        );
     }
 
     #[test]

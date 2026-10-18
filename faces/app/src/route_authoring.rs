@@ -13,6 +13,30 @@ fn route_accent() -> [u8; 3] {
         .accent
 }
 
+/// Diagram lettering in chrome text. `draw_text` would plot the room accent.
+fn draw_chrome_text(raster: &mut Raster, text: &str, x: i32, y: i32, scale: i32) {
+    struct Ink<'a> {
+        raster: &'a mut Raster,
+        color: [u8; 3],
+    }
+    impl Surface for Ink<'_> {
+        fn width(&self) -> usize {
+            self.raster.width()
+        }
+        fn height(&self) -> usize {
+            self.raster.height()
+        }
+        fn plot(&mut self, x: i32, y: i32, _mark: char) {
+            self.raster.paint(x, y, '#', self.color);
+        }
+    }
+    let color = numinous_core::chrome::rgb(
+        numinous_core::chrome::Appearance::Dark,
+        numinous_core::chrome::Role::Text,
+    );
+    numinous_core::draw_text(&mut Ink { raster, color }, text, x, y, scale, '#');
+}
+
 fn wrapped(text: &str, columns: usize) -> Vec<String> {
     numinous_core::wrap_text(text, columns)
         .into_iter()
@@ -1428,19 +1452,22 @@ impl Panel {
                 frame_dimensions,
                 viewport,
                 text.scroll,
-                [233, 237, 240, 255],
+                numinous_core::chrome::rgba(
+                    numinous_core::chrome::Appearance::Dark,
+                    numinous_core::chrome::Role::Text,
+                ),
             )?;
             raster.set_rgba(&rgba);
             Ok::<_, crate::study_text::TextError>(())
         })();
         if result.is_err() {
-            numinous_core::draw_text(
+            // Same face as the diagram labels, in chrome text rather than the room accent.
+            draw_chrome_text(
                 raster,
                 "QUESTION TEXT COULD NOT BE DRAWN",
                 6,
                 viewport.y,
                 scale,
-                '#',
             );
         }
     }
@@ -2368,6 +2395,33 @@ mod tests {
         }
         assert!(found > 5);
     }
+    fn assert_chrome_text_pixels(actual: &Raster, text: &str, x: i32, y: i32, scale: i32) {
+        let mut expected = Raster::with_accent(actual.width(), actual.height(), route_accent());
+        draw_chrome_text(&mut expected, text, x, y, scale);
+        let expected = expected.to_rgba();
+        let actual = actual.to_rgba();
+        let blank = Raster::with_accent(1, 1, route_accent()).to_rgba();
+        let mut found = 0;
+        for (a, e) in actual
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| chunk.as_slice())
+            .zip(
+                expected
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|chunk| chunk.as_slice()),
+            )
+        {
+            if e[..3] != blank[..3] {
+                assert_eq!(a[..3], e[..3]);
+                found += 1;
+            }
+        }
+        assert!(found > 5);
+    }
     #[test]
     fn route_authoring_search_raster_does_not_leak_tour_or_final_path_before_completion() {
         let mut panel = search_panel();
@@ -3222,7 +3276,7 @@ mod tests {
         panel.question = "x".repeat(65_536);
         let before = panel.workbench.snapshot();
         let raster = panel.draw(360, 240, None);
-        assert_text_pixels(&raster, "QUESTION TEXT COULD NOT BE DRAWN", 6, 36, 1);
+        assert_chrome_text_pixels(&raster, "QUESTION TEXT COULD NOT BE DRAWN", 6, 36, 1);
         assert_eq!(panel.workbench.snapshot(), before);
         assert!(panel.received_document().is_none());
         panel.act(Action::QuestionPage(1));

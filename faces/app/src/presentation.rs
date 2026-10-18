@@ -7,7 +7,10 @@ use winit::window::Window;
 #[cfg(feature = "gpu-post")]
 use numinous_gpu::{GpuAdapterInfo, RenderError, SensorySurfaceFrame, SensorySurfaceRenderer};
 
-const BACKGROUND_RGBA: [u8; 4] = [10, 11, 15, 255];
+const BACKGROUND_RGBA: [u8; 4] = numinous_core::chrome::rgba(
+    numinous_core::chrome::Appearance::Dark,
+    numinous_core::chrome::Role::Stage,
+);
 
 pub(crate) enum PresentOutcome {
     Presented {

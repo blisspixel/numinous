@@ -175,6 +175,7 @@ pub(crate) fn draw_banner(
     width: usize,
     height: usize,
     text_size: numinous_core::StudyTextSize,
+    role: numinous_core::chrome::Role,
 ) {
     let (lines, scale, line_step) = overlay_layout_for(lines, width, height, text_size);
     let line_height = line_step * scale;
@@ -194,7 +195,14 @@ pub(crate) fn draw_banner(
     for (i, line) in lines.iter().enumerate() {
         let text_width = line.chars().count() as i32 * 6 * scale;
         let left = ((width as i32 - text_width) / 2).max(10);
-        numinous_core::draw_text(raster, line, left, top + i as i32 * line_height, scale, '#');
+        numinous_app::menu::draw_solid_text(
+            raster,
+            line,
+            left,
+            top + i as i32 * line_height,
+            scale,
+            numinous_core::chrome::rgb(numinous_core::chrome::Appearance::Dark, role),
+        );
     }
 }
 
@@ -301,7 +309,17 @@ fn draw_centered_lines(
     for (i, line) in lines.iter().enumerate() {
         let text_width = line.chars().count() as i32 * 6 * scale;
         let left = ((width as i32 - text_width) / 2).max(10);
-        numinous_core::draw_text(raster, line, left, top + i as i32 * line_height, scale, '#');
+        numinous_app::menu::draw_solid_text(
+            raster,
+            line,
+            left,
+            top + i as i32 * line_height,
+            scale,
+            numinous_core::chrome::rgb(
+                numinous_core::chrome::Appearance::Dark,
+                numinous_core::chrome::Role::Text,
+            ),
+        );
     }
 }
 
@@ -410,6 +428,7 @@ mod tests {
             420,
             300,
             numinous_core::StudyTextSize::Standard,
+            numinous_core::chrome::Role::Success,
         );
         assert!(raster.lit_count() > 40);
         let rgba = raster.to_rgba();

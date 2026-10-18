@@ -544,7 +544,7 @@ impl App {
                 self.room_wager = Some(posed);
             }
             None => {
-                self.banner = Some(feedback::Banner::status(
+                self.banner = Some(feedback::Banner::refusal(
                     "THIS ROOM READS NO NUMBER TO CALL",
                     feedback::REFUSAL_FRAMES,
                 ));
