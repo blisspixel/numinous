@@ -3,6 +3,13 @@
 All notable changes to Numinous. The format follows Keep a Changelog, and the
 project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
+## [Unreleased]
+
+### Added
+- Designed: Listen, a Watch form whose presets draw the frame from the mix.
+  The specification is in `docs/DESIGN.md`, and the roadmap files it after
+  the work already in order. The mode itself is still designed.
+
 ## [0.5.0-alpha.8] - 2026-10-18
 
 ### Added

@@ -12,7 +12,8 @@ Studio knobs use critically damped springs. Sound shares articulation, reverb,
 limiting, persisted source levels, and room-change washes. Designed: the full
 theme system, longer video export,
 operating-system URL registration, the community creator platform, and the
-complete audio architecture. `ROADMAP.md` is the status authority.
+complete audio architecture, and Listen, the music display below.
+`ROADMAP.md` is the status authority.
 
 ## The design pillars (and how to obey them)
 
@@ -195,6 +196,40 @@ rooms, a math screensaver that listens. Nothing asks anything of you.
   that change only on track boundaries.
 - **The hand is always welcome.** Any touch takes the current room into Play
   without stopping the music; Esc returns to the Cabinet.
+
+### Listen: the music display (Designed)
+
+Listen is the Watch form you leave on because the picture is the music. The
+reference is a Winamp visualization plugin: one analysis of the sound, and a
+preset that draws the whole frame from it. You switch presets while the
+music keeps playing. Numinous draws its own presets.
+
+Vibe, above, stays a gallery of rooms that the radio paces. The meter that
+already ships stays a meter. It sits under the audio badge, and on the mixed
+output or a loopback capture it can quicken a room and plant a soft beat. In
+Play and in the ordinary Watch, the room remains the picture. In Listen the
+display is the picture.
+
+- **What it hears.** The three sources the visualizer already has: the room
+  bed, the mixed output, and an operating-system loopback when one is
+  present. The radio is the ordinary source. Loopback is how the display can
+  answer music that is playing outside Numinous.
+- **What it draws.** A small set of presets, each a full frame of the same
+  bands. The first set is original: bars, a waveform scope, and a field whose
+  density follows the bands. A later shelf may offer catalog rooms as
+  presets, with the mix driving parameters those rooms already understand.
+  The first slice does not take on the whole catalog. It also does not load
+  third-party visualization plugins. The presets are Numinous drawings.
+- **Manners.** No reveals, prompts, scores, or Journey progress. A source or
+  track name may appear when it changes, then leave. Silence and mute hold a
+  calm frame; a dark room with the sound off is still a finished picture.
+  Reduced motion answers level with brightness or density and does not
+  strobe. Motion stays inside the certified flash envelope, and any
+  beat-driven speed the sweep does not yet measure is measured before the
+  mode ships. `NO_COLOR` keeps the meaning in shape. Any touch can leave
+  into Play. Esc returns to the Cabinet.
+- **Where it sits.** Cabinet, beside Watch. MCP `listen_room` stays the tool
+  that hears a room. It is not this mode.
 
 ## The Studio (the creative canvas)
 
