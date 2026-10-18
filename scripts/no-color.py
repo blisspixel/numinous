@@ -129,6 +129,8 @@ PROBES: tuple[Probe, ...] = (
     Probe(["watch", "lorenz", "--mute", "--width", "24", "--height", "12"]),
     Probe(["play", "lorenz", "--width", "24", "--height", "12"]),
     Probe(["tour", "--mute", "--width", "24", "--height", "12", "--seconds", "1", "--fps", "5"]),
+    # A shell script, not a picture. Still a subcommand the help advertises.
+    Probe(["completion", "bash"]),
 )
 
 # Not driven here, and why. A reason is required: an unexplained skip is how a
@@ -176,6 +178,42 @@ def isolated_env(home: Path, no_color: bool) -> dict[str, str]:
     return env
 
 
+def subcommands_in_help(text: str) -> set[str]:
+    """Command names from clap's `Commands:` block or from grouped headings.
+
+    Root help is seven headings (`Start here:`, `Play:`, and the rest) rather
+    than one `Commands:` block. A command line is indented by exactly two
+    spaces. A wrapped description hangs further in, and options begin with a
+    dash, so neither is a command. `Options:` ends the list.
+    """
+    names: set[str] = set()
+    in_commands = False
+    for line in text.splitlines():
+        if line.startswith("Commands:") or (
+            line.endswith(":") and not line.startswith((" ", "Usage:", "Options:"))
+        ):
+            in_commands = True
+            continue
+        if line.startswith("Options:"):
+            in_commands = False
+            continue
+        if not in_commands or line.startswith("   "):
+            # A wrapped description hangs past two spaces. It is not a command,
+            # and it does not end the list.
+            continue
+        if not line.startswith("  "):
+            # A clap `Commands:` block ends at the first line that is not an
+            # entry. Grouped help puts a blank line between headings, and the
+            # next heading turns collection back on.
+            if line and not line.endswith(":"):
+                in_commands = False
+            continue
+        word = line.split()
+        if word and not word[0].startswith("-"):
+            names.add(word[0])
+    return names
+
+
 def advertised_subcommands(cli: str) -> set[str]:
     """Every subcommand the CLI lists in its own help.
 
@@ -187,18 +225,7 @@ def advertised_subcommands(cli: str) -> set[str]:
     )
     if result.returncode != 0:
         raise SweepError(f"the CLI would not print its help: {result.stderr[-400:]}")
-    names: set[str] = set()
-    in_commands = False
-    for line in result.stdout.splitlines():
-        if line.startswith("Commands:"):
-            in_commands = True
-            continue
-        if in_commands:
-            if not line.startswith("  "):
-                break
-            word = line.split()
-            if word:
-                names.add(word[0])
+    names = subcommands_in_help(result.stdout)
     if not names:
         raise SweepError("no subcommands found in the CLI help; the sweep would cover nothing")
     return names

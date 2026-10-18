@@ -174,7 +174,24 @@ pub(crate) fn color_allowed_for(no_color: Option<&OsStr>) -> bool {
     !numinous_core::setting_is_on(no_color)
 }
 
+/// Whether `TERM` names a dumb terminal.
+///
+/// A dumb terminal gets ASCII pictures: no color and no block art.
+/// `NO_COLOR` on a normal terminal keeps the block-glyph picture.
+/// Dumb is the terminal's own declaration, not a fourth access switch.
+pub(crate) fn term_is_dumb(term: Option<&OsStr>) -> bool {
+    term.is_some_and(|value| value.eq_ignore_ascii_case("dumb"))
+}
+
+/// Whether pictures may use color for this `NO_COLOR` and `TERM` pair.
+pub(crate) fn picture_color_allowed(no_color: Option<&OsStr>, term: Option<&OsStr>) -> bool {
+    color_allowed_for(no_color) && !term_is_dumb(term)
+}
+
 /// Whether this run may add color to its output.
 pub(crate) fn color_allowed() -> bool {
-    color_allowed_for(std::env::var_os("NO_COLOR").as_deref())
+    picture_color_allowed(
+        std::env::var_os("NO_COLOR").as_deref(),
+        std::env::var_os("TERM").as_deref(),
+    )
 }

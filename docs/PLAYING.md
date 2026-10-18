@@ -521,6 +521,10 @@ NO_COLOR                  No color in the terminal faces: rooms, chrome and
 NUMINOUS_REDUCED_MOTION=1 NO_COLOR=1 numinous tour
 ```
 
+A dumb terminal (`TERM=dumb`) gets an ASCII picture: no color and no
+block art. `NO_COLOR` on a normal terminal keeps the block-glyph picture.
+Dumb is the terminal's own declaration, not a fourth switch.
+
 A pipe or a file is not a terminal. `numinous tour`, `numinous watch <room>`,
 and `numinous play <room>` then print one still postcard and the title, and
 they exit without lighting a star. `--frames N` writes that many frames and

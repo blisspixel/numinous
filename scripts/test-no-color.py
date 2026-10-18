@@ -57,6 +57,52 @@ class CoverageJudgementTests(unittest.TestCase):
         self.assertIn("c, d", reasons[0])
 
 
+GROUPED_HELP = """\
+A museum of living mathematics.
+
+Usage: numinous [COMMAND]
+
+Start here:
+  tour   Walk every room
+         and keep going
+  watch  One room
+
+Maintain:
+  completion  Print a shell script
+
+Options:
+  -h, --help     Print help
+                 wrapped further
+  -V, --version  Print version
+"""
+
+CLAP_HELP = """\
+Usage: numinous [COMMAND]
+
+Commands:
+  tour        Walk every room
+  completion  Print a shell script
+  help        Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help
+"""
+
+
+class HelpParsingTests(unittest.TestCase):
+    def test_grouped_help_names_commands_and_skips_wraps_and_options(self) -> None:
+        self.assertEqual(
+            MODULE.subcommands_in_help(GROUPED_HELP),
+            {"tour", "watch", "completion"},
+        )
+
+    def test_clap_commands_block_still_names_its_commands(self) -> None:
+        self.assertEqual(
+            MODULE.subcommands_in_help(CLAP_HELP),
+            {"tour", "completion", "help"},
+        )
+
+
 class ProbeTableTests(unittest.TestCase):
     def test_every_skip_carries_a_reason(self) -> None:
         for name, reason in MODULE.SKIPPED.items():
