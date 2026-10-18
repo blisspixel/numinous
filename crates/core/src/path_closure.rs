@@ -604,10 +604,10 @@ fn analyze_parametric(creation: &StudioCreation) -> PathClosure {
     };
     let sliders = creation.sliders();
     let Some(x_osc) = oscillator(&x_expression, parameter, sliders) else {
-        return PathClosure::Unsupported;
+        return closure_when_the_pair_is_not_one_oscillator(creation);
     };
     let Some(y_osc) = oscillator(&y_expression, parameter, sliders) else {
-        return PathClosure::Unsupported;
+        return closure_when_the_pair_is_not_one_oscillator(creation);
     };
     let Some(x_freq) = frequency_cycles(&x_osc.omega) else {
         return PathClosure::Unsupported;
@@ -647,6 +647,16 @@ fn analyze_parametric(creation: &StudioCreation) -> PathClosure {
                 window_end,
             })
         }
+    }
+}
+
+/// A recognized sum already has a partial reading, so closure stays as quiet
+/// as a graph. A product or any other unnamed pair is unsupported.
+fn closure_when_the_pair_is_not_one_oscillator(creation: &StudioCreation) -> PathClosure {
+    if HarmonicPartial::of(creation).is_some() {
+        PathClosure::Graph
+    } else {
+        PathClosure::Unsupported
     }
 }
 
@@ -2159,10 +2169,8 @@ mod tests {
         let file = creation.to_num_file();
         let partial = HarmonicPartial::of(&creation).expect("partial");
         assert_eq!(creation.to_num_file(), file);
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert_eq!(partial.status_caption(), "PARTIAL  1  3");
         assert_eq!(
@@ -2269,10 +2277,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert_eq!(partial.x_terms.len(), 2);
         assert_eq!(partial.y_terms.len(), 1);
@@ -2378,10 +2384,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert_eq!(partial.x_terms.len(), 3);
         assert_eq!(partial.y_terms.len(), 1);
@@ -2495,10 +2499,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert_eq!(partial.x_terms.len(), 4);
         assert_eq!(partial.y_terms.len(), 1);
@@ -2647,10 +2649,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 5);
@@ -2802,10 +2802,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 6);
@@ -2992,10 +2990,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 7);
@@ -3184,10 +3180,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 8);
@@ -3384,10 +3378,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 9);
@@ -3586,10 +3578,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 10);
@@ -3790,10 +3780,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 11);
@@ -3996,10 +3984,8 @@ mod tests {
         assert_eq!(creation.to_num_file(), file);
         assert!(file.contains(x));
         assert!(!file.contains("PARTIAL"));
-        assert!(matches!(
-            PathClosure::of(&creation),
-            PathClosure::Unsupported
-        ));
+        assert!(matches!(PathClosure::of(&creation), PathClosure::Graph));
+        assert!(PathClosure::of(&creation).report_lines().is_empty());
         assert!(PathClosure::of(&creation).oscillator_tones().is_none());
         assert!(GraphPartial::of(&creation).is_none());
         assert_eq!(partial.x_terms.len(), 12);
