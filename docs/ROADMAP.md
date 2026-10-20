@@ -402,9 +402,11 @@ and the owner doc carries the standing description.
 
 - **`v0.5.0-alpha.10` (2026-10-20):** An issue carries a short closeout before
   it is finished: what changed or was decided, where it lives, and which
-  checks passed, failed, were blocked, or were not run. Play is unchanged
-  from alpha 9. Sensory Alpha's exit stays open. Understanding's qualifying
-  study stays open. See [release notes](releases/v0.5.0-alpha.10.md).
+  checks passed, failed, were blocked, or were not run. The photosensitivity
+  ceiling is `flash_budget_scale`, so code scanning no longer reads that
+  speed as a certificate. Play is unchanged from alpha 9. Sensory Alpha's
+  exit stays open. Understanding's qualifying study stays open.
+  See [release notes](releases/v0.5.0-alpha.10.md).
 
 - **`v0.5.0-alpha.9` (2026-10-18):** Tour, watch, and play are live on a
   terminal and still on a pipe. The Cabinet, the reader, and banners share
