@@ -123,7 +123,7 @@ pub fn room_by_id_with(id: &str, variation: u64) -> Option<Box<dyn Room>> {
 ///
 /// Fixing them changes each room's tour or speed, which is ROADMAP decision 2.
 /// Until a redraw measures a listed room clean at 8x with the visualizer
-/// included, [`certified_time_scale`] is the doubling below the recorded speed.
+/// included, [`flash_budget_scale`] is the doubling below the recorded speed.
 pub const KNOWN_OVER_FLASH_BUDGET: [(&str, f64); 3] = [
     ("cellular-automata", 8.0),
     ("julia", 8.0),
@@ -136,7 +136,7 @@ pub const KNOWN_OVER_FLASH_BUDGET: [(&str, f64); 3] = [
 /// over the budget. The certified scale is the doubling below it. A room that
 /// is not on the list is certified through [`crate::MAX_TIME_SCALE`].
 #[must_use]
-pub fn certified_time_scale(room_id: &str) -> f64 {
+pub fn flash_budget_scale(room_id: &str) -> f64 {
     KNOWN_OVER_FLASH_BUDGET
         .iter()
         .find(|&&(id, _)| id == room_id)
@@ -145,13 +145,13 @@ pub fn certified_time_scale(room_id: &str) -> f64 {
 }
 
 /// The scale the room actually runs, holding the player's wish and the
-/// visualizer's pump inside [`certified_time_scale`].
+/// visualizer's pump inside [`flash_budget_scale`].
 ///
 /// The saved wish is not rewritten. A non-finite wish or pump is treated as
 /// ordinary speed, then the product is capped.
 #[must_use]
 pub fn presented_time_scale(wished: f64, visualizer: f64, room_id: &str) -> f64 {
-    let ceiling = certified_time_scale(room_id);
+    let ceiling = flash_budget_scale(room_id);
     let wished = if wished.is_finite() && wished > 0.0 {
         wished
     } else {
@@ -174,7 +174,7 @@ pub fn allowed_phase_step(room_id: &str, elapsed: f64, requested: f64) -> f64 {
     if !elapsed.is_finite() || elapsed <= 0.0 || !requested.is_finite() || requested <= 0.0 {
         return 0.0;
     }
-    let cap = crate::ROOM_CYCLES_PER_SECOND * certified_time_scale(room_id) * elapsed;
+    let cap = crate::ROOM_CYCLES_PER_SECOND * flash_budget_scale(room_id) * elapsed;
     requested.min(cap)
 }
 
@@ -187,7 +187,7 @@ pub fn allowed_phase_nudge(room_id: &str, elapsed: f64, spent: f64, requested: f
     if !elapsed.is_finite() || elapsed <= 0.0 || !requested.is_finite() || requested <= 0.0 {
         return 0.0;
     }
-    let cap = crate::ROOM_CYCLES_PER_SECOND * certified_time_scale(room_id) * elapsed;
+    let cap = crate::ROOM_CYCLES_PER_SECOND * flash_budget_scale(room_id) * elapsed;
     let spent = if spent.is_finite() && spent > 0.0 {
         spent
     } else {
@@ -207,7 +207,7 @@ pub fn flash_limit_line(room_id: &str) -> Option<String> {
     let (_, failing) = KNOWN_OVER_FLASH_BUDGET
         .iter()
         .find(|&&(id, _)| id == room_id)?;
-    let ceiling = certified_time_scale(room_id);
+    let ceiling = flash_budget_scale(room_id);
     Some(format!(
         "{room_id} flashes faster than the WCAG budget allows when the App runs it at {failing}x speed or faster. It runs no faster than {ceiling}x."
     ))
@@ -423,7 +423,7 @@ pub fn hidden_room_by_id(id: &str) -> Option<Box<dyn Room>> {
 mod tests {
     use super::{
         MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, all_rooms, allowed_phase_nudge, allowed_phase_step,
-        certified_time_scale, counted, display_safe, echoable_id, flash_limit_line,
+        counted, display_safe, echoable_id, flash_budget_scale, flash_limit_line,
         must_escape_for_display, nearest_names, nearest_room_ids, presented_time_scale, room_by_id,
         room_by_id_with,
     };
@@ -839,7 +839,7 @@ mod tests {
             return 0;
         }
         let elapsed = 1.0 / crate::APP_FRAMES_PER_SECOND;
-        let ceiling = certified_time_scale(room_id);
+        let ceiling = flash_budget_scale(room_id);
         let pump = crate::max_visualizer_time_scale();
         let requested = crate::ROOM_CYCLES_PER_SECOND * ceiling * pump * elapsed;
         let advance = allowed_phase_step(room_id, elapsed, requested);
@@ -855,7 +855,7 @@ mod tests {
     #[test]
     fn the_certified_scale_is_the_doubling_below_a_recorded_failure() {
         for room in ["cellular-automata", "julia", "lambda-map"] {
-            assert_eq!(certified_time_scale(room), 4.0, "{room}");
+            assert_eq!(flash_budget_scale(room), 4.0, "{room}");
             let line = flash_limit_line(room).expect("listed room");
             assert!(
                 line.contains("flashes faster than the WCAG budget allows"),
@@ -864,9 +864,9 @@ mod tests {
             assert!(line.contains("at 8x speed or faster"), "{line}");
             assert!(line.contains("no faster than 4x"), "{line}");
         }
-        assert_eq!(certified_time_scale("mandelbrot"), crate::MAX_TIME_SCALE);
+        assert_eq!(flash_budget_scale("mandelbrot"), crate::MAX_TIME_SCALE);
         assert!(flash_limit_line("mandelbrot").is_none());
-        assert_eq!(certified_time_scale("not-a-room"), crate::MAX_TIME_SCALE);
+        assert_eq!(flash_budget_scale("not-a-room"), crate::MAX_TIME_SCALE);
     }
 
     #[test]
@@ -1020,7 +1020,7 @@ mod tests {
         // loop already measured, this series is the same one. If the clamp
         // stops containing the pump, the step grows and a new failure is
         // recorded at the certified speed.
-        let ceiling = certified_time_scale(room.meta().id);
+        let ceiling = flash_budget_scale(room.meta().id);
         let step = envelope_index_step(room.meta().id, cycle);
         if let Some(span) = cycle.checked_div(step) {
             let frames = span + window;

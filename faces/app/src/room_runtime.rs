@@ -217,7 +217,7 @@ impl App {
     /// is running slower than that wish.
     pub(super) fn held_speed_status(&self) -> Option<String> {
         let id = self.rooms[self.current].meta().id;
-        let ceiling = numinous_core::certified_time_scale(id);
+        let ceiling = numinous_core::flash_budget_scale(id);
         if self.time_scale.is_finite() && self.time_scale > ceiling {
             numinous_core::flash_limit_line(id)
         } else {

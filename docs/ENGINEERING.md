@@ -334,7 +334,11 @@ change to this topology must update and pass
   alert triage remains a separate review because successful analysis does not
   mean the alert set is empty. GitHub Actions analysis currently carries
   GitHub's public-preview support status, so each pin review must recheck its
-  limitations rather than treating that support boundary as settled.
+  limitations rather than treating that support boundary as settled. The
+  photosensitivity ceiling is `flash_budget_scale`. Its previous name contained
+  `cert`, and `rust/cleartext-logging` classified that call as certificate
+  data wherever a status line or an assertion printed the speed. The value is
+  a speed. Do not put `cert` back into that identifier.
 - **Dependency updates are opened by hand.** No update bot is configured
   and Dependabot security updates are switched off at the repository, so no
   automation authors commits here. `cargo audit` and `cargo deny` in CI, and

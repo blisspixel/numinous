@@ -11,6 +11,12 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   same rule. The changelog, the roadmap, and the packaged player documents
   remain the record of what shipped.
 
+### Fixed
+- The photosensitivity ceiling is `flash_budget_scale`. Code scanning had
+  read the previous name as certificate material and reported cleartext
+  logging wherever a status line or an assertion printed that speed. The
+  value is a speed, and the behavior is unchanged.
+
 ## [0.5.0-alpha.9] - 2026-10-18
 
 ### Added
