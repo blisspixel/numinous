@@ -3,7 +3,7 @@
 All notable changes to Numinous. The format follows Keep a Changelog, and the
 project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
-## [Unreleased]
+## [0.5.0-alpha.10] - 2026-10-20
 
 ### Changed
 - An issue carries a short closeout before it is marked finished or a merge
