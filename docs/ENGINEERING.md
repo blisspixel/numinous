@@ -502,6 +502,13 @@ wired, correct hook closes that gap.
 ## Git and review hygiene
 
 - **Small, focused PRs**, one concern each; a clear, imperative commit subject and a body that explains the why.
+- **Issue closeout.** Before an issue is marked finished, and before a merge
+  closes it, the issue carries a short note: what changed or was decided,
+  where that lives, and which checks passed, failed, were blocked, or were
+  not run. `AGENTS.md` holds the working checklist, including scope changes,
+  evidence labels, and duplicate or decision-only closes. The changelog, the
+  roadmap, and the packaged player documents remain the record of what
+  shipped. The note points at them.
 - **Clean commit messages and PR descriptions with no tool/AI attribution** (project rule).
 - **Review target:** math-touching changes need independent mathematical review
   before 1.0. That process is not yet staffed, so current claims remain bounded

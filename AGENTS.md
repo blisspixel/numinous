@@ -137,8 +137,31 @@ player-facing, check the four packaged files, not only `docs/`, and link
 anything outside them with a full repository URL. If it adds a count in prose,
 route it through `numinous_core::counted` and lock it against live data. A bare
 version number in a current doc means the current release; name a past one by
-its tag. If it adds an MCP `next`, follow it in a test. Keep commits small
-and focused, with a clear imperative subject and a body that explains the why,
-and with none of the attribution, dashes, or emojis named above. Temporary
-agent scratch stays in gitignored `.agent/`; durable knowledge belongs in
-source, tests, or tracked docs.
+its tag. If it adds an MCP `next`, follow it in a test.
+
+Before an issue is marked finished, and before a merge closes it, leave a
+short closing note on the issue. A comment is the usual place. A clearly
+labeled closing section in the body is enough when the decision already lives
+there. Say what changed or what was decided, name the core code or document
+and the pull request or commit, and state the verification that actually ran.
+For each relevant check, say whether it passed, failed, was blocked, or was
+not run. Link the evidence. Do not paste a log.
+
+Reconcile the acceptance items. If the scope changed, say how, and link any
+work that remains. Keep Designed, Built, and observed player, audio, or GPU
+evidence distinct. State a release or install limit when one applies. A
+duplicate, a superseded issue, or a not-planned close needs the reason and a
+link to the canonical issue or decision. A decision-only issue records the
+chosen option and why. Implementation claims belong only to work that was
+built.
+
+A few lines are enough for a small documentation change. Do not add a test
+harness, or an unrelated runtime check, only to close a documentation ticket.
+`CHANGELOG.md`, `docs/ROADMAP.md`, and the four packaged player documents
+remain the record of what shipped. The closing note points at them. Detail
+for reviewers is in `docs/ENGINEERING.md`.
+
+Keep commits small and focused, with a clear imperative subject and a body
+that explains the why, and with none of the attribution, dashes, or emojis
+named above. Temporary agent scratch stays in gitignored `.agent/`; durable
+knowledge belongs in source, tests, or tracked docs.
