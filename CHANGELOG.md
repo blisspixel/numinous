@@ -3,6 +3,14 @@
 All notable changes to Numinous. The format follows Keep a Changelog, and the
 project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
+## [Unreleased]
+
+### Changed
+- An issue carries a short closeout before it is marked finished or a merge
+  closes it. The checklist is in `AGENTS.md`. `docs/ENGINEERING.md` names the
+  same rule. The changelog, the roadmap, and the packaged player documents
+  remain the record of what shipped.
+
 ## [0.5.0-alpha.9] - 2026-10-18
 
 ### Added
