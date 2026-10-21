@@ -12,6 +12,15 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   of stdout was waiting for the helper to finish removing the installation.
   The command itself already returns before that work.
 
+### Security
+- The CLI HTTP client, used for the published-release check and for music
+  requests, resolved `rustls-webpki` 0.103.15 and `webpki-roots` 1.0.9.
+  0.103.15 could accept a path through distrusted emSign intermediates when
+  the trust anchors allowed it (RUSTSEC-2026-0382). 1.0.9 still bundled the
+  emSign ECC Root CA - G3 those paths use (RUSTSEC-2026-0381). The lockfile
+  now uses `rustls-webpki` 0.103.16, which rejects those intermediates, and
+  `webpki-roots` 1.0.10, which drops that root. `ureq` stays 3.4.1.
+
 ## [0.5.0-alpha.10] - 2026-10-20
 
 ### Changed
