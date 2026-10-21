@@ -1323,9 +1323,11 @@ fn maintain_installation(action: MaintenanceAction) -> ExitCode {
         let pid = std::process::id().to_string();
         let mut process = maintenance_process(&installer, &pid, action);
         process.env("NUMINOUS_HOME", &root).stdin(Stdio::null());
-        // A helper inherits anonymous pipes too. It waits for this process, so
-        // keeping a redirected handle open would make a capturing parent wait
-        // for the helper in turn.
+        // Null handles keep the helper off this process's terminal. On
+        // Windows, spawn still copies every inheritable handle, so a
+        // capturing parent's pipes stay open until the helper exits. This
+        // process has returned when it exits. End of stdout arrives only
+        // when the helper exits.
         if std::io::stdout().is_terminal() {
             process.stdout(Stdio::inherit());
         } else {

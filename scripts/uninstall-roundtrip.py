@@ -12,6 +12,12 @@ now it was only a sentence. Here it is checked: every player-owned file is
 hashed before the uninstall and must still be present and byte-identical after,
 while the install root and installer-owned platform launchers must be gone.
 
+`numinous uninstall` returns as soon as the helper is started. This waits for
+that process to exit, requires it to say the helper will continue, and then
+waits separately for the installation to disappear. On Windows the helper
+inherits a capturing parent's pipes, so waiting for end of stdout would wait
+for the helper instead.
+
 All five of the files the promise names must be there before the uninstall
 runs, not merely one of them. Playing a room writes the journey and nothing
 else, so for a long time this proved a third of the promise and reported it as
@@ -48,6 +54,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -182,6 +189,141 @@ def run(
             f"stdout:\n{result.stdout[-2000:]}\nstderr:\n{result.stderr[-2000:]}"
         )
     return result.stdout
+
+
+def _pump_ready_bytes(
+    pipe: Any,
+    parts: list[bytes],
+    lock: threading.Lock,
+    stop: threading.Event,
+    problems: list[BaseException],
+) -> None:
+    """Append bytes the process has already written, until `stop` is set.
+
+    `BufferedReader.read` keeps calling the raw stream until its buffer is
+    full or the pipe closes. A helper can hold the write end open, so that
+    call would leave the text inside the buffer. A raw read returns what is
+    already there and does not wait for the helper.
+    """
+    if pipe is None:
+        return
+    try:
+        fd = pipe.fileno()
+        os.set_blocking(fd, False)
+        while True:
+            try:
+                chunk = os.read(fd, 65536)
+            except BlockingIOError:
+                if stop.is_set():
+                    return
+                stop.wait(0.02)
+                continue
+            if chunk == b"":
+                return
+            with lock:
+                parts.append(chunk)
+    except (OSError, ValueError) as error:
+        with lock:
+            problems.append(error)
+
+
+def _captured_text(parts: list[bytes], lock: threading.Lock) -> str:
+    with lock:
+        data = b"".join(parts)
+    return data.decode("utf-8", "replace")
+
+
+def _finish_readers(
+    process: subprocess.Popen[bytes],
+    readers: list[threading.Thread],
+    stop: threading.Event,
+) -> None:
+    """Stop the readers and close the pipes without waiting for a helper."""
+    stop.set()
+    for reader in readers:
+        reader.join(timeout=2)
+    for pipe in (process.stdout, process.stderr):
+        if pipe is None:
+            continue
+        try:
+            pipe.close()
+        except OSError:
+            pass
+
+
+def run_until_the_process_exits(
+    command: list[str],
+    env: dict[str, str],
+    step: str,
+    timeout_seconds: float,
+) -> str:
+    """Wait until the process exits, and return the text it already wrote.
+
+    `numinous uninstall` starts a helper and returns. On Windows that helper
+    inherits every inheritable handle, including a capturing parent's pipes,
+    so waiting for end of stdout waits until the helper finishes. The command
+    has returned when its process exits. The helper is judged separately.
+
+    Output is collected while the process runs, so a full pipe cannot stall
+    it, and the readers stop when the process exits rather than when the
+    helper closes the inherited handles.
+    """
+    process = subprocess.Popen(
+        command,
+        env=native_tool_env(env),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=ROOT,
+    )
+    lock = threading.Lock()
+    stop = threading.Event()
+    problems: list[BaseException] = []
+    stdout_parts: list[bytes] = []
+    stderr_parts: list[bytes] = []
+    readers = [
+        threading.Thread(
+            target=_pump_ready_bytes,
+            args=(process.stdout, stdout_parts, lock, stop, problems),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=_pump_ready_bytes,
+            args=(process.stderr, stderr_parts, lock, stop, problems),
+            daemon=True,
+        ),
+    ]
+    for reader in readers:
+        reader.start()
+    timed_out: subprocess.TimeoutExpired | None = None
+    try:
+        try:
+            process.wait(timeout=timeout_seconds)
+        except subprocess.TimeoutExpired as error:
+            timed_out = error
+            try:
+                process.kill()
+            except OSError:
+                pass
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+    finally:
+        _finish_readers(process, readers, stop)
+    stdout = _captured_text(stdout_parts, lock)
+    stderr = _captured_text(stderr_parts, lock)
+    if problems:
+        raise RoundtripError(f"{step} could not read output: {problems[0]}") from problems[0]
+    if timed_out is not None:
+        raise RoundtripError(
+            f"{step} exceeded {timeout_seconds:g} seconds"
+        ) from timed_out
+    if process.returncode != 0:
+        raise RoundtripError(
+            f"{step} failed with exit {process.returncode}\n"
+            f"stdout:\n{stdout[-2000:]}\nstderr:\n{stderr[-2000:]}"
+        )
+    return stdout
 
 
 def build_local_soundtrack(output_dir: Path) -> tuple[Path, Path, Path]:
@@ -400,6 +542,9 @@ def roundtrip(
             "passed": install_root.is_dir(),
             "detail": f"install root present at {install_root}",
         })
+        # Launchers count only inside the isolated profile. On Windows the
+        # signed-in user's desktop can be a known folder outside USERPROFILE,
+        # and a shortcut placed there is not this gate's launcher.
         launchers = launcher_artifacts(profile)
         missing_launchers = [
             str(path) for path in launchers if not path_or_link_exists(path)
@@ -437,12 +582,21 @@ def roundtrip(
             ),
         })
 
-        run(
+        # The command returns before the helper finishes. On Windows the
+        # helper inherits these pipes, so judging end of stdout would time
+        # out on the helper instead of on the command.
+        uninstall_output = run_until_the_process_exits(
             [str(cli), "uninstall"],
             env,
             "uninstall through the installed CLI",
-            timeout_seconds=10.0,
+            10.0,
         )
+        if "The helper will continue after this command closes." not in uninstall_output:
+            raise RoundtripError(
+                "uninstall through the installed CLI returned without "
+                "reporting that the helper will continue\n"
+                f"stdout:\n{uninstall_output[-2000:]}"
+            )
         wait_until_removed((install_root, *launchers))
 
         checks.append({
