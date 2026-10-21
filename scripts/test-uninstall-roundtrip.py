@@ -13,8 +13,11 @@ import json
 import os
 import platform
 import shutil
+import signal
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from typing import cast
@@ -146,6 +149,36 @@ class NativeToolEnvTests(unittest.TestCase):
         self.assertEqual(original, {"PATH": "/usr/bin"})
 
 
+def _stop_recorded_process(pid_file: Path) -> None:
+    if not pid_file.is_file():
+        return
+    text = pid_file.read_text(encoding="ascii").strip()
+    if not text.isdecimal():
+        return
+    try:
+        os.kill(int(text), signal.SIGTERM)
+    except OSError:
+        return
+
+
+def _holder_script(exit_code: int) -> str:
+    """Print, leave a child holding stdout, record that child's pid, and exit.
+
+    The child inherits this process's standard output and outlives it. That is
+    the shape of the maintenance helper inheriting a capturing parent's pipes.
+    """
+    return (
+        "import subprocess, sys\n"
+        "from pathlib import Path\n"
+        "print('command-returned', flush=True)\n"
+        "child = subprocess.Popen(\n"
+        "    [sys.executable, '-c', 'import time; time.sleep(30)']\n"
+        ")\n"
+        "Path(sys.argv[1]).write_text(str(child.pid), encoding='ascii')\n"
+        f"raise SystemExit({exit_code})\n"
+    )
+
+
 class ProcessRunnerTests(unittest.TestCase):
     @mock.patch.object(MODULE.subprocess, "run")
     def test_each_step_can_choose_a_shorter_timeout(self, runner: mock.Mock) -> None:
@@ -165,6 +198,121 @@ class ProcessRunnerTests(unittest.TestCase):
             MODULE.RoundtripError, "stuck step exceeded 3 seconds"
         ):
             MODULE.run(["stuck"], {"PATH": ""}, "stuck step", timeout_seconds=3.0)
+
+    def test_a_spawned_child_keeps_stdout_open_after_its_parent_exits(self) -> None:
+        # The tests below only lock the gate if this process really does keep
+        # the pipe open. A fast pass against a pipe that already closed would
+        # say nothing.
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            script = directory / "holder.py"
+            pid_file = directory / "holder.pid"
+            script.write_text(_holder_script(0), encoding="utf-8")
+            process = subprocess.Popen(
+                [sys.executable, str(script), str(pid_file)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            try:
+                process.wait(timeout=8)
+                self.assertEqual(process.returncode, 0)
+                stdout = process.stdout
+                assert stdout is not None
+                os.set_blocking(stdout.fileno(), False)
+                collected = bytearray()
+                held = False
+                for _ in range(20):
+                    try:
+                        chunk: object = stdout.read(65536)
+                    except BlockingIOError:
+                        held = True
+                        break
+                    if chunk is None:
+                        held = True
+                        break
+                    if chunk == b"":
+                        self.fail(
+                            "stdout closed when the spawning process exited, "
+                            "so the child is not holding the pipe"
+                        )
+                    if not isinstance(chunk, bytes):
+                        self.fail(f"unexpected read result {chunk!r}")
+                    collected.extend(chunk)
+                self.assertTrue(held, "stdout did not stay open")
+                self.assertIn(b"command-returned", bytes(collected))
+            finally:
+                _stop_recorded_process(pid_file)
+                try:
+                    process.kill()
+                except OSError:
+                    pass
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
+                if process.stdout is not None:
+                    process.stdout.close()
+                if process.stderr is not None:
+                    process.stderr.close()
+
+    def test_a_helper_holding_stdout_does_not_delay_process_exit(self) -> None:
+        # The maintenance helper inherits a capturing parent's pipes and
+        # outlives `numinous uninstall`. The gate has to notice the command
+        # returning, with the text it printed, then judge the helper apart.
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            script = directory / "holder.py"
+            pid_file = directory / "holder.pid"
+            script.write_text(_holder_script(0), encoding="utf-8")
+            started = time.monotonic()
+            try:
+                output = MODULE.run_until_the_process_exits(
+                    [sys.executable, str(script), str(pid_file)],
+                    {"PATH": os.environ.get("PATH", "")},
+                    "held pipes",
+                    8.0,
+                )
+                elapsed = time.monotonic() - started
+            finally:
+                _stop_recorded_process(pid_file)
+        self.assertLess(elapsed, 6.0)
+        self.assertIn("command-returned", output)
+
+    def test_failure_text_is_visible_while_a_child_holds_the_pipe(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            script = directory / "holder.py"
+            pid_file = directory / "holder.pid"
+            script.write_text(_holder_script(3), encoding="utf-8")
+            started = time.monotonic()
+            try:
+                with self.assertRaises(MODULE.RoundtripError) as caught:
+                    MODULE.run_until_the_process_exits(
+                        [sys.executable, str(script), str(pid_file)],
+                        {"PATH": os.environ.get("PATH", "")},
+                        "held pipes",
+                        8.0,
+                    )
+                elapsed = time.monotonic() - started
+            finally:
+                _stop_recorded_process(pid_file)
+        message = str(caught.exception)
+        self.assertLess(elapsed, 6.0)
+        self.assertIn("exit 3", message)
+        self.assertIn("command-returned", message)
+
+    def test_a_process_that_does_not_exit_is_still_bounded(self) -> None:
+        started = time.monotonic()
+        with self.assertRaisesRegex(
+            MODULE.RoundtripError, "still running exceeded 1 seconds"
+        ):
+            MODULE.run_until_the_process_exits(
+                [sys.executable, "-c", "import time; time.sleep(30)"],
+                {"PATH": os.environ.get("PATH", "")},
+                "still running",
+                1.0,
+            )
+        self.assertLess(time.monotonic() - started, 5.0)
 
 
 class IsolatedProfileEnvTests(unittest.TestCase):

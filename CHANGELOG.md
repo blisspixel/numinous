@@ -3,6 +3,15 @@
 All notable changes to Numinous. The format follows Keep a Changelog, and the
 project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
+## [Unreleased]
+
+### Changed
+- The uninstall roundtrip waits for the `numinous uninstall` process to exit,
+  and still requires it to say the helper will continue. On Windows the
+  maintenance helper inherits a capturing parent's pipes, so waiting for end
+  of stdout was waiting for the helper to finish removing the installation.
+  The command itself already returns before that work.
+
 ## [0.5.0-alpha.10] - 2026-10-20
 
 ### Changed
