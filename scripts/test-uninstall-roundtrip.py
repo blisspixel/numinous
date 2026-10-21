@@ -19,6 +19,7 @@ import sys
 import tempfile
 import time
 import unittest
+import uuid
 from pathlib import Path
 from typing import cast
 from unittest import mock
@@ -313,6 +314,127 @@ class ProcessRunnerTests(unittest.TestCase):
                 1.0,
             )
         self.assertLess(time.monotonic() - started, 5.0)
+
+
+class WindowsRegistrationTests(unittest.TestCase):
+    def test_other_platforms_do_not_touch_the_registry(self) -> None:
+        with (
+            mock.patch.object(MODULE.platform, "system", return_value="Linux"),
+            mock.patch.object(MODULE, "_reg") as reg,
+        ):
+            saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
+            saved.capture()
+            saved.restore()
+        reg.assert_not_called()
+
+    def test_a_missing_key_is_deleted_again_on_restore(self) -> None:
+        calls: list[list[str]] = []
+
+        def fake_reg(args: list[str]) -> subprocess.CompletedProcess[str]:
+            calls.append(list(args))
+            if args[0] == "query":
+                return subprocess.CompletedProcess(
+                    args,
+                    1,
+                    "",
+                    "ERROR: The system was unable to find "
+                    "the specified registry key or value.",
+                )
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with (
+            mock.patch.object(MODULE.platform, "system", return_value="Windows"),
+            mock.patch.object(MODULE, "_reg", side_effect=fake_reg),
+        ):
+            saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
+            saved.capture()
+            saved.restore()
+        self.assertEqual(calls[0][:2], ["query", r"HKCU\Software\Example"])
+        self.assertEqual(calls[1], ["delete", r"HKCU\Software\Example", "/f"])
+
+    def test_an_exported_key_is_imported_unchanged(self) -> None:
+        blob = b"Windows Registry Editor Version 5.00\r\n"
+        imported: list[bytes] = []
+
+        def fake_reg(args: list[str]) -> subprocess.CompletedProcess[str]:
+            if args[0] == "query":
+                return subprocess.CompletedProcess(args, 0, "HKEY", "")
+            if args[0] == "export":
+                Path(args[2]).write_bytes(blob)
+                return subprocess.CompletedProcess(args, 0, "", "")
+            if args[0] == "import":
+                imported.append(Path(args[1]).read_bytes())
+                return subprocess.CompletedProcess(args, 0, "", "")
+            return subprocess.CompletedProcess(args, 1, "", "unexpected")
+
+        with (
+            mock.patch.object(MODULE.platform, "system", return_value="Windows"),
+            mock.patch.object(MODULE, "_reg", side_effect=fake_reg),
+        ):
+            saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
+            saved.capture()
+            saved.restore()
+        self.assertEqual(imported, [blob])
+
+    def test_a_read_failure_is_not_treated_as_absence(self) -> None:
+        def fake_reg(args: list[str]) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(args, 1, "", "ERROR: Access is denied.")
+
+        with (
+            mock.patch.object(MODULE.platform, "system", return_value="Windows"),
+            mock.patch.object(MODULE, "_reg", side_effect=fake_reg),
+        ):
+            saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
+            with self.assertRaises(MODULE.RoundtripError):
+                saved.capture()
+        self.assertFalse(saved._captured)
+
+    @unittest.skipUnless(
+        platform.system() == "Windows", "registry roundtrip is Windows-only"
+    )
+    def test_a_private_key_roundtrips_through_reg(self) -> None:
+        key = r"HKCU\Software\NuminousRoundtripTest" + uuid.uuid4().hex
+        subprocess.run(["reg", "delete", key, "/f"], capture_output=True, check=False)
+        try:
+            missing = MODULE.SavedWindowsRegistration(key)
+            missing.capture()
+            subprocess.run(
+                ["reg", "add", key, "/v", "DisplayName", "/d", "temporary", "/f"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            missing.restore()
+            probe = subprocess.run(
+                ["reg", "query", key], capture_output=True, text=True, check=False
+            )
+            self.assertNotEqual(probe.returncode, 0)
+
+            subprocess.run(
+                ["reg", "add", key, "/v", "DisplayName", "/d", "kept", "/f"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            present = MODULE.SavedWindowsRegistration(key)
+            present.capture()
+            subprocess.run(
+                ["reg", "add", key, "/v", "DisplayName", "/d", "changed", "/f"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            present.restore()
+            shown = subprocess.run(
+                ["reg", "query", key, "/v", "DisplayName"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self.assertIn("kept", shown.stdout)
+            self.assertNotIn("changed", shown.stdout)
+        finally:
+            subprocess.run(["reg", "delete", key, "/f"], capture_output=True, check=False)
 
 
 class IsolatedProfileEnvTests(unittest.TestCase):

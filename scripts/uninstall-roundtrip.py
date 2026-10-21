@@ -18,6 +18,11 @@ waits separately for the installation to disappear. On Windows the helper
 inherits a capturing parent's pipes, so waiting for end of stdout would wait
 for the helper instead.
 
+On Windows the Installed Apps registration is a HKCU key. Overriding
+USERPROFILE does not move that key, so this saves it before install and
+writes it back after the helper finishes. A roundtrip must not leave the
+signed-in user's entry pointed at the temporary install.
+
 All five of the files the promise names must be there before the uninstall
 runs, not merely one of them. Playing a room writes the journey and nothing
 else, so for a long time this proved a third of the promise and reported it as
@@ -72,6 +77,13 @@ PLAYER_STATE = (
     ".numinous-preferences",
 )
 
+# The installer writes this key in the signed-in user's hive. A profile
+# override does not redirect HKCU, so the roundtrip saves and restores it.
+WINDOWS_UNINSTALL_REGISTRATION = (
+    r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Numinous"
+)
+_MISSING_REGISTRY_KEY = "unable to find the specified registry key"
+
 # A room to play so there is state worth keeping. Times Tables is a flagship
 # and its render is deterministic.
 PLAY_ROOM = "times-tables"
@@ -79,6 +91,86 @@ PLAY_ROOM = "times-tables"
 
 class RoundtripError(RuntimeError):
     """A step of the roundtrip did not hold."""
+
+
+class SavedWindowsRegistration:
+    """One Windows registry key, saved so a roundtrip can put it back.
+
+    The installer's Installed Apps entry lives in HKCU. A profile override
+    does not redirect that hive, so the roundtrip would otherwise replace
+    the signed-in user's entry with the temporary install.
+    """
+
+    def __init__(self, key: str) -> None:
+        self.key = key
+        self._captured = False
+        self._export: bytes | None = None
+
+    def capture(self) -> None:
+        """Remember the key, including the fact that it was absent."""
+        if platform.system() != "Windows":
+            return
+        probe = _reg(["query", self.key])
+        if probe.returncode != 0:
+            if _MISSING_REGISTRY_KEY in _reg_text(probe):
+                self._captured = True
+                self._export = None
+                return
+            raise RoundtripError(
+                f"could not read the Windows registration {self.key}: "
+                f"{_reg_text(probe)}"
+            )
+        self._export = _export_registry_key(self.key)
+        self._captured = True
+
+    def restore(self) -> None:
+        """Put the captured key back. Absence is restored by deleting it."""
+        if not self._captured:
+            return
+        if self._export is None:
+            _reg(["delete", self.key, "/f"])
+            return
+        handle, name = tempfile.mkstemp(prefix="numinous-reg-", suffix=".reg")
+        os.close(handle)
+        path = Path(name)
+        try:
+            path.write_bytes(self._export)
+            imported = _reg(["import", str(path)])
+            if imported.returncode != 0:
+                raise RoundtripError(
+                    f"could not restore the Windows registration {self.key}: "
+                    f"{_reg_text(imported)}"
+                )
+        finally:
+            path.unlink(missing_ok=True)
+
+
+def _reg(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["reg", *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _reg_text(result: subprocess.CompletedProcess[str]) -> str:
+    return f"{result.stdout or ''}{result.stderr or ''}".strip()
+
+
+def _export_registry_key(key: str) -> bytes:
+    handle, name = tempfile.mkstemp(prefix="numinous-reg-", suffix=".reg")
+    os.close(handle)
+    path = Path(name)
+    try:
+        exported = _reg(["export", key, str(path), "/y"])
+        if exported.returncode != 0:
+            raise RoundtripError(
+                f"could not save the Windows registration {key}: {_reg_text(exported)}"
+            )
+        return path.read_bytes()
+    finally:
+        path.unlink(missing_ok=True)
 
 
 def native_tool_env(env: dict[str, str]) -> dict[str, str]:
@@ -498,6 +590,11 @@ def roundtrip(
     soundtrack: tuple[Path, Path, Path] | None = None,
 ) -> list[dict[str, Any]]:
     checks: list[dict[str, Any]] = []
+    # Save the signed-in user's Installed Apps entry before any installer
+    # runs. The restore stays outside the workspace cleanup, and it runs
+    # even when a later step fails.
+    registration = SavedWindowsRegistration(WINDOWS_UNINSTALL_REGISTRATION)
+    registration.capture()
     # A shared temporary directory can grant other accounts replacement rights.
     # Exercise the same private ancestry required of a real installation.
     workspace = Path(tempfile.mkdtemp(
@@ -633,6 +730,7 @@ def roundtrip(
         })
     finally:
         shutil.rmtree(workspace, ignore_errors=True)
+        registration.restore()
     return checks
 
 
