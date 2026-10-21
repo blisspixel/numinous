@@ -1056,10 +1056,18 @@ function Install-UninstallRegistration(
     }
     if (Test-Path -LiteralPath $RegistryPath) {
         $existing = Get-ItemProperty -LiteralPath $RegistryPath
-        $sameInstall = $existing.$UninstallRegistryOwnerName -eq 1 -and
-            $existing.DisplayName -ceq 'Numinous' -and
+        $managed = $existing.$UninstallRegistryOwnerName -eq 1 -and
+            $existing.DisplayName -ceq 'Numinous'
+        $sameInstall = $managed -and
             (Test-SameFilesystemPath $existing.InstallLocation $NuminousHome)
-        if (-not $sameInstall) {
+        # A managed entry whose directory is gone is the remnant of an install
+        # that no longer exists. Another install that is still on disk keeps
+        # its registration.
+        $location = [string]$existing.InstallLocation
+        $deadManaged = $managed -and
+            -not [string]::IsNullOrWhiteSpace($location) -and
+            -not (Test-Path -LiteralPath $location)
+        if (-not $sameInstall -and -not $deadManaged) {
             Say 'Windows Installed Apps registration belongs to something else and was preserved.'
             return $false
         }
@@ -1206,6 +1214,33 @@ function Test-UninstallRegistration {
         $collision = Get-ItemProperty -LiteralPath $registryPath
         if ($collision.UninstallString -cne 'personal') {
             Fail 'uninstall registration self-test: an unmarked collision changed.'
+        }
+        Remove-Item -LiteralPath $registryPath -Force
+        $gone = Join-Path $Root 'gone-install'
+        [void](New-Item -Path $registryPath -Force)
+        Set-ItemProperty -LiteralPath $registryPath -Name DisplayName -Value 'Numinous'
+        Set-ItemProperty -LiteralPath $registryPath -Name InstallLocation -Value $gone
+        Set-ItemProperty -LiteralPath $registryPath -Name UninstallString -Value 'stale'
+        [void](New-ItemProperty -LiteralPath $registryPath -Name $UninstallRegistryOwnerName `
+            -Value 1 -PropertyType DWord -Force)
+        if (-not (Install-UninstallRegistration $cli $registryPath '1.2.3')) {
+            Fail 'uninstall registration self-test: a managed entry whose install is gone was kept.'
+        }
+        $replaced = Get-ItemProperty -LiteralPath $registryPath
+        if ($replaced.UninstallString -cne $command -or
+            -not (Test-SameFilesystemPath $replaced.InstallLocation $Root)) {
+            Fail 'uninstall registration self-test: a dead managed entry was not claimed.'
+        }
+        $other = Join-Path $Root 'other-install'
+        New-Item -ItemType Directory -Path $other | Out-Null
+        Set-ItemProperty -LiteralPath $registryPath -Name InstallLocation -Value $other
+        Set-ItemProperty -LiteralPath $registryPath -Name UninstallString -Value 'other-install'
+        if (Install-UninstallRegistration $cli $registryPath '1.2.3') {
+            Fail 'uninstall registration self-test: another existing install was replaced.'
+        }
+        $preservedOther = Get-ItemProperty -LiteralPath $registryPath
+        if ($preservedOther.UninstallString -cne 'other-install') {
+            Fail 'uninstall registration self-test: another existing install changed.'
         }
         Say 'Windows Installed Apps registration and cleanup: pass.'
     } finally {

@@ -21,6 +21,14 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   now uses `rustls-webpki` 0.103.16, which rejects those intermediates, and
   `webpki-roots` 1.0.10, which drops that root. `ureq` stays 3.4.1.
 
+### Fixed
+- The uninstall roundtrip saves and restores the Windows Installed Apps
+  registration. That key is in HKCU, which an overridden USERPROFILE does
+  not move, so a roundtrip was leaving the signed-in user's entry pointed
+  at the temporary install. A managed Numinous entry whose install
+  directory is gone can be replaced by a new install. An entry for a
+  different install that is still on disk is left alone.
+
 ## [0.5.0-alpha.10] - 2026-10-20
 
 ### Changed
