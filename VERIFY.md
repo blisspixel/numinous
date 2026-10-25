@@ -32,6 +32,10 @@ Private state writes request owner-only Unix file permissions. Existing append
 files are tightened before writing; read-only inspection leaves permissions
 unchanged. Windows files continue to inherit their containing directory's ACL.
 
+Broadcast pairing and replay receipts require matching build fingerprints.
+`Cargo.lock` contributes to that fingerprint. Rebuild App and MCP together after
+dependency updates, even when their package version stays the same.
+
 - **Rust** (edition 2024; pinned to 1.99.1 in `rust-toolchain.toml`). That pin
   is the compiler floor. CI does not keep a second, older compiler. Install
   from <https://rustup.rs>. On Windows, cargo lands in

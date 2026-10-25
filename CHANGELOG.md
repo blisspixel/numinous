@@ -5,6 +5,14 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Security
+- The locked cryptographic graph now uses `ctutils` 0.4.4, the patched release
+  for RUSTSEC-2026-0385. The earlier 0.4.3 could generate conditional branches
+  in operations intended to run in constant time. Pairing still compares proofs
+  through `subtle`; this dependency advisory does not establish an exploitable
+  timing leak in the App. Rebuild App and MCP together because the lockfile is
+  part of their replay compatibility fingerprint.
+
 ### Fixed
 - Mandelbrot in The Overture uses the existing full-resolution GPU fractal
   renderer when available, with the score's canonical camera. The adaptive CPU
