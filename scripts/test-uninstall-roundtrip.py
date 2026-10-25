@@ -536,6 +536,8 @@ class WindowsRegistrationTests(unittest.TestCase):
         platform.system() == "Windows", "registry roundtrip is Windows-only"
     )
     def test_a_private_key_roundtrips_through_reg(self) -> None:
+        if sys.platform != "win32":
+            self.skipTest("registry roundtrip is Windows-only")
         key = r"HKCU\Software\NuminousRoundtripTest" + uuid.uuid4().hex
         subprocess.run(["reg", "delete", key, "/f"], capture_output=True, check=False)
         try:
