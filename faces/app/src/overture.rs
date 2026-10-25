@@ -41,6 +41,9 @@ impl App {
         self.the_show = false;
         self.show_journey = false;
         self.paused = false;
+        if !self.save_warning_showing() {
+            self.banner = None;
+        }
         self.route_lab_after_overture = false;
         self.menu.set_route_lab_door(false);
         self.install_overture_rooms();
@@ -80,13 +83,31 @@ impl App {
 
     /// End the score lock. The visible room, its phase, and the door flag stay.
     pub(super) fn release_overture(&mut self) {
+        let camera = self.overture_mandelbrot_camera();
         if self.overture.take().is_none() {
             return;
+        }
+        if let Some(camera) = camera {
+            self.mandelbrot_camera = camera;
         }
         self.sync_room_parameter_voice();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
         }
+    }
+
+    /// The score's canonical view, shared by accelerated rendering and takeover.
+    pub(super) fn overture_mandelbrot_camera(
+        &self,
+    ) -> Option<numinous_core::rooms::mandelbrot::MandelbrotCamera> {
+        if self.rooms[self.current].meta().id != "mandelbrot"
+            || !self.overture.as_ref().is_some_and(|play| !play.lead_in)
+        {
+            return None;
+        }
+        // The score installed the canonical room, regardless of the visit's
+        // variation. Both render paths and the handoff must use that same view.
+        Some(numinous_core::rooms::mandelbrot::MandelbrotCamera::from_phase(self.t, 0))
     }
 
     /// Move the score by raw presentation seconds.
@@ -381,6 +402,18 @@ mod tests {
     }
 
     #[test]
+    fn starting_the_score_clears_a_prior_celebration_but_keeps_save_warnings() {
+        let mut app = started("overture-banner", Motion::Full);
+        app.banner = Some(crate::feedback::level_up(2, 1));
+        app.start_overture();
+        assert!(app.banner.is_none());
+        app.report_save_trouble(crate::SaveStore::Journey, "journey save", &"test refusal");
+        assert!(app.save_warning_showing());
+        app.start_overture();
+        assert!(app.save_warning_showing());
+    }
+
+    #[test]
     fn a_delayed_tick_lands_once_on_the_score() {
         let mut app = started("overture-jump", Motion::Full);
         assert!(app.overture.as_ref().is_some_and(|play| play.lead_in));
@@ -526,6 +559,97 @@ mod tests {
         assert!(app.overture.is_none());
         assert_eq!(app.t, phase);
         assert!(app.route_lab_after_overture);
+    }
+
+    #[test]
+    fn mandelbrot_takeover_keeps_the_rendered_view() {
+        for variation in [0, 73] {
+            let mut app = started(&format!("overture-camera-{variation}"), Motion::Full);
+            app.set_variation_seed(variation);
+            app.start_overture();
+            let start = OVERTURE.beat_start_ms(1).unwrap();
+            for offset in [0, 3_000, 10_000] {
+                jump(&mut app, start + offset);
+                let room = &app.rooms[app.current];
+                let accent = room.meta().accent;
+                let mut before = Raster::with_accent(SIZE.0, SIZE.1, accent);
+                room.render_input(&mut before, app.t, &[]);
+                let score_camera = app.overture_mandelbrot_camera().expect("score camera");
+                let mut accelerated_source = Raster::with_accent(SIZE.0, SIZE.1, accent);
+                score_camera.render(&mut accelerated_source);
+                assert!(before.to_rgba() == accelerated_source.to_rgba());
+                assert_eq!(
+                    crate::live_mandelbrot_gpu_view(score_camera, 900, 700),
+                    Some(crate::mandelbrot_gpu_view(app.t, 0, 900, 700, &[]))
+                );
+                assert_eq!(
+                    crate::live_mandelbrot_gpu_view(score_camera, 2560, 1440),
+                    Some(crate::mandelbrot_gpu_view(app.t, 0, 2560, 1440, &[]))
+                );
+                assert!(app.overture_key(&Key::Named(NamedKey::ArrowRight)));
+                assert!(app.overture_mandelbrot_camera().is_none());
+                let mut after = Raster::with_accent(SIZE.0, SIZE.1, accent);
+                app.mandelbrot_camera.render(&mut after);
+                assert!(
+                    before.to_rgba() == after.to_rgba(),
+                    "variation {variation}, offset {offset}"
+                );
+                app.mandelbrot_camera.advance(0.1);
+                let continued = app.mandelbrot_camera.view();
+                app.release_overture();
+                assert_eq!(app.mandelbrot_camera.view(), continued);
+                app.start_overture();
+            }
+        }
+    }
+
+    #[test]
+    fn choosing_an_experiment_releases_the_score_without_resetting_the_dial() {
+        for motion in [Motion::Full, Motion::Reduced] {
+            for from_menu in [false, true] {
+                let mut app = started(
+                    &format!("overture-experiment-{motion:?}-{from_menu}"),
+                    motion,
+                );
+                if motion.animates() {
+                    jump(&mut app, OVERTURE.beat_start_ms(3).unwrap() + 1_000);
+                } else {
+                    for _ in 1..OVERTURE.beats().len() {
+                        app.overture_gamepad(Command::NextRoom);
+                    }
+                }
+                let phase = app.t;
+                let journey = app.journey.clone();
+                let bed = Arc::clone(&app.tune);
+                let door = app.route_lab_after_overture;
+                if from_menu {
+                    app.open_home_menu();
+                    app.apply_menu_intent(crate::menu::MenuIntent::ChooseExperiment);
+                } else {
+                    assert!(app.handle_chosen_experiment_key(&Key::Character("u".into()), false));
+                    assert!(app.handle_chosen_experiment_key(&Key::Character("u".into()), true));
+                }
+                assert!(app.overture.is_none(), "the experiment owns the room");
+                assert!(app.chosen_experiment_active());
+                assert_eq!(app.rooms[app.current].meta().id, "times-tables");
+                assert_eq!(app.t, phase);
+                assert_eq!(app.journey, journey);
+                assert_eq!(app.route_lab_after_overture, door);
+                assert!(Arc::ptr_eq(&app.tune, &bed));
+                app.advance_overture(30.0);
+                assert_eq!(app.t, phase, "the score cannot take the dial back");
+            }
+        }
+    }
+
+    #[test]
+    fn an_unavailable_experiment_does_not_release_the_score() {
+        let mut app = started("overture-no-experiment", Motion::Full);
+        jump(&mut app, OVERTURE.beat_start_ms(1).unwrap());
+        assert!(!app.current_room_has_experiment());
+        app.toggle_chosen_experiment();
+        assert!(app.overture.is_some());
+        assert!(!app.chosen_experiment_active());
     }
 
     #[test]

@@ -312,6 +312,15 @@ change to this topology must update and pass
 
 ## Supply chain and dependency hygiene
 
+Broadcast pairing computes HMAC-SHA256 through `hmac` and `sha2`; their shared
+`digest` dependency resolves `ctutils` 0.4.4, patched for
+[RUSTSEC-2026-0385](https://rustsec.org/advisories/RUSTSEC-2026-0385.html).
+Pairing's proof comparison remains `subtle::ConstantTimeEq`, so dependency
+presence alone does not establish a timing exploit through that caller.
+`Cargo.lock` contributes to the replay compatibility fingerprint: even a
+dependency-only rebuild requires matching App and MCP builds. The proof format
+and fail-closed pairing controls remain unchanged.
+
 - **`cargo-deny`** enforces advisory, license, ban, and source policy on every
   push. The local release gate runs it when installed; CI never skips it.
 - **`cargo-audit`** is a second, independent RustSec advisory check. CI runs it

@@ -3,6 +3,26 @@
 All notable changes to Numinous. The format follows Keep a Changelog, and the
 project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
+## [Unreleased]
+
+### Security
+- The locked cryptographic graph now uses `ctutils` 0.4.4, the patched release
+  for RUSTSEC-2026-0385. The earlier 0.4.3 could generate conditional branches
+  in operations intended to run in constant time. Pairing still compares proofs
+  through `subtle`; this dependency advisory does not establish an exploitable
+  timing leak in the App. Rebuild App and MCP together because the lockfile is
+  part of their replay compatibility fingerprint.
+
+### Fixed
+- Mandelbrot in The Overture uses the existing full-resolution GPU fractal
+  renderer when available, with the score's canonical camera. The adaptive CPU
+  fallback remains available. An earlier celebration no longer covers the
+  performance; save warnings remain visible.
+- Taking over Mandelbrot during The Overture continues from the visible zoom
+  instead of jumping to the live camera's opening view. Choosing the Times
+  Tables experiment with U or the Cabinet releases the score without resetting
+  the dial or replacing its audio bed.
+
 ## [0.5.0-alpha.11] - 2026-10-21
 
 ### Changed

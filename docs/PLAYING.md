@@ -13,8 +13,10 @@ same journey to level 42, because that is the point.
 piece: Chaos Game, Mandelbrot, Golden Angle, then Times Tables. The clock
 follows the score. Pause, an open Cabinet, and study hold it. The first
 room action keeps the picture and the dial and ends the score lock. Reduced
-motion shows each beat's still and moves only when you step. A forward step
-on the last beat leaves the piece. After the handoff, Modes lists Route Lab
+motion shows each beat's still and moves only when you step. Taking over
+Mandelbrot keeps its current zoom. On Times Tables, U or Cabinet > Experiment
+leaves the score and chooses the experiment without resetting the dial. A forward
+step on the last beat leaves the piece. After the handoff, Modes lists Route Lab
 under The Overture. The ordinary Show stays on Watch, and nothing plays the
 piece at launch.
 
