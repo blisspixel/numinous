@@ -129,6 +129,7 @@ impl App {
         if self.leave_chosen_experiment() {
             return;
         }
+        self.release_overture();
         self.chosen_experiment = true;
         // Existing observations may prime or earn a connection. Selection alone
         // supplies no wager, observation, or consolidation.

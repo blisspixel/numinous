@@ -70,6 +70,10 @@ From a source checkout: `cargo run --release --bin numinous-app`.
 Try Times Tables and turn its dial. E or ? opens study whenever you want it.
 Esc opens the Cabinet; choose Modes > Watch to let The Show lead, or
 Modes > Create to make something. Controls lists the keys for your activity.
+Modes > The Overture plays an authored opening. Take over Mandelbrot to keep
+its current zoom. A supported GPU draws it at window resolution; the software
+fallback adapts detail to keep the room responsive. Choose the Times Tables
+experiment with U or Cabinet > Experiment to leave the score with the current dial.
 Check [motion, sound, and flashing](#motion-sound-and-flashing) before play
 if those affect you.
 

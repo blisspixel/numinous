@@ -142,7 +142,11 @@ This avoids initializing a secondary driver unnecessarily: a local Windows
 probe rendered on Vulkan but crashed in AMD's OpenGL teardown. Repeated primary
 backend probes rendered and exited cleanly. These are local observations, not
 the pending physical-platform receipts. CPU fallback and deterministic exports
-remain available. Mandelbrot uses one
+remain available. The Overture uses that existing fractal GPU path at window
+resolution with its canonical score camera, rather than forcing Mandelbrot
+through the adaptive CPU raster. Taking over initializes the live camera from
+that same view. The feature-gated post stack remains disabled by default and
+still needs its closed physical qualification set. Mandelbrot uses one
 core-owned smooth escape-time palette on both CPU and GPU: violet, indigo,
 teal, amber, rose, and pale highlights, ordered by increasing lightness. The
 outer field eases into the uniform near-black stage, with no bright cutoff

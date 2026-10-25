@@ -1571,7 +1571,12 @@ impl App {
         let id = self.rooms[self.current].meta().id;
         let (w, h) = (width as u32, height as u32);
         let mandelbrot_view = (id == "mandelbrot")
-            .then(|| live_mandelbrot_gpu_view(self.mandelbrot_camera, w, h))
+            .then(|| {
+                let camera = self
+                    .overture_mandelbrot_camera()
+                    .unwrap_or(self.mandelbrot_camera);
+                live_mandelbrot_gpu_view(camera, w, h)
+            })
             .flatten();
         let julia_c = (id == "julia").then(|| julia_gpu_c(self.t, self.variation, &self.pokes));
         let gpu = self.gpu.as_mut()?;
@@ -2225,8 +2230,7 @@ impl App {
             self.present_raster(raster, width, height);
             return;
         }
-        if self.overture.is_none()
-            && !self.studio
+        if !self.studio
             && let Some(rgba) = self.gpu_frame(width, height)
             && let Some(mut raster) =
                 Raster::from_rgba(width, height, self.rooms[self.current].meta().accent, &rgba)

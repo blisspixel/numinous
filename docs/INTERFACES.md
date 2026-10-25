@@ -584,7 +584,14 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   dissolve lengths, eased key moves, and the hand-off. The App plays that
   score from Modes > The Overture: one bed, the score's clock, reduced-motion
   stills, and a handoff that leaves the Times Tables dial in the player's
-  hand. After the handoff, Modes offers Route Lab. The piece does not
+  hand. Taking over Mandelbrot initializes its live camera from the score's
+  visible canonical view, including when the prior visit used another variation.
+  The existing GPU fractal renderer draws that same view at window resolution
+  when available; the adaptive CPU path remains its fallback. Starting the score
+  clears a prior celebration while preserving save warnings.
+  Choosing the Times Tables experiment through U or the Cabinet releases the
+  score before the experiment takes control, retaining the dial and audio bed.
+  After the handoff, Modes offers Route Lab. The piece does not
   autoplay. Native App playback of the director's catalog tour remains later
   Arc work.
 - **Earned room goal, first slice (built):** Times Tables exposes `LAND ON

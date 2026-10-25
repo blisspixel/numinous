@@ -3,6 +3,18 @@
 All notable changes to Numinous. The format follows Keep a Changelog, and the
 project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
+## [Unreleased]
+
+### Fixed
+- Mandelbrot in The Overture uses the existing full-resolution GPU fractal
+  renderer when available, with the score's canonical camera. The adaptive CPU
+  fallback remains available. An earlier celebration no longer covers the
+  performance; save warnings remain visible.
+- Taking over Mandelbrot during The Overture continues from the visible zoom
+  instead of jumping to the live camera's opening view. Choosing the Times
+  Tables experiment with U or the Cabinet releases the score without resetting
+  the dial or replacing its audio bed.
+
 ## [0.5.0-alpha.11] - 2026-10-21
 
 ### Changed
