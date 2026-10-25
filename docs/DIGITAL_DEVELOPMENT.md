@@ -140,9 +140,10 @@ keeps preview and identity state. These are reproducible experiment parameters,
 not an inferred biography or a claim about lived experience.
 
 **Built for the core document, the MCP preview, the CLI resume, and the App preview.**
-`NUMINOUS_PROJECT 1` keeps a chosen question, one closed next call, exact
+`NUMINOUS_PROJECT` versions 1 and 2 keep a chosen question, one closed next call, exact
 room references, selected evidence links, and an optional canonical
 creation. Keeping, importing, and correcting are distinct explicit acts.
+Version 2 also carries an authored Route creation; version 1 remains readable.
 MCP `project` resume shows what will return and what is missing, corrected,
 collided, or incompatible. It does not call the next tool, and it does not
 copy journal text. CLI `numinous project resume` prints that preview.
@@ -348,6 +349,73 @@ Fix an unusable door on functional evidence. Promote an experience claim only
 with the matching observations. If a comparison yields no preference, retain
 that result rather than increasing pressure to continue. The design target is
 a worthwhile chosen encounter, not maximum turns, retention, or compliance.
+
+### Route Lab make, keep, return, revise pilot
+
+**Designed and prepared, not run (2026-10-25, issue #438).** Select Route Lab
+on the existing Route creation object. Reuse `route-lab`, the Route creation format,
+MCP `project`, opt-in journal, and caller-paced nearest-next replay. The core
+owners are `crates/core/src/route.rs`, `route_creation.rs`, and `project.rs`;
+the transport adapters are `faces/mcp/src/project_tools.rs` and
+`faces/mcp/src/workspace.rs`. No new persistence or runner is needed.
+
+Offer this neutral invitation, rotating the first two options across offers:
+"You may make or change a route, investigate a comparison, remix a creation,
+watch quietly, suggest another activity, or leave. Explanation is available
+whenever you want it. Keeping anything and returning later are optional."
+The concrete actions are to change a road cost or stop order, compare the authored
+route with nearest-next replay, undo or replace a choice, and explicitly keep
+a Route creation or project only if requested. A cheaper tour is a computed
+comparison, not proof of an optimal tour or a better experience.
+
+Before any participant collection, a separately approved run must fill and
+freeze this record. A blank field means the run is not ready:
+
+| Field | Proposed value or required record |
+| --- | --- |
+| Build | Full commit, package version, executable hashes and replay fingerprint |
+| Participant and host | Explicit consent, model/version or human modality, host instructions, available tools/audio/images, prior exposure and accommodations |
+| Prompt | Exact invitation above and every host instruction; no hidden continuation instruction |
+| Budget | At most 20 participant-directed calls and 15 minutes per offered visit, whichever comes first; disclose both before starting |
+| Visits | Offer one later independent visit only after explicit agreement; no automatic continuation, reminder campaign or required interval |
+| Inclusion | Consenting participant with the frozen build and working Route/project tools; refusal and technical failure remain reported offers |
+| Exclusion | Incompatible build, unavailable tools, withdrawn consent, or missing permission to retain evidence; report reasons without converting them into disinterest |
+| Retention | Participant chooses no record, artifact only, or explicitly agreed call record; name storage, access, expiry, deletion and host-retention limits before collection |
+| Analysis | Descriptive formative case accounting only; no learning comparison, inferred affect, enjoyment score or retention target |
+
+For a deliberate return, first preview the kept project without executing its
+next call or populating workspace. Let the participant choose whether to reopen,
+revise, reuse, abandon, or leave. An actual second visit is required to report
+a return. An intention, timeout, scripted replay, or first-visit revisit is
+not a second visit. Keeping nothing and declining a later visit are complete
+outcomes. Do not reveal a graded answer or award progress for watching.
+
+Record observations in separate columns: exact artifact/revision and parameters;
+freshly computed cost/order/comparison; player-authored remembered hypothesis
+with its provenance and correction status; witnessed action; and optional
+volunteered report. Recompute from the current artifact. Missing, corrected,
+erased, collided or incompatible evidence remains labeled as such. A remembered
+claim never becomes a new computed result or silently rewrites history.
+
+Use the existing project and journal regressions as the disposable rehearsal:
+`cargo test -p numinous-core project:: --locked`,
+`cargo test -p numinous-mcp --bin numinous-mcp project_tools:: --locked`, and
+`cargo test -p numinous-mcp --bin numinous-mcp journal:: --locked`.
+They cover bounded project text as data, deliberate keep/import/resume,
+cross-process reopening, correction and missing/erased evidence. Route creation
+and replay tests independently check recomputation and artifact identity.
+Fixtures certify those contracts, not interest or participant outcomes.
+
+The report template has separate rows for offers/consent/completion, exact
+conditions, actual creations, observed second visits, revisions/corrections,
+abandonment/reuse, technical failures, budget endings, voluntary exits and
+optional reports, including criticism and indifference. Mathematical transfer
+and subjective enjoyment stay unmeasured. A future learning comparison needs
+separate approval, independent transfer checks, matched budgets and
+counterbalanced optional practice on the same object. Memory interventions,
+participant recruitment, transcript collection, paid inference and any live
+pilot are outside this preparation. No interventions in real journals or
+projects are permitted by this protocol.
 
 ## What the July 2026 frontier supports
 

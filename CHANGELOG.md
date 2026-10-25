@@ -5,6 +5,14 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+## [0.5.0-alpha.12] - 2026-10-25
+
+### Changed
+- Session start and handoff rules require inspecting unfinished work, preserving
+  uncertain branches, and finishing on passing main. The chosen-play research
+  owner specifies one optional Route Lab make, keep, return and revise pilot.
+  It remains Designed; no participant session or comparative study has run.
+
 ### Security
 - The locked cryptographic graph now uses `ctutils` 0.4.4, the patched release
   for RUSTSEC-2026-0385. The earlier 0.4.3 could generate conditional branches
@@ -14,6 +22,10 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   part of their replay compatibility fingerprint.
 
 ### Fixed
+- Windows roundtrip registration capture recognizes missing keys independently
+  of display language. Restoration verifies original typed data and absence,
+  reports failed deletion or import, and retains an export on restore failure.
+  Focused integration tests touch only disposable test-owned keys.
 - Mandelbrot in The Overture uses the existing full-resolution GPU fractal
   renderer when available, with the score's canonical camera. The adaptive CPU
   fallback remains available. An earlier celebration no longer covers the

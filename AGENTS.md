@@ -129,6 +129,30 @@ Account for unfinished work before retiring an old branch; never discard it
 merely to make the branch list shorter. A release finishes with passing main
 and a tidy branch list, not with several workstreams left apart.
 
+### Start tidy, stop tidy
+
+Sessions can end partway through a task. Before starting new work, fetch with
+`git fetch --prune`, inspect `git worktree list`, local and remote branches,
+and open PRs. Finish or explicitly park existing work before starting another
+attempt. Squash merges hide ancestry, so check PR state as well as
+`git branch --merged`.
+
+Commit and push meaningful checkpoints when authorized. Before stopping,
+leave a short handoff in the PR or commit: what is done, what remains, and
+which checks passed, failed, were blocked, or were not run. Fixtures belong
+in maintained test locations; scratch scripts, logs, and generated output
+belong in their designated directories or gitignored `.agent/`. Remove
+throwaway scratch files before finishing; retain useful verification evidence.
+
+The goal is one `main` with CI passing and finished issues and PRs reconciled.
+Merge when authorized, then retire the work branch. Remove a branch or
+worktree only with evidence that its work is merged, contained in `main`, or
+safely pushed and explicitly parked. Never use force removal. Prune worktree
+metadata only for directories that are already gone. If ownership or the
+intended disposition is uncertain, preserve the work and ask.
+
+### Record the outcome
+
 Update `CHANGELOG.md` (the `[Unreleased]` section). If you completed a
 roadmap item, update its row in **Next, in order** in `docs/ROADMAP.md` and its
 release line under **Recently built**, and put the standing description in the

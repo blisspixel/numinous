@@ -13,9 +13,9 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 ## Now
 
-Reviewed 2026-10-21.
+Reviewed 2026-10-25.
 
-**Current release state: 0.5.0-alpha.11, Sensory Alpha active with its exit
+**Current release state: 0.5.0-alpha.12, Sensory Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are met and stay CI-locked. The package minor names
 the active milestone, not the oldest open gate. Understanding Alpha's external
@@ -399,6 +399,13 @@ above without adding release gates or reordering **Next, in order**.
 
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
+
+- **`v0.5.0-alpha.12` (2026-10-25):** The Overture restores full-resolution
+  fractals when GPU rendering is available and keeps the visible camera on
+  takeover. Experiment selection releases the score. The locked cryptographic
+  dependency is patched; Windows roundtrip restoration is verified. Sensory
+  promotion and Understanding study gates remain open.
+  See [release notes](releases/v0.5.0-alpha.12.md).
 
 - **`v0.5.0-alpha.11` (2026-10-21):** The CLI HTTP client rejects the
   distrusted emSign intermediates and drops the emSign root. A managed
