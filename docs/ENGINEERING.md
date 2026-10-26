@@ -405,6 +405,11 @@ Nothing merges red. On every PR, blocking:
 13. The native installer safety self-test on macOS, Linux, and Windows
 14. Deterministic release-package regressions, plus four-platform release
     builds and disposable packaged-install smoke tests in the release workflow.
+    Windows registration capture uses structured error codes, not localized
+    command text. Restoration verifies typed values and subkeys, removes only
+    additions, and retains the export on failure. Focused integration tests use
+    unique disposable test-owned keys, never a player's registration. This is
+    Python black-box qualification tooling, not product domain logic.
     Every installed package must render Times Tables through the CLI and complete
     modern MCP discovery, tool listing, and `play_room` from an isolated profile.
     Archive verification admits at most 256 entries, 256 MiB for any one

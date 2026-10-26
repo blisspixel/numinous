@@ -345,12 +345,14 @@ class WindowsRegistrationTests(unittest.TestCase):
         with (
             mock.patch.object(MODULE.platform, "system", return_value="Windows"),
             mock.patch.object(MODULE, "_reg", side_effect=fake_reg),
+            mock.patch.object(
+                MODULE, "_registry_snapshot", side_effect=[None, None, ({}, {}), None]
+            ),
         ):
             saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
             saved.capture()
             saved.restore()
-        self.assertEqual(calls[0][:2], ["query", r"HKCU\Software\Example"])
-        self.assertEqual(calls[1], ["delete", r"HKCU\Software\Example", "/f"])
+        self.assertEqual(calls, [["delete", r"HKCU\Software\Example", "/f"]])
 
     def test_an_exported_key_is_imported_unchanged(self) -> None:
         blob = b"Windows Registry Editor Version 5.00\r\n"
@@ -370,11 +372,14 @@ class WindowsRegistrationTests(unittest.TestCase):
         with (
             mock.patch.object(MODULE.platform, "system", return_value="Windows"),
             mock.patch.object(MODULE, "_reg", side_effect=fake_reg),
+            mock.patch.object(MODULE, "_registry_snapshot", return_value=({}, {})),
+            mock.patch.object(MODULE, "_prune_registry_additions") as prune,
         ):
             saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
             saved.capture()
             saved.restore()
         self.assertEqual(imported, [blob])
+        prune.assert_called_once_with(r"HKCU\Software\Example", ({}, {}))
 
     def test_a_read_failure_is_not_treated_as_absence(self) -> None:
         def fake_reg(args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -383,16 +388,171 @@ class WindowsRegistrationTests(unittest.TestCase):
         with (
             mock.patch.object(MODULE.platform, "system", return_value="Windows"),
             mock.patch.object(MODULE, "_reg", side_effect=fake_reg),
+            mock.patch.object(
+                MODULE, "_registry_snapshot", side_effect=MODULE.RoundtripError("denied")
+            ),
         ):
             saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
             with self.assertRaises(MODULE.RoundtripError):
                 saved.capture()
         self.assertFalse(saved._captured)
 
+    def test_absence_uses_error_codes_instead_of_localized_text(self) -> None:
+        for code in (2, 3, 5):
+            for message in ("not found", "introuvable", "nicht gefunden"):
+                with self.subTest(code=code, message=message):
+                    error = OSError(message)
+                    setattr(error, "winerror", code)
+                    registry = mock.MagicMock()
+                    registry.OpenKey.side_effect = error
+                    with mock.patch.dict(sys.modules, {"winreg": registry}):
+                        if code == 5:
+                            with self.assertRaises(MODULE.RoundtripError):
+                                MODULE._registry_snapshot(r"HKCU\Software\Example")
+                        else:
+                            self.assertIsNone(
+                                MODULE._registry_snapshot(r"HKCU\Software\Example")
+                            )
+
+    def test_absent_restore_is_idempotent_and_checks_deletion(self) -> None:
+        for deletion_code, remaining, failure in (
+            (0, None, False),
+            (1, ({}, {}), True),
+            (0, ({}, {}), True),
+        ):
+            with (
+                self.subTest(code=deletion_code, remaining=remaining),
+                mock.patch.object(MODULE.platform, "system", return_value="Windows"),
+                mock.patch.object(
+                    MODULE, "_registry_snapshot",
+                    side_effect=[None, None, ({}, {}), remaining],
+                ),
+                mock.patch.object(
+                    MODULE, "_reg",
+                    return_value=subprocess.CompletedProcess([], deletion_code, "", "denied"),
+                ),
+            ):
+                saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
+                saved.capture()
+                if failure:
+                    with self.assertRaises(MODULE.RoundtripError):
+                        saved.restore()
+                else:
+                    saved.restore()
+        with (
+            mock.patch.object(MODULE.platform, "system", return_value="Windows"),
+            mock.patch.object(MODULE, "_registry_snapshot", return_value=None),
+            mock.patch.object(MODULE, "_reg") as reg,
+        ):
+            saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
+            saved.capture()
+            saved.restore()
+            saved.restore()
+            reg.assert_not_called()
+
+    def test_capture_drift_prevents_restore_and_install(self) -> None:
+        with (
+            mock.patch.object(MODULE.platform, "system", return_value="Windows"),
+            mock.patch.object(MODULE, "_registry_snapshot", side_effect=[None, ({}, {})]),
+            mock.patch.object(MODULE, "_reg") as reg,
+        ):
+            saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
+            with self.assertRaises(MODULE.RoundtripError):
+                saved.capture()
+            saved.restore()
+            reg.assert_not_called()
+
+    def test_failed_import_or_verification_keeps_the_backup(self) -> None:
+        original: tuple[dict[str, tuple[object, int]], dict[str, object]] = (
+            {"name": ("original", 1), "number": (42, 4)}, {}
+        )
+        blob = b"original typed export"
+        for import_code, final in ((1, original), (0, ({}, {}))):
+            with (
+                self.subTest(import_code=import_code),
+                mock.patch.object(MODULE.platform, "system", return_value="Windows"),
+                mock.patch.object(
+                    MODULE, "_registry_snapshot", side_effect=[original, original, final]
+                ),
+                mock.patch.object(MODULE, "_export_registry_key", return_value=blob),
+                mock.patch.object(MODULE, "_prune_registry_additions") as prune,
+                mock.patch.object(
+                    MODULE, "_reg",
+                    return_value=subprocess.CompletedProcess([], import_code, "", "failed"),
+                ),
+            ):
+                saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
+                saved.capture()
+                with self.assertRaises(MODULE.RoundtripError) as failure:
+                    saved.restore()
+                backup = Path(str(failure.exception).split("backup retained at ", 1)[1])
+                try:
+                    self.assertEqual(backup.read_bytes(), blob)
+                finally:
+                    backup.unlink(missing_ok=True)
+                self.assertEqual(saved._export, blob)
+                self.assertEqual(saved._original, original)
+                if import_code:
+                    prune.assert_not_called()
+
+    def test_export_failure_does_not_capture_a_key(self) -> None:
+        with (
+            mock.patch.object(MODULE.platform, "system", return_value="Windows"),
+            mock.patch.object(MODULE, "_registry_snapshot", return_value=({}, {})),
+            mock.patch.object(
+                MODULE, "_reg", return_value=subprocess.CompletedProcess([], 1, "", "denied")
+            ) as reg,
+        ):
+            saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
+            with self.assertRaises(MODULE.RoundtripError):
+                saved.capture()
+            saved.restore()
+            self.assertFalse(saved._captured)
+            self.assertEqual(reg.call_count, 1)
+
+    def test_backup_write_failure_never_imports_or_claims_a_valid_backup(self) -> None:
+        with (
+            mock.patch.object(MODULE.platform, "system", return_value="Windows"),
+            mock.patch.object(MODULE, "_registry_snapshot", return_value=({}, {})),
+            mock.patch.object(MODULE, "_export_registry_key", return_value=b"original"),
+            mock.patch.object(MODULE, "_reg") as reg,
+            mock.patch.object(Path, "write_bytes", side_effect=OSError("disk full")),
+        ):
+            saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
+            saved.capture()
+            with self.assertRaisesRegex(MODULE.RoundtripError, "restore not attempted"):
+                saved.restore()
+            reg.assert_not_called()
+            self.assertEqual(saved._export, b"original")
+
+    def test_nested_read_and_prune_errors_are_failures(self) -> None:
+        registry = mock.MagicMock()
+        registry.QueryInfoKey.side_effect = OSError("nested read denied")
+        with mock.patch.dict(sys.modules, {"winreg": registry}):
+            with self.assertRaises(MODULE.RoundtripError):
+                MODULE._registry_snapshot(r"HKCU\Software\Example")
+            with self.assertRaises(MODULE.RoundtripError):
+                MODULE._prune_registry_additions(r"HKCU\Software\Example", ({}, {}))
+
+    def test_prune_never_deletes_an_original_value_and_reports_denial(self) -> None:
+        registry = mock.MagicMock()
+        registry.QueryInfoKey.return_value = (0, 2, 0)
+        registry.EnumValue.side_effect = [("KEEP", "old", 1), ("Added", "new", 1)]
+        registry.DeleteValue.side_effect = OSError("delete denied")
+        with mock.patch.dict(sys.modules, {"winreg": registry}):
+            with self.assertRaises(MODULE.RoundtripError):
+                MODULE._prune_registry_additions(
+                    r"HKCU\Software\Example", ({"Keep": ("old", 1)}, {})
+                )
+        self.assertEqual(registry.DeleteValue.call_args.args[1], "Added")
+        registry.DeleteKey.assert_not_called()
+
     @unittest.skipUnless(
         platform.system() == "Windows", "registry roundtrip is Windows-only"
     )
     def test_a_private_key_roundtrips_through_reg(self) -> None:
+        if sys.platform != "win32":
+            self.skipTest("registry roundtrip is Windows-only")
         key = r"HKCU\Software\NuminousRoundtripTest" + uuid.uuid4().hex
         subprocess.run(["reg", "delete", key, "/f"], capture_output=True, check=False)
         try:
@@ -417,14 +577,36 @@ class WindowsRegistrationTests(unittest.TestCase):
                 text=True,
             )
             present = MODULE.SavedWindowsRegistration(key)
+            # Typed and nested originals must survive additions as well as edits.
+            import winreg
+
+            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key[5:] + r"\Original") as child:
+                winreg.SetValueEx(child, "Number", 0, winreg.REG_DWORD, 42)
+                winreg.SetValueEx(child, "Bytes", 0, winreg.REG_BINARY, b"\x00\xff")
+                winreg.SetValueEx(child, "List", 0, winreg.REG_MULTI_SZ, ["a", "b"])
             present.capture()
+            original = MODULE._registry_snapshot(key)
             subprocess.run(
                 ["reg", "add", key, "/v", "DisplayName", "/d", "changed", "/f"],
                 check=True,
                 capture_output=True,
                 text=True,
             )
-            present.restore()
+            for fail in (False, True):
+                try:
+                    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key[5:]) as root:
+                        winreg.SetValueEx(root, "Added", 0, winreg.REG_SZ, "temporary")
+                    with winreg.CreateKey(
+                        winreg.HKEY_CURRENT_USER, key[5:] + r"\Added\Nested"
+                    ) as child:
+                        winreg.SetValueEx(child, "Value", 0, winreg.REG_DWORD, 9)
+                    if fail:
+                        raise MODULE.RoundtripError("simulated failed roundtrip")
+                except MODULE.RoundtripError:
+                    pass
+                finally:
+                    present.restore()
+                self.assertEqual(MODULE._registry_snapshot(key), original)
             shown = subprocess.run(
                 ["reg", "query", key, "/v", "DisplayName"],
                 capture_output=True,
@@ -435,6 +617,7 @@ class WindowsRegistrationTests(unittest.TestCase):
             self.assertNotIn("changed", shown.stdout)
         finally:
             subprocess.run(["reg", "delete", key, "/f"], capture_output=True, check=False)
+            self.assertIsNone(MODULE._registry_snapshot(key))
 
 
 class IsolatedProfileEnvTests(unittest.TestCase):

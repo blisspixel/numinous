@@ -82,7 +82,7 @@ PLAYER_STATE = (
 WINDOWS_UNINSTALL_REGISTRATION = (
     r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Numinous"
 )
-_MISSING_REGISTRY_KEY = "unable to find the specified registry key"
+RegistryTree = tuple[dict[str, tuple[Any, int]], dict[str, "RegistryTree"]]
 
 # A room to play so there is state worth keeping. Times Tables is a flagship
 # and its render is deterministic.
@@ -105,22 +105,19 @@ class SavedWindowsRegistration:
         self.key = key
         self._captured = False
         self._export: bytes | None = None
+        self._original: RegistryTree | None = None
 
     def capture(self) -> None:
         """Remember the key, including the fact that it was absent."""
         if platform.system() != "Windows":
             return
-        probe = _reg(["query", self.key])
-        if probe.returncode != 0:
-            if _MISSING_REGISTRY_KEY in _reg_text(probe):
-                self._captured = True
-                self._export = None
-                return
-            raise RoundtripError(
-                f"could not read the Windows registration {self.key}: "
-                f"{_reg_text(probe)}"
-            )
-        self._export = _export_registry_key(self.key)
+        self._captured = False
+        self._original = _registry_snapshot(self.key)
+        self._export = (
+            None if self._original is None else _export_registry_key(self.key)
+        )
+        if _registry_snapshot(self.key) != self._original:
+            raise RoundtripError("Windows registration changed while being saved")
         self._captured = True
 
     def restore(self) -> None:
@@ -128,21 +125,105 @@ class SavedWindowsRegistration:
         if not self._captured:
             return
         if self._export is None:
-            _reg(["delete", self.key, "/f"])
+            if _registry_snapshot(self.key) is not None:
+                deleted = _reg(["delete", self.key, "/f"])
+                if deleted.returncode != 0:
+                    raise RoundtripError(
+                        f"could not remove the temporary Windows registration: "
+                        f"{_reg_text(deleted)}"
+                    )
+            if _registry_snapshot(self.key) is not None:
+                raise RoundtripError("temporary Windows registration still exists")
             return
         handle, name = tempfile.mkstemp(prefix="numinous-reg-", suffix=".reg")
         os.close(handle)
         path = Path(name)
         try:
             path.write_bytes(self._export)
+        except OSError as error:
+            path.unlink(missing_ok=True)
+            raise RoundtripError(
+                "could not write the registration recovery backup; restore not attempted"
+            ) from error
+        try:
             imported = _reg(["import", str(path)])
             if imported.returncode != 0:
                 raise RoundtripError(
                     f"could not restore the Windows registration {self.key}: "
                     f"{_reg_text(imported)}"
                 )
-        finally:
+            assert self._original is not None
+            _prune_registry_additions(self.key, self._original)
+            if _registry_snapshot(self.key) != self._original:
+                raise RoundtripError("restored Windows registration differs from its backup")
+        except (OSError, RoundtripError) as error:
+            raise RoundtripError(
+                f"{error}; original registration backup retained at {path}"
+            ) from error
+        else:
             path.unlink(missing_ok=True)
+
+
+def _registry_snapshot(key: str) -> RegistryTree | None:
+    """Read typed data; only a missing root key means absence, in any locale."""
+    import winreg
+
+    def read(handle: Any) -> RegistryTree:
+        children_count, values_count, _ = winreg.QueryInfoKey(handle)
+        values = {}
+        children = {}
+        for index in range(values_count):
+            name, data, kind = winreg.EnumValue(handle, index)
+            values[name] = (data, kind)
+        for index in range(children_count):
+            name = winreg.EnumKey(handle, index)
+            with winreg.OpenKey(handle, name) as child:
+                children[name] = read(child)
+        return values, children
+
+    if not key.startswith("HKCU\\"):
+        raise RoundtripError("registration backup requires an HKCU key")
+    try:
+        handle = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key[5:])
+    except OSError as error:
+        if error.winerror in (2, 3):
+            return None
+        raise RoundtripError(f"could not open Windows registration: {error}") from error
+    try:
+        with handle:
+            return read(handle)
+    except OSError as error:
+        raise RoundtripError(f"could not read Windows registration: {error}") from error
+
+
+def _prune_registry_additions(key: str, original: RegistryTree) -> None:
+    """Remove added data after import, without deleting a captured original key."""
+    import winreg
+
+    def prune(path: str, expected: RegistryTree) -> None:
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, path, 0, winreg.KEY_READ | winreg.KEY_WRITE
+        ) as handle:
+            child_count, value_count, _ = winreg.QueryInfoKey(handle)
+            values = [winreg.EnumValue(handle, i)[0] for i in range(value_count)]
+            children = [winreg.EnumKey(handle, i) for i in range(child_count)]
+            expected_values = {name.casefold() for name in expected[0]}
+            expected_children = {name.casefold(): tree for name, tree in expected[1].items()}
+            for name in values:
+                if name.casefold() not in expected_values:
+                    winreg.DeleteValue(handle, name)
+            for name in children:
+                child_path = path + "\\" + name
+                if name.casefold() in expected_children:
+                    prune(child_path, expected_children[name.casefold()])
+                else:
+                    prune(child_path, ({}, {}))
+                    winreg.DeleteKey(handle, name)
+
+    try:
+        prune(key[5:], original)
+    except OSError as error:
+        raise RoundtripError(f"could not restore Windows registration contents: {error}") from error
 
 
 def _reg(args: list[str]) -> subprocess.CompletedProcess[str]:

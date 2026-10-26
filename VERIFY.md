@@ -8,6 +8,12 @@ tools are installed.
 
 ## 0. Prerequisites
 
+The Windows uninstall-roundtrip harness backs up HKCU registration before
+installing and verifies the restored typed values and subkeys afterward.
+Its focused tests use mocks and unique disposable keys. A failed restoration
+fails the gate and reports a retained `.reg` backup for recovery. Do not use
+a real player's registration as a test fixture.
+
 Just want to play? The one-line installers in `README.md` download the latest
 published platform release and verify the archive plus its closed payload
 manifest. They do not need Rust or native build dependencies. What follows is
