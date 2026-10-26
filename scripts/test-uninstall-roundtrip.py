@@ -510,6 +510,21 @@ class WindowsRegistrationTests(unittest.TestCase):
             self.assertFalse(saved._captured)
             self.assertEqual(reg.call_count, 1)
 
+    def test_backup_write_failure_never_imports_or_claims_a_valid_backup(self) -> None:
+        with (
+            mock.patch.object(MODULE.platform, "system", return_value="Windows"),
+            mock.patch.object(MODULE, "_registry_snapshot", return_value=({}, {})),
+            mock.patch.object(MODULE, "_export_registry_key", return_value=b"original"),
+            mock.patch.object(MODULE, "_reg") as reg,
+            mock.patch.object(Path, "write_bytes", side_effect=OSError("disk full")),
+        ):
+            saved = MODULE.SavedWindowsRegistration(r"HKCU\Software\Example")
+            saved.capture()
+            with self.assertRaisesRegex(MODULE.RoundtripError, "restore not attempted"):
+                saved.restore()
+            reg.assert_not_called()
+            self.assertEqual(saved._export, b"original")
+
     def test_nested_read_and_prune_errors_are_failures(self) -> None:
         registry = mock.MagicMock()
         registry.QueryInfoKey.side_effect = OSError("nested read denied")

@@ -140,6 +140,12 @@ class SavedWindowsRegistration:
         path = Path(name)
         try:
             path.write_bytes(self._export)
+        except OSError as error:
+            path.unlink(missing_ok=True)
+            raise RoundtripError(
+                "could not write the registration recovery backup; restore not attempted"
+            ) from error
+        try:
             imported = _reg(["import", str(path)])
             if imported.returncode != 0:
                 raise RoundtripError(
