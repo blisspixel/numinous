@@ -121,6 +121,9 @@ enum Command {
         /// Emit machine-readable JSON.
         #[arg(long)]
         json: bool,
+        /// Only rooms in this wing. The match ignores case.
+        #[arg(long)]
+        wing: Option<String>,
     },
     /// Describe a single room by id.
     Describe {
@@ -1885,10 +1888,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
         }
         Command::Update => maintain_installation(MaintenanceAction::Update),
         Command::Uninstall => maintain_installation(MaintenanceAction::Uninstall),
-        Command::Rooms { json } => {
-            print!("{}", rooms_report(json));
-            ExitCode::SUCCESS
-        }
+        Command::Rooms { json, wing } => emit(rooms_report(json, wing.as_deref())),
         Command::Describe { id, json } => {
             let report = describe_report(&id, json, allow_hidden, journey);
             if report.is_ok() && find_room(&id, allow_hidden).is_none() {
@@ -3450,36 +3450,72 @@ fn pad_column(text: &str, width: usize) -> String {
     out
 }
 
-/// The catalog listing, as human text or JSON.
-fn rooms_report(json: bool) -> String {
-    if json {
-        let arr: Vec<serde_json::Value> =
-            numinous_core::ROOM_CATALOG.iter().map(meta_json).collect();
-        format!("{}\n", to_pretty(&serde_json::Value::Array(arr)))
-    } else {
-        let id_width = numinous_core::ROOM_CATALOG
-            .iter()
-            .map(|metadata| metadata.id.chars().count())
-            .max()
-            .unwrap_or(0);
-        let wing_width = numinous_core::ROOM_CATALOG
-            .iter()
-            .map(|metadata| metadata.wing.chars().count())
-            .max()
-            .unwrap_or(0);
-        let lines: Vec<String> = numinous_core::ROOM_CATALOG
-            .iter()
-            .map(|metadata| {
-                format!(
-                    "{} {} {}",
-                    pad_column(metadata.id, id_width),
-                    pad_column(metadata.wing, wing_width),
-                    metadata.title
-                )
-            })
-            .collect();
-        format!("{}\n", lines.join("\n"))
+/// The wing the player named, in the catalog's own spelling.
+///
+/// Matching ignores case and nothing else: `Number` is not
+/// `Number & Pattern`. An unknown name is the way to learn the wings.
+fn resolve_wing(requested: &str) -> Result<&'static str, String> {
+    let wanted = requested.trim();
+    if let Some(name) = numinous_core::rooms::CATALOG_WINGS
+        .iter()
+        .copied()
+        .find(|name| name.eq_ignore_ascii_case(wanted))
+    {
+        return Ok(name);
     }
+    let mut message = format!("Unknown wing '{}'.\nWings:\n", terminal_safe(wanted));
+    for name in numinous_core::rooms::CATALOG_WINGS {
+        message.push_str(&format!("  {name}\n"));
+    }
+    Err(message)
+}
+
+/// The catalog listing, as human text or JSON.
+///
+/// Text starts with the count and ends with the next command. JSON is a
+/// bare array, so a pipe can count it. `--wing` narrows both. Columns stay
+/// sized from the whole catalog, so a filtered list lines up with the full one.
+fn rooms_report(json: bool, wing: Option<&str>) -> Result<String, String> {
+    let wing_name = wing.map(resolve_wing).transpose()?;
+    let rows: Vec<_> = numinous_core::ROOM_CATALOG
+        .iter()
+        .filter(|metadata| wing_name.is_none_or(|name| metadata.wing == name))
+        .collect();
+    if json {
+        let arr: Vec<serde_json::Value> = rows.into_iter().map(meta_json).collect();
+        return Ok(format!("{}\n", to_pretty(&serde_json::Value::Array(arr))));
+    }
+    let id_width = numinous_core::ROOM_CATALOG
+        .iter()
+        .map(|metadata| metadata.id.chars().count())
+        .max()
+        .unwrap_or(0);
+    let wing_width = numinous_core::ROOM_CATALOG
+        .iter()
+        .map(|metadata| metadata.wing.chars().count())
+        .max()
+        .unwrap_or(0);
+    let lines: Vec<String> = rows
+        .iter()
+        .map(|metadata| {
+            format!(
+                "{} {} {}",
+                pad_column(metadata.id, id_width),
+                pad_column(metadata.wing, wing_width),
+                metadata.title
+            )
+        })
+        .collect();
+    let header = match wing_name {
+        Some(name) => format!("{} in {name}", numinous_core::counted(lines.len(), "room")),
+        None => format!(
+            "{} in {}",
+            numinous_core::counted(lines.len(), "room"),
+            numinous_core::counted(numinous_core::rooms::CATALOG_WINGS.len(), "wing")
+        ),
+    };
+    let footer = "numinous describe <id> for the story, numinous watch <id> to step inside.";
+    Ok(format!("{header}\n\n{}\n\n{footer}\n", lines.join("\n")))
 }
 
 /// One room's description, or a guiding error if the id is unknown.

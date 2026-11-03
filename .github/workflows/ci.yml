@@ -73,6 +73,7 @@ jobs:
           python3 scripts/test-ignored-tests-run-somewhere.py
           python3 scripts/test-am-soak.py
           python3 scripts/am-soak.py
+          python3 scripts/test-catalog-scorecard.py
           python3 scripts/catalog-scorecard.py
           python3 scripts/test-game-truth.py
           python3 scripts/game-truth.py

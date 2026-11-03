@@ -10,6 +10,11 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   exit. An unknown argument exits 2. With no arguments, a piped session is
   unchanged. On a terminal, one stderr line says the server is waiting for
   JSON-RPC.
+- `numinous rooms` prints how many rooms and wings it is showing, and a
+  closing line for `describe` and `watch`. `--wing` lists one wing. An
+  unknown wing names the wings and exits nonzero. `--json` without
+  `--wing` stays the whole catalog. The catalog scorecard reads that
+  JSON array, so the count line is not mistaken for a room.
 
 ### Fixed
 - `TERM=dumb` no longer receives the alternate screen from `tour`, `watch`,

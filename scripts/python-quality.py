@@ -66,6 +66,7 @@ STRICT: Final[frozenset[str]] = frozenset(
         "test-agent-interoperability.py",
         "test-agent-plugin.py",
         "test-am-soak.py",
+        "test-catalog-scorecard.py",
         "test-clean-machine-release.py",
         "test-game-truth.py",
         "test-gate-cli.py",
