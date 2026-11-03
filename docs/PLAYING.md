@@ -585,6 +585,8 @@ or in any MCP client's config, use the installed command:
 From a clone without installing, build once with
 `cargo build --release --bin numinous-mcp` and use the absolute path of
 `target/release/numinous-mcp` (`numinous-mcp.exe` on Windows) as the command.
+`numinous-mcp --help` and `numinous-mcp --version` answer and exit. With no
+arguments the server waits for JSON-RPC on stdin. An unknown argument exits 2.
 
 Transport is JSON-RPC 2.0 over newline-delimited stdio. Modern hosts use the
 stateless MCP 2026-07-28 path: call `server/discover`, then include the protocol

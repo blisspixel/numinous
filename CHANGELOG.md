@@ -5,6 +5,12 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Added
+- `numinous-mcp --help` and `--version` print usage and the version, then
+  exit. An unknown argument exits 2. With no arguments, a piped session is
+  unchanged. On a terminal, one stderr line says the server is waiting for
+  JSON-RPC.
+
 ### Fixed
 - `TERM=dumb` no longer receives the alternate screen from `tour`, `watch`,
   or room `play`. Those commands print one still postcard, or a `--frames`
