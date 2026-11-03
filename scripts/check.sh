@@ -51,6 +51,8 @@ echo "== am soak contract =="
 python3 scripts/test-am-soak.py
 echo "== am soak =="
 python3 scripts/am-soak.py
+echo "== catalog scorecard contract =="
+python3 scripts/test-catalog-scorecard.py
 echo "== catalog scorecard =="
 python3 scripts/catalog-scorecard.py
 echo "== understanding am dry-run =="

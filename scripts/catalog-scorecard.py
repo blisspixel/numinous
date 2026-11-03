@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Machine catalog scorecard: stratified wing smoke via CLI.
 
-For every wing, render and describe a sample of rooms. Fail closed on empty
-status, missing PNG, or non-zero exit. This is keep/cut engineering signal for
-the am-track, not stranger beauty judgment.
+For every wing, render and describe a sample of rooms. The sample comes from
+`numinous rooms --json`, not the human listing. Fail closed on empty status,
+missing PNG, or non-zero exit. This is keep/cut engineering signal for the
+am-track, not stranger beauty judgment.
 """
 
 from __future__ import annotations
@@ -49,32 +50,38 @@ def run_cli(cli: list[str], args: list[str], env: dict[str, str]) -> tuple[int, 
     return process.returncode, process.stdout, process.stderr
 
 
+def rows_from_rooms_json(text: str) -> list[tuple[str, str]]:
+    """Read the bare array from `numinous rooms --json`.
+
+    The human listing opens with a count and closes with the next command.
+    Those lines are for a person. Reading them as room ids turns the count
+    into a room named `356` and the footer into a room named `numinous`.
+    """
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"rooms json could not be read: {error}") from error
+    if not isinstance(payload, list):
+        raise RuntimeError("rooms json was not a list")
+    rows: list[tuple[str, str]] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            raise RuntimeError("rooms json contained a row that was not an object")
+        room_id = item.get("id")
+        wing = item.get("wing")
+        if not isinstance(room_id, str) or not room_id.strip():
+            raise RuntimeError("rooms json contained a row without an id")
+        if not isinstance(wing, str) or not wing.strip():
+            raise RuntimeError(f"rooms json row {room_id!r} had no wing")
+        rows.append((room_id.strip(), wing.strip()))
+    return rows
+
+
 def list_catalog(cli: list[str], env: dict[str, str]) -> list[tuple[str, str]]:
-    code, stdout, stderr = run_cli(cli, ["rooms"], env)
+    code, stdout, stderr = run_cli(cli, ["rooms", "--json"], env)
     if code != 0:
         raise RuntimeError(f"rooms failed: {(stderr or stdout)[:400]}")
-    rows: list[tuple[str, str]] = []
-    for line in stdout.splitlines():
-        line = line.rstrip()
-        if not line or line.lower().startswith("id") or set(line) <= {"-", " "}:
-            continue
-        # CLI prints: <id> <wing...> <title...> with variable spacing.
-        # The room id is always the first whitespace-separated token (a slug).
-        parts = line.split(None, 1)
-        if not parts:
-            continue
-        room_id = parts[0].strip()
-        if not room_id or "/" in room_id or " " in room_id:
-            continue
-        rest = parts[1] if len(parts) > 1 else "unknown"
-        # Wing ends at a run of 2+ spaces before the title when present.
-        if "  " in rest:
-            wing = rest.split("  ", 1)[0].strip()
-        else:
-            # Fall back: take the first two tokens of the wing name.
-            wing_tokens = rest.split()
-            wing = " ".join(wing_tokens[:3]) if wing_tokens else "unknown"
-        rows.append((room_id, wing or "unknown"))
+    rows = rows_from_rooms_json(stdout)
     if len(rows) < 50:
         raise RuntimeError(f"catalog too small: {len(rows)} rows")
     # Unique ids only.
