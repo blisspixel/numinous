@@ -15,6 +15,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 - `TERM=dumb` no longer receives the alternate screen from `tour`, `watch`,
   or room `play`. Those commands print one still postcard, or a `--frames`
   recording, and exit without cursor control.
+- The CLI names a Munch board the way the game does. `NEW BEST` and
+  `numinous scores` say board 2 for the board the game called "Board 2 of 3".
+  The saved key stays `board:1`, and MCP `scores` still prints that key.
 
 ## [0.5.0-alpha.12] - 2026-10-25
 

@@ -1660,7 +1660,9 @@ fn post_score(key: &str, score: i64) {
     match numinous_core::record_score_file(&scores_path(), key, score) {
         // Zero is never a best worth announcing: an aborted run's nothing
         // must not wear a celebration.
-        Ok(true) if score > 0 => println!("NEW BEST: {key} = {score}"),
+        Ok(true) if score > 0 => {
+            println!("NEW BEST: {} = {score}", score_label(key));
+        }
         Ok(true) => {}
         Ok(false) => {}
         Err(error) => warn_progress_unsaved("score", &error),
@@ -1696,6 +1698,42 @@ fn trophies_report(journey: &Journey, board: &numinous_core::Scoreboard) -> Stri
     out
 }
 
+/// How a score key is shown to a person.
+///
+/// Munch stores `board:{round}` from zero, and the game announces
+/// `Board {round + 1}`. The file and the MCP table keep the stored key.
+/// The CLI names the board the way the game did. Any other key is shown
+/// as stored, including a Munch key this parser does not recognize.
+fn score_label(key: &str) -> String {
+    let Some((seed, round)) = munch_key_parts(key) else {
+        return key.to_string();
+    };
+    let Some(shown) = round.checked_add(1) else {
+        return key.to_string();
+    };
+    format!("munch seed:{seed} board {shown}")
+}
+
+/// `munch seed:<digits> board:<digits>`, and nothing else.
+///
+/// The digit text has to be the canonical decimal form, so `board:01` is
+/// left alone rather than displayed as a different board.
+fn munch_key_parts(key: &str) -> Option<(&str, u64)> {
+    let rest = key.strip_prefix("munch seed:")?;
+    let (seed, round) = rest.split_once(" board:")?;
+    let Ok(parsed_seed) = seed.parse::<u64>() else {
+        return None;
+    };
+    if parsed_seed.to_string() != seed {
+        return None;
+    }
+    let parsed = round.parse::<u64>().ok()?;
+    if parsed.to_string() != round {
+        return None;
+    }
+    Some((seed, parsed))
+}
+
 /// The table, arcade style.
 fn scores_report(board: &numinous_core::Scoreboard) -> String {
     if board.entries.is_empty() {
@@ -1708,12 +1746,24 @@ fn scores_report(board: &numinous_core::Scoreboard) -> String {
 
 ",
     );
+    let mut munch = false;
     for (rank, (key, score)) in board.top(15).iter().enumerate() {
+        if munch_key_parts(key).is_some() {
+            munch = true;
+        }
         out.push_str(&format!(
-            "  {:>2}.  {score:>6}  {key}
+            "  {:>2}.  {score:>6}  {}
 ",
-            rank + 1
+            rank + 1,
+            score_label(key)
         ));
+    }
+    if munch {
+        out.push_str(
+            "
+Munch boards use the game's numbering. The saved key counts from 0, so board 1 is stored as board:0.
+",
+        );
     }
     out
 }
