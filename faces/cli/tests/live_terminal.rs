@@ -1,10 +1,12 @@
 //! Pipe and terminal contracts for `tour`, `watch`, `play`, and `journey`.
 //!
 //! A pipe must exit with one still, or a `--frames` recording, and must not
-//! light a star. `journey` on a pipe prints the settled sky once. A Unix pty
-//! checks that Ctrl+C and SIGTERM leave the main screen and show the cursor,
-//! and that a new journey star ignites once and then stops. Windows CI runs
-//! the pipe half; the pty half runs where those signals exist.
+//! light a star. `TERM=dumb` on a real terminal does the same for `tour`,
+//! `watch`, and room `play`: one postcard, or a `--frames` recording, and no
+//! cursor control. `journey` on a pipe prints the settled sky once. A Unix
+//! pty checks that Ctrl+C and SIGTERM leave the main screen and show the
+//! cursor, and that a new journey star ignites once and then stops. Windows
+//! CI runs the pipe half; the pty half runs where those signals exist.
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -74,6 +76,72 @@ fn run_piped(mut cmd: Command) -> (ExitStatus, String, Duration) {
     )
 }
 
+#[cfg(unix)]
+fn run_pty(dir: &Path, args: &[&str], term: &str) -> (bool, String) {
+    let mut cmd = portable_pty::CommandBuilder::new(env!("CARGO_BIN_EXE_numinous"));
+    for arg in args {
+        cmd.arg(arg);
+    }
+    cmd.env("HOME", dir.as_os_str());
+    cmd.env("USERPROFILE", dir.as_os_str());
+    cmd.env("NUMINOUS_JOURNEY", dir.join("journey").as_os_str());
+    cmd.env("NUMINOUS_SCORES", dir.join("scores").as_os_str());
+    cmd.env("NUMINOUS_CAIRN", dir.join("cairn").as_os_str());
+    cmd.env("NUMINOUS_JOURNAL", dir.join("journal").as_os_str());
+    cmd.env("NUMINOUS_PROJECT", dir.join("project").as_os_str());
+    cmd.env("NUMINOUS_PREFERENCES", dir.join("preferences").as_os_str());
+    cmd.env_remove("NUMINOUS_REDUCED_MOTION");
+    cmd.env("NO_COLOR", "1");
+    cmd.env("TERM", term);
+    let system = portable_pty::native_pty_system();
+    let pair = system
+        .openpty(portable_pty::PtySize {
+            rows: 30,
+            cols: 100,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .expect("pty");
+    let mut child = pair.slave.spawn_command(cmd).expect("spawn on pty");
+    drop(pair.slave);
+    let mut reader = pair.master.try_clone_reader().expect("reader");
+    let collected = Arc::new(Mutex::new(Vec::new()));
+    let bucket = Arc::clone(&collected);
+    let handle = std::thread::spawn(move || {
+        let mut buf = [0u8; 4096];
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(n) => bucket
+                    .lock()
+                    .expect("pty bytes")
+                    .extend_from_slice(&buf[..n]),
+            }
+        }
+    });
+    let started = Instant::now();
+    let status = loop {
+        if let Some(status) = child.try_wait().expect("wait") {
+            break status;
+        }
+        if started.elapsed() > Duration::from_secs(3) {
+            let _ = child.kill();
+            let _ = child.wait();
+            drop(pair.master);
+            let _ = handle.join();
+            panic!("{args:?} did not exit within 3s on TERM={term}");
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    drop(pair.master);
+    handle.join().expect("reader");
+    let bytes = collected.lock().expect("pty").clone();
+    (
+        status.success(),
+        String::from_utf8_lossy(&bytes).into_owned(),
+    )
+}
+
 fn assert_no_star(dir: &Path) {
     let path = dir.join("journey");
     if path.exists() {
@@ -140,6 +208,78 @@ fn frames_record_a_finite_run_without_lighting_a_star() {
     assert_no_star(&dir);
 }
 
+#[cfg(unix)]
+#[test]
+fn dumb_terminal_prints_one_still_without_cursor_control() {
+    let first_title = numinous_core::all_rooms()[0].meta().title;
+    let cases: &[(&str, &[&str], &str)] = &[
+        (
+            "watch",
+            &[
+                "watch",
+                "lissajous",
+                "--mute",
+                "--width",
+                "16",
+                "--height",
+                "8",
+            ],
+            "Lissajous",
+        ),
+        (
+            "tour",
+            &["tour", "--mute", "--width", "16", "--height", "8"],
+            first_title,
+        ),
+        (
+            "play",
+            &["play", "lissajous", "--width", "16", "--height", "8"],
+            "Lissajous",
+        ),
+    ];
+    for (name, args, title) in cases {
+        let dir = scratch(&format!("dumb-{name}"));
+        let (ok, output) = run_pty(&dir, args, "dumb");
+        assert!(ok, "{name} failed on TERM=dumb:\n{output}");
+        assert!(output.contains(title), "{name} missed {title}:\n{output}");
+        assert!(
+            !output.contains('\u{1b}'),
+            "{name} sent an escape to TERM=dumb:\n{output}"
+        );
+        assert!(!output.contains('\u{1c}'), "{name} split a single postcard");
+        assert_no_star(&dir);
+    }
+
+    let dir = scratch("dumb-frames");
+    let (ok, output) = run_pty(
+        &dir,
+        &[
+            "watch",
+            "lissajous",
+            "--mute",
+            "--width",
+            "16",
+            "--height",
+            "8",
+            "--frames",
+            "3",
+        ],
+        "dumb",
+    );
+    assert!(ok, "frames failed on TERM=dumb:\n{output}");
+    assert_eq!(
+        output.matches('\u{1c}').count(),
+        2,
+        "three frames need two separators:\n{output}"
+    );
+    assert!(
+        !output.contains('\u{1b}'),
+        "frames sent an escape to TERM=dumb:\n{output}"
+    );
+    assert!(output.contains("Lissajous"), "{output}");
+    assert_no_star(&dir);
+}
+
 #[test]
 fn reduced_motion_tour_on_a_pipe_still_waits_and_lights_no_star() {
     let dir = scratch("held");
@@ -176,6 +316,7 @@ fn ctrl_c_and_sigterm_restore_the_main_screen() {
         cmd.env("NUMINOUS_JOURNEY", dir.join("journey").as_os_str());
         cmd.env("NUMINOUS_SCORES", dir.join("scores").as_os_str());
         cmd.env("NO_COLOR", "1");
+        cmd.env("TERM", "xterm-256color");
         cmd.env_remove("NUMINOUS_REDUCED_MOTION");
         let system = portable_pty::native_pty_system();
         let pair = system

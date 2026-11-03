@@ -5,6 +5,11 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Fixed
+- `TERM=dumb` no longer receives the alternate screen from `tour`, `watch`,
+  or room `play`. Those commands print one still postcard, or a `--frames`
+  recording, and exit without cursor control.
+
 ## [0.5.0-alpha.12] - 2026-10-25
 
 ### Changed

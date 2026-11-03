@@ -1,8 +1,9 @@
 //! Owning a terminal for `tour`, `watch`, and `play`.
 //!
-//! A pipe is not a terminal. Those commands then print one still postcard
-//! and a title, or a `--frames N` recording, and they exit. That path does
-//! not move the cursor and does not light a star.
+//! A pipe is not a terminal. `TERM=dumb` names a terminal that cannot honor
+//! the alternate screen. Callers of both kinds print one still postcard and
+//! a title, or a `--frames N` recording, and they exit. That path does not
+//! move the cursor and does not light a star.
 //!
 //! A terminal is entered once: the alternate screen, a hidden cursor, and
 //! each frame wrapped in synchronized output. The cursor and the main screen
@@ -11,7 +12,7 @@
 //! is what restores the screen there. A debug build also restores on unwind
 //! when [`LiveSession`] drops.
 
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 #[cfg(unix)]
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -122,6 +123,16 @@ fn arm_interrupts() {
 fn signal_ids() -> &'static Mutex<Vec<signal_hook::SigId>> {
     static KEPT: OnceLock<Mutex<Vec<signal_hook::SigId>>> = OnceLock::new();
     KEPT.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+/// Whether `tour`, `watch`, and room `play` may enter [`LiveSession`].
+///
+/// Stdout must be a terminal, and `TERM` must not be `dumb`. A dumb
+/// terminal cannot interpret the alternate screen, a hidden cursor, or
+/// synchronized output, so those commands use the still postcard, or a
+/// `--frames` recording, the same way a pipe does.
+pub(crate) fn stdout_hosts_live_view() -> bool {
+    io::stdout().is_terminal() && !crate::access::term_is_dumb(std::env::var_os("TERM").as_deref())
 }
 
 /// The alternate screen and the hidden cursor for one live view.
