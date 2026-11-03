@@ -3137,9 +3137,85 @@ fn scores_report_lists_best_first_or_invites_play() {
     board.record("quiz seed:1 rounds:5", 4);
     let table = super::scores_report(&board);
     assert!(table.contains("HIGH SCORES"));
-    let munch_pos = table.find("munch").unwrap();
+    assert!(table.contains("munch seed:7 board 1"));
+    assert!(
+        !table.contains("munch seed:7 board:0"),
+        "the table shows the game's number, not the stored key: {table}"
+    );
+    assert!(table.contains("board 1 is stored as board:0"));
+    assert!(table.contains("quiz seed:1 rounds:5"));
+    let munch_pos = table.find("munch seed:7 board 1").unwrap();
     let quiz_pos = table.find("quiz").unwrap();
     assert!(munch_pos < quiz_pos, "higher score listed first");
+
+    let quiz_only = {
+        let mut board = numinous_core::Scoreboard::default();
+        board.record("quiz seed:1 rounds:5", 4);
+        super::scores_report(&board)
+    };
+    assert!(
+        !quiz_only.contains("saved key"),
+        "a table with no Munch row does not explain Munch keys"
+    );
+}
+
+#[test]
+fn munch_labels_follow_the_game_and_leave_other_keys_alone() {
+    let second = numinous_core::munch_score_key(402557, 1);
+    assert_eq!(second, "munch seed:402557 board:1");
+    assert_eq!(super::score_label(&second), "munch seed:402557 board 2");
+    assert_eq!(
+        super::score_label(&numinous_core::munch_score_key(1, 0)),
+        "munch seed:1 board 1"
+    );
+    assert_eq!(
+        super::score_label("quiz seed:1 rounds:5"),
+        "quiz seed:1 rounds:5"
+    );
+    assert_eq!(
+        super::score_label("munch seed:7 board:01"),
+        "munch seed:7 board:01"
+    );
+    let overflow = format!("munch seed:1 board:{}", u64::MAX);
+    assert_eq!(super::score_label(&overflow), overflow);
+}
+
+#[test]
+fn an_existing_munch_key_is_still_read_and_compared() {
+    let dir = std::env::temp_dir().join(format!(
+        "numinous-munch-score-key-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("temp scores dir");
+    let path = dir.join("scores.txt");
+    let original = "50\tmunch seed:1 board:0\n";
+    std::fs::write(&path, original).expect("fixture");
+
+    let loaded = numinous_core::load_scoreboard_file(&path);
+    assert_eq!(loaded.entries.get("munch seed:1 board:0"), Some(&50));
+    assert!(
+        super::scores_report(&loaded).contains("munch seed:1 board 1"),
+        "a stored board:0 row is shown as board 1"
+    );
+
+    let worse =
+        numinous_core::record_score_file(&path, "munch seed:1 board:0", 40).expect("compare");
+    assert!(!worse, "a lower score must not replace board:0");
+    assert_eq!(std::fs::read_to_string(&path).expect("unchanged"), original);
+
+    let better =
+        numinous_core::record_score_file(&path, "munch seed:1 board:0", 80).expect("record");
+    assert!(better);
+    let saved = std::fs::read_to_string(&path).expect("saved");
+    assert!(saved.contains("80\tmunch seed:1 board:0\n"), "{saved}");
+    assert!(!saved.contains("board:1"), "{saved}");
+    assert!(!saved.contains("board 1"), "{saved}");
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]

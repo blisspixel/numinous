@@ -431,6 +431,10 @@ numinous trophies                 the case: what you earned, what still waits
 numinous choose                   spend a level-up boon: knowledge, early
 ```
 
+`numinous scores` numbers a Munch board the way the game does, starting at
+board 1. The saved key still counts from 0, so board 1 is `board:0`. MCP
+`scores` prints that saved key.
+
 Playing anything earns XP. Every level-up is announced with that number's own
 lore line (each of the 42 has one) and whatever it unlocked. Levels run 1 to
 42, and everything that opens along
