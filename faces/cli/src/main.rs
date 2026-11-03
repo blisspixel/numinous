@@ -2020,7 +2020,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 era,
                 seconds,
                 frames,
-                std::io::stdout().is_terminal(),
+                live::stdout_hosts_live_view(),
                 journey,
             )
         }
@@ -2057,7 +2057,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 era,
                 variation,
                 frames,
-                std::io::stdout().is_terminal(),
+                live::stdout_hosts_live_view(),
                 journey,
             )
         }
@@ -2174,7 +2174,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                     allow_hidden,
                     variation,
                     frames,
-                    std::io::stdout().is_terminal(),
+                    live::stdout_hosts_live_view(),
                     journey,
                 )
             }
@@ -3783,8 +3783,8 @@ fn watch_samples(
 /// Watch a room in full color in the terminal, its sound playing, until
 /// interrupted. The whole audiovisual experience with no window at all.
 ///
-/// A pipe prints one postcard, or `--frames` samples, and returns. It does
-/// not light a star: nobody was watching.
+/// A pipe, or `TERM=dumb`, prints one postcard, or `--frames` samples, and
+/// returns. It does not light a star: nobody was watching.
 #[allow(clippy::too_many_arguments)]
 fn watch(
     id: &str,
@@ -4067,10 +4067,11 @@ fn tour_held_with(
 /// back around forever.
 ///
 /// Under reduced motion it does not come around by itself: each room is held at
-/// its postcard phase and the player says when to move on. A pipe is neither
-/// of those. It prints one postcard, or `--frames` samples, and it lights no
-/// stars. Reduced motion on a pipe still waits for the player, which is the
-/// same hold as on a terminal, without the alternate screen.
+/// its postcard phase and the player says when to move on. A pipe, or
+/// `TERM=dumb`, is neither of those. It prints one postcard, or `--frames`
+/// samples, and it lights no stars. Reduced motion on that path still waits
+/// for the player, which is the same hold as on a terminal, without the
+/// alternate screen.
 #[allow(clippy::too_many_arguments)]
 fn tour(
     fps: f64,
@@ -5109,7 +5110,8 @@ fn play_samples(
 }
 
 /// Animate a room in the terminal, sweeping its phase, until interrupted.
-/// A pipe prints one postcard, or `--frames` samples, and does not light a star.
+/// A pipe, or `TERM=dumb`, prints one postcard, or `--frames` samples, and
+/// does not light a star.
 #[allow(clippy::too_many_arguments)]
 fn play(
     id: &str,

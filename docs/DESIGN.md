@@ -192,9 +192,10 @@ thing that did not happen.
 **Motion.** Causal and continuous. A room change dips through the stage, and
 a Visual Era change rides that same dip. A journey star that is new climbs
 once and then stays lit. On a terminal, `tour`, `watch`, and `play` take the
-alternate screen only when stdout is a terminal, and each frame is one
-synchronized update. A pipe or a file gets one still postcard and the title,
-then the command exits, and it does not light a star. Reduced motion,
+alternate screen only when stdout is a terminal and `TERM` is not `dumb`,
+and each frame is one synchronized update. A pipe, a file, or `TERM=dumb`
+gets one still postcard and the title, then the command exits, and it does
+not light a star. Reduced motion,
 `NO_COLOR`, and `TERM=dumb` stay as `INTERFACES.md` records them.
 
 **Width.** 60 columns is a normal terminal width. Grouped help wraps to the

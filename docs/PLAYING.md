@@ -527,10 +527,11 @@ A dumb terminal (`TERM=dumb`) gets an ASCII picture: no color and no
 block art. `NO_COLOR` on a normal terminal keeps the block-glyph picture.
 Dumb is the terminal's own declaration, not a fourth switch.
 
-A pipe or a file is not a terminal. `numinous tour`, `numinous watch <room>`,
-and `numinous play <room>` then print one still postcard and the title, and
-they exit without lighting a star. `--frames N` writes that many frames and
-stops. With `NUMINOUS_REDUCED_MOTION` set, The Show still waits for Enter.
+A pipe, a file, or `TERM=dumb` is not a live view. `numinous tour`,
+`numinous watch <room>`, and `numinous play <room>` then print one still
+postcard and the title, and they exit without lighting a star. `--frames N`
+writes that many frames and stops. With `NUMINOUS_REDUCED_MOTION` set, The
+Show still waits for Enter.
 
 Every room's answer to a touch shows under `NO_COLOR`. Three rooms,
 cellular-automata, julia, and lambda-map, flash faster than the measured WCAG
