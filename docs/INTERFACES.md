@@ -173,8 +173,12 @@ Maintain, and wraps to the terminal width, or to `COLUMNS` when stdout is not
 a terminal. `TERM=dumb` draws pictures in ASCII, with no color and no
 block art. `NO_COLOR` on a normal terminal keeps the block-glyph picture
 and strips the color. `numinous completion bash`, `zsh`, or `fish` prints
-a completion script. `numinous rooms` sizes its id and wing columns from the
-longest entry. `tour` presents the whole catalog in sequence. `watch <room>` animates a full-color room with sound;
+a completion script. `numinous rooms` prints the room count and the wing
+count, then one row per room, then a line naming `describe` and `watch`.
+`--wing` lists one wing and ignores case. An unknown wing exits with the
+wing names. Columns are sized from the longest id and wing in the whole
+catalog. `--json` is a bare array of those rows, and without `--wing` it
+is the whole catalog. `tour` presents the whole catalog in sequence. `watch <room>` animates a full-color room with sound;
 `play <room>` provides the simpler live ASCII path without audio. Those three
 own the terminal only when stdout is a terminal and `TERM` is not `dumb`:
 alternate screen, hidden cursor, and one synchronized update per frame. A

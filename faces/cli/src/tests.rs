@@ -681,15 +681,34 @@ fn music_request_does_not_follow_redirects_or_forward_the_key() {
 
 #[test]
 fn rooms_report_lists_times_tables() {
-    let report = rooms_report(false);
+    let report = rooms_report(false, None).expect("catalog");
+    assert!(report.starts_with(&format!(
+        "{} in {}\n",
+        numinous_core::counted(numinous_core::ROOM_CATALOG.len(), "room"),
+        numinous_core::counted(numinous_core::rooms::CATALOG_WINGS.len(), "wing")
+    )));
     assert!(report.contains("times-tables"));
     assert!(!report.contains("tetractys"));
+    assert!(
+        report.ends_with(
+            "numinous describe <id> for the story, numinous watch <id> to step inside.\n"
+        )
+    );
 }
 
 #[test]
 fn rooms_report_aligns_every_id_and_wing() {
-    let report = rooms_report(false);
-    let lines: Vec<&str> = report.lines().filter(|line| !line.is_empty()).collect();
+    let report = rooms_report(false, None).expect("catalog");
+    let lines: Vec<&str> = report
+        .lines()
+        .filter(|line| {
+            let id = line.split_whitespace().next().unwrap_or("");
+            numinous_core::ROOM_CATALOG
+                .iter()
+                .any(|metadata| metadata.id == id)
+        })
+        .collect();
+    assert_eq!(lines.len(), numinous_core::ROOM_CATALOG.len());
     assert!(
         lines
             .iter()
@@ -733,11 +752,59 @@ fn rooms_report_aligns_every_id_and_wing() {
 
 #[test]
 fn rooms_report_json_is_a_non_empty_array() {
-    let text = rooms_report(true);
+    let text = rooms_report(true, None).expect("catalog");
     let value: Value = serde_json::from_str(&text).expect("valid json");
     let rooms = value.as_array().expect("room catalog");
-    assert!(!rooms.is_empty());
+    assert_eq!(rooms.len(), numinous_core::ROOM_CATALOG.len());
     assert!(rooms.iter().all(|room| room["id"] != "tetractys"));
+    assert!(!text.contains("describe <id>"), "json stays a bare array");
+}
+
+#[test]
+fn rooms_report_filters_a_wing_and_rejects_an_unknown_one() {
+    let emergence = rooms_report(false, Some("emergence")).expect("wing");
+    assert!(emergence.starts_with(&format!(
+        "{} in Emergence\n",
+        numinous_core::counted(
+            numinous_core::ROOM_CATALOG
+                .iter()
+                .filter(|metadata| metadata.wing == "Emergence")
+                .count(),
+            "room"
+        )
+    )));
+    let rows: Vec<&str> = emergence
+        .lines()
+        .filter(|line| {
+            line.split_whitespace().next().is_some_and(|id| {
+                numinous_core::ROOM_CATALOG
+                    .iter()
+                    .any(|metadata| metadata.id == id)
+            })
+        })
+        .collect();
+    assert!(!rows.is_empty());
+    assert!(rows.iter().all(|line| line.contains("Emergence")));
+    assert!(!rows.iter().any(|line| line.contains("Number & Pattern")));
+    assert!(
+        emergence.ends_with(
+            "numinous describe <id> for the story, numinous watch <id> to step inside.\n"
+        )
+    );
+
+    let json = rooms_report(true, Some("EMERGENCE")).expect("json wing");
+    let value: Value = serde_json::from_str(&json).expect("valid json");
+    let rooms = value.as_array().expect("wing array");
+    assert_eq!(rooms.len(), rows.len());
+    assert!(rooms.iter().all(|room| room["wing"] == "Emergence"));
+    assert_ne!(rooms.len(), numinous_core::ROOM_CATALOG.len());
+
+    let error = rooms_report(false, Some("Number")).expect_err("prefix is not a wing");
+    assert!(error.contains("Unknown wing 'Number'"));
+    for name in numinous_core::rooms::CATALOG_WINGS {
+        assert!(error.contains(name), "missing {name}");
+    }
+    assert!(rooms_report(true, Some("no-such-wing")).is_err());
 }
 
 #[test]
