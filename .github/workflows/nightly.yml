@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: nightly-am-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   am-qa:
     name: agent-and-machine soak
