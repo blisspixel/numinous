@@ -16,6 +16,10 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   `--wing` stays the whole catalog. The catalog scorecard reads that
   JSON array, so the count line is not mistaken for a room.
 
+### Changed
+- `CLAUDE.md` is the one line `@AGENTS.md`, so the tool that reads it loads
+  the agent guide instead of a second copy of the house rules.
+
 ### Fixed
 - `TERM=dumb` no longer receives the alternate screen from `tour`, `watch`,
   or room `play`. Those commands print one still postcard, or a `--frames`
