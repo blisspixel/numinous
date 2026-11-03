@@ -47,7 +47,7 @@ mod transport;
 mod viewer_projection;
 mod workspace;
 
-use std::io;
+use std::io::{self, IsTerminal};
 
 use broadcast_tools::{ConnectionBroadcast, broadcast_session_tool};
 use catalog::{discover_result, initialize_result, server_info, tools_catalog, tools_list_result};
@@ -123,7 +123,70 @@ const MAX_TOOL_ID_CHARS: usize = 64;
 /// bound in `numinous_core::Bequest::new`.
 const MAX_AUTHOR_CHARS: usize = 48;
 
+const USAGE: &str = "\
+numinous-mcp is a stdio MCP server.
+
+It speaks newline-delimited JSON-RPC on stdin and stdout. An MCP client
+starts it. The terminal interface is numinous.
+
+Usage:
+  numinous-mcp
+  numinous-mcp --help
+  numinous-mcp --version
+
+Client configuration:
+  {\"mcpServers\": {\"numinous\": {\"command\": \"numinous-mcp\"}}}";
+
+/// What the command line asked for before the server reads stdin.
+#[derive(Debug, PartialEq, Eq)]
+enum Usage {
+    Serve,
+    Help,
+    Version,
+    Unknown(String),
+}
+
+/// `--help` and `--version` exit before any JSON-RPC read. Anything else
+/// that is not an empty argument list is a mistake.
+fn usage<I, S>(args: I) -> Usage
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
+    let Some(arg) = args.into_iter().next() else {
+        return Usage::Serve;
+    };
+    let arg = arg.as_ref();
+    if arg == "--help" || arg == "-h" {
+        Usage::Help
+    } else if arg == "--version" || arg == "-V" {
+        Usage::Version
+    } else {
+        Usage::Unknown(arg.to_string_lossy().into_owned())
+    }
+}
+
 fn main() -> io::Result<()> {
+    match usage(std::env::args_os().skip(1)) {
+        Usage::Serve => {}
+        Usage::Help => {
+            println!("{USAGE}");
+            return Ok(());
+        }
+        Usage::Version => {
+            println!("numinous-mcp {}", env!("CARGO_PKG_VERSION"));
+            return Ok(());
+        }
+        Usage::Unknown(argument) => {
+            eprintln!("numinous-mcp: unknown argument '{argument}'");
+            std::process::exit(2);
+        }
+    }
+    // A person who runs the binary in a terminal otherwise sees a silent
+    // wait. A pipe is a client, and this hint must not touch that stream.
+    if io::stdin().is_terminal() {
+        eprintln!("numinous-mcp is waiting for JSON-RPC on stdin. Try --help.");
+    }
     let stdin = io::stdin();
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -161,6 +224,25 @@ fn main() -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod usage_tests {
+    use super::Usage;
+
+    #[test]
+    fn flags_select_help_version_or_the_server() {
+        assert_eq!(super::usage(std::iter::empty::<&str>()), Usage::Serve);
+        assert_eq!(super::usage(["--help"]), Usage::Help);
+        assert_eq!(super::usage(["-h"]), Usage::Help);
+        assert_eq!(super::usage(["--version"]), Usage::Version);
+        assert_eq!(super::usage(["-V"]), Usage::Version);
+        assert_eq!(
+            super::usage(["--nope"]),
+            Usage::Unknown("--nope".to_string())
+        );
+        assert_eq!(super::usage(["--help", "--version"]), Usage::Help);
+    }
 }
 
 /// Handle one JSON-RPC request. Returns `None` for notifications (no `id`),
