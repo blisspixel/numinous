@@ -114,8 +114,8 @@ pub fn room_by_id_with(id: &str, variation: u64) -> Option<Box<dyn Room>> {
 /// to its brightest. `julia` walks `c` out along the real axis. `lambda-map`
 /// walks one way along a horizontal segment. Each still changes, and the
 /// sweep certifies all three through 8x with the visualizer included: every
-/// cellular rotation, every lambda residue, and Julia at the catalog seed
-/// and at its largest dealt offset. The list is empty until a room is
+/// cellular rotation, every pair of Lambda's dealt shifts, and Julia at the
+/// catalog seed and at its largest dealt offset. The list is empty until a room is
 /// measured over the budget again.
 ///
 /// An entry is the slowest speed that goes over. [`flash_budget_scale`] is
@@ -1100,8 +1100,10 @@ mod tests {
         // once per cycle, which at 2.4 cycles a second is under three flashes.
         // Entering a room deals a seed, and the cap is per room, not per seed.
         // Cellular rotations are the seven nonzero offsets plus the catalog
-        // order. Lambda residues are five. Julia's dealt offset is
-        // `(seed % 1000) * 1e-5`, so 999 is the farthest parallel walk.
+        // order. Lambda's real shift is `seed % 5` and its viewport shift is
+        // `seed % 7`. Seeds 0 through 34 are every pair of those two. Julia's
+        // dealt offset is `(seed % 1000) * 1e-5`, so 999 is the farthest
+        // parallel walk.
         let speeds = [1usize, 2, 4, 8];
         let mut cases = Vec::new();
         for seed in 0..8 {
@@ -1116,7 +1118,7 @@ mod tests {
                 room_by_id_with("julia", seed).expect("julia"),
             ));
         }
-        for seed in 0..5 {
+        for seed in 0..35 {
             cases.push((
                 format!("lambda-map/{seed}"),
                 room_by_id_with("lambda-map", seed).expect("lambda"),
