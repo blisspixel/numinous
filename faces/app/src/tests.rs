@@ -2383,38 +2383,43 @@ fn life_status_uses_the_persistent_session_after_history_limits() {
 }
 
 #[test]
-fn a_capped_room_keeps_the_wish_and_runs_at_the_certified_scale() {
+fn a_certified_room_keeps_the_wish_and_runs_at_eight_x() {
     let mut app = headless("numinous_app_test_flash_ceiling.txt");
     app.current = app
         .rooms
         .iter()
         .position(|room| room.meta().id == "julia")
         .expect("julia");
+    // The headless app opens on the menu. A room does not advance there.
+    app.show_help = false;
+    app.banner = None;
+    app.room_card = 0;
     app.time_scale = 8.0;
     app.visualizer_scale = numinous_core::max_visualizer_time_scale();
     app.t = 0.0;
     app.advance_room_tick(1.0 / 60.0, 1.0 / 60.0, false);
     app.apply_visualizer_nudge(numinous_core::max_visualizer_phase_nudge());
-    let cap = numinous_core::ROOM_CYCLES_PER_SECOND * 4.0 / 60.0;
+    let full = numinous_core::ROOM_CYCLES_PER_SECOND * numinous_core::MAX_TIME_SCALE / 60.0;
     assert!(
-        app.t <= cap + 1e-9,
-        "julia advanced {} past the certified step {cap}",
+        (app.t - full).abs() < 1e-9,
+        "julia advanced {} instead of the 8x step {full}",
         app.t
     );
     assert_eq!(app.time_scale, 8.0, "the saved wish stays");
-    let status = app.current_status_override(900).expect("held status");
+    let status = app.current_status_override(900).unwrap_or_default();
     assert!(
-        status.contains("flashes faster than the WCAG budget allows"),
-        "{status}"
+        !status.contains("flashes faster"),
+        "a certified room must not claim a flash hold: {status}"
     );
-    assert!(status.contains("at 8x speed or faster"), "{status}");
-    assert!(status.contains("no faster than 4x"), "{status}");
 
     app.current = app
         .rooms
         .iter()
         .position(|room| room.meta().id == "mandelbrot")
         .expect("mandelbrot");
+    app.show_help = false;
+    app.banner = None;
+    app.room_card = 0;
     app.time_scale = 8.0;
     app.visualizer_scale = numinous_core::max_visualizer_time_scale();
     app.t = 0.0;
@@ -2435,7 +2440,7 @@ fn a_capped_room_keeps_the_wish_and_runs_at_the_certified_scale() {
 }
 
 #[test]
-fn show_fractional_speed_and_reduced_motion_stay_inside_the_three_ceilings() {
+fn show_fractional_speed_and_reduced_motion_stay_inside_eight_x() {
     let mut app = headless("numinous_app_test_show_ceiling.txt");
     app.motion = numinous_core::Motion::Full;
     app.banner = None;
@@ -2458,7 +2463,7 @@ fn show_fractional_speed_and_reduced_motion_stay_inside_the_three_ceilings() {
         let start = app.t;
         app.advance_room_tick(elapsed, elapsed, false);
         app.apply_visualizer_nudge(numinous_core::max_visualizer_phase_nudge());
-        let cap = numinous_core::ROOM_CYCLES_PER_SECOND * 4.0 * elapsed;
+        let cap = numinous_core::ROOM_CYCLES_PER_SECOND * numinous_core::MAX_TIME_SCALE * elapsed;
         let advanced = if app.t >= start {
             app.t - start
         } else {
@@ -2469,9 +2474,21 @@ fn show_fractional_speed_and_reduced_motion_stay_inside_the_three_ceilings() {
             "{room_id} show advanced {advanced} past the certified step {cap}"
         );
         assert!(advanced > 0.0, "{room_id} show did not move");
+        assert_eq!(
+            numinous_core::presented_time_scale(
+                6.5,
+                numinous_core::max_visualizer_time_scale(),
+                room_id
+            ),
+            numinous_core::MAX_TIME_SCALE,
+            "{room_id} is still capped below 8x"
+        );
         assert_eq!(app.time_scale, 6.5, "{room_id} wish");
-        let status = app.current_status_override(900).expect(room_id);
-        assert!(status.contains("no faster than 4x"), "{room_id}: {status}");
+        let status = app.current_status_override(900).unwrap_or_default();
+        assert!(
+            !status.contains("flashes faster"),
+            "{room_id} claims a flash hold it no longer has: {status}"
+        );
     }
     let held = app.t;
     app.motion = numinous_core::Motion::Reduced;

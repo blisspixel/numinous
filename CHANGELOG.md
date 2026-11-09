@@ -3,7 +3,7 @@
 All notable changes to Numinous. The format follows Keep a Changelog, and the
 project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
-## [Unreleased]
+## [0.5.0-alpha.13] - 2026-11-08
 
 ### Added
 - `numinous-mcp --help` and `--version` print usage and the version, then
@@ -21,6 +21,13 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   the agent guide instead of a second copy of the house rules.
 
 ### Fixed
+- `cellular-automata`, `julia`, and `lambda-map` are certified through 8x.
+  The cellular tour climbs once per cycle from the dimmest notable rule to
+  the brightest. Julia walks `c` out along the real axis from the disk to
+  dust. Lambda walks one way along a horizontal segment, and a dealt
+  variation stays on that falling side. Each picture still changes. The
+  known-over list is empty, so the 4x ceiling is gone and a saved faster
+  wish runs.
 - `TERM=dumb` no longer receives the alternate screen from `tour`, `watch`,
   or room `play`. Those commands print one still postcard, or a `--frames`
   recording, and exit without cursor control.

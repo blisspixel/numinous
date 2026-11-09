@@ -8540,17 +8540,19 @@ fn list_rooms_offers_a_typed_starter_doorway() {
 }
 
 #[test]
-fn describe_and_study_name_the_flash_ceiling() {
+fn describe_and_study_omit_the_flash_ceiling_when_none_remains() {
     let described = call("describe_room", json!({"id": "julia"}));
     let text = described["result"]["content"][0]["text"]
         .as_str()
         .unwrap_or_default();
-    assert!(text.contains("no faster than 4x"), "{text}");
     assert!(
-        described["result"]["structuredContent"]["flashLimit"]
-            .as_str()
-            .unwrap_or("")
-            .contains("at 8x speed or faster"),
+        !text.contains("flashes faster than the WCAG budget"),
+        "{text}"
+    );
+    assert!(
+        described["result"]["structuredContent"]
+            .get("flashLimit")
+            .is_none(),
         "{described}"
     );
     let quiet = call("describe_room", json!({"id": "mandelbrot"}));
@@ -8564,9 +8566,14 @@ fn describe_and_study_name_the_flash_ceiling() {
     let study_text = studied["result"]["content"][0]["text"]
         .as_str()
         .unwrap_or_default();
-    assert!(study_text.contains("no faster than 4x"), "{study_text}");
     assert!(
-        studied["result"]["structuredContent"]["flashLimit"].is_string(),
+        !study_text.contains("flashes faster than the WCAG budget"),
+        "{study_text}"
+    );
+    assert!(
+        studied["result"]["structuredContent"]
+            .get("flashLimit")
+            .is_none(),
         "{studied}"
     );
 }

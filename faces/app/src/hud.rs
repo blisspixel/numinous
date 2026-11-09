@@ -996,7 +996,7 @@ mod tests {
     }
 
     #[test]
-    fn a_capped_room_names_its_flash_limit_on_arrival() {
+    fn a_certified_room_does_not_announce_a_flash_limit_on_arrival() {
         let julia = room("julia");
         let julia_lines = arrival_lines(
             julia.as_ref(),
@@ -1005,11 +1005,7 @@ mod tests {
             ControllerFace::Generic,
         );
         let card = julia_lines.join(" ");
-        assert!(
-            card.contains("FLASHES FASTER THAN THE WCAG BUDGET ALLOWS"),
-            "{julia_lines:?}"
-        );
-        assert!(card.contains("NO FASTER THAN 4X"), "{julia_lines:?}");
+        assert!(!card.contains("FLASHES FASTER"), "{julia_lines:?}");
         assert!(
             julia_lines.iter().all(|line| line.chars().count() <= 40),
             "{julia_lines:?}"

@@ -9,11 +9,17 @@
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
-/// A curated tour of notable elementary rules, indexed by phase `t`.
+/// Notable elementary rules, in increasing whole-frame luminance.
 ///
-/// The full 0..=255 dial belongs to the interactive GPU version; the headless
-/// face sweeps these standouts so every frame is worth looking at.
-const NOTABLE_RULES: [u8; 8] = [90, 30, 110, 54, 150, 18, 60, 105];
+/// Measured at the sweep's 240 by 140 raster with one center cell: 90, 18,
+/// and 60 sit together at 0.036, then 150 at 0.070, 110 at 0.085, 54 at
+/// 0.146, 30 at 0.148, and 105 at 0.222. The tour climbs that staircase
+/// once per cycle. The wrap from the brightest rule back to the dimmest is
+/// one flash, and at 2.4 cycles a second that stays inside the budget.
+///
+/// A nonzero seed rotates this order. A rotation of a staircase still
+/// drops only once, so the same bound holds for every variation.
+const NOTABLE_RULES: [u8; 8] = [90, 18, 60, 150, 110, 54, 30, 105];
 
 /// The Cellular Automata room.
 #[derive(Debug, Default)]
@@ -502,13 +508,23 @@ mod tests {
 
     #[test]
     fn new_with_nonzero_produces_variation() {
+        // Seed 5 rotates the staircase onto Rule 30. Seed 42 rotates onto
+        // Rule 18, and from one live cell that triangle matches Rule 90, so
+        // the opening frame is not where seed 42 shows up. Half a cycle later
+        // the rotation has left the matching rules.
         let r0 = CellularAutomata::new_with(0);
-        let r42 = CellularAutomata::new_with(42);
+        let r5 = CellularAutomata::new_with(5);
         let mut a = Canvas::new(41, 21);
         let mut c = Canvas::new(41, 21);
         r0.render(&mut a, 0.0);
-        r42.render(&mut c, 0.0);
+        r5.render(&mut c, 0.0);
         assert_ne!(a.to_text(), c.to_text());
+        let mut late0 = Canvas::new(41, 21);
+        let mut late42 = Canvas::new(41, 21);
+        CellularAutomata::new_with(42).render(&mut late0, 0.0);
+        CellularAutomata::new_with(42).render(&mut late42, 0.5);
+        assert_eq!(late0.to_text(), a.to_text());
+        assert_ne!(late42.to_text(), a.to_text());
     }
 
     #[test]

@@ -3628,19 +3628,19 @@ fn the_flash_disclosure_says_which_rooms_and_from_what_speed() {
     assert!(report.contains(&crate::access::flash_disclosure(
         &numinous_core::KNOWN_OVER_FLASH_BUDGET
     )));
-    assert!(report.contains("no faster than half the speed"), "{report}");
+    assert!(report.contains("No room is known to flash"), "{report}");
+    assert!(report.contains("That speed is 8x"), "{report}");
     assert!(report.contains("phase nudge is 0.03"), "{report}");
 }
 
 #[test]
-fn describe_and_study_name_a_room_that_is_still_over_the_budget() {
+fn describe_and_study_omit_a_flash_limit_once_the_list_is_empty() {
     let described =
         describe_report("julia", false, false, &numinous_core::Journey::default()).expect("julia");
     assert!(
-        described.contains("flashes faster than the WCAG budget allows"),
+        !described.contains("flashes faster than the WCAG budget"),
         "{described}"
     );
-    assert!(described.contains("no faster than 4x"), "{described}");
     let quiet = describe_report(
         "mandelbrot",
         false,
@@ -3655,18 +3655,15 @@ fn describe_and_study_name_a_room_that_is_still_over_the_budget() {
     let json = describe_report("julia", true, false, &numinous_core::Journey::default())
         .expect("julia json");
     let value: Value = serde_json::from_str(&json).expect("json");
-    assert!(
-        value["flashLimit"]
-            .as_str()
-            .unwrap_or("")
-            .contains("no faster than 4x"),
-        "{value}"
-    );
+    assert!(value.get("flashLimit").is_none(), "{value}");
     let studied = super::study::report("julia", None, None, None, false).expect("study");
-    assert!(studied.contains("no faster than 4x"), "{studied}");
+    assert!(
+        !studied.contains("flashes faster than the WCAG budget"),
+        "{studied}"
+    );
     let studied_json = super::study::report("julia", None, None, None, true).expect("study json");
     let studied_value: Value = serde_json::from_str(&studied_json).expect("study json value");
-    assert!(studied_value["flashLimit"].is_string(), "{studied_value}");
+    assert!(studied_value.get("flashLimit").is_none(), "{studied_value}");
 }
 
 #[test]
@@ -6561,15 +6558,20 @@ fn a_recording_splits_frames_without_cursor_control() {
         color: false,
     };
     let room = numinous_core::room_by_id("julia").expect("room");
-    let recorded = super::watch_samples(room.as_ref(), 4, 24, 12, style, false);
+    // The recorder steps 0.005, the same step as the live loop. This tour
+    // walks outward slowly, so the first few postcards share a picture.
+    // Half a cycle is 100 steps, and that frame has left the opening disk.
+    let steps_to_half = 100;
+    let samples = steps_to_half + 1;
+    let recorded = super::watch_samples(room.as_ref(), samples, 24, 12, style, false);
     let frames: Vec<&str> = recorded.split(super::live::FRAME_SEPARATOR).collect();
-    assert_eq!(frames.len(), 4, "four samples, three separators");
+    assert_eq!(frames.len(), samples as usize, "one frame per sample");
     assert!(frames.iter().all(|frame| !frame.contains('\u{1b}')));
     assert!(frames.iter().all(|frame| frame.contains(room.meta().title)));
     let motion = numinous_core::Motion::from_env();
     if motion.animates() {
         assert_ne!(
-            frames[0], frames[3],
+            frames[0], frames[steps_to_half as usize],
             "full motion should leave the postcard phase"
         );
     } else {

@@ -886,16 +886,24 @@ an invariant bound: `z' = sin(x)` gives `|z| <= 1`, so both other coordinates,
 sums of terms bounded by one, stay in `[-2,2]`. The projection now keeps those
 bounds instead of refitting each frame; an independent first-iterate check
 locks the scale, and the unchanged sweep passes through 8x. There is no
-substitute spiral or reset geometry. `cellular-automata` (5), `julia` (5), and
-`lambda-map` (4) are within budget at 1x, 2x and 4x and over it only at 8x.
-None of them redraws a fresh chaotic picture each frame, but within one cycle
-each one's whole-frame brightness swings by more than a tenth more than once,
-and 8x runs 2.4 cycles a second.
-They stay on the shrink-only list with that slowest failing speed recorded.
-The ruling in ROADMAP decision 2 is to cap each of them at the last certified
-speed, 4x, on every advance path, until the picture itself is inside the
-budget at 8x with the visualizer included. Every other room stays certified
-through 8x.
+substitute spiral or reset geometry. `cellular-automata`, `julia`, and
+`lambda-map` were over the budget only at 8x, because each picture's
+whole-frame brightness turned by more than a tenth
+more than once per cycle and 8x runs 2.4 cycles a second. The 4x ceiling held
+them until the tours themselves changed.
+
+The cellular tour now orders its eight notable rules by increasing luminance
+at this raster (90, 18, and 60 together, then 150, 110, 54, 30, 105) and
+climbs that staircase once per cycle. A dealt seed rotates the staircase,
+which still drops only once. Julia walks `c` along the real axis from the
+disk at 0 out to 0.7885, past the cardioid's rightmost point at 1/4, so the
+filled set shrinks once instead of dipping around a circle. Lambda walks real
+lambda from 0.4 to 0.9 with imaginary part 0.25. Past about 1.0 that portrait
+brightens again, so a dealt seed shifts the segment by at most 0.08 and stays
+on the falling side. A hand can still drag either fractal. The same sweep,
+including the visualizer's largest pump and phase nudge, now records no
+general or red failure for the catalog seed or a dealt variation of each
+room. The known-over list is empty. Every catalog room is certified through 8x.
 
 The measurement remains whole-frame mean relative luminance at 240 by 140, so
 the flashing-area rule is not implemented, as before. Speeds between the

@@ -1103,7 +1103,7 @@ macro_rules! catalog_rooms {
                 title: "Julia Set",
                 wing: "Fractals",
                 blurb: "The same rule as Mandelbrot, but c is fixed and the whole plane is the seed. \
-                        Every c grows a different fractal; t walks c around a circle to morph it.",
+                        Every c grows a different fractal; t walks c out along the real axis.",
                 accent: [255, 120, 60],
             }
         ),
@@ -4270,8 +4270,9 @@ mod tests {
 
     // Route Lab's doorway still invites the delivery order. Attention's
     // doorway invites the temperature hand and a placed key. Strange Loop's
-    // doorway invites the zoom into the frame. Order is unchanged.
-    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x8dcc_f407_b6d0_408e;
+    // doorway invites the zoom into the frame. Julia's doorway says t walks
+    // c out along the real axis. Order is unchanged.
+    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0xf9aa_0a43_eaaa_afaf;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {
