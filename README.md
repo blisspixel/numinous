@@ -94,9 +94,10 @@ feedback rather than a release gate.
 The App plays The Overture from Modes, and MCP `watch_show` plays the same
 score through to the Times Tables dial. Route Lab can step through nearest-next
 choices on the App, the CLI, and MCP without changing the delivery order.
-`cellular-automata`, `julia`, and `lambda-map` are certified through 8x. The
-cellular tour climbs once per cycle, Julia walks `c` out along the real axis,
-and Lambda walks one way along a horizontal segment. On a terminal, `tour`,
+The automatic tours of `cellular-automata`, `julia`, and `lambda-map` are
+inside the measured flash budget through 8x. The cellular tour climbs once
+per cycle, Julia walks `c` out along the real axis, and Lambda walks one way
+along a horizontal segment. On a terminal, `tour`,
 `watch`, and `play` are live. A pipe gets one still postcard. Attention is a
 temperature hand and a placed key. Strange Loop is a descent that returns.
 

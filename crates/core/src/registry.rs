@@ -113,9 +113,10 @@ pub fn room_by_id_with(id: &str, variation: u64) -> Option<Box<dyn Room>> {
 /// `cellular-automata` climbs once per cycle from its dimmest notable rule
 /// to its brightest. `julia` walks `c` out along the real axis. `lambda-map`
 /// walks one way along a horizontal segment. Each still changes, and the
-/// sweep certifies all three through 8x with the visualizer included, for
-/// the catalog seed and a dealt variation. The list is empty until a room
-/// is measured over the budget again.
+/// sweep certifies all three through 8x with the visualizer included: every
+/// cellular rotation, every lambda residue, and Julia at the catalog seed
+/// and at its largest dealt offset. The list is empty until a room is
+/// measured over the budget again.
 ///
 /// An entry is the slowest speed that goes over. [`flash_budget_scale`] is
 /// then the doubling below that speed. A room that is not listed is
@@ -1097,36 +1098,46 @@ mod tests {
         // These three were the last rooms over the budget, and only at 8x.
         // Each automatic tour now turns its whole-frame brightness at most
         // once per cycle, which at 2.4 cycles a second is under three flashes.
-        // A variation is included because entering a room deals a seed, and
-        // the cap is per room, not per seed.
+        // Entering a room deals a seed, and the cap is per room, not per seed.
+        // Cellular rotations are the seven nonzero offsets plus the catalog
+        // order. Lambda residues are five. Julia's dealt offset is
+        // `(seed % 1000) * 1e-5`, so 999 is the farthest parallel walk.
         let speeds = [1usize, 2, 4, 8];
-        let rooms = [
-            room_by_id("cellular-automata").expect("cellular"),
-            room_by_id_with("cellular-automata", 3).expect("cellular variation"),
-            room_by_id("julia").expect("julia"),
-            room_by_id_with("julia", 7).expect("julia variation"),
-            room_by_id("lambda-map").expect("lambda"),
-            room_by_id_with("lambda-map", 4).expect("lambda variation"),
-        ];
-        for room in &rooms {
+        let mut cases = Vec::new();
+        for seed in 0..8 {
+            cases.push((
+                format!("cellular-automata/{seed}"),
+                room_by_id_with("cellular-automata", seed).expect("cellular"),
+            ));
+        }
+        for seed in [0u64, 7, 999] {
+            cases.push((
+                format!("julia/{seed}"),
+                room_by_id_with("julia", seed).expect("julia"),
+            ));
+        }
+        for seed in 0..5 {
+            cases.push((
+                format!("lambda-map/{seed}"),
+                room_by_id_with("lambda-map", seed).expect("lambda"),
+            ));
+        }
+        for (label, room) in &cases {
             let sweep = sweep_room(room.as_ref(), &speeds);
             assert!(
                 sweep.over.is_none(),
-                "{} general flashes {:?}; samples {}",
-                sweep.id,
+                "{label} general flashes {:?}; samples {}",
                 sweep.over,
                 luminance_samples(room.as_ref())
             );
             assert!(
                 sweep.red_over.is_none(),
-                "{} red flashes {:?}",
-                sweep.id,
+                "{label} red flashes {:?}",
                 sweep.red_over
             );
             assert!(
                 sweep.swing > 0.01,
-                "{} did not change during the sweep",
-                sweep.id
+                "{label} did not change during the sweep"
             );
         }
     }

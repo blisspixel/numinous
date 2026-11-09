@@ -900,13 +900,21 @@ disk at 0 out to 0.7885, past the cardioid's rightmost point at 1/4, so the
 filled set shrinks once instead of dipping around a circle. Lambda walks real
 lambda from 0.4 to 0.9 with imaginary part 0.25. Past about 1.0 that portrait
 brightens again, so a dealt seed shifts the segment by at most 0.08 and stays
-on the falling side. A hand can still drag either fractal. The same sweep,
-including the visualizer's largest pump and phase nudge, now records no
-general or red failure for the catalog seed or a dealt variation of each
-room. The known-over list is empty. Every catalog room is certified through 8x.
+on the falling side. A dealt Julia seed shifts both components by less
+than 0.01, so that walk stays parallel to the real axis. A hand can still
+drag either fractal. While the button is down, Lambda replaces the segment
+and Julia only offsets `c`. The sweep does not poke, so that drag is not
+part of the certificate. An output-mix or loopback beat can also plant a
+hand point. The default room-bed source does not. The same sweep, including
+the visualizer's largest pump and phase nudge, now records no general or
+red failure for every cellular rotation, every lambda residue, and Julia
+at the catalog seed and at its largest dealt offset. The known-over list
+is empty. On this measurement, every catalog room's automatic tour is
+inside the budget through 8x.
 
 The measurement remains whole-frame mean relative luminance at 240 by 140, so
-the flashing-area rule is not implemented, as before. Speeds between the
+the flashing-area rule is not implemented, as before. GPU frames are not a
+separate series. Julia's GPU path uses the same `c`. Speeds between the
 doublings, which the App's typed console and the Life room's wheel can set,
 are held to the last certified doubling rather than measured as their own
 series. The music visualizer's largest pump and phase nudge are folded into

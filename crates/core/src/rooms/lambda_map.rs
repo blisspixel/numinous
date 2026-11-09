@@ -228,4 +228,17 @@ mod tests {
         assert!((re1 - 0.9).abs() < 1e-12 && (im1 - im0).abs() < 1e-12);
         assert!(re0 < re1);
     }
+
+    #[test]
+    fn every_dealt_seed_ends_before_the_brightening() {
+        // Nonzero seeds fold into five residues, at most +0.08. The portrait
+        // brightens again past about 1.0, and 0.98 is still short of that.
+        for seed in 0..20 {
+            let (re0, im0) = super::lambda(0.0, None, seed);
+            let (re1, im1) = super::lambda(1.0, None, seed);
+            assert!((im0 - 0.25).abs() < 1e-12 && (im1 - im0).abs() < 1e-12, "{seed}");
+            assert!(re0 < re1, "{seed}");
+            assert!(re1 <= 0.98 + 1e-12, "{seed} ends at {re1}");
+        }
+    }
 }

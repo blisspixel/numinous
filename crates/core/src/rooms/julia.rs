@@ -338,6 +338,21 @@ mod tests {
     }
 
     #[test]
+    fn the_largest_dealt_offset_stays_a_straight_outward_walk() {
+        // Seed 999 is the farthest `(seed % 1000) * 1e-5` shift. It stays a
+        // straight walk, parallel to the catalog tour, by less than 0.01.
+        let room = Julia::new_with(999);
+        let (x0, y0) = room.c_for(0.0);
+        let (x1, y1) = room.c_for(0.5);
+        let (x2, y2) = room.c_for(1.0);
+        assert!((y0 - 0.00999).abs() < 1e-12 && (y1 - y0).abs() < 1e-12);
+        assert!((y2 - y0).abs() < 1e-12);
+        assert!((x0 - y0).abs() < 1e-12);
+        assert!((x2 - x0 - 0.7885).abs() < 1e-12);
+        assert!(x0 < x1 && x1 < x2);
+    }
+
+    #[test]
     fn render_is_deterministic_and_has_ink() {
         let room = Julia::new();
         let mut a = Canvas::new(50, 30);

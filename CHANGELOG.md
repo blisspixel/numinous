@@ -21,8 +21,11 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   the agent guide instead of a second copy of the house rules.
 
 ### Fixed
-- `cellular-automata`, `julia`, and `lambda-map` are certified through 8x.
-  The cellular tour climbs once per cycle from the dimmest notable rule to
+- The automatic tours of `cellular-automata`, `julia`, and `lambda-map` are
+  inside the measured flash budget through 8x. The sweep covers every
+  cellular rotation, every lambda residue, and Julia at its largest dealt
+  offset, with the visualizer's largest pump and phase nudge. It does not
+  poke. The cellular tour climbs once per cycle from the dimmest notable rule to
   the brightest. Julia walks `c` out along the real axis from the disk to
   dust. Lambda walks one way along a horizontal segment, and a dealt
   variation stays on that falling side. Each picture still changes. The
