@@ -886,19 +886,38 @@ an invariant bound: `z' = sin(x)` gives `|z| <= 1`, so both other coordinates,
 sums of terms bounded by one, stay in `[-2,2]`. The projection now keeps those
 bounds instead of refitting each frame; an independent first-iterate check
 locks the scale, and the unchanged sweep passes through 8x. There is no
-substitute spiral or reset geometry. `cellular-automata` (5), `julia` (5), and
-`lambda-map` (4) are within budget at 1x, 2x and 4x and over it only at 8x.
-None of them redraws a fresh chaotic picture each frame, but within one cycle
-each one's whole-frame brightness swings by more than a tenth more than once,
-and 8x runs 2.4 cycles a second.
-They stay on the shrink-only list with that slowest failing speed recorded.
-The ruling in ROADMAP decision 2 is to cap each of them at the last certified
-speed, 4x, on every advance path, until the picture itself is inside the
-budget at 8x with the visualizer included. Every other room stays certified
-through 8x.
+substitute spiral or reset geometry. `cellular-automata`, `julia`, and
+`lambda-map` were over the budget only at 8x, because each picture's
+whole-frame brightness turned by more than a tenth
+more than once per cycle and 8x runs 2.4 cycles a second. The 4x ceiling held
+them until the tours themselves changed.
+
+The cellular tour now orders its eight notable rules by increasing luminance
+at this raster (90, 18, and 60 together, then 150, 110, 54, 30, 105) and
+climbs that staircase once per cycle. A dealt seed rotates the staircase,
+which still drops only once. Julia walks `c` along the real axis from the
+disk at 0 out to 0.7885, past the cardioid's rightmost point at 1/4, so the
+filled set shrinks once instead of dipping around a circle. Lambda walks real
+lambda from 0.4 to 0.9 with imaginary part 0.25. Past about 1.0 that portrait
+brightens again, so a dealt seed shifts the segment by at most 0.08 and stays
+on the falling side. A nonzero seed also shifts the viewport by
+`(seed % 7) * 0.002`, at most 0.012, and that shift does not change with
+time. Seeds 0 through 34 are every pair of the two shifts. A dealt Julia
+seed shifts both components by less than 0.01, so that walk stays parallel
+to the real axis. A hand can still
+drag either fractal. While the button is down, Lambda replaces the segment
+and Julia only offsets `c`. The sweep does not poke, so that drag is not
+part of the certificate. An output-mix or loopback beat can also plant a
+hand point. The default room-bed source does not. The same sweep, including
+the visualizer's largest pump and phase nudge, now records no general or
+red failure for every cellular rotation, every pair of Lambda's dealt
+shifts, and Julia at the catalog seed and at its largest dealt offset. The known-over list
+is empty. On this measurement, every catalog room's automatic tour is
+inside the budget through 8x.
 
 The measurement remains whole-frame mean relative luminance at 240 by 140, so
-the flashing-area rule is not implemented, as before. Speeds between the
+the flashing-area rule is not implemented, as before. GPU frames are not a
+separate series. Julia's GPU path uses the same `c`. Speeds between the
 doublings, which the App's typed console and the Life room's wheel can set,
 are held to the last certified doubling rather than measured as their own
 series. The music visualizer's largest pump and phase nudge are folded into

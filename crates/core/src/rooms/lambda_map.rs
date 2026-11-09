@@ -1,7 +1,8 @@
 //! Lambda map / logistic in multiplicative form: z -> lambda z (1-z).
 //!
-//! Complex lambda Julia-style escape for fixed lambda.
-//! See `docs/ROOMS.md`.
+//! Complex lambda Julia-style escape for fixed lambda. The automatic tour
+//! walks lambda one way along a horizontal segment. A sine in the imaginary
+//! part turned the portrait down and up twice a cycle. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
@@ -30,13 +31,18 @@ fn lambda(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64) {
     let s = if seed == 0 {
         0.0
     } else {
-        (seed % 5) as f64 * 0.05
+        // Keeps every variation on the same falling side of the portrait.
+        // A larger shift reaches a brightness bump near real lambda 1.1.
+        (seed % 5) as f64 * 0.02
     };
     if let Some((x, y)) = hand {
         ((x - 0.5) * 4.0 + s, (0.5 - y) * 4.0)
     } else {
         let u = phase_unit(t);
-        (0.5 + u * 0.5 + s, 0.5 * (u * std::f64::consts::TAU).sin())
+        // Real lambda from 0.4 to 0.9, imaginary part fixed. Past about 1.0
+        // the escape portrait brightens again, and that second turn is what
+        // put the sine tour over the budget at 8x.
+        (0.4 + u * 0.5 + s, 0.25)
     }
 }
 
@@ -212,5 +218,27 @@ mod tests {
     #[test]
     fn motif_ok() {
         assert!(LambdaMap::new().motif().unwrap().line.len() >= 6);
+    }
+
+    #[test]
+    fn automatic_lambda_walks_one_way() {
+        let (re0, im0) = super::lambda(0.0, None, 0);
+        let (re1, im1) = super::lambda(1.0, None, 0);
+        assert!((re0 - 0.4).abs() < 1e-12 && (im0 - 0.25).abs() < 1e-12);
+        assert!((re1 - 0.9).abs() < 1e-12 && (im1 - im0).abs() < 1e-12);
+        assert!(re0 < re1);
+    }
+
+    #[test]
+    fn every_dealt_seed_ends_before_the_brightening() {
+        // Nonzero seeds fold into five residues, at most +0.08. The portrait
+        // brightens again past about 1.0, and 0.98 is still short of that.
+        for seed in 0..20 {
+            let (re0, im0) = super::lambda(0.0, None, seed);
+            let (re1, im1) = super::lambda(1.0, None, seed);
+            assert!((im0 - 0.25).abs() < 1e-12 && (im1 - im0).abs() < 1e-12, "{seed}");
+            assert!(re0 < re1, "{seed}");
+            assert!(re1 <= 0.98 + 1e-12, "{seed} ends at {re1}");
+        }
     }
 }

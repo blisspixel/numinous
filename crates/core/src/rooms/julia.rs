@@ -2,17 +2,20 @@
 //!
 //! Same iteration as Mandelbrot (`z -> z*z + c`), but here `c` is a fixed
 //! constant and the starting point is the pixel. Each value of `c` gives a
-//! completely different fractal; `t` walks `c` around a circle, morphing the
-//! shape from a connected blob into scattered dust and back. See `docs/ROOMS.md`.
-
-use std::f64::consts::TAU;
+//! completely different fractal. `t` walks `c` along the real axis from the
+//! disk at the origin out past the cardioid, so the filled set shrinks once
+//! per cycle instead of swelling and dipping around a circle. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::{MAX_DIM, Surface};
 
 use super::FRACTAL_MAX_ITER;
-/// Radius of the circle in the `c` plane that `t` walks around.
-const C_RADIUS: f64 = 0.7885;
+/// Far end of the automatic tour, on the positive real axis.
+///
+/// The main cardioid ends at `1/4`. This point sits outside it, so the tour
+/// crosses from a filled disk into dust exactly once. It is the old circle's
+/// radius, kept as the outer endpoint rather than as a radius to orbit.
+const OUTER_REAL: f64 = 0.7885;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct MorphPoint {
@@ -91,14 +94,17 @@ impl Julia {
 }
 
 /// Return the automatic complex constant for the current sweep.
+///
+/// One cycle moves `c` from 0 out along the real axis to the outer bound. A
+/// circle of that radius enters and leaves the Mandelbrot set more than once
+/// per turn, and the filled set's brightness followed every crossing. At 8x
+/// that was more than three flashes a second. One outward trip is one
+/// darkening; the wrap back to the disk is the opposing transition.
 #[must_use]
 pub fn automatic_c(t: f64, seed: u64) -> (f64, f64) {
-    let theta = TAU * finite_phase(t);
+    let u = finite_phase(t);
     let seed_offset = (seed % 1000) as f64 * 0.00001;
-    (
-        C_RADIUS * theta.cos() + seed_offset,
-        C_RADIUS * theta.sin() + seed_offset,
-    )
+    (OUTER_REAL * u + seed_offset, seed_offset)
 }
 
 /// Return the complex constant selected by the newest finite hand point.
@@ -320,12 +326,30 @@ mod tests {
     }
 
     #[test]
-    fn c_walks_a_circle() {
+    fn c_walks_out_along_the_real_axis() {
         let room = Julia::new();
         let (x0, y0) = room.c_for(0.0);
-        let (x1, y1) = room.c_for(0.25);
-        assert!((x0 - 0.7885).abs() < 1e-9 && y0.abs() < 1e-9);
-        assert!(x1.abs() < 1e-9 && (y1 - 0.7885).abs() < 1e-9);
+        let (x1, y1) = room.c_for(0.5);
+        let (x2, y2) = room.c_for(1.0);
+        assert!(x0.abs() < 1e-12 && y0.abs() < 1e-12, "{x0}, {y0}");
+        assert!((x1 - 0.39425).abs() < 1e-12 && y1.abs() < 1e-12, "{x1}, {y1}");
+        assert!((x2 - 0.7885).abs() < 1e-12 && y2.abs() < 1e-12, "{x2}, {y2}");
+        assert!(x0 < x1 && x1 < x2);
+    }
+
+    #[test]
+    fn the_largest_dealt_offset_stays_a_straight_outward_walk() {
+        // Seed 999 is the farthest `(seed % 1000) * 1e-5` shift. It stays a
+        // straight walk, parallel to the catalog tour, by less than 0.01.
+        let room = Julia::new_with(999);
+        let (x0, y0) = room.c_for(0.0);
+        let (x1, y1) = room.c_for(0.5);
+        let (x2, y2) = room.c_for(1.0);
+        assert!((y0 - 0.00999).abs() < 1e-12 && (y1 - y0).abs() < 1e-12);
+        assert!((y2 - y0).abs() < 1e-12);
+        assert!((x0 - y0).abs() < 1e-12);
+        assert!((x2 - x0 - 0.7885).abs() < 1e-12);
+        assert!(x0 < x1 && x1 < x2);
     }
 
     #[test]

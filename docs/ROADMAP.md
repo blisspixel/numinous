@@ -13,9 +13,9 @@ in [history/ROADMAP_LEDGER.md](history/ROADMAP_LEDGER.md).
 
 ## Now
 
-Reviewed 2026-10-25.
+Reviewed 2026-11-08.
 
-**Current release state: 0.5.0-alpha.12, Sensory Alpha active with its exit
+**Current release state: 0.5.0-alpha.13, Sensory Alpha active with its exit
 open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
 agent-and-machine exits are met and stay CI-locked. The package minor names
 the active milestone, not the oldest open gate. Understanding Alpha's external
@@ -54,7 +54,7 @@ with the labels from `RESEARCH.md`.
 | # | Next move | Evidence today | Done when | Owner doc |
 |---|---|---|---|---|
 | 1 | **The Sensory Lift** | Measured: the GPU post stack and direct surface pass their integrated-GPU budgets, and a Windows physical pair passed on the Framework 13 reference at an earlier revision. In progress: the closed set needs all six physical receipts at one frozen revision; the first native macOS attempt was refused because the console session was locked, and the Linux probe is built and awaits a desktop session. Built: room changes through the dark stage, critically damped drag dials and Studio knobs, a transition flash guard, and one shared master chain with reverb, shaped envelopes, independent music, effect, and room levels, a read-only CLI view of saved/default audio settings, and room-change audio washes; audio goldens follow the new articulation. Built: one smooth Mandelbrot color field across CPU and GPU, with the main cardioid and period-two bulb answered in closed form. Built: a shared mark brightness ramp, a validated accent lightness band, and color-free touch responses across the catalog. Built: persisted study body text sizes with source-anchored reflow, and composed headers with bounded titles and separate status. Built: persisted Interface Text at 100, 125, and 150 percent for Cabinet menus, room HUD lettering, and pause, banner, and journey overlays, reduced until titles and controls stay inside the window. Gallery, games, Studio, and in-room pictures keep their own layout scales. Built: the five flagship plates gate a fixed-grid luminance signature beside the exact PNG hash, and their room beds gate a normalized spectral fingerprint from the existing analyzer. Open: further software glow refinement, catalog-wide perceptual comparison, and the designed diff classifier | The six physical receipts close the set, the lift is promoted, and the visual goldens re-baseline once, deliberately, with it | `PERFORMANCE.md`, `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md` |
-| 2 | **Mathematical honesty and photosensitivity** | Built: an exact or dithered iterator for the expanding maps, so no slope-2 map collapses to zero in binary floating point; Coupled Tents, Gauss Map, Ricker, and Pickover redrawn honestly and inside the measured flash budget; the flash sweep measured at the App's 60 frames a second up to its fastest 8x speed. Built: `cellular-automata`, `julia`, and `lambda-map` run no faster than 4x on every advance path, including a fractional speed, reduced motion, and the music visualizer. The player's saved speed is kept. Open: a redraw that measures those three inside the budget at 8x with the visualizer included | Cap at the last certified speed, on every advance path, until the picture itself is inside the budget at 8x with the visualizer included. No room presents a floating-point artifact as dynamics | `MATHEMATICS.md`, decisions entry 2 |
+| 2 | **Mathematical honesty and photosensitivity** | Built: an exact or dithered iterator for the expanding maps, so no slope-2 map collapses to zero in binary floating point; Coupled Tents, Gauss Map, Ricker, and Pickover redrawn honestly and inside the measured flash budget; the flash sweep measured at the App's 60 frames a second up to its fastest 8x speed. Built: the automatic tours of `cellular-automata`, `julia`, and `lambda-map` are inside the measured budget through 8x, pump and phase nudge included. The cellular tour climbs once per cycle, Julia walks `c` out along the real axis, and Lambda walks one way on a horizontal segment. The sweep covers every cellular rotation, every pair of Lambda's dealt shifts, and Julia at its largest dealt offset. The known-over list is empty. The player's saved speed is kept. Open: a hand drag and an output-mix or loopback beat poke are not in that sweep, and GPU frames are not a separate series | The picture itself stays inside the budget at 8x with the visualizer included, on every advance path. No room presents a floating-point artifact as dynamics | `MATHEMATICS.md`, decisions entry 2 |
 | 3 | **The arc** | Built: the three-door threshold in the App and over MCP; the caller-paced Show for minds; an App Show that names each room without printing its reveal unasked; core Show director profiles with seeded, contrast-aware ordering that keeps staged answers unperformed; the Front Hall collection; and The Overture as a core score that minds can play over MCP `watch_show` and in the App from Modes. The App performance uses the score's clock, keeps one bed, steps stills under reduced motion, and hands the Times Tables dial to the player. After that handoff, Modes offers Route Lab as an optional door. The piece does not autoplay. Route Lab nearest-next choices can be watched on the App, CLI, and MCP without changing the player's order | A first visit meets an authored opening rather than catalog order, and the App plays it in the lifted light | `DESIGN.md`, `INSIGHTS.md` |
 | 4 | **Vibe: radio and chill** | Built: the radio's three stations of original tracks on a live broadcast clock, a music visualizer that already quickens The Show with the mix's energy, and per-room tempo and key in the core Show director. Designed: one lean-back mode where a station plays through and the music chooses and paces the rooms, with screensaver manners (`DESIGN.md`, "Vibe: radio and chill") | Numinous can be left on for hours like a radio: the music leads, rooms change on its seams inside the certified flash envelope, no text or prompts appear, and any touch hands the current room back | `DESIGN.md`, `MUSIC.md` |
 | 5 | **Room depth** | Built: Attention and Strange Loop are rebuilt. A packaged round called Attention dull and kept it. A packaged round called Strange Loop worth staying in. Open: the thin-room scorecard and the commissioned cohort. Built: the catalog counts its 245 short doorways | Those two rooms are rebuilt, thin rooms are deepened or cut through the keep-or-cut scorecard, and the commissioned rooms (the Braid, the Calm Axes, the Seventeen Stamps, the Seven Bridges, and Noether's Mirror) lead the next cohort | `ROOMS.md`, `QUALITY.md` |
@@ -157,31 +157,35 @@ other item on this list could be answered and 1.0-am would still wait on this
 one. The paid run has not been authorized or performed. Choosing when to fund
 it is optional; satisfying this evidence gate before claiming 1.0-am is not.
 
-**2. Flashing past WCAG 2.3.1: four chaotic rooms are resolved; three
-rooms flash only at 8x speed: `cellular-automata`, `julia`, `lambda-map`.**
-The first three were resolved 2026-10-02 by fixing the mathematics. `coupled-tent`,
-`gauss-map` and `ricker` redrew a re-seeded chaotic orbit every frame, and two
+**2. Flashing past WCAG 2.3.1 is resolved for the rooms the sweep has
+measured, including `cellular-automata`, `julia`, and `lambda-map`.**
+`coupled-tent`, `gauss-map`, and `ricker` were resolved 2026-10-02 by fixing the mathematics. They
+redrew a re-seeded chaotic orbit every frame, and two
 were drawing floating-point artifacts. Coupled Tents now draws a density cloud
 and reports the exact transverse exponent, which crosses zero at the true
 threshold 1/4; Gauss Map keeps one seed per visit and reveals its legs over
 time; Ricker draws 16 faded legs and a population strip whose light holds
 steady because the long-run mean population is exactly 1. Equations, sources
 and budgets are in `docs/MATHEMATICS.md`. The sweep now measures the App's worst
-case, 60 frames a second at every speed from 1x to the 8x maximum, rather than
+case, 60 frames a second on the doubling ladder from 1x through 8x, rather than
 30 frames at 1x. That found five more rooms over the budget, at 8x only.
 `logistic-orbit` was the same re-seeded-orbit defect and is fixed. Pickover's
 orbit was fitted to its own extrema every frame, magnifying narrow orbits;
 its measured failure differed between builds. It now keeps the map's invariant
 `[-2,2]` projection and passes the same sweep without changing its parameters
 or speed. Its renderer never substitutes unrelated geometry for an orbit.
-The three
-named above stay within the budget at 1x, 2x and 4x; at 8x the App runs 2.4
-cycles a second, and their brightness swings more than once per cycle. The
-ceiling is built: those three rooms run no faster than 4x on every advance
-path, including a fractional speed and reduced motion. The player's saved
-speed is kept. A redraw that puts the pictures inside the budget at 8x, with
-the visualizer included, remains open. Every other room stays
-certified through 8x. Speeds between the doublings (set by the console or
+`cellular-automata`, `julia`, and `lambda-map` were redrawn so the automatic
+picture, not a speed cap, stays inside the budget on that measurement. The
+cellular tour climbs once per cycle from the dimmest notable rule to the
+brightest, and a dealt seed only rotates that staircase. Julia walks `c` out
+along the real axis from the disk to dust. Lambda walks one way on a
+horizontal segment, and a dealt seed stays on the falling side of that
+portrait. Seeds 0 through 34 cover every pair of Lambda's real shift and
+viewport shift. The sweep places all three automatic tours inside the budget
+through 8x, pump and phase nudge included. The known-over list is empty.
+The player's saved speed is kept, and a faster wish now runs. Every room's
+automatic tour stays inside that measurement through 8x. A hand drag, and
+an output-mix or loopback beat poke, are not in the sweep. Speeds between the doublings (set by the console or
 Life's wheel) are held to that certified speed. The music visualizer's pump
 and phase nudge are folded into the sweep at the same ceiling, and the App
 clamps both so they cannot outrun it.
@@ -399,6 +403,14 @@ above without adding release gates or reordering **Next, in order**.
 
 One line per release; the release notes in `../CHANGELOG.md` carry the detail,
 and the owner doc carries the standing description.
+
+- **`v0.5.0-alpha.13` (2026-11-08):** the automatic tours of
+  `cellular-automata`, `julia`, and `lambda-map` are inside the measured
+  flash budget through 8x, and the 4x ceiling is gone. The CLI
+  names Munch boards as the game does, keeps a dumb terminal off the
+  alternate screen, and `numinous rooms` states its count. Sensory Alpha's
+  exit stays open. Understanding's qualifying study stays open.
+  See [release notes](releases/v0.5.0-alpha.13.md).
 
 - **`v0.5.0-alpha.12` (2026-10-25):** The Overture restores full-resolution
   fractals when GPU rendering is available and keeps the visible camera on

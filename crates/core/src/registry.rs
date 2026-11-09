@@ -109,26 +109,19 @@ pub fn room_by_id_with(id: &str, variation: u64) -> Option<Box<dyn Room>> {
 /// rooms to the player from the same list the tests enforce: a count that
 /// lives in prose drifts, a count that lives here cannot.
 ///
-/// The three below were found when the sweep moved to the App's worst case on
-/// 2026-10-02. Each is within budget at 1x, 2x and 4x. At 8x the App runs 2.4
-/// cycles a second, and each picture's whole-frame brightness swings by more
-/// than a tenth more than once per cycle:
+/// The three rooms that used to fail at 8x were redrawn on 2026-11-08.
+/// `cellular-automata` climbs once per cycle from its dimmest notable rule
+/// to its brightest. `julia` walks `c` out along the real axis. `lambda-map`
+/// walks one way along a horizontal segment. Each still changes, and the
+/// sweep certifies all three through 8x with the visualizer included: every
+/// cellular rotation, every pair of Lambda's dealt shifts, and Julia at the
+/// catalog seed and at its largest dealt offset. The list is empty until a room is
+/// measured over the budget again.
 ///
-/// - `cellular-automata` steps through eight rules a cycle, and the rules'
-///   densities differ by up to 0.19 in mean luminance.
-/// - `julia` circles `c` once a cycle; the filled set swells from dust to a
-///   large connected set and back, with a dip on the way up and down.
-/// - `lambda-map` sweeps its parameter along a loop; the escape-time picture's
-///   mean luminance runs between 0.36 and 0.70, down and up twice a cycle.
-///
-/// Fixing them changes each room's tour or speed, which is ROADMAP decision 2.
-/// Until a redraw measures a listed room clean at 8x with the visualizer
-/// included, [`flash_budget_scale`] is the doubling below the recorded speed.
-pub const KNOWN_OVER_FLASH_BUDGET: [(&str, f64); 3] = [
-    ("cellular-automata", 8.0),
-    ("julia", 8.0),
-    ("lambda-map", 8.0),
-];
+/// An entry is the slowest speed that goes over. [`flash_budget_scale`] is
+/// then the doubling below that speed. A room that is not listed is
+/// certified through [`crate::MAX_TIME_SCALE`].
+pub const KNOWN_OVER_FLASH_BUDGET: [(&str, f64); 0] = [];
 
 /// The fastest App time scale the photosensitivity sweep has certified.
 ///
@@ -853,19 +846,15 @@ mod tests {
     }
 
     #[test]
-    fn the_certified_scale_is_the_doubling_below_a_recorded_failure() {
-        for room in ["cellular-automata", "julia", "lambda-map"] {
-            assert_eq!(flash_budget_scale(room), 4.0, "{room}");
-            let line = flash_limit_line(room).expect("listed room");
-            assert!(
-                line.contains("flashes faster than the WCAG budget allows"),
-                "{line}"
-            );
-            assert!(line.contains("at 8x speed or faster"), "{line}");
-            assert!(line.contains("no faster than 4x"), "{line}");
+    fn the_redrawn_rooms_are_certified_through_the_maximum() {
+        assert!(
+            KNOWN_OVER_FLASH_BUDGET.is_empty(),
+            "a room over the budget has to be named, not left as a surprise: {KNOWN_OVER_FLASH_BUDGET:?}"
+        );
+        for room in ["cellular-automata", "julia", "lambda-map", "mandelbrot"] {
+            assert_eq!(flash_budget_scale(room), crate::MAX_TIME_SCALE, "{room}");
+            assert!(flash_limit_line(room).is_none(), "{room}");
         }
-        assert_eq!(flash_budget_scale("mandelbrot"), crate::MAX_TIME_SCALE);
-        assert!(flash_limit_line("mandelbrot").is_none());
         assert_eq!(flash_budget_scale("not-a-room"), crate::MAX_TIME_SCALE);
     }
 
@@ -874,9 +863,9 @@ mod tests {
         let cycle = (crate::APP_FRAMES_PER_SECOND / crate::ROOM_CYCLES_PER_SECOND).round() as usize;
         let elapsed = 1.0 / crate::APP_FRAMES_PER_SECOND;
         for (room, ceiling) in [
-            ("julia", 4.0),
-            ("cellular-automata", 4.0),
-            ("lambda-map", 4.0),
+            ("julia", crate::MAX_TIME_SCALE),
+            ("cellular-automata", crate::MAX_TIME_SCALE),
+            ("lambda-map", crate::MAX_TIME_SCALE),
             ("mandelbrot", crate::MAX_TIME_SCALE),
         ] {
             assert_eq!(envelope_index_step(room, cycle), ceiling as usize, "{room}");
@@ -1086,6 +1075,73 @@ mod tests {
             sweep.swing > 0.01,
             "the orbit did not change during the sweep"
         );
+    }
+
+    /// Coarse samples, so a failure says how the brightness moved.
+    fn luminance_samples(room: &dyn Room) -> String {
+        use crate::photosensitivity::frame_luminance;
+        const REFERENCE: (usize, usize) = (240, 140);
+        let cycle = (crate::APP_FRAMES_PER_SECOND / crate::ROOM_CYCLES_PER_SECOND).round() as usize;
+        let step = (cycle / 16).max(1);
+        let mut samples = Vec::new();
+        for frame in (0..cycle).step_by(step) {
+            let mut raster =
+                crate::raster::Raster::with_accent(REFERENCE.0, REFERENCE.1, room.meta().accent);
+            room.render(&mut raster, frame as f64 / cycle as f64);
+            samples.push(format!("{:.3}", frame_luminance(&raster.to_rgba())));
+        }
+        samples.join(" ")
+    }
+
+    #[test]
+    fn the_redrawn_tours_stay_inside_the_flash_budget_at_eight_x() {
+        // These three were the last rooms over the budget, and only at 8x.
+        // Each automatic tour now turns its whole-frame brightness at most
+        // once per cycle, which at 2.4 cycles a second is under three flashes.
+        // Entering a room deals a seed, and the cap is per room, not per seed.
+        // Cellular rotations are the seven nonzero offsets plus the catalog
+        // order. Lambda's real shift is `seed % 5` and its viewport shift is
+        // `seed % 7`. Seeds 0 through 34 are every pair of those two. Julia's
+        // dealt offset is `(seed % 1000) * 1e-5`, so 999 is the farthest
+        // parallel walk.
+        let speeds = [1usize, 2, 4, 8];
+        let mut cases = Vec::new();
+        for seed in 0..8 {
+            cases.push((
+                format!("cellular-automata/{seed}"),
+                room_by_id_with("cellular-automata", seed).expect("cellular"),
+            ));
+        }
+        for seed in [0u64, 7, 999] {
+            cases.push((
+                format!("julia/{seed}"),
+                room_by_id_with("julia", seed).expect("julia"),
+            ));
+        }
+        for seed in 0..35 {
+            cases.push((
+                format!("lambda-map/{seed}"),
+                room_by_id_with("lambda-map", seed).expect("lambda"),
+            ));
+        }
+        for (label, room) in &cases {
+            let sweep = sweep_room(room.as_ref(), &speeds);
+            assert!(
+                sweep.over.is_none(),
+                "{label} general flashes {:?}; samples {}",
+                sweep.over,
+                luminance_samples(room.as_ref())
+            );
+            assert!(
+                sweep.red_over.is_none(),
+                "{label} red flashes {:?}",
+                sweep.red_over
+            );
+            assert!(
+                sweep.swing > 0.01,
+                "{label} did not change during the sweep"
+            );
+        }
     }
 
     #[test]

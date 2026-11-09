@@ -214,11 +214,10 @@ also carries the MCP workflow offline.
 
 ## Motion, sound, and flashing
 
-**Known flash limit:** `cellular-automata`, `julia`, and `lambda-map` exceed
-the measured WCAG 2.3.1 flash budget at 8x. They stay within it at 1x, 2x,
-and 4x, and the App runs them no faster than 4x. Every other room is certified
-through 8x. The music visualizer's pump and phase nudge stay inside that
-certified speed. `numinous access` reports the current limits and active switches.
+**Flashing:** No catalog room is known to flash faster than the WCAG 2.3.1
+budget at any App speed up to 8x. The music visualizer's pump and phase nudge
+stay inside that certified speed. `numinous access` reports the measurement
+and the active switches.
 
 | Environment variable | Effect when nonempty |
 |---|---|
