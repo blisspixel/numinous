@@ -541,6 +541,32 @@ common absolute magnification across separate creations, certify a continuous
 curve from finite samples, or make the audio map invertible. Ordinary
 `y=f(x)` graph autoscaling remains a separate presentation contract.
 
+## Elliptical billiards
+
+Elliptical Billiard and Whispering Table trace specular reflections on
+`x^2 + y^2/b^2 = 1`. For a point `p` on the rim, inward unit direction
+`v`, and `Q = diag(1, 1/b^2)`, one root of the ray intersection is zero.
+The next hit is `h = p + s*v`, where `s = -2(p.Qv)/(v.Qv)`. Reflect the
+direction across the tangent using the normal `Qh`. This avoids a step
+through the wall or an offset that makes the ray hit its starting point.
+
+For the unit normal `m = (-vy, vx)` to a flight line, its confocal parameter
+is `lambda = mx^2 + b^2*my^2 - (m.p)^2`. It stays constant during one
+launch. Below `b^2` the lines touch an inner ellipse. Above it they touch
+a hyperbola on the nondegenerate launches available in the room. At the
+focal boundary the ray through one focus reflects toward the other.
+
+Elliptical Billiard maps the parameter to the frequency ratio
+`2^(lambda - b^2)`. Unison marks the focal boundary. This is a sonification
+chosen for the room. From the top of the default table (`b = 0.65`), a
+launch 30 degrees from the tangent gives `lambda = 0.25`. At 45 degrees
+it gives `0.5`. Regressions check those readings, repeated wall hits,
+focus-to-focus reflection, and a return to the same picture and voice.
+The room illustrates the classical ellipse example discussed in the
+[manuscript introduction](https://github.com/openai/math/blob/fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb/preprints/Rigidity-of-Smooth-Billiards-with-a-Continuous-Caustic-Collar-September-24-2026/build/sections/01-introduction.tex).
+The manuscript's converse about a continuous family of caustics lies beyond
+a finite trajectory.
+
 ## Study depth and numerical readouts
 
 The authored Lissajous treatment in `crates/core/src/study/lissajous.rs` is
@@ -577,15 +603,16 @@ constitute independent scholarly review of the entire treatment.
 Other rooms retain their existing explanation and notes until a comparable
 Mathematics treatment is authored.
 
-Six rooms now expose finite, room-scoped numerical channels through
-`NumericReadout`: Times Tables, Lissajous, Gray-Scott, Standing Wave, Bayes
-Update, and Smith Chart. Grading uses channel identity rather than an English
+Times Tables, Lissajous, Gray-Scott, Standing Wave, Bayes Update, and Smith
+Chart expose their existing measurements through `NumericReadout`. Grading uses channel identity rather than an English
 label's position. Their existing decimal quantization, sampled challenge
 ranges, seeds, tolerances, and scores are retained, including Standing Wave's
 half-percent rounding. A missing or duplicate channel refuses instead of
 silently selecting another number. A challenge also checks its room identity.
-The compatibility parser remains for other rooms; [Rosetta](ROSETTA.md) owns
-that migration boundary.
+Route Lab supplies cost channels. Elliptical Billiard gives its confocal
+parameter a fresh channel ID so an old launch-angle index cannot be graded
+as a caustic. Other rooms can use the status-text compatibility parser.
+[Rosetta](ROSETTA.md) owns that migration boundary.
 
 ## Route Lab: exact finite street costs
 

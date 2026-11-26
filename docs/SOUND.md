@@ -78,7 +78,7 @@ after the mixer mutex is released.
 These bounds and synchronization checks do not establish native callback timing
 or perceptual smoothness.
 
-Times Tables, Galton Board, and Double Pendulum ship continuous
+Times Tables, Galton Board, Double Pendulum, and Elliptical Billiard ship continuous
 input-sonification through one bounded seam. Their stable room arrangements
 remain the bed while a quiet
 two-oscillator voice follows accepted mathematical input. Frequency and ratio
@@ -94,7 +94,10 @@ state for pixels, status, and sound: first-arm drop selects an ordered
 minor-pentatonic root, second-arm bend opens a symmetric interval from 1:1 to
 3:2, and bounded release speed raises quiet gain from 0.03 toward 0.05. A
 completed fling also voices the future separation of the same two integrated
-states as one bounded stereo event, described below.
+states as one bounded stereo event, described below. Elliptical Billiard
+sounds the launch against a fixed pitch. The second oscillator moves below
+it for an elliptical caustic and above it for a hyperbolic one. Aim through
+a focus to bring the pitches together. [Billiard geometry and frequency ratio](MATHEMATICS.md#elliptical-billiards).
 CLI `sonify --layer room-bed` separately exports a deterministic PCM16
 projection of the stable 16 kHz stereo App source, while MCP
 `listen_room.ambient_bed` exposes its arrangement summary
@@ -295,8 +298,8 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 
 ## Interaction & UI sound
 
-- **Touch has a voice, partially built.** Times Tables, Galton Board, and Double
-  Pendulum ship persistent input-audio paths through the smoothed parameter
+- **Touch has a voice, partially built.** Times Tables, Galton Board, Double
+  Pendulum, and Elliptical Billiard ship persistent input-audio paths through the smoothed parameter
   voice. Life ships one bounded generation-event texture with an exact
   tracked-glider phase accent, and Galton ships one bounded all-ball wave
   texture with an exact newest-ball peg sequence. Tuned event layers and

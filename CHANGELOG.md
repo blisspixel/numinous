@@ -5,6 +5,13 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Fixed
+- Elliptical Billiard draws the ray across the table after each reflection.
+  Dragging the launch changes the hidden curve and its pitch. The pitches
+  meet when the ray goes through a focus. Whispering Table uses the same
+  rim intersection so its path can follow one caustic through successive
+  bounces.
+
 ### Changed
 - The README opens with The Overture, the Times Tables dial, and Studio.
   The MCP entrance and installation instructions follow those first moves. PLAY.md adds a rhythm two players

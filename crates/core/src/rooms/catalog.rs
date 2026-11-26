@@ -1779,7 +1779,7 @@ macro_rules! catalog_rooms {
                 id: "elliptical-billiard",
                 title: "Elliptical Billiard",
                 wing: "Shape & Space",
-                blurb: "Bounces in an ellipse; caustics and foci.",
+                blurb: "Aim a straight shot across the table. Can you draw a curve with nothing but its bounces?",
                 accent: [40, 140, 180],
             }
         ),
@@ -4271,8 +4271,9 @@ mod tests {
     // Route Lab's doorway still invites the delivery order. Attention's
     // doorway invites the temperature hand and a placed key. Strange Loop's
     // doorway invites the zoom into the frame. Julia's doorway says t walks
-    // c out along the real axis. Order is unchanged.
-    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0xf9aa_0a43_eaaa_afaf;
+    // c out along the real axis. Elliptical Billiard invites a curve drawn
+    // by bouncing straight shots. Order is unchanged.
+    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x11aa_29af_2d33_1c20;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {
@@ -4342,7 +4343,7 @@ mod tests {
     /// none, which is how a number goes stale while everyone repeats it.
     /// Shrink-only: rewriting a doorway must lower it, and nothing may raise
     /// it.
-    const SHORT_DOORWAYS: usize = 245;
+    const SHORT_DOORWAYS: usize = 244;
 
     #[test]
     fn the_short_doorway_count_is_measured_rather_than_quoted() {

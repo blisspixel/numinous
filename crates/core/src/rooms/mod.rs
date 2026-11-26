@@ -7,6 +7,7 @@ pub const FRACTAL_MAX_ITER: u32 = 160;
 
 #[macro_use]
 mod catalog;
+mod ellipse_orbit;
 mod phase_plane;
 
 /// Admit the gallery phase used to select a finite room experiment.

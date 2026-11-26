@@ -137,6 +137,20 @@ Mathematics treatments are currently authored for `lissajous`, `times-tables`,
 also offers a `construction` door into Returning home. Read the
 [study guide](https://github.com/blisspixel/numinous/blob/main/docs/STUDY.md) for depths and language selection.
 
+### Draw an oval with straight lines
+
+In **Elliptical Billiard**, drag horizontally to move the launch around the
+rim. Drag vertically to aim. Find a hollow oval, then squeeze it until the
+chords pass between the two marked foci. Listen for the point where the two
+pitches meet. Can you find your first oval again?
+
+To try the same shot on the default table, run
+`numinous render elliptical-billiard --poke 0.25,0.20`. Over MCP, call
+`play_room` with `{"id":"elliptical-billiard","pokes":[[0.25,0.20]]}`.
+Try `[0.25,0.50]` for the second shot. Use the same arguments with
+`listen_room` to compare the pitches. The status names the hidden curve
+and gives its confocal parameter, `lambda`.
+
 ### Leave a rhythm for someone else
 
 Open `three-against-five` in Studio, or call MCP `open_creation` with

@@ -1,148 +1,15 @@
-//! Elliptical billiard: caustics and string construction.
-//!
-//! Trajectories in an ellipse with conserved product of angular momenta.
-//! DRAG: SET THE LAUNCH. See `docs/ROOMS.md`.
+//! Aim a ray inside an ellipse and trace its confocal caustic.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
+use std::f64::consts::{FRAC_PI_2, TAU};
+
+use super::ellipse_orbit::{Ellipse, Ray};
+use super::{latest_hand, phase_unit};
+use crate::room::{Room, RoomInput, pokes_from_inputs};
 use crate::surface::Surface;
+use crate::{DisplayNumber, NumericReadout, ParametricSound, ReadoutId, SoundSpec};
 
-const BOUNCES: usize = 80;
-
-fn phase_unit(t: f64) -> f64 {
-    if t.is_finite() {
-        t.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
-}
-
-fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
-    let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
-    pokes[start..]
-        .iter()
-        .copied()
-        .filter(|&(x, y)| x.is_finite() && y.is_finite())
-        .map(|(x, y)| (x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
-        .collect()
-}
-
-fn launch(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64) {
-    // Start angle on the ellipse and direction angle.
-    let s = if seed == 0 {
-        0.0
-    } else {
-        (seed % 9) as f64 * 0.05
-    };
-    if let Some((x, y)) = hand {
-        (x * std::f64::consts::TAU + s, y * std::f64::consts::PI)
-    } else {
-        let u = phase_unit(t);
-        (u * std::f64::consts::TAU + s, 0.4 + u * 0.8)
-    }
-}
-
-fn ellipse_point(a: f64, b: f64, phi: f64) -> (f64, f64) {
-    (a * phi.cos(), b * phi.sin())
-}
-
-fn normal(a: f64, b: f64, x: f64, y: f64) -> (f64, f64) {
-    // Gradient of x^2/a^2 + y^2/b^2 - 1.
-    let mut nx = 2.0 * x / (a * a);
-    let mut ny = 2.0 * y / (b * b);
-    let n = (nx * nx + ny * ny).sqrt().max(1e-9);
-    nx /= n;
-    ny /= n;
-    (nx, ny)
-}
-
-fn reflect(dx: f64, dy: f64, nx: f64, ny: f64) -> (f64, f64) {
-    let dot = dx * nx + dy * ny;
-    (dx - 2.0 * dot * nx, dy - 2.0 * dot * ny)
-}
-
-fn next_hit(a: f64, b: f64, x: f64, y: f64, dx: f64, dy: f64) -> (f64, f64, f64, f64) {
-    // Ray (x,y)+t(dx,dy) hits ellipse; take smallest t>eps.
-    // (x+t dx)^2/a^2 + (y+t dy)^2/b^2 = 1
-    let aa = a * a;
-    let bb = b * b;
-    let a_coef = (dx * dx) / aa + (dy * dy) / bb;
-    let b_coef = 2.0 * (x * dx / aa + y * dy / bb);
-    let c_coef = (x * x) / aa + (y * y) / bb - 1.0;
-    let disc = (b_coef * b_coef - 4.0 * a_coef * c_coef).max(0.0);
-    let sqrt_d = disc.sqrt();
-    let t1 = (-b_coef - sqrt_d) / (2.0 * a_coef);
-    let t2 = (-b_coef + sqrt_d) / (2.0 * a_coef);
-    let t = if t1 > 1e-6 {
-        t1
-    } else if t2 > 1e-6 {
-        t2
-    } else {
-        t2.max(t1).max(1e-3)
-    };
-    let hx = x + t * dx;
-    let hy = y + t * dy;
-    let (nx, ny) = normal(a, b, hx, hy);
-    let (rdx, rdy) = reflect(dx, dy, nx, ny);
-    let norm = (rdx * rdx + rdy * rdy).sqrt().max(1e-9);
-    (hx, hy, rdx / norm, rdy / norm)
-}
-
-fn draw(canvas: &mut dyn Surface, phi0: f64, dir: f64, seed: u64) {
-    let (width, height) = canvas.draw_bounds();
-    if width == 0 || height == 0 {
-        return;
-    }
-    let a = 1.0;
-    let b = 0.65
-        + if seed == 0 {
-            0.0
-        } else {
-            (seed % 5) as f64 * 0.02
-        };
-    // Draw ellipse.
-    let mut prev: Option<(i32, i32)> = None;
-    for i in 0..=128 {
-        let phi = std::f64::consts::TAU * i as f64 / 128.0;
-        let (x, y) = ellipse_point(a, b, phi);
-        let px = ((0.5 + 0.42 * x) * width.saturating_sub(1) as f64).round() as i32;
-        let py = ((0.5 - 0.42 * y) * height.saturating_sub(1) as f64).round() as i32;
-        if let Some(o) = prev {
-            canvas.line(o.0, o.1, px, py, '.');
-        }
-        prev = Some((px, py));
-    }
-    // Foci.
-    let c = (a * a - b * b).max(0.0).sqrt();
-    for &fx in &[-c, c] {
-        let px = ((0.5 + 0.42 * fx) * width.saturating_sub(1) as f64).round() as i32;
-        let py = (0.5 * height.saturating_sub(1) as f64).round() as i32;
-        canvas.plot(px, py, '+');
-    }
-    // Trajectory.
-    let (mut x, mut y) = ellipse_point(a, b, phi0);
-    let mut dx = dir.cos();
-    let mut dy = dir.sin();
-    // Nudge inward.
-    let (nx, ny) = normal(a, b, x, y);
-    x -= nx * 0.01;
-    y -= ny * 0.01;
-    let mut last = (
-        ((0.5 + 0.42 * x) * width.saturating_sub(1) as f64).round() as i32,
-        ((0.5 - 0.42 * y) * height.saturating_sub(1) as f64).round() as i32,
-    );
-    for i in 0..BOUNCES {
-        let (hx, hy, rdx, rdy) = next_hit(a, b, x, y, dx, dy);
-        let px = ((0.5 + 0.42 * hx) * width.saturating_sub(1) as f64).round() as i32;
-        let py = ((0.5 - 0.42 * hy) * height.saturating_sub(1) as f64).round() as i32;
-        let ch = if i % 5 == 0 { '#' } else { '*' };
-        canvas.line(last.0, last.1, px, py, ch);
-        last = (px, py);
-        x = hx - rdx * 1e-4;
-        y = hy - rdy * 1e-4;
-        dx = rdx;
-        dy = rdy;
-    }
-}
+const BOUNCES: usize = 48;
+const ROOT_HZ: f32 = 207.65;
 
 /// Elliptical billiard room.
 #[derive(Debug, Default)]
@@ -161,13 +28,94 @@ impl EllipticalBilliard {
     pub fn new_with(seed: u64) -> Self {
         Self { seed }
     }
+
+    fn table(&self) -> Ellipse {
+        Ellipse {
+            minor: 0.65 + (self.seed % 5) as f64 * 0.02,
+        }
+    }
+
+    fn launch(&self, t: f64, hand: Option<(f64, f64)>) -> Ray {
+        // The hand selects a place on the rim and an angle from its tangent.
+        // Keep the shallowest launch inside the table. The tour returns to
+        // its opening angle without a jump when the phase wraps.
+        let (rim, degrees) = match hand {
+            Some((x, y)) => (x * TAU, 15.0 + 60.0 * y),
+            None => (FRAC_PI_2, 32.0 - 12.0 * (TAU * phase_unit(t)).cos()),
+        };
+        let rim = rim + (self.seed % 9) as f64 * 0.05;
+        self.table().launch(rim, FRAC_PI_2 - degrees.to_radians())
+    }
+
+    fn draw(&self, canvas: &mut dyn Surface, mut ray: Ray) {
+        let table = self.table();
+        let b = table.minor;
+        let Some(plate) = table.draw_rim(canvas, '.') else {
+            return;
+        };
+
+        // Later flights supply the envelope. Draw the launch over them so a
+        // player can pick out the ray they aimed even on a small text canvas.
+        let start = plate.point(ray.point.0, ray.point.1);
+        let first_hit = table.bounce(ray);
+        let first = plate.point(first_hit.point.0, first_hit.point.1);
+        ray = first_hit;
+        let mut previous = first;
+        for index in 1..BOUNCES {
+            ray = table.bounce(ray);
+            let next = plate.point(ray.point.0, ray.point.1);
+            let ink = if index < 4 { '*' } else { '+' };
+            canvas.line(previous.0, previous.1, next.0, next.1, ink);
+            previous = next;
+        }
+        canvas.line(start.0, start.1, first.0, first.1, '*');
+        canvas.plot(start.0, start.1, '#');
+        let focus = (1.0 - b * b).sqrt();
+        for x in [-focus, focus] {
+            let (px, py) = plate.point(x, 0.0);
+            let (left, _) = plate.point(x - 0.022, 0.0);
+            let (right, _) = plate.point(x + 0.022, 0.0);
+            let (_, top) = plate.point(x, 0.022);
+            let (_, bottom) = plate.point(x, -0.022);
+            canvas.line(left, py, right, py, 'o');
+            canvas.line(px, top, px, bottom, 'o');
+        }
+    }
+
+    fn displayed_parameter(lambda: f64) -> DisplayNumber {
+        DisplayNumber::fixed(lambda, 4).expect("the bounded launch has a finite caustic")
+    }
+
+    fn voice(&self, ray: Ray) -> ParametricSound {
+        let table = self.table();
+        // One octave per squared table unit. At the focal boundary the two
+        // pitches coincide. Crossing the boundary reverses their order.
+        let octaves = table.caustic_parameter(ray) - table.minor.powi(2);
+        ParametricSound::new(ROOT_HZ, octaves.exp2() as f32, 0.04)
+            .expect("a finite billiard launch stays within one octave")
+    }
+
+    fn reading(&self, ray: Ray) -> String {
+        let table = self.table();
+        let lambda = table.caustic_parameter(ray);
+        let boundary = table.minor.powi(2);
+        let family = if (lambda - boundary).abs() < 1e-12 {
+            "through a focus"
+        } else if lambda < boundary {
+            "ellipse"
+        } else {
+            "hyperbola"
+        };
+        format!(
+            "{family}  lambda={}  DRAG TO AIM",
+            Self::displayed_parameter(lambda)
+        )
+    }
 }
 
 impl Room for EllipticalBilliard {
-
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let (phi, dir) = launch(t, None, self.seed);
-        draw(canvas, phi, dir, self.seed);
+        self.draw(canvas, self.launch(t, None));
     }
 
     fn postcard_t(&self) -> f64 {
@@ -177,7 +125,7 @@ impl Room for EllipticalBilliard {
     fn motif(&self) -> Option<crate::motifs::Motif> {
         Some(crate::motifs::Motif {
             key: "ellipse billiard",
-            root: 207.65,
+            root: ROOT_HZ,
             tempo: 88,
             line: &[0, 5, 7, 12, 7, 5, 0, 9],
             encodes: "conserved caustic of an elliptical table",
@@ -189,41 +137,40 @@ impl Room for EllipticalBilliard {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let (phi, dir) = launch(t, None, self.seed);
-        Some(format!(
-            "phi={:.2}  dir={:.2}  DRAG",
-            phi % std::f64::consts::TAU,
-            dir
-        ))
+        Some(self.reading(self.launch(t, None)))
+    }
+
+    fn numeric_readouts(&self, t: f64) -> Option<Vec<NumericReadout>> {
+        // The old status used channels 0 and 1 for launch angles.
+        let lambda = self.table().caustic_parameter(self.launch(t, None));
+        Some(vec![
+            Self::displayed_parameter(lambda).readout(ReadoutId::new(2), "LAMBDA"),
+        ])
+    }
+
+    fn parameter_sound(&self, t: f64, inputs: &[RoomInput]) -> Option<ParametricSound> {
+        let hand = latest_hand(&pokes_from_inputs(inputs));
+        Some(self.voice(self.launch(t, hand)))
+    }
+
+    fn sound(&self, t: f64) -> SoundSpec {
+        self.voice(self.launch(t, None)).snapshot()
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
-        let hands = finite_pokes(pokes);
-        let (phi, dir) = launch(t, hands.last().copied(), self.seed);
-        draw(canvas, phi, dir, self.seed ^ hands.len() as u64);
+        self.draw(canvas, self.launch(t, latest_hand(pokes)));
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let pokes = crate::pokes_from_inputs(inputs);
-        let hands = finite_pokes(&pokes);
-        if hands.is_empty() {
-            return self.status(t);
-        }
-        let (phi, dir) = launch(t, hands.last().copied(), self.seed);
-        let a = 1.5_f64;
-        let b = 1.0_f64;
-        // String construction caustic: confocal ellipse/hyperbola parameter.
-        // Eccentricity of table e = sqrt(1 - (b/a)^2).
-        let ecc = (1.0 - (b / a) * (b / a)).sqrt();
-        let deg =
-            (phi.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU * 360.0).floor() as i32;
-        Some(format!("phi={deg}deg  dir={dir:.2}  e={ecc:.2}"))
+        let hand = latest_hand(&pokes_from_inputs(inputs));
+        Some(self.reading(self.launch(t, hand)))
     }
 
     fn reveal(&self) -> &'static str {
-        "In an elliptical billiard every trajectory that crosses between the \
-         foci forever encloses them as a caustic; trajectories outside stay \
-         outside. The string construction of the ellipse is the same geometry."
+        "Every bounce keeps the same hidden curve. When the ray misses the gap \
+         between the foci, its chords skim an ellipse. When it crosses the gap, \
+         their lines touch a hyperbola. Aim through one focus and the next bounce \
+         sends the ray through the other."
     }
 }
 
@@ -262,6 +209,68 @@ mod tests {
         let mut c = Canvas::new(40, 28);
         EllipticalBilliard::new().render(&mut c, 0.5);
         assert!(c.ink_count() > 20);
+    }
+
+    #[test]
+    fn prediction_reads_the_displayed_caustic_on_its_own_channel() {
+        let room = EllipticalBilliard::new_with(4);
+        for t in [0.0, 0.25, 0.5] {
+            let channels = room.numeric_readouts(t).unwrap();
+            let [lambda] = channels.as_slice() else {
+                panic!("expected a single caustic reading");
+            };
+            assert_eq!(lambda.id().get(), 2);
+            assert!(
+                room.status(t)
+                    .unwrap()
+                    .contains(&format!("lambda={:.4}", lambda.value()))
+            );
+        }
+    }
+
+    #[test]
+    fn moving_the_hand_out_and_back_restores_the_curve_and_voice() {
+        let room = EllipticalBilliard::new();
+        let oval = (0.25, 0.25); // Top of the table, 30 degrees from the tangent.
+        let arms = (0.25, 0.5);
+        let focal_y = (0.65_f64.asin().to_degrees() - 15.0) / 60.0;
+        let mut pictures = Vec::new();
+        for (hand, family, lambda, order) in [
+            (oval, "ellipse", "0.2500", std::cmp::Ordering::Less),
+            (
+                (0.25, focal_y),
+                "through a focus",
+                "0.4225",
+                std::cmp::Ordering::Equal,
+            ),
+            (arms, "hyperbola", "0.5000", std::cmp::Ordering::Greater),
+        ] {
+            let inputs = crate::inputs_from_pokes(&[hand], 0.0);
+            let reading = room.status_input(0.0, &inputs).unwrap();
+            assert!(
+                reading.starts_with(family) && reading.contains(lambda),
+                "{reading}"
+            );
+            assert_eq!(
+                room.parameter_sound(0.0, &inputs)
+                    .unwrap()
+                    .ratio()
+                    .total_cmp(&1.0),
+                order
+            );
+            let mut picture = Canvas::new(80, 40);
+            room.render_poked(&mut picture, 0.0, &[hand]);
+            pictures.push(picture.to_text());
+        }
+        assert_ne!(pictures[0], pictures[2]);
+        let history = [oval, arms, oval];
+        let mut restored = Canvas::new(80, 40);
+        room.render_poked(&mut restored, 0.7, &history);
+        assert_eq!(restored.to_text(), pictures[0]);
+        assert_eq!(
+            room.sound_input(0.7, &crate::inputs_from_pokes(&history, 0.7)),
+            room.sound_input(0.0, &crate::inputs_from_pokes(&[oval], 0.0))
+        );
     }
 
     #[test]
