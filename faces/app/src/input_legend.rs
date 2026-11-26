@@ -393,6 +393,7 @@ impl InputMode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MenuChoice {
+    Sunflower,
     Quiz,
     Munch,
     Nim,

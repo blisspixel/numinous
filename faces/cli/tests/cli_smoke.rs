@@ -1391,3 +1391,68 @@ fn public_project_resume_of_an_empty_chain_fails_without_creating_files() {
     );
     std::fs::remove_dir_all(root).expect("fixture cleanup");
 }
+
+#[test]
+fn sunflower_reopens_a_board_and_compares_three_strings() {
+    let fixture = ProjectCliFixture::new("sunflower");
+    let entrance = fixture.run(&["play", "sunflower"]);
+    assert!(entrance.status.success());
+    assert!(
+        String::from_utf8(entrance.stdout)
+            .unwrap()
+            .contains("board 0000")
+    );
+    let opening = fixture.json(&[
+        "sunflower",
+        "--toggle",
+        "1-2",
+        "--toggle",
+        "1-3",
+        "--toggle",
+        "2-3",
+        "--inspect",
+        "1-2,1-3,2-3",
+        "--json",
+    ]);
+    assert_eq!(opening["board"], "0023");
+    assert_eq!(
+        opening["inspection"]["intersections"],
+        serde_json::json!([[1], [2], [3]])
+    );
+    assert!(opening["inspection"]["core"].is_null());
+    assert!(opening.get("explanation").is_none());
+    let replay = fixture.json(&[
+        "sunflower",
+        "--board",
+        "0023",
+        "--inspect",
+        "1-2,1-3,2-3",
+        "--json",
+    ]);
+    assert_eq!(replay, opening);
+    let changed = fixture.run(&[
+        "sunflower",
+        "--board",
+        "0023",
+        "--toggle",
+        "3-1",
+        "--challenge",
+    ]);
+    assert!(changed.status.success());
+    let text = String::from_utf8(changed.stdout).unwrap();
+    assert!(text.contains("1-2  2-3"));
+    assert!(text.contains(numinous_core::party::sunflower::CHALLENGE));
+    for args in [
+        vec!["--board", "000x"],
+        vec!["--toggle", "0-6"],
+        vec!["--toggle", "6-6"],
+        vec!["--toggle", "1+2"],
+        vec!["--inspect", "1-2,1-3"],
+        vec!["--inspect", "1-2,1-3,2-3,2-4"],
+        vec!["--board", "0023", "--inspect", "1-2,2-1,1-3"],
+    ] {
+        let mut command = fixture.command(&["sunflower"]);
+        assert!(!command.args(args).output().unwrap().status.success());
+    }
+    assert!(std::fs::read_dir(&fixture.root).unwrap().next().is_none());
+}

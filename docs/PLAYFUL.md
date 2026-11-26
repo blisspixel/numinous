@@ -234,11 +234,34 @@ and share a "room" without shipping a binary.
 - **The Show.** Lean back and let the collection play itself. It is a
   presentation mode, not performance or soak evidence.
 
+### Sunflower Strings
+
+Open **Games > Sunflower Strings** in the App. Pick two guests to stretch a
+string between them. Pick the same two to take it away. Watch which strings
+light together and try to predict whether the next one will make a flower.
+A flower uses three strings. Each pair shares the same set of guests.
+Choose **Test**, then pick the two guests on each of three drawn strings.
+Read the shared guest, or none, for each pair. The strings carry one, two
+and three crossbars in pick order. A triangle makes a good first guess.
+
+The **Goal** control asks how many strings you can keep without a flower.
+**Why** opens the finite argument whenever you want to read it. All moves
+remain available. Pass the board code to a friend before comparing ideas.
+With a keyboard, choose **Load**, type their code and press Enter to reopen the same strings.
+The corner of the board shows the new code after every edit. CLI and MCP use
+the same code. [Packaged controls and entry points](../PLAY.md)
+
+The model uses distinct two-element sets on a fixed ground set. It takes the
+definition of a sunflower, including an empty common intersection, from the
+[introduction to the manuscript](https://github.com/openai/math/blob/3344da59991ed94f9ba711217b29c1d760badfa6/preprints/An-exponential-bound-for-sunflowers-November-24-2026/build/intro.tex#L2-L17).
+The core checks every board against an independent degree and matching test.
+The manuscript's result for arbitrary set families has a different scope.
+
 ## How the faces host the fun
 
 - **CLI:** the full command catalog includes quiz, Munch, Munch Arcade, Nim,
   Hackenbush, Party, Fifteen, the Gauntlet, and other seeded games.
-- **App:** quiz, Munch, Munch Arcade, Nim, and the Gauntlet run in the window;
+- **App:** quiz, Munch, Munch Arcade, Nim, Sunflower Strings, and the Gauntlet run in the window;
   `E` or Inspect opens unrestricted [study](STUDY.md). The optional staged
   experiment uses U to enter and Enter for an earned connection. Pointer
   coverage and game feel still need depth.

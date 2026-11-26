@@ -5,7 +5,14 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 
 ## [Unreleased]
 
+### Added
+- Sunflower Strings opens a reversible drawing game on the six-guest Party
+  board. Compare pairs of strings, try the optional challenge, and pass the
+  board code between the App, CLI and MCP.
+
 ### Fixed
+- Ramsey Party accepts the displayed red and blue spellings and explains an
+  unknown color, an out-of-range guest, a self-pair or an already-shaded edge.
 - The Vector beam now rises smoothly from black. The catalog flash sweep
   checks every sampled starting frame in every visual era. Clifford and De
   Jong use fixed mathematical axes so a small orbit keeps its size. The

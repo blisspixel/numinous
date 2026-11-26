@@ -107,54 +107,101 @@ pub(super) fn hackenbush_tool(args: &Value) -> Value {
     )
 }
 
-/// The `party` tool.
-pub(super) fn party_tool(args: &Value) -> Value {
-    use numinous_core::party::{Party, Shade};
-    let guests = args.get("guests").and_then(Value::as_u64).unwrap_or(5) as usize;
+fn sunflower_response(request: &Value) -> Result<(String, Value), String> {
+    let toggle: Vec<[u8; 2]> = request
+        .get("toggle")
+        .map(|value| serde_json::from_value(value.clone()))
+        .transpose()
+        .map_err(|_| "Each toggle needs two guest numbers.")?
+        .unwrap_or_default();
+    let inspect = request
+        .get("inspect")
+        .map(|value| serde_json::from_value(value.clone()))
+        .transpose()
+        .map_err(|_| "Choose three strings to inspect, each with two guest numbers.")?;
+    crate::sunflower_report::report(
+        request.get("board").and_then(Value::as_str),
+        &toggle,
+        inspect,
+        request
+            .get("challenge")
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
+        request
+            .get("reveal")
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
+    )
+}
+
+/// Replay the guest's printed moves and retain the first terminal board.
+pub(super) fn ramsey_board(args: &Value) -> Result<numinous_core::party::Party, String> {
+    let guests = args.get("guests").and_then(Value::as_u64).unwrap_or(5);
     if !(4..=6).contains(&guests) {
-        return tool_error("Parties run 4 to 6 guests (5 is escapable; 6 is Ramsey's).");
+        return Err("Parties run 4 to 6 guests (5 is escapable; 6 is Ramsey's).".into());
     }
-    let mut party = Party::new(guests);
-    if let Some(list) = args.get("shakes").and_then(Value::as_array) {
-        for shake in list {
-            let Some(t) = shake.as_array() else {
-                return tool_error("Each shake is [a, b, \"r\"|\"b\"], guests 1-based.");
-            };
-            let (Some(a), Some(b), Some(color)) = (
-                t.first().and_then(Value::as_u64),
-                t.get(1).and_then(Value::as_u64),
-                t.get(2).and_then(Value::as_str),
-            ) else {
-                return tool_error("Each shake is [a, b, \"r\"|\"b\"], guests 1-based.");
-            };
-            let shade = if color.starts_with(['r', 'R']) {
-                Shade::Red
-            } else {
-                Shade::Blue
-            };
-            if a == 0 || b == 0 || !party.shade(a as usize - 1, b as usize - 1, shade) {
-                return tool_error(&format!("Handshake {a}-{b} is not open."));
-            }
-            if let Some((x, y, z, _)) = party.mono_triangle() {
-                let lesson = if guests == 6 {
-                    "It was never possible: among six, three mutual friends or three mutual strangers MUST exist. R(3,3) = 6."
-                } else {
-                    "Five CAN escape: ring one color, star the other (the pentagon's trick)."
-                };
-                return tool_structured(
-                    &format!(
-                        "A one-color triangle: guests {}, {}, {}. {} handshakes survived. {lesson}",
-                        x + 1,
-                        y + 1,
-                        z + 1,
-                        party.shaded() - 1
-                    ),
-                    // The Ramsey lesson and the offending triangle ride in the
-                    // structured payload, so the teaching is not text-only.
-                    json!({ "game": "party", "guests": guests, "escaped": false, "survived": party.shaded() - 1, "triangle": [x + 1, y + 1, z + 1], "why": lesson }),
+    let mut board = numinous_core::party::Party::new(guests as usize);
+    let mut first_triangle = None;
+    if let Some(shakes) = args.get("shakes").and_then(Value::as_array) {
+        for (index, shake) in shakes.iter().enumerate() {
+            let Some((a, b, color)) = shake.as_array().and_then(|args| match args.as_slice() {
+                [a, b, color] => Some((a.as_u64()?, b.as_u64()?, color.as_str()?)),
+                _ => None,
+            }) else {
+                return Err(
+                    "Each shake is [a, b, color], with positive guest numbers and color r or b."
+                        .into(),
                 );
+            };
+            board
+                .shake(a, b, color)
+                .map_err(|reason| format!("Shake {}. {reason}", index + 1))?;
+            if first_triangle.is_none() && board.mono_triangle().is_some() {
+                first_triangle = Some(board.clone());
             }
         }
+    }
+    Ok(first_triangle.unwrap_or(board))
+}
+
+/// The `party` tool.
+pub(super) fn party_tool(args: &Value) -> Value {
+    if let Some(request) = args.get("sunflower") {
+        if args.get("guests").is_some() || args.get("shakes").is_some() {
+            return tool_error(
+                "Choose sunflower by itself, or use guests and shakes for Ramsey coloring.",
+            );
+        }
+        return match sunflower_response(request) {
+            Ok((text, data)) => tool_structured(&text, data),
+            Err(message) => tool_error(&message),
+        };
+    }
+    let party = match ramsey_board(args) {
+        Ok(board) => board,
+        Err(reason) => return tool_error(&reason),
+    };
+    let guests = party.guests;
+    if let Some((x, y, z, _)) = party.mono_triangle() {
+        let lesson = if guests == 6 {
+            "It was never possible: among six, three mutual friends or three mutual strangers MUST exist. R(3,3) = 6."
+        } else if guests == 5 {
+            "Five CAN escape: ring one color, star the other (the pentagon's trick)."
+        } else {
+            "Try changing one of those three handshakes."
+        };
+        return tool_structured(
+            &format!(
+                "A one-color triangle: guests {}, {}, {}. {} handshakes survived. {lesson}",
+                x + 1,
+                y + 1,
+                z + 1,
+                party.shaded() - 1
+            ),
+            // The Ramsey lesson and the offending triangle ride in the
+            // structured payload, so the teaching is not text-only.
+            json!({ "game": "party", "guests": guests, "escaped": false, "survived": party.shaded() - 1, "triangle": [x + 1, y + 1, z + 1], "why": lesson }),
+        );
     }
     if party.complete() {
         return tool_structured(

@@ -655,7 +655,7 @@ pub(super) fn party_board_text(
 }
 
 pub(super) fn party_with_input(journey: &mut Journey, input: &mut impl BufRead) -> ExitCode {
-    use numinous_core::party::{Party, Shade};
+    use numinous_core::party::Party;
     println!("THE PARTY PROBLEM. Shade every handshake red or blue WITHOUT making");
     println!("a triangle of one color. Answer like: 1 3 r   (guests 1 and 3, red).");
     println!("Round one: five guests. It can be done. (? explains)\n");
@@ -677,23 +677,15 @@ pub(super) fn party_with_input(journey: &mut Journey, input: &mut impl BufRead) 
             }
             let words: Vec<&str> = line.split_whitespace().collect();
             let (Some(a), Some(b), Some(color)) = (
-                words.first().and_then(|w| w.parse::<usize>().ok()),
-                words.get(1).and_then(|w| w.parse::<usize>().ok()),
+                words.first().and_then(|w| w.parse::<u64>().ok()),
+                words.get(1).and_then(|w| w.parse::<u64>().ok()),
                 words.get(2),
             ) else {
                 println!("  Like this: 1 3 r   or   2 5 b");
                 continue;
             };
-            let shade = match color.chars().next().map(|c| c.to_ascii_lowercase()) {
-                Some('r') => Shade::Red,
-                Some('b') => Shade::Blue,
-                _ => {
-                    println!("  Color must be r or b.");
-                    continue;
-                }
-            };
-            if a == 0 || b == 0 || !p.shade(a - 1, b - 1, shade) {
-                println!("  That handshake is not open.");
+            if let Err(reason) = p.shake(a, b, color) {
+                println!("  {reason}");
                 continue;
             }
             if !played {

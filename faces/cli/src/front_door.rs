@@ -24,6 +24,7 @@ const GROUPS: &[(&str, &[&str])] = &[
             "arcade",
             "hackenbush",
             "party",
+            "sunflower",
             "fifteen",
             "nim",
             "gauntlet",

@@ -34,6 +34,13 @@ impl GameCue {
 }
 
 impl App {
+    pub(super) fn sunflower_start(&mut self) {
+        self.the_show = false;
+        self.paused = false;
+        self.sunflower = Some(crate::sunflower::Play::default());
+        self.sync_room_parameter_voice();
+    }
+
     pub(super) fn quiz_next(&mut self) {
         self.the_show = false;
         self.paused = false;

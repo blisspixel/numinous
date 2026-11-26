@@ -740,6 +740,7 @@ impl App {
         // player finishes or leaves it themselves, then drops again.
         if self.gauntlet.is_some()
             || self.munch.is_some()
+            || self.sunflower.is_some()
             || self.nim.is_some()
             || self.arcade.is_some()
             || self.session_viewer.is_open()

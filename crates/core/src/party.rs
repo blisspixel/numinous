@@ -5,6 +5,8 @@
 //! how). On six it is impossible, R(3,3) = 6, and the game exists so you
 //! can feel the walls close in. See `docs/PLAYFUL.md`.
 
+pub mod sunflower;
+
 /// An edge between guests `a < b`, colored or not yet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Shade {
@@ -59,6 +61,37 @@ impl Party {
         }
         self.edges[i] = shade;
         true
+    }
+
+    /// Shade a handshake using the printed guest numbers and color names.
+    /// A refused move leaves every edge as it was.
+    pub fn shake(&mut self, a: u64, b: u64, color: &str) -> Result<(), String> {
+        let shade = if color.eq_ignore_ascii_case("r") || color.eq_ignore_ascii_case("red") {
+            Shade::Red
+        } else if color.eq_ignore_ascii_case("b") || color.eq_ignore_ascii_case("blue") {
+            Shade::Blue
+        } else {
+            return Err("Choose r or b (red or blue) for the handshake.".into());
+        };
+        for guest in [a, b] {
+            if guest == 0 || guest > self.guests as u64 {
+                return Err(format!(
+                    "Guest {guest} is outside this party. Guests are numbered 1 to {}.",
+                    self.guests
+                ));
+            }
+        }
+        if a == b {
+            return Err(format!(
+                "Guest {a} cannot shake their own hand. Choose two different guests."
+            ));
+        }
+        if !self.shade(a as usize - 1, b as usize - 1, shade) {
+            return Err(format!(
+                "Handshake {a}-{b} is already shaded. Choose an open pair."
+            ));
+        }
+        Ok(())
     }
 
     /// The first one-color triangle, if any: (a, b, c, its shade).
@@ -149,6 +182,26 @@ mod tests {
                 "coloring {mask:#x} escaped: publish immediately"
             );
         }
+    }
+
+    #[test]
+    fn printed_handshakes_admit_only_named_colors_and_keep_refusals_atomic() {
+        let mut party = Party::new(5);
+        for (a, b, color) in [
+            (0, 0, "r"),
+            (1, u64::MAX, "r"),
+            (2, 2, "r"),
+            (1, 2, "blueberry"),
+        ] {
+            assert!(party.shake(a, b, color).is_err());
+            assert_eq!(party.shaded(), 0);
+        }
+        for (a, b, color) in [(1, 2, "R"), (1, 3, "rEd"), (2, 3, "red")] {
+            party.shake(a, b, color).unwrap();
+        }
+        assert_eq!(party.mono_triangle(), Some((0, 1, 2, Shade::Red)));
+        assert!(party.shake(2, 1, "blue").is_err());
+        assert_eq!(party.shaded(), 3);
     }
 
     #[test]

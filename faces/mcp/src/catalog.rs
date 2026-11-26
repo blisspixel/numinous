@@ -9,6 +9,24 @@ use numinous_broadcast::{PLAY_ROOM_MAX_DWELL_CELLS, PLAY_ROOM_MAX_TEMPORAL_CELLS
 use numinous_core::{MAX_DWELL_LOOKS, MIN_DWELL_LOOKS};
 use serde_json::{Value, json};
 
+fn sunflower_schema() -> Value {
+    let edge = json!({
+        "type": "array", "items": {"type":"integer","minimum":1,"maximum":6},
+        "minItems": 2, "maxItems": 2
+    });
+    json!({
+        "type": "object", "additionalProperties": false,
+        "description": "Each string is one edge joining two numbered guests. An empty object opens the board. Use without guests or shakes.",
+        "properties": {
+            "board": {"type": "string", "minLength": 4, "maxLength": 4, "description": "Replay code 0000 to 7FFF."},
+            "toggle": {"type":"array", "maxItems":crate::sunflower_report::MAX_TOGGLES,"items":edge,"description":"Draw or erase guest pairs in order."},
+            "inspect": {"type":"array","minItems":3,"maxItems":3,"items":edge,"description":"Three present strings in order A, B, C."},
+            "challenge":{"type":"boolean","description":"Ask the challenge."},
+            "reveal":{"type":"boolean","description":"Explain the maximum."}
+        }
+    })
+}
+
 /// Default legacy MCP revision when an initialization request has no preference.
 const LEGACY_PROTOCOL_VERSION: &str = "2025-06-18";
 
@@ -1101,12 +1119,13 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "party",
-                "description": "The Party Problem: shade every handshake red or blue without making a one-color triangle. Five guests can escape; six cannot (R(3,3) = 6), and feeling that is the point. Stateless: pass your full shading history as shakes (triples of [a, b, color] with color \"r\" or \"b\", guests 1-based).",
+                "description": "The Party Problem: shade handshakes to avoid a one-color triangle. Five can escape; six cannot (R(3,3) = 6). Replay shakes as [guest, guest, color], guests 1-based and r/red or b/blue case-insensitive. Or pass sunflower: {} to draw strings on a six-guest board.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "guests": { "type": "integer", "description": "5 (escapable) or 6 (Ramsey says no). Default 5." },
-                        "shakes": { "type": "array", "items": { "type": "array", "items": {} }, "description": "Your shadings so far: [[1, 3, \"r\"], [2, 5, \"b\"], ...]. Omit to see the open party." }
+                        "sunflower": sunflower_schema(),
+                        "guests": { "type": "integer", "minimum": 4, "maximum": 6, "description": "Four or five can escape. Six cannot. Default 5." },
+                        "shakes": { "type": "array", "items": { "type": "array", "minItems": 3, "maxItems": 3, "items": {} }, "description": "Your shadings so far: [[1, 3, \"r\"], [2, 5, \"b\"], ...]. Omit to see the open party." }
                     },
                     "additionalProperties": false
                 }

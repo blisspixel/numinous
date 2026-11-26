@@ -146,6 +146,10 @@ impl App {
             return;
         }
         let (mx, my) = self.mouse;
+        if let Some(play) = &mut self.sunflower {
+            play.click(width, height, mx, my);
+            return;
+        }
         if let Some(play) = &mut self.munch {
             if play.graded.is_some() {
                 return;
@@ -834,6 +838,7 @@ impl App {
             input_legend::MenuChoice::Quiz => self.quiz_next(),
             input_legend::MenuChoice::Munch => self.munch_start(),
             input_legend::MenuChoice::Nim => self.nim_start(),
+            input_legend::MenuChoice::Sunflower => self.sunflower_start(),
             input_legend::MenuChoice::Gauntlet => self.gauntlet_start(),
             input_legend::MenuChoice::Arcade => self.arcade_start(),
             input_legend::MenuChoice::Show => self.toggle_show(),
@@ -955,6 +960,27 @@ impl App {
                 gamepad::Command::Menu => self.gamepad_menu(),
                 _ => {}
             }
+            return;
+        }
+        if let Some(play) = &mut self.sunflower {
+            self.input_mode = input_legend::InputMode::Controller;
+            let key = match command {
+                gamepad::Command::Left | gamepad::Command::Up => Key::Named(NamedKey::ArrowLeft),
+                gamepad::Command::Right | gamepad::Command::Down => {
+                    Key::Named(NamedKey::ArrowRight)
+                }
+                gamepad::Command::PrimaryDown => Key::Named(NamedKey::Enter),
+                gamepad::Command::CycleRadio => Key::Character("c".into()),
+                gamepad::Command::Inspect => Key::Character("y".into()),
+                gamepad::Command::PreviousRoom => Key::Character("i".into()),
+                gamepad::Command::Reset => Key::Character("r".into()),
+                gamepad::Command::Back | gamepad::Command::Menu | gamepad::Command::Pause => {
+                    self.open_activity_menu(menu::ActivityKind::Sunflower);
+                    return;
+                }
+                _ => return,
+            };
+            play.key(&key);
             return;
         }
         if self.handle_gallery_gamepad(command) {

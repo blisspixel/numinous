@@ -2947,6 +2947,7 @@ fn controller_can_open_and_leave_every_menu_destination() {
         (MenuChoice::Quiz, MenuItemId::Quiz, true),
         (MenuChoice::Munch, MenuItemId::Munch, true),
         (MenuChoice::Nim, MenuItemId::Nim, true),
+        (MenuChoice::Sunflower, MenuItemId::Sunflower, true),
         (MenuChoice::Gauntlet, MenuItemId::Gauntlet, true),
         (MenuChoice::Arcade, MenuItemId::Arcade, true),
         (MenuChoice::Show, MenuItemId::Watch, false),
@@ -2985,6 +2986,7 @@ fn controller_can_open_and_leave_every_menu_destination() {
             MenuChoice::Quiz => assert!(app.quiz.is_some()),
             MenuChoice::Munch => assert!(app.munch.is_some()),
             MenuChoice::Nim => assert!(app.nim.is_some()),
+            MenuChoice::Sunflower => assert!(app.sunflower.is_some()),
             MenuChoice::Gauntlet => assert!(app.gauntlet.is_some()),
             MenuChoice::Arcade => assert!(app.arcade.is_some()),
             MenuChoice::Show => assert!(app.the_show),
@@ -3007,7 +3009,12 @@ fn controller_can_open_and_leave_every_menu_destination() {
         }
         assert!(!app.the_show && !app.studio && !app.show_journey);
         assert!(!app.session_viewer.is_open());
-        assert!(app.quiz.is_none() && app.munch.is_none() && app.nim.is_none());
+        assert!(
+            app.quiz.is_none()
+                && app.munch.is_none()
+                && app.nim.is_none()
+                && app.sunflower.is_none()
+        );
         assert!(app.gauntlet.is_none() && app.arcade.is_none());
         let _ = std::fs::remove_file(&app.journey_file);
         let _ = std::fs::remove_file(&app.scores_file);

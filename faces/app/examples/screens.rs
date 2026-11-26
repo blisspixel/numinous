@@ -110,6 +110,9 @@ mod overlays;
 #[allow(dead_code)]
 #[path = "../src/play.rs"]
 mod play;
+#[allow(dead_code)]
+#[path = "../src/sunflower.rs"]
+mod sunflower;
 // The core's census of current documents, for the screen-matrix count only
 // this example can state.
 #[cfg(test)]
@@ -175,8 +178,20 @@ const ROUTE_AUTHORING_STATES: [&str; 27] = [
     "keep-unicode-question",
 ];
 const ROUTE_GALLERY_STATES: [&str; 2] = ["question", "studio"];
-const SHARED_SCREEN_COUNT: usize =
-    105 + ROUTE_AUTHORING_STATES.len() * 4 + ROUTE_GALLERY_STATES.len() * 2;
+const SUNFLOWER_STATES: [(&str, &str); 8] = [
+    ("opening", ""),
+    ("selected", "1"),
+    ("triangle", "121323i121323"),
+    ("star", "121314"),
+    ("disjoint", "123456"),
+    ("challenge", "c"),
+    ("why", "y"),
+    ("replay", "l002"),
+];
+const SHARED_SCREEN_COUNT: usize = 105
+    + SUNFLOWER_STATES.len() * 2
+    + ROUTE_AUTHORING_STATES.len() * 4
+    + ROUTE_GALLERY_STATES.len() * 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum InteractionKind {
@@ -443,6 +458,14 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
     ] {
         for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
             expected.insert(format!("games/{name}-{label}-{}x{}.png", size.0, size.1));
+        }
+    }
+    for (state, _) in SUNFLOWER_STATES {
+        for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
+            expected.insert(format!(
+                "games/sunflower-{state}-{label}-{}x{}.png",
+                size.0, size.1
+            ));
         }
     }
     for stage in 0..=4 {
@@ -3147,6 +3170,25 @@ fn main() {
             height,
         )
     });
+
+    for (state, keys) in SUNFLOWER_STATES {
+        let mut board = sunflower::Play::default();
+        for ch in keys.chars() {
+            board.key(&winit::keyboard::Key::Character(ch.to_string().into()));
+        }
+        save_sizes(
+            &format!("sunflower-{state}"),
+            &mut manifest,
+            |width, height| {
+                board.draw(
+                    width,
+                    height,
+                    input_legend::InputMode::KeyboardMouse,
+                    input_legend::ControllerCopy::default(),
+                )
+            },
+        );
+    }
 
     let nim = play::NimPlay {
         heaps: numinous_core::nim_new(31),

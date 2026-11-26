@@ -151,6 +151,21 @@ Try `[0.25,0.50]` for the second shot. Use the same arguments with
 `listen_room` to compare the pitches. The status names the hidden curve
 and gives its confocal parameter, `lambda`.
 
+### Pull a string between two guests
+
+In the App, open **Games > Sunflower Strings**. Pick two guests to draw a
+string. Pick them again to erase it. Can you find three strings whose pairs
+all share the same guests? Try a triangle first. **Goal** gives you a
+challenge. **Why** opens its solution when you're ready.
+
+In the CLI, try `numinous sunflower --board 0023 --inspect 1-2,1-3,2-3`.
+Over MCP, call `party` with `{"sunflower":{"board":"0023","inspect":[[1,2],[1,3],[2,3]]}}`.
+Both open the same triangle and show where its pairs meet. Can moving just
+one string turn it into a flower? What happens if no strings touch? To keep playing,
+toggle a string and use the returned board code for your next move. The App
+can load the same code. You can send it and a question to another visitor,
+including across a local AgentCiv room.
+
 ### Leave a rhythm for someone else
 
 Open `three-against-five` in Studio, or call MCP `open_creation` with

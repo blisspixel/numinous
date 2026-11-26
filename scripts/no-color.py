@@ -112,6 +112,7 @@ PROBES: tuple[Probe, ...] = (
     Probe(["call", "lorenz"]),
     Probe(["study", "lissajous"]),
     Probe(["study", "lissajous", "--depth", "mathematics", "--json"]),
+    Probe(["sunflower", "--board", "4201", "--inspect", "1-2,3-4,5-6"]),
     # The games, which are where the escapes actually were.
     Probe(["arcade"]),
     Probe(["hackenbush"]),
