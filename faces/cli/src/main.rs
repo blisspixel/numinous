@@ -22,6 +22,8 @@ use numinous_core::{
 };
 
 mod access;
+#[path = "../../shared/catalog_json.rs"]
+mod catalog_json;
 mod front_door;
 mod game_input;
 mod game_runtime;
@@ -3501,7 +3503,14 @@ fn rooms_report(json: bool, wing: Option<&str>) -> Result<String, String> {
         .filter(|metadata| wing_name.is_none_or(|name| metadata.wing == name))
         .collect();
     if json {
-        let arr: Vec<serde_json::Value> = rows.into_iter().map(meta_json).collect();
+        let arr: Vec<_> = rows
+            .into_iter()
+            .map(|metadata| {
+                let mut row = meta_json(metadata);
+                catalog_json::mark_room(&mut row, metadata.id);
+                row
+            })
+            .collect();
         return Ok(format!("{}\n", to_pretty(&serde_json::Value::Array(arr))));
     }
     let id_width = numinous_core::ROOM_CATALOG
@@ -3517,12 +3526,17 @@ fn rooms_report(json: bool, wing: Option<&str>) -> Result<String, String> {
     let lines: Vec<String> = rows
         .iter()
         .map(|metadata| {
-            format!(
+            let mut line = format!(
                 "{} {} {}",
                 pad_column(metadata.id, id_width),
                 pad_column(metadata.wing, wing_width),
                 metadata.title
-            )
+            );
+            let signposts = numinous_core::RoomSignposts::for_room(metadata.id).label();
+            if !signposts.is_empty() {
+                line.push_str(&format!("  [{signposts}]"));
+            }
+            line
         })
         .collect();
     let header = match wing_name {
@@ -3534,7 +3548,10 @@ fn rooms_report(json: bool, wing: Option<&str>) -> Result<String, String> {
         ),
     };
     let footer = "numinous describe <id> for the story, numinous watch <id> to step inside.";
-    Ok(format!("{header}\n\n{}\n\n{footer}\n", lines.join("\n")))
+    Ok(format!(
+        "{header}\nFront Hall marks a curated starting room. Math study marks an authored mathematics reading.\n\n{}\n\n{footer}\n",
+        lines.join("\n")
+    ))
 }
 
 /// One room's description, or a guiding error if the id is unknown.

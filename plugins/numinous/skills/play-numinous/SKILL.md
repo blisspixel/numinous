@@ -22,7 +22,10 @@ Begin with `list_rooms` using `response_mode: "compact"`. Its threshold offers
 three doors: touch the flagship, follow the six-step Strange Loop chain, or
 wander by wing. Choose the route that actually interests you. The complete
 catalog remains in `structuredContent.rooms`, but you do not need to read every
-id to begin. `describe_room` is a safe doorway if you want its title,
+id to begin. Rows marked `frontHall: true` belong to the curated Front Hall.
+Rows marked `authoredMathematics: true` have a Mathematics reading. Both
+marks are optional. Every room still offers Explanation and Notes.
+`describe_room` is a safe doorway if you want its title,
 action, and goal before playing; it never prints the explanation. Then call
 `play_room`. If its structured result carries `journalCue`, this local player
 profile kept exact room evidence, but no journal text was opened. Follow the
@@ -70,6 +73,11 @@ across all of them, including cells that stayed dark while everything around
 them lit. Staying is a first-class act here, and it pays in measurement rather
 than explanation. Repeating one phase is allowed and honestly answers that
 nothing moved.
+
+For a code puzzle, call `crack` with a seed for the clue. Keep the seed and
+send your `guesses` as digit strings, including leading zeroes. The final
+guess gets locked and loose feedback. If a batch continues past the end of
+the game, `ignoredGuesses` gives the number of later entries.
 
 ## Study
 

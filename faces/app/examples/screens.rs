@@ -2344,6 +2344,16 @@ fn main() {
         let mut modes = numinous_app::menu::MenuState::launch();
         let _ = modes.activate_shortcut('m');
         states.push(("modes", modes));
+        let mut browse = numinous_app::menu::MenuState::launch();
+        browse.activate_shortcut('m');
+        browse.activate_shortcut('n');
+        browse.activate_shortcut('b');
+        states.push(("room-browser", browse.clone()));
+        browse.focus(numinous_app::menu::MenuItemId::Shelf(
+            numinous_app::menu::RoomShelf::MathStudy,
+        ));
+        browse.activate_focused();
+        states.push(("math-study", browse));
         let mut games = numinous_app::menu::MenuState::launch();
         let _ = games.activate_shortcut('g');
         states.push(("games", games));

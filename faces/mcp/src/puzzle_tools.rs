@@ -39,15 +39,10 @@ pub(super) fn crack_tool_at_level(args: &Value, level: u32) -> Value {
     let secret = numinous_core::secret_code(seed, digits);
     let clue = numinous_core::hint(&secret);
     let attempts = 8usize;
-    let guesses: Vec<String> = args
+    let guesses = args
         .get("guesses")
         .and_then(Value::as_array)
-        .map(|list| {
-            list.iter()
-                .filter_map(Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
+        .map(Vec::as_slice)
         .unwrap_or_default();
     if guesses.is_empty() {
         return tool_structured(
@@ -62,52 +57,59 @@ pub(super) fn crack_tool_at_level(args: &Value, level: u32) -> Value {
     // structured payload too, not only in the text a structured-content client
     // would drop.
     let mut feedback_rows = Vec::new();
-    for (i, raw) in guesses.iter().take(attempts).enumerate() {
-        let guess: Vec<u8> = raw
-            .chars()
-            .filter(char::is_ascii_digit)
-            .map(|c| c as u8 - b'0')
-            .collect();
-        if guess.len() != digits {
-            return tool_error(&format!("Guess {} is not {digits} digits: {raw:?}", i + 1));
-        }
+    let mut defused = false;
+    for (i, value) in guesses.iter().take(attempts).enumerate() {
+        let Some(raw) = value
+            .as_str()
+            .filter(|raw| raw.len() == digits && raw.bytes().all(|byte| byte.is_ascii_digit()))
+        else {
+            return tool_error(&format!(
+                "Guess {} must be exactly {digits} digits (0-9).",
+                i + 1
+            ));
+        };
+        let guess: Vec<_> = raw.bytes().map(|byte| byte - b'0').collect();
         let feedback = numinous_core::grade(&secret, &guess);
         feedback_rows.push(json!({
             "guess": raw,
             "locked": feedback.locked,
             "loose": feedback.loose,
         }));
-        if feedback.locked == digits {
-            let spare = (attempts - i - 1) as i64;
-            return tool_structured(
-                &format!(
-                    "{}\nDEFUSED on try {} with {spare} to spare. You cracked it.",
-                    lines.join("\n"),
-                    i + 1
-                ),
-                json!({ "game": "crack", "seed": seed, "defused": true, "attemptsToSpare": spare, "feedback": feedback_rows }),
-            );
-        }
         lines.push(format!(
             "{raw}: {} locked, {} loose",
             feedback.locked, feedback.loose
         ));
+        if feedback.locked == digits {
+            defused = true;
+            break;
+        }
     }
-    if guesses.len() >= attempts {
+    let used = feedback_rows.len();
+    let spare = attempts - used;
+    let mut result = json!({ "game": "crack", "seed": seed, "feedback": feedback_rows });
+    if defused {
+        lines.push(format!(
+            "DEFUSED on try {used} with {spare} to spare. You cracked it."
+        ));
+        result["defused"] = true.into();
+        result["attemptsToSpare"] = spare.into();
+    } else if spare == 0 {
         let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
-        return tool_structured(
-            &format!("{}\nBOOM. It was {code}.", lines.join("\n")),
-            json!({ "game": "crack", "seed": seed, "defused": false, "code": code, "feedback": feedback_rows }),
-        );
+        lines.push(format!("BOOM. It was {code}."));
+        result["defused"] = false.into();
+        result["code"] = code.into();
+    } else {
+        let noun = if spare == 1 { "try" } else { "tries" };
+        lines.push(format!("{spare} {noun} left. Clue: {clue}"));
+        result["triesLeft"] = spare.into();
+        result["clue"] = clue.into();
     }
-    tool_structured(
-        &format!(
-            "{}\n{} tries left. Clue: {clue}",
-            lines.join("\n"),
-            attempts - guesses.len()
-        ),
-        json!({ "game": "crack", "seed": seed, "triesLeft": attempts - guesses.len(), "clue": clue, "feedback": feedback_rows }),
-    )
+    let ignored = guesses.len() - used;
+    if ignored > 0 {
+        lines.push(format!("Guesses skipped after the game ended: {ignored}."));
+        result["ignoredGuesses"] = ignored.into();
+    }
+    tool_structured(&lines.join("\n"), result)
 }
 
 /// The `seti` tool: present the scan, or grade the pointed dish.

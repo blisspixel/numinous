@@ -200,31 +200,40 @@ pub(super) fn validate_schema_value(
 
     if let Some(object) = value.as_object() {
         let properties = schema.get("properties").and_then(Value::as_object);
-        if let Some(required) = schema.get("required").and_then(Value::as_array) {
-            for property in required.iter().filter_map(Value::as_str) {
-                if !object.contains_key(property) {
-                    let missing = property_path(path, property);
-                    return Err(format!("Missing required argument '{missing}'."));
-                }
-            }
+        let missing = schema
+            .get("required")
+            .and_then(Value::as_array)
+            .and_then(|required| {
+                required
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .find(|key| !object.contains_key(*key))
+            })
+            .map(|key| format!("Missing required argument '{}'.", property_path(path, key)));
+        if schema.get("additionalProperties").and_then(Value::as_bool) == Some(false)
+            && let Some(property) = object
+                .keys()
+                .find(|key| properties.is_none_or(|known| !known.contains_key(*key)))
+        {
+            let name = numinous_core::echoable_id(property);
+            let unexpected = if path.is_empty() {
+                format!("Unexpected argument '{name}'.")
+            } else {
+                format!(
+                    "{} has an unexpected field '{name}'.",
+                    argument_subject(path)
+                )
+            };
+            return Err(match missing {
+                Some(required) => format!("{unexpected} {required}"),
+                None => format!(
+                    "{unexpected}{}",
+                    nearest_argument_hint(property, properties)
+                ),
+            });
         }
-        if schema.get("additionalProperties").and_then(Value::as_bool) == Some(false) {
-            for property in object.keys() {
-                if properties.is_none_or(|known| !known.contains_key(property)) {
-                    let hint = nearest_argument_hint(property, properties);
-                    if path.is_empty() {
-                        return Err(format!(
-                            "Unexpected argument '{}'.{hint}",
-                            numinous_core::echoable_id(property)
-                        ));
-                    }
-                    return Err(format!(
-                        "{} has an unexpected field '{}'.{hint}",
-                        argument_subject(path),
-                        numinous_core::echoable_id(property)
-                    ));
-                }
-            }
+        if let Some(required) = missing {
+            return Err(required);
         }
         if let Some(additional_schema) = schema
             .get("additionalProperties")
@@ -235,7 +244,7 @@ pub(super) fn validate_schema_value(
                     validate_schema_value(
                         property_value,
                         additional_schema,
-                        &property_path(path, property),
+                        &property_path(path, &numinous_core::echoable_id(property)),
                         depth + 1,
                     )?;
                 }

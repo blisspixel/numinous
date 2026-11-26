@@ -751,6 +751,33 @@ fn rooms_report_aligns_every_id_and_wing() {
 }
 
 #[test]
+fn rooms_report_signposts_are_sparse_and_visible_in_text() {
+    let listing = rooms_report(false, None).unwrap();
+    let rows: Value = serde_json::from_str(&rooms_report(true, None).unwrap()).unwrap();
+    for row in rows.as_array().unwrap() {
+        let id = row["id"].as_str().unwrap();
+        let signs = numinous_core::RoomSignposts::for_room(id);
+        assert_eq!(
+            row.get("frontHall").map(Value::as_bool),
+            signs.front_hall.then_some(Some(true))
+        );
+        assert_eq!(
+            row.get("authoredMathematics").map(Value::as_bool),
+            signs.authored_mathematics.then_some(Some(true))
+        );
+        let line = listing
+            .lines()
+            .find(|line| line.split_whitespace().next() == Some(id))
+            .unwrap();
+        if signs.label().is_empty() {
+            assert!(line.ends_with(row["title"].as_str().unwrap()));
+        } else {
+            assert!(line.ends_with(&format!("[{}]", signs.label())));
+        }
+    }
+}
+
+#[test]
 fn rooms_report_json_is_a_non_empty_array() {
     let text = rooms_report(true, None).expect("catalog");
     let value: Value = serde_json::from_str(&text).expect("valid json");

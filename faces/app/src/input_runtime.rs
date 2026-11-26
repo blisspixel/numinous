@@ -650,6 +650,21 @@ impl App {
     }
 
     pub(super) fn apply_wheel_delta(&mut self, lines: f64) -> bool {
+        if self.show_help
+            && self.menu.is_open()
+            && matches!(
+                self.menu.route(),
+                menu::MenuRoute::Modes
+                    | menu::MenuRoute::Wings
+                    | menu::MenuRoute::Browse
+                    | menu::MenuRoute::Rooms(_)
+            )
+            && lines.is_finite()
+            && lines != 0.0
+        {
+            self.menu.focus_next(if lines > 0.0 { -1 } else { 1 });
+            return true;
+        }
         if self.handle_study_wheel(lines) {
             return true;
         }

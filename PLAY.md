@@ -74,6 +74,10 @@ Modes > The Overture plays an authored opening. Take over Mandelbrot to keep
 its current zoom. A supported GPU draws it at window resolution; the software
 fallback adapts detail to keep the room responsive. Choose the Times Tables
 experiment with U or Cabinet > Experiment to leave the score with the current dial.
+To pick a room by name, open Cabinet > Modes > Wings > Browse rooms.
+Choose Front Hall for a curated starting room or Math study for a room with
+an authored mathematics reading. Every room also has an explanation and notes.
+The same text markers appear in `numinous rooms`.
 Check [motion, sound, and flashing](#motion-sound-and-flashing) before play
 if those affect you.
 

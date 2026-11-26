@@ -57,7 +57,48 @@ pub enum MenuRoute {
     Settings,
     Controls,
     Wings,
+    Browse,
+    Rooms(RoomShelf),
     Pause(ActivityKind),
+}
+
+/// One list a player can inspect before entering a room.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RoomShelf {
+    FrontHall,
+    MathStudy,
+    Wing(&'static str),
+}
+
+impl RoomShelf {
+    fn title(self) -> &'static str {
+        match self {
+            Self::FrontHall => numinous_core::FRONT_HALL.title,
+            Self::MathStudy => "Math study",
+            Self::Wing(name) => name,
+        }
+    }
+
+    fn rooms(self) -> Vec<usize> {
+        match self {
+            Self::FrontHall => numinous_core::FRONT_HALL
+                .rooms
+                .iter()
+                .filter_map(|id| numinous_core::catalog_index(id))
+                .collect(),
+            Self::MathStudy => {
+                numinous_core::rooms_with_authored_depth(numinous_core::StudyDepth::Mathematics)
+                    .iter()
+                    .filter_map(|id| numinous_core::catalog_index(id))
+                    .collect()
+            }
+            Self::Wing(name) => numinous_core::wings()
+                .into_iter()
+                .find(|wing| wing.name == name)
+                .map(|wing| wing.rooms)
+                .unwrap_or_default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -96,6 +137,9 @@ pub enum MenuItemId {
     Controls,
     /// One wing of the catalog, by its position in the shared wing list.
     Wing(usize),
+    Browse,
+    Shelf(RoomShelf),
+    Room(usize),
     /// The authored walk through several rooms.
     Walk,
     /// The one astonishing room the threshold opens with.
@@ -130,6 +174,8 @@ pub enum MenuIntent {
     LeaveActivity(ActivityKind),
     /// Wander one wing, by its position in the shared wing list.
     EnterWing(usize),
+    /// Enter a selected catalog room and continue within its home wing.
+    EnterRoom(usize),
     /// Follow the authored walk, in its own order, carrying its questions.
     EnterWalk,
     /// Go straight to the one room the threshold opens with.
@@ -530,6 +576,13 @@ fn wing_items() -> Vec<MenuItem> {
             action: MenuAction::Intent(MenuIntent::EnterWing(index)),
         })
         .collect();
+    entries.push(MenuItem {
+        id: MenuItemId::Browse,
+        title: "BROWSE ROOMS",
+        description: "FIND A ROOM BY WING, FRONT HALL, OR MATH STUDY.",
+        shortcut: Some('b'),
+        action: MenuAction::Open(MenuRoute::Browse),
+    });
     entries.extend(wings);
     entries.push(MenuItem {
         id: MenuItemId::Back,
@@ -539,6 +592,58 @@ fn wing_items() -> Vec<MenuItem> {
         action: MenuAction::Intent(MenuIntent::LeaveWing),
     });
     entries
+}
+
+fn browser_back() -> MenuItem {
+    MenuItem {
+        id: MenuItemId::Back,
+        title: "BACK",
+        description: "RETURN TO THE PREVIOUS LIST.",
+        shortcut: None,
+        action: MenuAction::Back,
+    }
+}
+
+fn browser_items() -> Vec<MenuItem> {
+    let shelves = [RoomShelf::FrontHall, RoomShelf::MathStudy]
+        .into_iter()
+        .chain(
+            numinous_core::wings()
+                .into_iter()
+                .map(|wing| RoomShelf::Wing(wing.name)),
+        );
+    shelves
+        .map(|shelf| MenuItem {
+            id: MenuItemId::Shelf(shelf),
+            title: shelf.title(),
+            description: match shelf {
+                RoomShelf::FrontHall => "CURATED STARTING ROOMS. CHOOSE ANY ONE.",
+                RoomShelf::MathStudy => "ROOMS WITH AN AUTHORED MATHEMATICS READING IN EXPLAIN.",
+                RoomShelf::Wing(_) => "SEE THE ROOMS IN THIS WING BEFORE ENTERING.",
+            },
+            shortcut: None,
+            action: MenuAction::Open(MenuRoute::Rooms(shelf)),
+        })
+        .chain([browser_back()])
+        .collect()
+}
+
+fn room_items(shelf: RoomShelf) -> Vec<MenuItem> {
+    shelf
+        .rooms()
+        .into_iter()
+        .map(|index| {
+            let metadata = &numinous_core::ROOM_CATALOG[index];
+            MenuItem {
+                id: MenuItemId::Room(index),
+                title: metadata.title,
+                description: "OPEN THIS ROOM. THE ARROWS THEN WANDER ITS WING.",
+                shortcut: None,
+                action: MenuAction::Intent(MenuIntent::EnterRoom(index)),
+            }
+        })
+        .chain([browser_back()])
+        .collect()
 }
 
 fn state_items(state: &MenuState) -> Vec<MenuItem> {
@@ -627,6 +732,8 @@ fn items(
         MenuRoute::Settings => SETTINGS_ITEMS.to_vec(),
         MenuRoute::Controls => CONTROLS_ITEMS.to_vec(),
         MenuRoute::Wings => wing_items(),
+        MenuRoute::Browse => browser_items(),
+        MenuRoute::Rooms(shelf) => room_items(shelf),
         MenuRoute::Pause(kind) => pause_items(kind),
     }
 }
@@ -640,6 +747,11 @@ fn default_focus(route: MenuRoute, origin: MenuOrigin) -> MenuItemId {
         MenuRoute::Settings => MenuItemId::MasterVolume,
         MenuRoute::Controls => MenuItemId::Back,
         MenuRoute::Wings => MenuItemId::Touch,
+        MenuRoute::Browse => MenuItemId::Shelf(RoomShelf::FrontHall),
+        MenuRoute::Rooms(shelf) => shelf
+            .rooms()
+            .first()
+            .map_or(MenuItemId::Back, |index| MenuItemId::Room(*index)),
         MenuRoute::Pause(_) => MenuItemId::Resume,
     }
 }
@@ -788,9 +900,12 @@ impl MenuState {
     pub fn back(&mut self) -> MenuIntent {
         self.clear_pointer();
         if self.stack.len() > 1 {
-            self.stack.pop();
-            let route = self.route();
-            self.focused = default_focus(route, self.origin);
+            let previous = self.stack.pop();
+            self.focused = match previous {
+                Some(MenuRoute::Rooms(shelf)) => MenuItemId::Shelf(shelf),
+                Some(MenuRoute::Browse) => MenuItemId::Browse,
+                _ => default_focus(self.route(), self.origin),
+            };
             return MenuIntent::None;
         }
         match self.route() {
@@ -813,7 +928,7 @@ impl MenuState {
             .iter()
             .position(|item| item.id == self.focused)
             .unwrap_or(0);
-        let next = current.wrapping_add_signed(delta) % route_items.len();
+        let next = (current as isize + delta).rem_euclid(route_items.len() as isize) as usize;
         self.focused = route_items[next].id;
         self.clear_pointer();
     }
@@ -1308,7 +1423,13 @@ impl MenuLayout {
             let content_bottom = height as i32 - menu_footer_reserve(text_scale, false);
             row_scale =
                 fitting_row_scale(text_scale, route_items.len(), content_bottom - content_top);
-            let row_height = menu_row_height(row_scale);
+            // Room rows reserve a second line for their collection and study marks.
+            let row_height = menu_row_height(row_scale)
+                + if matches!(state.route(), MenuRoute::Rooms(_)) {
+                    10
+                } else {
+                    0
+                };
             let available = (content_bottom - content_top).max(row_height);
             let visible_count = route_items
                 .len()
@@ -1440,15 +1561,10 @@ fn route_title(route: MenuRoute) -> String {
         MenuRoute::Settings => "SETTINGS".to_string(),
         MenuRoute::Controls => "CONTROLS".to_string(),
         MenuRoute::Wings => "WHERE TO START".to_string(),
+        MenuRoute::Browse => "BROWSE ROOMS".to_string(),
+        MenuRoute::Rooms(shelf) => shelf.title().to_string(),
         MenuRoute::Pause(kind) => format!("{} PAUSED", kind.label()),
     }
-}
-
-fn selected_item(state: &MenuState) -> MenuItem {
-    state_items(state)
-        .into_iter()
-        .find(|item| item.id == state.focused)
-        .unwrap_or(HOME_ITEMS[0])
 }
 
 /// Draw lettering in one chrome color. The raster's room accent is left alone.
@@ -1479,6 +1595,60 @@ fn draw_label(
         scale,
         numinous_core::chrome::rgb(numinous_core::chrome::Appearance::Dark, role),
     );
+}
+
+fn fitting_label_scale(text: &str, width: i32, preferred: i32) -> i32 {
+    (1..=preferred)
+        .rev()
+        .find(|&scale| menu_font::text_width(text, scale) <= width)
+        .unwrap_or(1)
+}
+
+fn room_row_scales(
+    title: &str,
+    signs: &str,
+    width: i32,
+    height: i32,
+    preferred: i32,
+) -> (i32, i32) {
+    let title_scale = fitting_label_scale(title, width, preferred);
+    let mark_height_scale = ((height - 7 * title_scale - 4) / 7).clamp(1, 2);
+    (
+        title_scale,
+        fitting_label_scale(signs, width, mark_height_scale),
+    )
+}
+
+fn draw_room_row(
+    raster: &mut Raster,
+    rect: Rect,
+    label_x: i32,
+    index: usize,
+    preferred: i32,
+    role: numinous_core::chrome::Role,
+) {
+    let room = &numinous_core::ROOM_CATALOG[index];
+    let signs = numinous_core::RoomSignposts::for_room(room.id).label();
+    let width = rect.x + rect.width - label_x - 8;
+    let (title_scale, mark_scale) =
+        room_row_scales(room.title, signs, width, rect.height, preferred);
+    let mark_height = if signs.is_empty() {
+        0
+    } else {
+        2 + 7 * mark_scale
+    };
+    let top = rect.y + (rect.height - 7 * title_scale - mark_height) / 2;
+    draw_label(raster, room.title, label_x, top, title_scale, role);
+    if !signs.is_empty() {
+        draw_label(
+            raster,
+            signs,
+            label_x,
+            top + 7 * title_scale + 2,
+            mark_scale,
+            numinous_core::chrome::Role::TextMuted,
+        );
+    }
 }
 
 pub fn draw_menu(
@@ -1528,12 +1698,13 @@ pub fn draw_menu(
         numinous_core::chrome::Role::Text,
     );
 
-    let selected = selected_item(state);
+    let items = state_items(state);
+    let selected = items
+        .iter()
+        .find(|item| item.id == state.focused)
+        .unwrap_or(&HOME_ITEMS[0]);
     for item_layout in &layout.items {
-        let Some(item) = state_items(state)
-            .into_iter()
-            .find(|item| item.id == item_layout.id)
-        else {
+        let Some(item) = items.iter().find(|item| item.id == item_layout.id) else {
             continue;
         };
         let focused = item.id == state.focused;
@@ -1576,12 +1747,28 @@ pub fn draw_menu(
             } else {
                 shortcut_x + 9 * scale
             }
+        } else if layout.compact && matches!(item.id, MenuItemId::Room(_) | MenuItemId::Shelf(_)) {
+            item_layout.rect.x + 36
         } else if layout.compact {
             item_layout.rect.x + 44
         } else {
             item_layout.rect.x + 12 * scale
         };
-        draw_label(raster, item.title, label_x, label_y, scale, row_role);
+        if let MenuItemId::Room(index) = item.id {
+            draw_room_row(raster, item_layout.rect, label_x, index, scale, row_role);
+        } else {
+            let label_scale = if matches!(item.id, MenuItemId::Shelf(_)) {
+                fitting_label_scale(
+                    item.title,
+                    item_layout.rect.x + item_layout.rect.width - label_x - 8,
+                    scale,
+                )
+            } else {
+                scale
+            };
+            let text_y = item_layout.rect.y + (item_layout.rect.height - 7 * label_scale) / 2;
+            draw_label(raster, item.title, label_x, text_y, label_scale, row_role);
+        }
         if let Some(value) = item_value(item.id, readout) {
             let value_scale = auxiliary_scale;
             draw_label(
@@ -2300,11 +2487,8 @@ mod tests {
     }
 
     #[test]
-    fn the_keyboard_reference_names_the_only_way_to_reach_a_distant_room() {
-        // Stepping is one room per press through hundreds, and the console is
-        // the only jump. A player who opens the screen named for the controls
-        // has to be able to learn it exists from there, because nothing else
-        // in the app mentions it.
+    fn the_keyboard_reference_names_the_console_jump() {
+        // A player who knows a room id can still jump directly from the console.
         let lines = control_lines(
             InputMode::KeyboardMouse,
             ControllerCopy::empty(ControllerFace::PlayStation),
@@ -2333,6 +2517,81 @@ mod tests {
     }
 
     #[test]
+    fn the_room_title_and_both_signposts_fit_the_compact_row() {
+        let width = 320 - 48 - 36 - 8;
+        for room in numinous_core::ROOM_CATALOG {
+            let marks = numinous_core::RoomSignposts::for_room(room.id).label();
+            for preferred in [2, 3] {
+                let (title, mark) =
+                    room_row_scales(room.title, marks, width, COMPACT_ROW_HEIGHT, preferred);
+                assert!(
+                    menu_font::text_width(room.title, title) <= width,
+                    "{}",
+                    room.id
+                );
+                assert!(menu_font::text_width(marks, mark) <= width, "{}", room.id);
+                assert!(7 * title + 2 + 7 * mark <= COMPACT_ROW_HEIGHT);
+            }
+        }
+    }
+
+    #[test]
+    fn signposts_browser_exposes_both_shelves_and_each_wing_before_entry() {
+        let mut menu = MenuState::launch();
+        menu.activate_shortcut('m');
+        menu.activate_shortcut('n');
+        menu.activate_shortcut('b');
+        assert_eq!(menu.route(), MenuRoute::Browse);
+        for shelf in [RoomShelf::FrontHall, RoomShelf::MathStudy]
+            .into_iter()
+            .chain(
+                numinous_core::wings()
+                    .into_iter()
+                    .map(|wing| RoomShelf::Wing(wing.name)),
+            )
+        {
+            menu.focus(MenuItemId::Shelf(shelf));
+            assert_eq!(menu.activate_focused(), MenuIntent::None);
+            let entries = state_items(&menu);
+            let ids: Vec<_> = entries
+                .iter()
+                .filter_map(|entry| match entry.id {
+                    MenuItemId::Room(i) => Some(numinous_core::ROOM_CATALOG[i].id),
+                    _ => None,
+                })
+                .collect();
+            match shelf {
+                RoomShelf::FrontHall => assert_eq!(ids, numinous_core::FRONT_HALL.rooms),
+                RoomShelf::MathStudy => assert_eq!(
+                    ids,
+                    numinous_core::rooms_with_authored_depth(
+                        numinous_core::StudyDepth::Mathematics
+                    )
+                ),
+                RoomShelf::Wing(name) => assert_eq!(
+                    ids,
+                    numinous_core::ROOM_CATALOG
+                        .iter()
+                        .filter(|m| m.wing == name)
+                        .map(|m| m.id)
+                        .collect::<Vec<_>>()
+                ),
+            }
+            for entry in entries.iter().take(ids.len()) {
+                menu.focus(entry.id);
+                let MenuItemId::Room(index) = entry.id else {
+                    unreachable!()
+                };
+                assert_eq!(menu.activate_focused(), MenuIntent::EnterRoom(index));
+            }
+            menu.back();
+            assert_eq!(menu.focused(), MenuItemId::Shelf(shelf));
+        }
+        menu.back();
+        assert_eq!(menu.focused(), MenuItemId::Browse);
+    }
+
+    #[test]
     fn the_wings_route_offers_every_wing_and_a_way_back_out() {
         // The App's front door onto the catalog. Stepping is one room per press
         // through hundreds, so a wing has to be choosable from the menu, and a
@@ -2341,7 +2600,7 @@ mod tests {
         let wings = numinous_core::wings();
         assert_eq!(
             entries.len(),
-            wings.len() + 3,
+            wings.len() + 4,
             "three doors, every wing, and the way back to the catalog"
         );
 
@@ -2360,7 +2619,7 @@ mod tests {
         assert_eq!(walk.title, numinous_core::STRANGE_LOOP_WALK.title);
 
         for (index, wing) in wings.iter().enumerate() {
-            let entry = &entries[index + 2];
+            let entry = &entries[index + 3];
             assert_eq!(entry.title, wing.name, "a wing is named by the catalog");
             assert_eq!(entry.id, MenuItemId::Wing(index));
             assert_eq!(

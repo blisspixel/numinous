@@ -1314,6 +1314,16 @@ impl App {
             }
             menu::MenuIntent::Close | menu::MenuIntent::ResumeActivity => self.close_menu(),
             menu::MenuIntent::Choose(choice) => self.activate_menu_choice(choice),
+            menu::MenuIntent::EnterRoom(index) => {
+                if let Some(wing) = numinous_core::wings()
+                    .into_iter()
+                    .find(|wing| wing.rooms.contains(&index))
+                {
+                    self.route = Some(Route::Wing(wing));
+                    self.goto_room_index(index);
+                    self.close_menu();
+                }
+            }
             menu::MenuIntent::EnterWing(index) => {
                 if let Some(wing) = numinous_core::wings().into_iter().nth(index) {
                     let name = wing.name;

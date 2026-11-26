@@ -1023,7 +1023,7 @@ fn build_tools_catalog() -> Value {
                         "seed": { "type": "integer", "description": "Seed; the same seed hides the same code." },
                         "daily": { "type": "boolean", "description": "Use today\'s shared seed instead; dailies chain into streaks." },
                         "digits": { "type": "integer", "minimum": numinous_core::MIN_CODE_DIGITS, "maximum": numinous_core::MAX_CODE_DIGITS, "description": "Code length, default 4 (5+ opens at LV 5)." },
-                        "guesses": { "type": "array", "items": { "type": "string" }, "description": "Your guesses so far, in order. Omit to see the clue." }
+                        "guesses": { "type": "array", "items": { "type": "string" }, "description": "Digit strings in order, including leading zeroes. Omit to see the clue. The reply grades through the last played guess and reports any later entries in ignoredGuesses." }
                     },
                     "additionalProperties": false
                 }

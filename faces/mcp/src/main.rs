@@ -14,6 +14,8 @@ mod audible;
 mod broadcast;
 mod broadcast_tools;
 mod catalog;
+#[path = "../../shared/catalog_json.rs"]
+mod catalog_json;
 mod challenge_tools;
 mod encounter;
 mod flagship_aha;
@@ -377,7 +379,7 @@ fn handle_request_with_visit(
             .and_then(Value::as_str)
             != Some("broadcast_session")
     {
-        record_progress(request, journey_file);
+        record_progress(request, value, journey_file);
     }
 
     // Notifications carry no id and get no response.

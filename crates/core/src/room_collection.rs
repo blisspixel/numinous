@@ -66,12 +66,66 @@ pub const FRONT_HALL: RoomCollection = RoomCollection {
     ],
 };
 
+/// Optional entries a player can find while browsing a room.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RoomSignposts {
+    /// The room belongs to the curated Front Hall.
+    pub front_hall: bool,
+    /// Optional authored mathematics is available in the study reader.
+    pub authored_mathematics: bool,
+}
+
+impl RoomSignposts {
+    /// Read membership from the collection and study owners, including aliases.
+    #[must_use]
+    pub fn for_room(id: &str) -> Self {
+        let canonical = crate::canonical_room_id(id);
+        Self {
+            front_hall: FRONT_HALL.contains(canonical),
+            authored_mathematics: crate::rooms_with_authored_depth(crate::StudyDepth::Mathematics)
+                .contains(&canonical),
+        }
+    }
+
+    /// Short text labels shared by catalog browsers.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match (self.front_hall, self.authored_mathematics) {
+            (true, true) => "Front Hall / Math study",
+            (true, false) => FRONT_HALL.title,
+            (false, true) => "Math study",
+            (false, false) => "",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
 
     use super::FRONT_HALL;
     use crate::{THRESHOLD_ROOM_ID, room_meta_by_id};
+
+    #[test]
+    fn signposts_follow_both_content_owners() {
+        use crate::{RoomSignposts, StudyDepth, rooms_with_authored_depth};
+        for room in crate::ROOM_CATALOG {
+            let signs = RoomSignposts::for_room(room.id);
+            assert_eq!(signs.front_hall, FRONT_HALL.rooms.contains(&room.id));
+            assert_eq!(
+                signs.authored_mathematics,
+                rooms_with_authored_depth(StudyDepth::Mathematics).contains(&room.id)
+            );
+        }
+        for (id, label) in [
+            ("times-tables", "Front Hall / Math study"),
+            ("mandelbrot", "Front Hall"),
+            ("fermat-spiral", "Math study"),
+            ("route-lab", ""),
+        ] {
+            assert_eq!(RoomSignposts::for_room(id).label(), label);
+        }
+    }
 
     #[test]
     fn the_front_hall_is_twenty_five_distinct_canonical_catalog_rooms() {
