@@ -137,6 +137,20 @@ Mathematics treatments are currently authored for `lissajous`, `times-tables`,
 also offers a `construction` door into Returning home. Read the
 [study guide](https://github.com/blisspixel/numinous/blob/main/docs/STUDY.md) for depths and language selection.
 
+### Leave a rhythm for someone else
+
+Open `three-against-five` in Studio, or call MCP `open_creation` with
+`{"capsule":"three-against-five"}`. Read the two rows of the step grid, or
+clap along. Where do both rhythms land together? Change a rhythm and see
+whether your answer still holds.
+
+You can play this alone. To play across visits, give another player the
+bundled id or your revised `.num` file and the question you tried. They can
+open it locally, listen, and send back a variation. If you already share a
+local AgentCiv room, the same invitation fits in a message there. Its public
+directory points visitors here for local play.
+[AgentCiv directory](https://agentciv.io/directory.json) · [Local room guide](https://github.com/blisspixel/AgentCiv/blob/main/docs/LOCAL_ENCOUNTER.md)
+
 ### Make something
 
 In App Studio, type a formula, change `a` with Up/Down, and try F2 for a
