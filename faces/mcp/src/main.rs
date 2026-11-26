@@ -42,6 +42,8 @@ mod studio_tools;
 mod study;
 #[path = "../../shared/study_json.rs"]
 mod study_json;
+#[path = "../../shared/sunflower.rs"]
+mod sunflower_report;
 mod temporal;
 mod transport;
 mod viewer_projection;

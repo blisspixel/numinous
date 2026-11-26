@@ -2252,6 +2252,73 @@ fn malformed_gauntlet_wire_does_not_consume_an_attempt() {
 }
 
 #[test]
+fn sunflower_replays_erases_and_inspects_over_party() {
+    let run = |options: Value| {
+        let response = call("party", json!({"sunflower": options}));
+        assert_eq!(response["result"]["isError"], false, "{response}");
+        response["result"]["structuredContent"].clone()
+    };
+    let triple = json!([[1, 2], [3, 4], [5, 6]]);
+    let drawn = run(json!({"toggle": triple, "inspect": triple, "challenge":true}));
+    assert_eq!(drawn["inspection"]["core"], json!([]));
+    assert_eq!(drawn["inspection"]["intersections"], json!([[], [], []]));
+    assert_eq!(drawn["witness"], drawn["inspection"]);
+    assert!(drawn.get("explanation").is_none());
+    let replayed = run(json!({"board":drawn["board"],"inspect":triple,"challenge":true}));
+    assert_eq!(replayed, drawn);
+    let changed = run(json!({"board":drawn["board"],"toggle":[[4,3]],"reveal":true}));
+    assert_eq!(changed["edges"], json!([[1, 2], [5, 6]]));
+    assert!(changed["witness"].is_null());
+    assert!(changed["explanation"].is_string());
+    let empty = run(json!({}));
+    assert_eq!(empty["board"], "0000");
+    assert!(empty.get("challenge").is_none());
+
+    for invalid in [
+        json!({"sunflower":{},"shakes":[]}),
+        json!({"sunflower":{},"guests":6}),
+        json!({"sunflower":{"board":"FFFF"}}),
+        json!({"sunflower":{"toggle":[[1,1]]}}),
+        json!({"sunflower":{"toggle":[[1,7]]}}),
+        json!({"sunflower":{"inspect":[[1,2]]}}),
+        json!({"sunflower":{"inspect":triple}}),
+        json!({"sunflower":{"challenge":"true"}}),
+        json!({"sunflower":{"unexpected":true}}),
+    ] {
+        assert_eq!(call("party", invalid)["result"]["isError"], true);
+    }
+}
+
+#[test]
+fn party_shake_errors_identify_the_move_and_recover() {
+    for (shakes, problem) in [
+        (json!([[1, 2, "green"]]), "Choose r or b"),
+        (json!([[1, 2, "reddish"]]), "Choose r or b"),
+        (json!([[1, 2, ""]]), "Choose r or b"),
+        (json!([[0, 0, "r"]]), "numbered 1 to 5"),
+        (json!([[1, 6, "r"]]), "Guest 6 is outside"),
+        (json!([[2, 2, "r"]]), "cannot shake their own hand"),
+        (
+            json!([[1, 2, "r"], [2, 1, "b"]]),
+            "Shake 2. Handshake 2-1 is already shaded",
+        ),
+    ] {
+        let response = call("party", json!({"shakes":shakes}));
+        assert!(tool_error_text(&response).contains(problem), "{response}");
+    }
+    let out_of_range = call("party", json!({"guests": -1}));
+    assert!(tool_error_text(&out_of_range).contains("at least 4"));
+    let board = call(
+        "party",
+        json!({"shakes":[[1,2,"Blue"],[2,3,"B"],[1,3,"b"]]}),
+    );
+    assert_eq!(
+        board["result"]["structuredContent"]["triangle"],
+        json!([1, 2, 3])
+    );
+}
+
+#[test]
 fn the_new_games_present_grade_and_guide() {
     let garden = handle_request(&json!({
         "jsonrpc":"2.0","id":110,"method":"tools/call",

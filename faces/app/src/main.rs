@@ -51,6 +51,7 @@ mod save_gate;
 mod session_audio;
 mod studio_panel;
 mod study_runtime;
+mod sunflower;
 mod wager;
 
 use crate::audio_state::Program as AudioProgram;
@@ -553,6 +554,7 @@ struct App {
     munch_last_rule: Option<numinous_core::munchers::Rule>,
     /// Nim, when playing in the window.
     nim: Option<NimPlay>,
+    sunflower: Option<sunflower::Play>,
     /// The Gauntlet, when running in the window.
     gauntlet: Option<GauntletPlay>,
     /// The arcade, when the Vexations are loose.
@@ -800,6 +802,7 @@ impl App {
             munch_next_round: numinous_core::FULL_DECK_ROUND,
             munch_last_rule: None,
             nim: None,
+            sunflower: None,
             gauntlet: None,
             arcade: None,
             controller_digit: 0,
@@ -1037,6 +1040,8 @@ impl App {
             "munch arcade"
         } else if self.gauntlet.is_some() {
             "gauntlet"
+        } else if self.sunflower.is_some() {
+            "sunflower"
         } else if self.nim.is_some() {
             "nim"
         } else if self.munch.is_some() {
@@ -1132,6 +1137,7 @@ impl App {
             || self.route_active
             || self.quiz.is_some()
             || self.munch.is_some()
+            || self.sunflower.is_some()
             || self.nim.is_some()
             || self.gauntlet.is_some()
             || self.arcade.is_some()
@@ -1156,6 +1162,8 @@ impl App {
             Some(menu::ActivityKind::Arcade)
         } else if self.gauntlet.is_some() {
             Some(menu::ActivityKind::Gauntlet)
+        } else if self.sunflower.is_some() {
+            Some(menu::ActivityKind::Sunflower)
         } else if self.nim.is_some() {
             Some(menu::ActivityKind::Nim)
         } else if self.munch.is_some() {
@@ -1256,6 +1264,7 @@ impl App {
             menu::ActivityKind::Quiz => self.quiz = None,
             menu::ActivityKind::Munch => self.munch = None,
             menu::ActivityKind::Nim => self.nim = None,
+            menu::ActivityKind::Sunflower => self.sunflower = None,
             menu::ActivityKind::Gauntlet => self.gauntlet = None,
             menu::ActivityKind::Arcade => {
                 if let Some(play) = self.arcade.take() {
@@ -1274,6 +1283,7 @@ impl App {
             menu::ActivityKind::Quiz => self.quiz_next(),
             menu::ActivityKind::Munch => self.munch_start(),
             menu::ActivityKind::Nim => self.nim_start(),
+            menu::ActivityKind::Sunflower => self.sunflower_start(),
             menu::ActivityKind::Gauntlet => self.gauntlet_start(),
             menu::ActivityKind::Arcade => self.arcade_start(),
             menu::ActivityKind::Route => {
@@ -1452,6 +1462,7 @@ impl App {
         mouse_input::LeftPressContext {
             game_click_mode: self.munch.is_some()
                 || self.quiz.is_some()
+                || self.sunflower.is_some()
                 || self.nim.is_some()
                 || self.arcade.is_some()
                 || self.gauntlet.is_some(),
@@ -2058,6 +2069,8 @@ impl App {
                 width,
                 height,
             ))
+        } else if let Some(play) = &self.sunflower {
+            Some(play.draw(width, height, self.input_mode, copy))
         } else if let Some(play) = &self.nim {
             Some(game_draw::draw_nim(
                 play,
@@ -2727,6 +2740,7 @@ impl ApplicationHandler for App {
                     self.quiz = None;
                     self.munch = None;
                     self.nim = None;
+                    self.sunflower = None;
                     self.gauntlet = None;
                     self.arcade = None;
                     self.close_menu();
@@ -2802,6 +2816,10 @@ impl ApplicationHandler for App {
                     self.gauntlet_key(&logical_key);
                 } else if self.munch.is_some() {
                     self.munch_key(&logical_key);
+                } else if let Some(play) = &mut self.sunflower {
+                    if !repeat {
+                        play.key(&logical_key);
+                    }
                 } else if self.nim.is_some() {
                     self.nim_key(&logical_key);
                 } else if let Some(quiz) = &mut self.quiz {

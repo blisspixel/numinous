@@ -39,6 +39,9 @@ mod studio;
 mod study;
 #[path = "../../shared/study_json.rs"]
 mod study_json;
+mod sunflower;
+#[path = "../../shared/sunflower.rs"]
+mod sunflower_report;
 
 use access::{access_report, access_settings, color_allowed};
 #[cfg(test)]
@@ -509,6 +512,8 @@ enum Command {
     },
     /// The Party Problem: avoid a one-color triangle. Five escape; six never.
     Party,
+    /// Draw and erase strings among six guests. Inspect three to find a sunflower.
+    Sunflower(sunflower::Sunflower),
     /// Fifteen's Bet: solvable or stuck forever? Learn to smell parity.
     Fifteen {
         /// Seed (the same seed deals the same scrambles).
@@ -907,7 +912,11 @@ fn cli_main() -> ExitCode {
     // These commands have no progression dependency, including reading the
     // profile. Keep their routes ahead of Journey and score loading.
     let command = match cli.command {
-        Some(command @ (Command::Settings { .. } | Command::Completion { .. })) => {
+        Some(
+            command @ (Command::Settings { .. }
+            | Command::Completion { .. }
+            | Command::Sunflower(_)),
+        ) => {
             return run(command, &mut Journey::default());
         }
         Some(Command::RouteLab { request, json, out }) => {
@@ -2183,6 +2192,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
   numinous play arcade       the Munch arcade: eat what fits while spirits hunt you
   numinous play hackenbush   cut grass vs the Order; the grass is secretly made of numbers
   numinous play party        shade handshakes, dodge triangles; five escape, six never
+  numinous sunflower         draw and erase strings on the six-guest table
   numinous play fifteen      call each scramble solvable or stuck; parity is the tell
   numinous play gauntlet     one run through four of the above; clean stages build a combo
   numinous play bench        five fixed gauntlets, one composite number: compare any two minds
@@ -2194,6 +2204,9 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             // The seed line and the screen clear belong to a game deal. A room
             // is a picture, and announcing a game seed in front of it would
             // flash on the main screen before the alternate screen opens.
+            if id == "sunflower" {
+                return emit(sunflower::Sunflower::default().report());
+            }
             if PLAY_GAMES.contains(&id.as_str()) {
                 let seed = fresh_seed();
                 match id.as_str() {
@@ -2403,6 +2416,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
         Command::Arcade { seed, daily } => arcade(pick_seed(seed, daily, journey), journey),
         Command::Hackenbush { seed } => hackenbush(seed, journey),
         Command::Party => party(journey),
+        Command::Sunflower(options) => emit(options.report()),
         Command::Fifteen { seed, rounds } => fifteen(seed, rounds, journey),
         Command::Nim { seed } => nim(seed, journey),
         Command::Gauntlet { seed, daily } => gauntlet(pick_seed(seed, daily, journey), journey),
@@ -5143,6 +5157,7 @@ const PLAY_GAMES: &[&str] = &[
     "arcade",
     "hackenbush",
     "party",
+    "sunflower",
     "fifteen",
     "crack",
     "seti",

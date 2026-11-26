@@ -25,6 +25,7 @@ pub enum ActivityKind {
     Quiz,
     Munch,
     Nim,
+    Sunflower,
     Gauntlet,
     Arcade,
     Studio,
@@ -38,6 +39,7 @@ impl ActivityKind {
             Self::Quiz => "THE QUIZ",
             Self::Munch => "MUNCH",
             Self::Nim => "NIM",
+            Self::Sunflower => "SUNFLOWER STRINGS",
             Self::Gauntlet => "THE GAUNTLET",
             Self::Arcade => "THE ARCADE",
             Self::Studio => "THE STUDIO",
@@ -78,6 +80,7 @@ pub enum MenuItemId {
     Quiz,
     Munch,
     Nim,
+    Sunflower,
     Gauntlet,
     Arcade,
     MasterVolume,
@@ -224,7 +227,7 @@ const HOME_ITEMS: [MenuItem; 6] = [
     MenuItem {
         id: MenuItemId::Games,
         title: "GAMES",
-        description: "FIVE SHORT GAMES OF PATTERN, NUMBER, AND NERVE.",
+        description: "SHORT GAMES OF PATTERN, NUMBER, AND NERVE.",
         shortcut: Some('g'),
         action: MenuAction::Open(MenuRoute::Games),
     },
@@ -310,7 +313,7 @@ const MODE_ITEMS: [MenuItem; 8] = [
     },
 ];
 
-const GAME_ITEMS: [MenuItem; 6] = [
+const GAME_ITEMS: [MenuItem; 7] = [
     MenuItem {
         id: MenuItemId::Quiz,
         title: "THE QUIZ",
@@ -324,6 +327,13 @@ const GAME_ITEMS: [MenuItem; 6] = [
         description: "EAT EVERY NUMBER THAT FITS THE RULE.",
         shortcut: Some('m'),
         action: MenuAction::Intent(MenuIntent::Choose(MenuChoice::Munch)),
+    },
+    MenuItem {
+        id: MenuItemId::Sunflower,
+        title: "SUNFLOWER STRINGS",
+        description: "DRAW STRINGS BETWEEN SIX GUESTS. FIND WHAT THEY SHARE.",
+        shortcut: Some('s'),
+        action: MenuAction::Intent(MenuIntent::Choose(MenuChoice::Sunflower)),
     },
     MenuItem {
         id: MenuItemId::Nim,

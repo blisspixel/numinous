@@ -523,51 +523,18 @@ pub(super) fn record_progress(request: &Value, path: &std::path::Path) {
             }
         }
         "party" => {
-            if let Some(list) = args.get("shakes").and_then(Value::as_array)
-                && !list.is_empty()
+            if args.get("sunflower").is_none()
+                && let Ok(party) = crate::game_tools::ramsey_board(&args)
+                && party.shaded() > 0
             {
                 journey.play();
-                // A win is a complete shading with no triangle; replay cheaply
-                // by trusting the tool's own logic via a re-call shape.
-                let guests = args.get("guests").and_then(Value::as_u64).unwrap_or(5) as usize;
-                if (4..=6).contains(&guests) {
-                    let mut party = numinous_core::party::Party::new(guests);
-                    let mut clean = true;
-                    for shake in list {
-                        let Some(t) = shake.as_array() else {
-                            clean = false;
-                            break;
-                        };
-                        let (Some(a), Some(b), Some(color)) = (
-                            t.first().and_then(Value::as_u64),
-                            t.get(1).and_then(Value::as_u64),
-                            t.get(2).and_then(Value::as_str),
-                        ) else {
-                            clean = false;
-                            break;
-                        };
-                        let shade = if color.starts_with(['r', 'R']) {
-                            numinous_core::party::Shade::Red
-                        } else {
-                            numinous_core::party::Shade::Blue
-                        };
-                        if a == 0
-                            || b == 0
-                            || !party.shade(a as usize - 1, b as usize - 1, shade)
-                            || party.mono_triangle().is_some()
-                        {
-                            clean = false;
-                            break;
-                        }
-                    }
-                    if clean && party.complete() {
-                        journey.win();
-                        post_score(
-                            &scores_path(),
-                            &format!("party guests:{guests}"),
-                            party.shaded() as i64,
-                        );
-                    }
+                if party.complete() && party.mono_triangle().is_none() {
+                    journey.win();
+                    post_score(
+                        &scores_path(),
+                        &format!("party guests:{}", party.guests),
+                        party.shaded() as i64,
+                    );
                 }
             }
         }

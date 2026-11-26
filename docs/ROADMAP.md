@@ -30,7 +30,7 @@ creation and persistence, and 43 MCP tools in all:
 24 public play tools,
 18 private tools for progression, creation, study, or local state,
 and one local broadcast consent control. A deterministic matrix of
-3065 screens covers every catalog room plus the shared game, overlay, Show,
+3081 screens covers every catalog room plus the shared game, overlay, Show,
 Studio, and audio-state branches. Breadth is not a substitute for depth.
 
 **Release policy (agent-and-machine track, founder policy 2026-08-02).**
@@ -407,6 +407,7 @@ and the owner doc carries the standing description.
 - **Unreleased:** Elliptical Billiard traces its hidden curve and sounds
   the focal boundary. The automatic room flash sweep now covers every visual era.
   [Mathematics and verification](MATHEMATICS.md#elliptical-billiards).
+  [Sunflower Strings](PLAYFUL.md#sunflower-strings) shares its Party board across the three faces.
 
 - **`v0.5.0-alpha.13` (2026-11-08):** the automatic tours of
   `cellular-automata`, `julia`, and `lambda-map` are inside the measured
@@ -932,7 +933,7 @@ checks land; writing more designs does not enlarge the frozen candidate scope.
 | Real creative surface | Studio graphs, paired parametric paths, fields over the plane with three stored readings, named sliders with declared ranges, overlay programs of two to four graphs, and Euclidean rhythms as `euclid(hits, steps)`, tracker marks as `pat(x..x..x.)` or the editor form `x..x..x.`, piano roll of the sung MIDI voice, continuous and named-scale voices, versioned `.num` serialization with title, author, era, lineage, and editable prose credit, links, plotting, animation, singing, WAV and Standard MIDI File export of the sung melody on CLI, MCP, and the App F4 share, exact paused App reopen, the one-key share bundle, the local Gallery wall, and fork with recorded descent exist | MusicXML, safe share preview for incoming links, and clean-install round trip |
 | Rigor and care are provable | Dated full-gate and coverage evidence in `QUALITY.md`, pinned Rust 1.99.1, Clippy, style, supply-chain CI, tagged build provenance, and a native SPDX Rust plus packaged-native SBOM attested from the exact audited release set | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
-| Beautiful and honest throughout | An exact matrix of 3065 screens and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
+| Beautiful and honest throughout | An exact matrix of 3081 screens and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
 ### 1.x After First Light
 
@@ -1164,7 +1165,7 @@ on equal terms. This is a values commitment, not a feature, and it holds from
   source-bound catalog audits, and scripted hallway, tactile, and first-contact
   checks are enforced. Independent content evaluation, voluntary participant
   feedback, and the continuing refinement loop still need separate evidence.
-- **Beauty QA:** a deterministic matrix of 3065 screens covers eight states per room
+- **Beauty QA:** a deterministic matrix of 3081 screens covers eight states per room
   plus every persistent game display branch, overlays, The Show, Studio, and
   reset and phase flows, plus a five-frame persistent Life sequence, with 14
   compact controller and pause receipts, plus 18 explicit audio-state receipts. It
