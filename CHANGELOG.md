@@ -22,7 +22,8 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 - Confirmed erasure recognizes the exact native filenames used for temporary
   state. A relative journal filename gets the same inventory and cleanup as an
   absolute path. Conflicting store and sidecar paths are refused before erasure.
-  Local state and lock reads check for a regular file.
+  Local state and lock reads check for a regular file. On Windows, a writer
+  waits when another writer is still removing a lock or recovery marker.
 - MCP `crack` shows the winning guess, counts any guesses skipped after the
   game ends, and checks the digit strings it grades. Room calls that mix up
   `room` and `id` now name both fields in the error.

@@ -1770,13 +1770,38 @@ pub(crate) fn open_regular_file(path: &Path) -> io::Result<File> {
     Ok(file)
 }
 
-// Only regular directory entries belong to the lock and recovery protocol.
-// A missing entry is a normal race when another writer releases the lock.
-fn existing_lock_file(path: &Path) -> io::Result<bool> {
-    match fs::symlink_metadata(path) {
-        Ok(metadata) => require_regular(path, &metadata).map(|()| true),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
-        Err(error) => Err(error),
+#[derive(Debug, PartialEq, Eq)]
+enum LockEntry {
+    Missing,
+    Regular,
+    Busy,
+}
+
+impl LockEntry {
+    fn at(path: &Path) -> io::Result<Self> {
+        match fs::symlink_metadata(path) {
+            Ok(metadata) => require_regular(path, &metadata).map(|()| Self::Regular),
+            Err(error) => Self::from_lookup_error(error),
+        }
+    }
+
+    fn from_lookup_error(error: io::Error) -> io::Result<Self> {
+        if error.kind() == io::ErrorKind::NotFound {
+            Ok(Self::Missing)
+        } else if windows_lock_contention(&error) {
+            // A Windows name can remain inaccessible while deletion is pending.
+            Ok(Self::Busy)
+        } else {
+            Err(error)
+        }
+    }
+
+    fn clear_or_recover(self, recover: impl FnOnce() -> bool) -> bool {
+        match self {
+            Self::Missing => true,
+            Self::Regular => recover(),
+            Self::Busy => false,
+        }
     }
 }
 
@@ -1865,10 +1890,11 @@ impl PersistLock {
     fn acquire(path: &Path) -> io::Result<Self> {
         ensure_parent(path)?;
         let lock_path = lock_path_for(path);
+        let recovery_path = recovery_path_for(&lock_path);
         for _ in 0..LOCK_RETRIES {
-            let recovery_path = recovery_path_for(&lock_path);
-            if existing_lock_file(&recovery_path)? {
-                let _ = recover_stale_marker(&recovery_path);
+            if !LockEntry::at(&recovery_path)?
+                .clear_or_recover(|| recover_stale_marker(&recovery_path))
+            {
                 thread::sleep(LOCK_SLEEP);
                 continue;
             }
@@ -1892,7 +1918,7 @@ impl PersistLock {
                     })();
                     drop(file);
                     metadata_result?;
-                    if recovery_path_for(&lock_path).exists() {
+                    if LockEntry::at(&recovery_path)? != LockEntry::Missing {
                         drop(pending);
                         thread::sleep(LOCK_SLEEP);
                         continue;
@@ -1900,10 +1926,9 @@ impl PersistLock {
                     return Ok(pending.into_lock());
                 }
                 Err(error) if should_retry_lock(&error) => {
-                    if !existing_lock_file(&lock_path)? {
-                        continue;
-                    }
-                    if !recover_stale_lock(&lock_path) {
+                    if !LockEntry::at(&lock_path)?
+                        .clear_or_recover(|| recover_stale_lock(&lock_path))
+                    {
                         thread::sleep(LOCK_SLEEP);
                     }
                 }
@@ -1994,8 +2019,15 @@ fn ensure_parent(path: &Path) -> io::Result<()> {
 }
 
 fn should_retry_lock(error: &io::Error) -> bool {
-    error.kind() == io::ErrorKind::AlreadyExists
-        || (cfg!(windows) && error.kind() == io::ErrorKind::PermissionDenied)
+    error.kind() == io::ErrorKind::AlreadyExists || windows_lock_contention(error)
+}
+
+fn windows_lock_contention(error: &io::Error) -> bool {
+    // Sharing violation, lock violation and delete pending can also occur
+    // while another writer is finishing with the directory entry.
+    cfg!(windows)
+        && (error.kind() == io::ErrorKind::PermissionDenied
+            || matches!(error.raw_os_error(), Some(32 | 33 | 303)))
 }
 
 fn recover_stale_lock(lock_path: &Path) -> bool {
@@ -2046,7 +2078,7 @@ fn lock_token_matches(lock_path: &Path, token: &str) -> bool {
 }
 
 fn lock_is_recoverable(lock_path: &Path) -> bool {
-    if !matches!(existing_lock_file(lock_path), Ok(true)) {
+    if !matches!(LockEntry::at(lock_path), Ok(LockEntry::Regular)) {
         return false;
     }
     let text = match read_lock_text_lossy(lock_path) {
@@ -3625,13 +3657,47 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn non_unicode_store_names_keep_distinct_sidecars() {
+    fn sidecar_names_preserve_the_original_unix_bytes() {
         use std::os::unix::ffi::OsStrExt;
+        use std::path::Path;
+        let store = Path::new(std::ffi::OsStr::from_bytes(b"state-\xff"));
+        let other = Path::new(std::ffi::OsStr::from_bytes(b"state-\xfe"));
+        let owned = super::temp_name(store, 17, 42);
+        assert_eq!(owned.as_bytes(), b".state-\xff.17.42.tmp");
+        assert_ne!(owned, super::temp_name(other, 17, 42));
+        assert_eq!(
+            super::lock_path_for(store).as_os_str().as_bytes(),
+            b"state-\xff.lock"
+        );
+    }
+
+    #[test]
+    fn inventory_and_erasure_preserve_differently_named_native_sidecars() {
+        use std::ffi::OsStr;
         let root = IsolatedStore::new("native_names");
-        let store = root.root.join(std::ffi::OsStr::from_bytes(b"state-\xff"));
-        let other = root.root.join(std::ffi::OsStr::from_bytes(b"state-\xfe"));
-        let owned = super::temp_path_for(&store);
-        let unrelated = super::temp_path_for(&other);
+        let names = (OsStr::new("state-π"), OsStr::new("state-λ"));
+        #[cfg(unix)]
+        let names = {
+            use std::os::unix::ffi::OsStrExt;
+            let bytes = (
+                OsStr::from_bytes(b"state-\xff"),
+                OsStr::from_bytes(b"state-\xfe"),
+            );
+            // Some Unix volumes only admit UTF-8 names. Exercise cleanup on
+            // names this volume accepts; the byte grammar is tested above.
+            let probe = root.root.join(bytes.0);
+            if let Ok(file) = std::fs::File::create_new(&probe) {
+                drop(file);
+                std::fs::remove_file(probe).unwrap();
+                bytes
+            } else {
+                names
+            }
+        };
+        let store = root.root.join(names.0);
+        let other = root.root.join(names.1);
+        let owned = root.root.join(super::temp_name(&store, 17, 42));
+        let unrelated = root.root.join(super::temp_name(&other, 17, 42));
         for path in [&owned, &unrelated, &super::lock_path_for(&other)] {
             std::fs::write(path, b"fixture").unwrap();
         }
@@ -4074,6 +4140,39 @@ mod tests {
         assert!(merged.visited.contains("julia"));
         assert_eq!(merged.plays, 1);
         remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn an_inaccessible_lock_entry_neither_grants_ownership_nor_runs_recovery() {
+        use super::LockEntry;
+        assert_eq!(
+            LockEntry::from_lookup_error(io::ErrorKind::NotFound.into()).unwrap(),
+            LockEntry::Missing
+        );
+        assert!(LockEntry::Missing.clear_or_recover(|| panic!("missing lock recovered")));
+        assert!(!LockEntry::Busy.clear_or_recover(|| panic!("busy lock recovered")));
+        assert!(LockEntry::Regular.clear_or_recover(|| true));
+        assert!(!LockEntry::Regular.clear_or_recover(|| false));
+        assert_eq!(
+            LockEntry::from_lookup_error(io::ErrorKind::InvalidInput.into())
+                .unwrap_err()
+                .kind(),
+            io::ErrorKind::InvalidInput
+        );
+        let denied = LockEntry::from_lookup_error(io::ErrorKind::PermissionDenied.into());
+        if cfg!(windows) {
+            assert_eq!(denied.unwrap(), LockEntry::Busy);
+            for code in [5, 32, 33, 303] {
+                let error = io::Error::from_raw_os_error(code);
+                assert!(super::should_retry_lock(&error));
+                assert_eq!(
+                    LockEntry::from_lookup_error(error).unwrap(),
+                    LockEntry::Busy
+                );
+            }
+        } else {
+            assert_eq!(denied.unwrap_err().kind(), io::ErrorKind::PermissionDenied);
+        }
     }
 
     #[test]
