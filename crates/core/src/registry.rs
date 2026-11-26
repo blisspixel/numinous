@@ -6,6 +6,11 @@
 use crate::room::Room;
 use crate::rooms;
 
+mod regional_baseline;
+#[cfg(test)]
+mod regional_report;
+pub use regional_baseline::{KNOWN_OVER_FLASH_AREA, REGIONAL_FLASH_SPEEDS};
+
 /// The one room the threshold offers as an astonishing first touch.
 ///
 /// Face-neutral because it is a choice about the catalog rather than about any
@@ -414,6 +419,37 @@ pub fn echoable_id(id: &str) -> String {
 #[must_use]
 pub fn hidden_room_by_id(id: &str) -> Option<Box<dyn Room>> {
     rooms::construct_hidden_by_id(id)
+}
+
+#[cfg(test)]
+const FLASH_REFERENCE: (usize, usize) = (240, 140);
+
+/// Render each sampled phase once. The whole-frame and regional measurements
+/// use the same raster and give each Era its own copy of the original pixels.
+#[cfg(test)]
+fn visit_era_frames<T>(
+    room: &dyn Room,
+    (width, height): (usize, usize),
+    states: &mut [(crate::Era, T)],
+    mut visit: impl FnMut(&mut T, &[u8]),
+) {
+    let cycle = (crate::APP_FRAMES_PER_SECOND / crate::ROOM_CYCLES_PER_SECOND).round() as usize;
+    let accent = room.meta().accent;
+    let mut transformed = Vec::with_capacity(width * height * 4);
+    for frame in 0..cycle {
+        let mut raster = crate::raster::Raster::with_accent(width, height, accent);
+        room.render(&mut raster, frame as f64 / cycle as f64);
+        let raw = raster.to_rgba();
+        for (era, state) in &mut *states {
+            if *era == crate::Era::Modern {
+                visit(state, &raw);
+            } else {
+                transformed.clone_from(&raw);
+                era.apply(&mut transformed, width, height);
+                visit(state, &transformed);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -934,6 +970,12 @@ mod tests {
         // reviewer found in an earlier rule of mine.
         let section = crate::roadmap_decisions();
 
+        for &(room, _, _, _) in super::KNOWN_OVER_FLASH_AREA {
+            assert!(
+                section.contains(&format!("`{room}`")),
+                "{room} is missing from the regional flash decisions"
+            );
+        }
         for (room, era, _) in KNOWN_OVER_FLASH_BUDGET {
             let name = format!("`{room}`");
             assert!(
@@ -947,7 +989,7 @@ mod tests {
 
     use crate::Era;
 
-    const FLASH_REFERENCE: (usize, usize) = (240, 140);
+    use super::FLASH_REFERENCE;
 
     /// One room and Era measured across the App's speeds.
     struct FlashSweep {
@@ -979,27 +1021,17 @@ mod tests {
         eras: [Era; N],
     ) -> [FlashSweep; N] {
         use crate::photosensitivity::{frame_luminance, frame_red_state};
-        let cycle = (crate::APP_FRAMES_PER_SECOND / crate::ROOM_CYCLES_PER_SECOND).round() as usize;
-        let mut series =
-            eras.map(|era| (era, Vec::with_capacity(cycle), Vec::with_capacity(cycle)));
-        let mut transformed = Vec::with_capacity(width * height * 4);
-        for frame in 0..cycle {
-            let mut raster = crate::raster::Raster::with_accent(width, height, room.meta().accent);
-            room.render(&mut raster, frame as f64 / cycle as f64);
-            let raw = raster.to_rgba();
-            for (era, luminance, red) in &mut series {
-                let pixels = if *era == Era::Modern {
-                    &raw
-                } else {
-                    transformed.clone_from(&raw);
-                    era.apply(&mut transformed, width, height);
-                    &transformed
-                };
+        let mut series = eras.map(|era| (era, (Vec::new(), Vec::new())));
+        super::visit_era_frames(
+            room,
+            (width, height),
+            &mut series,
+            |(luminance, red), pixels| {
                 luminance.push(frame_luminance(pixels));
                 red.push(frame_red_state(pixels));
-            }
-        }
-        series.map(|(era, luminance, red)| {
+            },
+        );
+        series.map(|(era, (luminance, red))| {
             analyze_flash_series(room.meta().id, era, speeds, &luminance, &red)
         })
     }

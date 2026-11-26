@@ -353,6 +353,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
             },
             NIGHTLY_WORKFLOW_PATH: {
                 "am-qa": 30,
+                "regional-flashes": 60,
                 "roundtrip": 45,
                 # Downloads and installs a published release on three systems;
                 # the same budget as the roundtrip it stands beside.

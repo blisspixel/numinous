@@ -108,7 +108,11 @@ enum Command {
         out: Option<PathBuf>,
     },
     /// Show the accessibility switches and which of them are on right now.
-    Access,
+    Access {
+        /// Look up measured flashing in the automatic tour of one catalog room.
+        #[arg(long)]
+        room: Option<String>,
+    },
     /// Read saved App audio levels or first-run defaults, without a sound device.
     Settings {
         /// Emit machine-readable levels, mute, and saved/default provenance.
@@ -1881,7 +1885,8 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             );
             ExitCode::SUCCESS
         }
-        Command::Access => {
+        Command::Access { room: Some(id) } => emit(access::room_flash_report(&id)),
+        Command::Access { room: None } => {
             print!(
                 "{}",
                 access_report(&access_settings(

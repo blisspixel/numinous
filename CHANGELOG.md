@@ -6,6 +6,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 ## [Unreleased]
 
 ### Added
+- `numinous access --room <id>` shows which visual eras and speeds exceeded
+  three flashes in one second within part of an automatic room image. The
+  nightly report measures regional general and red flashes across the catalog.
 - Sunflower Strings opens a reversible drawing game on the six-guest Party
   board. Compare pairs of strings, try the optional challenge, and pass the
   board code between the App, CLI and MCP.

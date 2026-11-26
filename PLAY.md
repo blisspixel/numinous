@@ -257,11 +257,14 @@ also carries the MCP workflow offline.
 
 ## Motion, sound, and flashing
 
-**Flashing.** The automatic room tours stayed within the whole-frame general
-and red flash budget in every visual era at 1x, 2x, 4x and 8x. This measures
-a 240 by 140 room image. Flashing in smaller areas, hand and beat input, and
-the final App display remain unmeasured. `numinous access` reports the
-measurement and your active switches.
+**Flashing.** To check a room before opening it, run
+`numinous access --room interference`, substituting any catalog room ID.
+Some automatic tours exceeded three flashes in one second in a smaller
+region even though the whole-image average stayed within budget. The check
+samples brightness and color in overlapping 80 by 47 rectangles on a 240 by
+140 image, in every visual era at 1x, 2x, 4x and 8x. The test can miss
+smaller patches and some changes involving red. Hand and beat input and the final App display remain unmeasured.
+`numinous access` also shows your active switches.
 
 | Environment variable | Effect when nonempty |
 |---|---|

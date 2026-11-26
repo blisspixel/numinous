@@ -3599,7 +3599,7 @@ fn the_flash_disclosure_says_which_rooms_and_from_what_speed() {
         "{none}"
     );
     assert!(none.contains("final App display"), "{none}");
-    assert!(none.contains("largest pump is 1.5"), "{none}");
+    assert!(none.contains("80 by 47 rectangles"), "{none}");
     use numinous_core::Era::{Modern, Vector};
     let some = crate::access::flash_disclosure(&[
         ("julia", Vector, 8.0),
@@ -3638,7 +3638,7 @@ fn the_flash_disclosure_says_which_rooms_and_from_what_speed() {
         &numinous_core::KNOWN_OVER_FLASH_BUDGET
     )));
     assert!(report.contains("measured speeds up to 8x"), "{report}");
-    assert!(report.contains("phase nudge is 0.03"), "{report}");
+    assert!(report.contains("numinous access --room <id>"), "{report}");
 }
 
 #[test]

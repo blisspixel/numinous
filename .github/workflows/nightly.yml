@@ -94,6 +94,30 @@ jobs:
           python3 scripts/test-understanding-am.py
           python3 scripts/understanding-am-pipeline.py --check-only docs/evidence/understanding-0.4/registration-dry-run.json
 
+  regional-flashes:
+    name: Regional flash report
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: 1.99.1
+      - name: Measure every automatic catalog tour
+        run: |
+          python3 scripts/run-exact-test.py --package numinous-core --lib --ignored \
+            registry::regional_report::automatic_room_regional_flash_report
+      - name: Keep the measured regional peaks and locations
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: regional-flash-report
+          path: .agent/qol/regional-flash.csv
+          include-hidden-files: true
+          if-no-files-found: error
+
   roundtrip:
     # Its own job with a matrix, because 0.6-am asks for install, play and
     # uninstall on three operating systems and this ran only on Linux. The

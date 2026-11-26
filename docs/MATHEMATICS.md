@@ -967,9 +967,8 @@ were 0, 1, 1 and 2 in every era. Interference measured zero throughout. Both roo
 red flashes across the same runs. These are whole-frame measurements of the
 automatic room raster, before App overlays and display effects.
 
-The catalog measurement remains whole-frame mean relative luminance at 240 by 140, so
-the flashing-area rule is not implemented, as before. GPU frames are not a
-separate series. Julia's GPU path uses the same `c`. Speeds between the
+These whole-frame results use a 240 by 140 reference raster.
+GPU frames are not a separate series. Julia's GPU path uses the same `c`. Speeds between the
 doublings, which the App's typed console and the Life room's wheel can set,
 are held to the last certified doubling rather than measured as their own
 series. The music visualizer's largest pump and phase nudge are folded into
@@ -978,6 +977,42 @@ step, so neither path can outrun the series the sweep already measured.
 Source: [WCAG 2.2, Understanding Three Flashes or Below
 Threshold](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold).
 Implementation: the sweep in `crates/core/src/registry.rs`.
+
+### Regional flashing in automatic tours
+
+A whole room can keep a steady average while one corner pulses. The regional
+report measures mean light and color in overlapping rectangles on the same
+240 by 140 raster. Each rectangle spans roughly a third of the width and
+height (80 by 47 pixels). Origins advance 20 pixels horizontally and 11
+vertically, with an extra origin wherever needed to reach the far edge.
+The general and red series are measured for each fixed rectangle over time.
+Taking the brightest rectangle independently at each frame would conflate
+different places and could manufacture a flash.
+
+This approximates the field size in the W3C reference geometry. Screen size,
+scaling and viewing distance determine how much of a player's vision it
+actually occupies. The regional mean also differs from the area undergoing
+a qualifying transition at the same time. A fifth of a field pulsing from
+black to white changes its mean by 0.20. Conversely, a third of a field
+changing by 0.15 changes its mean by only 0.05, below the general 0.10
+threshold. Both examples assume a steady background. A count above three
+is a reason to inspect the room. A count below it does not establish WCAG
+conformance. [W3C reference geometry and area criterion](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html)
+
+The nightly report samples the default variation in every visual era and the
+1x, 2x, 4x and 8x playback speeds. `numinous access --room <id>` reads
+the recorded overages offline. The regional baseline tracks changes to the
+pictures separately from the whole-frame speed cap. The report covers
+automatic tours before App composition. A separate flag records a region with two or three
+flashes in each of five successive one-second bins of the repeating tour.
+It records sustained activity and does not change the speed cap. Gestures,
+beat input, post-processing
+and the area of contiguous pixels flashing together remain open. Both reports use
+the existing red test, which takes its saturation ratio in encoded RGB and
+checks crossings of that threshold. A red-orange and blue alternation exposes
+a difference from a linear-RGB calculation. The general test can also pair
+two same-direction changes separated by a small reversal.
+[Flash measurement follow-up](https://github.com/blisspixel/numinous/issues/483)
 
 ## What remains open
 
