@@ -87,6 +87,39 @@ impl Drop for ProjectCliFixture {
 }
 
 #[test]
+fn public_access_looks_up_a_room_without_opening_it() {
+    let fixture = ProjectCliFixture::new("room-flash-report");
+    let report = |room: &str| {
+        let result = fixture.run(&["access", "--room", room]);
+        assert!(result.status.success(), "{result:?}");
+        String::from_utf8(result.stdout).unwrap()
+    };
+    if let Some(&(room, era, general, red)) = numinous_core::KNOWN_OVER_FLASH_AREA.first() {
+        let result = report(room);
+        for (index, speed) in [1, 2, 4, 8].into_iter().enumerate() {
+            for (kind, peak) in [("general", general[index]), ("red", red[index])] {
+                if peak > 0 {
+                    assert!(result.contains(&format!("{} {speed}x: {peak} {kind}", era.name())));
+                }
+            }
+        }
+        assert!(result.contains("Only readings above three"));
+    }
+    if let Some(room) = numinous_core::ROOM_CATALOG.iter().find(|room| {
+        !numinous_core::KNOWN_OVER_FLASH_AREA
+            .iter()
+            .any(|row| row.0 == room.id)
+    }) {
+        assert!(report(room.id).contains("No sampled region exceeded"));
+    }
+    assert_eq!(report("kepler-areas"), report("kepler-laws"));
+    let unknown = fixture.run(&["access", "--room", "interferenc"]);
+    assert!(!unknown.status.success());
+    assert!(String::from_utf8_lossy(&unknown.stderr).contains("interference"));
+    assert_eq!(std::fs::read_dir(&fixture.root).unwrap().count(), 0);
+}
+
+#[test]
 fn public_settings_reports_defaults_without_creating_profile_files() {
     let fixture = ProjectCliFixture::new("settings-defaults");
     let report = fixture.json(&["settings", "--json"]);

@@ -540,8 +540,12 @@ Show still waits for Enter.
 Every room's answer to a touch shows under `NO_COLOR`. The flash sweep
 measures the automatic room image in every visual era, at 240 by 140 and
 at 1x, 2x, 4x and 8x. The general and red whole-frame measurements stayed
-within budget. Local flashing areas, input-driven changes and the final App
-display remain unmeasured. `numinous access` prints the scope of the sweep.
+within budget. Some smaller regions exceeded three flashes in a second.
+Before entering a room, run `numinous access --room <id>` to see which visual
+eras and speeds crossed that threshold. The regional measurement averages light
+and color in overlapping 80 by 47 rectangles. Smaller patches can average
+away. Input-driven changes and the final App display remain unmeasured.
+[Measurement and limits](MATHEMATICS.md#regional-flashing-in-automatic-tours)
 
 The App's optional study surface preserves Unicode case and mathematical
 notation with bundled fonts, wrapping, and scrolling. Lissajous has English

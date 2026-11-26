@@ -1,8 +1,7 @@
 //! Photosensitivity budget: how hard a surface is allowed to flash.
 //!
 //! The standard is WCAG 2.3.1, Three Flashes or Below Threshold. Its terms are
-//! specific and easy to approximate wrongly, so they are implemented here
-//! rather than eyeballed:
+//! the basis for the following measurements:
 //!
 //! - A **flash** is a *pair of opposing* transitions in relative luminance, an
 //!   increase followed by a decrease or the reverse. A single transition is not
@@ -17,19 +16,21 @@
 //!   `crate::ansi::to_mono`, which answers a different question and must not be
 //!   substituted here.
 //! - The limit is [`MAX_FLASHES_PER_SECOND`] within any one-second window.
+//!   The comparator halves the total qualifying extrema transitions. When
+//!   smaller intervening legs are discarded, two counted legs can have the
+//!   same direction. This affects the general and red proxy counts.
 //!
 //! 2.3.1 bounds red flashing separately and more strictly, because sensitivity
-//! to saturated red is higher, and that test is implemented too. It is a
-//! different measurement rather than the same one on the red channel: see
+//! to saturated red is higher. The red screen uses Numinous's existing
+//! encoded-RGB saturation and threshold-crossing convention, described in
 //! [`frame_red_state`].
 //!
-//! One part of 2.3.1 is deliberately **not** implemented, and the evidence must
-//! say so rather than implying full conformance: the flashing **area** rule,
-//! which bounds how much of central vision may flash. This module measures
-//! whole frames, which is the conservative direction for a full-screen flash (a
-//! whole-frame flash is at least as large as a partial one) but which cannot
-//! see a small patch strobing inside an otherwise steady picture. Both the
-//! general and the red measurement share that limit.
+//! Whole-frame means can dilute a localized strobe. The [regional] screen
+//! also measures overlapping windows at a declared raster geometry. Its
+//! window means have different biases from measuring the actual area of
+//! concurrent flashing pixels.
+
+pub mod regional;
 
 /// Minimum change in relative luminance for a transition to count, as a
 /// fraction of maximum relative luminance.
@@ -81,9 +82,8 @@ pub(crate) fn linear_channel_table() -> &'static [f64; 256] {
 
 /// Mean relative luminance of one RGBA frame.
 ///
-/// Whole-frame rather than per-region: this module does not implement the
-/// flashing-area rule, and averaging the whole frame cannot understate a
-/// full-screen flash, which is the case that matters most.
+/// This whole-frame reading can dilute a local strobe. The [regional] screen
+/// measures smaller windows separately.
 #[must_use]
 pub fn frame_luminance(rgba: &[u8]) -> f64 {
     let pixels = rgba.len() / 4;
@@ -216,9 +216,9 @@ pub const RED_CHROMATICITY_DELTA: f64 = 0.20;
 pub struct RedState {
     /// `R / (R + G + B)` over the frame's mean displayed color.
     ///
-    /// The standard reads this off the displayed values, so it is taken before
-    /// linearization. Relative luminance is the quantity that gets linearized.
-    /// This one is not, and linearizing it anyway would move the threshold.
+    /// The Numinous proxy takes this ratio from mean sRGB code values,
+    /// before linearization. WCAG 2.2 refers to the linear R, G, B values
+    /// defined for relative luminance. These can select different states.
     pub saturation: f64,
     /// CIE 1976 UCS `u'` of the frame's mean color.
     pub u: f64,
@@ -247,16 +247,12 @@ impl RedState {
 
 /// The red-flash state of one RGBA frame.
 ///
-/// Whole-frame, on the same basis and with the same limitation as
-/// [`frame_luminance`]: without the flashing-area rule, a small patch strobing
-/// saturated red inside a steady picture averages away here. What this does
-/// measure is a full-frame red flash.
+/// As with [`frame_luminance`], local color excursions can average away.
+/// The [regional] measurement uses the same red-state calculation per window.
 ///
-/// Note for anyone reading the evidence this produces: the standard puts no
-/// luminance floor under the ratio, so a frame of faint red ink on black is a
-/// saturated red state, exactly as a bright red fill is. That is the standard
-/// as written, and adding a floor it does not have would be inventing a
-/// threshold rather than implementing one.
+///
+/// This proxy has no luminance floor: dim red ink on black can yield a
+/// saturated state. See [`RedState::saturation`] for its channel convention.
 #[must_use]
 pub fn frame_red_state(rgba: &[u8]) -> RedState {
     let pixels = rgba.len() / 4;
@@ -267,11 +263,8 @@ pub fn frame_red_state(rgba: &[u8]) -> RedState {
             v: 0.0,
         };
     }
-    // Two means, because the two quantities are read off different scales. The
-    // ratio comes off the displayed values, which is where the standard takes
-    // it. The chromaticity comes off linear light, the only scale on which
-    // averaging a picture means anything: averaging encoded values and
-    // linearizing afterwards names a color no part of the frame contains.
+    // Preserve the two scales used by the historical whole-frame measurement:
+    // encoded-channel saturation and linear-light chromaticity.
     let table = linear_channel_table();
     let mut encoded = [0.0f64; 3];
     let mut light = [0.0f64; 3];
@@ -283,6 +276,10 @@ pub fn frame_red_state(rgba: &[u8]) -> RedState {
     }
     let encoded = encoded.map(|total| total / pixels as f64);
     let linear = light.map(|total| total / pixels as f64);
+    red_state_from_means(encoded, linear)
+}
+
+fn red_state_from_means(encoded: [f64; 3], linear: [f64; 3]) -> RedState {
     let sum = encoded[0] + encoded[1] + encoded[2];
     // A black frame has no color to be red and no chromaticity at all. Zero for
     // both is the honest answer rather than a division producing NaN, which
@@ -341,6 +338,9 @@ fn red_run_extremes(states: &[RedState]) -> Vec<RedState> {
 }
 
 /// How many crossings into or out of saturated red are large enough to count.
+///
+/// This proxy requires a crossing of its saturation threshold. Its reported
+/// transitions therefore exclude excursions entirely within saturated red.
 ///
 /// The series is first reduced to one representative frame per run of
 /// same-redness frames, so every boundary left is already a crossing and the
@@ -447,7 +447,7 @@ mod tests {
 
     #[test]
     fn saturated_red_is_the_ratio_and_not_the_brightness() {
-        // The standard's ratio has no luminance floor, so dim red is as
+        // The proxy's ratio has no luminance floor, so dim red is as
         // saturated as bright red. This is deliberate and is documented on
         // `frame_red_state`; pinning it here means a later "fix" that adds a
         // floor has to argue with a test rather than slip through.

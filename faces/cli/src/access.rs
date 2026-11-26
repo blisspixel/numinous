@@ -101,9 +101,7 @@ pub(crate) fn access_report(settings: &[AccessSetting]) -> String {
 ///
 /// `known` is the sweep's shrink-only list: each room with the slowest App
 /// speed at which its automatic tour exceeds the measured budget in an era.
-/// Rooms are grouped by that speed and era. The music
-/// visualizer's largest pump and phase nudge are named, and both are held
-/// inside the measured speed limit the same list produces.
+/// Rooms are grouped by that speed and era.
 pub(crate) fn flash_disclosure(known: &[(&str, numinous_core::Era, f64)]) -> String {
     /// Room names wrap before this width, leaving room for the comma.
     const NAME_COLUMNS: usize = 72;
@@ -140,18 +138,52 @@ pub(crate) fn flash_disclosure(known: &[(&str, numinous_core::Era, f64)]) -> Str
         }
         out.push_str("The App limits each listed room by its earliest over-budget speed.\n");
     }
-    let pump = numinous_core::max_visualizer_time_scale();
-    let nudge = numinous_core::max_visualizer_phase_nudge();
-    out.push_str(&format!(
-        "The music visualizer's largest pump is {pump} and its largest\n\
-         phase nudge is {nudge}. Both stay inside the measured speed limit.\n"
-    ));
-    out.push_str(
-        "The sweep measures whole-frame general and red flashes at 240 by 140.\n\
-         Local flashing areas, hand or beat input, and the final App display\n\
-         remain unmeasured.\n",
-    );
+    out.push_str("The sweep measures whole-frame general and red flashes at 240 by 140.\n");
+    if !numinous_core::KNOWN_OVER_FLASH_AREA.is_empty() {
+        out.push_str("Some smaller regions exceeded three flashes in one second.\n");
+    }
+    out.push_str("Check a room before opening it: numinous access --room <id>\n");
+    out.push_str(REGIONAL_SCOPE);
     out
+}
+
+const REGIONAL_SCOPE: &str = "At 1x, 2x, 4x and 8x, the regional check averages light and color in\n\
+    overlapping 80 by 47 rectangles on a 240 by 140 automatic room image.\n\
+    Patches within a rectangle and some red color changes can go undetected.\n\
+    Hand or beat input and the final App display remain unmeasured.\n";
+
+/// Look up the catalog measurement without starting the room or its sound.
+pub(crate) fn room_flash_report(id: &str) -> Result<String, String> {
+    let room = numinous_core::room_meta_by_id(id).ok_or_else(|| super::not_found_message(id))?;
+    let mut out = format!("{} ({}) | Regional flashes\n", room.title, room.id);
+    let mut flagged = false;
+    for &(id, era, general, red) in numinous_core::KNOWN_OVER_FLASH_AREA {
+        if id != room.id {
+            continue;
+        }
+        for ((speed, general), red) in numinous_core::REGIONAL_FLASH_SPEEDS
+            .into_iter()
+            .zip(general)
+            .zip(red)
+        {
+            for (kind, peak) in [("general", general), ("red", red)] {
+                if peak > 0 {
+                    flagged = true;
+                    out.push_str(&format!(
+                        "{} {speed}x: {peak} {kind} flashes in one second\n",
+                        era.name()
+                    ));
+                }
+            }
+        }
+    }
+    if flagged {
+        out.push_str("Only readings above three in one second are listed.\n");
+    } else {
+        out.push_str("No sampled region exceeded three general or red flashes in one second.\n");
+    }
+    out.push_str(REGIONAL_SCOPE);
+    Ok(out)
 }
 
 /// Whether color is allowed, given whatever `NO_COLOR` was set to.
