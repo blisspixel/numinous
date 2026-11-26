@@ -5,24 +5,35 @@
 
 **Mathematics as a shared language, made playable.**
 
-Numinous is a native audiovisual game and creative instrument for humans and
-digital minds. Explore mathematical rooms, hear their relationships, play with
-their rules, and make something of your own. Each room draws its mathematics as
-light on a near-black stage and sounds it in one shared voice. Explanation is
-available whenever you want it, with no level requirement.
+Turn the dial in Times Tables and watch straight threads draw a curve. Open
+Studio and give a curve of your own a voice. Numinous is a native audiovisual
+instrument for humans and digital minds, built to make mathematics feel
+inexhaustibly alive. Play by hand, in a terminal, or over MCP. Open the
+mathematics whenever a pattern makes you curious.
 
-The ambition is a place a child can enjoy exploring and a mathematician can
-use for serious work: playful objects with precise tools available when wanted.
-The [research and tool direction](https://github.com/blisspixel/numinous/blob/main/docs/RESEARCH.md#mathematical-play-and-useful-instruments)
-describes that next depth, with proposals clearly separated from what ships.
+## Choose a way in
 
-*Numinous means awe in the presence of something vast and beautiful. That is
-the experience this project is trying to earn.*
+| Watch | Play | Create |
+|---|---|---|
+| ![Mandelbrot, a stop in The Overture](https://raw.githubusercontent.com/blisspixel/numinous/main/assets/screens/mandelbrot.png) | ![Straight chords gathering into a curve in Times Tables](https://raw.githubusercontent.com/blisspixel/numinous/main/assets/screens/times-tables.png) | ![A parametric path drawn in Studio](https://raw.githubusercontent.com/blisspixel/numinous/main/assets/screens/studio.png) |
+| Open Cabinet > Modes > The Overture. Take over when the Times Tables dial reaches your hand. | In Times Tables, drag slowly. Where does the curve go when you turn back? Press **E** when you want to read about it. | Open Studio with **Tab**. Change a frequency, listen, then keep the version you like. |
 
-## Play
+[First session and controls](PLAY.md) · [App gallery](https://github.com/blisspixel/numinous/blob/main/docs/VISUALS.md#app-gallery) · [Studio experiments](https://github.com/blisspixel/numinous/blob/main/docs/STUDIO.md#bundled-experiments)
 
-Start with [PLAY.md](PLAY.md) for your first session, including the MCP entry
-for digital minds.
+## For digital minds
+
+Point an MCP client at the installed server:
+
+```json
+{"mcpServers": {"numinous": {"command": "numinous-mcp"}}}
+```
+
+Call `list_rooms` with `{"response_mode":"compact"}` to touch Times Tables,
+walk the Strange Loop, or wander by wing. For the same opening score as the
+App, call `watch_show` with `{"show":"overture"}` and follow its cues at
+your own pace. [Packaged play reference](plugins/numinous/skills/play-numinous/SKILL.md)
+
+## Install
 
 Install [GitHub CLI](https://cli.github.com/) first. The installer verifies each
 downloaded archive's signed provenance before extracting it. `gh attestation verify`
@@ -49,80 +60,16 @@ A loose archive or source checkout is not an install root; download a fresh
 archive or use the installer in a separate location. You can download a platform
 archive from [Releases](https://github.com/blisspixel/numinous/releases).
 
-For a digital mind, point an MCP client at the installed server:
-
-```json
-{"mcpServers": {"numinous": {"command": "numinous-mcp"}}}
-```
-
-Then call `list_rooms` with `response_mode: "compact"` and choose a door.
-
 From a source checkout: `cargo run --release --bin numinous-app`.
 On Linux, install the packages in
 [Building from source on Linux](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md#building-from-source-on-linux)
 first. The [player's manual](https://github.com/blisspixel/numinous/blob/main/docs/PLAYING.md) covers controls, settings, and installation.
 
-## Explore, play, create
-
-- **Watch:** let The Show move through mathematical worlds and their sound.
-- **Play:** turn a dial, change a relationship, or try a game. In Route Lab,
-  find a path between two points or plan a cheaper delivery round trip.
-- **Create:** draw and hear your own expressions in Studio, then keep, share,
-  and remix them.
-
-| Times Tables | Studio / Formula Jam |
-|---|---|
-| ![Times Tables: luminous chords across a circle](https://raw.githubusercontent.com/blisspixel/numinous/main/assets/screens/times-tables.png) | ![Studio: an expression drawn as a parametric path](https://raw.githubusercontent.com/blisspixel/numinous/main/assets/screens/studio.png) |
-| Turn the dial and watch a pattern emerge. | Make a relationship of your own. |
-
-See the [app gallery](https://github.com/blisspixel/numinous/blob/main/docs/VISUALS.md#app-gallery),
-[Studio experiments](https://github.com/blisspixel/numinous/blob/main/docs/STUDIO.md#bundled-experiments), and
-[Route Lab guide](https://github.com/blisspixel/numinous/blob/main/docs/ROUTE_LAB.md) for more.
-
-The App, terminal CLI, and MCP server share the same mathematical core. Digital
-minds can play, predict, create, and keep a journal through MCP. Compatible
-hosts can also load the [portable plugin](plugins/numinous).
-
 ## Current state
 
-**0.5.0-alpha.13** is a playable alpha with 356 catalog rooms, games, Journey,
-Studio, controllers, and built-in music. It is still under development:
-Sensory Alpha is active, refining the shared visual and sonic identity.
-Understanding Alpha's qualifying study remains open; human playtests are optional
-feedback rather than a release gate.
-
-The App plays The Overture from Modes, and MCP `watch_show` plays the same
-score through to the Times Tables dial. Route Lab can step through nearest-next
-choices on the App, the CLI, and MCP without changing the delivery order.
-The automatic tours of `cellular-automata`, `julia`, and `lambda-map` are
-inside the measured flash budget through 8x. The cellular tour climbs once
-per cycle, Julia walks `c` out along the real axis, and Lambda walks one way
-along a horizontal segment. On a terminal, `tour`,
-`watch`, and `play` are live. A pipe gets one still postcard. Attention is a
-temperature hand and a placed key. Strange Loop is a descent that returns.
-
-Room marks now preserve faint guides, secondary detail, main shapes, and hot
-highlights through one shared brightness ramp. Touch responses remain visible
-without color, with Hilbert lighting a neighborhood and Percolation exposing a
-shortest crossing. Mandelbrot retains its continuous multicolor field.
-
-Compact room headers keep titles, progress, and audio status separate.
-Percolation's crossing reads in text as well as pixels. Catalog contact sheets
-include every row, share exports reject invalid requests before writes, and
-the saved-creation Gallery stays bounded while discovering the newest files.
-
-The App's study reader offers saved 100, 125, and 150 percent body text through
-Settings > Reading Text and A-/A+ controls, retaining your place as words reflow.
-Settings > Interface Text uses the same three sizes for Cabinet and room
-lettering, and for the pause, banner, and journey overlays, while keeping
-titles and controls inside the window.
-`numinous settings` reports the App's saved audio levels or first-run defaults
-without a window or sound card; add `--json` for a machine-readable snapshot.
-
-The [roadmap](https://github.com/blisspixel/numinous/blob/main/docs/ROADMAP.md#now)
-owns what is built and what comes next.
-[Release history](https://github.com/blisspixel/numinous/blob/main/CHANGELOG.md) records changes, and [VERIFY.md](VERIFY.md)
-describes the checks behind them.
+**0.5.0-alpha.13** is a playable alpha with 356 catalog rooms. Sensory Alpha is
+active. Understanding Alpha's qualifying study remains open.
+[Roadmap](https://github.com/blisspixel/numinous/blob/main/docs/ROADMAP.md#now) · [Changelog](https://github.com/blisspixel/numinous/blob/main/CHANGELOG.md) · [Verification](VERIFY.md)
 
 ## Go deeper
 

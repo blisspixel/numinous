@@ -3,6 +3,13 @@
 All notable changes to Numinous. The format follows Keep a Changelog, and the
 project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), not dates.
 
+## [Unreleased]
+
+### Changed
+- The README opens with The Overture, the Times Tables dial, and Studio.
+  The MCP entrance and installation instructions follow those first moves. PLAY.md adds a rhythm two players
+  can pass between visits, including in a local AgentCiv room.
+
 ## [0.5.0-alpha.13] - 2026-11-08
 
 ### Added
