@@ -3,6 +3,7 @@
 //! x' = sin(a y) + c cos(a x); y' = sin(b x) + d cos(b y).
 //! DRAG: TUNE A AND B. See `docs/ROOMS.md`.
 
+use super::phase_plane::PhasePlane;
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
@@ -52,42 +53,26 @@ fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64, f64, f64) {
     }
 }
 
+fn step((x, y): (f64, f64), [a, b, c, d]: [f64; 4]) -> (f64, f64) {
+    (
+        (a * y).sin() + c * (a * x).cos(),
+        (b * x).sin() + d * (b * y).cos(),
+    )
+}
+
 fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
-    let (width, height) = canvas.draw_bounds();
-    if width == 0 || height == 0 {
+    // Sine and cosine stay in [-1, 1], so these bounds cover every iterate.
+    let (rx, ry) = (1.0 + c.abs(), 1.0 + d.abs());
+    let Some(plane) = PhasePlane::fit(canvas, [(-rx, -ry), (rx, ry)].into_iter()) else {
         return;
-    }
-    let mut x: f64 = 0.1;
-    let mut y: f64 = 0.1;
-    let mut min_x = f64::MAX;
-    let mut max_x = f64::MIN;
-    let mut min_y = f64::MAX;
-    let mut max_y = f64::MIN;
-    let mut pts = Vec::with_capacity(ITERS);
-    for _ in 0..ITERS {
-        let nx = (a * y).sin() + c * (a * x).cos();
-        let ny = (b * x).sin() + d * (b * y).cos();
-        x = nx;
-        y = ny;
-        if !x.is_finite() || !y.is_finite() {
-            break;
-        }
-        min_x = min_x.min(x);
-        max_x = max_x.max(x);
-        min_y = min_y.min(y);
-        max_y = max_y.max(y);
-        pts.push((x, y));
-    }
-    let dx = (max_x - min_x).max(1e-6);
-    let dy = (max_y - min_y).max(1e-6);
-    for (i, &(px, py)) in pts.iter().enumerate() {
-        let u = ((px - min_x) / dx).clamp(0.0, 1.0);
-        let v = ((py - min_y) / dy).clamp(0.0, 1.0);
-        let ix = (u * width.saturating_sub(1) as f64).round() as i32;
-        let iy = ((1.0 - v) * height.saturating_sub(1) as f64).round() as i32;
-        let ch = if i % 10 == 0 { '#' } else { '*' };
-        canvas.plot(ix, iy, ch);
-    }
+    };
+    plane.draw_orbit(
+        canvas,
+        (0.1, 0.1),
+        ITERS,
+        |i| if i % 10 == 0 { '#' } else { '*' },
+        |point| step(point, [a, b, c, d]),
+    );
 }
 
 /// Clifford attractor room.
@@ -110,7 +95,6 @@ impl Clifford {
 }
 
 impl Room for Clifford {
-
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b, c, d) = params(t, None, self.seed);
         draw(canvas, a, b, c, d);
@@ -159,8 +143,7 @@ impl Room for Clifford {
         let mut min_y = y;
         let mut max_y = y;
         for _ in 0..800 {
-            let nx = (a * y).sin() + c * (a * x).cos();
-            let ny = (b * x).sin() + d * (b * y).cos();
+            let (nx, ny) = step((x, y), [a, b, c, d]);
             if !nx.is_finite() || !ny.is_finite() {
                 break;
             }
@@ -210,6 +193,15 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn a_constant_orbit_keeps_its_position_on_the_fixed_axes() {
+        // The zero coefficients send every point to the origin.
+        let mut canvas = Canvas::new(101, 101);
+        super::draw(&mut canvas, 0.0, 0.0, 0.0, 0.0);
+        assert_eq!(canvas.ink_count(), 1);
+        assert_ne!(canvas.cell(50, 50), Some(' '));
     }
 
     #[test]

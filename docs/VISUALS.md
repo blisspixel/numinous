@@ -358,7 +358,8 @@ Four Eras ship as deterministic CPU styling in the app, CLI, and PNG paths:
 
 - **Phosphor:** a green character-display treatment.
 - **8-bit:** a small-palette, chunky-pixel treatment.
-- **Vector:** a sparse line-forward treatment inspired by an oscilloscope.
+- **Vector:** a black background with a continuous beam intensity. Each channel
+  rises from black at 16 to full at 255 before neighboring pixels add a soft glow.
 - **Modern:** the native near-black and single-accent raster look.
 
 The fuller CRT effects, feedback persistence, 16-bit and blueprint treatments,

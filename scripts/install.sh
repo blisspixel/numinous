@@ -1123,7 +1123,10 @@ test_platform_launchers() {
     (
         HOME="$home"
         XDG_DATA_HOME="$home/data"
-        export HOME XDG_DATA_HOME
+        XDG_CONFIG_HOME="$home/config"
+        export HOME XDG_DATA_HOME XDG_CONFIG_HOME
+        mkdir -p "$XDG_CONFIG_HOME"
+        printf '%s\n' 'XDG_DESKTOP_DIR="$HOME/Desktop"' >"$XDG_CONFIG_HOME/user-dirs.dirs"
         install_linux_launchers "$target" "$icon"
         desktop_entry_is_managed "$home/data/applications/numinous.desktop" "$target" \
             || fail "launcher self-test: the Linux application launcher is incomplete"

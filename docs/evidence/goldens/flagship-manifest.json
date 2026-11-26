@@ -160,11 +160,11 @@
       "era": "vector",
       "width": 64,
       "height": 40,
-      "png_sha256": "f33ed0fb226c4f1716dc18dc1ff6f89cf84abc902a0124cffd9ae680b22403ec",
-      "png_bytes": 2459,
-      "png_mean_byte": 123.07198,
+      "png_sha256": "3e276d20b62387ecec94d3f1f2ff7be3f7615917958738ec25c9aa497863b9e0",
+      "png_bytes": 2898,
+      "png_mean_byte": 125.047619,
       "render_status_line": "Status: K 2.00  CLOSED  1 LOBE  TARGET 4",
-      "appearance": "3e131f374b2b131308004d3d3e50050000096e5c6962220000008bb3bf9104000000175a6b1e0000"
+      "appearance": "390d182637210d0c07003a34344005000009564e584c1b0000007197a87404000000134b57170000"
     }
   ]
 }

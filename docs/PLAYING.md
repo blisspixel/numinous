@@ -537,10 +537,11 @@ postcard and the title, and they exit without lighting a star. `--frames N`
 writes that many frames and stops. With `NUMINOUS_REDUCED_MOTION` set, The
 Show still waits for Enter.
 
-Every room's answer to a touch shows under `NO_COLOR`. No catalog room is
-known to flash faster than the measured WCAG 2.3.1 budget at any App speed up
-to 8x. The music visualizer's pump and phase nudge stay inside that certified
-speed. `numinous access` prints the same measurement from the enforcing code.
+Every room's answer to a touch shows under `NO_COLOR`. The flash sweep
+measures the automatic room image in every visual era, at 240 by 140 and
+at 1x, 2x, 4x and 8x. The general and red whole-frame measurements stayed
+within budget. Local flashing areas, input-driven changes and the final App
+display remain unmeasured. `numinous access` prints the scope of the sweep.
 
 The App's optional study surface preserves Unicode case and mathematical
 notation with bundled fonts, wrapping, and scrolling. Lissajous has English

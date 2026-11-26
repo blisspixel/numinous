@@ -100,29 +100,27 @@ pub(crate) fn access_report(settings: &[AccessSetting]) -> String {
 /// What the photosensitivity sweep found, in the words a player reads.
 ///
 /// `known` is the sweep's shrink-only list: each room with the slowest App
-/// speed at which it goes over the WCAG 2.3.1 budget. Rooms are grouped by
-/// that speed, so a player learns both which rooms and when. The music
+/// speed at which its automatic tour exceeds the measured budget in an era.
+/// Rooms are grouped by that speed and era. The music
 /// visualizer's largest pump and phase nudge are named, and both are held
-/// inside the certified speed the same list produces.
-pub(crate) fn flash_disclosure(known: &[(&str, f64)]) -> String {
+/// inside the measured speed limit the same list produces.
+pub(crate) fn flash_disclosure(known: &[(&str, numinous_core::Era, f64)]) -> String {
     /// Room names wrap before this width, leaving room for the comma.
     const NAME_COLUMNS: usize = 72;
     let fastest = numinous_core::MAX_TIME_SCALE;
     let mut out = String::new();
     if known.is_empty() {
         out.push_str(&format!(
-            "No room is known to flash faster than the WCAG budget allows\n\
-             at any App speed up to {fastest}x.\n"
+            "Automatic room tours stayed within the whole-frame flash budget in every\n\
+             visual era at the measured speeds up to {fastest}x.\n"
         ));
     } else {
-        let mut speeds: Vec<f64> = known.iter().map(|&(_, speed)| speed).collect();
-        speeds.sort_by(f64::total_cmp);
-        speeds.dedup();
-        for speed in speeds {
-            let rooms = known
-                .iter()
-                .filter(|&&(_, from)| from == speed)
-                .map(|&(room, _)| room);
+        let mut entries = known.to_vec();
+        entries.sort_by(|a, b| a.2.total_cmp(&b.2).then_with(|| a.1.name().cmp(b.1.name())));
+        for group in entries.chunk_by(|a, b| a.1 == b.1 && a.2 == b.2) {
+            let (_, era, speed) = group[0];
+            out.push_str(&format!("{} era, over budget from {speed}x:\n", era.name()));
+            let rooms = group.iter().map(|&(room, _, _)| room);
             // The names get lines of their own, wrapped, so the report stays
             // inside eighty columns however long the list grows.
             let mut line = String::new();
@@ -137,27 +135,22 @@ pub(crate) fn flash_disclosure(known: &[(&str, f64)]) -> String {
                 }
                 line.push_str(room);
             }
-            out.push_str(&format!(
-                "{line}\n\
-                 flash faster than the WCAG budget allows when the App runs them\n\
-                 at {speed}x speed or faster.\n"
-            ));
+            out.push_str(&line);
+            out.push('\n');
         }
+        out.push_str("The App limits each listed room by its earliest over-budget speed.\n");
     }
     let pump = numinous_core::max_visualizer_time_scale();
     let nudge = numinous_core::max_visualizer_phase_nudge();
     out.push_str(&format!(
         "The music visualizer's largest pump is {pump} and its largest\n\
-         phase nudge is {nudge}. Both stay inside the certified speed.\n"
+         phase nudge is {nudge}. Both stay inside the measured speed limit.\n"
     ));
-    if known.is_empty() {
-        out.push_str("That speed is 8x, the fastest this sweep certifies.\n");
-    } else {
-        out.push_str(
-            "Each room named above runs no faster than half the speed named\n\
-             with it. Every other room stays inside 8x.\n",
-        );
-    }
+    out.push_str(
+        "The sweep measures whole-frame general and red flashes at 240 by 140.\n\
+         Local flashing areas, hand or beat input, and the final App display\n\
+         remain unmeasured.\n",
+    );
     out
 }
 

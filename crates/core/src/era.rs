@@ -115,17 +115,11 @@ impl Era {
             }
             Era::Vector => {
                 for pixel in rgba.as_chunks_mut::<4>().0 {
-                    let lum = luminance(pixel);
-                    if lum < 40 {
-                        // The scope shows nothing but the beam.
-                        pixel[0] = 0;
-                        pixel[1] = 0;
-                        pixel[2] = 0;
-                    } else {
-                        // The beam burns bright.
-                        pixel[0] = boost(pixel[0]);
-                        pixel[1] = boost(pixel[1]);
-                        pixel[2] = boost(pixel[2]);
+                    // Subtract the scope's black level, then map the remaining
+                    // beam intensity to the full channel range. A faint mark
+                    // enters continuously instead of switching on at a cutoff.
+                    for channel in &mut pixel[..3] {
+                        *channel = (u16::from(channel.saturating_sub(16)) * 255 / 239) as u8;
                     }
                 }
                 // Soft bloom: bright neighbors lift dim neighbors slightly.
@@ -183,12 +177,6 @@ fn soft_bloom(rgba: &mut [u8], width: usize, height: usize) {
 /// Integer luminance of an RGBA pixel (0..=255 scale).
 fn luminance(pixel: &[u8]) -> u32 {
     (u32::from(pixel[0]) * 299 + u32::from(pixel[1]) * 587 + u32::from(pixel[2]) * 114) / 1000
-}
-
-/// Brighten a channel toward full, preserving hue ratios roughly.
-fn boost(value: u8) -> u8 {
-    let boosted = u32::from(value) * 3 / 2 + 40;
-    boosted.min(255) as u8
 }
 
 /// Snap to the nearest palette color by squared distance.
@@ -272,11 +260,18 @@ mod tests {
     }
 
     #[test]
-    fn vector_culls_the_dim_and_boosts_the_bright() {
-        let mut rgba = vec![10, 11, 15, 255, 200, 100, 50, 255];
-        Era::Vector.apply(&mut rgba, 2, 1);
-        assert_eq!(&rgba[0..3], &[0, 0, 0], "dim background goes pure black");
-        assert!(rgba[4] > 200, "the beam brightens");
+    fn vector_preserves_beam_levels_without_a_flash_at_the_black_cutoff() {
+        // A one-row ramp isolates the beam response from spatial bloom.
+        let mut ramp: Vec<u8> = (0..=255).flat_map(|v| [v, v, v, 173]).collect();
+        Era::Vector.apply(&mut ramp, 256, 1);
+        let pixels = ramp.as_chunks::<4>().0;
+        assert!(pixels[..=16].iter().all(|p| p[..3] == [0, 0, 0]));
+        assert_eq!(pixels[255], [255, 255, 255, 173]);
+        assert!(pixels.iter().all(|p| p[3] == 173));
+        for pair in pixels.windows(2) {
+            let step = i16::from(pair[1][0]) - i16::from(pair[0][0]);
+            assert!((0..=2).contains(&step), "beam intensity jumped by {step}");
+        }
     }
 
     #[test]

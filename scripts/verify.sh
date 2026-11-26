@@ -8,6 +8,8 @@ mkdir -p "$verify_state"
 export NUMINOUS_JOURNEY="$verify_state/journey.txt"
 export NUMINOUS_SCORES="$verify_state/scores.txt"
 export NUMINOUS_CAIRN="$verify_state/cairn.txt"
+export NUMINOUS_JOURNAL="$verify_state/journal.txt"
+export NUMINOUS_PROJECT="$verify_state/project.txt"
 export NUMINOUS_PREFERENCES="$verify_state/preferences.txt"
 
 echo "== format =="

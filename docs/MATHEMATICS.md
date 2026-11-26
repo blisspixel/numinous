@@ -886,16 +886,18 @@ themselves dyadic, `3/96 = 1/32` for one, and their true orbits do reach 0 in
 a few steps; the exact oracle agrees, so that is the mathematics and not the
 machine. Implementation: `baker.rs`, `cat_map.rs`, `horseshoe.rs`.
 
-### The photosensitivity sweep at the App's worst case
+### The photosensitivity sweep of automatic room images
 
-WCAG 2.3.1 allows at most three general flashes in any one-second window. The
-sweep used to sample 30 frames a second at normal speed and called that the
+The whole-frame check uses three flashes per one-second window as its budget.
+WCAG 2.3.1 also accounts for the area that flashes. A whole-frame average
+can conceal a concentrated flash. The sweep used to sample 30 frames a second at normal speed and called that the
 fastest a face advances a room. The App presents 60 frames a second and a
 player can double its speed up to eight times. The core now owns those numbers
 (`ROOM_CYCLES_PER_SECOND`, `MAX_TIME_SCALE`, `APP_FRAMES_PER_SECOND`), the App
 reads them, and the sweep renders one full cycle per room at the App's normal
 speed and frame rate, 200 frames, and measures every speed on the doubling
 ladder by taking every first, second, fourth, or eighth frame cyclically.
+For each step it checks every starting position on that sampled cycle.
 
 Before this review, at 30 frames and 1x, `gauss-map`, `coupled-tent` and
 `ricker` peaked at 7, 5 and 4 flashes a second. At 60 frames and 1x they peaked
@@ -942,7 +944,30 @@ shifts, and Julia at the catalog seed and at its largest dealt offset. The known
 is empty. On this measurement, every catalog room's automatic tour is
 inside the budget through 8x.
 
-The measurement remains whole-frame mean relative luminance at 240 by 140, so
+The automatic room image now passes through each visual era before the sweep
+samples general and red flashes. Vector used to switch abruptly from black
+to a boosted beam at luma 40. A smooth narrow ramp feeding the old boost
+still sent The Magnet over budget at normal speed. The new beam subtracts a
+black level of 16 from each channel and rescales the rest to full white
+before the usual bloom. This preserves the geometry of fine lines as their
+brightness changes.
+
+Starting at frame zero alone hid an 8x failure in Clifford and De Jong. Both
+rooms were fitting their axes to the observed extrema at each phase. A compact
+orbit could grow to fill the screen just because its viewport contracted.
+Clifford now uses `|x| <= 1 + |c|` and `|y| <= 1 + |d|`. Each coordinate of
+the De Jong map is a difference of two trigonometric terms in `[-1,1]`, so
+its fixed square is `[-2,2]` on both axes. Equal scales preserve the shape
+of each orbit as the parameters change. Across the distinct dealt variations,
+Clifford measured zero general and red flashes throughout. De Jong's worst
+general peaks at 1x, 2x, 4x and 8x were 1, 1, 2 and 3. Its red peak was zero.
+
+At 480 by 280, the general flash peaks for The Magnet at 1x, 2x, 4x and 8x
+were 0, 1, 1 and 2 in every era. Interference measured zero throughout. Both rooms measured zero
+red flashes across the same runs. These are whole-frame measurements of the
+automatic room raster, before App overlays and display effects.
+
+The catalog measurement remains whole-frame mean relative luminance at 240 by 140, so
 the flashing-area rule is not implemented, as before. GPU frames are not a
 separate series. Julia's GPU path uses the same `c`. Speeds between the
 doublings, which the App's typed console and the Life room's wheel can set,

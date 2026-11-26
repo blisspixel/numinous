@@ -6,6 +6,13 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 ## [Unreleased]
 
 ### Fixed
+- The Vector beam now rises smoothly from black. The catalog flash sweep
+  checks every sampled starting frame in every visual era. Clifford and De
+  Jong use fixed mathematical axes so a small orbit keeps its size. The
+  player guide and `numinous access` describe the whole-frame measurement.
+- The documented Git hook checks commit messages on a fresh Unix checkout.
+  The POSIX installer tests desktop shortcuts inside their own XDG configuration.
+  Release checks isolate the journal and project alongside the other player stores.
 - Elliptical Billiard draws the ray across the table after each reflection.
   Dragging the launch changes the hidden curve and its pitch. The pitches
   meet when the ray goes through a focus. Whispering Table uses the same

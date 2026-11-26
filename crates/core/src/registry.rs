@@ -118,22 +118,24 @@ pub fn room_by_id_with(id: &str, variation: u64) -> Option<Box<dyn Room>> {
 /// catalog seed and at its largest dealt offset. The list is empty until a room is
 /// measured over the budget again.
 ///
-/// An entry is the slowest speed that goes over. [`flash_budget_scale`] is
+/// An entry names the room, Era, and slowest speed that goes over. [`flash_budget_scale`] is
 /// then the doubling below that speed. A room that is not listed is
 /// certified through [`crate::MAX_TIME_SCALE`].
-pub const KNOWN_OVER_FLASH_BUDGET: [(&str, f64); 0] = [];
+pub const KNOWN_OVER_FLASH_BUDGET: [(&str, crate::Era, f64); 0] = [];
 
 /// The fastest App time scale the photosensitivity sweep has certified.
 ///
 /// An entry in [`KNOWN_OVER_FLASH_BUDGET`] is the slowest speed that goes
-/// over the budget. The certified scale is the doubling below it. A room that
-/// is not on the list is certified through [`crate::MAX_TIME_SCALE`].
+/// over the budget for one Era. The room-wide ceiling is the doubling below
+/// its earliest failing speed across Eras. Rooms absent from the list are
+/// certified through [`crate::MAX_TIME_SCALE`].
 #[must_use]
 pub fn flash_budget_scale(room_id: &str) -> f64 {
     KNOWN_OVER_FLASH_BUDGET
         .iter()
-        .find(|&&(id, _)| id == room_id)
-        .map(|&(_, failing)| (failing / 2.0).max(crate::MIN_TIME_SCALE))
+        .filter(|&&(id, _, _)| id == room_id)
+        .map(|&(_, _, failing)| (failing / 2.0).max(crate::MIN_TIME_SCALE))
+        .min_by(f64::total_cmp)
         .unwrap_or(crate::MAX_TIME_SCALE)
 }
 
@@ -197,12 +199,14 @@ pub fn allowed_phase_nudge(room_id: &str, elapsed: f64, spent: f64, requested: f
 /// than the certified scale. `None` when the room is not on the list.
 #[must_use]
 pub fn flash_limit_line(room_id: &str) -> Option<String> {
-    let (_, failing) = KNOWN_OVER_FLASH_BUDGET
+    let (_, era, failing) = KNOWN_OVER_FLASH_BUDGET
         .iter()
-        .find(|&&(id, _)| id == room_id)?;
+        .filter(|&&(id, _, _)| id == room_id)
+        .min_by(|a, b| a.2.total_cmp(&b.2))?;
     let ceiling = flash_budget_scale(room_id);
     Some(format!(
-        "{room_id} flashes faster than the WCAG budget allows when the App runs it at {failing}x speed or faster. It runs no faster than {ceiling}x."
+        "{room_id} flashes faster than the WCAG budget allows in the {} Era at {failing}x speed or faster. It runs no faster than {ceiling}x.",
+        era.name()
     ))
 }
 
@@ -930,17 +934,25 @@ mod tests {
         // reviewer found in an earlier rule of mine.
         let section = crate::roadmap_decisions();
 
-        for (room, _) in KNOWN_OVER_FLASH_BUDGET {
+        for (room, era, _) in KNOWN_OVER_FLASH_BUDGET {
+            let name = format!("`{room}`");
             assert!(
-                section.contains(&format!("`{room}`")),
-                "{room} is on KNOWN_OVER_FLASH_BUDGET but is not named in the roadmap's decisions section"
+                section
+                    .lines()
+                    .any(|line| line.contains(&name) && line.contains(era.name())),
+                "{room} ({era:?}) is on KNOWN_OVER_FLASH_BUDGET but is not named with its Era in the roadmap's decisions section"
             );
         }
     }
 
-    /// One room's photosensitivity measurement across the App's speeds.
+    use crate::Era;
+
+    const FLASH_REFERENCE: (usize, usize) = (240, 140);
+
+    /// One room and Era measured across the App's speeds.
     struct FlashSweep {
         id: &'static str,
+        era: Era,
         /// The slowest speed whose worst one-second window went over the
         /// general budget, with that window's flash rate.
         over: Option<(f64, f64)>,
@@ -958,77 +970,71 @@ mod tests {
     /// one frame per presented frame. Doubling the speed doubles how far the
     /// phase moves between presented frames, so speed `s` on the App's ladder
     /// is exactly every `s`-th of those frames, taken cyclically because the
-    /// phase wraps. One render therefore measures every speed on the ladder.
-    /// Each speed's series runs one cycle plus one second, so every one-second
-    /// window, including those across the wrap, is seen.
-    fn sweep_room(room: &dyn Room, speeds: &[usize]) -> FlashSweep {
-        use crate::photosensitivity::{
-            MAX_FLASHES_PER_SECOND, RedState, frame_luminance, frame_red_state,
-            peak_flashes_per_second, peak_red_flashes_per_second,
-        };
-        const REFERENCE: (usize, usize) = (240, 140);
-        let fps = crate::APP_FRAMES_PER_SECOND;
-        let cycle = (fps / crate::ROOM_CYCLES_PER_SECOND).round() as usize;
-        let window = fps.round() as usize;
-        // Both measurements come off the same renders. They are different
-        // questions, luminance against chromaticity, but rendering the
-        // catalog twice to ask them separately would double the most
-        // expensive part of the sweep for nothing.
-        let (luminance, red): (Vec<f64>, Vec<RedState>) = (0..cycle)
-            .map(|frame| {
-                let mut raster = crate::raster::Raster::with_accent(
-                    REFERENCE.0,
-                    REFERENCE.1,
-                    room.meta().accent,
-                );
-                room.render(&mut raster, frame as f64 / cycle as f64);
-                let rgba = raster.to_rgba();
-                (frame_luminance(&rgba), frame_red_state(&rgba))
-            })
-            .unzip();
+    /// phase wraps. The same base renders measure every speed on the ladder
+    /// and every distinct starting phase on that frame grid.
+    fn sweep_room<const N: usize>(
+        room: &dyn Room,
+        speeds: &[usize],
+        (width, height): (usize, usize),
+        eras: [Era; N],
+    ) -> [FlashSweep; N] {
+        use crate::photosensitivity::{frame_luminance, frame_red_state};
+        let cycle = (crate::APP_FRAMES_PER_SECOND / crate::ROOM_CYCLES_PER_SECOND).round() as usize;
+        let mut series =
+            eras.map(|era| (era, Vec::with_capacity(cycle), Vec::with_capacity(cycle)));
+        let mut transformed = Vec::with_capacity(width * height * 4);
+        for frame in 0..cycle {
+            let mut raster = crate::raster::Raster::with_accent(width, height, room.meta().accent);
+            room.render(&mut raster, frame as f64 / cycle as f64);
+            let raw = raster.to_rgba();
+            for (era, luminance, red) in &mut series {
+                let pixels = if *era == Era::Modern {
+                    &raw
+                } else {
+                    transformed.clone_from(&raw);
+                    era.apply(&mut transformed, width, height);
+                    &transformed
+                };
+                luminance.push(frame_luminance(pixels));
+                red.push(frame_red_state(pixels));
+            }
+        }
+        series.map(|(era, luminance, red)| {
+            analyze_flash_series(room.meta().id, era, speeds, &luminance, &red)
+        })
+    }
+
+    fn analyze_flash_series(
+        id: &'static str,
+        era: Era,
+        speeds: &[usize],
+        luminance: &[f64],
+        red: &[crate::photosensitivity::RedState],
+    ) -> FlashSweep {
+        use crate::photosensitivity::MAX_FLASHES_PER_SECOND;
+        let cycle = luminance.len();
         let low = luminance.iter().copied().fold(f64::MAX, f64::min);
         let high = luminance.iter().copied().fold(f64::MIN, f64::max);
         let mut over = None;
         let mut red_over = None;
-        for &speed in speeds {
-            let frames = cycle / speed + window;
-            let at = |k: usize| (k * speed) % cycle;
-            let series: Vec<f64> = (0..frames).map(|k| luminance[at(k)]).collect();
-            let red_series: Vec<RedState> = (0..frames).map(|k| red[at(k)]).collect();
-            let peak = peak_flashes_per_second(&series, fps);
-            if over.is_none() && peak > MAX_FLASHES_PER_SECOND {
-                over = Some((speed as f64, peak));
+        // Include the largest legal pump and phase nudge at its certified
+        // ceiling when it advances by a step the ladder did not sample.
+        let ceiling = flash_budget_scale(id);
+        let step = envelope_index_step(id, cycle);
+        let sampled_at_ceiling = step as f64 == ceiling && speeds.contains(&step);
+        let envelope = (step > 0 && !sampled_at_ceiling).then_some((ceiling, step));
+        for (speed, step) in speeds.iter().map(|&s| (s as f64, s)).chain(envelope) {
+            let (peak, red_peak) = peaks_at_step(luminance, red, step);
+            if peak > MAX_FLASHES_PER_SECOND && over.is_none_or(|(old, _)| speed < old) {
+                over = Some((speed, peak));
             }
-            let red_peak = peak_red_flashes_per_second(&red_series, fps);
-            if red_over.is_none() && red_peak > MAX_FLASHES_PER_SECOND {
-                red_over = Some((speed as f64, red_peak));
-            }
-        }
-        // The visualizer's largest legal pump and phase nudge, held inside
-        // the certified scale. When that product rounds to a ladder speed the
-        // loop already measured, this series is the same one. If the clamp
-        // stops containing the pump, the step grows and a new failure is
-        // recorded at the certified speed.
-        let ceiling = flash_budget_scale(room.meta().id);
-        let step = envelope_index_step(room.meta().id, cycle);
-        if let Some(span) = cycle.checked_div(step) {
-            let frames = span + window;
-            let at = |k: usize| (k * step) % cycle;
-            let series: Vec<f64> = (0..frames).map(|k| luminance[at(k)]).collect();
-            let red_series: Vec<RedState> = (0..frames).map(|k| red[at(k)]).collect();
-            let peak = peak_flashes_per_second(&series, fps);
-            if peak > MAX_FLASHES_PER_SECOND && over.is_none_or(|(speed, _)| ceiling < speed) {
-                over = Some((ceiling, peak));
-            }
-            let red_peak = peak_red_flashes_per_second(&red_series, fps);
-            if red_peak > MAX_FLASHES_PER_SECOND
-                && red_over.is_none_or(|(speed, _)| ceiling < speed)
-            {
-                red_over = Some((ceiling, red_peak));
+            if red_peak > MAX_FLASHES_PER_SECOND && red_over.is_none_or(|(old, _)| speed < old) {
+                red_over = Some((speed, red_peak));
             }
         }
         FlashSweep {
-            id: room.meta().id,
+            id,
+            era,
             over,
             red_over,
             swing: high - low,
@@ -1038,13 +1044,199 @@ mod tests {
         }
     }
 
+    /// A player can change speed on any sampled frame. The modular step
+    /// partitions the base frames into disjoint cycles, each of the same
+    /// length. Measure each cycle plus a window that crosses its wrap.
+    fn peaks_at_step(
+        luminance: &[f64],
+        red: &[crate::photosensitivity::RedState],
+        step: usize,
+    ) -> (f64, f64) {
+        use crate::photosensitivity::{peak_flashes_per_second, peak_red_flashes_per_second};
+        let cycle = luminance.len();
+        let fps = crate::APP_FRAMES_PER_SECOND;
+        let period = (1..cycle)
+            .find(|k| (k * step).is_multiple_of(cycle))
+            .unwrap_or(cycle);
+        let frames = period + fps.round() as usize;
+        let mut peak = 0.0_f64;
+        let mut red_peak = 0.0_f64;
+        for offset in 0..cycle / period {
+            let indices = (0..frames).map(|k| (offset + k * step) % cycle);
+            let series: Vec<_> = indices.clone().map(|i| luminance[i]).collect();
+            let red_series: Vec<_> = indices.map(|i| red[i]).collect();
+            peak = peak.max(peak_flashes_per_second(&series, fps));
+            red_peak = red_peak.max(peak_red_flashes_per_second(&red_series, fps));
+        }
+        (peak, red_peak)
+    }
+
+    /// Compare measured first failures to the room and Era they were recorded for.
+    /// Red flashes have no exemptions. A catalog of still or grayscale frames
+    /// cannot supply both kinds of evidence required by the gate.
+    fn flash_budget_violations(sweeps: &[FlashSweep], known: &[(&str, Era, f64)]) -> Vec<String> {
+        let mut failures = Vec::new();
+        let widest_swing = sweeps.iter().map(|s| s.swing).fold(0.0, f64::max);
+        if widest_swing <= 0.01 {
+            failures.push(format!(
+                "no room varied in luminance by more than {widest_swing:.4}"
+            ));
+        }
+        let reddest = sweeps.iter().map(|s| s.reddest).fold(0.0, f64::max);
+        if reddest <= 0.5 {
+            failures.push(format!(
+                "the reddest measured frame reached only {reddest:.4} saturation"
+            ));
+        }
+        for sweep in sweeps {
+            let recorded = known
+                .iter()
+                .find(|&&(id, era, _)| sweep.id == id && sweep.era == era);
+            if let Some((speed, peak)) = sweep.over
+                && recorded.is_none_or(|&(_, _, limit)| speed < limit)
+            {
+                failures.push(format!(
+                    "{} ({}) newly over the general flash budget at {peak:.2}/s from {speed}x",
+                    sweep.id,
+                    sweep.era.name()
+                ));
+            }
+            if let Some((speed, peak)) = sweep.red_over {
+                failures.push(format!(
+                    "{} ({}) over the red flash budget at {peak:.2}/s from {speed}x",
+                    sweep.id,
+                    sweep.era.name()
+                ));
+            }
+        }
+        for &(room, era, recorded) in known {
+            let sweep = sweeps.iter().find(|s| s.id == room && s.era == era);
+            let first = sweep.and_then(|s| s.over).map(|(speed, _)| speed);
+            if first != Some(recorded) {
+                failures.push(format!(
+                    "{room} ({}) is recorded from {recorded}x but measured {first:?}",
+                    era.name()
+                ));
+            }
+        }
+        failures
+    }
+
+    #[test]
+    fn flash_sweep_measures_each_era_from_the_original_pixels() {
+        use crate::photosensitivity::relative_luminance;
+        use crate::room::{RoomMeta, RoomMetadata};
+        use crate::surface::Surface;
+
+        struct RedPulse;
+        impl RoomMetadata for RedPulse {
+            fn meta(&self) -> RoomMeta {
+                RoomMeta {
+                    id: "pulse",
+                    title: "Pulse",
+                    wing: "Test",
+                    blurb: "Red and black.",
+                    accent: [210, 0, 0],
+                }
+            }
+        }
+        impl Room for RedPulse {
+            fn render(&self, surface: &mut dyn Surface, t: f64) {
+                let color = if ((t * 32.0) as usize).is_multiple_of(2) {
+                    [0, 0, 0]
+                } else {
+                    self.meta().accent
+                };
+                surface.paint(0, 0, '*', color);
+            }
+            fn reveal(&self) -> &'static str {
+                "A red pulse."
+            }
+        }
+
+        // One pixel isolates the scanline, palette, and beam transforms from
+        // spatial bloom. Red 210 on black crosses the general flash threshold
+        // in Modern and Vector. Quantized red crosses only the red threshold.
+        let sweeps = sweep_room(&RedPulse, &[1, 2, 4, 8], (1, 1), Era::ALL);
+        for sweep in &sweeps {
+            let (color, general, red) = match sweep.era {
+                Era::Phosphor => ([6, 37, 9], false, false),
+                Era::EightBit => ([170, 0, 0], false, true),
+                Era::Vector => ([206, 0, 0], true, true),
+                Era::Modern => ([210, 0, 0], true, true),
+            };
+            let [r, g, b] = color;
+            assert!(
+                (sweep.swing - relative_luminance(r, g, b)).abs() < 1e-12,
+                "{:?}",
+                sweep.era
+            );
+            assert_eq!(sweep.over.map(|p| p.0), general.then_some(1.0));
+            assert_eq!(sweep.red_over.map(|p| p.0), red.then_some(1.0));
+        }
+        // Even a matching general exemption cannot excuse a red failure.
+        let known = [("pulse", Era::Modern, 1.0), ("pulse", Era::Vector, 1.0)];
+        let failures = flash_budget_violations(&sweeps, &known);
+        assert_eq!(failures.len(), 3);
+        assert!(
+            failures
+                .iter()
+                .all(|f| f.contains("over the red flash budget"))
+        );
+    }
+
+    #[test]
+    fn flash_budget_exceptions_match_the_room_era_and_first_failing_speed() {
+        let measured = FlashSweep {
+            id: "test-room",
+            era: Era::Vector,
+            over: Some((4.0, 5.0)),
+            red_over: None,
+            swing: 0.25,
+            reddest: 0.6,
+        };
+        let sweeps = [measured];
+        assert!(flash_budget_violations(&sweeps, &[("test-room", Era::Vector, 4.0)]).is_empty());
+        for wrong in [
+            ("test-room", Era::Modern, 4.0),
+            ("another-room", Era::Vector, 4.0),
+        ] {
+            let failures = flash_budget_violations(&sweeps, &[wrong]);
+            assert_eq!(failures.len(), 2);
+            assert!(failures[0].contains("test-room (Vector) newly over"));
+            assert!(failures[1].contains("measured None"));
+        }
+        let slower = flash_budget_violations(&sweeps, &[("test-room", Era::Vector, 8.0)]);
+        assert_eq!(slower.len(), 2);
+        assert!(slower[0].contains("from 4x"));
+        let stale = flash_budget_violations(&sweeps, &[("test-room", Era::Vector, 2.0)]);
+        assert_eq!(stale.len(), 1);
+        assert!(stale[0].contains("recorded from 2x but measured Some(4.0)"));
+        assert_eq!(
+            flash_budget_violations(&[], &[]).len(),
+            2,
+            "an empty sweep cannot certify a catalog"
+        );
+    }
+
+    #[test]
+    fn a_speed_change_can_find_a_strobe_on_another_sampled_phase() {
+        use crate::photosensitivity::{MAX_FLASHES_PER_SECOND, frame_red_state};
+        let dark = frame_red_state(&[0, 0, 0, 255]);
+        let bright = frame_red_state(&[255, 0, 0, 255]);
+        // A step of two from frame zero is always dark. From frame one
+        // it alternates on every frame, in both measured channels.
+        let (peak, red_peak) = peaks_at_step(&[0.0, 0.0, 0.0, 0.2], &[dark, dark, dark, bright], 2);
+        assert!(peak > MAX_FLASHES_PER_SECOND && red_peak > MAX_FLASHES_PER_SECOND);
+    }
+
     #[test]
     fn mandelbrot_color_field_stays_inside_the_measured_flash_budget() {
         let room = crate::rooms::mandelbrot::Mandelbrot::new();
         let speeds: Vec<_> = std::iter::successors(Some(1usize), |speed| Some(speed * 2))
             .take_while(|&speed| speed as f64 <= crate::MAX_TIME_SCALE)
             .collect();
-        let sweep = sweep_room(&room, &speeds);
+        let [sweep] = sweep_room(&room, &speeds, FLASH_REFERENCE, [Era::Modern]);
         assert!(sweep.over.is_none(), "general flashes: {:?}", sweep.over);
         assert!(
             sweep.red_over.is_none(),
@@ -1064,7 +1256,12 @@ mod tests {
             speeds.last().map(|&speed| speed as f64),
             Some(crate::MAX_TIME_SCALE)
         );
-        let sweep = sweep_room(&crate::rooms::pickover::Pickover::new(), &speeds);
+        let [sweep] = sweep_room(
+            &crate::rooms::pickover::Pickover::new(),
+            &speeds,
+            FLASH_REFERENCE,
+            [Era::Modern],
+        );
         assert!(sweep.over.is_none(), "general flashes: {:?}", sweep.over);
         assert!(
             sweep.red_over.is_none(),
@@ -1125,7 +1322,7 @@ mod tests {
             ));
         }
         for (label, room) in &cases {
-            let sweep = sweep_room(room.as_ref(), &speeds);
+            let [sweep] = sweep_room(room.as_ref(), &speeds, FLASH_REFERENCE, [Era::Modern]);
             assert!(
                 sweep.over.is_none(),
                 "{label} general flashes {:?}; samples {}",
@@ -1168,6 +1365,8 @@ mod tests {
         // the series at that certified ceiling. The App clamps both into the
         // same phase step, so the envelope is that speed and not a faster one.
         //
+        // Each saved Era transforms its own copy of the room raster. The HUD,
+        // hand and beat pokes, and the App's GPU post stack are separate paths.
         // Measured at a declared reference size. Mean whole-frame luminance is
         // a proxy: this does not implement the flashing-area rule, and at very
         // small rasters a dense plot saturates the frame and reads as brighter
@@ -1201,7 +1400,9 @@ mod tests {
                         let rooms = all_rooms();
                         (worker..count)
                             .step_by(workers)
-                            .map(|index| sweep_room(rooms[index].as_ref(), speeds))
+                            .flat_map(|index| {
+                                sweep_room(rooms[index].as_ref(), speeds, FLASH_REFERENCE, Era::ALL)
+                            })
                             .collect::<Vec<_>>()
                     })
                 })
@@ -1212,93 +1413,47 @@ mod tests {
                 .collect()
         });
         sweeps.sort_by_key(|sweep| sweep.id);
-        assert_eq!(sweeps.len(), count, "every room was measured once");
-
-        // A catalog whose luminance never changed would pass every assertion
-        // below while measuring nothing at all. Counting flashes instead would
-        // be wrong: a catalog of gentle fades produces no qualifying flashes at
-        // all, and that is a pass, not an empty measurement.
-        let widest_swing = sweeps.iter().map(|sweep| sweep.swing).fold(0.0, f64::max);
-        assert!(
-            widest_swing > 0.01,
-            "no room's luminance varied by more than {widest_swing:.4} across a full \
-             cycle, so the sweep measured nothing"
+        assert_eq!(
+            sweeps.len(),
+            count * Era::ALL.len(),
+            "every room in every Era was measured"
         );
 
-        let max = crate::photosensitivity::MAX_FLASHES_PER_SECOND;
-        let listed = |id: &str| {
-            KNOWN_OVER_FLASH_BUDGET
-                .iter()
-                .find(|&&(room, _)| room == id)
-                .map(|&(_, speed)| speed)
-        };
-        let mut unexpected = Vec::new();
-        for sweep in &sweeps {
-            if let Some((speed, peak)) = sweep.over
-                && listed(sweep.id).is_none_or(|recorded| speed < recorded)
-            {
-                unexpected.push(format!("{} at {peak:.2}/s from {speed}x", sweep.id));
+        let failures = flash_budget_violations(&sweeps, &KNOWN_OVER_FLASH_BUDGET);
+        assert!(failures.is_empty(), "{}", failures.join("\n"));
+
+        // Varying the attractor coefficients preserves each map's coordinate
+        // bounds. Check each distinct dealt seed after the fixed-viewport
+        // correction, across every Era and every base-frame start.
+        for (id, seeds) in [("clifford", 7), ("dejong", 6)] {
+            for seed in 1..seeds {
+                let room = room_by_id_with(id, seed).expect("catalog room");
+                for sweep in sweep_room(room.as_ref(), &speeds, FLASH_REFERENCE, Era::ALL) {
+                    assert!(
+                        sweep.over.is_none() && sweep.red_over.is_none(),
+                        "{id} seed {seed} ({:?}): general {:?}, red {:?}",
+                        sweep.era,
+                        sweep.over,
+                        sweep.red_over
+                    );
+                }
             }
         }
-        assert!(
-            unexpected.is_empty(),
-            "rooms newly over the {max:.0} flash per second budget: {}",
-            unexpected.join(", ")
-        );
 
-        let mut stale = Vec::new();
-        for &(room, recorded) in &KNOWN_OVER_FLASH_BUDGET {
-            let sweep = sweeps.iter().find(|sweep| sweep.id == room);
-            let first = sweep.and_then(|sweep| sweep.over).map(|(speed, _)| speed);
-            if first != Some(recorded) {
-                stale.push(format!(
-                    "{room} is recorded from {recorded}x but measured {first:?}"
-                ));
+        // These two fields also exceeded the general budget at twice the
+        // reference dimensions under the original Vector beam response.
+        for id in ["interference", "the-magnet"] {
+            let room = room_by_id(id).expect("catalog room");
+            for sweep in sweep_room(room.as_ref(), &speeds, (480, 280), Era::ALL) {
+                assert!(
+                    sweep.over.is_none() && sweep.red_over.is_none(),
+                    "{id} ({:?}) at 480x280: general {:?}, red {:?}",
+                    sweep.era,
+                    sweep.over,
+                    sweep.red_over
+                );
             }
         }
-        assert!(
-            stale.is_empty(),
-            "KNOWN_OVER_FLASH_BUDGET must shrink or be corrected: {}",
-            stale.join(", ")
-        );
-
-        // What the red half of this sweep actually found, stated plainly
-        // because it is easy to mistake for a stronger claim than it is: no
-        // room in the catalog ever reaches the saturated-red ratio at all. The
-        // reddest whole-frame mean anywhere is burning-ship at 0.658, against a
-        // threshold of 0.80, with ising next at 0.617. So the budget assertion
-        // below passes with room to spare rather than by a narrow margin, and
-        // the flash-counting itself is proven by the unit tests in
-        // `crate::photosensitivity` rather than by this catalog.
-        //
-        // This guard is the red counterpart of the luminance one above. A
-        // catalog rendered entirely in greys would satisfy the budget assertion
-        // while the red path never ran, and that would be an empty measurement
-        // reported as a pass. The bar sits below the measured 0.658 so that
-        // ordinary drift does not trip it, and far enough above zero that a
-        // catalog which stopped drawing warm colors would.
-        let reddest = sweeps.iter().map(|sweep| sweep.reddest).fold(0.0, f64::max);
-        assert!(
-            reddest > 0.5,
-            "the reddest frame in the catalog measured {reddest:.4}, so the red sweep did \
-             not look at anything meaningfully red"
-        );
-
-        let red_offenders: Vec<String> = sweeps
-            .iter()
-            .filter_map(|sweep| {
-                sweep
-                    .red_over
-                    .map(|(speed, peak)| format!("{} at {peak:.2}/s from {speed}x", sweep.id))
-            })
-            .collect();
-        assert!(
-            red_offenders.is_empty(),
-            "rooms over the {max:.0} red flash per second budget (reddest frame measured \
-             {reddest:.4} against a {:.2} ratio): {}",
-            crate::photosensitivity::RED_SATURATION,
-            red_offenders.join(", ")
-        );
     }
 
     #[test]
