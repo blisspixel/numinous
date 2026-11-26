@@ -3094,20 +3094,15 @@ fn radio_tune(station_id: &str, seconds: Option<u64>, count: usize, yes: bool) -
         return ExitCode::SUCCESS;
     }
     let dir = radio_dir();
-    let _ = std::fs::create_dir_all(&dir);
-    let existing = std::fs::read_dir(&dir)
-        .map(|entries| {
-            entries
-                .filter_map(Result::ok)
-                .filter(|e| {
-                    e.file_name()
-                        .to_string_lossy()
-                        .starts_with(&format!("{}-", station.id))
-                })
-                .count()
-        })
-        .unwrap_or(0);
-    for track in existing..existing + count {
+    for _ in 0..count {
+        let number = match numinous_core::persistence::radio_tracks::next_number(&dir, station.id) {
+            Ok(number) => number,
+            Err(error) => {
+                eprintln!("Could not choose the next station recording: {error}");
+                return ExitCode::FAILURE;
+            }
+        };
+        let track = number - 1;
         let secs = seconds
             .unwrap_or_else(|| numinous_core::length_for(station, track))
             .clamp(10, 600);
@@ -3116,9 +3111,9 @@ fn radio_tune(station_id: &str, seconds: Option<u64>, count: usize, yes: bool) -
         }
     }
     println!(
-        "{} has {} track(s) on rotation. In the app, Y tunes the dial; the station is always on the air.",
-        station.name,
-        existing + count
+        "Added {} to {}. In the app, Y tunes the dial.",
+        numinous_core::counted(count, "track"),
+        station.name
     );
     ExitCode::SUCCESS
 }
@@ -3132,7 +3127,7 @@ fn fetch_track(
     dir: &Path,
 ) -> bool {
     println!(
-        "Tuning {} ({}): track {:03}, {seconds} seconds...",
+        "Tuning {} ({}): brief {:03}, {seconds} seconds...",
         station.id,
         station.name,
         track + 1
@@ -3187,28 +3182,8 @@ fn fetch_track(
         eprintln!("{message} ({} bytes). Try again.", pcm.len());
         return false;
     }
-    let path = dir.join(format!("{}-{:03}.wav", station.id, track + 1));
-    let _cache_lock = match numinous_core::lock_local_state(dir) {
-        Ok(lock) => lock,
-        Err(error) => {
-            eprintln!("could not lock the radio cache: {error}");
-            return false;
-        }
-    };
-    let spec = hound::WavSpec {
-        channels: 2,
-        sample_rate: 44_100,
-        bits_per_sample: 16,
-        sample_format: hound::SampleFormat::Int,
-    };
-    let write = hound::WavWriter::create(&path, spec).and_then(|mut writer| {
-        for bytes in pcm.as_chunks::<2>().0.iter().map(|chunk| chunk.as_slice()) {
-            writer.write_sample(i16::from_le_bytes([bytes[0], bytes[1]]))?;
-        }
-        writer.finalize()
-    });
-    match write {
-        Ok(()) => {
+    match cache_station_pcm(dir, station.id, &pcm) {
+        Ok(path) => {
             println!(
                 "  ON AIR: {} ({:.0}s, stereo)",
                 terminal_safe_path(&path),
@@ -3217,10 +3192,33 @@ fn fetch_track(
             true
         }
         Err(e) => {
-            eprintln!("could not cache the track: {e}");
+            eprintln!(
+                "could not cache the track: {}",
+                terminal_safe(&e.to_string())
+            );
             false
         }
     }
+}
+
+/// Encode complete interleaved stereo samples in private before publication.
+fn cache_station_pcm(dir: &Path, station_id: &str, pcm: &[u8]) -> std::io::Result<PathBuf> {
+    let spec = hound::WavSpec {
+        channels: 2,
+        sample_rate: 44_100,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    numinous_core::persistence::radio_tracks::publish(dir, station_id, |file| {
+        let mut writer = hound::WavWriter::new(std::io::BufWriter::new(file), spec)
+            .map_err(std::io::Error::other)?;
+        for &[lo, hi] in pcm.as_chunks::<2>().0 {
+            writer
+                .write_sample(i16::from_le_bytes([lo, hi]))
+                .map_err(std::io::Error::other)?;
+        }
+        writer.finalize().map_err(std::io::Error::other)
+    })
 }
 
 #[derive(Debug)]

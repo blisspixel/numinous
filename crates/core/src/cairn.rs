@@ -284,7 +284,7 @@ fn read_bounded_text(reader: impl std::io::Read) -> Option<String> {
 #[must_use]
 pub fn all_bequests(path: &std::path::Path) -> Vec<Bequest> {
     let mut out = founding_bequests();
-    if let Ok(file) = std::fs::File::open(path)
+    if let Ok(file) = crate::persistence::open_regular_file(path)
         && let Some(text) = read_bounded_text(file)
     {
         out.extend(text.lines().filter_map(parse_bequest_line));
@@ -299,7 +299,7 @@ pub fn all_bequests(path: &std::path::Path) -> Vec<Bequest> {
 /// still reported by the local-state inventory.
 #[must_use]
 pub fn local_bequest_count(path: &std::path::Path) -> usize {
-    std::fs::File::open(path)
+    crate::persistence::open_regular_file(path)
         .ok()
         .and_then(read_bounded_text)
         .map(|text| text.lines().filter_map(parse_bequest_line).count())

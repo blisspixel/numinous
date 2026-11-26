@@ -3162,6 +3162,33 @@ fn resonances_appear_in_the_journey_when_lit() {
 }
 
 #[test]
+fn generated_station_recordings_publish_complete_stereo_wavs_after_gaps() {
+    let dir = std::env::temp_dir().join(format!("numinous-radio-wav-{}", std::process::id()));
+    std::fs::create_dir(&dir).unwrap();
+    std::fs::write(dir.join("trance-002.wav"), b"keep this track").unwrap();
+    let samples = [1_i16, -2, 3, -4];
+    let pcm: Vec<_> = samples.into_iter().flat_map(i16::to_le_bytes).collect();
+    let path = super::cache_station_pcm(&dir, "trance", &pcm).unwrap();
+    assert_eq!(path, dir.join("trance-003.wav"));
+    let mut reader = hound::WavReader::open(path).unwrap();
+    assert_eq!(reader.spec().channels, 2);
+    assert_eq!(reader.spec().sample_rate, 44_100);
+    assert_eq!(
+        reader
+            .samples::<i16>()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap(),
+        samples
+    );
+    drop(reader);
+    assert_eq!(
+        std::fs::read(dir.join("trance-002.wav")).unwrap(),
+        b"keep this track"
+    );
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn tune2_requires_explicit_consent_to_spend() {
     // The flag exists and defaults to off: without it the command names
     // the key source and the cost, spends nothing, and stops.

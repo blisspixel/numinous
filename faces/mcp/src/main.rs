@@ -464,7 +464,7 @@ fn call_tool(
                 replay_encounter(tool, replay_args, journey_file)
             })
         }
-        "erase_journal" => journal::erase_tool(&domain_args, &journal_path()),
+        "erase_journal" => journal::erase_tool(&domain_args, &local_state_paths_at(journey_file)),
         "project" => project_tools::project_tool(
             &domain_args,
             &project_path(),
