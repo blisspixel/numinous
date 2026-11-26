@@ -1071,6 +1071,154 @@ mod tests {
         (peak, red_peak)
     }
 
+    /// Compare measured first failures to the room and Era they were recorded for.
+    /// Red flashes have no exemptions. A catalog of still or grayscale frames
+    /// cannot supply both kinds of evidence required by the gate.
+    fn flash_budget_violations(sweeps: &[FlashSweep], known: &[(&str, Era, f64)]) -> Vec<String> {
+        let mut failures = Vec::new();
+        let widest_swing = sweeps.iter().map(|s| s.swing).fold(0.0, f64::max);
+        if widest_swing <= 0.01 {
+            failures.push(format!(
+                "no room varied in luminance by more than {widest_swing:.4}"
+            ));
+        }
+        let reddest = sweeps.iter().map(|s| s.reddest).fold(0.0, f64::max);
+        if reddest <= 0.5 {
+            failures.push(format!(
+                "the reddest measured frame reached only {reddest:.4} saturation"
+            ));
+        }
+        for sweep in sweeps {
+            let recorded = known
+                .iter()
+                .find(|&&(id, era, _)| sweep.id == id && sweep.era == era);
+            if let Some((speed, peak)) = sweep.over
+                && recorded.is_none_or(|&(_, _, limit)| speed < limit)
+            {
+                failures.push(format!(
+                    "{} ({}) newly over the general flash budget at {peak:.2}/s from {speed}x",
+                    sweep.id,
+                    sweep.era.name()
+                ));
+            }
+            if let Some((speed, peak)) = sweep.red_over {
+                failures.push(format!(
+                    "{} ({}) over the red flash budget at {peak:.2}/s from {speed}x",
+                    sweep.id,
+                    sweep.era.name()
+                ));
+            }
+        }
+        for &(room, era, recorded) in known {
+            let sweep = sweeps.iter().find(|s| s.id == room && s.era == era);
+            let first = sweep.and_then(|s| s.over).map(|(speed, _)| speed);
+            if first != Some(recorded) {
+                failures.push(format!(
+                    "{room} ({}) is recorded from {recorded}x but measured {first:?}",
+                    era.name()
+                ));
+            }
+        }
+        failures
+    }
+
+    #[test]
+    fn flash_sweep_measures_each_era_from_the_original_pixels() {
+        use crate::photosensitivity::relative_luminance;
+        use crate::room::{RoomMeta, RoomMetadata};
+        use crate::surface::Surface;
+
+        struct RedPulse;
+        impl RoomMetadata for RedPulse {
+            fn meta(&self) -> RoomMeta {
+                RoomMeta {
+                    id: "pulse",
+                    title: "Pulse",
+                    wing: "Test",
+                    blurb: "Red and black.",
+                    accent: [210, 0, 0],
+                }
+            }
+        }
+        impl Room for RedPulse {
+            fn render(&self, surface: &mut dyn Surface, t: f64) {
+                let color = if ((t * 32.0) as usize).is_multiple_of(2) {
+                    [0, 0, 0]
+                } else {
+                    self.meta().accent
+                };
+                surface.paint(0, 0, '*', color);
+            }
+            fn reveal(&self) -> &'static str {
+                "A red pulse."
+            }
+        }
+
+        // One pixel isolates the scanline, palette, and beam transforms from
+        // spatial bloom. Red 210 on black crosses the general flash threshold
+        // in Modern and Vector. Quantized red crosses only the red threshold.
+        let sweeps = sweep_room(&RedPulse, &[1, 2, 4, 8], (1, 1), Era::ALL);
+        for sweep in &sweeps {
+            let (color, general, red) = match sweep.era {
+                Era::Phosphor => ([6, 37, 9], false, false),
+                Era::EightBit => ([170, 0, 0], false, true),
+                Era::Vector => ([206, 0, 0], true, true),
+                Era::Modern => ([210, 0, 0], true, true),
+            };
+            let [r, g, b] = color;
+            assert!(
+                (sweep.swing - relative_luminance(r, g, b)).abs() < 1e-12,
+                "{:?}",
+                sweep.era
+            );
+            assert_eq!(sweep.over.map(|p| p.0), general.then_some(1.0));
+            assert_eq!(sweep.red_over.map(|p| p.0), red.then_some(1.0));
+        }
+        // Even a matching general exemption cannot excuse a red failure.
+        let known = [("pulse", Era::Modern, 1.0), ("pulse", Era::Vector, 1.0)];
+        let failures = flash_budget_violations(&sweeps, &known);
+        assert_eq!(failures.len(), 3);
+        assert!(
+            failures
+                .iter()
+                .all(|f| f.contains("over the red flash budget"))
+        );
+    }
+
+    #[test]
+    fn flash_budget_exceptions_match_the_room_era_and_first_failing_speed() {
+        let measured = FlashSweep {
+            id: "test-room",
+            era: Era::Vector,
+            over: Some((4.0, 5.0)),
+            red_over: None,
+            swing: 0.25,
+            reddest: 0.6,
+        };
+        let sweeps = [measured];
+        assert!(flash_budget_violations(&sweeps, &[("test-room", Era::Vector, 4.0)]).is_empty());
+        for wrong in [
+            ("test-room", Era::Modern, 4.0),
+            ("another-room", Era::Vector, 4.0),
+        ] {
+            let failures = flash_budget_violations(&sweeps, &[wrong]);
+            assert_eq!(failures.len(), 2);
+            assert!(failures[0].contains("test-room (Vector) newly over"));
+            assert!(failures[1].contains("measured None"));
+        }
+        let slower = flash_budget_violations(&sweeps, &[("test-room", Era::Vector, 8.0)]);
+        assert_eq!(slower.len(), 2);
+        assert!(slower[0].contains("from 4x"));
+        let stale = flash_budget_violations(&sweeps, &[("test-room", Era::Vector, 2.0)]);
+        assert_eq!(stale.len(), 1);
+        assert!(stale[0].contains("recorded from 2x but measured Some(4.0)"));
+        assert_eq!(
+            flash_budget_violations(&[], &[]).len(),
+            2,
+            "an empty sweep cannot certify a catalog"
+        );
+    }
+
     #[test]
     fn a_speed_change_can_find_a_strobe_on_another_sampled_phase() {
         use crate::photosensitivity::{MAX_FLASHES_PER_SECOND, frame_red_state};
@@ -1271,89 +1419,8 @@ mod tests {
             "every room in every Era was measured"
         );
 
-        // A catalog whose luminance never changed would pass every assertion
-        // below while measuring nothing at all. Counting flashes instead would
-        // be wrong: a catalog of gentle fades produces no qualifying flashes at
-        // all, and that is a pass, not an empty measurement.
-        let widest_swing = sweeps.iter().map(|sweep| sweep.swing).fold(0.0, f64::max);
-        assert!(
-            widest_swing > 0.01,
-            "no room's luminance varied by more than {widest_swing:.4} across a full \
-             cycle, so the sweep measured nothing"
-        );
-
-        let max = crate::photosensitivity::MAX_FLASHES_PER_SECOND;
-        let listed = |id: &str, era: Era| {
-            KNOWN_OVER_FLASH_BUDGET
-                .iter()
-                .find(|&&(room, listed_era, _)| room == id && listed_era == era)
-                .map(|&(_, _, speed)| speed)
-        };
-        let mut unexpected = Vec::new();
-        for sweep in &sweeps {
-            if let Some((speed, peak)) = sweep.over
-                && listed(sweep.id, sweep.era).is_none_or(|recorded| speed < recorded)
-            {
-                unexpected.push(format!(
-                    "{} ({}) at {peak:.2}/s from {speed}x",
-                    sweep.id,
-                    sweep.era.name()
-                ));
-            }
-        }
-        assert!(
-            unexpected.is_empty(),
-            "rooms newly over the {max:.0} flash per second budget: {}",
-            unexpected.join(", ")
-        );
-
-        let mut stale = Vec::new();
-        for &(room, era, recorded) in &KNOWN_OVER_FLASH_BUDGET {
-            let sweep = sweeps
-                .iter()
-                .find(|sweep| sweep.id == room && sweep.era == era);
-            let first = sweep.and_then(|sweep| sweep.over).map(|(speed, _)| speed);
-            if first != Some(recorded) {
-                stale.push(format!(
-                    "{room} ({era:?}) is recorded from {recorded}x but measured {first:?}"
-                ));
-            }
-        }
-        assert!(
-            stale.is_empty(),
-            "KNOWN_OVER_FLASH_BUDGET must shrink or be corrected: {}",
-            stale.join(", ")
-        );
-
-        // A catalog rendered entirely in grays could clear the red budget
-        // without exercising the measurement on colored light. Guard the
-        // measured input as well as the worst one-second flash rate.
-        let reddest = sweeps.iter().map(|sweep| sweep.reddest).fold(0.0, f64::max);
-        assert!(
-            reddest > 0.5,
-            "the reddest frame in the catalog measured {reddest:.4}, so the red sweep did \
-             not look at anything meaningfully red"
-        );
-
-        let red_offenders: Vec<String> = sweeps
-            .iter()
-            .filter_map(|sweep| {
-                sweep.red_over.map(|(speed, peak)| {
-                    format!(
-                        "{} ({}) at {peak:.2}/s from {speed}x",
-                        sweep.id,
-                        sweep.era.name()
-                    )
-                })
-            })
-            .collect();
-        assert!(
-            red_offenders.is_empty(),
-            "rooms over the {max:.0} red flash per second budget (reddest frame measured \
-             {reddest:.4} against a {:.2} ratio): {}",
-            crate::photosensitivity::RED_SATURATION,
-            red_offenders.join(", ")
-        );
+        let failures = flash_budget_violations(&sweeps, &KNOWN_OVER_FLASH_BUDGET);
+        assert!(failures.is_empty(), "{}", failures.join("\n"));
 
         // Varying the attractor coefficients preserves each map's coordinate
         // bounds. Check each distinct dealt seed after the fixed-viewport
