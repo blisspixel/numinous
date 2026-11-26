@@ -2114,6 +2114,30 @@ fn declared_tool_schemas_are_enforced_at_runtime() {
 }
 
 #[test]
+fn list_rooms_signposts_survive_compact_and_full_projection() {
+    for mode in ["compact", "full"] {
+        let response = call("list_rooms", json!({"response_mode":mode}));
+        let result = &response["result"];
+        let rows = result["structuredContent"]["rooms"].as_array().unwrap();
+        assert_eq!(rows.len(), numinous_core::ROOM_CATALOG.len());
+        for (metadata, row) in numinous_core::ROOM_CATALOG.iter().zip(rows) {
+            assert_eq!(row["id"], metadata.id);
+            let signs = numinous_core::RoomSignposts::for_room(metadata.id);
+            assert_eq!(
+                row.get("frontHall").map(Value::as_bool),
+                signs.front_hall.then_some(Some(true))
+            );
+            assert_eq!(
+                row.get("authoredMathematics").map(Value::as_bool),
+                signs.authored_mathematics.then_some(Some(true))
+            );
+        }
+        let summary = result["content"][0]["text"].as_str().unwrap();
+        assert!(summary.contains("frontHall") && summary.contains("authoredMathematics"));
+    }
+}
+
+#[test]
 fn representative_valid_arguments_cross_the_schema_boundary() {
     let calls = [
         ("list_rooms", json!({})),
@@ -2176,6 +2200,85 @@ fn crack_presents_replays_and_defuses() {
     let text = win["result"]["content"][0]["text"].as_str().unwrap();
     assert!(text.contains("DEFUSED"), "{text}");
     assert_eq!(win["result"]["structuredContent"]["defused"], true);
+}
+
+#[test]
+fn crack_accounts_for_the_final_guess_and_the_unplayed_suffix() {
+    let won = call("crack", json!({"seed":3,"guesses":["2720","1111"]}));
+    let result = &won["result"];
+    assert_eq!(
+        result["content"][0]["text"],
+        "2720: 4 locked, 0 loose\nDEFUSED on try 1 with 7 to spare. You cracked it.\nGuesses skipped after the game ended: 1."
+    );
+    let data = &result["structuredContent"];
+    assert_eq!(data["ignoredGuesses"], 1);
+    assert_eq!(data["attemptsToSpare"], 7);
+    assert_eq!(
+        data["feedback"],
+        json!([{"guess":"2720","locked":4,"loose":0}])
+    );
+
+    let scores = call("scores", json!({}));
+    assert_eq!(
+        scores["result"]["structuredContent"]["top"][0]["score"],
+        data["attemptsToSpare"]
+    );
+
+    let mut history = vec!["0111"; 8];
+    history.extend(["2720", "3333"]);
+    let lost = call("crack", json!({"seed":3,"guesses":history}));
+    let data = &lost["result"]["structuredContent"];
+    assert_eq!(data["defused"], false);
+    assert_eq!(data["ignoredGuesses"], 2);
+    assert_eq!(data["feedback"].as_array().unwrap().len(), 8);
+    let text = lost["result"]["content"][0]["text"].as_str().unwrap();
+    assert_eq!(
+        text.lines()
+            .filter(|line| line.starts_with("0111: "))
+            .count(),
+        8
+    );
+    assert!(text.ends_with("BOOM. It was 2720.\nGuesses skipped after the game ended: 2."));
+
+    let open = call("crack", json!({"seed":3,"guesses":vec!["0000";7]}));
+    assert_eq!(open["result"]["structuredContent"]["triesLeft"], 1);
+    assert!(
+        open["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("1 try left.")
+    );
+    let before = super::load_journey(&super::journey_path());
+    let invalid = call("crack", json!({"seed":3,"guesses":["0000","abc2720"]}));
+    assert_eq!(
+        tool_error_text(&invalid),
+        "Guess 2 must be exactly 4 digits (0-9)."
+    );
+    assert_eq!(super::load_journey(&super::journey_path()), before);
+}
+
+#[test]
+fn wrong_room_field_names_the_supplied_and_required_arguments() {
+    for (name, supplied, expected) in [
+        ("play_room", "room", "id"),
+        ("describe_room", "room", "id"),
+        ("challenge", "room", "id"),
+        ("study_room", "id", "room"),
+    ] {
+        let rejected = call(name, json!({(supplied): "julia"}));
+        assert_eq!(
+            tool_error_text(&rejected),
+            format!("Unexpected argument '{supplied}'. Missing required argument '{expected}'.")
+        );
+    }
+    let rejected = call(
+        "run_sim",
+        json!({"id":"tribbles","params":{"line\nbreak":"slow"}}),
+    );
+    assert_eq!(
+        tool_error_text(&rejected),
+        "Argument 'params.line\\nbreak' must be a number."
+    );
 }
 
 #[test]
@@ -2579,6 +2682,7 @@ fn an_agent_earns_xp_and_sees_its_level() {
             "jsonrpc":"2.0","id":50,"method":"tools/call",
             "params":{"name":"run_sim","arguments":{"id":"wing"}}
         }),
+        &Value::Null,
         &path,
     );
     super::record_progress(
@@ -2586,6 +2690,7 @@ fn an_agent_earns_xp_and_sees_its_level() {
             "jsonrpc":"2.0","id":51,"method":"tools/call",
             "params":{"name":"play_room","arguments":{"id":"lorenz"}}
         }),
+        &Value::Null,
         &path,
     );
     let resp = super::handle_request_with(
@@ -2619,6 +2724,7 @@ fn varied_progress_records_only_listed_rooms_once() {
                 "jsonrpc":"2.0","id":53,"method":"tools/call",
                 "params":{"name":"play_room","arguments":{"id":id,"variation":variation}}
             }),
+            &Value::Null,
             &path,
         );
     }
@@ -2630,6 +2736,7 @@ fn varied_progress_records_only_listed_rooms_once() {
                 "speed_wager":"faster","aha_summon":true
             }}
         }),
+        &Value::Null,
         &path,
     );
     super::record_progress(
@@ -2637,6 +2744,7 @@ fn varied_progress_records_only_listed_rooms_once() {
             "jsonrpc":"2.0","id":55,"method":"tools/call",
             "params":{"name":"play_room","arguments":{"id":"kepler-laws"}}
         }),
+        &Value::Null,
         &path,
     );
 
@@ -2668,6 +2776,7 @@ fn play_room_records_an_attention_wager_and_listen_room_does_not() {
             "jsonrpc":"2.0","id":70,"method":"tools/call",
             "params":{"name":"listen_room","arguments":{"id":"attention","t":0.2,"pokes":pokes}}
         }),
+        &Value::Null,
         &path,
     );
     let listened = super::load_journey(&path);
@@ -2678,6 +2787,7 @@ fn play_room_records_an_attention_wager_and_listen_room_does_not() {
             "jsonrpc":"2.0","id":71,"method":"tools/call",
             "params":{"name":"play_room","arguments":{"id":"attention","t":0.2,"pokes":pokes}}
         }),
+        &Value::Null,
         &path,
     );
     let played = super::load_journey(&path);
@@ -6731,6 +6841,7 @@ fn play_room_records_a_strange_loop_wager_and_one_period_returns() {
             "jsonrpc":"2.0","id":80,"method":"tools/call",
             "params":{"name":"listen_room","arguments":{"id":"strange-loop","t":0.4,"pokes":pokes}}
         }),
+        &Value::Null,
         &path,
     );
     let listened = super::load_journey(&path);
@@ -6741,6 +6852,7 @@ fn play_room_records_a_strange_loop_wager_and_one_period_returns() {
             "jsonrpc":"2.0","id":81,"method":"tools/call",
             "params":{"name":"play_room","arguments":{"id":"strange-loop","t":0.4,"pokes":pokes}}
         }),
+        &Value::Null,
         &path,
     );
     let played = super::load_journey(&path);
@@ -8041,6 +8153,7 @@ fn predict_is_a_mirror_not_a_leaderboard() {
 
     super::record_progress(
         &json!({"method":"tools/call","params":{"name":"predict","arguments":{"id":"slope-rider","seed":4}}}),
+        &Value::Null,
         &journey,
     );
     assert_eq!(
@@ -8056,6 +8169,7 @@ fn predict_is_a_mirror_not_a_leaderboard() {
         .actual;
     super::record_progress(
         &json!({"method":"tools/call","params":{"name":"predict","arguments":{"id":"slope-rider","seed":4,"guess":truth}}}),
+        &Value::Null,
         &journey,
     );
     let after = numinous_core::load_journey_file(&journey);

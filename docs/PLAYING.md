@@ -9,6 +9,11 @@ same journey to level 42, because that is the point.
 
 ## For humans
 
+**Pick a room:** Cabinet > Modes > Wings still opens a wing at its doorway.
+Choose Browse rooms to see individual titles. Browse a wing, Front Hall for
+curated starting rooms, or Math study to find an authored Mathematics reading.
+Open a title to enter it. Room navigation continues in its home wing.
+
 **The Overture:** Cabinet > Modes > The Overture plays four rooms as one
 piece: Chaos Game, Mandelbrot, Golden Angle, then Times Tables. The clock
 follows the score. Pause, an open Cabinet, and study hold it. The first

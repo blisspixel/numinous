@@ -189,7 +189,9 @@ plays and the nerd notices the math underneath:
 - **Crack the Code / defuse the bomb** (built). A hidden numeric code, a true math
   clue to open (digit sum and parity), and a countdown of attempts. Each guess
   reports locked and loose digits, Bulls and Cows; run out and it goes off. The
-  logic is in `crates/core/src/codebreaker.rs`, so it plays anywhere.
+  logic is in `crates/core/src/codebreaker.rs`. MCP accepts a history of digit
+  strings. Feedback includes the winning guess, and `ignoredGuesses` counts
+  any entries left after a win or after time runs out.
 - **Talk to the Aliens** (built). They transmit the start of a famous sequence
   (primes, Fibonacci, powers of two, triangular, squares) and you answer the next
   term to prove you speak math; these are the actual sequences proposed for first

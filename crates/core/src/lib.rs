@@ -266,7 +266,7 @@ pub use room::{
     RoomInput, RoomMeta, RoomMetadata, held_pokes_from_inputs, inputs_from_pokes, latest_gesture,
     pokes_from_inputs, renderable_poke_count, room_action, room_touch_action,
 };
-pub use room_collection::{FRONT_HALL, RoomCollection};
+pub use room_collection::{FRONT_HALL, RoomCollection, RoomSignposts};
 pub use room_walk::{RoomWalk, RoomWalkStep, STRANGE_LOOP_WALK};
 pub use rooms::{ROOM_CATALOG, canonical_room_id, catalog_index, room_meta_by_id};
 pub use route_creation::{

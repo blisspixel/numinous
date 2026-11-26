@@ -280,7 +280,7 @@ fn note_strange_loop_wager(journey: &mut numinous_core::Journey, args: &Value) {
     }
 }
 
-pub(super) fn record_progress(request: &Value, path: &std::path::Path) {
+pub(super) fn record_progress(request: &Value, result: &Value, path: &std::path::Path) {
     if request.get("method").and_then(Value::as_str) != Some("tools/call") {
         return;
     }
@@ -467,36 +467,18 @@ pub(super) fn record_progress(request: &Value, path: &std::path::Path) {
             }
         }
         "crack" => {
-            if let Some(list) = args.get("guesses").and_then(Value::as_array)
-                && !list.is_empty()
-            {
+            let replay = &result["structuredContent"];
+            if replay["feedback"].is_array() {
                 journey.play();
-                let seed = effective_seed(&args);
-                let digits = args.get("digits").map_or(Some(4), |value| {
-                    value.as_u64().and_then(|value| usize::try_from(value).ok())
-                });
-                if let Some(digits) =
-                    digits.filter(|&digits| numinous_core::supports_code_length(digits))
-                {
-                    let secret = numinous_core::secret_code(seed, digits);
-                    for (i, raw) in list.iter().filter_map(Value::as_str).take(8).enumerate() {
-                        let guess: Vec<u8> = raw
-                            .chars()
-                            .filter(char::is_ascii_digit)
-                            .map(|c| c as u8 - b'0')
-                            .collect();
-                        if guess.len() == digits
-                            && numinous_core::grade(&secret, &guess).locked == digits
-                        {
-                            journey.win();
-                            post_score(
-                                &scores_path(),
-                                &format!("crack seed:{seed} digits:{digits}"),
-                                (8 - i - 1) as i64,
-                            );
-                            break;
-                        }
-                    }
+                if let Some(spare) = replay["attemptsToSpare"].as_i64() {
+                    journey.win();
+                    let seed = effective_seed(&args);
+                    let digits = args.get("digits").and_then(Value::as_u64).unwrap_or(4);
+                    post_score(
+                        &scores_path(),
+                        &format!("crack seed:{seed} digits:{digits}"),
+                        spare,
+                    );
                 }
             }
         }

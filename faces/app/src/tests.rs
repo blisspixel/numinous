@@ -6113,3 +6113,55 @@ fn a_missing_display_names_its_cause_and_the_faces_that_need_no_window() {
     assert!(message.contains("`numinous`"), "{message}");
     assert!(message.contains("`numinous-mcp`"), "{message}");
 }
+
+#[test]
+fn signposts_browse_by_mouse_then_wander_the_selected_wing() {
+    use crate::menu::{MenuIntent, MenuItemId, MenuRoute, RoomShelf};
+    let mut app = headless("numinous-signposts-visit");
+    app.menu.activate_shortcut('m');
+    app.menu.activate_shortcut('n');
+    app.menu.activate_shortcut('b');
+    app.menu.focus(MenuItemId::Shelf(RoomShelf::MathStudy));
+    let _ = app.menu.activate_focused();
+    assert_eq!(app.menu.route(), MenuRoute::Rooms(RoomShelf::MathStudy));
+    let before = app.current;
+    let first = app.menu.focused();
+    assert!(app.apply_wheel_delta(-1.0));
+    assert_ne!(app.menu.focused(), first);
+    assert_eq!(app.current, before);
+    let target = app.menu.focused();
+    app.menu.pointer_down(Some(target));
+    let intent = app.menu.pointer_up(Some(target));
+    let MenuIntent::EnterRoom(index) = intent else {
+        panic!("expected room entry");
+    };
+    app.apply_menu_intent(intent);
+    assert_eq!(app.current, index);
+    assert!(!app.menu.is_open());
+    let wing = numinous_core::ROOM_CATALOG[index].wing;
+    app.switch(1);
+    assert_eq!(app.rooms[app.current].meta().wing, wing);
+}
+
+#[test]
+fn controller_can_read_a_collection_and_enter_its_last_room() {
+    use crate::gamepad::Command;
+    use crate::menu::{MenuItemId, MenuRoute, RoomShelf};
+
+    let mut app = headless("numinous-signposts-controller");
+    app.menu.activate_shortcut('m');
+    app.menu.activate_shortcut('n');
+    app.menu.focus(MenuItemId::Browse);
+    app.handle_gamepad_command(Command::PrimaryDown);
+    app.handle_gamepad_command(Command::PrimaryDown);
+    assert_eq!(app.menu.route(), MenuRoute::Rooms(RoomShelf::FrontHall));
+    for _ in 1..numinous_core::FRONT_HALL.rooms.len() {
+        app.handle_gamepad_command(Command::Down);
+    }
+    app.handle_gamepad_command(Command::PrimaryDown);
+    assert!(!app.menu.is_open());
+    assert_eq!(
+        Some(&app.rooms[app.current].meta().id),
+        numinous_core::FRONT_HALL.rooms.last()
+    );
+}

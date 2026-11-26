@@ -16,11 +16,13 @@ pub(super) const STARTER_ROOM_IDS: [&str; 4] = [
 const TOUCH_ROOM_ID: &str = numinous_core::THRESHOLD_ROOM_ID;
 
 fn catalog_row(metadata: &numinous_core::RoomMeta) -> Value {
-    json!({
+    let mut row = json!({
         "id": metadata.id,
         "title": metadata.title,
         "wing": metadata.wing,
-    })
+    });
+    crate::catalog_json::mark_room(&mut row, metadata.id);
+    row
 }
 
 fn catalog_rows() -> Vec<Value> {
@@ -167,7 +169,7 @@ fn threshold_text(chain: &Value, wings: &[Value]) -> String {
         .collect::<Vec<_>>()
         .join("\n");
     format!(
-        "Three doors. Choose one.\n\n1. Touch one astonishing thing\n{} ({}) in {}. Turn one dial and watch multiplication draw a living curve.\n\n2. Walk the Strange Loop\n{}\n\n3. Wander by wing\n{}\n\nThe complete typed catalog remains in structuredContent.rooms.",
+        "Three doors. Choose one.\n\n1. Touch one astonishing thing\n{} ({}) in {}. Turn one dial and watch multiplication draw a living curve.\n\n2. Walk the Strange Loop\n{}\n\n3. Wander by wing\n{}\n\nThe complete typed catalog remains in structuredContent.rooms. A frontHall room is a curated starting place. An authoredMathematics room has a mathematics reading.",
         touch.title, touch.id, touch.wing, step_text, wing_text,
     )
 }
@@ -205,7 +207,7 @@ pub(super) fn compact_summary(structured: &Value) -> Option<String> {
         })
         .collect::<Option<Vec<String>>>()?;
     Some(format!(
-        "{} rooms, three doors: {}. Follow each door's next field. Read structuredContent.chain for the Strange Loop walk, wings to wander, and rooms for the complete catalog.",
+        "{} rooms, three doors: {}. Follow each door's next field. Read structuredContent.chain for the Strange Loop walk, wings to wander, and rooms for the complete catalog. Look for frontHall to find curated starts and authoredMathematics for deeper reading.",
         structured.get("count")?.as_u64()?,
         choices.join(", "),
     ))

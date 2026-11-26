@@ -174,7 +174,7 @@ a terminal. `TERM=dumb` draws pictures in ASCII, with no color and no
 block art. `NO_COLOR` on a normal terminal keeps the block-glyph picture
 and strips the color. `numinous completion bash`, `zsh`, or `fish` prints
 a completion script. `numinous rooms` prints the room count and the wing
-count, then one row per room, then a line naming `describe` and `watch`.
+count, a legend for Front Hall and Math study, one row per room, and a line naming `describe` and `watch`.
 `--wing` lists one wing and ignores case. An unknown wing exits with the
 wing names. Columns are sized from the longest id and wing in the whole
 catalog. `--json` is a bare array of those rows, and without `--wing` it
@@ -490,7 +490,9 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Runtime schema enforcement (built):** every `tools/call` is checked against
   the same bounded schema advertised by `tools/list`, including required fields,
   types, enums, numeric and array bounds, nested object shape, and unexpected
-  fields. `play_room` additionally rejects non-finite or out-of-range phase and
+  fields. If a caller uses the wrong field name, the error identifies both
+  the unexpected name and the required field that is missing.
+  `play_room` additionally rejects non-finite or out-of-range phase and
   dimensions. Gesture array order is chronological while each finite timestamp
   follows the App's circular phase clock, including the wrap from 1 back to 0.
   `listen_room` enforces the same phase and input contract, plus the declared
@@ -505,9 +507,12 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   wing. `chain` is a `numinous.room-walk` schema version 1 projection of six
   core-owned canonical steps, each carrying a nonspoiling question and exact
   `describe_room` call. `wings` gives each catalog wing's count and one valid
-  doorway. Full prose renders only this bounded threshold, not the 355-row
-  index. The complete typed catalog remains byte-compatible in `rooms`, and
-  the existing four-row `starters` field remains in every response mode, so
+  doorway. Full prose renders only this bounded threshold, not the full
+  index. The complete typed catalog retains its row order and existing fields in
+  `rooms`. Compact and full rows can carry `frontHall: true` and
+  `authoredMathematics: true`. Unmarked rows omit these fields. Both come from the
+  core collections and study catalog. The
+  existing four-row `starters` field remains in every response mode, so
   clients lose no discovery data.
   `describe_room` is a safe doorway with title, wing, action, optional
   goal, blurb, and the next play call, but no revelation, concept, deep cut, or

@@ -6,6 +6,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 ## [Unreleased]
 
 ### Added
+- Cabinet > Modes > Wings > Browse rooms opens a room by name. The Front Hall
+  collection offers curated starting points, and Math study gathers rooms
+  with authored mathematics. CLI and MCP room lists carry the same marks.
 - `numinous access --room <id>` shows which visual eras and speeds exceeded
   three flashes in one second within part of an automatic room image. The
   nightly report measures regional general and red flashes across the catalog.
@@ -14,6 +17,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   board code between the App, CLI and MCP.
 
 ### Fixed
+- MCP `crack` shows the winning guess, counts any guesses skipped after the
+  game ends, and checks the digit strings it grades. Room calls that mix up
+  `room` and `id` now name both fields in the error.
 - Ramsey Party accepts the displayed red and blue spellings and explains an
   unknown color, an out-of-range guest, a self-pair or an already-shaded edge.
 - The Vector beam now rises smoothly from black. The catalog flash sweep
