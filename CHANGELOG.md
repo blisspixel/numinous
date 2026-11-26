@@ -6,6 +6,8 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 ## [Unreleased]
 
 ### Fixed
+- The documented Git hook checks commit messages on a fresh Unix checkout.
+  The POSIX installer tests desktop shortcuts inside their own XDG configuration.
 - Elliptical Billiard draws the ray across the table after each reflection.
   Dragging the launch changes the hidden curve and its pitch. The pitches
   meet when the ray goes through a focus. Whispering Table uses the same
