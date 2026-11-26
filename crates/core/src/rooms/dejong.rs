@@ -3,6 +3,7 @@
 //! x' = sin(a y) - cos(b x); y' = sin(c x) - cos(d y).
 //! DRAG: TUNE A AND B. See `docs/ROOMS.md`.
 
+use super::phase_plane::PhasePlane;
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 use crate::surface::Surface;
 
@@ -40,42 +41,22 @@ fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64, f64, f64) {
     }
 }
 
+fn step((x, y): (f64, f64), [a, b, c, d]: [f64; 4]) -> (f64, f64) {
+    ((a * y).sin() - (b * x).cos(), (c * x).sin() - (d * y).cos())
+}
+
 fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
-    let (width, height) = canvas.draw_bounds();
-    if width == 0 || height == 0 {
+    // Each coordinate is a difference of two values in [-1, 1].
+    let Some(plane) = PhasePlane::fit(canvas, [(-2.0, -2.0), (2.0, 2.0)].into_iter()) else {
         return;
-    }
-    let mut x: f64 = 0.1;
-    let mut y: f64 = 0.1;
-    let mut min_x = f64::MAX;
-    let mut max_x = f64::MIN;
-    let mut min_y = f64::MAX;
-    let mut max_y = f64::MIN;
-    let mut pts = Vec::with_capacity(ITERS);
-    for _ in 0..ITERS {
-        let nx = (a * y).sin() - (b * x).cos();
-        let ny = (c * x).sin() - (d * y).cos();
-        x = nx;
-        y = ny;
-        if !x.is_finite() || !y.is_finite() {
-            break;
-        }
-        min_x = min_x.min(x);
-        max_x = max_x.max(x);
-        min_y = min_y.min(y);
-        max_y = max_y.max(y);
-        pts.push((x, y));
-    }
-    let dx = (max_x - min_x).max(1e-6);
-    let dy = (max_y - min_y).max(1e-6);
-    for (i, &(px, py)) in pts.iter().enumerate() {
-        let u = ((px - min_x) / dx).clamp(0.0, 1.0);
-        let v = ((py - min_y) / dy).clamp(0.0, 1.0);
-        let ix = (u * width.saturating_sub(1) as f64).round() as i32;
-        let iy = ((1.0 - v) * height.saturating_sub(1) as f64).round() as i32;
-        let ch = if i % 9 == 0 { '#' } else { '*' };
-        canvas.plot(ix, iy, ch);
-    }
+    };
+    plane.draw_orbit(
+        canvas,
+        (0.1, 0.1),
+        ITERS,
+        |i| if i % 9 == 0 { '#' } else { '*' },
+        |point| step(point, [a, b, c, d]),
+    );
 }
 
 /// Peter de Jong attractor room.
@@ -98,7 +79,6 @@ impl DeJong {
 }
 
 impl Room for DeJong {
-
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b, c, d) = params(t, None, self.seed);
         draw(canvas, a, b, c, d);
@@ -143,8 +123,7 @@ impl Room for DeJong {
         let mut x = 0.1_f64;
         let mut y = 0.1_f64;
         for _ in 0..40 {
-            let nx = (a * y).sin() - (b * x).cos();
-            let ny = (c * x).sin() - (d * y).cos();
+            let (nx, ny) = step((x, y), [a, b, c, d]);
             x = nx;
             y = ny;
             if !x.is_finite() || !y.is_finite() {
@@ -156,8 +135,7 @@ impl Room for DeJong {
         let mut min_y = y;
         let mut max_y = y;
         for _ in 0..400 {
-            let nx = (a * y).sin() - (b * x).cos();
-            let ny = (c * x).sin() - (d * y).cos();
+            let (nx, ny) = step((x, y), [a, b, c, d]);
             if !nx.is_finite() || !ny.is_finite() {
                 break;
             }
@@ -207,6 +185,15 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn a_constant_orbit_keeps_its_position_on_the_fixed_axes() {
+        // At zero coefficients both sine terms vanish and each cosine is one.
+        let mut canvas = Canvas::new(101, 101);
+        super::draw(&mut canvas, 0.0, 0.0, 0.0, 0.0);
+        assert_eq!(canvas.ink_count(), 1);
+        assert_ne!(canvas.cell(29, 61), Some(' '));
     }
 
     #[test]

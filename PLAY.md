@@ -242,10 +242,11 @@ also carries the MCP workflow offline.
 
 ## Motion, sound, and flashing
 
-**Flashing:** No catalog room is known to flash faster than the WCAG 2.3.1
-budget at any App speed up to 8x. The music visualizer's pump and phase nudge
-stay inside that certified speed. `numinous access` reports the measurement
-and the active switches.
+**Flashing.** The automatic room tours stayed within the whole-frame general
+and red flash budget in every visual era at 1x, 2x, 4x and 8x. This measures
+a 240 by 140 room image. Flashing in smaller areas, hand and beat input, and
+the final App display remain unmeasured. `numinous access` reports the
+measurement and your active switches.
 
 | Environment variable | Effect when nonempty |
 |---|---|

@@ -1217,6 +1217,8 @@ fn public_forget_previews_fails_closed_and_erases_isolated_state() {
             .env("NUMINOUS_SCORES", &scores)
             .env("NUMINOUS_CAIRN", &cairn)
             .env("NUMINOUS_PREFERENCES", &preferences)
+            .env_remove("NUMINOUS_JOURNAL")
+            .env_remove("NUMINOUS_PROJECT")
             .env("HOME", &home)
             .env("USERPROFILE", &home)
             .env_remove("NUMINOUS_RADIO");

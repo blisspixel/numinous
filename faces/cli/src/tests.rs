@@ -3563,10 +3563,10 @@ fn the_access_report_names_every_room_on_the_known_limit_lists() {
     const PLAYING: &str = include_str!("../../../docs/PLAYING.md");
     // Packaged players must receive the same safety disclosure.
     const PLAY: &str = include_str!("../../../PLAY.md");
-    for &(room, _) in &numinous_core::KNOWN_OVER_FLASH_BUDGET {
+    for &(room, era, _) in &numinous_core::KNOWN_OVER_FLASH_BUDGET {
         assert!(
-            report.contains(room),
-            "the access report no longer names {room}"
+            report.contains(room) && report.contains(era.name()),
+            "the access report no longer names {room} in {era:?}"
         );
         assert!(
             PLAYING.contains(room),
@@ -3592,30 +3592,39 @@ fn the_flash_disclosure_says_which_rooms_and_from_what_speed() {
     // An empty list is a measured result, not a blank line in the report:
     // it says how far the measurement reached and what it left out.
     let none = crate::access::flash_disclosure(&[]);
-    assert!(none.starts_with("No room is known to flash"), "{none}");
+    assert!(none.contains("every\nvisual era"), "{none}");
     assert!(none.contains("up to 8x"), "{none}");
-    assert!(none.contains("visualizer"), "{none}");
-    assert!(none.contains("largest pump is 1.5"), "{none}");
-    assert!(!none.contains("not measured"), "{none}");
-    // Rooms are grouped by the slowest speed at which they go over, so the
-    // player learns when as well as which.
-    let some =
-        crate::access::flash_disclosure(&[("julia", 8.0), ("pickover", 4.0), ("farey", 8.0)]);
     assert!(
-        some.contains(
-            "pickover\nflash faster than the WCAG budget allows when the App runs them\nat 4x"
-        ),
+        none.contains("whole-frame general and red flashes"),
+        "{none}"
+    );
+    assert!(none.contains("final App display"), "{none}");
+    assert!(none.contains("largest pump is 1.5"), "{none}");
+    use numinous_core::Era::{Modern, Vector};
+    let some = crate::access::flash_disclosure(&[
+        ("julia", Vector, 8.0),
+        ("pickover", Modern, 4.0),
+        ("farey", Vector, 8.0),
+        ("julia", Modern, 8.0),
+    ]);
+    assert!(
+        some.contains("Modern era, over budget from 4x:\npickover\n"),
         "{some}"
     );
-    assert!(some.contains("julia, farey\nflash faster"), "{some}");
-    assert!(some.find("pickover") < some.find("julia"), "{some}");
-    assert!(!some.contains("No room"), "{some}");
+    assert!(
+        some.contains("Vector era, over budget from 8x:\njulia, farey\n"),
+        "{some}"
+    );
+    assert!(
+        some.contains("Modern era, over budget from 8x:\njulia\n"),
+        "{some}"
+    );
     // A long list wraps rather than running past eighty columns, and loses
     // no name doing it.
-    let many: Vec<(&str, f64)> = ["cellular-automata", "magnet-fractal", "sierpinski-carpet"]
+    let many: Vec<_> = ["cellular-automata", "magnet-fractal", "sierpinski-carpet"]
         .repeat(4)
         .into_iter()
-        .map(|room| (room, 8.0))
+        .map(|room| (room, Vector, 8.0))
         .collect();
     let wrapped = crate::access::flash_disclosure(&many);
     assert!(
@@ -3628,8 +3637,7 @@ fn the_flash_disclosure_says_which_rooms_and_from_what_speed() {
     assert!(report.contains(&crate::access::flash_disclosure(
         &numinous_core::KNOWN_OVER_FLASH_BUDGET
     )));
-    assert!(report.contains("No room is known to flash"), "{report}");
-    assert!(report.contains("That speed is 8x"), "{report}");
+    assert!(report.contains("measured speeds up to 8x"), "{report}");
     assert!(report.contains("phase nudge is 0.03"), "{report}");
 }
 

@@ -61,6 +61,23 @@ impl PhasePlane {
         )
     }
 
+    /// Plot successive iterates with a regularly accented sample. The caller
+    /// chooses the mathematical bounds once for the whole orbit.
+    pub(super) fn draw_orbit(
+        self,
+        canvas: &mut dyn Surface,
+        mut point: (f64, f64),
+        count: usize,
+        mark: impl Fn(usize) -> char,
+        step: impl Fn((f64, f64)) -> (f64, f64),
+    ) {
+        for sample in 0..count {
+            point = step(point);
+            let (x, y) = self.point(point.0, point.1);
+            canvas.plot(x, y, mark(sample));
+        }
+    }
+
     /// Invert continuous screen coordinates, including fractional pixel edges.
     /// One-row or one-column surfaces have no invertible two-dimensional fit.
     pub(super) fn world(self, x: f64, y: f64) -> Option<(f64, f64)> {
