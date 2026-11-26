@@ -871,7 +871,12 @@ first-class ways into the same world.
 - **What is remembered is yours.** The `forget` tool inventories Journey,
   scores, player-owned Cairn drafts, the opt-in experience journal, the
   explicit project chain, generated radio cache, the App crash diagnostic, and their managed sidecars, with
-  explicit exclusions. Nothing is
+  explicit exclusions. Each store owns its lock, recovery marker and names of
+  the form `.<store>.<pid>.<counter>.tmp`, with the native store filename and
+  decimal fields written by the application. Use another name for personal
+  files. A single-component relative path looks for these files in the current
+  directory. Configured paths that overlap another store or its sidecars must
+  be separated before an erase can proceed. Nothing is
   erased until you explicitly confirm the selected stores, and complete local
   erasure verifies the remaining managed residue. Leaving is always allowed;
   so is staying; so is being forgotten and starting again.

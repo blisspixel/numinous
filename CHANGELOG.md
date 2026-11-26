@@ -17,6 +17,12 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   board code between the App, CLI and MCP.
 
 ### Fixed
+- Generated radio recordings keep existing tracks when numbering has gaps or
+  two writers finish together. Erasure preserves lookalike recording names.
+- Confirmed erasure recognizes the exact native filenames used for temporary
+  state. A relative journal filename gets the same inventory and cleanup as an
+  absolute path. Conflicting store and sidecar paths are refused before erasure.
+  Local state and lock reads check for a regular file.
 - MCP `crack` shows the winning guess, counts any guesses skipped after the
   game ends, and checks the digit strings it grades. Room calls that mix up
   `room` and `id` now name both fields in the error.

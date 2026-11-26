@@ -5,7 +5,9 @@
 //! file behavior every face needs: one lock file per state file,
 //! merge-before-write semantics, and same-directory temp writes before commit.
 
-use std::ffi::OsString;
+pub mod radio_tracks;
+
+use std::ffi::{OsStr, OsString};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
@@ -337,22 +339,111 @@ impl std::error::Error for LocalStateEraseError {
     }
 }
 
-fn sidecar_name_parts(path: &Path) -> (String, String, String) {
-    let base = file_name(path).to_string_lossy().into_owned();
-    (
-        format!("{base}.lock"),
-        format!("{base}.lock.recover"),
-        format!(".{base}."),
-    )
+fn state_parent(path: &Path) -> &Path {
+    path.parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."))
+}
+
+// Only the numeric fields and the extension use an ASCII encoding.
+fn temp_fields(candidate: &OsStr) -> Option<(u32, u64)> {
+    let mut parts = candidate
+        .as_encoded_bytes()
+        .rsplitn(4, |byte| *byte == b'.');
+    if !parts.next()?.eq_ignore_ascii_case(b"tmp") {
+        return None;
+    }
+    let counter = std::str::from_utf8(parts.next()?)
+        .ok()?
+        .parse::<u64>()
+        .ok()?;
+    let pid = std::str::from_utf8(parts.next()?)
+        .ok()?
+        .parse::<u32>()
+        .ok()?;
+    (pid != 0 && parts.next().is_some()).then_some((pid, counter))
+}
+
+fn expected_temp_name(path: &Path, candidate: &OsStr) -> Option<OsString> {
+    let (pid, counter) = temp_fields(candidate)?;
+    Some(temp_name(path, pid, counter))
+}
+
+#[derive(Default)]
+struct TempSpellings {
+    exact: bool,
+    literal_suffix: bool,
+    other_suffix: bool,
+}
+
+fn visit_store_temps(
+    path: &Path,
+    mut visit: impl FnMut(PathBuf, fs::Metadata) -> io::Result<()>,
+) -> io::Result<bool> {
+    let entries = match fs::read_dir(state_parent(path)) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(error),
+    };
+    let mut spellings = std::collections::BTreeMap::<_, TempSpellings>::new();
+    let mut capped = false;
+    for (index, entry) in entries.enumerate() {
+        if index == MAX_MANAGED_SIDECARS {
+            capped = true;
+            break;
+        }
+        let name = entry?.file_name();
+        let Some((pid, counter)) = temp_fields(&name) else {
+            continue;
+        };
+        let suffix = temp_suffix(pid, counter);
+        let raw = name.as_encoded_bytes();
+        if !raw.starts_with(b".")
+            || raw.len() <= suffix.len() + 1
+            || !raw[raw.len() - suffix.len()..].eq_ignore_ascii_case(suffix.as_bytes())
+        {
+            continue;
+        }
+        let group = spellings.entry((pid, counter)).or_default();
+        if raw.ends_with(b".tmp") {
+            group.literal_suffix = true;
+            group.exact |= name == temp_name(path, pid, counter);
+        } else {
+            group.other_suffix = true;
+        }
+    }
+    for ((pid, counter), group) in spellings {
+        if !group.literal_suffix || (capped && !group.exact) {
+            continue;
+        }
+        // The volume resolves the owner's spelling. Act only on that name,
+        // even if other directory entries are hard links to the same inode.
+        let candidate = path.with_file_name(temp_name(path, pid, counter));
+        match fs::symlink_metadata(&candidate) {
+            Ok(_) if !group.exact && group.other_suffix => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!(
+                        "could not verify temporary-file spelling for {}",
+                        candidate.display()
+                    ),
+                ));
+            }
+            Ok(metadata) => visit(candidate, metadata)?,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(capped)
 }
 
 fn inspect_managed_sidecars(path: &Path) -> io::Result<(usize, u64, bool)> {
-    let parent = path.parent().unwrap_or_else(|| Path::new("."));
-    let (lock_name, recovery_name, temp_prefix) = sidecar_name_parts(path);
+    let lock = lock_path_for(path);
+    let recovery = recovery_path_for(&lock);
     let mut files = 0_usize;
     let mut bytes = 0_u64;
-    for exact_name in [&lock_name, &recovery_name] {
-        match fs::symlink_metadata(parent.join(exact_name)) {
+    for sidecar in [lock, recovery] {
+        match fs::symlink_metadata(sidecar) {
             Ok(metadata) => {
                 files += 1;
                 if metadata.file_type().is_file() {
@@ -363,29 +454,13 @@ fn inspect_managed_sidecars(path: &Path) -> io::Result<(usize, u64, bool)> {
             Err(error) => return Err(error),
         }
     }
-    let entries = match fs::read_dir(parent) {
-        Ok(entries) => entries,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => {
-            return Ok((files, bytes, false));
+    let capped = visit_store_temps(path, |_, metadata| {
+        files += 1;
+        if metadata.file_type().is_file() {
+            bytes = bytes.saturating_add(metadata.len());
         }
-        Err(error) => return Err(error),
-    };
-    let mut capped = false;
-    for (index, entry) in entries.enumerate() {
-        if index == MAX_MANAGED_SIDECARS {
-            capped = true;
-            break;
-        }
-        let entry = entry?;
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if name.starts_with(&temp_prefix) && name.ends_with(".tmp") {
-            files += 1;
-            let metadata = fs::symlink_metadata(entry.path())?;
-            if metadata.file_type().is_file() {
-                bytes = bytes.saturating_add(metadata.len());
-            }
-        }
-    }
+        Ok(())
+    })?;
     Ok((files, bytes, capped))
 }
 
@@ -420,7 +495,8 @@ fn inspect_managed_file(path: &Path) -> io::Result<LocalFileInventory> {
 
 fn inspect_managed_cache(path: &Path) -> io::Result<LocalCacheInventory> {
     let resolved_path = resolved_path_for_comparison(path)?;
-    let (sidecar_files, sidecar_bytes, sidecar_scan_capped) = inspect_managed_sidecars(path)?;
+    let (mut sidecar_files, mut sidecar_bytes, sidecar_scan_capped) =
+        inspect_managed_sidecars(path)?;
     let metadata = match fs::symlink_metadata(path) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == io::ErrorKind::NotFound => {
@@ -463,9 +539,14 @@ fn inspect_managed_cache(path: &Path) -> io::Result<LocalCacheInventory> {
         }
         let entry = entry?;
         let metadata = fs::symlink_metadata(entry.path())?;
-        if metadata.file_type().is_file() && is_generated_radio_file(&entry.file_name()) {
+        if metadata.file_type().is_file()
+            && radio_tracks::generated_track(&entry.file_name()).is_some()
+        {
             files += 1;
             bytes = bytes.saturating_add(metadata.len());
+        } else if metadata.file_type().is_file() && radio_tracks::is_stage(&entry.file_name()) {
+            sidecar_files += 1;
+            sidecar_bytes = sidecar_bytes.saturating_add(metadata.len());
         } else {
             unexpected_entries += 1;
         }
@@ -480,20 +561,6 @@ fn inspect_managed_cache(path: &Path) -> io::Result<LocalCacheInventory> {
         sidecar_files,
         sidecar_bytes,
         sidecar_scan_capped,
-    })
-}
-
-fn is_generated_radio_file(name: &std::ffi::OsStr) -> bool {
-    let Some(name) = name.to_str() else {
-        return false;
-    };
-    crate::radio::STATIONS.iter().any(|station| {
-        name.strip_prefix(station.id)
-            .and_then(|suffix| suffix.strip_prefix('-'))
-            .and_then(|suffix| suffix.strip_suffix(".wav"))
-            .is_some_and(|number| {
-                !number.is_empty() && number.bytes().all(|byte| byte.is_ascii_digit())
-            })
     })
 }
 
@@ -596,8 +663,50 @@ fn paths_overlap_for_erasure(left: &Path, right: &Path) -> bool {
     left.starts_with(&right) || right.starts_with(&left)
 }
 
+/// The directory entry used to name sidecars follows links in the parent only.
+/// A store selected through a final symlink has separate entry and target paths.
+fn resolved_entry(path: &Path) -> io::Result<PathBuf> {
+    let absolute = lexical_absolute_path(path)?;
+    match absolute.file_name() {
+        Some(name) => Ok(resolved_path_for_comparison(state_parent(&absolute))?.join(name)),
+        None => Ok(absolute),
+    }
+}
+
+// Existing Unix aliases can have different spellings on a case-insensitive
+// or normalizing volume. Compare the entries without following final links.
+fn paths_alias_for_erasure(left: &Path, right: &Path) -> bool {
+    if paths_equal_for_erasure(left, right) {
+        return true;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if let (Ok(a), Ok(b)) = (fs::symlink_metadata(left), fs::symlink_metadata(right)) {
+            return a.dev() == b.dev() && a.ino() == b.ino();
+        }
+    }
+    false
+}
+
+fn is_reserved_sidecar(owner: &Path, other: &Path) -> bool {
+    let lock = lock_path_for(owner);
+    let recovery = recovery_path_for(&lock);
+    other.ancestors().any(|candidate| {
+        if !paths_alias_for_erasure(state_parent(owner), state_parent(candidate)) {
+            return false;
+        }
+        paths_alias_for_erasure(&lock, candidate)
+            || paths_alias_for_erasure(&recovery, candidate)
+            || candidate
+                .file_name()
+                .and_then(|name| expected_temp_name(owner, name))
+                .is_some_and(|name| paths_alias_for_erasure(&owner.with_file_name(name), candidate))
+    })
+}
+
 fn validate_local_state_paths(paths: &LocalStatePaths) -> io::Result<()> {
-    let files = [
+    let stores = [
         ("journey", &paths.journey),
         ("scores", &paths.scores),
         ("Cairn drafts", &paths.cairn),
@@ -605,36 +714,63 @@ fn validate_local_state_paths(paths: &LocalStatePaths) -> io::Result<()> {
         ("project", &paths.project),
         ("App preferences", &paths.preferences),
         ("crash log", &paths.crash_log),
+        ("radio cache", &paths.radio_cache),
     ]
-    .map(|(name, path)| Ok((name, resolved_path_for_comparison(path)?)))
+    .map(|(name, path)| {
+        Ok((
+            name,
+            resolved_entry(path)?,
+            resolved_path_for_comparison(path)?,
+        ))
+    })
     .into_iter()
     .collect::<io::Result<Vec<_>>>()?;
-    for (index, (left_name, left)) in files.iter().enumerate() {
-        for (right_name, right) in files.iter().skip(index + 1) {
-            if paths_equal_for_erasure(left, right) {
+    for (index, (name, entry, target)) in stores.iter().enumerate() {
+        for (other_name, other_entry, other_target) in &stores[index + 1..] {
+            if paths_equal_for_erasure(target, other_target) {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
-                    format!("{left_name} and {right_name} resolve to the same path"),
+                    format!("{name} and {other_name} resolve to the same path"),
                 ));
+            }
+            if paths_overlap_for_erasure(target, other_target) {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!("{name} and {other_name} paths overlap"),
+                ));
+            }
+            for (owner, other) in [
+                (entry, other_entry),
+                (entry, other_target),
+                (other_entry, entry),
+                (other_entry, target),
+            ] {
+                if paths_overlap_for_erasure(owner, other) || is_reserved_sidecar(owner, other) {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        format!("{name} and {other_name} paths or transaction sidecars overlap"),
+                    ));
+                }
             }
         }
     }
-    let cache = resolved_path_for_comparison(&paths.radio_cache)?;
-    for (name, file) in &files {
-        if paths_overlap_for_erasure(file, &cache) {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("{name} and radio cache paths overlap"),
-            ));
-        }
-    }
     if let Some(source) = paths.protected_radio_source.as_deref() {
-        let source = resolved_path_for_comparison(source)?;
-        if paths_overlap_for_erasure(&source, &cache) {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "selected radio source and managed radio cache paths overlap",
-            ));
+        let source_entry = resolved_entry(source)?;
+        let source_target = resolved_path_for_comparison(source)?;
+        for (name, entry, target) in &stores {
+            for source in [&source_entry, &source_target] {
+                if paths_overlap_for_erasure(source, entry)
+                    || paths_overlap_for_erasure(source, target)
+                    || is_reserved_sidecar(entry, source)
+                {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        format!(
+                            "selected radio source and {name} paths or transaction sidecars overlap"
+                        ),
+                    ));
+                }
+            }
         }
     }
     Ok(())
@@ -741,7 +877,10 @@ fn managed_cache_entries(path: &Path) -> io::Result<Option<Vec<PathBuf>>> {
         }
         let entry = entry?;
         let metadata = fs::symlink_metadata(entry.path())?;
-        if !metadata.file_type().is_file() || !is_generated_radio_file(&entry.file_name()) {
+        if !metadata.file_type().is_file()
+            || (radio_tracks::generated_track(&entry.file_name()).is_none()
+                && !radio_tracks::is_stage(&entry.file_name()))
+        {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!(
@@ -1069,6 +1208,18 @@ fn persist_journal(path: &Path, journal: &Journal) -> io::Result<()> {
     Ok(())
 }
 
+impl LocalStatePaths {
+    /// Erase only this profile's journal after checking for store and sidecar aliases.
+    ///
+    /// # Errors
+    /// Returns a layout error before locking when another configured store overlaps.
+    /// I/O errors and residual files are reported by the single-store eraser.
+    pub fn erase_journal(&self) -> io::Result<LocalFileInventory> {
+        validate_local_state_paths(self)?;
+        erase_journal_file(&self.journal)
+    }
+}
+
 /// Wipes the player's journal and reports the verified managed residue.
 pub fn erase_journal_file(path: &Path) -> io::Result<LocalFileInventory> {
     {
@@ -1347,40 +1498,28 @@ pub fn remove_persisted_file(path: &Path) -> io::Result<()> {
 }
 
 fn orphan_temp_files(path: &Path) -> io::Result<Vec<PathBuf>> {
-    let parent = path.parent().unwrap_or_else(|| Path::new("."));
-    let entries = match fs::read_dir(parent) {
-        Ok(entries) => entries,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(error) => return Err(error),
-    };
-    let (_, _, temp_prefix) = sidecar_name_parts(path);
     let mut temps = Vec::new();
-    for (index, entry) in entries.enumerate() {
-        if index == MAX_MANAGED_SIDECARS {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "could not bound adjacent temporary-file cleanup for {}",
-                    path.display()
-                ),
-            ));
-        }
-        let entry = entry?;
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if !(name.starts_with(&temp_prefix) && name.ends_with(".tmp")) {
-            continue;
-        }
-        let metadata = fs::symlink_metadata(entry.path())?;
+    let capped = visit_store_temps(path, |candidate, metadata| {
         if !metadata.file_type().is_file() && !metadata.file_type().is_symlink() {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!(
                     "{} is not a removable state temporary file",
-                    entry.path().display()
+                    candidate.display()
                 ),
             ));
         }
-        temps.push(entry.path());
+        temps.push(candidate);
+        Ok(())
+    })?;
+    if capped {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "could not bound adjacent temporary-file cleanup for {}",
+                path.display()
+            ),
+        ));
     }
     Ok(temps)
 }
@@ -1601,13 +1740,49 @@ fn merge_journey_delta(before: &Journey, after: &Journey, latest: &mut Journey) 
     }
 }
 
+fn require_regular(path: &Path, metadata: &fs::Metadata) -> io::Result<()> {
+    if metadata.is_file() {
+        Ok(())
+    } else {
+        Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("{} is not a regular file", path.display()),
+        ))
+    }
+}
+
+/// Open a regular file for bounded reads. Regular-file symlink targets
+/// remain readable. On the shipped Unix targets O_NONBLOCK also protects the
+/// open itself if a FIFO replaces the target after the preliminary stat.
+pub(crate) fn open_regular_file(path: &Path) -> io::Result<File> {
+    require_regular(path, &fs::metadata(path)?)?;
+    let mut options = OpenOptions::new();
+    options.read(true);
+    #[cfg(all(
+        target_os = "linux",
+        any(target_arch = "x86_64", target_arch = "aarch64")
+    ))]
+    std::os::unix::fs::OpenOptionsExt::custom_flags(&mut options, 0o4000);
+    #[cfg(target_os = "macos")]
+    std::os::unix::fs::OpenOptionsExt::custom_flags(&mut options, 0x0004);
+    let file = options.open(path)?;
+    require_regular(path, &file.metadata()?)?;
+    Ok(file)
+}
+
+// Only regular directory entries belong to the lock and recovery protocol.
+// A missing entry is a normal race when another writer releases the lock.
+fn existing_lock_file(path: &Path) -> io::Result<bool> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) => require_regular(path, &metadata).map(|()| true),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error),
+    }
+}
+
 fn read_local_text_bounded(path: &Path, max_bytes: u64) -> io::Result<String> {
-    let file = File::open(path)?;
-    if file
-        .metadata()
-        .map(|metadata| metadata.len() > max_bytes)
-        .unwrap_or(false)
-    {
+    let file = open_regular_file(path)?;
+    if file.metadata()?.len() > max_bytes {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "local persistence file is too large",
@@ -1692,7 +1867,7 @@ impl PersistLock {
         let lock_path = lock_path_for(path);
         for _ in 0..LOCK_RETRIES {
             let recovery_path = recovery_path_for(&lock_path);
-            if recovery_path.exists() {
+            if existing_lock_file(&recovery_path)? {
                 let _ = recover_stale_marker(&recovery_path);
                 thread::sleep(LOCK_SLEEP);
                 continue;
@@ -1725,6 +1900,9 @@ impl PersistLock {
                     return Ok(pending.into_lock());
                 }
                 Err(error) if should_retry_lock(&error) => {
+                    if !existing_lock_file(&lock_path)? {
+                        continue;
+                    }
                     if !recover_stale_lock(&lock_path) {
                         thread::sleep(LOCK_SLEEP);
                     }
@@ -1782,14 +1960,22 @@ fn recovery_path_for(lock_path: &Path) -> PathBuf {
 }
 
 fn temp_path_for(path: &Path) -> PathBuf {
+    path.with_file_name(temp_name(
+        path,
+        std::process::id(),
+        TEMP_COUNTER.fetch_add(1, Ordering::Relaxed),
+    ))
+}
+
+fn temp_name(path: &Path, pid: u32, counter: u64) -> OsString {
     let mut name = OsString::from(".");
     name.push(file_name(path));
-    name.push(format!(
-        ".{}.{}.tmp",
-        std::process::id(),
-        TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)
-    ));
-    path.with_file_name(name)
+    name.push(temp_suffix(pid, counter));
+    name
+}
+
+fn temp_suffix(pid: u32, counter: u64) -> String {
+    format!(".{pid}.{counter}.tmp")
 }
 
 fn file_name(path: &Path) -> OsString {
@@ -1860,6 +2046,9 @@ fn lock_token_matches(lock_path: &Path, token: &str) -> bool {
 }
 
 fn lock_is_recoverable(lock_path: &Path) -> bool {
+    if !matches!(existing_lock_file(lock_path), Ok(true)) {
+        return false;
+    }
     let text = match read_lock_text_lossy(lock_path) {
         Ok(text) => Some(text),
         Err(error) if error.kind() == io::ErrorKind::InvalidData => None,
@@ -1899,12 +2088,8 @@ fn lock_is_recoverable(lock_path: &Path) -> bool {
 }
 
 fn read_lock_text_lossy(lock_path: &Path) -> io::Result<String> {
-    let file = File::open(lock_path)?;
-    if file
-        .metadata()
-        .map(|metadata| metadata.len() > MAX_LOCK_FILE_BYTES)
-        .unwrap_or(false)
-    {
+    let file = open_regular_file(lock_path)?;
+    if file.metadata()?.len() > MAX_LOCK_FILE_BYTES {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "persistence lock file is too large",
@@ -2068,11 +2253,7 @@ fn replace_temp_file(path: &Path, temp: &Path) -> io::Result<()> {
 
 #[cfg(unix)]
 fn open_parent_directory(path: &Path) -> io::Result<File> {
-    let parent = path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-        .unwrap_or_else(|| Path::new("."));
-    File::open(parent)
+    File::open(state_parent(path))
 }
 
 #[cfg(any(windows, test))]
@@ -2924,6 +3105,150 @@ mod tests {
     }
 
     #[test]
+    fn generated_radio_accepts_only_the_canonical_positive_station_names() {
+        use super::radio_tracks::generated_track;
+        for name in [
+            "trance-001.wav",
+            "chill-010.wav",
+            "arcade-999.wav",
+            "trance-1000.wav",
+        ] {
+            assert!(generated_track(name.as_ref()).is_some(), "{name}");
+        }
+        for name in [
+            "trance-1.wav",
+            "trance-00.wav",
+            "trance-000.wav",
+            "trance-0001.wav",
+            "trance-+01.wav",
+            "chill-10000.mp3",
+            "station-001.wav",
+            "arcade-001.WAV",
+            "trance-999999999999999999999999.wav",
+            "trance-1a1.wav",
+        ] {
+            assert!(generated_track(name.as_ref()).is_none(), "{name}");
+        }
+        let store = IsolatedStore::new("radio_name_ownership");
+        let dir = store.path("radio");
+        std::fs::create_dir(&dir).unwrap();
+        let notes = dir.join("trance-1.wav");
+        std::fs::write(&notes, b"personal recording").unwrap();
+        std::fs::write(dir.join("trance-001.wav"), b"generated recording").unwrap();
+        let inventory = super::inspect_managed_cache(&dir).unwrap();
+        assert_eq!((inventory.files, inventory.unexpected_entries), (1, 1));
+        assert!(super::remove_managed_cache_locked(&dir).is_err());
+        assert_eq!(std::fs::read(&notes).unwrap(), b"personal recording");
+        std::fs::remove_file(notes).unwrap();
+
+        let stage = dir.join(".numinous-recording.27.4.tmp");
+        std::fs::write(stage, b"recoverable audio").unwrap();
+        let lookalike = dir.join(".numinous-recording.027.4.tmp");
+        std::fs::write(&lookalike, b"unrelated").unwrap();
+        let inventory = super::inspect_managed_cache(&dir).unwrap();
+        assert_eq!(
+            (
+                inventory.files,
+                inventory.sidecar_files,
+                inventory.unexpected_entries
+            ),
+            (1, 1, 1)
+        );
+        assert_eq!(inventory.sidecar_bytes, 17);
+        assert!(super::remove_managed_cache_locked(&dir).is_err());
+        assert_eq!(std::fs::read(&lookalike).unwrap(), b"unrelated");
+        std::fs::remove_file(lookalike).unwrap();
+        super::remove_managed_cache_locked(&dir).unwrap();
+        assert!(!dir.exists());
+    }
+
+    #[test]
+    fn generated_radio_appends_after_gaps_and_preserves_unexpected_collisions() {
+        use super::radio_tracks::{SAMPLE_WAV, next_number, publish};
+        use std::io::Write;
+        let store = IsolatedStore::new("radio_append");
+        let dir = store.path("radio");
+        assert_eq!(next_number(&dir, "trance").unwrap(), 1);
+        assert!(next_number(&dir, "unknown").is_err());
+        std::fs::create_dir(&dir).unwrap();
+        for name in [
+            "trance-001.wav",
+            "trance-003.wav",
+            "trance-0009.wav",
+            "chill-096.wav",
+        ] {
+            std::fs::write(dir.join(name), b"old").unwrap();
+        }
+        assert_eq!(next_number(&dir, "trance").unwrap(), 4);
+        let collision = dir.join("trance-004.wav");
+        let assigned = publish(&dir, "trance", |file| {
+            std::fs::write(&collision, b"another file appeared")?;
+            file.write_all(SAMPLE_WAV)
+        })
+        .unwrap();
+        assert_eq!(assigned, dir.join("trance-005.wav"));
+        assert_eq!(std::fs::read(&assigned).unwrap(), *SAMPLE_WAV);
+        assert_eq!(std::fs::read(&collision).unwrap(), b"another file appeared");
+        assert_eq!(std::fs::read(dir.join("trance-003.wav")).unwrap(), b"old");
+
+        assert!(
+            publish(&dir, "trance", |file| {
+                file.write_all(b"partial header")?;
+                Err(std::io::Error::other("encoder stopped"))
+            })
+            .is_err()
+        );
+        assert_eq!(next_number(&dir, "trance").unwrap(), 6);
+        assert_eq!(super::inspect_managed_cache(&dir).unwrap().sidecar_files, 0);
+        let ceiling = format!("trance-{}.wav", usize::MAX);
+        std::fs::write(dir.join(format!("trance-{}.wav", usize::MAX - 1)), b"old").unwrap();
+        let error = publish(&dir, "trance", |file| {
+            std::fs::write(dir.join(&ceiling), b"occupied")?;
+            file.write_all(SAMPLE_WAV)
+        })
+        .unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::AlreadyExists);
+        let retained = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(Result::unwrap)
+            .find(|entry| super::radio_tracks::is_stage(&entry.file_name()))
+            .unwrap();
+        assert_eq!(std::fs::read(retained.path()).unwrap(), *SAMPLE_WAV);
+        assert_eq!(std::fs::read(dir.join(&ceiling)).unwrap(), b"occupied");
+        assert!(next_number(&dir, "trance").is_err());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn simultaneous_radio_writers_keep_each_completed_recording() {
+        use std::io::Write;
+        let store = IsolatedStore::new("radio_concurrent_publish");
+        let dir = store.path("radio");
+        let start = std::sync::Barrier::new(4);
+        std::thread::scope(|scope| {
+            let dir = &dir;
+            let start = &start;
+            for sample in 1..=4 {
+                scope.spawn(move || {
+                    start.wait();
+                    let mut wav = *super::radio_tracks::SAMPLE_WAV;
+                    wav[44] = sample;
+                    let path =
+                        super::radio_tracks::publish(dir, "arcade", |file| file.write_all(&wav))
+                            .unwrap();
+                    assert_eq!(std::fs::read(path).unwrap(), wav);
+                });
+            }
+        });
+        let mut samples: Vec<_> = (1..=4)
+            .map(|index| std::fs::read(dir.join(format!("arcade-{index:03}.wav"))).unwrap()[44])
+            .collect();
+        samples.sort_unstable();
+        assert_eq!(samples, [1, 2, 3, 4]);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
     fn missing_parent_has_no_orphan_temporaries() {
         let root = temp_file("missing_temp_parent").with_extension("");
         let path = root.join("nested").join("journey.txt");
@@ -2956,9 +3281,12 @@ mod tests {
         let root = temp_file("cache_entry_cap").with_extension("");
         let paths = local_state_paths(&root);
         std::fs::create_dir_all(&paths.radio_cache).expect("cache fixture");
-        for index in 0..=super::MAX_MANAGED_CACHE_ENTRIES {
-            std::fs::write(paths.radio_cache.join(format!("trance-{index}.wav")), b"R")
-                .expect("bounded cache fixture");
+        for number in 1..=super::MAX_MANAGED_CACHE_ENTRIES + 1 {
+            std::fs::write(
+                paths.radio_cache.join(format!("trance-{number:03}.wav")),
+                b"R",
+            )
+            .expect("bounded cache fixture");
         }
 
         let inventory = inspect_local_state(&paths).expect("inspect capped cache");
@@ -3101,6 +3429,274 @@ mod tests {
             b"not generated audio"
         );
         std::fs::remove_dir_all(&root).expect("fixture cleanup");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn reads_accept_regular_targets_and_reject_special_entries_before_consuming_bytes() {
+        use std::os::unix::fs::symlink;
+        let root = IsolatedStore::new("regular_reads");
+        let ordinary = root.path("ordinary");
+        let link = root.path("selected");
+        std::fs::write(&ordinary, b"plays 3\n").unwrap();
+        symlink(&ordinary, &link).unwrap();
+        assert_eq!(super::read_journey_file(&link).unwrap().plays, 3);
+        let directory = root.path("directory");
+        std::fs::create_dir(&directory).unwrap();
+        assert_eq!(
+            super::open_regular_file(&directory).unwrap_err().kind(),
+            std::io::ErrorKind::InvalidInput
+        );
+        assert_eq!(
+            super::read_journey_file(&directory).unwrap_err().kind(),
+            std::io::ErrorKind::InvalidInput
+        );
+        assert_eq!(crate::cairn::local_bequest_count(&directory), 0);
+        std::fs::remove_dir(directory).unwrap();
+
+        let fifo = root.path("pending-stream");
+        assert!(
+            std::process::Command::new("mkfifo")
+                .arg(&fifo)
+                .status()
+                .unwrap()
+                .success()
+        );
+        // Exercise the type gate independently of pipe scheduling.
+        assert_eq!(
+            super::require_regular(&fifo, &std::fs::metadata(&fifo).unwrap())
+                .unwrap_err()
+                .kind(),
+            std::io::ErrorKind::InvalidInput
+        );
+        #[cfg(target_os = "linux")]
+        {
+            // An open writer lets the read-open return even if the type guard
+            // regresses. This check never waits for an absent pipe peer.
+            let _peer = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&fifo)
+                .unwrap();
+            assert_eq!(
+                super::open_regular_file(&fifo).unwrap_err().kind(),
+                std::io::ErrorKind::InvalidInput
+            );
+        }
+        let lock = super::lock_path_for(&ordinary);
+        std::fs::rename(&fifo, &lock).unwrap();
+        assert_eq!(
+            super::PersistLock::acquire(&ordinary).err().unwrap().kind(),
+            std::io::ErrorKind::InvalidInput
+        );
+        assert!(!super::lock_is_recoverable(&lock));
+        let recovery = super::recovery_path_for(&lock);
+        std::fs::rename(&lock, &recovery).unwrap();
+        assert_eq!(
+            super::PersistLock::acquire(&ordinary).err().unwrap().kind(),
+            std::io::ErrorKind::InvalidInput
+        );
+        std::fs::remove_file(recovery).unwrap();
+    }
+
+    #[test]
+    fn only_native_writer_names_are_temporary_state() {
+        let root = IsolatedStore::new("writer_name_grammar");
+        let owner = root.path("a.store");
+        let emitted = super::temp_path_for(&owner);
+        std::fs::write(&emitted, b"x").unwrap();
+        assert_eq!(
+            super::orphan_temp_files(&owner).unwrap(),
+            std::slice::from_ref(&emitted)
+        );
+        std::fs::remove_file(emitted).unwrap();
+        for (name, expected) in [
+            (".a.store.4294967295.18446744073709551615.tmp", true),
+            (".a.store.1.0.tmp", true),
+            (".a.store.0.1.tmp", false),
+            (".a.store.1.2.3.tmp", false),
+            (".a.store.01.2.tmp", false),
+            (".a.store.+1.2.tmp", false),
+            (".a.store.2.01.tmp", false),
+            (".a.store.4294967296.0.tmp", false),
+            (".a.store.1.18446744073709551616.tmp", false),
+            (".a.store.1.tmp", false),
+            (".a.store.notes.tmp", false),
+            (".a.store.1.2.TMP", false),
+            (".another.1.2.tmp", false),
+        ] {
+            let file = root.path(name);
+            std::fs::write(&file, b"x").unwrap();
+            assert_eq!(
+                super::orphan_temp_files(&owner).unwrap().contains(&file),
+                expected,
+                "{name}"
+            );
+            std::fs::remove_file(file).unwrap();
+        }
+    }
+
+    #[test]
+    fn temporary_file_ownership_uses_the_volume_name_lookup() {
+        for (written, configured) in [("Journey", "journey"), ("Möbius", "MÖbius")] {
+            check_volume_temp_ownership(written, configured);
+        }
+    }
+
+    fn check_volume_temp_ownership(written: &str, configured: &str) {
+        let root = IsolatedStore::new("volume_temp_names");
+        let original = root.path(written);
+        let selected = root.path(configured);
+        std::fs::write(&original, b"state").unwrap();
+        let aliases = selected.exists();
+        std::fs::remove_file(&original).unwrap();
+
+        let orphan = root.path(&format!(".{written}.17.2.tmp"));
+        std::fs::write(&orphan, b"orphan").unwrap();
+        let near_misses = [
+            format!(".{written}.17.3.TMP"),
+            format!(".{written}.017.4.tmp"),
+            ".other.17.2.tmp".to_owned(),
+        ];
+        for name in &near_misses {
+            std::fs::write(root.path(name), b"preserved").unwrap();
+        }
+        assert_eq!(
+            super::inspect_managed_file(&selected)
+                .unwrap()
+                .sidecar_files,
+            usize::from(aliases),
+        );
+        super::remove_orphan_temp_files(&selected).unwrap();
+        let orphan_listed = std::fs::read_dir(&root.root)
+            .unwrap()
+            .any(|entry| entry.unwrap().file_name() == orphan.file_name().unwrap());
+        assert_eq!(orphan_listed, !aliases);
+        for name in &near_misses {
+            assert_eq!(std::fs::read(root.path(name)).unwrap(), b"preserved");
+        }
+    }
+
+    #[test]
+    fn ambiguous_extension_spelling_preserves_entries_and_discloses_the_refusal() {
+        let root = IsolatedStore::new("uncertain_temp_spelling");
+        let owner = root.path("journey");
+        let upper = root.path(".Journey.6.2.TMP");
+        let other = root.path(".other.6.2.tmp");
+        std::fs::write(&upper, b"original").unwrap();
+        std::fs::write(&other, b"preserved").unwrap();
+        let aliases = root.path(".journey.6.2.tmp").exists();
+        let inventory = super::inspect_managed_file(&owner);
+        let cleanup = super::remove_orphan_temp_files(&owner);
+        if aliases {
+            assert_eq!(inventory.unwrap_err().kind(), io::ErrorKind::InvalidData);
+            assert_eq!(cleanup.unwrap_err().kind(), io::ErrorKind::InvalidData);
+        } else {
+            assert_eq!(inventory.unwrap().sidecar_files, 0);
+            cleanup.unwrap();
+        }
+        assert_eq!(std::fs::read(upper).unwrap(), b"original");
+        assert_eq!(std::fs::read(other).unwrap(), b"preserved");
+    }
+
+    #[test]
+    fn cleanup_keeps_other_names_for_the_same_temporary_file() {
+        let root = IsolatedStore::new("temp_hard_links");
+        let owner = root.path("journey");
+        let reserved = root.path(".journey.42.0.tmp");
+        let other = root.path(".other.42.0.tmp");
+        let differently_cased = root.path(".Journey.42.0.tmp");
+        std::fs::write(&reserved, b"fixture").unwrap();
+        std::fs::hard_link(&reserved, &other).unwrap();
+        let distinct = !differently_cased.exists();
+        if distinct {
+            std::fs::hard_link(&reserved, &differently_cased).unwrap();
+        }
+
+        let inventory = super::inspect_managed_file(&owner).unwrap();
+        assert_eq!((inventory.sidecar_files, inventory.sidecar_bytes), (1, 7));
+        super::remove_orphan_temp_files(&owner).unwrap();
+        assert!(!reserved.exists());
+        assert_eq!(std::fs::read(other).unwrap(), b"fixture");
+        if distinct {
+            assert_eq!(std::fs::read(differently_cased).unwrap(), b"fixture");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn non_unicode_store_names_keep_distinct_sidecars() {
+        use std::os::unix::ffi::OsStrExt;
+        let root = IsolatedStore::new("native_names");
+        let store = root.root.join(std::ffi::OsStr::from_bytes(b"state-\xff"));
+        let other = root.root.join(std::ffi::OsStr::from_bytes(b"state-\xfe"));
+        let owned = super::temp_path_for(&store);
+        let unrelated = super::temp_path_for(&other);
+        for path in [&owned, &unrelated, &super::lock_path_for(&other)] {
+            std::fs::write(path, b"fixture").unwrap();
+        }
+        assert_eq!(
+            super::inspect_managed_file(&store).unwrap().sidecar_files,
+            1
+        );
+        super::remove_orphan_temp_files(&store).unwrap();
+        assert!(!owned.exists());
+        assert!(unrelated.is_file() && super::lock_path_for(&other).is_file());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn independent_symlink_entries_keep_their_resolved_cache_boundaries() {
+        let root = IsolatedStore::new("linked_targets");
+        let cache = root.path("cache-target");
+        let store = cache.join("selected");
+        std::fs::create_dir(&cache).unwrap();
+        std::fs::write(&store, b"preserved").unwrap();
+        let paths = local_state_paths(&root.root);
+        std::os::unix::fs::symlink(&cache, &paths.radio_cache).unwrap();
+        std::os::unix::fs::symlink(&store, &paths.project).unwrap();
+        let err = super::validate_local_state_paths(&paths).unwrap_err();
+        assert!(err.to_string().contains("project and radio cache"));
+        assert_eq!(std::fs::read(&store).unwrap(), b"preserved");
+        std::fs::remove_file(store).unwrap();
+        std::fs::remove_dir(cache).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_sidecar_and_an_existing_alias_are_one_entry_for_preflight() {
+        let root = IsolatedStore::new("alias_sidecar");
+        let paths = local_state_paths(&root.root);
+        let candidate = super::lock_path_for(&paths.journal);
+        std::fs::write(&candidate, b"profile fixture").unwrap();
+        std::fs::hard_link(&candidate, &paths.project).unwrap();
+        let err = paths.erase_journal().unwrap_err();
+        assert!(err.to_string().contains("sidecars overlap"));
+        assert_eq!(std::fs::read(&candidate).unwrap(), b"profile fixture");
+    }
+
+    #[test]
+    fn a_configured_store_inside_a_transaction_namespace_refuses_before_locking() {
+        let root = IsolatedStore::new("reserved_names");
+        let mut paths = local_state_paths(&root.root);
+        std::fs::write(&paths.journal, b"retained").unwrap();
+        let lock = super::lock_path_for(&paths.journal);
+        let recovery = super::recovery_path_for(&lock);
+        let temp = super::temp_path_for(&paths.journal);
+        for other in [&temp, &lock, &recovery] {
+            paths.project = other.clone();
+            assert!(paths.erase_journal().is_err());
+            assert!(erase_local_state(&paths, LocalStateEraseSelection::complete()).is_err());
+            assert!(!lock.exists() && !recovery.exists() && !temp.exists());
+            assert_eq!(std::fs::read(&paths.journal).unwrap(), b"retained");
+        }
+        paths.project = root.root.join("unrelated");
+        paths.protected_radio_source = Some(temp.join("music"));
+        assert!(paths.erase_journal().is_err());
+        paths.protected_radio_source = None;
+        paths.radio_cache = recovery.join("radio");
+        assert!(paths.erase_journal().is_err());
+        assert_eq!(std::fs::read(&paths.journal).unwrap(), b"retained");
     }
 
     #[test]

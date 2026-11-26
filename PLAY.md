@@ -313,7 +313,12 @@ starts no broadcast. Update App and MCP together; pairing requires matching
 builds and older invitations are refused.
 
 `forget` previews managed local state before deletion. Erasure requires
-confirmation. User-selected exports and installed files are excluded.
+confirmation. A store reserves its lock, recovery marker, and temporary names
+of the form `.<store>.<pid>.<counter>.tmp` beside it. Put personal exports
+under their own names. Erasure refuses overlapping configured store paths
+before taking a lock. Generated radio files have a station name and a positive
+track number, such as `trance-001.wav`. A different name in the managed cache
+stops complete erasure so you can inspect it. User-selected exports and installed files are excluded.
 Details of memory, projects, consent, and erasure are in the
 [packaged reference](plugins/numinous/skills/play-numinous/SKILL.md).
 

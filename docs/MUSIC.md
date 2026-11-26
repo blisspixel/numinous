@@ -241,6 +241,18 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 
 ---
 
+Generated WAVs use a positive station number padded to at least three digits,
+such as `chill-001.wav` or `chill-1000.wav`. Tuning appends after the largest
+existing number for that station. The cache lock serializes publication after
+the audio arrives. The writer stages the complete WAV in the
+cache directory before publishing it. A hard link publishes it atomically
+where supported. The returned path refers to a completed recording; durability
+across power loss depends on the filesystem. On filesystems without hard links, the writer creates the
+new file exclusively, flushes its audio, and writes its RIFF signature last.
+An interruption on that path can leave an unplayable numbered file and a
+complete private staging file. `forget` previews both before confirmed
+cache erasure.
+
 ## How the two engines coexist
 
 - **One master bus (built).** Room score, Studio, radio, and game cues share one

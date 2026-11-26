@@ -1812,7 +1812,7 @@ impl StudioCreation {
     /// byte cap, or the format.
     pub fn from_num_path(path: &std::path::Path) -> Result<Self, NumFileError> {
         use std::io::Read;
-        let file = std::fs::File::open(path).map_err(NumFileError::Io)?;
+        let file = crate::persistence::open_regular_file(path).map_err(NumFileError::Io)?;
         let mut text = String::new();
         file.take(MAX_SHARE_INPUT_BYTES as u64 + 1)
             .read_to_string(&mut text)
@@ -6492,6 +6492,11 @@ mod tests {
         // so the byte cap, the read order, and the refusal reasons are proved
         // once here rather than once per face.
         let dir = std::env::temp_dir();
+
+        assert!(matches!(
+            StudioCreation::from_num_path(&dir),
+            Err(super::NumFileError::Io(error)) if error.kind() == std::io::ErrorKind::InvalidInput
+        ));
 
         let good = dir.join("numinous_core_from_num_path_good.num");
         let creation = StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5).expect("creation");

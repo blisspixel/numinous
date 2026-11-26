@@ -367,7 +367,8 @@ pub(super) fn export_tool(
 }
 
 /// Preview or perform verified journal erasure.
-pub(super) fn erase_tool(args: &Value, path: &std::path::Path) -> Value {
+pub(super) fn erase_tool(args: &Value, paths: &numinous_core::LocalStatePaths) -> Value {
+    let path = &paths.journal;
     let confirm = args
         .get("confirm")
         .and_then(Value::as_bool)
@@ -379,7 +380,7 @@ pub(super) fn erase_tool(args: &Value, path: &std::path::Path) -> Value {
             Ok(inventory) => inventory.exists || inventory.sidecar_files != 0,
             Err(error) => return tool_error(&format!("Failed to inspect journal: {error}")),
         };
-        match numinous_core::erase_journal_file(path) {
+        match paths.erase_journal() {
             Ok(inventory) => tool_structured(
                 if existed {
                     "Journal erased; zero recoverable managed residue remains."
@@ -727,10 +728,14 @@ mod tests {
         );
         assert_eq!(misplaced["isError"], true);
 
-        let preview = super::erase_tool(&json!({"confirm": false}), &path);
+        let paths = numinous_core::LocalStatePaths {
+            journal: path.clone(),
+            ..crate::progress::local_state_paths()
+        };
+        let preview = super::erase_tool(&json!({"confirm": false}), &paths);
         assert_eq!(preview["isError"], false);
         assert!(path.exists());
-        let erased = super::erase_tool(&json!({"confirm": true}), &path);
+        let erased = super::erase_tool(&json!({"confirm": true}), &paths);
         assert_eq!(erased["structuredContent"]["recoverableManagedResidue"], 0);
         assert_eq!(erased["structuredContent"]["managedSidecarFiles"], 0);
         assert_eq!(erased["structuredContent"]["sidecarScanCapped"], false);

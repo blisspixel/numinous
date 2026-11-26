@@ -1199,6 +1199,30 @@ fn public_describe_is_safe_and_reveal_is_earned() {
 }
 
 #[test]
+fn public_forget_recognizes_adjacent_files_for_a_bare_relative_store() {
+    let fixture = ProjectCliFixture::new("bare-relative-store");
+    let store = fixture.root.join("journey.txt");
+    let owned = fixture.root.join(".journey.txt.1.5.tmp");
+    let personal = fixture.root.join(".journey.txt.pencil-drawing.tmp");
+    for path in [&store, &owned, &personal] {
+        std::fs::write(path, b"fixture").unwrap();
+    }
+    let run = |args: &[&str]| {
+        let result = fixture
+            .command(args)
+            .env("NUMINOUS_JOURNEY", "journey.txt")
+            .output()
+            .unwrap();
+        assert!(result.status.success(), "{result:?}");
+        String::from_utf8(result.stdout).unwrap()
+    };
+    assert!(run(&["forget"]).contains("1 adjacent persistence files"));
+    run(&["forget", "--confirm"]);
+    assert!(!store.exists() && !owned.exists());
+    assert_eq!(std::fs::read(personal).unwrap(), b"fixture");
+}
+
+#[test]
 fn public_journey_override_names_the_file_contract() {
     let root = std::env::temp_dir().join(format!(
         "numinous-cli-directory-contract-{}",
