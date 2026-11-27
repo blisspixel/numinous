@@ -122,6 +122,135 @@ class InstallerCommandTests(unittest.TestCase):
             self.assertIn(str(part), joined)
 
 
+@unittest.skipUnless(platform.system() in ("Linux", "Darwin"), "POSIX release installer")
+class ReleaseLookupTests(unittest.TestCase):
+    @staticmethod
+    def seed_root(home: Path, state: str) -> None:
+        if state == "fresh":
+            return
+        root = home / ".numinous"
+        root.mkdir(mode=0o750 if state == "empty" else 0o700)
+        if state == "marked":
+            marker = root / ".numinous-install-root"
+            marker.write_text("Numinous install root v2\nroot.abc123\n", encoding="ascii")
+            marker.chmod(0o600)
+            receipt_dir = home / ".config/numinous/install-roots"
+            receipt_dir.mkdir(mode=0o700, parents=True)
+            receipt = receipt_dir / "root.abc123"
+            info = root.stat()
+            receipt.write_text(f"{info.st_uid}\n700\n{info.st_dev}:{info.st_ino}\n{root}\n")
+            receipt.chmod(0o600)
+            (root / ".installed-release").write_text("v1.2.2\n", encoding="ascii")
+
+    @staticmethod
+    def inventory(home: Path) -> dict[Path, tuple[int, bytes | None]]:
+        return {
+            path: (path.stat().st_mode, path.read_bytes() if path.is_file() else None)
+            for path in home.rglob("*")
+        }
+
+    def refused_lookup(
+        self, downloader: str, headers: str, *, tagged: bool = False, state: str = "fresh"
+    ) -> str:
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw).resolve()
+            home, tools, stage = (base / name for name in ("home", "tools", "tmp"))
+            for directory in (home, tools, stage):
+                directory.mkdir(mode=0o700)
+            self.seed_root(home, state)
+            before = self.inventory(home)
+            # Only this downloader is visible. No request can reach the network.
+            for name in "awk basename cat date dirname grep id ls mktemp rm sed stat tr uname wc".split():
+                tool = shutil.which(name)
+                self.assertIsNotNone(tool)
+                (tools / name).symlink_to(cast(str, tool))
+            (tools / "gh").write_text("#!/bin/sh\nexit 1\n", encoding="ascii")
+            (tools / "gh").chmod(0o700)
+            if downloader == "curl":
+                fetch = (
+                    '[ "$1" = -fsSL ] && [ "$2" = -D ] && [ "$5" = -o ] || exit 90\n'
+                    'url="$4"; cat "$HEADERS" >"$3"\n'
+                )
+            else:
+                fetch = (
+                    '[ "$1" = -S ] && [ "$2" = -O ] || exit 90\n'
+                    'url="$4"; cat "$HEADERS" >&2\n'
+                )
+                headers = "".join("  " + line for line in headers.splitlines(keepends=True))
+            script = tools / downloader
+            script.write_text(
+                '#!/bin/sh\n' + fetch + 'printf "%s\\n" "$url" >>"$REQUESTS"\nexit 8\n',
+                encoding="ascii",
+            )
+            script.chmod(0o700)
+            header_file, requests = base / "headers", base / "requests"
+            header_file.write_bytes(headers.encode("ascii"))
+            command = ["/bin/sh", str(ROOT / "scripts/install.sh")]
+            if tagged:
+                command += ["--release-tag", "v1.2.3"]
+            result = subprocess.run(
+                command,
+                env={
+                    "HOME": str(home), "TMPDIR": str(stage), "PATH": str(tools),
+                    "HEADERS": str(header_file), "REQUESTS": str(requests),
+                },
+                capture_output=True, text=True, check=False, timeout=10,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            endpoint = "git/ref/tags/v1.2.3" if tagged else "releases?per_page=20"
+            self.assertEqual(
+                requests.read_text().splitlines(),
+                [f"https://api.github.com/repos/blisspixel/numinous/{endpoint}"],
+            )
+            self.assertEqual(self.inventory(home), before)
+            self.assertEqual(list(stage.iterdir()), [])
+            self.assertIn("https://github.com/blisspixel/numinous/releases", result.stderr)
+            return result.stderr
+
+    def test_both_downloaders_explain_rate_limits_before_claiming_a_root(self) -> None:
+        redirect = "HTTP/1.1 302 Found\r\nRetry-After: 999\r\n\r\n"
+        for downloader in ("curl", "wget"):
+            with self.subTest(downloader=downloader):
+                message = self.refused_lookup(
+                    downloader, redirect + "HTTP/2 403\r\nX-RateLimit-Remaining: 0\r\n"
+                    "x-ratelimit-reset: 1800000000\r\n",
+                )
+                self.assertIn("GitHub refused the release lookup (HTTP 403)", message)
+                self.assertIn("2027-01-15 08:00:00 UTC", message)
+                message = self.refused_lookup(
+                    downloader, redirect + "HTTP/1.1 429 Too Many Requests\r\n"
+                    "retry-AFTER: 37\r\n", tagged=True,
+                )
+                self.assertIn("HTTP 429", message)
+                self.assertIn("Wait 37 seconds", message)
+
+    def test_refusal_preserves_an_existing_empty_or_marked_root(self) -> None:
+        for state in ("empty", "marked"):
+            with self.subTest(state=state):
+                message = self.refused_lookup("wget", "HTTP/1.1 429 Too Many Requests\n", state=state)
+                self.assertIn("HTTP 429", message)
+                self.assertIn("Wait at least one minute", message)
+
+    def test_retry_advice_uses_only_applicable_final_response_headers(self) -> None:
+        message = self.refused_lookup(
+            "wget", "HTTP/1.1 302 Found\nRetry-After: 999\n\nHTTP/1.1 403 Forbidden\n"
+            "X-RateLimit-Remaining: 12\nX-RateLimit-Reset: 1800000000\n",
+        )
+        self.assertIn("Try again later.", message)
+        self.assertNotIn("999", message)
+        self.assertNotIn("UTC", message)
+        message = self.refused_lookup("curl", "HTTP/2 429\nRetry-After: invalid|60\n")
+        self.assertIn("Wait at least one minute", message)
+        self.assertNotIn("invalid", message)
+        message = self.refused_lookup("wget", "HTTP/1.1 502 Bad Gateway\nRetry-After: 80\n")
+        self.assertIn("Could not retrieve release information", message)
+        self.assertNotIn("request limit", message)
+        message = self.refused_lookup(
+            "curl", "HTTP/2 429\nRetry-After: Fri, 15 Jan 2027 08:00:00 GMT\n",
+        )
+        self.assertIn("Try again after Fri, 15 Jan 2027 08:00:00 GMT.", message)
+
+
 class NativeToolEnvTests(unittest.TestCase):
     def test_windows_puts_system32_first(self) -> None:
         patched = MODULE.native_tool_env({"PATH": "/usr/bin"})

@@ -601,11 +601,72 @@ install_release_payload() (
     mv "$new_tree" "$destination"
 )
 
+# GitHub may send headers for proxies and redirects before the API response.
+# Only the final response can describe when this lookup may be retried.
+fetch_release_metadata() (
+    headers="$(mktemp "${TMPDIR:-/tmp}/numinous-headers.XXXXXX")" \
+        || fail "could not stage release response headers"
+    trap 'rm -f -- "$headers"' EXIT HUP INT TERM
+    if fetch_with_headers "$1" "$2" "$headers"; then exit 0; fi
+    fields="$(LC_ALL=C awk '
+        { sub(/^[ \t]+/, ""); sub(/[ \t\r]+$/, "") }
+        /^HTTP\/[0-9.]+[ \t]+[0-9][0-9][0-9]([ \t]|$)/ {
+            status = $2; retry = reset = remaining = ""; reading = 1; next
+        }
+        /^$/ { reading = 0 }
+        reading {
+            name = tolower($0)
+            sub(/:.*/, "", name)
+            sub(/^[^:]+:[ \t]*/, "")
+            if (name == "retry-after") retry = $0
+            if (name == "x-ratelimit-reset") reset = $0
+            if (name == "x-ratelimit-remaining") remaining = $0
+        }
+        END {
+            digits = "^[0-9]+$"
+            weekday = "(Mon|Tue|Wed|Thu|Fri|Sat|Sun)"
+            month = "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+            clock = "([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
+            date = "^" weekday ", (0[1-9]|[12][0-9]|3[01]) " month " [0-9][0-9][0-9][0-9] " clock " GMT$"
+            if (!(retry ~ digits && length(retry) <= 10) && retry !~ date) retry = ""
+            if (remaining !~ /^0$/ || reset !~ digits || length(reset) > 10) reset = ""
+            print status "|" retry "|" reset
+        }
+    ' "$headers")"
+    IFS='|' read -r status retry reset <<EOF
+$fields
+EOF
+    case "$status" in
+        403|429) ;;
+        *) fail "Could not retrieve release information from GitHub. Check your connection and try again, or visit $REPO_URL/releases." ;;
+    esac
+    case "$retry" in
+        *GMT) advice="Try again after $retry." ;;
+        ?*) advice="Wait $retry seconds before trying again." ;;
+        '')
+            if [ -n "$reset" ]; then
+                case "$os" in
+                    macos) set -- -r "$reset" ;;
+                    linux) set -- -d "@$reset" ;;
+                esac
+                reset_time="$(date -u "$@" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null \
+                    || printf 'Unix time %s' "$reset")"
+                advice="Try again after $reset_time."
+            elif [ "$status" = 429 ]; then
+                advice="Wait at least one minute before trying again."
+            else
+                advice="Try again later."
+            fi
+            ;;
+    esac
+    fail "GitHub refused the release lookup (HTTP $status). Shared networks can reach GitHub's request limit. Nothing was installed. $advice Releases: $REPO_URL/releases"
+)
+
 latest_release_tag() (
     metadata="$(mktemp "${TMPDIR:-/tmp}/numinous-releases.XXXXXX")" \
         || fail "could not stage release metadata"
     trap 'rm -f -- "$metadata"' EXIT HUP INT TERM
-    fetch "$REPO_API_URL/releases?per_page=20" "$metadata"
+    fetch_release_metadata "$REPO_API_URL/releases?per_page=20" "$metadata" || exit 1
     tag="$(sed -n 's/^[[:space:]]*"tag_name": "\(v[0-9][0-9A-Za-z.-]*\)",$/\1/p' "$metadata" | sed -n '1p')"
     printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
         || fail "no safe published Numinous release is available; use --source to build main"
@@ -621,7 +682,7 @@ release_revision() (
     url="$REPO_API_URL/git/ref/tags/$tag"
     depth=0
     while [ "$depth" -lt 8 ]; do
-        fetch "$url" "$object"
+        fetch_release_metadata "$url" "$object" || exit 1
         revision="$(sed -n '/"object": {/,/^[[:space:]]*}/s/^[[:space:]]*"sha": "\([0-9a-f]*\)",*$/\1/p' "$object")"
         kind="$(sed -n '/"object": {/,/^[[:space:]]*}/s/^[[:space:]]*"type": "\([a-z]*\)",*$/\1/p' "$object")"
         [ "${#revision}" -eq 40 ] && printf '%s' "$revision" | grep -Eq '^[0-9a-f]{40}$' \
@@ -701,9 +762,9 @@ installed_soundtrack_is_current() (
     [ "$(soundtrack_content_hash "$SOUNDTRACK_PATH")" = "$expected_content_hash" ]
 )
 
-install_latest_release() (
-    if [ -n "$RELEASE_TAG" ]; then tag="$RELEASE_TAG"; else tag="$(latest_release_tag)"; fi
-    printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
+prepare_release_metadata() {
+    if [ -z "$RELEASE_TAG" ]; then RELEASE_TAG="$(latest_release_tag)"; fi
+    printf '%s' "$RELEASE_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
         || fail "the requested release tag is unsafe"
     if { [ -n "$RELEASE_ARCHIVE" ] && [ -z "$RELEASE_CHECKSUM" ]; } \
         || { [ -z "$RELEASE_ARCHIVE" ] && [ -n "$RELEASE_CHECKSUM" ]; }; then
@@ -715,7 +776,18 @@ install_latest_release() (
         || [ -z "$SOUNDTRACK_CONTENT_CHECKSUM" ]; }; then
         fail "local soundtrack fixtures require matching archive and checksum paths"
     fi
-    target="$(release_target)"
+    RELEASE_TARGET="$(release_target)"
+    RELEASE_REVISION=''
+    if [ -z "$RELEASE_ARCHIVE" ] || [ -z "$SOUNDTRACK_ARCHIVE" ]; then
+        have gh || fail "install GitHub CLI (gh) to verify release provenance, then retry"
+        RELEASE_REVISION="$(release_revision "$RELEASE_TAG")"
+    fi
+}
+
+install_latest_release() (
+    tag="$RELEASE_TAG"
+    target="$RELEASE_TARGET"
+    revision="$RELEASE_REVISION"
     payload_root="numinous-$tag-$target"
     payload_name="$payload_root.tar.gz"
     soundtrack_root="numinous-$tag-soundtrack"
@@ -725,11 +797,8 @@ install_latest_release() (
         || fail "could not create a release download directory"
     trap 'rm -rf -- "$stage"' EXIT HUP INT TERM
     release_base="$REPO_URL/releases/download/$tag"
-    revision=''
     bundle="$stage/provenance.jsonl"
-    if [ -z "$RELEASE_ARCHIVE" ] || [ -z "$SOUNDTRACK_ARCHIVE" ]; then
-        have gh || fail "install GitHub CLI (gh) to verify release provenance, then retry"
-        revision="$(release_revision "$tag")"
+    if [ -n "$revision" ]; then
         fetch "$release_base/numinous-$tag-provenance.jsonl" "$bundle"
     fi
     payload_path="$stage/$payload_name"
@@ -1348,6 +1417,7 @@ test_release_provenance() (
         case "$1" in *-soundtrack.tar.gz) fail "fixture provenance rejection" ;; esac
     }
     install_release_payload() { printf '%s' published >"$test_root/published"; }
+    prepare_release_metadata
     if (install_latest_release) >"$test_root/result" 2>&1; then
         fail "provenance self-test: unauthenticated soundtrack was accepted"
     fi
@@ -1786,6 +1856,23 @@ if [ "$UNINSTALL" -eq 1 ]; then
     exit 0
 fi
 
+# A downloader is needed for rustup and for the no-git source fallback.
+if have curl; then
+    fetch_with_headers() { curl -fsSL -D "$3" "$1" -o "$2"; }
+    fetch() { curl -fsSL "$1" -o "$2"; }
+elif have wget; then
+    fetch_with_headers() { wget -S -O "$2" "$1" 2>"$3"; }
+    fetch() { wget -qO "$2" "$1"; }
+else
+    fail "neither curl nor wget is installed; install one and re-run"
+fi
+
+if [ "$SOURCE_MODE" -eq 0 ]; then
+    prepare_release_metadata
+    # The network lookup may take time. Check the destination again before claiming it.
+    validate_install_root
+fi
+
 cd "$install_parent"
 if [ ! -e "$install_name" ]; then
     mkdir "$install_name"
@@ -1802,15 +1889,6 @@ if ! install_marker_is_valid "$NUMINOUS_HOME"; then
 fi
 SRC_DIR=src
 BIN_DIR=bin
-
-# A downloader is needed for rustup and for the no-git source fallback.
-if have curl; then
-    fetch() { curl -fsSL "$1" -o "$2"; }
-elif have wget; then
-    fetch() { wget -qO "$2" "$1"; }
-else
-    fail "neither curl nor wget is installed; install one and re-run"
-fi
 
 # Building main from source remains available as an explicit fallback.
 if [ "$SOURCE_MODE" -eq 1 ]; then
