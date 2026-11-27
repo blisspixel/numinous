@@ -1,6 +1,16 @@
-//! Bounded-step numerical methods shared by the room models.
+//! Numerical methods shared by the room models and measurements.
 
 use crate::rng::SplitMix64;
+
+/// Greatest common divisor of two unsigned integers, including zero.
+pub(crate) fn gcd(mut a: u128, mut b: u128) -> u128 {
+    while b != 0 {
+        let next = a % b;
+        a = b;
+        b = next;
+    }
+    a
+}
 
 /// The largest nudge a dithered [`MapOrbit`] gives a coordinate in one step:
 /// `2^-44`, about `5.7e-14`.

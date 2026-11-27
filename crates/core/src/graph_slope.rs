@@ -13,6 +13,7 @@
 
 use std::f64::consts::{E, PI};
 
+use crate::numerics::gcd;
 use crate::studio::{
     Expr, Func, MAX_STUDIO_SOURCE_CHARS, Op, PairFunc, StudioCreation, StudioKind, eval, parse,
 };
@@ -603,15 +604,6 @@ fn fits_source_int(value: i128) -> bool {
 
 fn unsigned_mag(value: i128) -> Option<u128> {
     u128::try_from(value.checked_abs()?).ok()
-}
-
-fn gcd(mut a: u128, mut b: u128) -> u128 {
-    while b != 0 {
-        let next = a % b;
-        a = b;
-        b = next;
-    }
-    a
 }
 
 #[cfg(test)]

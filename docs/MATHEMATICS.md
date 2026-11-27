@@ -899,6 +899,12 @@ speed and frame rate, 200 frames, and measures every speed on the doubling
 ladder by taking every first, second, fourth, or eighth frame cyclically.
 For each step it checks every starting position on that sampled cycle.
 
+At 60 frames per second, a window includes the sample at each end of its
+60 frame intervals. A gradual brightness rise is one leg. Pairing that rise
+requires a qualifying fall. For example, the luminances 0.00, 0.15, 0.10
+and 0.25 contain two rises of at least 0.10, but the only intervening fall
+is 0.05. They contribute zero complete flashes.
+
 Before this review, at 30 frames and 1x, `gauss-map`, `coupled-tent` and
 `ricker` peaked at 7, 5 and 4 flashes a second. At 60 frames and 1x they peaked
 at 22, 15 and 5, because each frame was a fresh chaotic picture. After the
@@ -958,16 +964,16 @@ orbit could grow to fill the screen just because its viewport contracted.
 Clifford now uses `|x| <= 1 + |c|` and `|y| <= 1 + |d|`. Each coordinate of
 the De Jong map is a difference of two trigonometric terms in `[-1,1]`, so
 its fixed square is `[-2,2]` on both axes. Equal scales preserve the shape
-of each orbit as the parameters change. Across the distinct dealt variations,
-Clifford measured zero general and red flashes throughout. De Jong's worst
+of each orbit as the parameters change. In the sweep before the linear-red revision, across the distinct dealt
+variations, Clifford measured zero general and red flashes throughout. De Jong's worst
 general peaks at 1x, 2x, 4x and 8x were 1, 1, 2 and 3. Its red peak was zero.
 
-At 480 by 280, the general flash peaks for The Magnet at 1x, 2x, 4x and 8x
+In that same revision at 480 by 280, the general flash peaks for The Magnet at 1x, 2x, 4x and 8x
 were 0, 1, 1 and 2 in every era. Interference measured zero throughout. Both rooms measured zero
 red flashes across the same runs. These are whole-frame measurements of the
 automatic room raster, before App overlays and display effects.
 
-These whole-frame results use a 240 by 140 reference raster.
+The catalog-wide whole-frame sweep uses a 240 by 140 reference raster.
 GPU frames are not a separate series. Julia's GPU path uses the same `c`. Speeds between the
 doublings, which the App's typed console and the Life room's wheel can set,
 are held to the last certified doubling rather than measured as their own
@@ -1004,15 +1010,60 @@ The nightly report samples the default variation in every visual era and the
 the recorded overages offline. The regional baseline tracks changes to the
 pictures separately from the whole-frame speed cap. The report covers
 automatic tours before App composition. A separate flag records a region with two or three
-flashes in each of five successive one-second bins of the repeating tour.
+flashes in each of five successive one-second windows of the repeating tour. Adjacent windows
+share their endpoint sample and measure disjoint frame intervals.
 It records sustained activity and does not change the speed cap. Gestures,
-beat input, post-processing
-and the area of contiguous pixels flashing together remain open. Both reports use
-the existing red test, which takes its saturation ratio in encoded RGB and
-checks crossings of that threshold. A red-orange and blue alternation exposes
-a difference from a linear-RGB calculation. The general test can also pair
-two same-direction changes separated by a small reversal.
-[Flash measurement follow-up](https://github.com/blisspixel/numinous/issues/483)
+beat input, post-processing and the area of contiguous pixels flashing
+together remain open. [App-frame measurement work](https://github.com/blisspixel/numinous/issues/473)
+
+For the red series, both the saturation ratio and the chromaticity use
+mean linear-light RGB. The screen sums the channel table entries exactly
+and tests whether red is at least four times the sum of green and blue.
+This includes a region with a 4:1 ratio at the 0.80 boundary even when
+averaging each channel first would round below it.
+The sRGB color (200, 60, 0) has a red fraction of
+0.769 in encoded channels and 0.927 after linearization. Against pure blue
+its relative luminance differs by only 0.083, while its CIE 1976 UCS
+chromaticity differs by 0.428. Alternating these colors exercises the red
+threshold independently of the brightness threshold.
+
+The W3C working definition supplies the saturation threshold (at least
+0.80) and the chromaticity distance (over 0.20). Numinous also needs a
+rule for locating turns on a sampled two-dimensional path. It follows the
+chord from the last turn until the next step points back along that chord
+(negative dot product). Two qualifying chords can make a flash when they
+oppose each other and at least one endpoint is saturated. A bent path may
+turn at different samples when read backwards, so the screen takes the
+larger count witnessed in either direction. Both chords must exceed 0.20.
+It assigns black the origin
+for this calculation because black's chromaticity is undefined.
+[W3C color equations and transition definition](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html)
+
+On the November 26 reference run, the earlier and revised screens measured
+the same 5,696 combinations of room, era and speed. General peaks over three
+fell from 301 combinations to 245 after requiring opposite brightness changes.
+With the earlier time window and red transition rule, the linear-light color
+calculation raised red overages from 3 combinations to 10. Measuring opposing
+color chords raised that to 17. Including the last frame interval raised it
+to 18. That final crossing was Figure Eight Knot in Vector at 2x.
+Summing the channel entries exactly and reducing proportional RGB totals
+to the same chromaticity exposed one further overage, for 19 in all.
+The 8-bit Collatz tour reached 4 at 2x. Without this reduction, numerical
+roundoff could turn a change in intensity at constant hue into a color reversal.
+In Chua's Vector era at 1x, the regional red peak was 17, while its general
+peak was zero. That result flags color changes for inspection even when the
+average brightness is steady.
+[Regional room follow-up](https://github.com/blisspixel/numinous/issues/487)
+
+To reproduce the comparison, run the following at each revision and keep
+the resulting `.agent/qol/regional-flash.csv` from each checkout. Match rows
+by room, era and speed. Each row reports both peak counts and their locations.
+[Historical baseline](https://github.com/blisspixel/numinous/blob/1e57073c75e966049f99328117cca46aae437065/crates/core/src/registry/regional_baseline.rs)
+
+```sh
+python3 scripts/run-exact-test.py --package numinous-core --lib --ignored \
+  registry::regional_report::automatic_room_regional_flash_report
+```
 
 ## What remains open
 

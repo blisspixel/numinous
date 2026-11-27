@@ -6,12 +6,11 @@
 //! strides, with the right and bottom boundaries included. Display size,
 //! distance, and magnification can change the actual visual angle.
 //!
-//! Each window uses its mean luminance and the existing Numinous red proxy
-//! (encoded-channel saturation, threshold crossings, linear-light chromaticity).
-//! A patch covering a fraction
-//! `a` of a steady window with a luminance excursion `d` moves the mean by
-//! `a*d`. A small, bright patch can cross the 0.10 threshold, while a patch
-//! over a quarter of the window with a modest excursion can fall below it.
+//! Each window uses mean linear-light RGB for luminance, red saturation and
+//! chromaticity. A patch covering a fraction `a` of a steady window with a
+//! luminance excursion `d` moves the mean by `a*d`. A small, bright patch can
+//! cross the 0.10 threshold, while a patch over a quarter of the window with a
+//! modest excursion can fall below it.
 //! Opposite excursions can cancel. The returned rates describe these sampled
 //! windows, not the area of concurrently flashing pixels.
 //!
@@ -19,8 +18,8 @@
 //! and [the viewing geometry](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html).
 
 use super::{
-    DARK_CEILING, GENERAL_FLASH_DELTA, RedState, count_flashes, count_red_flashes,
-    linear_channel_table, red_state_from_means,
+    DARK_CEILING, GENERAL_FLASH_DELTA, LINEAR_SCALE, RedState, count_flashes, count_red_flashes,
+    linear_counts, red_state_from_totals,
 };
 use crate::surface::MAX_DIM;
 
@@ -100,16 +99,6 @@ impl Axis {
     }
 }
 
-// Fixed-point accumulation gives identical sums for identical color multisets,
-// including black regions beside very bright ones. Per-channel roundoff is at
-// most 2^-33 in linear light. All sums fit u64 at the raster dimension cap.
-const LINEAR_SCALE: f64 = (1u64 << 32) as f64;
-
-fn linear_counts() -> &'static [u64; 256] {
-    static COUNTS: std::sync::OnceLock<[u64; 256]> = std::sync::OnceLock::new();
-    COUNTS.get_or_init(|| linear_channel_table().map(|s| (s * LINEAR_SCALE).round() as u64))
-}
-
 /// Streaming spatial reduction of one base cycle. Stores window readings for
 /// each phase, so additional playback speeds reuse the original capture.
 pub struct RegionalFlashCapture {
@@ -117,8 +106,8 @@ pub struct RegionalFlashCapture {
     height: usize,
     x: Axis,
     y: Axis,
-    /// Encoded R,G,B and linear R,G,B sums, at window boundary intersections.
-    sums: Vec<[u64; 6]>,
+    /// Linear-light R,G,B sums at window boundary intersections.
+    sums: Vec<[u128; 3]>,
     samples: Vec<Sample>,
 }
 
@@ -153,7 +142,7 @@ impl RegionalFlashCapture {
                 });
             }
         }
-        let sums = vec![[0; 6]; pitch * y.cuts.len()];
+        let sums = vec![[0; 3]; pitch * y.cuts.len()];
         Some(Self {
             width,
             height,
@@ -173,7 +162,7 @@ impl RegionalFlashCapture {
         let pixels = rgba.as_chunks::<4>().0;
         let table = linear_counts();
         let pitch = self.x.cuts.len();
-        self.sums.fill([0; 6]);
+        self.sums.fill([0; 3]);
         // Accumulate disjoint tiles first. Each pixel is read exactly once.
         // Only the corners needed by the windows need a summed-area entry.
         for (row, bounds) in self.y.cuts.windows(2).enumerate() {
@@ -182,21 +171,18 @@ impl RegionalFlashCapture {
             for y in bounds[0]..bounds[1] {
                 let scan = &pixels[y * self.width..(y + 1) * self.width];
                 for (xs, total) in self.x.cuts.windows(2).zip(tiles.iter_mut()) {
-                    let mut run = [0u64; 6];
+                    let mut run = [0u128; 3];
                     for &[r, g, b, _] in &scan[xs[0]..xs[1]] {
-                        run[0] += u64::from(r);
-                        run[1] += u64::from(g);
-                        run[2] += u64::from(b);
-                        run[3] += table[usize::from(r)];
-                        run[4] += table[usize::from(g)];
-                        run[5] += table[usize::from(b)];
+                        run[0] += table[usize::from(r)];
+                        run[1] += table[usize::from(g)];
+                        run[2] += table[usize::from(b)];
                     }
                     for (cell, add) in total.iter_mut().zip(run) {
                         *cell += add;
                     }
                 }
             }
-            let mut row_sum = [0; 6];
+            let mut row_sum = [0; 3];
             for i in start..start + pitch - 1 {
                 for (k, sum) in row_sum.iter_mut().enumerate() {
                     *sum += self.sums[i][k];
@@ -206,19 +192,14 @@ impl RegionalFlashCapture {
         }
         for sample in &mut self.samples {
             let [tl, tr, bl, br] = sample.corners;
-            let channel = |k: usize| {
-                ((self.sums[br][k] - self.sums[bl][k]) - (self.sums[tr][k] - self.sums[tl][k]))
-                    as f64
-            };
+            let totals = [0, 1, 2].map(|k| {
+                (self.sums[br][k] - self.sums[bl][k]) - (self.sums[tr][k] - self.sums[tl][k])
+            });
             let area = (sample.rect.width * sample.rect.height) as f64;
-            let encoded = [0, 1, 2].map(|k| channel(k) / area);
-            let linear = [3, 4, 5].map(|k| channel(k) / (area * LINEAR_SCALE));
+            let linear = totals.map(|total| total as f64 / (area * LINEAR_SCALE));
             let luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
             sample.series.luminance.push(luminance);
-            sample
-                .series
-                .red
-                .push(red_state_from_means(encoded, linear));
+            sample.series.red.push(red_state_from_totals(totals));
         }
         true
     }
@@ -235,7 +216,7 @@ impl RegionalFlashCapture {
     }
 
     /// Replay the base cycle advancing by `step` frames per sample. Every
-    /// starting phase gets a full `fps`-sample window, including across wraps.
+    /// starting phase gets a full second of transitions, including across wraps.
     /// A zero step holds the sampled image. Empty captures and rates outside
     /// 2 through 1000 samples per second have no reading.
     ///
@@ -263,11 +244,7 @@ impl RegionalFlashCapture {
         if step == 0 {
             return Some(report);
         }
-        let mut offset_count = len;
-        let mut divisor = step;
-        while divisor != 0 {
-            (offset_count, divisor) = (divisor, offset_count % divisor);
-        }
+        let offset_count = crate::numerics::gcd(len as u128, step as u128) as usize;
         let period = len / offset_count;
         for (rect, light, red) in self.windows() {
             let (low, high) = light.iter().fold((1.0_f64, 0.0_f64), |(low, high), &v| {
@@ -284,9 +261,7 @@ impl RegionalFlashCapture {
                     };
                 }
             }
-            if red.iter().any(RedState::is_saturated_red)
-                && red.iter().any(|s| !s.is_saturated_red())
-            {
+            if red.iter().any(RedState::is_saturated_red) {
                 let (peak, extended) =
                     orbit_counts(red, offset_count, period, step, fps, count_red_flashes);
                 report.extended_red |= extended;
@@ -312,17 +287,19 @@ fn orbit_counts<T: Copy>(
 ) -> (usize, bool) {
     let mut peak = 0;
     let mut extended = false;
-    let mut orbit = Vec::with_capacity(period + fps - 1);
+    // A second contains fps transitions and therefore fps + 1 sample states.
+    // Consecutive seconds share the boundary state.
+    let mut orbit = Vec::with_capacity(period + fps);
     let mut counts = Vec::with_capacity(period);
     for offset in 0..offsets {
         orbit.clear();
         let mut index = offset;
-        for _ in 0..period + fps - 1 {
+        for _ in 0..period + fps {
             orbit.push(states[index]);
             index = (index + step) % states.len();
         }
         counts.clear();
-        counts.extend(orbit.windows(fps).map(&count));
+        counts.extend(orbit.windows(fps + 1).map(&count));
         peak = peak.max(counts.iter().copied().max().unwrap_or(0));
         extended |= (0..period).any(|start| {
             (0..5).all(|second| (2..=3).contains(&counts[(start + fps * second) % period]))
@@ -379,9 +356,7 @@ mod tests {
             }
             assert_eq!(light.len(), 1);
             assert!((light[0] - frame_luminance(&crop)).abs() < 2e-10);
-            let reference = frame_red_state(&crop);
-            assert!((red[0].saturation - reference.saturation).abs() < 1e-12);
-            assert!(red[0].chromaticity_distance(&reference) < 1e-8);
+            assert_eq!(red[0], frame_red_state(&crop));
         }
         // The WCAG reference rectangle is reproduced at the cited resolution.
         let reference = RegionalFlashCapture::new(1024, 768)
@@ -391,6 +366,27 @@ mod tests {
             .unwrap()
             .0;
         assert_eq!((reference.width, reference.height), (341, 256));
+    }
+
+    #[test]
+    fn equal_intensity_four_to_one_mixture_includes_red_threshold_in_every_window() {
+        // Fifteen columns give five pixels per window. Any five consecutive
+        // pixels contain four red and one green of the same linear intensity.
+        let mut grid = RegionalFlashCapture::new(15, 1).unwrap();
+        for value in 1..=255 {
+            let rgba = frame(15, 1, |x, _| {
+                if x % 5 == 0 {
+                    [0, value, 0]
+                } else {
+                    [value, 0, 0]
+                }
+            });
+            assert!(grid.push(&rgba));
+            assert!(frame_red_state(&rgba).is_saturated_red());
+        }
+        for (_, _, series) in grid.windows() {
+            assert!(series.iter().all(RedState::is_saturated_red));
+        }
     }
 
     #[test]
@@ -430,14 +426,15 @@ mod tests {
     }
 
     #[test]
-    fn regional_color_alternation_remains_visible_in_a_steady_surround() {
+    fn regional_linear_red_alternation_remains_visible_in_a_steady_surround() {
         let mut grid = RegionalFlashCapture::new(60, 30).unwrap();
         let mut whole = Vec::new();
         for t in 0..60 {
-            // The two patch colors differ by less than 0.10 in luminance.
+            // The warm color is saturated red in linear light. The encoded
+            // ratio is 200/260, and the luminance difference stays below 0.10.
             let rgba = frame(60, 30, |x, y| {
                 if x < 20 && y < 10 {
-                    if t % 6 < 3 { [130, 0, 0] } else { [0, 0, 190] }
+                    if t % 6 < 3 { [200, 60, 0] } else { [0, 0, 255] }
                 } else {
                     [90; 3]
                 }
@@ -474,6 +471,17 @@ mod tests {
     }
 
     #[test]
+    fn regional_one_second_includes_its_last_transition() {
+        let mut grid = RegionalFlashCapture::new(1, 1).unwrap();
+        for red in [0, 255] {
+            assert!(grid.push(&[red, 0, 0, 255]));
+        }
+        let report = grid.at_step(1, 4).unwrap();
+        assert_eq!((report.general.rate, report.red.rate), (2, 2));
+        assert!(report.extended_general && report.extended_red);
+    }
+
+    #[test]
     fn regional_rates_match_direct_counts_over_every_starting_phase() {
         let mut grid = RegionalFlashCapture::new(1, 1).unwrap();
         let colors = [
@@ -494,7 +502,7 @@ mod tests {
             let mut general = 0;
             let mut red_peak = 0;
             for start in 0..n {
-                let indices = (0..fps).map(|i| (start + i * (step % n)) % n);
+                let indices = (0..=fps).map(|i| (start + i * (step % n)) % n);
                 general = general.max(count_flashes(
                     &indices.clone().map(|i| light[i]).collect::<Vec<_>>(),
                 ));

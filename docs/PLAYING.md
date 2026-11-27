@@ -548,8 +548,9 @@ at 1x, 2x, 4x and 8x. The general and red whole-frame measurements stayed
 within budget. Some smaller regions exceeded three flashes in a second.
 Before entering a room, run `numinous access --room <id>` to see which visual
 eras and speeds crossed that threshold. The regional measurement averages light
-and color in overlapping 80 by 47 rectangles. Smaller patches can average
-away. Input-driven changes and the final App display remain unmeasured.
+and color in overlapping 80 by 47 rectangles. A red warning can come from
+a change in color even when the brightness swing is small. Smaller patches
+can average away. Input-driven changes and the final App display remain unmeasured.
 [Measurement and limits](MATHEMATICS.md#regional-flashing-in-automatic-tours)
 
 The App's optional study surface preserves Unicode case and mathematical

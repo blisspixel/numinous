@@ -16,14 +16,13 @@
 //!   `crate::ansi::to_mono`, which answers a different question and must not be
 //!   substituted here.
 //! - The limit is [`MAX_FLASHES_PER_SECOND`] within any one-second window.
-//!   The comparator halves the total qualifying extrema transitions. When
-//!   smaller intervening legs are discarded, two counted legs can have the
-//!   same direction. This affects the general and red proxy counts.
+//!   Each general flash uses one qualifying rise and one qualifying fall,
+//!   in either order. A leg is used at most once.
 //!
 //! 2.3.1 bounds red flashing separately and more strictly, because sensitivity
-//! to saturated red is higher. The red screen uses Numinous's existing
-//! encoded-RGB saturation and threshold-crossing convention, described in
-//! [`frame_red_state`].
+//! to saturated red is higher. The red screen measures linear RGB saturation
+//! and CIE chromaticity distance. [`count_red_flashes`] describes how the
+//! sampled color path is divided into opposing excursions.
 //!
 //! Whole-frame means can dilute a localized strobe. The [regional] screen
 //! also measures overlapping windows at a declared raster geometry. Its
@@ -70,7 +69,7 @@ pub(crate) fn linear_channel_table() -> &'static [f64; 256] {
         let mut table = [0.0f64; 256];
         for (channel, slot) in table.iter_mut().enumerate() {
             let value = channel as f64 / 255.0;
-            *slot = if value <= 0.03928 {
+            *slot = if value <= 0.04045 {
                 value / 12.92
             } else {
                 ((value + 0.055) / 1.055).powf(2.4)
@@ -78,6 +77,17 @@ pub(crate) fn linear_channel_table() -> &'static [f64; 256] {
         }
         table
     })
+}
+
+// Every nonzero channel in the sRGB table is at least 2^-12. A binary64
+// value at that magnitude has a spacing of 2^-64, so this scale preserves
+// every table entry exactly. Even a 64-bit slice contains fewer than 2^62
+// RGBA pixels, leaving room in u128 for the sum of all three channels.
+const LINEAR_SCALE: f64 = (1u128 << 64) as f64;
+
+fn linear_counts() -> &'static [u128; 256] {
+    static COUNTS: std::sync::OnceLock<[u128; 256]> = std::sync::OnceLock::new();
+    COUNTS.get_or_init(|| linear_channel_table().map(|value| (value * LINEAR_SCALE) as u128))
 }
 
 /// Mean relative luminance of one RGBA frame.
@@ -99,59 +109,57 @@ pub fn frame_luminance(rgba: &[u8]) -> f64 {
     total / pixels as f64
 }
 
-/// The peaks and valleys of a luminance series, in order.
-///
-/// Transitions are measured between adjacent extrema, not between adjacent
-/// samples, so a gradual ramp is one transition rather than many small ones.
-/// Flat runs are not turning points and are passed over.
-fn turning_points(series: &[f64]) -> Vec<f64> {
-    if series.len() < 2 {
-        return series.to_vec();
-    }
-    let mut points = vec![series[0]];
-    let mut direction: i8 = 0;
-    for window in series.windows(2) {
-        let (previous, next) = (window[0], window[1]);
-        let step: i8 = if next > previous {
-            1
-        } else if next < previous {
-            -1
-        } else {
-            continue;
-        };
-        if direction != 0 && step != direction {
-            points.push(previous);
+/// Visit the direction of each qualifying leg between adjacent extrema.
+/// Flat runs preserve the current leg, so a gradual change is measured once.
+fn visit_general_transitions(series: &[f64], mut visit: impl FnMut(bool)) {
+    let Some((&first, rest)) = series.split_first() else {
+        return;
+    };
+    let mut record = |from: f64, to: f64| {
+        if (to - from).abs() >= GENERAL_FLASH_DELTA && from.min(to) < DARK_CEILING {
+            visit(to > from);
         }
-        direction = step;
+    };
+    let mut start = first;
+    let mut end = first;
+    for &next in rest {
+        if (end > start && next < end) || (end < start && next > end) {
+            record(start, end);
+            start = end;
+        }
+        end = next;
     }
-    if let Some(&last) = series.last() {
-        points.push(last);
-    }
-    points
+    record(start, end);
 }
 
 /// How many transitions in this series are large enough and dark enough to
 /// count toward the flash budget.
 #[must_use]
 pub fn qualifying_transitions(series: &[f64]) -> usize {
-    turning_points(series)
-        .windows(2)
-        .filter(|pair| {
-            let change = (pair[1] - pair[0]).abs();
-            let darker = pair[0].min(pair[1]);
-            change >= GENERAL_FLASH_DELTA && darker < DARK_CEILING
-        })
-        .count()
+    let mut legs = 0;
+    visit_general_transitions(series, |_| legs += 1);
+    legs
 }
 
 /// Flashes in a luminance series.
 ///
-/// A flash is two opposing transitions, so a full bright-dark-bright cycle is
-/// one flash rather than two. Counting transitions instead would double every
-/// measurement and fail surfaces that are within the budget.
+/// A qualifying rise can close a pending fall and vice versa. Several rises
+/// separated by shallow dips still need a qualifying fall to complete a flash.
+/// Closing each pair at the first opportunity leaves the longest possible
+/// suffix for subsequent disjoint pairs.
 #[must_use]
 pub fn count_flashes(series: &[f64]) -> usize {
-    qualifying_transitions(series) / 2
+    let mut pending = None;
+    let mut flashes = 0;
+    visit_general_transitions(series, |rise| {
+        if pending == Some(!rise) {
+            flashes += 1;
+            pending = None;
+        } else {
+            pending = Some(rise);
+        }
+    });
+    flashes
 }
 
 /// Flashes per second for a series sampled at `fps`.
@@ -172,24 +180,23 @@ pub fn flashes_per_second(series: &[f64], fps: f64) -> f64 {
     count_flashes(series) as f64 / seconds
 }
 
-/// The worst one-second window in a longer series.
+/// The most complete flashes observed in any sampled one-second window.
 ///
 /// The standard bounds flashing in *any* one-second window, so averaging over
 /// a whole cycle would let a half-second strobe hide behind quiet neighbours.
-/// A series shorter than a full window is measured whole rather than skipped.
+/// At 60 fps, 61 sample instants span one second. A shorter capture contributes
+/// the complete flashes observed during that capture.
 #[must_use]
 pub fn peak_flashes_per_second(series: &[f64], fps: f64) -> f64 {
-    if series.len() < 2 || !fps.is_finite() || fps <= 0.0 {
+    peak_count_per_second(series, fps, count_flashes)
+}
+
+fn peak_count_per_second<T>(series: &[T], fps: f64, count: impl Fn(&[T]) -> usize) -> f64 {
+    if series.len() < 3 || !fps.is_finite() || fps <= 0.0 {
         return 0.0;
     }
-    let window = (fps.ceil() as usize).max(2);
-    if series.len() <= window {
-        return flashes_per_second(series, fps);
-    }
-    series
-        .windows(window)
-        .map(|slice| flashes_per_second(slice, fps))
-        .fold(0.0f64, f64::max)
+    let samples = (fps.floor() as usize).saturating_add(1).min(series.len());
+    series.windows(samples).map(count).max().unwrap_or(0) as f64
 }
 
 /// Whether a series sampled at `fps` stays inside the budget, judged on its
@@ -203,7 +210,7 @@ pub fn within_budget(series: &[f64], fps: f64) -> bool {
 pub const RED_SATURATION: f64 = 0.80;
 
 /// Two states must differ by more than this in CIE 1976 UCS chromaticity for a
-/// crossing between them to count as a red transition.
+/// color excursion to count toward a red flash.
 pub const RED_CHROMATICITY_DELTA: f64 = 0.20;
 
 /// A frame's color state for the red-flash test.
@@ -214,11 +221,7 @@ pub const RED_CHROMATICITY_DELTA: f64 = 0.20;
 /// alone would call a move between two greens one.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RedState {
-    /// `R / (R + G + B)` over the frame's mean displayed color.
-    ///
-    /// The Numinous proxy takes this ratio from mean sRGB code values,
-    /// before linearization. WCAG 2.2 refers to the linear R, G, B values
-    /// defined for relative luminance. These can select different states.
+    /// `R / (R + G + B)` over mean linear-light sRGB channels.
     pub saturation: f64,
     /// CIE 1976 UCS `u'` of the frame's mean color.
     pub u: f64,
@@ -250,118 +253,149 @@ impl RedState {
 /// As with [`frame_luminance`], local color excursions can average away.
 /// The [regional] measurement uses the same red-state calculation per window.
 ///
-///
 /// This proxy has no luminance floor: dim red ink on black can yield a
 /// saturated state. See [`RedState::saturation`] for its channel convention.
 #[must_use]
 pub fn frame_red_state(rgba: &[u8]) -> RedState {
-    let pixels = rgba.len() / 4;
-    if pixels == 0 {
+    let table = linear_counts();
+    let mut light = [0u128; 3];
+    for pixel in rgba.as_chunks::<4>().0 {
+        for (total, &channel) in light.iter_mut().zip(pixel) {
+            *total += table[usize::from(channel)];
+        }
+    }
+    red_state_from_totals(light)
+}
+
+fn red_state_from_totals(totals: [u128; 3]) -> RedState {
+    // Chromaticity depends only on the proportions. Dimming a field or
+    // repeating its pixels must give identical coordinates: a rounded
+    // displacement on a constant-hue plateau can reverse the next chord.
+    let [red, green, blue] = totals;
+    let divisor = crate::numerics::gcd(crate::numerics::gcd(red, green), blue);
+    if divisor == 0 {
+        // Place black at the origin to screen returns between red and black.
         return RedState {
             saturation: 0.0,
             u: 0.0,
             v: 0.0,
         };
     }
-    // Preserve the two scales used by the historical whole-frame measurement:
-    // encoded-channel saturation and linear-light chromaticity.
-    let table = linear_channel_table();
-    let mut encoded = [0.0f64; 3];
-    let mut light = [0.0f64; 3];
-    for pixel in rgba.as_chunks::<4>().0 {
-        for (index, channel) in pixel[..3].iter().enumerate() {
-            encoded[index] += f64::from(*channel);
-            light[index] += table[*channel as usize];
-        }
-    }
-    let encoded = encoded.map(|total| total / pixels as f64);
-    let linear = light.map(|total| total / pixels as f64);
-    red_state_from_means(encoded, linear)
-}
-
-fn red_state_from_means(encoded: [f64; 3], linear: [f64; 3]) -> RedState {
-    let sum = encoded[0] + encoded[1] + encoded[2];
-    // A black frame has no color to be red and no chromaticity at all. Zero for
-    // both is the honest answer rather than a division producing NaN, which
-    // would silently disable every later comparison. Placing black at the
-    // origin also makes any red-to-black crossing look maximally distant, which
-    // errs toward counting a flash rather than missing one.
-    let saturation = if sum > 0.0 { encoded[0] / sum } else { 0.0 };
-    let x = 0.4124 * linear[0] + 0.3576 * linear[1] + 0.1805 * linear[2];
-    let y = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
-    let z = 0.0193 * linear[0] + 0.1192 * linear[1] + 0.9505 * linear[2];
-    let denominator = x + 15.0 * y + 3.0 * z;
-    let (u, v) = if denominator > 0.0 {
-        (4.0 * x / denominator, 9.0 * y / denominator)
+    let [red, green, blue] = totals.map(|channel| channel / divisor);
+    let other = green + blue;
+    let sum = red + other;
+    // R/(R+G+B) >= 4/5 iff R >= 4(G+B). Compare integer totals before
+    // rounding the public ratio, including values within one ulp of 0.8.
+    let ratio = red as f64 / sum as f64;
+    let saturation = if red / 4 >= other {
+        ratio.max(RED_SATURATION)
     } else {
-        (0.0, 0.0)
+        ratio.min(RED_SATURATION.next_down())
     };
-    RedState { saturation, u, v }
+    let [r, g, b] = [red, green, blue].map(|channel| channel as f64);
+    let x = 0.412_456_4 * r + 0.357_576_1 * g + 0.180_437_5 * b;
+    let y = 0.212_672_9 * r + 0.715_152_2 * g + 0.072_175 * b;
+    let z = 0.019_333_9 * r + 0.119_192 * g + 0.950_304_1 * b;
+    let denominator = x + 15.0 * y + 3.0 * z;
+    RedState {
+        saturation,
+        u: 4.0 * x / denominator,
+        v: 9.0 * y / denominator,
+    }
 }
 
-/// One representative state per run of same-redness frames, in order.
-///
-/// A run is a stretch of frames that are all saturated red or all not, so
-/// consecutive runs always differ in redness and every boundary between them is
-/// a candidate transition. The representative is the run's most extreme frame,
-/// the reddest inside a red run and the least red outside one, so a gradual
-/// slide into red is judged by where it arrives rather than by how small each
-/// step was. Comparing adjacent frames instead would miss a ramp that crosses
-/// the diagram over half a second, which is well inside flashing speed.
-///
-/// This is the red counterpart of `turning_points`, and it exists for the same
-/// reason: to measure excursions rather than samples.
-fn red_run_extremes(states: &[RedState]) -> Vec<RedState> {
-    let mut runs: Vec<RedState> = Vec::new();
-    let mut current: Option<(bool, RedState)> = None;
-    for state in states {
-        match current {
-            Some((red, best)) if red == state.is_saturated_red() => {
-                let further = if red {
-                    state.saturation > best.saturation
-                } else {
-                    state.saturation < best.saturation
-                };
-                current = Some((red, if further { *state } else { best }));
-            }
-            Some((_, best)) => {
-                runs.push(best);
-                current = Some((state.is_saturated_red(), *state));
-            }
-            None => current = Some((state.is_saturated_red(), *state)),
+#[derive(Default)]
+struct RedCounts {
+    transitions: usize,
+    flashes: usize,
+}
+
+fn displacement(from: RedState, to: RedState) -> [f64; 2] {
+    [to.u - from.u, to.v - from.v]
+}
+
+fn dot(a: [f64; 2], b: [f64; 2]) -> f64 {
+    a[0] * b[0] + a[1] * b[1]
+}
+
+// Each leg ends when the next step turns back along the accumulated chord.
+// Compare the chords of the qualifying legs again: skipping a small leg
+// must never turn two displacements in the same direction into a flash.
+fn red_counts_in_order(mut states: impl Iterator<Item = RedState>) -> RedCounts {
+    let mut counts = RedCounts::default();
+    let Some(mut start) = states.next() else {
+        return counts;
+    };
+    let mut tip = start;
+    let mut pending: Option<([f64; 2], bool)> = None;
+    let mut finish_leg = |from: RedState, to: RedState| {
+        let chord = displacement(from, to);
+        let distance_squared = dot(chord, chord);
+        if !distance_squared.is_finite()
+            || distance_squared <= RED_CHROMATICITY_DELTA * RED_CHROMATICITY_DELTA
+        {
+            return;
         }
+        let red = from.is_saturated_red() || to.is_saturated_red();
+        counts.transitions += usize::from(red);
+        if let Some((previous, previous_red)) = pending
+            && (red || previous_red)
+            && dot(previous, chord) < 0.0
+        {
+            counts.flashes += 1;
+            pending = None;
+        } else {
+            pending = Some((chord, red));
+        }
+    };
+    for next in states {
+        if dot(displacement(start, tip), displacement(tip, next)) < 0.0 {
+            finish_leg(start, tip);
+            start = tip;
+        }
+        tip = next;
     }
-    if let Some((_, best)) = current {
-        runs.push(best);
-    }
-    runs
+    finish_leg(start, tip);
+    counts
 }
 
-/// How many crossings into or out of saturated red are large enough to count.
+fn red_counts(states: &[RedState]) -> RedCounts {
+    if !states.iter().any(RedState::is_saturated_red) {
+        return RedCounts::default();
+    }
+    // A bent path can have different chord endpoints from either end. Each
+    // orientation must witness its own complete pairs; their counts never add.
+    let forward = red_counts_in_order(states.iter().copied());
+    let backward = red_counts_in_order(states.iter().rev().copied());
+    RedCounts {
+        transitions: forward.transitions.max(backward.transitions),
+        flashes: forward.flashes.max(backward.flashes),
+    }
+}
+
+/// Count individual above-threshold color excursions with a saturated endpoint.
 ///
-/// This proxy requires a crossing of its saturation threshold. Its reported
-/// transitions therefore exclude excursions entirely within saturated red.
-///
-/// The series is first reduced to one representative frame per run of
-/// same-redness frames, so every boundary left is already a crossing and the
-/// only question is whether its two sides are far enough apart on the diagram.
-/// That second condition is what keeps a drift between two nearly identical
-/// colors, one just over the ratio and one just under, from reading as a flash.
+/// A flash can include a return leg whose own endpoints are both unsaturated.
+/// Use [`count_red_flashes`] to measure complete pairs.
 #[must_use]
 pub fn qualifying_red_transitions(states: &[RedState]) -> usize {
-    red_run_extremes(states)
-        .windows(2)
-        .filter(|pair| pair[0].chromaticity_distance(&pair[1]) > RED_CHROMATICITY_DELTA)
-        .count()
+    red_counts(states).transitions
 }
 
-/// Red flashes in a series of frame states.
+/// Count disjoint pairs of opposing color excursions in a sequence of frame means.
 ///
-/// A flash is a pair of opposing transitions, in and back out, exactly as for
-/// general flashes.
+/// [WCAG 2.2](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html)
+/// defines the saturation and CIE 1976 UCS distance tests. This
+/// screen locates a turn in the two-dimensional color path when the next
+/// sample moves back along the chord from the previous turn (negative dot
+/// product). Each paired chord must exceed 0.20 in length, the two chords
+/// must point back against each other, and at least one of their endpoints
+/// must be saturated. Short legs cannot supply either half of a pair.
+/// Bent color paths are screened from both ends and the larger count is used.
+/// This turning convention is an operational choice for sampled colors.
 #[must_use]
 pub fn count_red_flashes(states: &[RedState]) -> usize {
-    qualifying_red_transitions(states) / 2
+    red_counts(states).flashes
 }
 
 /// Red flashes per second for a series sampled at `fps`.
@@ -383,17 +417,7 @@ pub fn red_flashes_per_second(states: &[RedState], fps: f64) -> f64 {
 /// The worst one-second window of red flashing in a longer series.
 #[must_use]
 pub fn peak_red_flashes_per_second(states: &[RedState], fps: f64) -> f64 {
-    if states.len() < 2 || !fps.is_finite() || fps <= 0.0 {
-        return 0.0;
-    }
-    let window = (fps.ceil() as usize).max(2);
-    if states.len() <= window {
-        return red_flashes_per_second(states, fps);
-    }
-    states
-        .windows(window)
-        .map(|slice| red_flashes_per_second(slice, fps))
-        .fold(0.0f64, f64::max)
+    peak_count_per_second(states, fps, count_red_flashes)
 }
 
 /// Whether a series stays inside the red-flash budget.
@@ -459,9 +483,9 @@ mod tests {
 
         // Just either side of the threshold, built from the ratio rather than
         // from a color chosen by eye.
-        let under = frame_red_state(&flat(79, 21, 0, 4));
+        let under = frame_red_state(&flat(200, 107, 0, 4));
         assert!(under.saturation < RED_SATURATION && !under.is_saturated_red());
-        let over = frame_red_state(&flat(81, 19, 0, 4));
+        let over = frame_red_state(&flat(200, 105, 0, 4));
         assert!(over.saturation > RED_SATURATION && over.is_saturated_red());
 
         // Black has no color to be red, and must not divide by zero.
@@ -494,19 +518,159 @@ mod tests {
         let blue = frame_red_state(&flat(0, 0, 255, 4));
         assert!(green.chromaticity_distance(&blue) > far);
         assert_eq!(qualifying_red_transitions(&[green, blue]), 0);
+        // The return from blue to green opposes the earlier red-to-blue leg.
+        // Only the first leg has a saturated endpoint; the pair involves it.
+        assert_eq!(qualifying_red_transitions(&[red, blue, green]), 1);
+        assert_eq!(count_red_flashes(&[red, blue, green]), 1);
 
-        // Two saturated reds are both red states, so there is no crossing.
+        // Two intensities of the same red have the same chromaticity.
         let dim_red = frame_red_state(&flat(40, 0, 0, 4));
         assert!(dim_red.is_saturated_red());
         assert_eq!(qualifying_red_transitions(&[red, dim_red]), 0);
 
         // A crossing that barely moves on the diagram is not a flash. These two
         // sit either side of the ratio and are almost the same color.
-        let over = frame_red_state(&flat(81, 19, 0, 4));
-        let under = frame_red_state(&flat(79, 21, 0, 4));
+        let over = frame_red_state(&flat(200, 105, 0, 4));
+        let under = frame_red_state(&flat(200, 107, 0, 4));
         assert!(over.is_saturated_red() != under.is_saturated_red());
         assert!(over.chromaticity_distance(&under) < RED_CHROMATICITY_DELTA);
         assert_eq!(qualifying_red_transitions(&[over, under]), 0);
+    }
+
+    #[test]
+    fn linear_saturation_catches_the_warm_red_and_blue_pair() {
+        let warm = frame_red_state(&flat(200, 60, 0, 4));
+        let blue = frame_red_state(&flat(0, 0, 255, 4));
+        // Half as much light in each channel preserves both ratios.
+        let mixed = frame_red_state(&[200, 0, 0, 255, 0, 60, 0, 255]);
+        assert!((warm.saturation - mixed.saturation).abs() < 1e-12);
+        assert!(warm.chromaticity_distance(&mixed) < 1e-12);
+        // The encoded ratio is 200/260, below 0.8. These independent
+        // references apply the W3C linearization and full XYZ coefficients.
+        assert!((warm.saturation - 0.927_442_799).abs() < 1e-9);
+        assert!((warm.chromaticity_distance(&blue) - 0.428_480_457).abs() < 1e-9);
+        let light = relative_luminance(200, 60, 0) - relative_luminance(0, 0, 255);
+        assert!((light - 0.082_910_775).abs() < 1e-9 && light < GENERAL_FLASH_DELTA);
+        assert_eq!(count_red_flashes(&[blue, warm, blue]), 1);
+        assert_eq!(count_red_flashes(&[warm, blue, warm]), 1);
+        let strobe: Vec<_> = [warm, blue, warm, blue]
+            .into_iter()
+            .cycle()
+            .take(61)
+            .collect();
+        assert_eq!(peak_red_flashes_per_second(&strobe, 60.0), 30.0);
+    }
+
+    #[test]
+    fn constant_hue_plateaus_cannot_turn_a_color_chord() {
+        let red = frame_red_state(&[255, 0, 0, 255]);
+        let green = frame_red_state(&[0, 255, 0, 255]);
+        let black = frame_red_state(&[0, 0, 0, 255]);
+        for intensity in 1..=255 {
+            let dim_green = frame_red_state(&[0, intensity, 0, 255]);
+            assert_eq!(dim_green, green);
+            assert_eq!(
+                count_red_flashes(&[red, green, dim_green, green, black, green]),
+                1
+            );
+        }
+        let warm = super::red_state_from_totals([5, 3, 19]);
+        for scale in [2, 7, (1 << 100) + 5] {
+            assert_eq!(
+                warm,
+                super::red_state_from_totals([5 * scale, 3 * scale, 19 * scale])
+            );
+        }
+    }
+
+    #[test]
+    fn red_saturation_is_inclusive_and_ucs_distance_is_strict() {
+        let green = 1u128 << 80;
+        for (red, saturated) in [
+            (4 * green - 1, false),
+            (4 * green, true),
+            (4 * green + 1, true),
+        ] {
+            assert_eq!(
+                super::red_state_from_totals([red, green, 0]).is_saturated_red(),
+                saturated
+            );
+        }
+        // Synthetic coordinates isolate the temporal rule from the sRGB gamut.
+        let a = RedState {
+            saturation: 0.8,
+            u: 0.0,
+            v: 0.0,
+        };
+        let boundary = RedState {
+            u: RED_CHROMATICITY_DELTA,
+            ..a
+        };
+        let far = RedState {
+            u: RED_CHROMATICITY_DELTA + 0.001,
+            ..a
+        };
+        assert_eq!(count_red_flashes(&[a, boundary, a]), 0);
+        assert_eq!(count_red_flashes(&[a, far, a]), 1);
+        let red_green = frame_red_state(&flat(255, 136, 0, 4));
+        let red_blue = frame_red_state(&flat(255, 0, 136, 4));
+        assert!(red_green.is_saturated_red() && red_blue.is_saturated_red());
+        assert!(red_green.chromaticity_distance(&red_blue) < RED_CHROMATICITY_DELTA);
+        assert_eq!(count_red_flashes(&[red_green, red_blue, red_green]), 0);
+    }
+
+    #[test]
+    fn red_pairs_agree_with_an_independent_three_sample_oracle() {
+        // Coordinates are in quarter units. Every nonzero displacement
+        // clears 0.2. The law of cosines lets integer arithmetic decide
+        // whether the two successive displacements point back at each other.
+        let points = [
+            (0_i32, 0_i32, true),
+            (1, 0, false),
+            (1, 1, false),
+            (2, 1, true),
+            (2, 2, false),
+            (0, 2, false),
+        ];
+        let color = |(x, y, red)| RedState {
+            u: f64::from(x) / 4.0,
+            v: f64::from(y) / 4.0,
+            saturation: if red { 1.0 } else { 0.0 },
+        };
+        let squared = |(x, y, _): (i32, i32, bool), (u, v, _): (i32, i32, bool)| {
+            (x - u).pow(2) + (y - v).pow(2)
+        };
+        for a in points {
+            for b in points {
+                for c in points {
+                    let ab = squared(a, b);
+                    let bc = squared(b, c);
+                    let flash = ab > 0 && bc > 0 && squared(a, c) < ab + bc && (a.2 || b.2 || c.2);
+                    assert_eq!(
+                        count_red_flashes(&[color(a), color(b), color(c)]),
+                        usize::from(flash)
+                    );
+                }
+            }
+        }
+        // The first and last states can bound different chords on a bent
+        // color path. Reversing playback preserves the larger witnessed count.
+        let bent = [points[0], points[1], points[2], points[5]].map(color);
+        assert_eq!(count_red_flashes(&bent), 1);
+        let mut backward = bent;
+        backward.reverse();
+        assert_eq!(count_red_flashes(&backward), 1);
+    }
+
+    #[test]
+    fn two_qualifying_color_legs_in_the_same_direction_do_not_make_a_flash() {
+        let states = [0.0, 0.3, 0.25, 0.55].map(|u| RedState {
+            saturation: 1.0,
+            u,
+            v: 0.0,
+        });
+        assert_eq!(qualifying_red_transitions(&states), 2);
+        assert_eq!(count_red_flashes(&states), 0);
     }
 
     #[test]
@@ -544,6 +708,11 @@ mod tests {
         let mut there_and_back = ramp.clone();
         there_and_back.extend(ramp.iter().rev().skip(1).copied());
         assert_eq!(count_red_flashes(&there_and_back), 1);
+        let mut out_of_red: Vec<_> = ramp.iter().rev().copied().collect();
+        assert_eq!(count_red_flashes(&out_of_red), 0);
+        out_of_red.extend(ramp.iter().skip(1).copied());
+        assert_eq!(count_red_flashes(&out_of_red), 1);
+        assert_eq!(count_red_flashes(&ramp), 0);
     }
 
     #[test]
@@ -581,6 +750,16 @@ mod tests {
         assert!(peak_red_flashes_per_second(&[], fps).abs() < 1e-12);
         assert!(peak_red_flashes_per_second(&[white, red], 0.0).abs() < 1e-12);
         assert!(peak_red_flashes_per_second(&[white, red], f64::NAN).abs() < 1e-12);
+    }
+
+    #[test]
+    fn fixed_point_counts_preserve_every_linear_channel() {
+        for (&channel, &count) in super::linear_channel_table()
+            .iter()
+            .zip(super::linear_counts())
+        {
+            assert_eq!(channel, count as f64 / super::LINEAR_SCALE);
+        }
     }
 
     #[test]
@@ -630,6 +809,36 @@ mod tests {
     }
 
     #[test]
+    fn only_opposing_qualified_legs_complete_disjoint_flashes() {
+        for (samples, legs, flashes) in [
+            (&[0.00, 0.15, 0.10, 0.25][..], 2, 0),
+            (&[0.00, 0.15, 0.10, 0.25, 0.25, 0.00][..], 3, 1),
+            (&[0.00, 0.15, 0.10, 0.25, 0.00, 0.40, 0.00][..], 5, 2),
+            (&[0.00, 0.08, 0.16, 0.16, 0.08, 0.00, 0.30][..], 3, 1),
+        ] {
+            let reversed: Vec<_> = samples.iter().copied().rev().collect();
+            let inverted: Vec<_> = samples.iter().map(|v| 0.7 - v).collect();
+            for series in [samples, &reversed, &inverted] {
+                assert_eq!(qualifying_transitions(series), legs, "{series:?}");
+                assert_eq!(count_flashes(series), flashes, "{series:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn one_second_includes_both_endpoints_but_never_extrapolates_a_short_clip() {
+        // Four complete flashes need eight transitions. The last transition
+        // falls exactly one second after the start at eight samples a second.
+        let alternating = [0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0];
+        assert_eq!(peak_flashes_per_second(&alternating, 8.0), 4.0);
+        assert!(!within_budget(&alternating, 8.0));
+        assert_eq!(peak_flashes_per_second(&alternating, 7.5), 3.0);
+        assert_eq!(peak_flashes_per_second(&alternating, 8.5), 4.0);
+        assert_eq!(peak_flashes_per_second(&alternating, 0.5), 0.0);
+        assert_eq!(peak_flashes_per_second(&alternating[..3], 60.0), 1.0);
+    }
+
+    #[test]
     fn a_ten_hertz_strobe_is_caught() {
         // The case the budget exists to prevent: alternating black and white
         // every other frame at 30fps is 15 flashes per second.
@@ -659,6 +868,7 @@ mod tests {
         let subtle = [0.40, 0.40 + GENERAL_FLASH_DELTA / 2.0, 0.40];
         assert_eq!(qualifying_transitions(&subtle), 0);
         assert_eq!(count_flashes(&subtle), 0);
+        assert_eq!(count_flashes(&[0.0, GENERAL_FLASH_DELTA, 0.0]), 1);
     }
 
     #[test]
@@ -667,6 +877,7 @@ mod tests {
         // standard counts. Dropping this condition is the common mistake.
         let bright = [DARK_CEILING + 0.05, 1.0, DARK_CEILING + 0.05];
         assert_eq!(qualifying_transitions(&bright), 0);
+        assert_eq!(count_flashes(&[DARK_CEILING, 1.0, DARK_CEILING]), 0);
         // The same swing with a dark image in it does count.
         let dark = [0.0, 0.5, 0.0];
         assert_eq!(qualifying_transitions(&dark), 2);

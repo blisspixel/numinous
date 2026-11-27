@@ -266,8 +266,11 @@ also carries the MCP workflow offline.
 Some automatic tours exceeded three flashes in one second in a smaller
 region even though the whole-image average stayed within budget. The check
 samples brightness and color in overlapping 80 by 47 rectangles on a 240 by
-140 image, in every visual era at 1x, 2x, 4x and 8x. The test can miss
-smaller patches and some changes involving red. Hand and beat input and the final App display remain unmeasured.
+140 image, in every visual era at 1x, 2x, 4x and 8x. A back-and-forth
+change involving red can register even when brightness barely changes.
+Chua in Vector has a regional red warning even at normal speed.
+Smaller patches can average away. Hand and beat input and the final App
+display remain unmeasured.
 `numinous access` also shows your active switches.
 
 | Environment variable | Effect when nonempty |

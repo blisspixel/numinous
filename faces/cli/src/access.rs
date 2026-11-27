@@ -149,7 +149,8 @@ pub(crate) fn flash_disclosure(known: &[(&str, numinous_core::Era, f64)]) -> Str
 
 const REGIONAL_SCOPE: &str = "At 1x, 2x, 4x and 8x, the regional check averages light and color in\n\
     overlapping 80 by 47 rectangles on a 240 by 140 automatic room image.\n\
-    Patches within a rectangle and some red color changes can go undetected.\n\
+    The check looks for opposing changes in brightness or red color.\n\
+    Smaller patches can average away inside a rectangle.\n\
     Hand or beat input and the final App display remain unmeasured.\n";
 
 /// Look up the catalog measurement without starting the room or its sound.
