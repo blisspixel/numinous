@@ -17,6 +17,8 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   board code between the App, CLI and MCP.
 
 ### Fixed
+- The dependency lock now uses the patched rustix 1.1.6 for extended-attribute
+  reads on Unix. [RustSec advisory](https://rustsec.org/advisories/RUSTSEC-2026-0486)
 - The automatic-tour flash check now measures red saturation in linear light,
   pairs opposing changes in color and brightness, and includes the sample at
   each end of a one-second window. The room lookup uses the revised measurements.
