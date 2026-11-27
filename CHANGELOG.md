@@ -36,6 +36,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   checks every sampled starting frame in every visual era. Clifford and De
   Jong use fixed mathematical axes so a small orbit keeps its size. The
   player guide and `numinous access` describe the whole-frame measurement.
+- The macOS and Linux installer explains when GitHub refuses a release lookup
+  and shows when to retry if GitHub supplies the timing. It resolves the
+  release before creating a new install directory or ownership receipt.
 - The documented Git hook checks commit messages on a fresh Unix checkout.
   The POSIX installer tests desktop shortcuts inside their own XDG configuration.
   Release checks isolate the journal and project alongside the other player stores.

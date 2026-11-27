@@ -57,8 +57,13 @@ irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.p
 Open the installed Numinous launcher, or run `numinous-app` from a new terminal.
 Use `numinous update` for later releases of an installer-created installation.
 A loose archive or source checkout is not an install root; download a fresh
-archive or use the installer in a separate location. You can download a platform
-archive from [Releases](https://github.com/blisspixel/numinous/releases).
+archive or use the installer in a separate location.
+
+If GitHub refuses the macOS or Linux release lookup with HTTP 403 or 429,
+your network may have reached its request limit. Wait for the retry time if
+the installer shows one. For a manual download on any platform, get the
+archive from [Releases](https://github.com/blisspixel/numinous/releases)
+and [verify its provenance](VERIFY.md#2a-verify-tagged-release-provenance).
 
 From a source checkout: `cargo run --release --bin numinous-app`.
 On Linux, install the packages in
