@@ -3,140 +3,122 @@
 //! x' = x^2 - y^2 + a x + b y; y' = 2 x y + c x + d y.
 //! DRAG: TUNE A AND C. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
+use super::{latest_hand, phase_unit};
+use crate::room::{Room, RoomInput};
 use crate::surface::Surface;
 
-const ITERS: usize = 22_000;
+const START: (f64, f64) = (-0.72, -0.64);
+const CLASSIC: Map = Map { a: 0.9, c: 2.0 };
+const SELECTED_STEPS: usize = 512;
+const REFERENCE_STEPS: usize = 2048;
 
-fn phase_unit(t: f64) -> f64 {
-    if t.is_finite() {
-        t.clamp(0.0, 1.0)
-    } else {
-        0.0
+#[derive(Clone, Copy)]
+struct Map {
+    a: f64,
+    c: f64,
+}
+
+impl Map {
+    fn next(self, (x, y): (f64, f64)) -> (f64, f64) {
+        (
+            x * x - y * y + self.a * x - 0.6013 * y,
+            2.0 * x * y + self.c * x + 0.5 * y,
+        )
+    }
+
+    // Visit the start and every in-range iterate. In complex coordinates this
+    // map is z squared plus a real linear map with Frobenius norm below three
+    // throughout the controls. At radius r > 4 the next radius is at least
+    // r * (r - 3), so each later radius grows by at least that same factor r - 3 > 1.
+    fn trace(self, steps: usize, mut visit: impl FnMut(usize, (f64, f64))) -> Option<usize> {
+        let mut point = START;
+        visit(0, point);
+        for i in 1..=steps {
+            point = self.next(point);
+            let (x, y) = point;
+            if x * x + y * y > 16.0 {
+                return Some(i);
+            }
+            visit(i, point);
+        }
+        None
+    }
+
+    fn readout(self) -> String {
+        let (mut xmin, mut xmax) = (START.0, START.0);
+        let (mut ymin, mut ymax) = (START.1, START.1);
+        let escaped = self.trace(SELECTED_STEPS, |_, (x, y)| {
+            xmin = xmin.min(x);
+            xmax = xmax.max(x);
+            ymin = ymin.min(y);
+            ymax = ymax.max(y);
+        });
+        let result = match escaped {
+            Some(step) => format!("escape {step}"),
+            None => {
+                let span = ((xmax - xmin) * (ymax - ymin)).sqrt();
+                format!("span={span:.2}")
+            }
+        };
+        format!(
+            "a={:.2} c={:.2}  {result}  * tuned  . classic  DRAG",
+            self.a, self.c
+        )
     }
 }
 
-fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
-    let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
-    pokes[start..]
-        .iter()
-        .copied()
-        .filter(|&(x, y)| x.is_finite() && y.is_finite())
-        .map(|(x, y)| (x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
-        .collect()
-}
-
-fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64, f64, f64) {
-    // Classic a=0.9, b=-0.6013, c=2.0, d=0.5. Keep a,c inside the butterfly basin;
-    // wider sweeps explode to a few divergent pixels and look blank.
-    let s = if seed == 0 {
-        0.0
-    } else {
-        (seed % 5) as f64 * 0.008
-    };
+fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> Map {
+    let s = (seed % 5) as f64 * 0.008;
     if let Some((x, y)) = hand {
-        (
-            (0.82 + x * 0.16 + s).clamp(0.78, 0.98),
-            -0.6013,
-            (1.7 + y * 0.55).clamp(1.55, 2.35),
-            0.5,
-        )
+        Map {
+            a: (0.82 + x * 0.16 + s).clamp(0.78, 0.98),
+            c: (1.7 + y * 0.55).clamp(1.55, 2.35),
+        }
     } else {
         let u = phase_unit(t);
-        (
-            (0.88 + u * 0.06 + s).clamp(0.85, 0.96),
-            -0.6013,
-            (1.85 + u * 0.25).clamp(1.75, 2.2),
-            0.5,
-        )
+        Map {
+            a: (0.88 + u * 0.06 + s).clamp(0.85, 0.96),
+            c: (1.85 + u * 0.25).clamp(1.75, 2.2),
+        }
     }
 }
 
-fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
-    let (width, height) = canvas.draw_bounds();
-    if width == 0 || height == 0 {
+fn draw(canvas: &mut dyn Surface, map: Map) {
+    let (w, h) = canvas.draw_bounds();
+    if w == 0 || h == 0 {
         return;
     }
-    let mut min_x = f64::MAX;
-    let mut max_x = f64::MIN;
-    let mut min_y = f64::MAX;
-    let mut max_y = f64::MIN;
-    let mut pts = Vec::with_capacity(ITERS);
-    // Burn-in, then sample. Restart from classic seed if the orbit escapes.
-    for attempt in 0..3 {
-        let mut x = -0.72 + attempt as f64 * 0.02;
-        let mut y = -0.64 - attempt as f64 * 0.01;
-        pts.clear();
-        min_x = f64::MAX;
-        max_x = f64::MIN;
-        min_y = f64::MAX;
-        max_y = f64::MIN;
-        let mut ok = true;
-        for _ in 0..80 {
-            let nx = x * x - y * y + a * x + b * y;
-            let ny = 2.0 * x * y + c * x + d * y;
-            if !nx.is_finite() || !ny.is_finite() || nx.abs() > 20.0 || ny.abs() > 20.0 {
-                ok = false;
-                break;
-            }
-            x = nx;
-            y = ny;
-        }
-        if !ok {
-            continue;
-        }
-        for _ in 0..ITERS {
-            let nx = x * x - y * y + a * x + b * y;
-            let ny = 2.0 * x * y + c * x + d * y;
-            if !nx.is_finite() || !ny.is_finite() || nx.abs() > 20.0 || ny.abs() > 20.0 {
-                break;
-            }
-            x = nx;
-            y = ny;
-            min_x = min_x.min(x);
-            max_x = max_x.max(x);
-            min_y = min_y.min(y);
-            max_y = max_y.max(y);
-            pts.push((x, y));
-        }
-        if pts.len() > 200 {
-            break;
-        }
+    let (w, h) = ((w - 1) as f64, (h - 1) as f64);
+    let aspect = canvas.safe_char_aspect();
+    let scale = (w / 2.0).min(h / (2.2 * aspect));
+    let project = |(x, y): (f64, f64)| {
+        (
+            (w * 0.5 + (x + 0.4) * scale).round() as i32,
+            (h * 0.5 - (y + 0.5) * scale * aspect).round() as i32,
+        )
+    };
+
+    // One dot per cell keeps the classic butterfly faint even where it folds
+    // back on itself. Both orbits share a fixed camera and initial point.
+    let mut reference = Vec::with_capacity(REFERENCE_STEPS + 1);
+    CLASSIC.trace(REFERENCE_STEPS, |_, p| reference.push(project(p)));
+    reference.sort_unstable();
+    reference.dedup();
+    for (x, y) in reference {
+        canvas.plot(x, y, '.');
     }
-    if pts.is_empty() {
-        // Fallback silhouette so the room never paints blank.
-        for i in 0..120 {
-            let u = i as f64 / 119.0;
-            let th = u * std::f64::consts::TAU;
-            let px = (0.5 + 0.28 * th.cos()) * width.saturating_sub(1) as f64;
-            let py = (0.5 + 0.18 * th.sin()) * height.saturating_sub(1) as f64;
-            canvas.plot(px.round() as i32, py.round() as i32, '*');
+
+    let mut previous = None;
+    map.trace(SELECTED_STEPS, |i, p| {
+        let (x, y) = project(p);
+        if let Some((px, py)) = previous
+            && i <= 5
+        {
+            canvas.line(px, py, x, y, '.');
         }
-        return;
-    }
-    let dx = (max_x - min_x).max(1e-6);
-    let dy = (max_y - min_y).max(1e-6);
-    // Keep a margin so wings do not collapse into the corners.
-    let mx = width as f64 * 0.06;
-    let my = height as f64 * 0.06;
-    let iw = (width as f64 - 2.0 * mx).max(1.0);
-    let ih = (height as f64 - 2.0 * my).max(1.0);
-    for (i, &(px, py)) in pts.iter().enumerate() {
-        let u = ((px - min_x) / dx).clamp(0.0, 1.0);
-        let v = ((py - min_y) / dy).clamp(0.0, 1.0);
-        let ix = (mx + u * iw).round() as i32;
-        let iy = (my + (1.0 - v) * ih).round() as i32;
-        let ch = if i % 9 == 0 { '#' } else { '*' };
-        canvas.plot(ix, iy, ch);
-        // Wings are dust on large plates without a denser pass of ink.
-        canvas.plot(ix + 1, iy, ch);
-        if i % 2 == 0 {
-            canvas.plot(ix, iy + 1, '.');
-        }
-        if i % 4 == 0 {
-            canvas.plot(ix - 1, iy, ch);
-        }
-    }
+        previous = Some((x, y));
+        canvas.plot(x, y, if i < 8 || i % 16 == 0 { '#' } else { '*' });
+    });
 }
 
 /// Tinkerbell map room.
@@ -159,10 +141,8 @@ impl Tinkerbell {
 }
 
 impl Room for Tinkerbell {
-
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let (a, b, c, d) = params(t, None, self.seed);
-        draw(canvas, a, b, c, d);
+        draw(canvas, params(t, None, self.seed));
     }
 
     fn postcard_t(&self) -> f64 {
@@ -184,67 +164,31 @@ impl Room for Tinkerbell {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let (a, _b, c, _d) = params(t, None, self.seed);
-        Some(format!("a={a:.2}  c={c:.2}  DRAG:TUNE"))
+        Some(params(t, None, self.seed).readout())
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
-        let hands = finite_pokes(pokes);
-        let (a, b, c, d) = params(t, hands.last().copied(), self.seed);
-        draw(canvas, a, b, c, d);
+        draw(canvas, params(t, latest_hand(pokes), self.seed));
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let pokes = crate::pokes_from_inputs(inputs);
-        let hands = finite_pokes(&pokes);
-        if hands.is_empty() {
-            return self.status(t);
-        }
-        let (a, b, c, d) = params(t, hands.last().copied(), self.seed);
-        let mut x = -0.72_f64;
-        let mut y = -0.64_f64;
-        for _ in 0..50 {
-            let nx = x * x - y * y + a * x + b * y;
-            let ny = 2.0 * x * y + c * x + d * y;
-            x = nx;
-            y = ny;
-            if !x.is_finite() || !y.is_finite() || x.abs() > 50.0 || y.abs() > 50.0 {
-                return Some(format!("a={a:.2} c={c:.2}  span=0  div"));
-            }
-        }
-        let mut min_x = x;
-        let mut max_x = x;
-        let mut min_y = y;
-        let mut max_y = y;
-        for _ in 0..500 {
-            let nx = x * x - y * y + a * x + b * y;
-            let ny = 2.0 * x * y + c * x + d * y;
-            if !nx.is_finite() || !ny.is_finite() || nx.abs() > 50.0 || ny.abs() > 50.0 {
-                break;
-            }
-            x = nx;
-            y = ny;
-            min_x = min_x.min(x);
-            max_x = max_x.max(x);
-            min_y = min_y.min(y);
-            max_y = max_y.max(y);
-        }
-        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
-        Some(format!("a={a:.2} c={c:.2}  span={span:.2}"))
+        let hand = latest_hand(&crate::pokes_from_inputs(inputs));
+        Some(params(t, hand, self.seed).readout())
     }
 
     fn reveal(&self) -> &'static str {
-        "The Tinkerbell map is a planar quadratic iteration whose classic \
-         parameters yield a butterfly-shaped strange attractor. Small parameter \
-         moves shred or thicken the wings."
+        "The dotted butterfly follows the classic Tinkerbell map. The bright stars follow \
+         up to 512 jumps from the same starting point at your settings. Lines join the first five. \
+         Drag to see the stars gather or scatter. Escape marks the first step beyond \
+         radius four, where the orbit must keep growing."
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Tinkerbell;
+    use super::*;
     use crate::canvas::Canvas;
-    use crate::room::{Room, RoomInput};
+    use crate::room::MAX_ROOM_POKES;
 
     #[test]
     fn status_invites() {
@@ -254,20 +198,129 @@ mod tests {
     }
 
     #[test]
-    fn tune_changes() {
-        let r = Tinkerbell::new();
-        let o = r.status(0.3).unwrap();
-        let a = r
-            .status_input(
-                0.3,
-                &[RoomInput::PointerDown {
-                    x: 0.2,
-                    y: 0.8,
-                    t: 0.0,
-                }],
-            )
-            .unwrap();
-        assert_ne!(o, a);
+    fn the_classic_orbit_starts_at_the_documented_point_and_uses_both_equations() {
+        let mut points = Vec::new();
+        assert_eq!(CLASSIC.trace(1, |i, p| points.push((i, p))), None);
+        assert_eq!(points[0], (0, (-0.72, -0.64)));
+        assert_eq!(points[1].0, 1);
+        let (x, y) = points[1].1;
+        assert!((x + 0.154368).abs() < 1e-14 && (y + 0.8384).abs() < 1e-14);
+        assert_eq!(CLASSIC.trace(REFERENCE_STEPS, |_, _| {}), None);
+    }
+
+    #[test]
+    fn the_escape_step_is_the_first_certified_crossing() {
+        let upper = params(1.0, Some((1.0, 1.0)), 4);
+        let norm_sq = upper.a.powi(2) + 0.6013_f64.powi(2) + upper.c.powi(2) + 0.5_f64.powi(2);
+        assert!(norm_sq < 9.0);
+        let map = params(0.9, None, 0);
+        let mut last = None;
+        assert_eq!(
+            map.trace(SELECTED_STEPS, |i, (x, y)| {
+                assert!(x * x + y * y <= 16.0);
+                last = Some((i, (x, y)));
+            }),
+            Some(27)
+        );
+        let (i, p) = last.unwrap();
+        assert_eq!(i, 26);
+        let (x, y) = map.next(p);
+        assert!(x * x + y * y > 16.0);
+        assert!(map.readout().contains("escape 27"));
+    }
+
+    #[test]
+    fn seed_and_phase_keep_the_parameter_targets_and_a_touch_selects_both_dials() {
+        let room = Tinkerbell::new_with(4);
+        assert!(room.status(f64::NAN).unwrap().starts_with("a=0.91 c=1.85"));
+        assert!(room.status(1.5).unwrap().starts_with("a=0.96 c=2.10"));
+        let input = RoomInput::PointerDown {
+            x: 0.0,
+            y: 1.0,
+            t: 0.0,
+        };
+        let room = Tinkerbell::new();
+        let status = room.status_input(0.3, &[input]).unwrap();
+        assert!(status.starts_with("a=0.82 c=2.25  escape 141"));
+        assert!(room.status(0.3).unwrap().contains("span="));
+        assert_eq!(room.status_input(0.3, &[]), room.status(0.3));
+        assert_eq!(
+            latest_hand(&[(0.1, 0.4), (-1.0, 2.0), (0.5, f64::NAN)]),
+            Some((0.0, 1.0))
+        );
+        let mut history = vec![(0.5, 0.5)];
+        history.extend(vec![(f64::NAN, 0.5); MAX_ROOM_POKES]);
+        assert_eq!(latest_hand(&history), None);
+    }
+
+    #[test]
+    fn a_compact_footer_keeps_the_measurement_before_the_legend() {
+        let room = Tinkerbell::new();
+        let hand = RoomInput::PointerDown {
+            x: 0.0,
+            y: 1.0,
+            t: 0.0,
+        };
+        let tuning = room.status_input(0.5, &[hand]).unwrap();
+        let postcard = room.status(room.postcard_t()).unwrap();
+        // At 360 pixels the generic-controller footer can keep 25 characters
+        // before its ellipsis. Both dials and the result belong in that space.
+        assert_eq!(&tuning[..25], "a=0.82 c=2.25  escape 141");
+        assert!(postcard[..25].starts_with("a=0.91 c=1.96  span=1.69"));
+        for status in [tuning, postcard] {
+            assert!(status.ends_with("* tuned  . classic  DRAG"));
+        }
+    }
+
+    #[test]
+    fn the_reference_stays_faint_and_the_escape_draws_only_real_iterates() {
+        #[derive(Default)]
+        struct Plate {
+            dots: Vec<(i32, i32)>,
+            live: Vec<(i32, i32, char)>,
+            links: usize,
+        }
+
+        impl Surface for Plate {
+            fn width(&self) -> usize {
+                241
+            }
+            fn height(&self) -> usize {
+                141
+            }
+            fn plot(&mut self, x: i32, y: i32, mark: char) {
+                match mark {
+                    '.' => self.dots.push((x, y)),
+                    _ => self.live.push((x, y, mark)),
+                }
+            }
+            fn line(&mut self, _: i32, _: i32, _: i32, _: i32, mark: char) {
+                assert_eq!(mark, '.');
+                self.links += 1;
+            }
+        }
+
+        let mut wings = Plate::default();
+        let mut escape = Plate::default();
+        let room = Tinkerbell::new();
+        room.render(&mut wings, room.postcard_t());
+        room.render(&mut escape, 0.9);
+        assert!(wings.dots.len() > 300);
+        assert_eq!(wings.dots, escape.dots);
+        assert!(
+            wings.dots.windows(2).all(|w| w[0] < w[1]),
+            "one faint dot per cell"
+        );
+        assert_eq!(wings.live.len(), SELECTED_STEPS + 1);
+        assert_eq!(
+            escape.live.len(),
+            27,
+            "includes the starting point at step zero"
+        );
+        assert_eq!(escape.live[0], (100, 79, '#'));
+        assert_eq!(wings.live[0], escape.live[0], "one fixed coordinate frame");
+        assert_eq!((wings.links, escape.links), (5, 5));
+        assert!(escape.live.iter().all(|(_, _, m)| matches!(m, '*' | '#')));
     }
 
     #[test]

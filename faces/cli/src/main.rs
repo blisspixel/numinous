@@ -3763,18 +3763,32 @@ fn scrub_touch_fragments(status: &str) -> String {
 /// The Action line, translated for a keyboard face: the lever keeps its
 /// name, and the hand becomes the flag that actually moves it here.
 fn terminal_action_line(room: &dyn Room) -> String {
+    let (lever, hint) = terminal_action_parts(room);
+    format!("{lever}{hint}")
+}
+
+// Live play keeps the lever first and can place the measurement before the
+// parenthesized command. Other terminal surfaces keep the whole action together.
+fn terminal_action_parts(room: &dyn Room) -> (&'static str, String) {
     if room.meta().id == "times-tables" {
-        return "TURN THE DIAL (phase here: numinous render times-tables --t 0.375; --poke x,y is a second hand)".to_string();
+        return (
+            "TURN THE DIAL",
+            " (phase here: numinous render times-tables --t 0.375; --poke x,y is a second hand)"
+                .to_string(),
+        );
     }
     match room.verb() {
         Some(verb) => {
             let lever = verb.split_once(':').map_or(verb, |(_, lever)| lever.trim());
-            format!(
-                "{lever} (the hand here: numinous render {} --poke x,y)",
-                room.meta().id
+            (
+                lever,
+                format!(
+                    " (the hand here: numinous render {} --poke x,y)",
+                    room.meta().id
+                ),
             )
         }
-        None => numinous_core::room_action(room).to_string(),
+        None => (numinous_core::room_action(room), String::new()),
     }
 }
 
@@ -5193,11 +5207,11 @@ fn play_frame(room: &dyn Room, t: f64, width: usize, height: usize) -> String {
         .status(t)
         .map(|readout| format!("   {}", scrub_touch_fragments(&readout)))
         .unwrap_or_default();
+    let (lever, hint) = terminal_action_parts(room);
     format!(
-        "{}\n[{}]  {}   t = {t:.2}{status}   (Ctrl+C to stop)\n",
+        "{}\n[{}]  {lever}   t = {t:.2}{status}{hint}   (Ctrl+C to stop)\n",
         play_picture(room, t, width, height),
-        room.meta().title,
-        terminal_action_line(room)
+        room.meta().title
     )
 }
 

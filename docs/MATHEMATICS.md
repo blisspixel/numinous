@@ -580,6 +580,34 @@ and dial offset measured zero complete regional general or red flashes in
 each era at 1x, 2x, 4x and 8x. The default variation gave the same result
 at 480 by 280. The measurement excludes hand input and final App composition. [Regional measurement](#regional-flashing-in-automatic-tours)
 
+## Tinkerbell map
+
+The faint dots plot the classic Tinkerbell orbit starting at
+`(x, y) = (-0.72, -0.64)`. Its reference settings are `a = 0.9` and `c = 2`.
+The stars use the same starting point and fixed axes, with the player's
+selected values of `a` and `c`. The first five jumps are connected so the eye
+can follow an orbit that leaves after only a few steps. [Ouannas et al., figure 1(a)](https://www.mdpi.com/2076-3417/8/12/2640)
+
+```text
+x' = x^2 - y^2 + a x - 0.6013 y
+y' = 2 x y + c x + 0.5 y
+```
+
+The two quadratic terms together are the complex square of `z = x + i y`.
+The remaining terms form a real linear map whose Frobenius norm is below
+three throughout the dial range. At radius `r > 4`, the next radius is at
+least `r^2 - 3r`. Each later radius grows by at least the same factor
+`r - 3 > 1`, so crossing four certifies escape. The status records the first
+such step of the computed orbit, even if earlier steps have already left
+the camera. Rounding can change how long a chaotic orbit takes to get there.
+
+The reference uses 2,048 iterations. When the selected orbit stays inside
+the escape radius for 512 steps, the readout gives the geometric mean of its
+sampled horizontal and vertical spans. Eventual boundedness remains open for
+that sample. At the default seed, phase 0.45 gives span 1.69 and phase 0.90
+escapes at step 27. The former renderer showed the same ellipse for distinct
+escaping orbits. The bright drawing now follows the recurrence at both settings.
+
 ## Elliptical billiards
 
 Elliptical Billiard and Whispering Table trace specular reflections on
