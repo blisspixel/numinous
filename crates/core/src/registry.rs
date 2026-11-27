@@ -99,11 +99,11 @@ pub fn room_by_id_with(id: &str, variation: u64) -> Option<Box<dyn Room>> {
     rooms::construct_by_id(id, variation)
 }
 
-/// Rooms measured over the WCAG 2.3.1 flash budget at the App's worst case,
-/// each with the slowest App time scale at which it goes over.
+/// Rooms measured over the general flash budget in the whole-frame tour sweep,
+/// each with the slowest sampled App time scale at which it goes over.
 ///
 /// The sweep measures every room at the App's frame rate and at every speed
-/// from normal up to [`crate::MAX_TIME_SCALE`]. A room listed here at `8.0`
+/// on its doubling ladder up to [`crate::MAX_TIME_SCALE`]. A room listed here at `8.0`
 /// stays inside the budget at normal speed and every doubling below eight.
 ///
 /// This list is a record of a real defect, not a permission slip. It exists
@@ -118,14 +118,14 @@ pub fn room_by_id_with(id: &str, variation: u64) -> Option<Box<dyn Room>> {
 /// `cellular-automata` climbs once per cycle from its dimmest notable rule
 /// to its brightest. `julia` walks `c` out along the real axis. `lambda-map`
 /// walks one way along a horizontal segment. Each still changes, and the
-/// sweep certifies all three through 8x with the visualizer included: every
+/// sweep measures all three through 8x with the visualizer included: every
 /// cellular rotation, every pair of Lambda's dealt shifts, and Julia at the
 /// catalog seed and at its largest dealt offset. The list is empty until a room is
 /// measured over the budget again.
 ///
 /// An entry names the room, Era, and slowest speed that goes over. [`flash_budget_scale`] is
-/// then the doubling below that speed. A room that is not listed is
-/// certified through [`crate::MAX_TIME_SCALE`].
+/// then the doubling below that speed. An unlisted room keeps the full speed ladder.
+/// [`KNOWN_OVER_FLASH_AREA`] records the separate regional screen.
 pub const KNOWN_OVER_FLASH_BUDGET: [(&str, crate::Era, f64); 0] = [];
 
 /// The fastest App time scale the photosensitivity sweep has certified.
@@ -1002,7 +1002,7 @@ mod tests {
         red_over: Option<(f64, f64)>,
         /// The widest luminance swing across the cycle.
         swing: f64,
-        /// The reddest frame's `R / (R + G + B)`.
+        /// The reddest frame's `R / (R + G + B)` in mean linear-light RGB.
         reddest: f64,
     }
 
@@ -1399,11 +1399,10 @@ mod tests {
         //
         // Each saved Era transforms its own copy of the room raster. The HUD,
         // hand and beat pokes, and the App's GPU post stack are separate paths.
-        // Measured at a declared reference size. Mean whole-frame luminance is
-        // a proxy: this does not implement the flashing-area rule, and at very
-        // small rasters a dense plot saturates the frame and reads as brighter
-        // than it would on screen. Smaller sizes therefore report more
-        // violations than this, which is recorded rather than hidden.
+        // This reference raster supplies whole-frame luminance and linear-light
+        // mean colors. A local strobe can disappear in either mean. The regional
+        // sweep checks smaller windows at the same raster size. The area of
+        // simultaneously flashing pixels on a player's display is unmeasured.
         let speeds: Vec<usize> = std::iter::successors(Some(1usize), |speed| Some(speed * 2))
             .take_while(|&speed| speed as f64 <= crate::MAX_TIME_SCALE)
             .collect();

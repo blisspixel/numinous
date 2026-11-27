@@ -17,6 +17,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   board code between the App, CLI and MCP.
 
 ### Fixed
+- The automatic-tour flash check now measures red saturation in linear light,
+  pairs opposing changes in color and brightness, and includes the sample at
+  each end of a one-second window. The room lookup uses the revised measurements.
 - Generated radio recordings keep existing tracks when numbering has gaps or
   two writers finish together. Erasure preserves lookalike recording names.
 - Confirmed erasure recognizes the exact native filenames used for temporary
