@@ -17,6 +17,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   board code between the App, CLI and MCP.
 
 ### Fixed
+- Chua Circuit now follows one voltage trace as the dial rises. Dragging
+  holds the dial and measures that same trace on fixed axes. The automatic
+  tour leaves the regional red warning list.
 - The dependency lock now uses the patched rustix 1.1.6 for extended-attribute
   reads on Unix. [RustSec advisory](https://rustsec.org/advisories/RUSTSEC-2026-0486)
 - The automatic-tour flash check now measures red saturation in linear light,

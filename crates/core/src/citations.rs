@@ -110,7 +110,10 @@ pub fn for_room(id: &str) -> &'static str {
              doi:10.1086/109234 (Hamiltonian galactic model)."
         }
         "rossler" => "See also: Rossler attractor; continuous chaos beyond Lorenz.",
-        "chua" => "See also: Chua's circuit; electronic chaos realization papers.",
+        "chua" => {
+            "See also: Fortuna, Frasca and Rizzo, Experimental pulse synchronisation of two \
+             chaotic circuits (2003), equation 3 and figure 5. doi:10.1016/S0960-0779(02)00374-0."
+        }
         "sierpinski-tri" | "sierpinski-carpet" | "sierpinski-arrowhead" => {
             "See also: Sierpinski gasket; Falconer, Fractal Geometry."
         }

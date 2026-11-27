@@ -72,7 +72,7 @@
     {"id": "chebyshev", "marks": "#*.", "closestPair": "#*", "normal": 41.5, "folded": 34.3, "dichromacy": "deuteranopia", "colorAlone": []},
     {"id": "chladni", "marks": "#.", "closestPair": "#.", "normal": 79.4, "folded": 74.7, "dichromacy": "tritanopia", "colorAlone": []},
     {"id": "chord-game", "marks": "*+.", "closestPair": "+.", "normal": 19.1, "folded": 18.5, "dichromacy": "protanopia", "colorAlone": []},
-    {"id": "chua", "marks": "#*", "closestPair": "#*", "normal": 19.4, "folded": 18.9, "dichromacy": "deuteranopia", "colorAlone": []},
+    {"id": "chua", "marks": "*+", "closestPair": "*+", "normal": 27.9, "folded": 16.2, "dichromacy": "protanopia", "colorAlone": []},
     {"id": "circle-map", "marks": "#*+.@", "closestPair": "*@", "normal": 65.9, "folded": 2.1, "dichromacy": "tritanopia", "colorAlone": ["*@"]},
     {"id": "circular-caustic", "marks": "#*+.", "closestPair": "+.", "normal": 23.6, "folded": 22.9, "dichromacy": "protanopia", "colorAlone": []},
     {"id": "cissoid", "marks": "#*.", "closestPair": "#*", "normal": 42.6, "folded": 34.7, "dichromacy": "tritanopia", "colorAlone": []},
