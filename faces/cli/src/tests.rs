@@ -2460,8 +2460,9 @@ fn contact_sheet_keeps_the_last_catalog_row_inside_the_image() {
 fn play_frame_shows_the_room() {
     let room = numinous_core::room_by_id("times-tables").expect("room");
     let frame = super::play_frame(room.as_ref(), 0.0, 30, 15);
-    assert!(frame.contains("Times Tables"));
-    assert!(frame.contains(&super::terminal_action_line(room.as_ref())));
+    let footer = frame.lines().last().unwrap();
+    assert!(footer.starts_with("[Times Tables]  TURN THE DIAL   t = 0.00"));
+    assert!(footer.contains("numinous render times-tables --t 0.375; --poke x,y is a second hand"));
     assert!(frame.contains('*'));
 }
 
@@ -2935,7 +2936,18 @@ fn play_frames_always_lead_with_the_verb() {
     // generic fallback.
     let room = numinous_core::room_by_id("slope-rider").expect("room");
     let frame = super::play_frame(room.as_ref(), 0.0, 30, 15);
-    assert!(frame.contains(&super::terminal_action_line(room.as_ref())));
+    let footer = frame.lines().last().unwrap();
+    let readout = super::scrub_touch_fragments(&room.status(0.0).unwrap());
+    let visible = footer.chars().take(80).collect::<String>();
+    assert!(
+        visible.starts_with("[Slope Rider]  DROP A RIDER"),
+        "{visible}"
+    );
+    assert!(
+        visible.contains(&format!("t = 0.00   {readout}")),
+        "{visible}"
+    );
+    assert!(footer.contains("numinous render slope-rider --poke x,y"));
     assert!(!frame.contains(numinous_core::DEFAULT_ROOM_ACTION));
 }
 

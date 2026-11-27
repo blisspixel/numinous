@@ -130,9 +130,6 @@ pub const KNOWN_OVER_FLASH_AREA: &[(&str, Era, [u8; 4], [u8; 4])] = &[
     ("thomas", Era::Vector, [6, 6, 7, 6], [0, 0, 0, 0]),
     ("thomas", Era::Modern, [6, 6, 7, 6], [0, 0, 0, 0]),
     ("times-tables", Era::Vector, [0, 0, 0, 6], [0, 0, 0, 0]),
-    ("tinkerbell", Era::EightBit, [0, 4, 6, 8], [0, 0, 0, 0]),
-    ("tinkerbell", Era::Vector, [0, 4, 6, 8], [0, 0, 4, 6]),
-    ("tinkerbell", Era::Modern, [0, 4, 6, 8], [0, 0, 0, 0]),
     (
         "whispering-table",
         Era::Phosphor,

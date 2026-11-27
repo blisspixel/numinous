@@ -109,6 +109,10 @@ pub fn for_room(id: &str) -> &'static str {
             "See also: Henon and Heiles (1964), Astronomical Journal 69:73, \
              doi:10.1086/109234 (Hamiltonian galactic model)."
         }
+        "tinkerbell" => {
+            "See also: Ouannas et al., The Fractional Form of the Tinkerbell Map Is Chaotic (2018), \
+             figure 1(a) shows the ordinary map at the reference setting. doi:10.3390/app8122640."
+        }
         "rossler" => "See also: Rossler attractor; continuous chaos beyond Lorenz.",
         "chua" => {
             "See also: Fortuna, Frasca and Rizzo, Experimental pulse synchronisation of two \

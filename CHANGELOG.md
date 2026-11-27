@@ -17,6 +17,11 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   board code between the App, CLI and MCP.
 
 ### Fixed
+- Tinkerbell Map draws the selected orbit against the classic dotted butterfly.
+  When the orbit escapes, the room keeps its real steps and reports when
+  escape became certain. Its automatic tour leaves the regional warning list.
+  Compact App readouts bring the escape step into view, and live terminal
+  play shows each room's measurement before its longer input example.
 - Chua Circuit now follows one voltage trace as the dial rises. Dragging
   holds the dial and measures that same trace on fixed axes. The automatic
   tour leaves the regional red warning list.

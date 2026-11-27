@@ -259,10 +259,20 @@ covers controls, request actions, and portable route/project examples; the
 [packaged reference](plugins/numinous/skills/play-numinous/SKILL.md#route-lab)
 also carries the MCP workflow offline.
 
+### Follow an orbit
+
 To explore Chua's circuit, try `numinous render chua --t 0.55`, or open
 Chua Circuit in the App. Watch the bright tip extend a two-scroll voltage
 trace. Drag horizontally to hold the dial, then look at how often the trace
 crosses the center. A high setting can take it outside the scope.
+
+In Tinkerbell Map, the faint dots show the classic butterfly. The stars show
+what happens when you start at the same point and change the two dials.
+Try `numinous render tinkerbell --t 0.45` and again at `--t 0.9`. At the
+second setting the stars leave the butterfly and the room reports the step
+where their escape becomes certain. In the App, drag to find another exit.
+A spatial touch challenge grades changed cells in the room drawing. To replay
+an older touch score exactly, use the same build and frame size.
 
 ## Motion, sound, and flashing
 
