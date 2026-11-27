@@ -274,6 +274,11 @@ where their escape becomes certain. In the App, drag to find another exit.
 A spatial touch challenge grades changed cells in the room drawing. To replay
 an older touch score exactly, use the same build and frame size.
 
+In Figure Eight Knot, find the break at a crossing. Drag sideways and
+follow the bead on that strand. It disappears behind the bridge, then
+comes out the other side. Follow a complete lap and see whether it goes
+over or under the next time it reaches the same crossing.
+
 ## Motion, sound, and flashing
 
 **Flashing.** To check a room before opening it, run
@@ -283,8 +288,8 @@ region even though the whole-image average stayed within budget. The check
 samples brightness and color in overlapping 80 by 47 rectangles on a 240 by
 140 image, in every visual era at 1x, 2x, 4x and 8x. A back-and-forth
 change involving red can register even when brightness barely changes.
-For example, `numinous access --room figure-eight-knot` shows a regional
-red warning in Vector at normal speed.
+For example, Interference reached five regional brightness flashes in one
+second in Modern at 4x. The room lookup lists the measured settings.
 Smaller patches can average away. Hand and beat input and the final App
 display remain unmeasured.
 `numinous access` also shows your active switches.

@@ -17,6 +17,10 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   board code between the App, CLI and MCP.
 
 ### Fixed
+- Figure Eight Knot shows which strand goes underneath at each crossing.
+  Drag to watch a bead disappear and emerge. Revised warm inks in Collatz,
+  Collatz Tree, Sierpinski Arrowhead, Slingshot and Slope Rider clear the
+  remaining regional red warnings in the measured automatic tours.
 - Tinkerbell Map draws the selected orbit against the classic dotted butterfly.
   When the orbit escapes, the room keeps its real steps and reports when
   escape became certain. Its automatic tour leaves the regional warning list.
