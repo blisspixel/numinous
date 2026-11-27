@@ -608,6 +608,26 @@ that sample. At the default seed, phase 0.45 gives span 1.69 and phase 0.90
 escapes at step 27. The former renderer showed the same ellipse for distinct
 escaping orbits. The bright drawing now follows the recurrence at both settings.
 
+## Figure Eight Knot
+
+The diagram looks down on a single closed curve. For a parameter `t` around
+one turn, its cylindrical coordinates are
+
+```text
+r = 2 + cos(2t)
+angle = 3t + rotation
+z = sin(4t)
+```
+
+Two distinct visits to the same point on the page require equal radii and
+equal angles modulo a turn. At each of the four crossings, the two heights
+are opposite. The lower visits occur at `pi/3 + k pi/2` for `k = 0, 1, 2, 3`,
+where `z = -sqrt(3)/2`. A short gap breaks only the lower strand. A bead
+following the curve disappears in that gap. Drag sideways to change its
+position, and look for the same crossing again when the bead is in front.
+Four is the minimum crossing number of the figure-eight knot. Rotating this
+particular diagram in the plane preserves all four visible crossings. [Knot Atlas, 4_1](https://katlas.org/wiki/4_1)
+
 ## Elliptical billiards
 
 Elliptical Billiard and Whispering Table trace specular reflections on
@@ -1121,6 +1141,20 @@ In Chua's Vector era at 1x, the regional red peak was 17, while its general
 peak was zero. That result flags color changes for inspection even when the
 average brightness is steady.
 [Regional room follow-up](https://github.com/blisspixel/numinous/issues/487)
+
+In the follow-up, the highest 8x red-peak regions for Collatz, Collatz
+Tree, Sierpinski Arrowhead, Slingshot and Slope Rider each went completely
+black during part of the tour. Among their nonblack states, no pair reached
+the screen's chromaticity-distance threshold. A warm accent landing in a
+small, previously empty rectangle was enough to register a color transition.
+Changing the five room accents kept the same geometry and timing. The
+figure-eight diagram kept its copper ink and redrew the crossings instead.
+
+Across the default catalog, all regional red peaks were within three after
+these room changes. Regional brightness peaks still exceeded three in some
+tours. The offline lookup lists those rooms, eras and speeds. The bounds of
+the measurement, including its treatment of black, remain the same.
+[Room-by-room investigation](https://github.com/blisspixel/numinous/issues/487)
 
 To reproduce the comparison, run the following at each revision and keep
 the resulting `.agent/qol/regional-flash.csv` from each checkout. Match rows

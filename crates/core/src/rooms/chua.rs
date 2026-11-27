@@ -2,7 +2,8 @@
 //!
 //! DRAG: TUNE ALPHA. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
+use super::{latest_hand, phase_unit};
+use crate::room::{Room, RoomInput};
 use crate::surface::Surface;
 
 const DT: f64 = 0.02;
@@ -14,23 +15,6 @@ const ALPHA_SWEEP: f64 = 2.5;
 // Fixed voltage scales for the oscilloscope. A tuned orbit can leave the view.
 const X_LIMIT: f64 = 3.0;
 const Y_LIMIT: f64 = 0.8;
-
-fn phase_unit(t: f64) -> f64 {
-    if t.is_finite() {
-        t.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
-}
-
-fn last_dial(pokes: &[(f64, f64)]) -> Option<f64> {
-    pokes
-        .iter()
-        .rev()
-        .take(MAX_ROOM_POKES)
-        .find(|(x, y)| x.is_finite() && y.is_finite())
-        .map(|(x, _)| x.clamp(0.0, 1.0))
-}
 
 // The total x characteristic is x plus the piecewise-linear diode current.
 // Its inner and outer slopes are -1/7 and 2/7, with bends at x = +/-1.
@@ -182,11 +166,11 @@ impl Room for Chua {
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
-        self.draw(canvas, t, last_dial(pokes));
+        self.draw(canvas, t, latest_hand(pokes).map(|(x, _)| x));
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let Some(x) = last_dial(&crate::pokes_from_inputs(inputs)) else {
+        let Some((x, _)) = latest_hand(&crate::pokes_from_inputs(inputs)) else {
             return self.status(t);
         };
         let a = self.held_alpha(x);

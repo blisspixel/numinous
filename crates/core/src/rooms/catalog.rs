@@ -170,7 +170,7 @@ macro_rules! catalog_rooms {
                 blurb: "Pull and release to launch a probe past suns. Gravity assists are discovered, \
                         not taught; missed shots become comets, never failures. t advances the mission \
                         clock; HOLD grows a sun under the hand.",
-                accent: [213, 156, 33],
+                accent: [213, 148, 52],
             }
         ),
         (
@@ -1040,7 +1040,7 @@ macro_rules! catalog_rooms {
                 wing: "Emergence",
                 blurb: "Halve it if even, triple it and add one if odd, and repeat. Every tested \
                         start reaches 1, but nobody has proved that all do. t picks the number.",
-                accent: [220, 130, 50],
+                accent: [209, 135, 84],
             }
         ),
         (
@@ -1211,7 +1211,7 @@ macro_rules! catalog_rooms {
                 wing: "Change",
                 blurb: "Ride the tangent line along a curve. The board's tilt is the slope, and the \
                         tilt traces its own curve below as you go: the derivative, drawing itself.",
-                accent: [215, 155, 31],
+                accent: [210, 155, 39],
             }
         ),
         (
@@ -1582,7 +1582,7 @@ macro_rules! catalog_rooms {
                 title: "Sierpinski Arrowhead",
                 wing: "Fractals",
                 blurb: "A continuous path whose limit is the Sierpinski gasket.",
-                accent: [200, 80, 40],
+                accent: [197, 74, 97],
             }
         ),
         (
@@ -2044,7 +2044,7 @@ macro_rules! catalog_rooms {
                 title: "Collatz Tree",
                 wing: "Number & Pattern",
                 blurb: "Inverse hailstone branches from a root.",
-                accent: [180, 80, 40],
+                accent: [162, 91, 72],
             }
         ),
         (
@@ -4272,8 +4272,9 @@ mod tests {
     // doorway invites the temperature hand and a placed key. Strange Loop's
     // doorway invites the zoom into the frame. Julia's doorway says t walks
     // c out along the real axis. Elliptical Billiard invites a curve drawn
-    // by bouncing straight shots. Order is unchanged.
-    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x11aa_29af_2d33_1c20;
+    // by bouncing straight shots. The regional flash review adjusts only the
+    // five warm room accents. The order and all doorway text stay the same.
+    const REVIEWED_ORDERED_METADATA_CHECKSUM: u64 = 0x3814_34a6_d87b_8e87;
 
     fn extend_checksum(mut checksum: u64, bytes: &[u8]) -> u64 {
         for byte in (bytes.len() as u64).to_le_bytes().iter().chain(bytes) {
