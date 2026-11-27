@@ -259,6 +259,11 @@ covers controls, request actions, and portable route/project examples; the
 [packaged reference](plugins/numinous/skills/play-numinous/SKILL.md#route-lab)
 also carries the MCP workflow offline.
 
+To explore Chua's circuit, try `numinous render chua --t 0.55`, or open
+Chua Circuit in the App. Watch the bright tip extend a two-scroll voltage
+trace. Drag horizontally to hold the dial, then look at how often the trace
+crosses the center. A high setting can take it outside the scope.
+
 ## Motion, sound, and flashing
 
 **Flashing.** To check a room before opening it, run
@@ -268,7 +273,8 @@ region even though the whole-image average stayed within budget. The check
 samples brightness and color in overlapping 80 by 47 rectangles on a 240 by
 140 image, in every visual era at 1x, 2x, 4x and 8x. A back-and-forth
 change involving red can register even when brightness barely changes.
-Chua in Vector has a regional red warning even at normal speed.
+For example, `numinous access --room figure-eight-knot` shows a regional
+red warning in Vector at normal speed.
 Smaller patches can average away. Hand and beat input and the final App
 display remain unmeasured.
 `numinous access` also shows your active switches.

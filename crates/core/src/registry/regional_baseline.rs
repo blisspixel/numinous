@@ -15,7 +15,6 @@ pub const KNOWN_OVER_FLASH_AREA: &[(&str, Era, [u8; 4], [u8; 4])] = &[
     ("chladni", Era::EightBit, [0, 0, 4, 8], [0, 0, 0, 0]),
     ("chladni", Era::Vector, [0, 0, 4, 8], [0, 0, 0, 0]),
     ("chladni", Era::Modern, [0, 0, 4, 8], [0, 0, 0, 0]),
-    ("chua", Era::Vector, [0, 0, 0, 0], [17, 15, 12, 14]),
     ("clifford", Era::Phosphor, [0, 0, 5, 8], [0, 0, 0, 0]),
     ("clifford", Era::EightBit, [0, 0, 5, 9], [0, 0, 0, 0]),
     ("clifford", Era::Vector, [0, 0, 5, 9], [0, 0, 0, 0]),

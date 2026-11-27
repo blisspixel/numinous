@@ -541,6 +541,45 @@ common absolute magnification across separate creations, certify a continuous
 curve from finite samples, or make the audio map invertible. Ordinary
 `y=f(x)` graph autoscaling remains a separate presentation contract.
 
+## Chua's circuit
+
+The two coordinates on the scope are dimensionless capacitor voltages
+`x` and `y`. The inductor current `z` drives the motion in and out of the
+plane. In the notation of Fortuna, Frasca and Rizzo, the circuit obeys
+
+```text
+dx/dt = alpha (y - h(x))
+dy/dt = x - y + z
+dz/dt = -14.286 y
+h(x)  = (2x - 3 clamp(x, -1, 1)) / 7
+```
+
+The characteristic bends at both diode breakpoints. Its inner slope is
+`-1/7` and its outer slope is `2/7`. The default dial begins at `alpha = 9`,
+the paper's double-scroll setting. [Fortuna, Frasca and Rizzo, equation 3 and figure 5](https://people.eecs.berkeley.edu/~chua/papers/Fortuna03.pdf)
+
+After four units of warm-up, the dim trace follows one orbit for 48 time
+units at the initial dial setting. The bright trace continues from that
+last state. Over eight more time units it raises alpha by 2.5. Thus the
+growing segment shows a circuit whose dial is moving. A horizontal drag
+holds a single setting for the trace. The touched readout reports the span
+of the visible x samples and counts changes of sign between successive x
+samples. Both use the same path as the drawing.
+
+The integrator uses fourth-order Runge-Kutta with a step of 0.02 and a
+partial final step when needed. The viewport stays at `|x| <= 3` and
+`|y| <= 0.8`. At the first sample outside that window the trace stops.
+Leaving this finite voltage window alone cannot establish divergence.
+
+In the November 26 reference tour, every phase started another orbit and
+refitted the axes. In Vector at 1x, the top-left 80 by 47 window went from
+1,327 lit pixels at frame 91 to black at frame 92. Its one-second peak was
+17 red flashes. On the revised tour that window retained visible ink at
+every frame. At 240 by 140, every distinct pair of dealt starting voltage
+and dial offset measured zero complete regional general or red flashes in
+each era at 1x, 2x, 4x and 8x. The default variation gave the same result
+at 480 by 280. The measurement excludes hand input and final App composition. [Regional measurement](#regional-flashing-in-automatic-tours)
+
 ## Elliptical billiards
 
 Elliptical Billiard and Whispering Table trace specular reflections on
