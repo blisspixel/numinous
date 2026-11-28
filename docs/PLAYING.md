@@ -550,8 +550,12 @@ Before entering a room, run `numinous access --room <id>` to see which visual
 eras and speeds crossed that threshold. The regional measurement averages light
 and color in overlapping 80 by 47 rectangles. A red warning can come from
 a change in color even when the brightness swing is small. Smaller patches
-can average away. Input-driven changes and the final App display remain unmeasured.
-[Measurement and limits](MATHEMATICS.md#regional-flashing-in-automatic-tours)
+can average away. A separate section of the lookup gives the peak across the
+sampled speeds and eras for a repeated drag, rapid beats and a 240 BPM pulse.
+Beat warnings describe how the core room responds to a trail of musical
+points. In the App, GPU Julia follows that trail. CPU rooms read the player's
+own input. Reduced motion leaves the music playing and stops it planting points.
+[Measurements and limits](MATHEMATICS.md#scripted-input-and-flashing)
 
 The App's optional study surface preserves Unicode case and mathematical
 notation with bundled fonts, wrapping, and scrolling. Lissajous has English

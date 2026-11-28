@@ -112,6 +112,34 @@ fn public_access_looks_up_a_room_without_opening_it() {
     }) {
         assert!(report(room.id).contains("No sampled region exceeded"));
     }
+    if let Some(&(room, general, red)) = numinous_core::KNOWN_OVER_INTERACTION_FLASHES.first() {
+        let result = report(room);
+        assert!(result.contains("Scripted room responses"));
+        for ((schedule, general), red) in [
+            "Side-to-side drag",
+            "Rapid beat requests",
+            "240 BPM beat requests",
+        ]
+        .into_iter()
+        .zip(general)
+        .zip(red)
+        {
+            for (kind, peak) in [("general", general), ("red", red)] {
+                if peak > 0 {
+                    assert!(result.contains(&format!("{schedule}: {peak} {kind}")));
+                }
+            }
+        }
+    }
+    let quiet = numinous_core::ROOM_CATALOG
+        .iter()
+        .find(|room| {
+            !numinous_core::KNOWN_OVER_INTERACTION_FLASHES
+                .iter()
+                .any(|row| row.0 == room.id)
+        })
+        .unwrap();
+    assert!(report(quiet.id).contains("No scripted input sample exceeded"));
     assert_eq!(report("kepler-areas"), report("kepler-laws"));
     let unknown = fixture.run(&["access", "--room", "interferenc"]);
     assert!(!unknown.status.success());

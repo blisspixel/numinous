@@ -419,13 +419,13 @@ mod tests {
         assert!(app.overture.as_ref().is_some_and(|play| play.lead_in));
         let before = app.journey.visited.clone();
         app.time_scale = 8.0;
+        app.pending_visualizer_nudge = numinous_core::max_visualizer_phase_nudge();
         app.advance_room_tick(10.0, 10.0, false);
         let moment = OVERTURE.moment_at(10_000);
         assert_eq!(at_ms(&app), 10_000);
         assert_eq!(app.rooms[app.current].meta().id, moment.room_id.unwrap());
         assert_eq!(app.t, moment.phase);
-        assert_eq!(app.phase_tick_elapsed, 0.0);
-        assert_eq!(app.phase_spent, 0.0);
+        assert_eq!(app.pending_visualizer_nudge, 0.0);
         assert_eq!(app.journey.visited, before);
         assert!(!app.route_lab_after_overture);
     }

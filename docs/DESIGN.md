@@ -248,11 +248,12 @@ rooms, a math screensaver that listens. Nothing asks anything of you.
 - **Screensaver manners.** No reveals, doorway text, prompts, scores, or
   Journey progress. A track's title may surface briefly when it changes and
   then fade. The session can run for hours without accumulating anything.
-- **Safe by construction.** Music-driven motion stays inside the envelope the
-  photosensitivity sweep certifies, and the beat-driven speed-ups the sweep
-  does not yet measure are measured before Vibe ships. Rooms with a known
-  fast-speed flash limit are capped or left out. Reduced motion holds stills
-  that change only on track boundaries.
+- **Check the picture before a room joins the station.** Scripted tests measure
+  each room under rapid and musical beats, and the App spaces new beat points.
+  A Vibe station still needs measurements of its actual rooms, effects and
+  track changes together. Cap or leave out combinations that exceed the
+  budget. Reduced motion holds stills that change only on track boundaries.
+  [Scripted input and flashing](MATHEMATICS.md#scripted-input-and-flashing)
 - **The hand is always welcome.** Any touch takes the current room into Play
   without stopping the music; Esc returns to the Cabinet.
 

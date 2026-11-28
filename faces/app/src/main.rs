@@ -321,17 +321,11 @@ fn ambient_tick_seconds(elapsed: f64, motion: numinous_core::Motion) -> f64 {
     if motion.animates() { elapsed } else { 0.0 }
 }
 
-fn advance_gallery_phase(
-    phase: f64,
-    elapsed: f64,
-    time_scale: f64,
-    rate: f64,
-    first_contact_obscured: bool,
-) -> (f64, bool) {
+fn advance_gallery_phase(phase: f64, step: f64, first_contact_obscured: bool) -> (f64, bool) {
     if first_contact_obscured {
         return (phase, false);
     }
-    let next = phase + rate * elapsed * time_scale;
+    let next = phase + step;
     if next >= 1.0 {
         (next.rem_euclid(1.0), true)
     } else {
@@ -386,12 +380,12 @@ struct App {
     loopback: Option<numinous_audio::InputCapture>,
     /// Previous frame bands for onset / lever mapping.
     spectrum_prev: [f32; numinous_core::BAND_COUNT],
+    /// Monotonic presentation time of the latest accepted music-driven poke.
+    last_spectrum_poke: Option<Instant>,
     /// Multiplier from live spectrum bass (1.0 when drive is off).
     visualizer_scale: f64,
-    /// Ambient seconds the last tick was allowed to move the phase.
-    phase_tick_elapsed: f64,
-    /// Phase that tick already consumed, before the visualizer nudge.
-    phase_spent: f64,
+    /// Strongest nudge since the last room tick, consumed once by the next.
+    pending_visualizer_nudge: f64,
     mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera,
     life_session: numinous_core::rooms::game_of_life::LifeSession,
     life_accumulator: f64,
@@ -714,9 +708,9 @@ impl App {
             visualizer_source: numinous_audio::VisualizerSource::RoomBed,
             loopback: None,
             spectrum_prev: [0.0; numinous_core::BAND_COUNT],
+            last_spectrum_poke: None,
             visualizer_scale: 1.0,
-            phase_tick_elapsed: 0.0,
-            phase_spent: 0.0,
+            pending_visualizer_nudge: 0.0,
             mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
             life_session: numinous_core::rooms::game_of_life::LifeSession::new(0),
             life_accumulator: 0.0,
@@ -1094,6 +1088,7 @@ impl App {
         if self.overture.is_some() {
             self.release_overture();
         }
+        self.pending_visualizer_nudge = 0.0;
         self.the_show = !self.the_show;
         if self.the_show {
             self.close_menu();
@@ -1126,6 +1121,7 @@ impl App {
     fn toggle_pause(&mut self) {
         self.paused = !self.paused;
         if self.paused {
+            self.pending_visualizer_nudge = 0.0;
             self.clear_pointer_state();
         }
     }
@@ -1640,6 +1636,7 @@ impl App {
 
     fn suspend_presentation_clock(&mut self, now: Instant) {
         self.window_active = false;
+        self.pending_visualizer_nudge = 0.0;
         self.inactive_since.get_or_insert(now);
     }
 
@@ -2099,18 +2096,13 @@ impl App {
     /// Advance the live room after input, holding every reading-owned tick.
     fn advance_room_tick(&mut self, elapsed: f64, presentation_elapsed: f64, study_captured: bool) {
         self.advance_presentation_time(presentation_elapsed);
+        let pending_nudge = std::mem::take(&mut self.pending_visualizer_nudge);
         if study_captured || self.study.is_some() {
-            self.phase_tick_elapsed = 0.0;
-            self.phase_spent = 0.0;
             return;
         }
         self.refresh_pointer_state();
-        self.phase_tick_elapsed = 0.0;
-        self.phase_spent = 0.0;
         if self.overture.is_some() {
             self.advance_overture(presentation_elapsed);
-            self.phase_tick_elapsed = 0.0;
-            self.phase_spent = 0.0;
             return;
         }
         let first_contact_obscured = self.banner.is_some() && self.room_card > 0;
@@ -2151,22 +2143,14 @@ impl App {
                 T_RATE
             };
             let requested = rate * ambient * motion;
-            let step = numinous_core::allowed_phase_step(room_id, ambient, requested);
-            let applied = if rate * ambient > 0.0 {
-                step / (rate * ambient)
-            } else {
+            let nudge = if self.muted || self.modal_mode_active() {
                 0.0
-            };
-            let (next_phase, wrapped) =
-                advance_gallery_phase(self.t, ambient, applied, rate, first_contact_obscured);
-            self.t = next_phase;
-            if first_contact_obscured {
-                self.phase_tick_elapsed = 0.0;
-                self.phase_spent = 0.0;
             } else {
-                self.phase_tick_elapsed = ambient;
-                self.phase_spent = step;
-            }
+                pending_nudge
+            };
+            let step = numinous_core::visualizer_phase_step(room_id, ambient, requested, nudge);
+            let (next_phase, wrapped) = advance_gallery_phase(self.t, step, first_contact_obscured);
+            self.t = next_phase;
             if wrapped {
                 // In The Show, a finished sweep drifts into the next room.
                 if show_active {
@@ -2264,6 +2248,16 @@ impl App {
             self.present_raster(raster, width, height);
             return;
         }
+        let raster = self.cpu_room_frame(width, height, &room_inputs);
+        self.present_raster(raster, width, height);
+    }
+
+    fn cpu_room_frame(
+        &mut self,
+        width: usize,
+        height: usize,
+        room_inputs: &[numinous_core::RoomInput],
+    ) -> Raster {
         let room = &self.rooms[self.current];
         let mut raster = if self.studio {
             let mut raster = Raster::with_accent(width, height, [120, 220, 190]);
@@ -2278,7 +2272,7 @@ impl App {
             let started = std::time::Instant::now();
             let mut raster = Raster::with_accent(rw, rh, room.meta().accent);
             if self.overture.is_some() {
-                room.render_input(&mut raster, self.t, &room_inputs);
+                room.render_input(&mut raster, self.t, room_inputs);
             } else if room.meta().id == "mandelbrot" {
                 self.mandelbrot_camera.render(&mut raster);
             } else if room.meta().id == "game-of-life" {
@@ -2286,14 +2280,14 @@ impl App {
             } else if !self.draw_chosen_experiment(&mut raster) {
                 let phase =
                     effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
-                room.render_input(&mut raster, phase, &room_inputs);
+                room.render_input(&mut raster, phase, room_inputs);
                 if !self.the_show
                     && let Some(posed) = &self.room_wager
                 {
                     posed.draw(&mut raster);
                 }
             }
-            input_feedback::draw(&mut raster, &room_inputs);
+            input_feedback::draw(&mut raster, room_inputs);
             self.live_scale
                 .observe(started.elapsed().as_secs_f64() * 1000.0);
             if factor > 1 {
@@ -2303,8 +2297,8 @@ impl App {
             }
         };
 
-        self.draw_room_interface(&mut raster, room.as_ref(), &room_inputs, width, height);
-        self.present_raster(raster, width, height);
+        self.draw_room_interface(&mut raster, room.as_ref(), room_inputs, width, height);
+        raster
     }
 
     /// Draw the chrome over a room frame. `inputs` is the history the frame
@@ -2422,9 +2416,28 @@ impl App {
     /// without a window.
     fn compose_frame(
         &mut self,
+        raster: Raster,
+        width: usize,
+        height: usize,
+    ) -> (Vec<u8>, usize, usize) {
+        let bands = if self.muted {
+            None
+        } else {
+            self.visualizer_bands()
+        };
+        self.compose_frame_with_bands(raster, width, height, bands, Instant::now())
+    }
+
+    fn compose_frame_with_bands(
+        &mut self,
         mut raster: Raster,
         width: usize,
         height: usize,
+        bands: Option<(
+            [f32; numinous_core::BAND_COUNT],
+            numinous_audio::VisualizerSource,
+        )>,
+        now: Instant,
     ) -> (Vec<u8>, usize, usize) {
         if self.paused {
             overlays::draw_pause_overlay_scaled(
@@ -2446,9 +2459,8 @@ impl App {
         // Visualizer path: room bed, mixed output tap, or OS loopback capture.
         // Output mix and loopback drive a scale multiplier and soft beat pokes.
         self.visualizer_scale = 1.0;
-        if !self.muted
-            && let Some((bands, source)) = self.visualizer_bands()
-        {
+        let pending_nudge = std::mem::take(&mut self.pending_visualizer_nudge);
+        if let Some((bands, source)) = bands {
             hud::draw_spectrum_meter(&mut raster, &bands, width, height, self.interface_text_size);
             let levers = numinous_core::levers_from_bands(&self.spectrum_prev, &bands);
             let drive = matches!(
@@ -2456,24 +2468,30 @@ impl App {
                 numinous_audio::VisualizerSource::OutputMix
                     | numinous_audio::VisualizerSource::Loopback
             );
-            if drive && !self.modal_mode_active() && !self.paused {
+            if drive
+                && self.motion.animates()
+                && self.window_active
+                && !self.paused
+                && !self.modal_mode_active()
+                && self.overture.is_none()
+                && !(self.show_help && self.menu.is_open())
+            {
                 // Bass pumps motion without rewriting the player's time_scale.
                 self.visualizer_scale = numinous_core::spectrum_time_scale(1.0, &levers);
-                // Reduced motion holds the phase, and the music is not the
-                // player's hand, so it may not move it either.
-                let nudge = numinous_core::spectrum_phase_nudge(&levers);
-                self.apply_visualizer_nudge(nudge);
-                if numinous_core::spectrum_should_poke(&levers)
-                    && !self.studio
-                    && !self.the_show
-                    && self.pokes.len() < 24
+                // A redraw can observe the same attack again before a tick.
+                // Keep one impulse with the next pump, without summing repeats.
+                self.pending_visualizer_nudge =
+                    pending_nudge.max(numinous_core::spectrum_phase_nudge(&levers));
+                if !self.the_show
+                    && !self.poking
+                    && numinous_core::spectrum::plant_spectrum_poke(
+                        &mut self.pokes,
+                        &levers,
+                        self.last_spectrum_poke
+                            .map(|last| now.saturating_duration_since(last)),
+                    )
                 {
-                    let (x, y) = numinous_core::spectrum_hand_point(&levers);
-                    // Avoid stacking identical soft beats in one breath.
-                    let last = self.pokes.last().copied();
-                    if last != Some((x, y)) {
-                        self.pokes.push((x, y));
-                    }
+                    self.last_spectrum_poke = Some(now);
                 }
             }
             self.spectrum_prev = bands;
@@ -3594,6 +3612,8 @@ fn main() {
     event_loop.run_app(&mut app).expect("run the app");
 }
 
+#[cfg(test)]
+mod beat_tests;
 #[cfg(test)]
 mod tests;
 

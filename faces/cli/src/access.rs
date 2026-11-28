@@ -142,21 +142,26 @@ pub(crate) fn flash_disclosure(known: &[(&str, numinous_core::Era, f64)]) -> Str
     if !numinous_core::KNOWN_OVER_FLASH_AREA.is_empty() {
         out.push_str("Some smaller regions exceeded three flashes in one second.\n");
     }
-    out.push_str("Check a room before opening it: numinous access --room <id>\n");
+    out.push_str("Check a room before opening it, including its response to scripted inputs:\n");
+    out.push_str("  numinous access --room <id>\n");
     out.push_str(REGIONAL_SCOPE);
     out
 }
 
 const REGIONAL_SCOPE: &str = "At 1x, 2x, 4x and 8x, the regional check averages light and color in\n\
-    overlapping 80 by 47 rectangles on a 240 by 140 automatic room image.\n\
+    overlapping 80 by 47 rectangles on a 240 by 140 image.\n\
     The check looks for opposing changes in brightness or red color.\n\
     Smaller patches can average away inside a rectangle.\n\
-    Hand or beat input and the final App display remain unmeasured.\n";
+    The input tests send a drag and two beat patterns to the core room.\n\
+    Hand smoothing, other gestures and effects can change the final App display.\n";
 
 /// Look up the catalog measurement without starting the room or its sound.
 pub(crate) fn room_flash_report(id: &str) -> Result<String, String> {
     let room = numinous_core::room_meta_by_id(id).ok_or_else(|| super::not_found_message(id))?;
-    let mut out = format!("{} ({}) | Regional flashes\n", room.title, room.id);
+    let mut out = format!(
+        "{} ({}) | Regional flashes\nAutomatic tour\n",
+        room.title, room.id
+    );
     let mut flagged = false;
     for &(id, era, general, red) in numinous_core::KNOWN_OVER_FLASH_AREA {
         if id != room.id {
@@ -183,6 +188,36 @@ pub(crate) fn room_flash_report(id: &str) -> Result<String, String> {
     } else {
         out.push_str("No sampled region exceeded three general or red flashes in one second.\n");
     }
+    out.push_str("\nScripted room responses\n");
+    if let Some((_, general, red)) = numinous_core::KNOWN_OVER_INTERACTION_FLASHES
+        .iter()
+        .find(|(id, _, _)| *id == room.id)
+    {
+        for ((label, &g), &r) in [
+            "Side-to-side drag",
+            "Rapid beat requests",
+            "240 BPM beat requests",
+        ]
+        .into_iter()
+        .zip(general)
+        .zip(red)
+        {
+            for (kind, peak) in [("general", g), ("red", r)] {
+                if peak > 0 {
+                    out.push_str(&format!("{label}: {peak} {kind} flashes in one second\n"));
+                }
+            }
+        }
+        out.push_str("These are the highest whole-frame or regional readings above three.\n");
+    } else {
+        out.push_str(
+            "No scripted input sample exceeded three general or red flashes in one second.\n",
+        );
+    }
+    out.push_str(
+        "Beat readings measure the room with points placed by the music. In the App,\n\
+         GPU Julia follows those points. CPU rooms follow the player's input.\n\n",
+    );
     out.push_str(REGIONAL_SCOPE);
     Ok(out)
 }

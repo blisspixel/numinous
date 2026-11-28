@@ -2234,13 +2234,13 @@ fn a_zero_ambient_tick_holds_the_phase_and_never_wraps() {
     // sweep, and it is the completed sweep that moves The Show to the next
     // room, so the gallery stops advancing without a separate guard.
     for phase in [0.0, 0.25, 0.5, 0.999] {
-        let (next, wrapped) = super::advance_gallery_phase(phase, 0.0, 1.0, 0.24, false);
+        let (next, wrapped) = super::advance_gallery_phase(phase, 0.0, false);
         assert_eq!(next, phase, "phase moved on a zero tick");
         assert!(!wrapped, "a held phase must not wrap into the next room");
     }
     // The counterpart: given real time, it still advances, so the test
     // above cannot pass because the mechanism broke.
-    let (next, _) = super::advance_gallery_phase(0.5, 1.0 / 60.0, 1.0, 0.24, false);
+    let (next, _) = super::advance_gallery_phase(0.5, 0.24 / 60.0, false);
     assert!(next > 0.5, "full motion must still advance");
 }
 
@@ -2397,8 +2397,8 @@ fn a_certified_room_keeps_the_wish_and_runs_at_eight_x() {
     app.time_scale = 8.0;
     app.visualizer_scale = numinous_core::max_visualizer_time_scale();
     app.t = 0.0;
+    app.pending_visualizer_nudge = numinous_core::max_visualizer_phase_nudge();
     app.advance_room_tick(1.0 / 60.0, 1.0 / 60.0, false);
-    app.apply_visualizer_nudge(numinous_core::max_visualizer_phase_nudge());
     let full = numinous_core::ROOM_CYCLES_PER_SECOND * numinous_core::MAX_TIME_SCALE / 60.0;
     assert!(
         (app.t - full).abs() < 1e-9,
@@ -2423,8 +2423,8 @@ fn a_certified_room_keeps_the_wish_and_runs_at_eight_x() {
     app.time_scale = 8.0;
     app.visualizer_scale = numinous_core::max_visualizer_time_scale();
     app.t = 0.0;
+    app.pending_visualizer_nudge = numinous_core::max_visualizer_phase_nudge();
     app.advance_room_tick(1.0 / 60.0, 1.0 / 60.0, false);
-    app.apply_visualizer_nudge(numinous_core::max_visualizer_phase_nudge());
     let open = numinous_core::ROOM_CYCLES_PER_SECOND * numinous_core::MAX_TIME_SCALE / 60.0;
     assert!(
         app.t <= open + 1e-9,
@@ -2461,8 +2461,8 @@ fn show_fractional_speed_and_reduced_motion_stay_inside_eight_x() {
         assert!(app.the_show, "{room_id}");
         app.t = 0.2;
         let start = app.t;
+        app.pending_visualizer_nudge = numinous_core::max_visualizer_phase_nudge();
         app.advance_room_tick(elapsed, elapsed, false);
-        app.apply_visualizer_nudge(numinous_core::max_visualizer_phase_nudge());
         let cap = numinous_core::ROOM_CYCLES_PER_SECOND * numinous_core::MAX_TIME_SCALE * elapsed;
         let advanced = if app.t >= start {
             app.t - start
@@ -2493,8 +2493,8 @@ fn show_fractional_speed_and_reduced_motion_stay_inside_eight_x() {
     let held = app.t;
     app.motion = numinous_core::Motion::Reduced;
     app.visualizer_scale = numinous_core::max_visualizer_time_scale();
+    app.pending_visualizer_nudge = numinous_core::max_visualizer_phase_nudge();
     app.advance_room_tick(1.0, 1.0, false);
-    app.apply_visualizer_nudge(numinous_core::max_visualizer_phase_nudge());
     assert_eq!(app.t, held, "reduced motion holds the show where it is");
     assert_eq!(app.time_scale, 6.5);
     let _ = std::fs::remove_file(&app.journey_file);
@@ -2884,7 +2884,7 @@ fn journey_banner_preserves_the_first_contact_clock_and_card() {
 
     for _ in 0..300 {
         let obscured = banner.is_some() && room_card > 0;
-        let (next, wrapped) = advance_gallery_phase(phase, 1.0 / 60.0, 1.0, 0.24, obscured);
+        let (next, wrapped) = advance_gallery_phase(phase, 0.24 / 60.0, obscured);
         phase = next;
         assert!(!wrapped);
         crate::room_input::tick_room_card(&mut room_card, banner.is_some());
@@ -2896,7 +2896,7 @@ fn journey_banner_preserves_the_first_contact_clock_and_card() {
     assert!(banner.is_none());
     assert_eq!(phase, 0.0);
     assert_eq!(room_card, crate::room_input::ROOM_CARD_FRAMES);
-    let (next, wrapped) = advance_gallery_phase(phase, 1.0 / 60.0, 1.0, 0.24, false);
+    let (next, wrapped) = advance_gallery_phase(phase, 0.24 / 60.0, false);
     assert!(next > 0.0);
     assert!(!wrapped);
     crate::room_input::tick_room_card(&mut room_card, false);
@@ -6165,3 +6165,6 @@ fn controller_can_read_a_collection_and_enter_its_last_room() {
         numinous_core::FRONT_HALL.rooms.last()
     );
 }
+
+#[path = "composition_flash_report.rs"]
+mod composition_flash_report;
