@@ -6,6 +6,10 @@
 use crate::room::Room;
 use crate::rooms;
 
+mod interaction_baseline;
+pub use interaction_baseline::KNOWN_OVER_INTERACTION_FLASHES;
+#[cfg(test)]
+mod interaction_report;
 mod regional_baseline;
 #[cfg(test)]
 mod regional_report;
@@ -195,6 +199,20 @@ pub fn allowed_phase_nudge(room_id: &str, elapsed: f64, spent: f64, requested: f
     };
     let remaining = (cap - spent).max(0.0);
     requested.min(remaining)
+}
+
+/// Combine the ordinary advance and the music nudge for one displayed tick.
+///
+/// Both requests spend the same elapsed time before the room is rendered.
+#[must_use]
+pub fn visualizer_phase_step(
+    room_id: &str,
+    elapsed: f64,
+    requested_step: f64,
+    requested_nudge: f64,
+) -> f64 {
+    let step = allowed_phase_step(room_id, elapsed, requested_step);
+    step + allowed_phase_nudge(room_id, elapsed, step, requested_nudge)
 }
 
 /// One sentence for a room that still exceeds the budget at some App speed.
@@ -424,6 +442,16 @@ pub fn hidden_room_by_id(id: &str) -> Option<Box<dyn Room>> {
 #[cfg(test)]
 const FLASH_REFERENCE: (usize, usize) = (240, 140);
 
+/// Sparse baselines record the measured peak only when it exceeds the budget.
+#[cfg(test)]
+fn flash_overage(rate: usize) -> u8 {
+    if rate as f64 > crate::photosensitivity::MAX_FLASHES_PER_SECOND {
+        u8::try_from(rate).expect("one second of frames bounds its flash count")
+    } else {
+        0
+    }
+}
+
 /// Render each sampled phase once. The whole-frame and regional measurements
 /// use the same raster and give each Era its own copy of the original pixels.
 #[cfg(test)]
@@ -439,17 +467,63 @@ fn visit_era_frames<T>(
     for frame in 0..cycle {
         let mut raster = crate::raster::Raster::with_accent(width, height, accent);
         room.render(&mut raster, frame as f64 / cycle as f64);
-        let raw = raster.to_rgba();
-        for (era, state) in &mut *states {
-            if *era == crate::Era::Modern {
-                visit(state, &raw);
-            } else {
-                transformed.clone_from(&raw);
-                era.apply(&mut transformed, width, height);
-                visit(state, &transformed);
-            }
+        visit_in_each_era(&raster, &mut transformed, states, &mut visit);
+    }
+}
+
+/// Each era starts with the same original pixels at this instant.
+#[cfg(test)]
+fn visit_in_each_era<T>(
+    raster: &crate::raster::Raster,
+    transformed: &mut Vec<u8>,
+    states: &mut [(crate::Era, T)],
+    mut visit: impl FnMut(&mut T, &[u8]),
+) {
+    use crate::surface::Surface;
+    let raw = raster.to_rgba();
+    for (era, state) in states {
+        if *era == crate::Era::Modern {
+            visit(state, &raw);
+        } else {
+            transformed.clone_from(&raw);
+            era.apply(transformed, raster.width(), raster.height());
+            visit(state, transformed);
         }
     }
+}
+
+/// Render on independent room instances. Keep catalog order in the result,
+/// regardless of which worker finished first.
+#[cfg(test)]
+fn measure_rooms<T: Send>(
+    rooms: &[crate::RoomMeta],
+    measure: impl Fn(&crate::RoomMeta) -> Vec<T> + Sync,
+) -> Vec<T> {
+    let workers = std::thread::available_parallelism()
+        .map_or(1, usize::from)
+        .min(rooms.len());
+    let measure = &measure;
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = (0..workers)
+            .map(|worker| {
+                scope.spawn(move || {
+                    rooms
+                        .iter()
+                        .enumerate()
+                        .skip(worker)
+                        .step_by(workers)
+                        .map(|(index, meta)| (index, measure(meta)))
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        let mut results: Vec<_> = handles
+            .into_iter()
+            .flat_map(|handle| handle.join().expect("flash report worker"))
+            .collect();
+        results.sort_by_key(|(index, _)| *index);
+        results.into_iter().flat_map(|(_, rows)| rows).collect()
+    })
 }
 
 #[cfg(test)]
@@ -875,14 +949,13 @@ mod tests {
         let ceiling = flash_budget_scale(room_id);
         let pump = crate::max_visualizer_time_scale();
         let requested = crate::ROOM_CYCLES_PER_SECOND * ceiling * pump * elapsed;
-        let advance = allowed_phase_step(room_id, elapsed, requested);
-        let nudge = allowed_phase_nudge(
+        let step = super::visualizer_phase_step(
             room_id,
             elapsed,
-            advance,
+            requested,
             crate::max_visualizer_phase_nudge(),
         );
-        ((advance + nudge) * cycle as f64).round() as usize
+        (step * cycle as f64).round() as usize
     }
 
     #[test]

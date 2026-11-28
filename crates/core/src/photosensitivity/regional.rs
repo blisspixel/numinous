@@ -1,4 +1,4 @@
-//! Regional screening of a periodic SDR image sequence.
+//! Regional screening of an SDR image sequence.
 //!
 //! The WCAG reference is a 341 by 256 pixel field at 1024 by 768. This
 //! screening geometry scales each side to one third of the supplied raster,
@@ -19,7 +19,7 @@
 
 use super::{
     DARK_CEILING, GENERAL_FLASH_DELTA, LINEAR_SCALE, RedState, count_flashes, count_red_flashes,
-    linear_counts, red_state_from_totals,
+    linear_counts, peak_flashes_per_second, peak_red_flashes_per_second, red_state_from_totals,
 };
 use crate::surface::MAX_DIM;
 
@@ -58,10 +58,60 @@ pub struct RegionalFlashes {
     pub extended_red: bool,
 }
 
+/// Peak counts in real, overlapping one-second windows of a finite recording.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TimelineFlashPeaks {
+    /// Peak general-flash count for the mean of the entire frame.
+    pub whole_general: usize,
+    /// Peak red-flash count for the entire frame.
+    pub whole_red: usize,
+    /// Highest general-flash count among the regional windows.
+    pub general: WindowPeak,
+    /// Highest red-flash count among the regional windows.
+    pub red: WindowPeak,
+}
+
 #[derive(Default)]
 struct WindowSeries {
     luminance: Vec<f64>,
     red: Vec<RedState>,
+}
+
+impl WindowSeries {
+    fn push(&mut self, totals: [u128; 3], area: usize) {
+        let linear = totals.map(|total| total as f64 / (area as f64 * LINEAR_SCALE));
+        self.luminance
+            .push(0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]);
+        self.red.push(red_state_from_totals(totals));
+    }
+
+    fn can_flash(&self) -> bool {
+        let (low, high) = self
+            .luminance
+            .iter()
+            .fold((1.0_f64, 0.0_f64), |(low, high), &v| {
+                (low.min(v), high.max(v))
+            });
+        low < DARK_CEILING && high - low >= GENERAL_FLASH_DELTA
+    }
+
+    fn can_flash_red(&self) -> bool {
+        self.red.iter().any(RedState::is_saturated_red)
+    }
+
+    fn finite_counts(&self, fps: usize) -> (usize, usize) {
+        let general = if self.can_flash() {
+            peak_flashes_per_second(&self.luminance, fps as f64) as usize
+        } else {
+            0
+        };
+        let red = if self.can_flash_red() {
+            peak_red_flashes_per_second(&self.red, fps as f64) as usize
+        } else {
+            0
+        };
+        (general, red)
+    }
 }
 
 struct Sample {
@@ -99,8 +149,8 @@ impl Axis {
     }
 }
 
-/// Streaming spatial reduction of one base cycle. Stores window readings for
-/// each phase, so additional playback speeds reuse the original capture.
+/// Streaming spatial reduction of presented frames. A periodic base cycle may
+/// also be replayed at additional speeds with [Self::at_step].
 pub struct RegionalFlashCapture {
     width: usize,
     height: usize,
@@ -109,6 +159,7 @@ pub struct RegionalFlashCapture {
     /// Linear-light R,G,B sums at window boundary intersections.
     sums: Vec<[u128; 3]>,
     samples: Vec<Sample>,
+    whole: WindowSeries,
 }
 
 impl RegionalFlashCapture {
@@ -150,6 +201,7 @@ impl RegionalFlashCapture {
             y,
             sums,
             samples,
+            whole: WindowSeries::default(),
         })
     }
 
@@ -190,16 +242,16 @@ impl RegionalFlashCapture {
                 }
             }
         }
+        self.whole
+            .push(self.sums[self.sums.len() - 1], self.width * self.height);
         for sample in &mut self.samples {
             let [tl, tr, bl, br] = sample.corners;
             let totals = [0, 1, 2].map(|k| {
                 (self.sums[br][k] - self.sums[bl][k]) - (self.sums[tr][k] - self.sums[tl][k])
             });
-            let area = (sample.rect.width * sample.rect.height) as f64;
-            let linear = totals.map(|total| total as f64 / (area * LINEAR_SCALE));
-            let luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
-            sample.series.luminance.push(luminance);
-            sample.series.red.push(red_state_from_totals(totals));
+            sample
+                .series
+                .push(totals, sample.rect.width * sample.rect.height);
         }
         true
     }
@@ -213,6 +265,43 @@ impl RegionalFlashCapture {
                 s.series.red.as_slice(),
             )
         })
+    }
+
+    /// Count only windows actually captured. No last-to-first transition is
+    /// invented for a gesture or a transient overlay. Requires at least one
+    /// full second of transitions and 2 through 1000 samples per second.
+    #[must_use]
+    pub fn timeline_peaks(&self, fps: usize) -> Option<TimelineFlashPeaks> {
+        if !(2..=1000).contains(&fps) || self.whole.luminance.len() <= fps {
+            return None;
+        }
+        let zero = WindowPeak {
+            window: self.samples.first()?.rect,
+            rate: 0,
+        };
+        let (whole_general, whole_red) = self.whole.finite_counts(fps);
+        let mut peaks = TimelineFlashPeaks {
+            whole_general,
+            whole_red,
+            general: zero,
+            red: zero,
+        };
+        for sample in &self.samples {
+            let (general, red) = sample.series.finite_counts(fps);
+            if general > peaks.general.rate {
+                peaks.general = WindowPeak {
+                    window: sample.rect,
+                    rate: general,
+                };
+            }
+            if red > peaks.red.rate {
+                peaks.red = WindowPeak {
+                    window: sample.rect,
+                    rate: red,
+                };
+            }
+        }
+        Some(peaks)
     }
 
     /// Replay the base cycle advancing by `step` frames per sample. Every
@@ -246,13 +335,17 @@ impl RegionalFlashCapture {
         }
         let offset_count = crate::numerics::gcd(len as u128, step as u128) as usize;
         let period = len / offset_count;
-        for (rect, light, red) in self.windows() {
-            let (low, high) = light.iter().fold((1.0_f64, 0.0_f64), |(low, high), &v| {
-                (low.min(v), high.max(v))
-            });
-            if low < DARK_CEILING && high - low >= GENERAL_FLASH_DELTA {
-                let (peak, extended) =
-                    orbit_counts(light, offset_count, period, step, fps, count_flashes);
+        for sample in &self.samples {
+            let rect = sample.rect;
+            if sample.series.can_flash() {
+                let (peak, extended) = orbit_counts(
+                    &sample.series.luminance,
+                    offset_count,
+                    period,
+                    step,
+                    fps,
+                    count_flashes,
+                );
                 report.extended_general |= extended;
                 if peak > report.general.rate {
                     report.general = WindowPeak {
@@ -261,9 +354,15 @@ impl RegionalFlashCapture {
                     };
                 }
             }
-            if red.iter().any(RedState::is_saturated_red) {
-                let (peak, extended) =
-                    orbit_counts(red, offset_count, period, step, fps, count_red_flashes);
+            if sample.series.can_flash_red() {
+                let (peak, extended) = orbit_counts(
+                    &sample.series.red,
+                    offset_count,
+                    period,
+                    step,
+                    fps,
+                    count_red_flashes,
+                );
                 report.extended_red |= extended;
                 if peak > report.red.rate {
                     report.red = WindowPeak {
@@ -410,6 +509,74 @@ mod tests {
         assert_eq!((report.general.rate, report.red.rate), (10, 0));
         assert_eq!((report.general.window.x, report.general.window.y), (0, 0));
         assert!(!report.extended_general);
+    }
+
+    #[test]
+    fn finite_peaks_count_only_recorded_transitions() {
+        let mut grid = RegionalFlashCapture::new(12, 9).unwrap();
+        for value in [0, 0, 255, 255] {
+            assert!(grid.push(&frame(12, 9, |_, _| [value, 0, 0])));
+        }
+        assert!(
+            grid.timeline_peaks(4).is_none(),
+            "four frames have only three transitions"
+        );
+        assert!(grid.push(&frame(12, 9, |_, _| [255, 0, 0])));
+        let finite = grid.timeline_peaks(4).unwrap();
+        assert_eq!(
+            (
+                finite.whole_general,
+                finite.whole_red,
+                finite.general.rate,
+                finite.red.rate
+            ),
+            (0, 0, 0, 0)
+        );
+        // Cycling the same samples would complete a flash at the seam.
+        let cyclic = grid.at_step(1, 4).unwrap();
+        assert_eq!((cyclic.general.rate, cyclic.red.rate), (1, 1));
+        assert!(grid.push(&frame(12, 9, |_, _| [0; 3])));
+        let finite = grid.timeline_peaks(4).unwrap();
+        assert_eq!(
+            (
+                finite.whole_general,
+                finite.whole_red,
+                finite.general.rate,
+                finite.red.rate
+            ),
+            (1, 1, 1, 1)
+        );
+    }
+
+    #[test]
+    fn finite_peaks_keep_whole_frame_and_regional_readings_distinct() {
+        let mut grid = RegionalFlashCapture::new(60, 30).unwrap();
+        let mut whole = Vec::new();
+        let mut red = Vec::new();
+        for i in 0..=60 {
+            let rgba = frame(60, 30, |x, y| {
+                if x >= 54 && y >= 20 && i % 6 < 3 {
+                    [255; 3]
+                } else {
+                    [0; 3]
+                }
+            });
+            whole.push(frame_luminance(&rgba));
+            red.push(frame_red_state(&rgba));
+            assert!(grid.push(&rgba));
+        }
+        let peaks = grid.timeline_peaks(60).unwrap();
+        assert_eq!(
+            peaks.whole_general as f64,
+            peak_flashes_per_second(&whole, 60.0)
+        );
+        assert_eq!(
+            peaks.whole_red as f64,
+            peak_red_flashes_per_second(&red, 60.0)
+        );
+        assert_eq!((peaks.whole_general, peaks.general.rate), (0, 10));
+        assert!(peaks.general.window.x > 0 && peaks.general.window.y > 0);
+        assert_eq!(peaks.red.rate, 0);
     }
 
     #[test]

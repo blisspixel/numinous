@@ -6,6 +6,9 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
 ## [Unreleased]
 
 ### Added
+- The offline room lookup also lists flashes measured during a side-to-side
+  drag and two scripted beat patterns. Nightly reports keep the peaks for
+  each era and speed, including the room responses to unspaced beats.
 - Cabinet > Modes > Wings > Browse rooms opens a room by name. The Front Hall
   collection offers curated starting points, and Math study gathers rooms
   with authored mathematics. CLI and MCP room lists carry the same marks.
@@ -17,6 +20,12 @@ project uses evidence-labeled milestones (see [ROADMAP.md](docs/ROADMAP.md)), no
   board code between the App, CLI and MCP.
 
 ### Fixed
+- The App applies the musical phase nudge and bass pump to the same frame.
+  A loud beat after a quiet one could previously move the picture farther
+  than the frame's phase allowance.
+- Music-driven points in GPU Julia leave time between beats and yield to a
+  held hand or reduced motion. In a measured 8-bit sequence, pacing reduced
+  the peak regional brightness flashes in one second from six to one.
 - Figure Eight Knot shows which strand goes underneath at each crossing.
   Drag to watch a bead disappear and emerge. Revised warm inks in Collatz,
   Collatz Tree, Sierpinski Arrowhead, Slingshot and Slope Rider clear the

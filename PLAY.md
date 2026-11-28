@@ -290,8 +290,14 @@ samples brightness and color in overlapping 80 by 47 rectangles on a 240 by
 change involving red can register even when brightness barely changes.
 For example, Interference reached five regional brightness flashes in one
 second in Modern at 4x. The room lookup lists the measured settings.
-Smaller patches can average away. Hand and beat input and the final App
-display remain unmeasured.
+The lookup also shows peak readings for a fast side-to-side drag and two
+beat patterns. Rule 30's automatic tour had zero regional flashes at 1x.
+The drag reached 30 brightness flashes in one second across the whole image. A beat reading describes the room's response to points
+placed by the music. The App uses those points in GPU Julia, while a room
+drawn with the CPU follows the player's hand. The drag test sends the hand
+positions directly to the room. The App smooths some dials and draws its own
+Life board and Mandelbrot camera. Smaller patches can average away, and
+other gestures and display effects can give different results.
 `numinous access` also shows your active switches.
 
 | Environment variable | Effect when nonempty |

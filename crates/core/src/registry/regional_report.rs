@@ -2,12 +2,11 @@
 
 use std::io::Write;
 use std::path::Path;
-use std::thread;
 
 use super::{
-    FLASH_REFERENCE, KNOWN_OVER_FLASH_AREA, REGIONAL_FLASH_SPEEDS as SPEEDS, visit_era_frames,
+    FLASH_REFERENCE, KNOWN_OVER_FLASH_AREA, REGIONAL_FLASH_SPEEDS as SPEEDS, flash_overage,
+    measure_rooms, visit_era_frames,
 };
-use crate::photosensitivity::MAX_FLASHES_PER_SECOND;
 use crate::photosensitivity::regional::{RegionalFlashCapture, RegionalFlashes};
 use crate::{Era, ROOM_CATALOG, RoomMeta, room_by_id};
 
@@ -19,46 +18,32 @@ struct Measurement {
 
 fn measure_catalog(rooms: &[RoomMeta], size: (usize, usize)) -> Vec<Measurement> {
     let fps = crate::APP_FRAMES_PER_SECOND as usize;
-    let workers = thread::available_parallelism()
-        .map_or(1, usize::from)
-        .min(rooms.len());
-    let mut results = thread::scope(|scope| {
-        let mut handles = Vec::new();
-        for worker in 0..workers {
-            handles.push(scope.spawn(move || {
-                let mut rows = Vec::new();
-                for meta in rooms.iter().skip(worker).step_by(workers) {
-                    let room = room_by_id(meta.id).expect("catalog room");
-                    let mut captures = Era::ALL.map(|era| {
-                        (
-                            era,
-                            RegionalFlashCapture::new(size.0, size.1)
-                                .expect("valid reference raster"),
-                        )
-                    });
-                    visit_era_frames(room.as_ref(), size, &mut captures, |capture, frame| {
-                        assert!(
-                            capture.push(frame),
-                            "render dimensions must match the capture"
-                        );
-                    });
-                    rows.extend(captures.map(|(era, capture)| Measurement {
-                        room: meta.id,
-                        era,
-                        speeds: SPEEDS.map(|step| {
-                            capture
-                                .at_step(step, fps)
-                                .expect("nonempty capture and frame rate")
-                        }),
-                    }));
-                }
-                rows
-            }));
-        }
-        handles
+    let mut results = measure_rooms(rooms, |meta| {
+        let room = room_by_id(meta.id).expect("catalog room");
+        let mut captures = Era::ALL.map(|era| {
+            (
+                era,
+                RegionalFlashCapture::new(size.0, size.1).expect("valid reference raster"),
+            )
+        });
+        visit_era_frames(room.as_ref(), size, &mut captures, |capture, frame| {
+            assert!(
+                capture.push(frame),
+                "render dimensions must match the capture"
+            );
+        });
+        captures
             .into_iter()
-            .flat_map(|h| h.join().expect("regional report worker"))
-            .collect::<Vec<_>>()
+            .map(|(era, capture)| Measurement {
+                room: meta.id,
+                era,
+                speeds: SPEEDS.map(|step| {
+                    capture
+                        .at_step(step, fps)
+                        .expect("nonempty capture and frame rate")
+                }),
+            })
+            .collect()
     });
     results.sort_by_key(|r| r.room);
     results
@@ -101,19 +86,11 @@ fn write_report(
 
 type BaselineRow = (&'static str, Era, [u8; 4], [u8; 4]);
 
-fn overage(rate: usize) -> u8 {
-    if rate as f64 > MAX_FLASHES_PER_SECOND {
-        u8::try_from(rate).expect("one second of frames bounds its flash count")
-    } else {
-        0
-    }
-}
-
 fn over_budget(rows: &[Measurement]) -> Vec<BaselineRow> {
     let mut entries = Vec::new();
     for row in rows {
-        let general = row.speeds.each_ref().map(|p| overage(p.general.rate));
-        let red = row.speeds.each_ref().map(|p| overage(p.red.rate));
+        let general = row.speeds.each_ref().map(|p| flash_overage(p.general.rate));
+        let red = row.speeds.each_ref().map(|p| flash_overage(p.red.rate));
         if general != [0; 4] || red != [0; 4] {
             entries.push((row.room, row.era, general, red));
         }

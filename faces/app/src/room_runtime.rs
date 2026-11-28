@@ -13,6 +13,7 @@ use super::{
 impl App {
     pub(super) fn reset_room_runtime(&mut self) {
         self.clear_pointer_state();
+        self.pending_visualizer_nudge = 0.0;
         self.chosen_experiment = false;
         self.experiment_primary_consumed = false;
         self.menu
@@ -197,19 +198,6 @@ impl App {
             .replace("PRESS E", &format!("PRESS {primary}"))
             .replace("BOTH E ", &format!("BOTH {primary} "))
             .replace("PI HIDES E ", &format!("PI HIDES {primary} "))
-    }
-
-    /// Add the visualizer's phase nudge without passing the certified scale.
-    pub(super) fn apply_visualizer_nudge(&mut self, requested: f64) {
-        let id = self.rooms[self.current].meta().id;
-        let nudge = numinous_core::allowed_phase_nudge(
-            id,
-            self.phase_tick_elapsed,
-            self.phase_spent,
-            requested,
-        );
-        self.t = self.motion.next_phase(self.t, nudge);
-        self.phase_spent += nudge;
     }
 
     /// The access-report sentence, when the saved speed is above the certified scale.

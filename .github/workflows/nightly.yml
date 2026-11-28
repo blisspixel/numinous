@@ -21,8 +21,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
           toolchain: 1.99.1
-      - name: Install Linux audio and input development libraries
-        run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev
+      - name: Install Linux audio, input and Vulkan libraries
+        run: bash scripts/ci-linux-libs.sh libasound2-dev libudev-dev libxkbcommon-dev mesa-vulkan-drivers
       - name: Build CLI and MCP faces
         run: cargo build --locked --bin numinous --bin numinous-mcp
       - name: Agent cohorts
@@ -80,6 +80,22 @@ jobs:
           python3 scripts/run-exact-test.py \
             --package numinous-app --example screens --ignored \
             tests::catalog_visual_contract_report
+      - name: Measure the App meter and screen shake
+        run: |
+          python3 scripts/run-exact-test.py --package numinous-app --bin numinous-app --ignored \
+            tests::composition_flash_report::app_composition_flash_report
+      - name: Replay moving beats through the Julia shader and App compositor
+        run: |
+          python3 scripts/run-exact-test.py --package numinous-app --bin numinous-app --ignored \
+            beat_tests::moving_beats_in_gpu_julia_stay_within_the_sampled_flash_budget
+      - name: Keep composed App measurements
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-composition-flash-report
+          path: .agent/qol/app-composition-flash.csv
+          include-hidden-files: true
+          if-no-files-found: error
       - name: Multi-room soak and catalog scorecard
         run: |
           python3 scripts/test-gate-cli.py
@@ -115,6 +131,36 @@ jobs:
         with:
           name: regional-flash-report
           path: .agent/qol/regional-flash.csv
+          include-hidden-files: true
+          if-no-files-found: error
+
+  interaction-flashes:
+    name: Scripted input flash report (${{ matrix.schedule }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        schedule: [drag, dense-beat, musical-beat]
+    env:
+      NUMINOUS_INTERACTION_SCHEDULE: ${{ matrix.schedule }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: 1.99.1
+      - name: Measure the scheduled inputs in every room
+        run: |
+          python3 scripts/run-exact-test.py --package numinous-core --lib --ignored \
+            registry::interaction_report::interaction_room_flash_report
+      - name: Keep the input schedule and its measured peaks
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: interaction-flash-${{ matrix.schedule }}
+          path: .agent/qol/interaction-flash-${{ matrix.schedule }}.csv
           include-hidden-files: true
           if-no-files-found: error
 

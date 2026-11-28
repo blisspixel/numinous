@@ -67,6 +67,7 @@ impl App {
                 return false;
             }
         };
+        self.pending_visualizer_nudge = 0.0;
         self.capture_room_input_for_study();
         let return_menu = (self.show_help && self.menu.is_open()).then(|| self.menu.clone());
         self.show_help = false;

@@ -1099,9 +1099,9 @@ pictures separately from the whole-frame speed cap. The report covers
 automatic tours before App composition. A separate flag records a region with two or three
 flashes in each of five successive one-second windows of the repeating tour. Adjacent windows
 share their endpoint sample and measure disjoint frame intervals.
-It records sustained activity and does not change the speed cap. Gestures,
-beat input, post-processing and the area of contiguous pixels flashing
-together remain open. [App-frame measurement work](https://github.com/blisspixel/numinous/issues/473)
+It records sustained activity and does not change the speed cap. Scripted
+gestures and beats have their own report below. Post-processing and the
+area of contiguous pixels flashing together remain open. [App-frame measurement work](https://github.com/blisspixel/numinous/issues/473)
 
 For the red series, both the saturation ratio and the chromaticity use
 mean linear-light RGB. The screen sums the channel table entries exactly
@@ -1165,6 +1165,77 @@ by room, era and speed. Each row reports both peak counts and their locations.
 python3 scripts/run-exact-test.py --package numinous-core --lib --ignored \
   registry::regional_report::automatic_room_regional_flash_report
 ```
+
+### Scripted input and flashing
+
+The input report starts every room at seed zero. It draws four seconds at
+60 frames a second, including both endpoints, at 240 by 140 in every era and
+at requested speeds of 1x, 2x, 4x and 8x. The room's speed cap still applies.
+It follows each fixed region through consecutive
+frames. Joining the end back to the start would invent a change of picture.
+
+For the drag, the pointer travels across the horizontal centerline and back
+every half second. The core room sees a down event followed by moves. The
+App smooths some dial gestures and has dedicated renderers for Mandelbrot's
+camera and Life's live board. For the beat traces, synthetic bass, midrange,
+treble and onset values offer a point on every frame or on each beat at
+240 BPM. These values enter after frequency-band analysis. The report applies the phase pump and nudge
+and draws the resulting trail with the room's `render_poked` path. The dense
+trace runs twice, with and without spacing the points. Both runs retain the
+same limit on trail length and skip consecutive duplicate points.
+
+`numinous access --room <id>` lists peaks above three general or red flashes
+in any one second across the measured regions, whole image, eras and speeds.
+Its beat entries use the spaced runs. The nightly CSVs retain the other
+readings, the number of points offered and accepted, and the region where
+each peak occurred. These are core room responses. In the App, GPU Julia
+reads the musical trail and CPU rooms read the player's input history.
+
+In Rule 30 the horizontal hand chooses an elementary rule. At 1x the
+automatic tour counted zero regional flashes. Scrubbing the rule across
+the dial reached 30 brightness flashes in one second in both the whole image
+and a region. Each frame moves one fifteenth of the width, so the dial
+changes the rule number by 17. That flips the output for an empty
+neighborhood every frame. Slowing the room clock leaves this gesture
+unchanged. At 1x in Vector, Interference reached 21 regional brightness
+flashes and Halvorsen reached 12 regional red flashes during the drag.
+[Room follow-up](https://github.com/blisspixel/numinous/issues/494)
+
+Spacing the dense beat requests changes which points the room receives.
+Burning Ship's peak regional red count fell from ten to one. Lorenz's peak
+regional brightness count rose from eleven to fifteen. The spaced core
+Julia trace reached four whole-frame brightness flashes. The hardware
+Julia replay below uses a different beat sequence, phase and speed.
+The lookup retains overages in the spaced response.
+
+The timing of those samples also matters. The old App spent a beat nudge
+after drawing and then applied the next tick's bass pump before drawing
+again. In the 8x musical trace, adjacent pictures advanced as much as 0.058
+cycles while the 60 Hz allowance was 0.04. The App now spends the pump and
+the pending nudge together on the tick that draws their result. Phase
+advance and flash count are measured separately.
+
+The App waits at least one third of a second between soft beat points from
+output mix or loopback. A held hand takes priority. Reduced motion suppresses
+new musical points. On a Radeon 780M, an alternating bass and midrange
+sequence through the Julia shader and App compositor at 0.25x in 8-bit
+started at phase 0.44. In two seconds the old rule accepted 24 points and
+the new rule accepted six. The regional peaks fell from six general and
+five red flashes in one second to one general and two red. The whole-image
+brightness peak fell from four to one. The whole-image red peak was zero
+in both runs. Other phases, gestures, displays and GPU effects can produce
+different pictures.
+
+A separate App test holds Times Tables at one pointer position and grades a
+seeded Munch board with a wrong bite. In every era it compares the held
+room with and without the meter. On the Munch board it also switches the
+grade's screen shake on and off at both motion settings. The meter alternates
+between empty and full bands for one second.
+The full-motion Munch jolt changed fourteen frames. The meter alone and the
+jolt alone each counted zero flashes. Together, the meter and reduced-motion
+feedback edge reached one regional brightness flash in 8-bit, Vector and
+Modern. The whole-frame and regional red peaks stayed at zero throughout.
+This samples those particular scenes before optional GPU post-processing.
 
 ## What remains open
 

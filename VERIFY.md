@@ -180,9 +180,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 **Every gate must pass.** Formatting, Clippy and rustdoc stay warning-free;
 the all-target Rust suite, live MCP cohorts, flagship visual and room-bed audio
 goldens, study contracts, and packaging and provenance contracts must pass.
-Three expensive diagnostics are excluded from the ordinary run. The nightly
-workflow runs them, and the full local gate also runs the photosensitivity
-sweep. Coverage must meet the 80% line floor without
+The nightly workflow runs the automatic flash sweeps, scripted drags and
+beats, App composition checks and the catalog visual contract. The full
+local gate also runs the whole-frame automatic sweep. To reproduce all input
+schedules in one release run, use
+`python3 scripts/run-exact-test.py --package numinous-core --lib --ignored registry::interaction_report::interaction_room_flash_report`.
+The resulting `.agent/qol/interaction-flash.csv` includes every measured
+region peak, its location and the admitted input counts. Coverage must meet the 80% line floor without
 regression; the latest dated counts and measured percentages live in
 [QUALITY.md](https://github.com/blisspixel/numinous/blob/main/docs/QUALITY.md).
 The `gpu` and `audio` crates plus the App event loop are excluded from the

@@ -305,10 +305,38 @@ pub fn spectrum_hand_point(levers: &SpectrumLevers) -> (f64, f64) {
     (x, y)
 }
 
-/// True when this frame should plant a soft spectrum poke.
+/// True when the spectrum has a non-silent onset strong enough for a soft poke.
 #[must_use]
 pub fn spectrum_should_poke(levers: &SpectrumLevers) -> bool {
     levers.onset >= ONSET_HIT && levers.bass + levers.mid + levers.treble > 0.05
+}
+
+/// Minimum elapsed presentation time between music-driven parameter changes.
+/// Round one third of a second up to the next whole nanosecond.
+pub const SPECTRUM_POKE_INTERVAL: std::time::Duration =
+    std::time::Duration::from_nanos(333_333_334);
+
+/// Plant a distinct soft beat in an existing poke trail, leaving a full trail
+/// intact. Pass `None` before the first beat and restart the clock only when
+/// this returns true. The player's own hand is independent of this cadence.
+#[must_use]
+pub fn plant_spectrum_poke(
+    pokes: &mut Vec<(f64, f64)>,
+    levers: &SpectrumLevers,
+    elapsed_since_poke: Option<std::time::Duration>,
+) -> bool {
+    if !spectrum_should_poke(levers)
+        || pokes.len() >= crate::MAX_ROOM_POKES
+        || elapsed_since_poke.is_some_and(|elapsed| elapsed < SPECTRUM_POKE_INTERVAL)
+    {
+        return false;
+    }
+    let point = spectrum_hand_point(levers);
+    if pokes.last() == Some(&point) {
+        return false;
+    }
+    pokes.push(point);
+    true
 }
 
 /// Layout for [`draw_spectrum_bars`].
@@ -506,6 +534,50 @@ mod tests {
         assert!(!spectrum_should_poke(&quiet));
         let (x, y) = spectrum_hand_point(&loud);
         assert!((0.05..=0.95).contains(&x) && (0.05..=0.95).contains(&y));
+    }
+
+    #[test]
+    fn soft_beats_obey_elapsed_time_and_preserve_full_trails() {
+        use super::{SPECTRUM_POKE_INTERVAL, plant_spectrum_poke};
+        use std::time::Duration;
+
+        let silent = [0.0; BAND_COUNT];
+        let bass = levers_from_bands(&silent, &[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        let mid = levers_from_bands(&silent, &[0.01, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]);
+        let mut trail = Vec::new();
+        assert!(!plant_spectrum_poke(
+            &mut trail,
+            &levers_from_bands(&silent, &silent),
+            None
+        ));
+        assert!(plant_spectrum_poke(&mut trail, &bass, None));
+        assert!(!plant_spectrum_poke(
+            &mut trail,
+            &mid,
+            Some(SPECTRUM_POKE_INTERVAL - Duration::from_nanos(1))
+        ));
+        assert!(!plant_spectrum_poke(
+            &mut trail,
+            &bass,
+            Some(SPECTRUM_POKE_INTERVAL)
+        ));
+        assert!(plant_spectrum_poke(
+            &mut trail,
+            &mid,
+            Some(SPECTRUM_POKE_INTERVAL)
+        ));
+        assert_eq!(
+            trail,
+            [spectrum_hand_point(&bass), spectrum_hand_point(&mid)]
+        );
+        trail.resize(crate::MAX_ROOM_POKES, (0.0, 0.0));
+        let full = trail.clone();
+        assert!(!plant_spectrum_poke(
+            &mut trail,
+            &bass,
+            Some(SPECTRUM_POKE_INTERVAL)
+        ));
+        assert_eq!(trail, full);
     }
 
     fn peak_band(bands: &[f32; BAND_COUNT]) -> usize {
